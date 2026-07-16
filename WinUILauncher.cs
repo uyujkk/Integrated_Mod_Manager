@@ -5,12 +5,12 @@ using System.IO;
 using System.Reflection;
 using System.Windows.Forms;
 
-[assembly: AssemblyTitle("Mod 文件复制器")]
-[assembly: AssemblyProduct("Mod 文件复制器")]
+[assembly: AssemblyTitle("集成化mod管理器")]
+[assembly: AssemblyProduct("集成化mod管理器")]
 [assembly: AssemblyCopyright("Copyright (c) 2026 uyujkk")]
-[assembly: AssemblyVersion("2.2.8.0")]
-[assembly: AssemblyFileVersion("2.2.8.0")]
-[assembly: AssemblyInformationalVersion("2.2.8")]
+[assembly: AssemblyVersion("3.0.1.0")]
+[assembly: AssemblyFileVersion("3.0.1.0")]
+[assembly: AssemblyInformationalVersion("3.0.1")]
 
 internal static class WinUILauncher
 {
@@ -51,11 +51,12 @@ internal static class WinUILauncher
             if (ex.NativeErrorCode == 1223)
             {
                 MessageBox.Show(
-                    "启动 WinUI 3 版本时被系统取消。\n\n请尝试：\n" +
-                    "1. 将压缩包完整解压到普通文件夹\n" +
-                    "2. 右键压缩包或 EXE，检查属性中是否有“解除锁定”\n" +
+                    "启动 WinUI 3 版本时被 Windows 取消。\n\n" +
+                    "请尝试：\n" +
+                    "1. 先把压缩包完整解压到普通文件夹\n" +
+                    "2. 右键压缩包或 EXE，检查属性里是否有“解除锁定”\n" +
                     "3. 确认安全软件或系统弹窗没有拦截程序\n\n" +
-                    "详细信息： " + ex.Message,
+                    "详细信息：" + ex.Message,
                     "启动失败",
                     MessageBoxButtons.OK,
                     MessageBoxIcon.Warning);
@@ -63,7 +64,7 @@ internal static class WinUILauncher
             }
 
             MessageBox.Show(
-                "启动 WinUI 3 版本时出错：\n" + ex.Message,
+                "启动 WinUI 3 版本失败：\n" + ex.Message,
                 "启动失败",
                 MessageBoxButtons.OK,
                 MessageBoxIcon.Error);
@@ -71,7 +72,7 @@ internal static class WinUILauncher
         catch (Exception ex)
         {
             MessageBox.Show(
-                "启动 WinUI 3 版本时出错：\n" + ex.Message,
+                "启动 WinUI 3 版本失败：\n" + ex.Message,
                 "启动失败",
                 MessageBoxButtons.OK,
                 MessageBoxIcon.Error);
