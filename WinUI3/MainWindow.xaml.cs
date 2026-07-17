@@ -27,11 +27,12 @@ namespace ModFolderCopier.WinUI;
 
 public sealed partial class MainWindow : Window
 {
-    private const string AppVersion = "v3.0.2";
+    private const string AppVersion = "v3.1.0";
     private const string GitHubRepositoryUrl = "https://github.com/uyujkk/Integrated_Mod_Manager";
     private const string GitHubLatestReleaseApiUrl = "https://api.github.com/repos/uyujkk/Integrated_Mod_Manager/releases/latest";
     private const string DefaultOnlineSourceSite = "GameBanana";
     private const string DefaultOnlineCategoryId = "42770";
+    private const string DefaultOnlineGameName = "";
     private const int OnlineDisplayPageSize = 20;
     private const int OnlineRawFetchPageSize = 50;
     private const int OnlineRawPageLimit = 80;
@@ -164,6 +165,8 @@ public sealed partial class MainWindow : Window
     {
         InitializeComponent();
         ExtendsContentIntoTitleBar = false;
+        EditOnlineRepositoryButton.Click -= OnEditRepositoryDetailsClicked;
+        EditOnlineRepositoryButton.Click += OnEditOnlineRepositoryClicked;
         FirstLevelListView.ItemsSource = _firstLevelItems;
         SecondLevelListView.ItemsSource = _secondLevelItems;
         RegisterTrackedTextInputs();
@@ -340,8 +343,7 @@ public sealed partial class MainWindow : Window
         SettingsProjectHintTextBlock.Text = L("这里保留 GitHub 仓库入口和软件版本检查；Mod 更新请使用左侧的“更新”模块。", "This section keeps the GitHub repository link and app-version checks. Use the Updates section in the left navigation for mod updates.");
         UpdateCheckIntervalLabelTextBlock.Text = L("软件更新频率", "App update interval");
         UpdateCheckIntervalHintTextBlock.Text = L("这里只影响软件版本检查，不影响 Mod 更新检查。Mod 更新频率请到左侧“更新”模块设置。", "This only affects app-version checks, not mod update checks. Configure mod update frequency in the Updates section.");
-        SettingsPlaceholderTitleTextBlock.Text = L("仓库在线配置", "Repository Online Config");
-        SettingsPlaceholderTextBlock.Text = L("在线 Mod 页面需要的来源站点、分类 ID 和备注都集中放在这里管理。", "Manage the source site, category ID, and notes used by the online mod page here.");
+        EditOnlineRepositoryButton.Content = L("编辑当前仓库在线分类", "Edit Current Repository Category");
         OpenGitHubButton.Content = L("打开 GitHub 仓库", "Open GitHub Repository");
         CheckUpdatesButton.Content = _isCheckingUpdates ? L("检查中...", "Checking...") : L("检查软件更新", "Check App Updates");
 
@@ -355,7 +357,33 @@ public sealed partial class MainWindow : Window
         }
 
         PopulateUpdateCheckIntervalOptions();
+        RefreshSettingsOnlineConfigSummary();
         RefreshUpdateDetailsView();
+    }
+
+    private void RefreshSettingsOnlineConfigSummary()
+    {
+        WorkspaceRepository? repository = GetSelectedRepository();
+        SettingsPlaceholderTitleTextBlock.Text = L("仓库在线分类", "Repository Online Category");
+
+        if (repository is null)
+        {
+            SettingsPlaceholderTextBlock.Text = L(
+                "先在左侧选择一个仓库，然后在这里为该仓库填写 GameBanana 来源、目标游戏名称和皮肤分类 ID。",
+                "Select a repository on the left first, then configure its GameBanana source, target game name, and skin category ID here.");
+            return;
+        }
+
+        string source = GetEffectiveOnlineSource(repository);
+        string gameName = GetEffectiveOnlineGameName(repository);
+        string categoryId = GetEffectiveOnlineCategoryId(repository);
+        string notes = string.IsNullOrWhiteSpace(repository.Notes)
+            ? L("无", "None")
+            : NormalizeUiText(repository.Notes);
+
+        SettingsPlaceholderTextBlock.Text = L(
+            $"当前仓库：{repository.Name}\n来源：{source}\n目标游戏：{(string.IsNullOrWhiteSpace(gameName) ? "未填写" : gameName)}\n皮肤分类 ID：{categoryId}\n备注：{notes}",
+            $"Repository: {repository.Name}\nSource: {source}\nGame: {(string.IsNullOrWhiteSpace(gameName) ? "Not set" : gameName)}\nSkin category ID: {categoryId}\nNotes: {notes}");
     }
 
     private void InitializeOnlineControls()
@@ -567,6 +595,7 @@ public sealed partial class MainWindow : Window
             TargetPath = TargetTextBox.Text ?? string.Empty,
             LauncherPath = LauncherTextBox.Text ?? string.Empty,
             OnlineSourceSite = DefaultOnlineSourceSite,
+            OnlineGameName = DefaultOnlineGameName,
             OnlineCategoryId = DefaultOnlineCategoryId
         };
 
@@ -1104,6 +1133,7 @@ public sealed partial class MainWindow : Window
         WorkspaceRepository? repository = GetSelectedRepository();
         bool hasRepository = repository is not null;
         string effectiveSource = GetEffectiveOnlineSource(repository);
+        string effectiveGameName = GetEffectiveOnlineGameName(repository);
         string effectiveCategoryId = GetEffectiveOnlineCategoryId(repository);
         bool isSupportedSource = IsGameBananaSource(effectiveSource);
         bool canLoadOnlineMods = hasRepository && isSupportedSource && !string.IsNullOrWhiteSpace(effectiveCategoryId);
@@ -1122,11 +1152,15 @@ public sealed partial class MainWindow : Window
             ? (_isLoadingOnlineMods ? L("加载中", "Loading") : L("就绪", "Ready"))
             : L("待配置", "Needs setup");
         OnlineCategoryValueTextBlock.Text = hasRepository
-            ? effectiveCategoryId
+            ? (string.IsNullOrWhiteSpace(effectiveGameName)
+                ? effectiveCategoryId
+                : $"{effectiveCategoryId} · {effectiveGameName}")
             : L("先从左侧选择一个仓库。", "Select a repository from the left first.");
         OnlineNotesValueTextBlock.Text = hasRepository
             ? (string.IsNullOrWhiteSpace(repository!.Notes)
-                ? L("当前仓库还没有备注，可用来记录目标游戏、来源说明或安装规则。", "No notes yet. Use this area to record the target game, source notes, or install rules.")
+                ? (string.IsNullOrWhiteSpace(effectiveGameName)
+                    ? L("当前仓库还没有备注，可用来记录目标游戏、来源说明或安装规则。", "No notes yet. Use this area to record the target game, source notes, or install rules.")
+                    : L($"当前目标游戏：{effectiveGameName}", $"Current game: {effectiveGameName}"))
                 : NormalizeUiText(repository.Notes))
             : L("在线页面会按当前仓库的来源配置加载内容。", "The online page will load content based on the selected repository configuration.");
 
@@ -1181,7 +1215,7 @@ public sealed partial class MainWindow : Window
             {
                 OnlinePreviewPanel.Children.Add(CreateOnlinePreviewCard(
                     L("没有匹配的皮肤 Mod", "No matching skin mods"),
-                    L("当前页只显示 Skins 分类。你可以翻页，或者尝试用角色名和 Mod 名称搜索。", "This page only shows the Skins category. Try another page, or search by character and mod name."),
+                    L("当前页只显示分类名中包含 Skins 的条目。你可以翻页，或者尝试用角色名和 Mod 名称搜索。", "This page only shows entries whose category name contains Skins. Try another page, or search by character and mod name."),
                     L("筛选结果为空", "No results")));
             }
             else
@@ -1205,10 +1239,16 @@ public sealed partial class MainWindow : Window
             || source.Contains("gamebanana", StringComparison.OrdinalIgnoreCase);
     }
 
+    private static bool IsAllowedSkinCategory(string? categoryName)
+    {
+        return !string.IsNullOrWhiteSpace(categoryName)
+            && categoryName.Contains("Skins", StringComparison.OrdinalIgnoreCase);
+    }
+
     private List<OnlineModCard> GetFilteredOnlineMods()
     {
         IEnumerable<OnlineModCard> query = _onlineMods
-            .Where(mod => string.Equals(mod.RootCategoryName, "Skins", StringComparison.OrdinalIgnoreCase));
+            .Where(mod => IsAllowedSkinCategory(mod.RootCategoryName));
 
         if (!string.IsNullOrWhiteSpace(_onlineCharacterFilter))
         {
@@ -1250,6 +1290,18 @@ public sealed partial class MainWindow : Window
         return string.IsNullOrWhiteSpace(repository.OnlineSourceSite)
             ? DefaultOnlineSourceSite
             : repository.OnlineSourceSite.Trim();
+    }
+
+    private string GetEffectiveOnlineGameName(WorkspaceRepository? repository)
+    {
+        if (repository is null)
+        {
+            return string.Empty;
+        }
+
+        return string.IsNullOrWhiteSpace(repository.OnlineGameName)
+            ? DefaultOnlineGameName
+            : repository.OnlineGameName.Trim();
     }
 
     private string GetEffectiveOnlineCategoryId(WorkspaceRepository? repository)
@@ -1310,7 +1362,11 @@ public sealed partial class MainWindow : Window
         _isLoadingOnlineMods = true;
         RefreshOnlineButton.Content = L("加载中...", "Loading...");
         RefreshOnlineButton.IsEnabled = false;
-        SetOnlineStatus($"正在从 GameBanana 读取分类 {categoryId} 的在线 Mod 列表...", $"Loading online mods from GameBanana for category {categoryId}...");
+        string gameName = GetEffectiveOnlineGameName(repository);
+        string categoryLabel = string.IsNullOrWhiteSpace(gameName)
+            ? categoryId
+            : $"{gameName} / {categoryId}";
+        SetOnlineStatus($"正在从 GameBanana 读取分类 {categoryLabel} 的在线 Mod 列表...", $"Loading online mods from GameBanana for category {categoryLabel}...");
         RefreshOnlinePaneV2();
 
         try
@@ -1379,7 +1435,7 @@ public sealed partial class MainWindow : Window
             OnlineModCard?[] results = await Task.WhenAll(tasks);
             allMods.AddRange(results
                 .OfType<OnlineModCard>()
-                .Where(mod => string.Equals(mod.RootCategoryName, "Skins", StringComparison.OrdinalIgnoreCase)));
+                .Where(mod => IsAllowedSkinCategory(mod.RootCategoryName)));
 
             if (pageResult.ModIds.Count < OnlineRawFetchPageSize)
             {
@@ -4135,6 +4191,7 @@ public sealed partial class MainWindow : Window
             Id = Guid.NewGuid().ToString("N"),
             Name = repositoryName.Trim(),
             OnlineSourceSite = DefaultOnlineSourceSite,
+            OnlineGameName = DefaultOnlineGameName,
             OnlineCategoryId = DefaultOnlineCategoryId
         };
 
@@ -4211,6 +4268,7 @@ public sealed partial class MainWindow : Window
             TargetPath = result.TargetPath.Trim(),
             LauncherPath = result.LauncherPath.Trim(),
             OnlineSourceSite = result.OnlineSourceSite.Trim(),
+            OnlineGameName = result.OnlineGameName.Trim(),
             OnlineCategoryId = result.OnlineCategoryId.Trim(),
             Notes = result.Notes.Trim()
         };
@@ -4257,6 +4315,7 @@ public sealed partial class MainWindow : Window
         repository.TargetPath = result.TargetPath.Trim();
         repository.LauncherPath = result.LauncherPath.Trim();
         repository.OnlineSourceSite = result.OnlineSourceSite.Trim();
+        repository.OnlineGameName = result.OnlineGameName.Trim();
         repository.OnlineCategoryId = result.OnlineCategoryId.Trim();
         repository.Notes = result.Notes.Trim();
         _onlineCurrentPage = 1;
@@ -4273,6 +4332,43 @@ public sealed partial class MainWindow : Window
         RefreshDashboard();
         RefreshRepositoryActionButtons();
         StatusTextBlock.Text = L($"已更新仓库：{repository.Name}", $"Updated repository: {repository.Name}");
+    }
+
+    private async void OnEditOnlineRepositoryClicked(object sender, RoutedEventArgs e)
+    {
+        WorkspaceRepository? repository = GetSelectedRepository();
+        if (repository is null || _selectedRepositoryId is null)
+        {
+            await ShowMessageAsync(
+                L("请先在左侧选择一个仓库，再编辑它的在线分类配置。", "Select a repository on the left before editing its online category settings."),
+                L("未选择仓库", "No repository selected"));
+            return;
+        }
+
+        OnlineRepositoryConfigResult? result = await PromptForOnlineRepositoryConfigAsync(repository);
+        if (result is null)
+        {
+            return;
+        }
+
+        repository.OnlineSourceSite = result.OnlineSourceSite.Trim();
+        repository.OnlineGameName = result.OnlineGameName.Trim();
+        repository.OnlineCategoryId = result.OnlineCategoryId.Trim();
+        repository.Notes = result.Notes.Trim();
+        _onlineCurrentPage = 1;
+        _onlineTotalCount = 0;
+        _onlineTotalPages = 1;
+        _onlineCharacterFilter = string.Empty;
+        _onlineKnownCharacters.Clear();
+        _lastLoadedOnlineConfigKey = null;
+        _onlineMods.Clear();
+        _activeOnlineDetailMod = null;
+
+        SaveShellConfig();
+        RefreshSettingsPane();
+        RefreshOnlinePaneV2();
+        ResetOnlineDetailPaneToPlaceholder();
+        StatusTextBlock.Text = L($"已更新在线分类配置：{repository.Name}", $"Updated online category settings: {repository.Name}");
     }
 
     private async void OnDeleteRepositoryClicked(object sender, RoutedEventArgs e)
@@ -4368,7 +4464,7 @@ public sealed partial class MainWindow : Window
         ToolTipService.SetToolTip(OpenGitHubButton, L("打开 GitHub 仓库", "Open GitHub repository"));
         ToolTipService.SetToolTip(CheckUpdatesButton, L("检查软件版本更新", "Check for app updates"));
         ToolTipService.SetToolTip(CheckModUpdatesButton, L("手动检查已追踪 Mod 更新", "Check tracked mod updates now"));
-        ToolTipService.SetToolTip(EditOnlineRepositoryButton, L("编辑当前仓库在线配置", "Edit current repository source config"));
+        ToolTipService.SetToolTip(EditOnlineRepositoryButton, L("编辑当前仓库在线分类", "Edit current repository online category"));
         ToolTipService.SetToolTip(RefreshOnlineButton, L("刷新在线 Mod 列表", "Refresh online mod list"));
         ToolTipService.SetToolTip(OnlinePrevPageButton, L("上一页", "Previous page"));
         ToolTipService.SetToolTip(OnlineNextPageButton, L("下一页", "Next page"));
@@ -4380,7 +4476,7 @@ public sealed partial class MainWindow : Window
         AutomationProperties.SetName(OpenGitHubButton, L("打开 GitHub 仓库", "Open GitHub repository"));
         AutomationProperties.SetName(CheckUpdatesButton, L("检查软件版本更新", "Check for app updates"));
         AutomationProperties.SetName(CheckModUpdatesButton, L("手动检查已追踪 Mod 更新", "Check tracked mod updates now"));
-        AutomationProperties.SetName(EditOnlineRepositoryButton, L("编辑当前仓库在线配置", "Edit current repository source config"));
+        AutomationProperties.SetName(EditOnlineRepositoryButton, L("编辑当前仓库在线分类", "Edit current repository online category"));
         AutomationProperties.SetName(RefreshOnlineButton, L("刷新在线 Mod 列表", "Refresh online mod list"));
         AutomationProperties.SetName(OnlinePrevPageButton, L("上一页", "Previous page"));
         AutomationProperties.SetName(OnlineNextPageButton, L("下一页", "Next page"));
@@ -4396,17 +4492,17 @@ public sealed partial class MainWindow : Window
         DashboardRepositoriesTitleTextBlock.Text = L("仓库卡片", "Repository Cards");
 
         OnlineTitleTextBlock.Text = L("在线 Mod 浏览", "Online Mod Browser");
-        OnlineSubtitleTextBlock.Text = L("这里保留在线 Mod 列表和右侧预览详情；仓库在线配置已经移动到“设置”页面。", "This page now keeps the online mod list and the right-side preview details. Repository online config has been moved to Settings.");
+        OnlineSubtitleTextBlock.Text = L("这里保留在线 Mod 列表和右侧预览详情；不同游戏的 GameBanana 皮肤分类可在“设置”页面按仓库分别配置。", "This page keeps the online mod list and the right-side preview details. GameBanana skin categories for different games can be configured per repository in Settings.");
         OnlineRepositoryLabelTextBlock.Text = L("当前仓库", "Repository");
         OnlineSourceLabelTextBlock.Text = L("在线来源", "Online source");
         OnlineReadyLabelTextBlock.Text = L("准备状态", "Readiness");
         OnlineConfigTitleTextBlock.Text = L("当前仓库映射", "Current repository mapping");
-        OnlineConfigHintTextBlock.Text = L("在线页面会优先读取当前仓库的来源站点、分类 ID 和备注说明。你也可以在这里直接编辑当前仓库。", "The online page reads the current repository's source site, category ID, and notes first. You can also edit the current repository directly here.");
+        OnlineConfigHintTextBlock.Text = L("在线页面会优先读取当前仓库的来源站点、目标游戏和皮肤分类 ID。需要切换不同游戏时，直接去“设置”里改当前仓库即可。", "The online page reads the current repository's source site, target game, and skin category ID first. To switch games, edit the current repository in Settings.");
         OnlineCategoryLabelTextBlock.Text = L("分类 ID", "Category ID");
         OnlineNotesLabelTextBlock.Text = L("备注", "Notes");
         OnlinePreviewTitleTextBlock.Text = L("在线 Mod 列表", "Online Mod List");
         OnlinePreviewHintTextBlock.Text = L("这里读取的是外网 Mod 站点数据，如果加载较慢或失败，可能需要 VPN。", "This page loads data from an external mod site. If loading is slow or fails, a VPN may be required.");
-        EditOnlineRepositoryButton.Content = L("编辑当前仓库在线配置", "Edit current repository source config");
+        EditOnlineRepositoryButton.Content = L("编辑当前仓库在线分类", "Edit current repository online category");
 
         SettingsTitleTextBlock.Text = L("应用设置", "Application Settings");
         SettingsSubtitleTextBlock.Text = L("在这里配置语言、主题、更新检查和项目链接。", "Configure language, theme, update checks, and project links here.");
@@ -4639,17 +4735,17 @@ public sealed partial class MainWindow : Window
         }
 
         OnlineTitleTextBlock.Text = L("在线 Mod 浏览", "Online Mod Browser");
-        OnlineSubtitleTextBlock.Text = L("这里只保留在线 Mod 列表和右侧详情预览；仓库在线配置已经移到设置页。", "This page now focuses on the online mod list and the right-side detail preview. Repository online config has moved to Settings.");
+        OnlineSubtitleTextBlock.Text = L("这里只保留在线 Mod 列表和右侧详情预览；不同游戏的 GameBanana 皮肤分类已经移到设置页按仓库配置。", "This page now focuses on the online mod list and the right-side detail preview. GameBanana skin categories for different games are configured per repository in Settings.");
         OnlineRepositoryLabelTextBlock.Text = L("当前仓库", "Repository");
         OnlineSourceLabelTextBlock.Text = L("在线来源", "Online source");
         OnlineReadyLabelTextBlock.Text = L("准备状态", "Readiness");
         OnlineConfigTitleTextBlock.Text = L("当前仓库映射", "Current repository mapping");
-        OnlineConfigHintTextBlock.Text = L("在线页面会优先读取当前仓库的来源站点、分类 ID 和备注说明。未填写时会默认使用 GameBanana / 21842。你也可以在这里直接编辑当前仓库。", "The online page reads the current repository's source site, category ID, and notes first. If omitted, it falls back to GameBanana / 21842. You can also edit the current repository directly here.");
+        OnlineConfigHintTextBlock.Text = L("在线页面会优先读取当前仓库的来源站点、目标游戏和皮肤分类 ID。未填写游戏名时仍可直接用分类 ID 检索。", "The online page reads the current repository's source site, target game, and skin category ID first. If the game name is empty, the category ID still works on its own.");
         OnlineCategoryLabelTextBlock.Text = L("分类 ID", "Category ID");
         OnlineNotesLabelTextBlock.Text = L("备注", "Notes");
         OnlinePreviewTitleTextBlock.Text = L("在线 Mod 列表", "Online Mod List");
         OnlinePreviewHintTextBlock.Text = L("当前会从外网 Mod 站点读取列表；如果加载缓慢或失败，可能需要 VPN。详情页支持实验性自动翻译。", "This page loads data from an external mod site. If loading is slow or fails, a VPN may be required. The detail view includes experimental auto-translation.");
-        EditOnlineRepositoryButton.Content = L("编辑当前仓库在线配置", "Edit current repository source config");
+        EditOnlineRepositoryButton.Content = L("编辑当前仓库在线分类", "Edit current repository online category");
         RefreshOnlineButton.Content = _isLoadingOnlineMods ? L("加载中...", "Loading...") : L("刷新在线列表", "Refresh Online List");
         OnlinePrevPageButton.Content = L("上一页", "Previous");
         OnlineNextPageButton.Content = L("下一页", "Next");
@@ -7023,6 +7119,12 @@ public sealed partial class MainWindow : Window
             PlaceholderText = L("在线来源，例如 GameBanana", "Online source, for example GameBanana")
         };
 
+        TextBox gameBox = new()
+        {
+            Text = string.IsNullOrWhiteSpace(initial.OnlineGameName) ? DefaultOnlineGameName : initial.OnlineGameName,
+            PlaceholderText = L("目标游戏名称，例如 Arknights: Endfield", "Target game name, for example Arknights: Endfield")
+        };
+
         TextBox categoryBox = new()
         {
             Text = string.IsNullOrWhiteSpace(initial.OnlineCategoryId) ? DefaultOnlineCategoryId : initial.OnlineCategoryId,
@@ -7049,6 +7151,7 @@ public sealed partial class MainWindow : Window
         panel.Children.Add(CreateLabeledEditor(L("目标路径", "Target path"), targetBox));
         panel.Children.Add(CreateLabeledEditor(L("启动器路径", "Launcher path"), launcherBox));
         panel.Children.Add(CreateLabeledEditor(L("在线来源", "Online source"), siteBox));
+        panel.Children.Add(CreateLabeledEditor(L("目标游戏", "Target game"), gameBox));
         panel.Children.Add(CreateLabeledEditor(L("分类标识", "Category ID"), categoryBox));
         panel.Children.Add(CreateLabeledEditor(L("备注", "Notes"), notesBox));
 
@@ -7075,6 +7178,83 @@ public sealed partial class MainWindow : Window
             TargetPath = targetBox.Text,
             LauncherPath = launcherBox.Text,
             OnlineSourceSite = siteBox.Text,
+            OnlineGameName = gameBox.Text,
+            OnlineCategoryId = categoryBox.Text,
+            Notes = notesBox.Text
+        };
+    }
+
+    private async Task<OnlineRepositoryConfigResult?> PromptForOnlineRepositoryConfigAsync(WorkspaceRepository initial)
+    {
+        TextBox siteBox = new()
+        {
+            Text = string.IsNullOrWhiteSpace(initial.OnlineSourceSite) ? DefaultOnlineSourceSite : initial.OnlineSourceSite,
+            PlaceholderText = L("在线来源，例如 GameBanana", "Online source, for example GameBanana")
+        };
+
+        TextBox gameBox = new()
+        {
+            Text = string.IsNullOrWhiteSpace(initial.OnlineGameName) ? DefaultOnlineGameName : initial.OnlineGameName,
+            PlaceholderText = L("目标游戏名称，例如 Arknights: Endfield", "Target game name, for example Arknights: Endfield")
+        };
+
+        TextBox categoryBox = new()
+        {
+            Text = string.IsNullOrWhiteSpace(initial.OnlineCategoryId) ? DefaultOnlineCategoryId : initial.OnlineCategoryId,
+            PlaceholderText = L("皮肤分类 ID，例如 42770", "Skin category ID, for example 42770")
+        };
+
+        TextBox notesBox = new()
+        {
+            Text = initial.Notes,
+            PlaceholderText = L("备注（可选）", "Notes (optional)"),
+            AcceptsReturn = true,
+            MinHeight = 88,
+            TextWrapping = TextWrapping.Wrap
+        };
+
+        StackPanel panel = new() { Spacing = 10, MaxWidth = 520 };
+        panel.Children.Add(new TextBlock
+        {
+            Text = L(
+                "这里配置的是当前仓库对应的在线 Mod 分类。不同游戏在 GameBanana 上的皮肤分类 ID 不一样，所以建议每个游戏单独建一个仓库并分别填写。",
+                "This config controls the online mod category used by the current repository. Different games use different skin category IDs on GameBanana, so it is best to keep one repository per game and configure them separately."),
+            TextWrapping = TextWrapping.Wrap
+        });
+        panel.Children.Add(CreateLabeledEditor(L("在线来源", "Online source"), siteBox));
+        panel.Children.Add(CreateLabeledEditor(L("目标游戏", "Target game"), gameBox));
+        panel.Children.Add(CreateLabeledEditor(L("皮肤分类 ID", "Skin category ID"), categoryBox));
+        panel.Children.Add(CreateLabeledEditor(L("备注", "Notes"), notesBox));
+
+        panel.Children.Add(new TextBlock
+        {
+            Text = L(
+                "当前检索逻辑会把这里的分类 ID 直接传给 GameBanana 的 Generic_Category 过滤器，因此只要改这里，就能切换到别的游戏皮肤分类。",
+                "The current fetch logic passes this category ID directly to GameBanana's Generic_Category filter, so changing this value switches the browser to another game's skin category."),
+            TextWrapping = TextWrapping.Wrap,
+            Style = (Style)Application.Current.Resources["CaptionTextStyle"]
+        });
+
+        ContentDialog dialog = new()
+        {
+            Title = L("编辑当前仓库在线分类", "Edit Current Repository Online Category"),
+            Content = panel,
+            PrimaryButtonText = L("保存", "Save"),
+            CloseButtonText = L("取消", "Cancel"),
+            DefaultButton = ContentDialogButton.Primary,
+            XamlRoot = RootGrid.XamlRoot
+        };
+
+        ContentDialogResult result = await dialog.ShowAsync();
+        if (result != ContentDialogResult.Primary)
+        {
+            return null;
+        }
+
+        return new OnlineRepositoryConfigResult
+        {
+            OnlineSourceSite = siteBox.Text,
+            OnlineGameName = gameBox.Text,
             OnlineCategoryId = categoryBox.Text,
             Notes = notesBox.Text
         };
@@ -7123,6 +7303,19 @@ public sealed class RepositoryEditorResult
 
     public string OnlineSourceSite { get; set; } = string.Empty;
 
+    public string OnlineGameName { get; set; } = string.Empty;
+
+    public string OnlineCategoryId { get; set; } = string.Empty;
+
+    public string Notes { get; set; } = string.Empty;
+}
+
+public sealed class OnlineRepositoryConfigResult
+{
+    public string OnlineSourceSite { get; set; } = string.Empty;
+
+    public string OnlineGameName { get; set; } = string.Empty;
+
     public string OnlineCategoryId { get; set; } = string.Empty;
 
     public string Notes { get; set; } = string.Empty;
@@ -7141,6 +7334,8 @@ public sealed class WorkspaceRepository
     public string LauncherPath { get; set; } = string.Empty;
 
     public string OnlineSourceSite { get; set; } = string.Empty;
+
+    public string OnlineGameName { get; set; } = string.Empty;
 
     public string OnlineCategoryId { get; set; } = string.Empty;
 

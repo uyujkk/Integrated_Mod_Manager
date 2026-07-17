@@ -1,16 +1,16 @@
-[中文](./README.md) | [English](./README.en.md)
+# [中文](./README.md) | [English](./README.en.md)
 
-# Integrated Mod Manager v3.0.2
+# Integrated Mod Manager v3.1.0
 
 > Non-official notice:
 > This project is an unofficial fan-made tool. It is not affiliated with, endorsed by, or sponsored by XXMI, any game publisher, or any related developers.
 
-This is a WinUI 3 desktop tool for Windows that helps manage multi-repository mod workspaces, browse and operate on two-level mod folders, import archives, store per-mod shortcut notes and descriptions, set preview images, bind mod links, and use online mod browsing, downloading, and update tracking workflows.
+This is a WinUI 3 desktop tool for Windows for managing multi-repository mod workspaces, browsing two-level mod folders, importing archives, storing per-mod shortcut notes, setting preview images, opening mod links, and browsing online mods.
 
 Current version:
 
-- Display version: `v3.0.2`
-- File version: `3.0.2.0`
+- Display version: `v3.1.0`
+- File version: `3.1.0.0`
 
 ## Main Features
 
@@ -19,12 +19,11 @@ Current version:
 - Copy, delete, preview image, shortcut note, and per-mod link management
 - Archive import support for `.zip`, `.zipx`, `.7z`, `.rar`, `.tar`, `.tar.gz`, `.tar.bz2`, `.tar.xz`, `.tar.zst`, `.gz`, `.tgz`, `.bz2`, `.xz`, `.zst`, and `.cab`
 - Online mod browsing, filtering, paging, detail preview, download, and extraction
-- Online source tracking with remote ID, preview image, and update timestamp
-- Update checks, light/dark theme switching, and Chinese/English UI switching
+- Per-repository GameBanana source, game name, and skin category configuration
+- Chinese and English UI switching with light and dark theme support
 
-## What's New In v3.0.2
+## What's New In v3.1.0
 
-- Added common archive formats including `.rar`, `.zipx`, `.zst`, `.tar.zst`, and `.cab`
-- Added a 7-Zip extraction backend for `.7z`, `.rar`, `.zipx`, and `.cab`
-- Updated the build flow to copy available 7-Zip helper files into the release package
-- Switched the in-app GitHub update and repository links to `Integrated_Mod_Manager`
+- Added per-repository online category settings so different games can use different GameBanana skin category IDs
+- Relaxed online category filtering so entries are accepted when the category name contains `Skins`
+- Updated the displayed app version to `v3.1.0` and the file version to `3.1.0.0`
