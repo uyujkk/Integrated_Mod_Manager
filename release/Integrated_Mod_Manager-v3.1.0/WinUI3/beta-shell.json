@@ -1,0 +1,37 @@
+{
+  "CurrentPrimarySection": "online",
+  "SelectedRepositoryId": "be558adc75c649988fa1420585bd0eee",
+  "UpdateCheckInterval": "Manual",
+  "LastUpdateCheckUtc": "2026-07-17T17:56:32.1848705\u002B00:00",
+  "ModUpdateCheckInterval": "Manual",
+  "LastModUpdateCheckUtc": "2026-07-16T20:47:26.8675129\u002B00:00",
+  "LatestReleaseTag": "v3.0.2",
+  "LatestReleaseTitle": "Integrated_Mod_Manager v3.0.2",
+  "LatestReleaseBody": "- Added common archive formats: \u0060.rar\u0060, \u0060.zipx\u0060, \u0060.zst\u0060, \u0060.tar.zst\u0060, and \u0060.cab\u0060\r\n- Added a 7-Zip extraction backend for \u0060.7z\u0060, \u0060.rar\u0060, \u0060.zipx\u0060, and \u0060.cab\u0060\r\n- The build now copies available 7-Zip helper files into the release package\r\n- The in-app GitHub update and repository links now point to \u0060Integrated_Mod_Manager\u0060",
+  "LatestReleasePublishedAt": "2026-07-17T00:28:44Z",
+  "LatestReleaseUrl": "https://github.com/uyujkk/Integrated_Mod_Manager/releases/tag/v3.0.2",
+  "Repositories": [
+    {
+      "Id": "6cd4a15e733e410b9cfa706e8813136a",
+      "Name": "\u9ED8\u8BA4\u4ED3\u5E93",
+      "SourcePath": "C:\\Users\\wujia\\OneDrive\\Desktop\\\u6D4B\u8BD5\u76EE\u6807",
+      "TargetPath": "C:\\Users\\wujia\\OneDrive\\Desktop\\\u6D4B\u8BD5\u76EE\u6807\u6587\u4EF6\u5939",
+      "LauncherPath": "",
+      "OnlineSourceSite": "GameBanana",
+      "OnlineGameName": "",
+      "OnlineCategoryId": "42770",
+      "Notes": ""
+    },
+    {
+      "Id": "be558adc75c649988fa1420585bd0eee",
+      "Name": "1",
+      "SourcePath": "F:\\\u6D4B\u8BD5",
+      "TargetPath": "F:\\\u76EE\u6807",
+      "LauncherPath": "",
+      "OnlineSourceSite": "GameBanana",
+      "OnlineGameName": "",
+      "OnlineCategoryId": "30305",
+      "Notes": ""
+    }
+  ]
+}
