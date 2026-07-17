@@ -19,6 +19,8 @@ set "SOURCE=%ROOT%\WinUI3\bin\x64\Release\net8.0-windows10.0.19041.0\win-x64"
 set "OUTPUT=%ROOT%\dist\WinUI3"
 set "LAUNCHER_SOURCE=%ROOT%\WinUILauncher.cs"
 set "LAUNCHER_OUTPUT=%ROOT%\dist\ModFolderCopier.exe"
+set "SEVENZIP_DIR=C:\Program Files\7-Zip"
+set "TOOLS_OUTPUT=%OUTPUT%\Tools"
 set "APP_ICON=%ROOT%\WinUI3\Assets\AppIcon.ico"
 
 if not exist "%PROJECT%" (
@@ -46,6 +48,19 @@ robocopy "%SOURCE%" "%OUTPUT%" /E /NFL /NDL /NJH /NJS /NC /NS /NP >nul
 if errorlevel 8 exit /b %errorlevel%
 
 if exist "%ROOT%\dist\config.ini" copy /Y "%ROOT%\dist\config.ini" "%OUTPUT%\config.ini" >nul
+
+if exist "%SEVENZIP_DIR%\7z.exe" (
+  if not exist "%TOOLS_OUTPUT%" mkdir "%TOOLS_OUTPUT%"
+  copy /Y "%SEVENZIP_DIR%\7z.exe" "%TOOLS_OUTPUT%\7z.exe" >nul
+)
+if exist "%SEVENZIP_DIR%\7z.dll" (
+  if not exist "%TOOLS_OUTPUT%" mkdir "%TOOLS_OUTPUT%"
+  copy /Y "%SEVENZIP_DIR%\7z.dll" "%TOOLS_OUTPUT%\7z.dll" >nul
+)
+if exist "%SEVENZIP_DIR%\License.txt" (
+  if not exist "%TOOLS_OUTPUT%" mkdir "%TOOLS_OUTPUT%"
+  copy /Y "%SEVENZIP_DIR%\License.txt" "%TOOLS_OUTPUT%\7zip-License.txt" >nul
+)
 
 if exist "%APP_ICON%" (
   "%CSC%" /nologo /target:winexe /win32icon:"%APP_ICON%" /out:"%LAUNCHER_OUTPUT%" /reference:System.dll /reference:System.Windows.Forms.dll "%LAUNCHER_SOURCE%" || exit /b 1

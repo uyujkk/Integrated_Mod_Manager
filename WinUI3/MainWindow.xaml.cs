@@ -27,16 +27,35 @@ namespace ModFolderCopier.WinUI;
 
 public sealed partial class MainWindow : Window
 {
-    private const string AppVersion = "v3.0.1";
-    private const string GitHubRepositoryUrl = "https://github.com/uyujkk/mod-folder-copier-winui3";
-    private const string GitHubLatestReleaseApiUrl = "https://api.github.com/repos/uyujkk/mod-folder-copier-winui3/releases/latest";
+    private const string AppVersion = "v3.0.2";
+    private const string GitHubRepositoryUrl = "https://github.com/uyujkk/Integrated_Mod_Manager";
+    private const string GitHubLatestReleaseApiUrl = "https://api.github.com/repos/uyujkk/Integrated_Mod_Manager/releases/latest";
     private const string DefaultOnlineSourceSite = "GameBanana";
     private const string DefaultOnlineCategoryId = "42770";
     private const int OnlineDisplayPageSize = 20;
     private const int OnlineRawFetchPageSize = 50;
     private const int OnlineRawPageLimit = 80;
     private const int MaxShortcutRows = 10;
-    private static readonly string[] SupportedArchiveExtensions = [".zip", ".7z", ".tar", ".gz", ".tgz", ".bz2", ".xz"];
+    private static readonly string[] SupportedArchiveExtensions =
+    [
+        ".tar.gz",
+        ".tar.bz2",
+        ".tar.xz",
+        ".tar.zst",
+        ".zip",
+        ".zipx",
+        ".7z",
+        ".rar",
+        ".tar",
+        ".gz",
+        ".tgz",
+        ".bz2",
+        ".xz",
+        ".zst",
+        ".cab"
+    ];
+    private static readonly string[] SevenZipArchiveExtensions = [".7z", ".rar", ".zipx", ".cab"];
+    private static readonly string[] TarArchiveExtensions = [".tar", ".gz", ".tgz", ".bz2", ".xz", ".zst", ".tar.gz", ".tar.bz2", ".tar.xz", ".tar.zst"];
 
     private enum PrimarySection
     {
@@ -3586,11 +3605,50 @@ public sealed partial class MainWindow : Window
             return ".7z";
         }
 
+        if (bytesRead >= 6
+            && header[0] == 0x52
+            && header[1] == 0x61
+            && header[2] == 0x72
+            && header[3] == 0x21
+            && header[4] == 0x1A
+            && header[5] == 0x07)
+        {
+            return ".rar";
+        }
+
         if (bytesRead >= 2
             && header[0] == 0x1F
             && header[1] == 0x8B)
         {
             return ".gz";
+        }
+
+        if (bytesRead >= 3
+            && header[0] == 0x42
+            && header[1] == 0x5A
+            && header[2] == 0x68)
+        {
+            return ".bz2";
+        }
+
+        if (bytesRead >= 6
+            && header[0] == 0xFD
+            && header[1] == 0x37
+            && header[2] == 0x7A
+            && header[3] == 0x58
+            && header[4] == 0x5A
+            && header[5] == 0x00)
+        {
+            return ".xz";
+        }
+
+        if (bytesRead >= 4
+            && header[0] == 0x28
+            && header[1] == 0xB5
+            && header[2] == 0x2F
+            && header[3] == 0xFD)
+        {
+            return ".zst";
         }
 
         return string.Empty;
@@ -6593,9 +6651,15 @@ public sealed partial class MainWindow : Window
 
     private static bool IsSupportedArchiveFile(string path)
     {
+        return GetSupportedArchiveExtension(path) is not null;
+    }
+
+    private static string? GetSupportedArchiveExtension(string path)
+    {
         string fileName = Path.GetFileName(path);
-        return SupportedArchiveExtensions.Any(extension =>
-            fileName.EndsWith(extension, StringComparison.OrdinalIgnoreCase));
+        return SupportedArchiveExtensions
+            .OrderByDescending(extension => extension.Length)
+            .FirstOrDefault(extension => fileName.EndsWith(extension, StringComparison.OrdinalIgnoreCase));
     }
 
     private static string NormalizeLink(string link)
@@ -6759,7 +6823,7 @@ public sealed partial class MainWindow : Window
 
     private void ExtractArchiveToDirectory(string archivePath, string destinationDirectory)
     {
-        string extension = Path.GetExtension(archivePath).ToLowerInvariant();
+        string extension = GetSupportedArchiveExtension(archivePath) ?? Path.GetExtension(archivePath).ToLowerInvariant();
         DispatcherQueue.TryEnqueue(() => UpdateProgress(10, L("正在准备解压...", "Preparing extraction...")));
 
         if (extension == ".zip")
@@ -6793,8 +6857,69 @@ public sealed partial class MainWindow : Window
             return;
         }
 
+        if (SevenZipArchiveExtensions.Contains(extension, StringComparer.OrdinalIgnoreCase))
+        {
+            RunSevenZipExtraction(archivePath, destinationDirectory);
+            DispatcherQueue.TryEnqueue(() => UpdateProgress(100, L("解压完成", "Extraction complete")));
+            return;
+        }
+
+        if (TarArchiveExtensions.Contains(extension, StringComparer.OrdinalIgnoreCase))
+        {
+            RunTarExtraction(archivePath, destinationDirectory);
+            DispatcherQueue.TryEnqueue(() => UpdateProgress(100, L("解压完成", "Extraction complete")));
+            return;
+        }
+
         RunTarExtraction(archivePath, destinationDirectory);
         DispatcherQueue.TryEnqueue(() => UpdateProgress(100, L("解压完成", "Extraction complete")));
+    }
+
+    private static string? FindSevenZipExecutable()
+    {
+        string baseDirectory = AppContext.BaseDirectory;
+        string[] candidates =
+        [
+            Path.Combine(baseDirectory, "Tools", "7z.exe"),
+            Path.Combine(baseDirectory, "7z.exe"),
+            @"C:\Program Files\7-Zip\7z.exe",
+            @"C:\Program Files (x86)\7-Zip\7z.exe"
+        ];
+
+        return candidates.FirstOrDefault(File.Exists);
+    }
+
+    private void RunSevenZipExtraction(string archivePath, string destinationDirectory)
+    {
+        string? sevenZipPath = FindSevenZipExecutable();
+        if (string.IsNullOrWhiteSpace(sevenZipPath))
+        {
+            throw new InvalidOperationException(L(
+                "解压此格式需要 7-Zip。请先安装 7-Zip，或把 7z.exe 和 7z.dll 放到程序目录的 Tools 文件夹中。",
+                "This format requires 7-Zip. Install 7-Zip first, or place 7z.exe and 7z.dll in the app's Tools folder."));
+        }
+
+        var startInfo = new ProcessStartInfo
+        {
+            FileName = sevenZipPath,
+            Arguments = $"x -y -aoa -o\"{destinationDirectory}\" \"{archivePath}\"",
+            UseShellExecute = false,
+            RedirectStandardError = true,
+            RedirectStandardOutput = true,
+            CreateNoWindow = true
+        };
+
+        using Process process = Process.Start(startInfo)
+            ?? throw new InvalidOperationException(L("无法启动 7-Zip 解压工具。", "Unable to start the 7-Zip extraction tool."));
+        string error = process.StandardError.ReadToEnd();
+        process.WaitForExit();
+
+        if (process.ExitCode != 0)
+        {
+            throw new InvalidOperationException(string.IsNullOrWhiteSpace(error)
+                ? L("7-Zip 无法解压当前文件。请检查压缩包是否完整。", "7-Zip could not extract this file. Check whether the archive is valid.")
+                : error.Trim());
+        }
     }
 
     private void RunTarExtraction(string archivePath, string destinationDirectory)
