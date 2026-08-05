@@ -5,5 +5,9 @@ WinUI3/obj/
 *.user
 *.suo
 config.ini
-startup.log
+beta-shell.json
+*.log
+*.pdb
+Thumbs.db
+.DS_Store
 release/

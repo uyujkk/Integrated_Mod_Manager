@@ -4,8 +4,8 @@
 
 适用于 Windows 10/11 的 WinUI 3 Mod 管理工具。它以“仓库”为单位管理本地 Mod，支持两层目录浏览、复制切换、压缩包导入、图片预览、快捷键说明、在线 Mod 浏览与下载，以及已安装 Mod 的更新追踪。
 
-- 当前版本：`v3.1.0`
-- 文件版本：`3.1.0.0`
+- 当前版本：`v3.1.3`
+- 文件版本：`3.1.3.0`
 - 工具作者：`uyujkk`
 
 [下载最新版本](https://github.com/uyujkk/Integrated_Mod_Manager/releases/latest) ·
@@ -42,14 +42,15 @@
 | 在线 Mod | 从 GameBanana 加载、搜索、筛选、排序、分页、预览、下载和解压 |
 | 内容识别 | 尝试从在线说明识别额外访问要求与快捷键说明 |
 | Mod 更新 | 对在线安装并记录来源 ID 的 Mod 手动或定期检查更新 |
-| 软件更新 | 从 GitHub Releases 检查新版本并打开对应下载页面 |
+| 软件更新 | 从 GitHub Releases 检查新版本，或从程序目录中的新版发布 ZIP 完成本地更新 |
 | 界面 | 中文/English 切换、浅色/深色主题和自适应布局 |
 
-## v3.1.0 更新重点
+## v3.1.3 更新重点
 
-- 每个仓库可以分别配置在线来源、目标游戏和 GameBanana 皮肤分类 ID。
-- 在线分类名称只要包含 `Skins` 即可识别，兼容不同游戏的分类命名。
-- 完整同步应用版本、发布包、中英文 README、使用说明和历史更新日志。
+- 把新版 `Integrated_Mod_Manager-vX.Y.Z.zip` 放到现有程序文件夹，程序会在下次启动时自动识别并提示安装。
+- 更新在主程序退出后完成，并自动重新启动。
+- 自动保留 `config.ini` 和 `beta-shell.json`，避免仓库、路径、语言、主题、快捷键和 Mod 链接配置丢失。
+- 增加更新包安全校验和失败回滚，避免错误压缩包破坏现有安装。
 
 ## 系统要求
 
@@ -68,6 +69,8 @@
 5. 首次启动后创建或编辑仓库，并设置 Mod 存储文件夹、目标文件夹和可选启动器。
 
 `ModFolderCopier.exe` 是启动入口，实际 WinUI 程序位于 `WinUI3/ModFolderCopier.WinUI.exe`。请保留发布包原有目录结构。
+
+发布包根目录中的 `LocalUpdateAgent.exe` 是本地更新组件。不要单独运行或删除它；主程序只会在用户确认本地更新后调用该组件。
 
 ### SmartScreen 提示
 
@@ -214,7 +217,7 @@ min(10, 2 × (
 - 打开在线页面或本地文件夹。
 - 删除某一条追踪记录；这不会删除本地 Mod 文件。
 
-“设置”中的软件更新检查会读取 GitHub 最新 Release，显示版本号和更新说明，并打开 Release 页面。当前版本不会静默替换正在运行的程序文件。
+“设置”中的软件更新检查会读取 GitHub 最新 Release，显示版本号和更新说明，并打开 Release 页面。下载新版 ZIP 后，也可以直接把它放到当前程序文件夹；下次启动时程序会识别版本并询问是否更新。确认后主程序会退出，由独立更新组件替换文件并重新启动。
 
 ## 配置与备份
 
@@ -224,7 +227,7 @@ min(10, 2 × (
 - `beta-shell.json`：仓库列表、当前页面、在线分类和更新检查设置等。
 - `startup.log`：仅在启动器需要记录启动问题时出现。
 
-升级或移动程序前，建议备份 `config.ini` 和 `beta-shell.json`。这些文件可能包含本机目录路径，不应在提交 Issue、分享截图或上传压缩包时公开。
+本地 ZIP 更新会自动保留 `config.ini` 和 `beta-shell.json`。手动移动程序前仍建议备份；这些文件可能包含本机目录路径，不应在提交 Issue、分享截图或上传压缩包时公开。
 
 ## 从源码构建
 
@@ -247,6 +250,7 @@ cmd /c build_winui.bat
 ```text
 dist/
 ├─ ModFolderCopier.exe
+├─ LocalUpdateAgent.exe
 └─ WinUI3/
    ├─ ModFolderCopier.WinUI.exe
    └─ ...
@@ -257,6 +261,7 @@ dist/
 ```text
 WinUI3/            WinUI 3 主程序源码与资源
 WinUILauncher.cs   外层启动器
+LocalUpdateAgent.cs 本地 ZIP 更新与配置保留组件
 build_winui.bat    Windows 构建与发布目录整理脚本
 README.md          中文项目说明
 README.en.md       English documentation
@@ -266,7 +271,7 @@ CHANGELOG.md       完整中英更新历史
 LICENSE            MIT 许可证
 ```
 
-`dist/`、构建中间文件和本地配置不会作为源码提交。
+`dist/`、`release/`、构建中间文件、调试符号、本地配置和运行日志不会作为源码提交。旧的 Beta 源码副本已从主分支移除，发布代码以根目录和 `WinUI3/` 为准。
 
 ## 常见问题
 
@@ -288,7 +293,7 @@ LICENSE            MIT 许可证
 
 ### 更新检查会自动安装吗？
 
-不会。程序会检查并显示 GitHub Release 信息，然后由用户打开下载页面完成更新。
+不会静默安装。把下载的新版发布 ZIP 放进现有程序文件夹后，下次启动会询问是否安装，必须由用户确认才会更新。
 
 ## 更新历史
 

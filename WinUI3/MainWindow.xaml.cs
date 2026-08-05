@@ -27,7 +27,7 @@ namespace ModFolderCopier.WinUI;
 
 public sealed partial class MainWindow : Window
 {
-    private const string AppVersion = "v3.1.0";
+    private const string AppVersion = "v3.1.3";
     private const string GitHubRepositoryUrl = "https://github.com/uyujkk/Integrated_Mod_Manager";
     private const string GitHubLatestReleaseApiUrl = "https://api.github.com/repos/uyujkk/Integrated_Mod_Manager/releases/latest";
     private const string DefaultOnlineSourceSite = "GameBanana";
@@ -57,6 +57,9 @@ public sealed partial class MainWindow : Window
     ];
     private static readonly string[] SevenZipArchiveExtensions = [".7z", ".rar", ".zipx", ".cab"];
     private static readonly string[] TarArchiveExtensions = [".tar", ".gz", ".tgz", ".bz2", ".xz", ".zst", ".tar.gz", ".tar.bz2", ".tar.xz", ".tar.zst"];
+    private static readonly Regex LocalUpdatePackageRegex = new(
+        @"^Integrated_Mod_Manager-v(?<version>\d+\.\d+\.\d+)\.zip$",
+        RegexOptions.IgnoreCase | RegexOptions.Compiled);
 
     private enum PrimarySection
     {
@@ -125,6 +128,7 @@ public sealed partial class MainWindow : Window
     private bool _isLoadingOnlineMods;
     private bool _isLoadingBindings;
     private bool _isLoadingModLink;
+    private bool _hasPromptedForLocalUpdate;
     private bool _isApplyingOnlineCharacterSelection;
     private bool _isApplyingUpdateCheckIntervalSelection;
     private bool _isApplyingModUpdateIntervalSelection;
@@ -136,6 +140,8 @@ public sealed partial class MainWindow : Window
     private string? _latestReleaseTag;
     private string? _latestReleaseTitle;
     private string? _latestReleaseUrl;
+    private string? _localUpdatePackagePath;
+    private Version? _localUpdatePackageVersion;
     private string? _onlineStatusZh;
     private string? _onlineStatusEn;
     private string? _lastLoadedOnlineConfigKey;
@@ -176,11 +182,13 @@ public sealed partial class MainWindow : Window
         ApplyTheme(_isDarkTheme);
         ApplyLanguage();
         InitializeOnlineControls();
+        DetectLocalUpdatePackage();
         RefreshSettingsPane();
         RefreshSecondaryNavigation();
         ApplyShellState(refreshRepository: false);
         UpdateShellLayout();
         RefreshDashboard();
+        RootGrid.Loaded += OnRootGridLoaded;
         _ = CheckForUpdatesIfDueAsync();
 
         if (Directory.Exists(SourceTextBox.Text))
@@ -249,7 +257,7 @@ public sealed partial class MainWindow : Window
     private static HttpClient CreateHttpClient()
     {
         var client = new HttpClient();
-        client.DefaultRequestHeaders.UserAgent.ParseAdd("IntegratedModManager/3.0");
+        client.DefaultRequestHeaders.UserAgent.ParseAdd($"IntegratedModManager/{AppVersion.TrimStart('v', 'V')}");
         return client;
     }
 
@@ -343,9 +351,7 @@ public sealed partial class MainWindow : Window
         SettingsProjectHintTextBlock.Text = L("这里保留 GitHub 仓库入口和软件版本检查；Mod 更新请使用左侧的“更新”模块。", "This section keeps the GitHub repository link and app-version checks. Use the Updates section in the left navigation for mod updates.");
         UpdateCheckIntervalLabelTextBlock.Text = L("软件更新频率", "App update interval");
         UpdateCheckIntervalHintTextBlock.Text = L("这里只影响软件版本检查，不影响 Mod 更新检查。Mod 更新频率请到左侧“更新”模块设置。", "This only affects app-version checks, not mod update checks. Configure mod update frequency in the Updates section.");
-        EditOnlineRepositoryButton.Content = L("编辑当前仓库在线分类", "Edit Current Repository Category");
-        OpenGitHubButton.Content = L("打开 GitHub 仓库", "Open GitHub Repository");
-        CheckUpdatesButton.Content = _isCheckingUpdates ? L("检查中...", "Checking...") : L("检查软件更新", "Check App Updates");
+        RefreshSettingsButtonLabels();
 
         if (string.IsNullOrWhiteSpace(_updateStatusZh) || string.IsNullOrWhiteSpace(_updateStatusEn))
         {
@@ -359,6 +365,29 @@ public sealed partial class MainWindow : Window
         PopulateUpdateCheckIntervalOptions();
         RefreshSettingsOnlineConfigSummary();
         RefreshUpdateDetailsView();
+    }
+
+    private void RefreshSettingsButtonLabels()
+    {
+        LanguageToggleButton.Content = _currentLanguage == AppLanguage.ZhCn ? "English" : "中文";
+        ThemeToggleButton.Content = _isDarkTheme ? L("切换浅色", "Light theme") : L("切换深色", "Dark theme");
+        EditOnlineRepositoryButton.Content = L("编辑当前仓库在线分类", "Edit Current Repository Category");
+        OpenGitHubButton.Content = L("打开 GitHub 仓库", "Open GitHub Repository");
+        CheckUpdatesButton.Content = _isCheckingUpdates ? L("检查中...", "Checking...") : L("检查软件更新", "Check App Updates");
+        InstallUpdateButton.Content = _localUpdatePackageVersion is not null
+            ? L($"安装本地更新 v{_localUpdatePackageVersion}", $"Install Local Update v{_localUpdatePackageVersion}")
+            : string.IsNullOrWhiteSpace(_latestReleaseUrl)
+                ? L("检查并获取更新", "Check and Get Update")
+                : L("打开更新页面", "Open Release Page");
+    }
+
+    private void RefreshOnlineNavigationButtonLabels()
+    {
+        RefreshOnlineButton.Content = _isLoadingOnlineMods
+            ? L("加载中...", "Loading...")
+            : L("刷新在线列表", "Refresh Online List");
+        OnlinePrevPageButton.Content = L("上一页", "Previous");
+        OnlineNextPageButton.Content = L("下一页", "Next");
     }
 
     private void RefreshSettingsOnlineConfigSummary()
@@ -763,17 +792,17 @@ public sealed partial class MainWindow : Window
     private void ApplySecondaryNavButtonVisual(Button button, bool isSelected)
     {
         Brush backgroundBrush = isSelected
-            ? (Brush)Application.Current.Resources["AppSecondarySelectedBrush"]
-            : (Brush)Application.Current.Resources["AppSecondaryDefaultBrush"];
+            ? GetAppThemeBrush("AppSecondarySelectedBrush")
+            : GetAppThemeBrush("AppSecondaryDefaultBrush");
         Brush borderBrush = isSelected
-            ? (Brush)Application.Current.Resources["AccentFillColorDefaultBrush"]
-            : (Brush)Application.Current.Resources["AppCardBorderBrush"];
+            ? GetAppThemeBrush("AppNavSelectedBorderBrush")
+            : GetAppThemeBrush("AppCardBorderBrush");
         Brush foregroundBrush = isSelected
-            ? (Brush)Application.Current.Resources["AppSecondarySelectedForegroundBrush"]
-            : (Brush)Application.Current.Resources["AppSecondaryDefaultForegroundBrush"];
-        Brush disabledForegroundBrush = (Brush)Application.Current.Resources["TextFillColorDisabledBrush"];
-        Brush disabledBackgroundBrush = (Brush)Application.Current.Resources["AppSecondaryDefaultBrush"];
-        Brush disabledBorderBrush = (Brush)Application.Current.Resources["AppCardBorderBrush"];
+            ? GetAppThemeBrush("AppSecondarySelectedForegroundBrush")
+            : GetAppThemeBrush("AppSecondaryDefaultForegroundBrush");
+        Brush disabledForegroundBrush = GetAppThemeBrush("AppDisabledForegroundBrush");
+        Brush disabledBackgroundBrush = GetAppThemeBrush("AppSecondaryDefaultBrush");
+        Brush disabledBorderBrush = GetAppThemeBrush("AppCardBorderBrush");
 
         button.Background = backgroundBrush;
         button.BorderBrush = borderBrush;
@@ -971,17 +1000,17 @@ public sealed partial class MainWindow : Window
     private void ApplyPrimaryButtonVisual(Button button, bool isSelected)
     {
         Brush backgroundBrush = isSelected
-            ? (Brush)Application.Current.Resources["AppNavSelectedBrush"]
-            : (Brush)Application.Current.Resources["AppInsetBackgroundBrush"];
+            ? GetAppThemeBrush("AppNavSelectedBrush")
+            : GetAppThemeBrush("AppInsetBackgroundBrush");
         Brush borderBrush = isSelected
-            ? (Brush)Application.Current.Resources["AccentFillColorDefaultBrush"]
-            : (Brush)Application.Current.Resources["AppCardBorderBrush"];
+            ? GetAppThemeBrush("AppNavSelectedBorderBrush")
+            : GetAppThemeBrush("AppCardBorderBrush");
         Brush foregroundBrush = isSelected
-            ? (Brush)Application.Current.Resources["AppNavSelectedForegroundBrush"]
-            : (Brush)Application.Current.Resources["TextFillColorPrimaryBrush"];
-        Brush disabledForegroundBrush = (Brush)Application.Current.Resources["TextFillColorDisabledBrush"];
-        Brush disabledBackgroundBrush = (Brush)Application.Current.Resources["AppInsetBackgroundBrush"];
-        Brush disabledBorderBrush = (Brush)Application.Current.Resources["AppCardBorderBrush"];
+            ? GetAppThemeBrush("AppNavSelectedForegroundBrush")
+            : GetAppThemeBrush("AppNavDefaultForegroundBrush");
+        Brush disabledForegroundBrush = GetAppThemeBrush("AppDisabledForegroundBrush");
+        Brush disabledBackgroundBrush = GetAppThemeBrush("AppInsetBackgroundBrush");
+        Brush disabledBorderBrush = GetAppThemeBrush("AppCardBorderBrush");
 
         button.Background = backgroundBrush;
         button.BorderBrush = borderBrush;
@@ -1001,6 +1030,13 @@ public sealed partial class MainWindow : Window
         button.Resources["ButtonForegroundPointerOver"] = foregroundBrush;
         button.Resources["ButtonForegroundPressed"] = foregroundBrush;
         button.Resources["ButtonForegroundDisabled"] = disabledForegroundBrush;
+    }
+
+    private Brush GetAppThemeBrush(string resourceKey)
+    {
+        string themeKey = _isDarkTheme ? "Dark" : "Light";
+        ResourceDictionary themeDictionary = (ResourceDictionary)Application.Current.Resources.ThemeDictionaries[themeKey];
+        return (Brush)themeDictionary[resourceKey];
     }
 
     private void RefreshDashboard()
@@ -1130,6 +1166,7 @@ public sealed partial class MainWindow : Window
 
     private void RefreshOnlinePaneV2()
     {
+        RefreshOnlineNavigationButtonLabels();
         WorkspaceRepository? repository = GetSelectedRepository();
         bool hasRepository = repository is not null;
         string effectiveSource = GetEffectiveOnlineSource(repository);
@@ -1411,7 +1448,6 @@ public sealed partial class MainWindow : Window
         finally
         {
             _isLoadingOnlineMods = false;
-            RefreshOnlineButton.Content = L("刷新在线列表", "Refresh Online List");
             RefreshOnlinePaneV2();
         }
     }
@@ -4745,10 +4781,8 @@ public sealed partial class MainWindow : Window
         OnlineNotesLabelTextBlock.Text = L("备注", "Notes");
         OnlinePreviewTitleTextBlock.Text = L("在线 Mod 列表", "Online Mod List");
         OnlinePreviewHintTextBlock.Text = L("当前会从外网 Mod 站点读取列表；如果加载缓慢或失败，可能需要 VPN。详情页支持实验性自动翻译。", "This page loads data from an external mod site. If loading is slow or fails, a VPN may be required. The detail view includes experimental auto-translation.");
-        EditOnlineRepositoryButton.Content = L("编辑当前仓库在线分类", "Edit current repository online category");
-        RefreshOnlineButton.Content = _isLoadingOnlineMods ? L("加载中...", "Loading...") : L("刷新在线列表", "Refresh Online List");
-        OnlinePrevPageButton.Content = L("上一页", "Previous");
-        OnlineNextPageButton.Content = L("下一页", "Next");
+        RefreshSettingsButtonLabels();
+        RefreshOnlineNavigationButtonLabels();
         OpenOnlineDetailPageButton.Content = L("打开原页面", "Open Original Page");
         DownloadOnlineDetailButton.Content = L("下载并解压", "Download and Extract");
         if (_activeOnlineDetailMod is null)
@@ -4769,7 +4803,7 @@ public sealed partial class MainWindow : Window
         };
     }
 
-    private static void ConfigureShortcutTextBoxTheme(TextBox box)
+    private void ConfigureShortcutTextBoxTheme(TextBox box)
     {
         var transparentBrush = new SolidColorBrush(Colors.Transparent);
         box.Resources["TextControlBackground"] = transparentBrush;
@@ -4782,7 +4816,7 @@ public sealed partial class MainWindow : Window
         box.Resources["TextControlBorderBrushPointerOver"] = transparentBrush;
         box.Resources["TextControlBorderBrushDisabled"] = transparentBrush;
         box.Resources["TextControlBorderBrushReadOnly"] = transparentBrush;
-        box.Resources["TextControlForegroundReadOnly"] = (Brush)Application.Current.Resources["TextFillColorPrimaryBrush"];
+        box.Resources["TextControlForegroundReadOnly"] = GetAppThemeBrush("AppNavDefaultForegroundBrush");
     }
 
     private void OnShortcutKeyBoxGotFocus(object sender, RoutedEventArgs e)
@@ -4803,10 +4837,10 @@ public sealed partial class MainWindow : Window
 
     private void UpdateShortcutKeyFocusVisuals()
     {
-        Brush normalBackground = (Brush)Application.Current.Resources["AppInsetBackgroundBrush"];
-        Brush normalBorder = (Brush)Application.Current.Resources["AppCardBorderBrush"];
-        Brush activeBackground = (Brush)Application.Current.Resources["AppAccentSoftBrush"];
-        Brush activeBorder = (Brush)Application.Current.Resources["AccentFillColorDefaultBrush"];
+        Brush normalBackground = GetAppThemeBrush("AppInsetBackgroundBrush");
+        Brush normalBorder = GetAppThemeBrush("AppCardBorderBrush");
+        Brush activeBackground = GetAppThemeBrush("AppAccentSoftBrush");
+        Brush activeBorder = GetAppThemeBrush("AppNavSelectedBorderBrush");
         object? focusedElement = Content is FrameworkElement root && root.XamlRoot is not null
             ? FocusManager.GetFocusedElement(root.XamlRoot)
             : null;
@@ -5359,6 +5393,13 @@ public sealed partial class MainWindow : Window
 
     private async void OnInstallUpdateClicked(object sender, RoutedEventArgs e)
     {
+        DetectLocalUpdatePackage();
+        if (_localUpdatePackageVersion is not null && !string.IsNullOrWhiteSpace(_localUpdatePackagePath))
+        {
+            await PromptAndStartLocalUpdateAsync();
+            return;
+        }
+
         if (string.IsNullOrWhiteSpace(_latestReleaseUrl))
         {
             await CheckForUpdatesAsync(showDialogs: true);
@@ -5366,6 +5407,143 @@ public sealed partial class MainWindow : Window
         }
 
         await OpenExternalUrlAsync(_latestReleaseUrl, L("打开更新页面失败", "Failed to open the update page"));
+    }
+
+    private async void OnRootGridLoaded(object sender, RoutedEventArgs e)
+    {
+        RootGrid.Loaded -= OnRootGridLoaded;
+        DetectLocalUpdatePackage();
+
+        if (_localUpdatePackageVersion is not null && !_hasPromptedForLocalUpdate)
+        {
+            await PromptAndStartLocalUpdateAsync();
+        }
+    }
+
+    private void DetectLocalUpdatePackage()
+    {
+        _localUpdatePackagePath = null;
+        _localUpdatePackageVersion = null;
+
+        string installRoot = GetInstallRootPath();
+        if (!Directory.Exists(installRoot) || !TryParseVersion(AppVersion, out Version currentVersion))
+        {
+            return;
+        }
+
+        foreach (string packagePath in Directory.EnumerateFiles(installRoot, "*.zip", SearchOption.TopDirectoryOnly))
+        {
+            Match match = LocalUpdatePackageRegex.Match(Path.GetFileName(packagePath));
+            if (!match.Success || !Version.TryParse(match.Groups["version"].Value, out Version? packageVersion))
+            {
+                continue;
+            }
+
+            if (packageVersion <= currentVersion || (_localUpdatePackageVersion is not null && packageVersion <= _localUpdatePackageVersion))
+            {
+                continue;
+            }
+
+            _localUpdatePackagePath = packagePath;
+            _localUpdatePackageVersion = packageVersion;
+        }
+
+        if (_localUpdatePackageVersion is not null)
+        {
+            SetUpdateStatus(
+                $"检测到本地更新包：v{_localUpdatePackageVersion}，配置将在更新时保留。",
+                $"Local update v{_localUpdatePackageVersion} detected. Your configuration will be preserved.");
+        }
+
+        RefreshSettingsButtonLabels();
+    }
+
+    private static bool TryParseVersion(string value, out Version version)
+    {
+        return Version.TryParse(value.Trim().TrimStart('v', 'V'), out version!);
+    }
+
+    private string GetInstallRootPath()
+    {
+        var runtimeDirectory = new DirectoryInfo(AppContext.BaseDirectory.TrimEnd(Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar));
+        return runtimeDirectory.Name.Equals("WinUI3", StringComparison.OrdinalIgnoreCase) && runtimeDirectory.Parent is not null
+            ? runtimeDirectory.Parent.FullName
+            : runtimeDirectory.FullName;
+    }
+
+    private async Task PromptAndStartLocalUpdateAsync()
+    {
+        if (_localUpdatePackageVersion is null || string.IsNullOrWhiteSpace(_localUpdatePackagePath))
+        {
+            return;
+        }
+
+        _hasPromptedForLocalUpdate = true;
+        bool confirmed = await ShowConfirmAsync(
+            L(
+                $"检测到本地更新包 v{_localUpdatePackageVersion}。\n\n程序将退出并自动完成更新，然后重新启动。现有仓库、路径、语言、主题、快捷键和 Mod 链接配置都会保留。\n\n是否现在更新？",
+                $"Local update v{_localUpdatePackageVersion} was detected.\n\nThe app will close, update itself, and restart. Existing repositories, paths, language, theme, shortcuts, and mod links will be preserved.\n\nUpdate now?"),
+            L("安装本地更新", "Install Local Update"));
+
+        if (!confirmed)
+        {
+            return;
+        }
+
+        await StartLocalUpdateAsync(_localUpdatePackagePath);
+    }
+
+    private async Task StartLocalUpdateAsync(string packagePath)
+    {
+        try
+        {
+            string installRoot = GetInstallRootPath();
+            string updaterSource = Path.Combine(installRoot, "LocalUpdateAgent.exe");
+            string launcherPath = Path.Combine(installRoot, "ModFolderCopier.exe");
+
+            if (!File.Exists(updaterSource))
+            {
+                await ShowMessageAsync(
+                    L("更新组件 LocalUpdateAgent.exe 不存在，请重新下载完整发布包。", "LocalUpdateAgent.exe is missing. Download the complete release package again."),
+                    L("无法开始更新", "Unable to Update"));
+                return;
+            }
+
+            SaveConfig();
+            SaveShellConfig();
+
+            string updaterCopy = Path.Combine(Path.GetTempPath(), $"IntegratedModManagerUpdateAgent-{Guid.NewGuid():N}.exe");
+            File.Copy(updaterSource, updaterCopy, overwrite: true);
+
+            string arguments = string.Join(" ",
+                "--package", QuoteCommandLineArgument(packagePath),
+                "--install-root", QuoteCommandLineArgument(installRoot),
+                "--process-id", Environment.ProcessId.ToString(CultureInfo.InvariantCulture),
+                "--launcher", QuoteCommandLineArgument(launcherPath),
+                "--expected-version", _localUpdatePackageVersion?.ToString() ?? string.Empty,
+                "--language", _currentLanguage == AppLanguage.EnUs ? "en" : "zh");
+
+            Process.Start(new ProcessStartInfo
+            {
+                FileName = updaterCopy,
+                Arguments = arguments,
+                WorkingDirectory = installRoot,
+                UseShellExecute = false
+            });
+
+            Close();
+        }
+        catch (Exception ex)
+        {
+            await ShowMessageAsync(
+                L("启动本地更新失败：", "Failed to start the local update: ") + ex.Message,
+                L("更新失败", "Update Failed"));
+        }
+    }
+
+    private static string QuoteCommandLineArgument(string value)
+    {
+        return "\"" + value.Replace("\"", "\\\"") + "\"";
     }
 
     private async Task CheckForUpdatesAsync(bool showDialogs)

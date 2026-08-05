@@ -1,4 +1,4 @@
-<Application
+﻿<Application
     x:Class="ModFolderCopier.WinUI.App"
     xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
     xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
@@ -10,20 +10,38 @@
             </ResourceDictionary.MergedDictionaries>
             <ResourceDictionary.ThemeDictionaries>
                 <ResourceDictionary x:Key="Light">
-                    <SolidColorBrush x:Key="AppPageBackgroundBrush" Color="#F5F7FA" />
-                    <SolidColorBrush x:Key="AppCardBackgroundBrush" Color="#FBFBFD" />
-                    <SolidColorBrush x:Key="AppCardBorderBrush" Color="#D9E1EA" />
-                    <SolidColorBrush x:Key="AppInsetBackgroundBrush" Color="#F4F6F8" />
-                    <SolidColorBrush x:Key="AppAccentSoftBrush" Color="#E8F1FF" />
-                    <SolidColorBrush x:Key="AppPreviewBackgroundBrush" Color="#EEF2F7" />
+                    <SolidColorBrush x:Key="AppPageBackgroundBrush" Color="#F3F6FB" />
+                    <SolidColorBrush x:Key="AppCardBackgroundBrush" Color="#FFFFFF" />
+                    <SolidColorBrush x:Key="AppCardBorderBrush" Color="#D7DFEA" />
+                    <SolidColorBrush x:Key="AppInsetBackgroundBrush" Color="#EEF3F9" />
+                    <SolidColorBrush x:Key="AppAccentSoftBrush" Color="#E7F0FF" />
+                    <SolidColorBrush x:Key="AppNavSelectedBrush" Color="#DCEBFF" />
+                    <SolidColorBrush x:Key="AppNavSelectedForegroundBrush" Color="#0F172A" />
+                    <SolidColorBrush x:Key="AppNavDefaultForegroundBrush" Color="#1F2937" />
+                    <SolidColorBrush x:Key="AppNavSelectedBorderBrush" Color="#2563EB" />
+                    <SolidColorBrush x:Key="AppDisabledForegroundBrush" Color="#94A0AF" />
+                    <SolidColorBrush x:Key="AppSecondaryDefaultBrush" Color="#F7FAFD" />
+                    <SolidColorBrush x:Key="AppSecondaryDefaultForegroundBrush" Color="#1F2937" />
+                    <SolidColorBrush x:Key="AppSecondarySelectedBrush" Color="#E1EEFF" />
+                    <SolidColorBrush x:Key="AppSecondarySelectedForegroundBrush" Color="#0F172A" />
+                    <SolidColorBrush x:Key="AppPreviewBackgroundBrush" Color="#EAF0F7" />
                 </ResourceDictionary>
                 <ResourceDictionary x:Key="Dark">
-                    <SolidColorBrush x:Key="AppPageBackgroundBrush" Color="#1B1F27" />
-                    <SolidColorBrush x:Key="AppCardBackgroundBrush" Color="#272C35" />
-                    <SolidColorBrush x:Key="AppCardBorderBrush" Color="#414A57" />
-                    <SolidColorBrush x:Key="AppInsetBackgroundBrush" Color="#323844" />
-                    <SolidColorBrush x:Key="AppAccentSoftBrush" Color="#21324D" />
-                    <SolidColorBrush x:Key="AppPreviewBackgroundBrush" Color="#20252E" />
+                    <SolidColorBrush x:Key="AppPageBackgroundBrush" Color="#11161D" />
+                    <SolidColorBrush x:Key="AppCardBackgroundBrush" Color="#1A212B" />
+                    <SolidColorBrush x:Key="AppCardBorderBrush" Color="#2D3643" />
+                    <SolidColorBrush x:Key="AppInsetBackgroundBrush" Color="#202833" />
+                    <SolidColorBrush x:Key="AppAccentSoftBrush" Color="#18314B" />
+                    <SolidColorBrush x:Key="AppNavSelectedBrush" Color="#24466E" />
+                    <SolidColorBrush x:Key="AppNavSelectedForegroundBrush" Color="#F8FBFF" />
+                    <SolidColorBrush x:Key="AppNavDefaultForegroundBrush" Color="#F8FAFC" />
+                    <SolidColorBrush x:Key="AppNavSelectedBorderBrush" Color="#60A5FA" />
+                    <SolidColorBrush x:Key="AppDisabledForegroundBrush" Color="#7D8794" />
+                    <SolidColorBrush x:Key="AppSecondaryDefaultBrush" Color="#242D39" />
+                    <SolidColorBrush x:Key="AppSecondaryDefaultForegroundBrush" Color="#F8FAFC" />
+                    <SolidColorBrush x:Key="AppSecondarySelectedBrush" Color="#2A4E78" />
+                    <SolidColorBrush x:Key="AppSecondarySelectedForegroundBrush" Color="#FFFFFF" />
+                    <SolidColorBrush x:Key="AppPreviewBackgroundBrush" Color="#141B23" />
                 </ResourceDictionary>
             </ResourceDictionary.ThemeDictionaries>
 

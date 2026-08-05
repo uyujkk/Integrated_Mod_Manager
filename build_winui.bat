@@ -19,6 +19,8 @@ set "SOURCE=%ROOT%\WinUI3\bin\x64\Release\net8.0-windows10.0.19041.0\win-x64"
 set "OUTPUT=%ROOT%\dist\WinUI3"
 set "LAUNCHER_SOURCE=%ROOT%\WinUILauncher.cs"
 set "LAUNCHER_OUTPUT=%ROOT%\dist\ModFolderCopier.exe"
+set "UPDATER_SOURCE=%ROOT%\LocalUpdateAgent.cs"
+set "UPDATER_OUTPUT=%ROOT%\dist\LocalUpdateAgent.exe"
 set "SEVENZIP_DIR=C:\Program Files\7-Zip"
 set "TOOLS_OUTPUT=%OUTPUT%\Tools"
 set "APP_ICON=%ROOT%\WinUI3\Assets\AppIcon.ico"
@@ -68,10 +70,22 @@ if exist "%APP_ICON%" (
   "%CSC%" /nologo /target:winexe /out:"%LAUNCHER_OUTPUT%" /reference:System.dll /reference:System.Windows.Forms.dll "%LAUNCHER_SOURCE%" || exit /b 1
 )
 
+if not exist "%UPDATER_SOURCE%" (
+  echo Local update agent source not found.
+  exit /b 1
+)
+
+if exist "%APP_ICON%" (
+  "%CSC%" /nologo /target:winexe /win32icon:"%APP_ICON%" /out:"%UPDATER_OUTPUT%" /reference:System.dll /reference:System.Core.dll /reference:System.Windows.Forms.dll /reference:System.IO.Compression.dll /reference:System.IO.Compression.FileSystem.dll "%UPDATER_SOURCE%" || exit /b 1
+) else (
+  "%CSC%" /nologo /target:winexe /out:"%UPDATER_OUTPUT%" /reference:System.dll /reference:System.Core.dll /reference:System.Windows.Forms.dll /reference:System.IO.Compression.dll /reference:System.IO.Compression.FileSystem.dll "%UPDATER_SOURCE%" || exit /b 1
+)
+
 if exist "%OUTPUT%\startup.log" del /f /q "%OUTPUT%\startup.log"
 if exist "%OUTPUT%\ModFolderCopier.WinUI.pdb" del /f /q "%OUTPUT%\ModFolderCopier.WinUI.pdb"
 
 echo WinUI 3 build completed.
 echo Launcher: %LAUNCHER_OUTPUT%
+echo Updater:  %UPDATER_OUTPUT%
 echo Runtime:  %OUTPUT%
 endlocal

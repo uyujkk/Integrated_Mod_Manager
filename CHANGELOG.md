@@ -6,6 +6,50 @@
 
 This document records the major changes in published versions of Integrated Mod Manager.
 
+## v3.1.3
+
+### 中文
+
+- 新增本地 ZIP 更新：把规范命名的新版发布包放入现有程序文件夹，启动后即可自动识别并确认安装。
+- 更新在主程序退出后由独立组件完成，并在完成后自动重新启动程序。
+- 更新时保留 `config.ini` 与 `beta-shell.json`，仓库、路径、语言、主题、快捷键和 Mod 链接配置不会被发布包覆盖。
+- 新增更新包结构和解压路径安全校验；替换失败时会尝试回滚原文件。
+
+### English
+
+- Added local ZIP updates: place a correctly named newer release package in the existing app folder, then launch the app to detect and install it.
+- Updates are applied by a separate component after the main app exits, followed by an automatic restart.
+- `config.ini` and `beta-shell.json` are preserved, so repositories, paths, language, theme, shortcuts, and mod links are not overwritten.
+- Added package-structure and safe-extraction validation, with best-effort rollback if file replacement fails.
+
+## v3.1.2
+
+### 中文
+
+- 修复浅色模式下快捷键输入框在普通或焦点状态错误使用深色主题资源的问题。
+- 快捷键输入框的背景、边框和只读文字现在会严格跟随应用当前主题。
+
+### English
+
+- Fixed the shortcut input incorrectly using dark-theme resources in light mode.
+- Shortcut backgrounds, borders, and read-only text now consistently follow the active app theme.
+
+## v3.1.1
+
+### 中文
+
+- 修复设置页更新按钮没有显示文字的问题。
+- 修复英文模式下在线 Mod 页的刷新、上一页和下一页按钮仍显示中文的问题。
+- 修复浅色模式导航按钮错误使用深色主题资源的问题，并统一选中边框颜色。
+- 统一按钮文案刷新逻辑，确保切换语言和在线加载结束后保持正确语言。
+
+### English
+
+- Fixed the missing label on the Settings update button.
+- Fixed Chinese refresh, previous-page, and next-page labels appearing in the English online-mod interface.
+- Fixed navigation buttons incorrectly using dark-theme resources in light mode and standardized selected borders.
+- Centralized button-label refresh logic so language changes and completed online loads keep the correct language.
+
 ## v3.1.0
 
 ### 中文
