@@ -4,8 +4,8 @@
 
 A WinUI 3 mod management tool for Windows 10/11. It organizes local mods into repositories and provides two-level folder browsing, copy-based switching, archive import, image previews, shortcut notes, online mod browsing and downloads, and update tracking for installed mods.
 
-- Current version: `v3.2.1`
-- File version: `3.2.1.0`
+- Current version: `v3.3.0`
+- File version: `3.3.0.0`
 - Tool author: `uyujkk`
 
 [Download Latest Release](https://github.com/uyujkk/Integrated_Mod_Manager/releases/latest) ·
@@ -45,7 +45,7 @@ Integrated Mod Manager is designed to:
 | App updates | Check GitHub Releases or apply a newer release ZIP placed in the app folder |
 | Interface | Chinese/English, light/dark themes, comfortable/compact density, reduced motion, and responsive layout |
 
-## v3.2.1 Highlights
+## v3.3.0 Highlights
 
 - Reworked online browsing into character, mod-list, and details columns on wide windows, with a responsive character rail on smaller windows.
 - Added Endfield Wiki character avatars and bilingual names, mapped to their corresponding GameBanana categories.

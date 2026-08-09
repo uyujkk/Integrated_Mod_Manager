@@ -6,6 +6,24 @@
 
 This document records the major changes in published versions of Integrated Mod Manager.
 
+## v3.3.0
+
+### 中文
+
+- 在线 Mod 页面重构为角色、Mod 列表与详情预览三栏布局，并可在中小窗口自动调整。
+- 接入终末地 Wiki 角色头像与中英文名称，角色筛选直接读取对应 GameBanana 分类。
+- 角色筛选后每页完整显示在线结果，修复分类数组越界、漏项和数据读取不完整问题。
+- 优化 Mod 卡片、独立详情面板、预览区域与操作按钮，修复滚动条遮挡内容的问题。
+- 应用显示版本、主程序、启动器和本地更新组件统一提升至 `v3.3.0`。
+
+### English
+
+- Reworked Online Mods into character, mod-list, and detail-preview columns with responsive behavior on smaller windows.
+- Added Endfield Wiki character avatars and bilingual names mapped to the corresponding GameBanana categories.
+- Character filters now show complete page results and avoid category index, missing-item, and incomplete-data errors.
+- Improved mod cards, the independent details panel, image previews, and action buttons, and fixed scrollbars covering content.
+- Advanced the displayed version, main app, launcher, and local update agent to `v3.3.0`.
+
 ## v3.2.1
 
 ### 中文
