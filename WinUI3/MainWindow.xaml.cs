@@ -32,7 +32,7 @@ namespace ModFolderCopier.WinUI;
 
 public sealed partial class MainWindow : Window
 {
-    private const string AppVersion = "v3.2.0";
+    private const string AppVersion = "v3.2.1";
     private const string GitHubRepositoryUrl = "https://github.com/uyujkk/Integrated_Mod_Manager";
     private const string GitHubLatestReleaseApiUrl = "https://api.github.com/repos/uyujkk/Integrated_Mod_Manager/releases/latest";
     private const string DefaultOnlineSourceSite = "GameBanana";
@@ -65,6 +65,45 @@ public sealed partial class MainWindow : Window
     private static readonly Regex LocalUpdatePackageRegex = new(
         @"^Integrated_Mod_Manager-v(?<version>\d+\.\d+\.\d+)\.zip$",
         RegexOptions.IgnoreCase | RegexOptions.Compiled);
+    private static readonly HashSet<string> GenericOnlineCharacterNames = new(StringComparer.OrdinalIgnoreCase)
+    {
+        "operator", "operators", "character", "characters", "skin", "skins",
+        "other", "others", "misc", "miscellaneous", "uncategorized", "unclassified"
+    };
+    private static readonly EndfieldCharacterInfo[] EndfieldCharacters =
+    [
+        new("Liino", "梨诺", "", "https://bbs.hycdn.cn/image/common/20260809/4826366/6a77c4b6a87c0071fa15da57_3eac6ad0.png"),
+        new("Arcane", "诀", "47395", "https://bbs.hycdn.cn/image/common/20260714/4634516/6a55d3861da1e29cd294f0d1_6ad0f152.png"),
+        new("Camille", "卡缪", "46924", "https://bbs.hycdn.cn/image/common/20260626/5246026/6a3dfcd1690f9d18da26a0cd_3eac6ad0.png"),
+        new("Mi Fu", "弭弗", "46272", "https://bbs.hycdn.cn/image/common/20260605/4826366/6a22112497bfaba8393d24e0_56331367.png", "Mifu"),
+        new("Zhuang Fangyi", "庄方宜", "44984", "https://bbs.hycdn.cn/image/common/20260417/2641152/69e12fbefe4a20e7c0d83e4e_f1525633.png", "Fangyi", "ZFY"),
+        new("Rossi", "洛茜", "44510", "https://bbs.hycdn.cn/image/common/20260329/4826366/69c8998745f7d92a73c88faf_2f76db19.png"),
+        new("Tangtang", "汤汤", "44247", "https://bbs.hycdn.cn/image/common/20260312/2274383/69b211574298be0edf042cea_f1525633.png"),
+        new("Yvonne", "伊冯", "42742", "https://bbs.hycdn.cn/image/common/20260202/4850358/69807e73d262875d5b986600_2f76db19.png"),
+        new("Gilberta", "洁尔佩塔", "42733", "https://bbs.hycdn.cn/image/common/20260203/101423/6980d4aa4973d8a11340c613_2f76db19.png", "Berta"),
+        new("Laevatain", "莱万汀", "42734", "https://bbs.hycdn.cn/image/2025/12/29/2054140/9a215e451767e4527e1f8d1f8ce09fef.png", "Laev"),
+        new("Endministrator (M)", "管理员 (男)", "42720", "https://bbs.hycdn.cn/image/2026/01/12/2641152/40da4202dc8dd5d4a943077b195f5f25.png", "Male Endministrator", "Endministrator Male"),
+        new("Endministrator (F)", "管理员 (女)", "42719", "https://bbs.hycdn.cn/image/2026/01/12/2641152/837428a7e2fdc13972d45599675f53a4.png", "Female Endministrator", "Endministrator Female"),
+        new("Pogranichnik", "骏卫", "42738", "https://bbs.hycdn.cn/image/common/20260204/2054140/6983540cf139cae54d734e26_13673ac9.png", "Pog"),
+        new("Ember", "余烬", "42730", "https://bbs.hycdn.cn/image/common/20260217/2054140/69940065223662a892b01da4_db193eac.png"),
+        new("Last Rite", "别礼", "42735", "https://bbs.hycdn.cn/image/common/20260203/101423/6981a44d9fd9f8e1d8fd5d22_56331367.png", "Lastrite"),
+        new("Lifeng", "黎风", "42736", "https://bbs.hycdn.cn/image/common/20260204/2274383/69822586645bf8ceddc4e329_f1525633.png"),
+        new("Ardelia", "艾尔黛拉", "42725", "https://bbs.hycdn.cn/image/2026/01/26/4826366/3f24dfab756936f20757e5a5b5ddd966.png"),
+        new("Perlica", "佩丽卡", "42737", "https://bbs.hycdn.cn/image/common/20260128/5246026/6979ace2deae33c4ae1159c0_3eac6ad0.png"),
+        new("Chen Qianyu", "陈千语", "42728", "https://bbs.hycdn.cn/image/common/20260129/4826366/697b015c4973d8a1133f7876_6ad0f152.png", "Qianyu"),
+        new("Wulfgard", "狼卫", "42740", "https://bbs.hycdn.cn/image/common/20260203/5246026/6981cf549fd9f8e1d8fd61cc_3eac6ad0.png", "Wulf"),
+        new("Arclight", "弧光", "42724", "https://bbs.hycdn.cn/image/common/20260203/101423/6981b85449da91d62c6689cc_f1525633.png"),
+        new("Xaihi", "赛希", "42741", "https://bbs.hycdn.cn/image/common/20260217/2054140/6993df14b32aacba0e7256d4_13673ac9.png", "Saihi"),
+        new("Alesh", "阿列什", "42722", "https://bbs.hycdn.cn/image/common/20260217/4826366/699434292468ffc1c1e2b772_f1525633.png"),
+        new("Da Pan", "大潘", "42729", "https://bbs.hycdn.cn/image/common/20260208/4826366/698771821acbba54e4b0e048_3eac6ad0.png", "Dapan"),
+        new("Avywenna", "艾维文娜", "42726", "https://bbs.hycdn.cn/image/common/20260208/4826366/6987747b94e337a3813bf30c_13673ac9.png"),
+        new("Snowshine", "昼雪", "42739", "https://bbs.hycdn.cn/image/common/20260202/4826366/6980bf4a3a151ae9156138f7_f1525633.png"),
+        new("Akekuri", "秋栗", "42721", "https://bbs.hycdn.cn/image/2026/01/12/2641152/00598faf8a7eccab9c4d64e102faac6b.png"),
+        new("Estella", "埃特拉", "42731", "https://bbs.hycdn.cn/image/common/20260204/2274383/6982b354f139cae54d7333a2_6ad0f152.png"),
+        new("Catcher", "卡契尔", "42727", "https://bbs.hycdn.cn/image/common/20260202/5246026/6980af993a151ae9156136ea_f1525633.png"),
+        new("Fluorite", "萤石", "42732", "https://bbs.hycdn.cn/image/2026/01/12/2641152/d50a55c6f0bb70419677592a21b635ef.png"),
+        new("Antal", "安塔尔", "42723", "https://bbs.hycdn.cn/image/common/20260204/4850358/69835ef9645bf8ceddc50a96_2f76db19.png")
+    ];
 
     private enum PrimarySection
     {
@@ -119,6 +158,8 @@ public sealed partial class MainWindow : Window
     private readonly string _configPath = Path.Combine(AppContext.BaseDirectory, "config.ini");
     private readonly string _shellConfigPath = Path.Combine(AppContext.BaseDirectory, "beta-shell.json");
     private readonly string _onlineImageCachePath = Path.Combine(AppContext.BaseDirectory, "cache", "online-images");
+    private readonly string _onlinePageCachePath = Path.Combine(AppContext.BaseDirectory, "cache", "online-pages");
+    private readonly string _onlineDetailsCachePath = Path.Combine(AppContext.BaseDirectory, "cache", "online-details");
     private readonly HttpClient _httpClient = CreateHttpClient();
     private readonly ObservableCollection<FirstLevelFolderItem> _firstLevelItems = [];
     private readonly ObservableCollection<SecondLevelFolderItem> _secondLevelItems = [];
@@ -160,6 +201,8 @@ public sealed partial class MainWindow : Window
     private string? _onlineStatusZh;
     private string? _onlineStatusEn;
     private string? _lastLoadedOnlineConfigKey;
+    private string? _onlineCharacterStripSignature;
+    private bool _useHorizontalOnlineCharacterRail;
     private int _onlineCurrentPage = 1;
     private int _onlineTotalCount;
     private int _onlineTotalPages = 1;
@@ -182,6 +225,9 @@ public sealed partial class MainWindow : Window
     private TextBox? _lastFocusedTextBox;
     private int _notificationVersion;
     private int _onlineHeroImageRequestVersion;
+    private int _onlineCharacterAnimationVersion;
+    private int _onlineDetailAnimationVersion;
+    private bool _animateOnlineCardsOnNextRefresh;
     private int? _savedWindowX;
     private int? _savedWindowY;
     private int? _savedWindowWidth;
@@ -488,11 +534,6 @@ public sealed partial class MainWindow : Window
         _isApplyingOnlineCharacterSelection = true;
         try
         {
-            string[] characters = _onlineKnownCharacters
-                .Where(name => !string.IsNullOrWhiteSpace(name))
-                .OrderBy(name => name, StringComparer.OrdinalIgnoreCase)
-                .ToArray();
-
             OnlineCharacterComboBox.Items.Clear();
             OnlineCharacterComboBox.Items.Add(new ComboBoxItem
             {
@@ -500,12 +541,12 @@ public sealed partial class MainWindow : Window
                 Tag = string.Empty
             });
 
-            foreach (string character in characters)
+            foreach (EndfieldCharacterInfo character in EndfieldCharacters)
             {
                 OnlineCharacterComboBox.Items.Add(new ComboBoxItem
                 {
-                    Content = character,
-                    Tag = character
+                    Content = GetOnlineCharacterDisplayName(character),
+                    Tag = character.EnglishName
                 });
             }
 
@@ -1078,6 +1119,174 @@ public sealed partial class MainWindow : Window
         }
     }
 
+    private void RefreshOnlineCharacterAvatarStrip()
+    {
+        string signature = $"{_currentLanguage}|{_isDarkTheme}|{_isLoadingOnlineMods}|{_onlineCharacterFilter}|{_onlineTotalCount}|horizontal={_useHorizontalOnlineCharacterRail}";
+        if (string.Equals(signature, _onlineCharacterStripSignature, StringComparison.Ordinal))
+        {
+            return;
+        }
+
+        _onlineCharacterStripSignature = signature;
+        OnlineCharacterAvatarPanel.Children.Clear();
+
+        OnlineCharacterAvatarPanel.Children.Add(CreateOnlineCharacterButton(
+            string.Empty,
+            L("全部", "All"),
+            null,
+            string.IsNullOrWhiteSpace(_onlineCharacterFilter) ? _onlineTotalCount : null));
+
+        foreach (EndfieldCharacterInfo character in EndfieldCharacters)
+        {
+            int? characterModCount = string.Equals(_onlineCharacterFilter, character.EnglishName, StringComparison.OrdinalIgnoreCase)
+                ? _onlineTotalCount
+                : null;
+            OnlineCharacterAvatarPanel.Children.Add(CreateOnlineCharacterButton(
+                character.EnglishName,
+                GetOnlineCharacterDisplayName(character),
+                character.AvatarUrl,
+                characterModCount));
+        }
+
+        string currentRole = string.IsNullOrWhiteSpace(_onlineCharacterFilter)
+            ? L("全部", "All")
+            : GetOnlineCharacterDisplayName(_onlineCharacterFilter);
+        OnlineCharacterRailHintTextBlock.Text = L(
+            $"{EndfieldCharacters.Length} 个角色 · 当前：{currentRole}",
+            $"{EndfieldCharacters.Length} characters · Current: {currentRole}");
+    }
+
+    private Button CreateOnlineCharacterButton(string character, string label, string? avatarUrl, int? modCount)
+    {
+        bool isSelected = string.Equals(character, _onlineCharacterFilter, StringComparison.OrdinalIgnoreCase);
+        double avatarSize = _useHorizontalOnlineCharacterRail ? 44 : 38;
+        var avatarHost = new Border
+        {
+            Width = avatarSize,
+            Height = avatarSize,
+            CornerRadius = new CornerRadius(avatarSize / 2),
+            BorderThickness = new Thickness(isSelected ? 2 : 1),
+            BorderBrush = GetAppThemeBrush(isSelected ? "AppNavSelectedBorderBrush" : "AppCardBorderBrush"),
+            Background = GetAppThemeBrush("AppInsetBackgroundBrush")
+        };
+
+        if (!string.IsNullOrWhiteSpace(avatarUrl))
+        {
+            var avatar = new Image { Stretch = Stretch.UniformToFill };
+            avatarHost.Child = avatar;
+            _ = SetCachedOnlineImageAsync(avatar, avatarUrl);
+        }
+        else
+        {
+            avatarHost.Child = new FontIcon
+            {
+                Glyph = string.IsNullOrWhiteSpace(character) ? "\uE77B" : "\uE77B",
+                FontSize = 22,
+                HorizontalAlignment = HorizontalAlignment.Center,
+                VerticalAlignment = VerticalAlignment.Center
+            };
+        }
+
+        FrameworkElement content;
+        if (_useHorizontalOnlineCharacterRail)
+        {
+            var compactCard = new StackPanel
+            {
+                Width = 82,
+                Spacing = 3,
+                HorizontalAlignment = HorizontalAlignment.Center
+            };
+            compactCard.Children.Add(avatarHost);
+            compactCard.Children.Add(new TextBlock
+            {
+                Text = label,
+                MaxWidth = 82,
+                TextAlignment = TextAlignment.Center,
+                TextTrimming = TextTrimming.CharacterEllipsis,
+                FontSize = 12,
+                FontWeight = isSelected ? Microsoft.UI.Text.FontWeights.SemiBold : Microsoft.UI.Text.FontWeights.Normal
+            });
+            if (modCount.HasValue)
+            {
+                compactCard.Children.Add(new TextBlock
+                {
+                    Text = L($"{modCount.Value} 个", $"{modCount.Value} mods"),
+                    MaxWidth = 82,
+                    TextAlignment = TextAlignment.Center,
+                    Style = (Style)Application.Current.Resources["CaptionTextStyle"]
+                });
+            }
+
+            content = compactCard;
+        }
+        else
+        {
+            var compactRow = new Grid
+            {
+                ColumnSpacing = 8,
+                HorizontalAlignment = HorizontalAlignment.Stretch
+            };
+            compactRow.ColumnDefinitions.Add(new ColumnDefinition { Width = GridLength.Auto });
+            compactRow.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(1, GridUnitType.Star) });
+            compactRow.Children.Add(avatarHost);
+
+            var textPanel = new StackPanel { Spacing = 1, VerticalAlignment = VerticalAlignment.Center };
+            Grid.SetColumn(textPanel, 1);
+            textPanel.Children.Add(new TextBlock
+            {
+                Text = label,
+                FontSize = 12,
+                FontWeight = isSelected ? Microsoft.UI.Text.FontWeights.SemiBold : Microsoft.UI.Text.FontWeights.Normal,
+                TextTrimming = TextTrimming.CharacterEllipsis,
+                TextWrapping = TextWrapping.NoWrap
+            });
+            if (modCount.HasValue)
+            {
+                textPanel.Children.Add(new TextBlock
+                {
+                    Text = L($"{modCount.Value} 个 Mod", $"{modCount.Value} mods"),
+                    Style = (Style)Application.Current.Resources["CaptionTextStyle"],
+                    TextTrimming = TextTrimming.CharacterEllipsis,
+                    TextWrapping = TextWrapping.NoWrap
+                });
+            }
+
+            compactRow.Children.Add(textPanel);
+            content = compactRow;
+        }
+
+        var button = new Button
+        {
+            Content = content,
+            Padding = new Thickness(5),
+            MinWidth = _useHorizontalOnlineCharacterRail ? 92 : 0,
+            MinHeight = _useHorizontalOnlineCharacterRail ? 80 : 54,
+            CornerRadius = new CornerRadius(12),
+            BorderThickness = new Thickness(1),
+            IsEnabled = !_isLoadingOnlineMods,
+            HorizontalAlignment = HorizontalAlignment.Stretch,
+            HorizontalContentAlignment = HorizontalAlignment.Center,
+            Background = GetAppThemeBrush(isSelected ? "AppSecondarySelectedBrush" : "AppSecondaryDefaultBrush"),
+            BorderBrush = GetAppThemeBrush(isSelected ? "AppNavSelectedBorderBrush" : "AppCardBorderBrush"),
+            Foreground = GetAppThemeBrush(isSelected ? "AppSecondarySelectedForegroundBrush" : "AppSecondaryDefaultForegroundBrush")
+        };
+        ToolTipService.SetToolTip(button, string.IsNullOrWhiteSpace(character) ? L("显示全部角色", "Show all characters") : label);
+        AutomationProperties.SetName(button, string.IsNullOrWhiteSpace(character) ? L("全部角色", "All characters") : label);
+        button.Click += async (_, _) => await SelectOnlineCharacterAsync(character);
+        return button;
+    }
+
+    private string GetOnlineCharacterDisplayName(EndfieldCharacterInfo character)
+    {
+        return _currentLanguage == AppLanguage.ZhCn ? character.ChineseName : character.EnglishName;
+    }
+
+    private string GetOnlineCharacterDisplayName(string characterName)
+    {
+        EndfieldCharacterInfo? character = FindEndfieldCharacter(characterName);
+        return character is null ? characterName : GetOnlineCharacterDisplayName(character);
+    }
+
     private void RefreshRepositoryActionButtons()
     {
         bool hasSelectedRepository = GetSelectedRepository() is not null;
@@ -1115,6 +1324,8 @@ public sealed partial class MainWindow : Window
         {
             return;
         }
+
+        UpdateOnlineResponsiveLayout(width);
 
         if (_shellLayoutMode == nextMode)
         {
@@ -1176,6 +1387,84 @@ public sealed partial class MainWindow : Window
         }
 
         ApplyPrimaryNavigationContent();
+    }
+
+    private void UpdateOnlineResponsiveLayout(double windowWidth)
+    {
+        if (OnlineDetailsSplitView is null
+            || OnlineWorkspaceGrid is null
+            || OnlineCharacterRailColumn is null
+            || OnlineResultsColumn is null
+            || OnlineCharacterRailRow is null
+            || OnlineResultsRow is null
+            || OnlineCharacterRailHost is null
+            || OnlineResultsHost is null
+            || OnlineCharacterAvatarPanel is null
+            || OnlineCharacterRailScrollViewer is null
+            || OnlineCharacterRailHintTextBlock is null)
+        {
+            return;
+        }
+
+        bool useHorizontalCharacterRail = windowWidth < 1520;
+        bool characterRailModeChanged = _useHorizontalOnlineCharacterRail != useHorizontalCharacterRail;
+        _useHorizontalOnlineCharacterRail = useHorizontalCharacterRail;
+        if (useHorizontalCharacterRail)
+        {
+            OnlineCharacterRailColumn.Width = new GridLength(1, GridUnitType.Star);
+            OnlineResultsColumn.Width = new GridLength(0);
+            OnlineCharacterRailRow.Height = GridLength.Auto;
+            OnlineResultsRow.Height = new GridLength(1, GridUnitType.Star);
+            Grid.SetColumn(OnlineCharacterRailHost, 0);
+            Grid.SetRow(OnlineCharacterRailHost, 0);
+            Grid.SetColumn(OnlineResultsHost, 0);
+            Grid.SetRow(OnlineResultsHost, 1);
+            OnlineCharacterRailHost.MaxHeight = 148;
+            OnlineCharacterAvatarPanel.Orientation = Orientation.Horizontal;
+            OnlineCharacterAvatarPanel.HorizontalAlignment = HorizontalAlignment.Left;
+            OnlineCharacterAvatarPanel.Margin = new Thickness(0, 0, 0, 12);
+            OnlineCharacterRailScrollViewer.HorizontalScrollMode = ScrollMode.Enabled;
+            OnlineCharacterRailScrollViewer.HorizontalScrollBarVisibility = ScrollBarVisibility.Auto;
+            OnlineCharacterRailScrollViewer.VerticalScrollMode = ScrollMode.Disabled;
+            OnlineCharacterRailScrollViewer.VerticalScrollBarVisibility = ScrollBarVisibility.Disabled;
+            OnlineCharacterRailHintTextBlock.Visibility = Visibility.Collapsed;
+        }
+        else
+        {
+            OnlineCharacterRailColumn.Width = new GridLength(168);
+            OnlineResultsColumn.Width = new GridLength(1, GridUnitType.Star);
+            OnlineCharacterRailRow.Height = new GridLength(1, GridUnitType.Star);
+            OnlineResultsRow.Height = new GridLength(0);
+            Grid.SetColumn(OnlineCharacterRailHost, 0);
+            Grid.SetRow(OnlineCharacterRailHost, 0);
+            Grid.SetColumn(OnlineResultsHost, 1);
+            Grid.SetRow(OnlineResultsHost, 0);
+            OnlineCharacterRailHost.ClearValue(FrameworkElement.MaxHeightProperty);
+            OnlineCharacterAvatarPanel.Orientation = Orientation.Vertical;
+            OnlineCharacterAvatarPanel.HorizontalAlignment = HorizontalAlignment.Stretch;
+            OnlineCharacterAvatarPanel.Margin = new Thickness(0, 0, 12, 0);
+            OnlineCharacterRailScrollViewer.HorizontalScrollMode = ScrollMode.Disabled;
+            OnlineCharacterRailScrollViewer.HorizontalScrollBarVisibility = ScrollBarVisibility.Disabled;
+            OnlineCharacterRailScrollViewer.VerticalScrollMode = ScrollMode.Enabled;
+            OnlineCharacterRailScrollViewer.VerticalScrollBarVisibility = ScrollBarVisibility.Auto;
+            OnlineCharacterRailHintTextBlock.Visibility = Visibility.Collapsed;
+        }
+
+        if (characterRailModeChanged)
+        {
+            _onlineCharacterStripSignature = null;
+            RefreshOnlineCharacterAvatarStrip();
+        }
+
+        if (windowWidth < 1220)
+        {
+            OnlineDetailsSplitView.DisplayMode = SplitViewDisplayMode.Overlay;
+            OnlineDetailsSplitView.OpenPaneLength = Math.Clamp(windowWidth - 150, 380, 600);
+            return;
+        }
+
+        OnlineDetailsSplitView.DisplayMode = SplitViewDisplayMode.Inline;
+        OnlineDetailsSplitView.OpenPaneLength = Math.Clamp(windowWidth * 0.34, 460, 580);
     }
 
     private void ApplyPrimaryNavigationContent()
@@ -1396,7 +1685,10 @@ public sealed partial class MainWindow : Window
         string effectiveCategoryId = GetEffectiveOnlineCategoryId(repository);
         bool isSupportedSource = IsGameBananaSource(effectiveSource);
         bool canLoadOnlineMods = hasRepository && isSupportedSource && !string.IsNullOrWhiteSpace(effectiveCategoryId);
-        string configKey = hasRepository ? $"{repository!.Id}|{effectiveSource}|{effectiveCategoryId}|page={_onlineCurrentPage}" : string.Empty;
+        string requestCategoryId = GetOnlineRequestCategoryId(repository);
+        string configKey = hasRepository
+            ? $"{repository!.Id}|{effectiveSource}|{requestCategoryId}|character={_onlineCharacterFilter}|page={_onlineCurrentPage}"
+            : string.Empty;
 
         if (!string.IsNullOrEmpty(_lastLoadedOnlineConfigKey)
             && !string.Equals(_lastLoadedOnlineConfigKey, configKey, StringComparison.Ordinal)
@@ -1442,6 +1734,8 @@ public sealed partial class MainWindow : Window
         OnlineSearchTextBox.IsEnabled = canLoadOnlineMods && !_isLoadingOnlineMods;
         OnlineCharacterComboBox.IsEnabled = canLoadOnlineMods && !_isLoadingOnlineMods;
         OnlineSortComboBox.IsEnabled = canLoadOnlineMods && !_isLoadingOnlineMods;
+        OnlineCharacterRailTitleTextBlock.Text = L("按角色浏览", "Browse by character");
+        RefreshOnlineCharacterAvatarStrip();
 
         OnlinePreviewPanel.Children.Clear();
 
@@ -1451,6 +1745,7 @@ public sealed partial class MainWindow : Window
                 L("等待选择仓库", "Waiting for repository"),
                 L("请先在左侧选择一个仓库，在线资源库会根据这个仓库的来源配置继续加载。", "Select a repository from the left first. The online page will continue from that repository's source settings."),
                 L("未开始", "Not started")));
+            AnimateOnlineCardsEntrance();
             return;
         }
 
@@ -1460,6 +1755,7 @@ public sealed partial class MainWindow : Window
                 L("来源暂不支持", "Source not supported yet"),
                 L("当前在线页面优先支持 GameBanana。你可以把在线来源改成 GameBanana，或继续保留这个字段等待后续站点接入。", "This online page currently supports GameBanana first. Change the source to GameBanana or keep the field for later site integrations."),
                 effectiveSource));
+            AnimateOnlineCardsEntrance();
             return;
         }
 
@@ -1488,9 +1784,11 @@ public sealed partial class MainWindow : Window
             }
         }
 
+        AnimateOnlineCardsEntrance();
+
         if (_currentPrimarySection == PrimarySection.Online && canLoadOnlineMods && configKey != _lastLoadedOnlineConfigKey && !_isLoadingOnlineMods)
         {
-            _ = LoadOnlineModsAsync(forceReload: true);
+            _ = LoadOnlineModsAsync(forceReload: false);
         }
     }
 
@@ -1518,9 +1816,7 @@ public sealed partial class MainWindow : Window
 
         if (!string.IsNullOrWhiteSpace(_onlineSearchText))
         {
-            query = query.Where(mod =>
-                mod.Title.Contains(_onlineSearchText, StringComparison.OrdinalIgnoreCase)
-                || mod.CharacterName.Contains(_onlineSearchText, StringComparison.OrdinalIgnoreCase));
+            query = query.Where(mod => MatchesOnlineSearch(mod, _onlineSearchText));
         }
 
         query = _onlineSortMode switch
@@ -1577,11 +1873,20 @@ public sealed partial class MainWindow : Window
             : repository.OnlineCategoryId.Trim();
     }
 
+    private string GetOnlineRequestCategoryId(WorkspaceRepository? repository)
+    {
+        EndfieldCharacterInfo? selectedCharacter = FindEndfieldCharacter(_onlineCharacterFilter);
+        return selectedCharacter is not null && !string.IsNullOrWhiteSpace(selectedCharacter.GameBananaCategoryId)
+            ? selectedCharacter.GameBananaCategoryId
+            : GetEffectiveOnlineCategoryId(repository);
+    }
+
     private void SetOnlineStatus(string zh, string en)
     {
         _onlineStatusZh = zh;
         _onlineStatusEn = en;
         OnlineStatusTextBlock.Text = L(zh, en);
+        ToolTipService.SetToolTip(OnlineStatusTextBlock, L(zh, en));
     }
 
     private void SetOnlineDownloadProgress(bool isVisible, double percent, string zh, string en)
@@ -1605,15 +1910,16 @@ public sealed partial class MainWindow : Window
         }
 
         string source = GetEffectiveOnlineSource(repository);
-        string categoryId = GetEffectiveOnlineCategoryId(repository);
-        if (!IsGameBananaSource(source) || string.IsNullOrWhiteSpace(categoryId))
+        string baseCategoryId = GetEffectiveOnlineCategoryId(repository);
+        string categoryId = GetOnlineRequestCategoryId(repository);
+        if (!IsGameBananaSource(source) || string.IsNullOrWhiteSpace(baseCategoryId))
         {
             SetOnlineStatus("当前仓库还没有可用的在线来源配置。", "The current repository does not have a usable online source configuration yet.");
             RefreshOnlinePaneV2();
             return;
         }
 
-        string configKey = $"{repository.Id}|{source}|{categoryId}|page={_onlineCurrentPage}";
+        string configKey = $"{repository.Id}|{source}|{categoryId}|character={_onlineCharacterFilter}|page={_onlineCurrentPage}";
         if (!forceReload && string.Equals(configKey, _lastLoadedOnlineConfigKey, StringComparison.Ordinal) && _onlineMods.Count > 0)
         {
             RefreshOnlinePaneV2();
@@ -1632,7 +1938,24 @@ public sealed partial class MainWindow : Window
 
         try
         {
-            OnlineCategoryPageResult pageResult = await FetchGameBananaCategoryPageAsync(categoryId, _onlineCurrentPage);
+            bool needsCharacterFallback = !string.IsNullOrWhiteSpace(_onlineCharacterFilter)
+                && string.Equals(categoryId, baseCategoryId, StringComparison.OrdinalIgnoreCase);
+            string cacheCategoryKey = needsCharacterFallback
+                ? $"{baseCategoryId}-character-{_onlineCharacterFilter}"
+                : categoryId;
+            OnlineCategoryPageResult? cachedPage = forceReload
+                ? null
+                : await TryReadOnlineCategoryPageCacheAsync(cacheCategoryKey, _onlineCurrentPage);
+            bool loadedFromCache = cachedPage is not null;
+            OnlineCategoryPageResult pageResult = cachedPage
+                ?? (needsCharacterFallback
+                    ? await FetchGameBananaCharacterFallbackPageAsync(baseCategoryId, _onlineCharacterFilter, _onlineCurrentPage)
+                    : await FetchGameBananaCategoryPageAsync(categoryId, _onlineCurrentPage));
+            if (!loadedFromCache)
+            {
+                await WriteOnlineCategoryPageCacheAsync(cacheCategoryKey, pageResult);
+            }
+
             _onlineMods.Clear();
             _onlineMods.AddRange(pageResult.Mods);
             _onlineKnownCharacters.Clear();
@@ -1642,6 +1965,7 @@ public sealed partial class MainWindow : Window
             {
                 _onlineKnownCharacters.Add(character);
             }
+
             PopulateOnlineCharacterOptions();
             _onlineTotalCount = pageResult.TotalCount;
             _onlineTotalPages = Math.Max(1, pageResult.TotalPages);
@@ -1655,9 +1979,16 @@ public sealed partial class MainWindow : Window
 
             _lastLoadedOnlineConfigKey = configKey;
 
+            EndfieldCharacterInfo? selectedCharacter = FindEndfieldCharacter(_onlineCharacterFilter);
+            string roleLabelZh = selectedCharacter?.ChineseName ?? "全部角色";
+            string roleLabelEn = selectedCharacter?.EnglishName ?? "all characters";
             SetOnlineStatus(
-                $"已载入分类第 {_onlineCurrentPage} 页，共 {_onlineTotalCount} 个皮肤 Mod。每页显示 20 个，可继续往后翻页。",
-                $"Loaded category page {_onlineCurrentPage}. There are {_onlineTotalCount} skin mods in total, with 20 items per page.");
+                loadedFromCache
+                    ? $"本地缓存 · {roleLabelZh} · 第 {_onlineCurrentPage} 页 · {_onlineTotalCount} 个 Mod"
+                    : $"已更新 · {roleLabelZh} · 第 {_onlineCurrentPage} 页 · {_onlineTotalCount} 个 Mod",
+                loadedFromCache
+                    ? $"Local cache · {roleLabelEn} · Page {_onlineCurrentPage} · {_onlineTotalCount} mods"
+                    : $"Updated · {roleLabelEn} · Page {_onlineCurrentPage} · {_onlineTotalCount} mods");
             ShowAppNotification("在线 Mod 列表已更新。", "The online mod list has been refreshed.");
         }
         catch (Exception ex)
@@ -1710,9 +2041,54 @@ public sealed partial class MainWindow : Window
             .ToList();
     }
 
-    private async Task<OnlineCategoryPageResult> FetchGameBananaCategoryPageAsync(string categoryId, int page)
+    private async Task<OnlineCategoryPageResult> FetchGameBananaCharacterFallbackPageAsync(string categoryId, string characterName, int page)
     {
-        string requestUrl = $"https://gamebanana.com/apiv11/Mod/Index?_aFilters%5BGeneric_Category%5D={Uri.EscapeDataString(categoryId)}&_nPerpage={OnlineDisplayPageSize}&_nPage={page}";
+        const int scanPageSize = 50;
+        List<OnlineModCard> matches = [];
+        int sourcePage = 1;
+        int sourceTotalPages = 1;
+
+        do
+        {
+            OnlineCategoryPageResult sourceResult = await FetchGameBananaCategoryPageAsync(
+                categoryId,
+                sourcePage,
+                scanPageSize,
+                enrich: false);
+            sourceTotalPages = sourceResult.TotalPages;
+            matches.AddRange(sourceResult.Mods.Where(mod =>
+                string.Equals(mod.CharacterName, characterName, StringComparison.OrdinalIgnoreCase)));
+            sourcePage++;
+        }
+        while (sourcePage <= sourceTotalPages && sourcePage <= OnlineRawPageLimit);
+
+        List<OnlineModCard> pageMods = matches
+            .GroupBy(mod => mod.ItemId)
+            .Select(group => group.First())
+            .Skip((page - 1) * OnlineDisplayPageSize)
+            .Take(OnlineDisplayPageSize)
+            .ToList();
+
+        if (pageMods.Count > 0)
+        {
+            OnlineModCard?[] enriched = await Task.WhenAll(pageMods.Select(mod => FetchGameBananaModCardAsyncV2(mod.ItemId)));
+            for (int index = 0; index < pageMods.Count && index < enriched.Length; index++)
+            {
+                pageMods[index] = MergeOnlineModCard(pageMods[index], enriched[index]);
+            }
+        }
+
+        return new OnlineCategoryPageResult(pageMods, matches.Select(mod => mod.ItemId).Distinct().Count(), page, OnlineDisplayPageSize);
+    }
+
+    private async Task<OnlineCategoryPageResult> FetchGameBananaCategoryPageAsync(
+        string categoryId,
+        int page,
+        int pageSize = OnlineDisplayPageSize,
+        bool enrich = true)
+    {
+        pageSize = Math.Clamp(pageSize, 1, 50);
+        string requestUrl = $"https://gamebanana.com/apiv11/Mod/Index?_aFilters%5BGeneric_Category%5D={Uri.EscapeDataString(categoryId)}&_nPerpage={pageSize}&_nPage={page}";
         using HttpResponseMessage response = await _httpClient.GetAsync(requestUrl);
         response.EnsureSuccessStatusCode();
 
@@ -1723,16 +2099,16 @@ public sealed partial class MainWindow : Window
         List<OnlineModCard> mods = [];
         if (root.ValueKind != JsonValueKind.Object)
         {
-            return new OnlineCategoryPageResult(mods, 0, page, OnlineDisplayPageSize);
+            return new OnlineCategoryPageResult(mods, 0, page, pageSize);
         }
 
         JsonElement metadata = root.TryGetProperty("_aMetadata", out JsonElement metadataElement) ? metadataElement : default;
         int totalCount = TryGetInt32Property(metadata, "_nRecordCount");
-        int pageSize = Math.Max(1, TryGetInt32Property(metadata, "_nPerpage"));
+        int responsePageSize = Math.Max(1, TryGetInt32Property(metadata, "_nPerpage"));
 
         if (!root.TryGetProperty("_aRecords", out JsonElement recordsElement) || recordsElement.ValueKind != JsonValueKind.Array)
         {
-            return new OnlineCategoryPageResult(mods, totalCount, page, pageSize);
+            return new OnlineCategoryPageResult(mods, totalCount, page, responsePageSize);
         }
 
         foreach (JsonElement record in recordsElement.EnumerateArray())
@@ -1744,19 +2120,20 @@ public sealed partial class MainWindow : Window
             }
         }
 
-        if (mods.Count > 0)
+        if (enrich && mods.Count > 0)
         {
             Task<OnlineModCard?>[] enrichTasks = mods
                 .Select(mod => mod.Downloads > 0 ? Task.FromResult<OnlineModCard?>(mod) : FetchGameBananaModCardAsyncV2(mod.ItemId))
                 .ToArray();
 
             OnlineModCard?[] enrichedMods = await Task.WhenAll(enrichTasks);
-            mods = enrichedMods
-                .Select((enriched, index) => MergeOnlineModCard(mods[index], enriched))
-                .ToList();
+            for (int index = 0; index < mods.Count && index < enrichedMods.Length; index++)
+            {
+                mods[index] = MergeOnlineModCard(mods[index], enrichedMods[index]);
+            }
         }
 
-        return new OnlineCategoryPageResult(mods, totalCount, page, pageSize);
+        return new OnlineCategoryPageResult(mods, totalCount, page, responsePageSize);
     }
 
     private static OnlineModCard MergeOnlineModCard(OnlineModCard baseCard, OnlineModCard? enrichedCard)
@@ -1784,6 +2161,12 @@ public sealed partial class MainWindow : Window
         if (!string.IsNullOrWhiteSpace(enrichedCard.CharacterName))
         {
             baseCard.CharacterName = enrichedCard.CharacterName;
+            baseCard.IsCharacterNameInferred = enrichedCard.IsCharacterNameInferred;
+        }
+
+        if (!string.IsNullOrWhiteSpace(enrichedCard.CategoryId))
+        {
+            baseCard.CategoryId = enrichedCard.CategoryId;
         }
 
         if (!string.IsNullOrWhiteSpace(enrichedCard.RootCategoryName))
@@ -1822,9 +2205,12 @@ public sealed partial class MainWindow : Window
         }
 
         string characterName = string.Empty;
+        string categoryId = string.Empty;
         if (record.TryGetProperty("_aSubCategory", out JsonElement subCategoryElement))
         {
             characterName = TryGetStringProperty(subCategoryElement, "_sName") ?? string.Empty;
+            string? categoryUrl = TryGetStringProperty(subCategoryElement, "_sProfileUrl");
+            categoryId = ExtractTrailingNumericId(categoryUrl);
         }
 
         string? previewUrl = null;
@@ -1861,13 +2247,18 @@ public sealed partial class MainWindow : Window
         int likes = TryGetInt32Property(record, "_nLikeCount");
         int views = TryGetInt32Property(record, "_nViewCount");
         int downloads = TryGetInt32Property(record, "_nDownloadCount");
-        DateTimeOffset updatedAt = updatedEpoch > 0 ? DateTimeOffset.FromUnixTimeSeconds(updatedEpoch).ToLocalTime() : DateTimeOffset.Now;
+        DateTimeOffset updatedAt = FromGameBananaUnixTime(updatedEpoch);
 
+        string resolvedCharacterName = ResolveOnlineCharacterName(characterName, title);
+        bool isCharacterNameInferred = IsGenericOnlineCharacterName(characterName)
+            && !string.Equals(resolvedCharacterName, characterName, StringComparison.OrdinalIgnoreCase);
         return new OnlineModCard
         {
             ItemId = itemId,
             Title = title,
-            CharacterName = string.IsNullOrWhiteSpace(characterName) ? L("未分类角色", "Uncategorized") : characterName,
+            CharacterName = resolvedCharacterName,
+            CategoryId = categoryId,
+            IsCharacterNameInferred = isCharacterNameInferred,
             RootCategoryName = string.IsNullOrWhiteSpace(rootCategoryName) ? "Skins" : rootCategoryName,
             Author = string.IsNullOrWhiteSpace(author) ? L("未知作者", "Unknown author") : author,
             Likes = likes,
@@ -1917,6 +2308,11 @@ public sealed partial class MainWindow : Window
                 continue;
             }
 
+            if (item[0].ValueKind != JsonValueKind.String || item[1].ValueKind != JsonValueKind.Number)
+            {
+                continue;
+            }
+
             string? itemType = item[0].GetString();
             if (!string.Equals(itemType, "Mod", StringComparison.OrdinalIgnoreCase))
             {
@@ -1941,62 +2337,12 @@ public sealed partial class MainWindow : Window
         return new OnlineModPageResult(modIds, totalCount, page, OnlineRawFetchPageSize);
     }
 
-    private async Task<OnlineModCard?> FetchGameBananaModCardAsync(int itemId)
-    {
-        string fields = string.Join(",",
-            "name",
-            "Category().name",
-            "RootCategory().name",
-            "likes",
-            "views",
-            "downloads",
-            "Owner().name",
-            "mdate",
-            "Preview().sSubFeedImageUrl()",
-            "Url().sProfileUrl()",
-            "Url().sDownloadUrl()",
-            "Updates().bSubmissionHasUpdates()");
-        string requestUrl = $"https://api.gamebanana.com/Core/Item/Data?itemtype=Mod&itemid={itemId}&fields={Uri.EscapeDataString(fields)}&format=json_min";
-        using HttpResponseMessage response = await _httpClient.GetAsync(requestUrl);
-        response.EnsureSuccessStatusCode();
-
-        string json = await response.Content.ReadAsStringAsync();
-        using JsonDocument document = JsonDocument.Parse(json);
-        JsonElement root = document.RootElement;
-
-        JsonElement dataElement = root;
-        if (root.ValueKind == JsonValueKind.Object && root.TryGetProperty("value", out JsonElement wrappedValue))
-        {
-            dataElement = wrappedValue;
-        }
-
-        string title = TryGetGameBananaString(dataElement, 0, "name") ?? $"Mod {itemId}";
-        string author = TryGetGameBananaString(dataElement, 1, "Owner().name") ?? L("未知作者", "Unknown author");
-        long updatedEpoch = TryGetGameBananaInt64(dataElement, 3, "mdate");
-        string? previewUrl = TryGetGameBananaString(dataElement, 4, "Preview().sSubFeedImageUrl()");
-        string profileUrl = TryGetGameBananaString(dataElement, 5, "Url().sProfileUrl()") ?? $"https://gamebanana.com/mods/{itemId}";
-        string? downloadUrl = TryGetGameBananaString(dataElement, 6, "Url().sDownloadUrl()");
-        bool hasUpdates = TryGetGameBananaBool(dataElement, 7, "Updates().bSubmissionHasUpdates()");
-        DateTimeOffset updatedAt = updatedEpoch > 0 ? DateTimeOffset.FromUnixTimeSeconds(updatedEpoch).ToLocalTime() : DateTimeOffset.Now;
-
-        return new OnlineModCard
-        {
-            ItemId = itemId,
-            Title = title,
-            Author = author,
-            PreviewUrl = previewUrl,
-            ProfileUrl = profileUrl,
-            DownloadUrl = downloadUrl,
-            HasUpdates = hasUpdates,
-            UpdatedAt = updatedAt
-        };
-    }
-
     private async Task<OnlineModCard?> FetchGameBananaModCardAsyncV2(int itemId)
     {
         string fields = string.Join(",",
             "name",
             "Category().name",
+            "catid",
             "RootCategory().name",
             "likes",
             "views",
@@ -2024,6 +2370,7 @@ public sealed partial class MainWindow : Window
 
         string title = TryGetStringProperty(dataElement, "name") ?? $"Mod {itemId}";
         string characterName = TryGetStringProperty(dataElement, "Category().name") ?? L("未分类角色", "Uncategorized");
+        int categoryId = TryGetInt32Property(dataElement, "catid");
         string rootCategoryName = TryGetStringProperty(dataElement, "RootCategory().name") ?? string.Empty;
         int likes = TryGetInt32Property(dataElement, "likes");
         int views = TryGetInt32Property(dataElement, "views");
@@ -2047,13 +2394,18 @@ public sealed partial class MainWindow : Window
             }
         }
 
-        DateTimeOffset updatedAt = updatedEpoch > 0 ? DateTimeOffset.FromUnixTimeSeconds(updatedEpoch).ToLocalTime() : DateTimeOffset.Now;
+        DateTimeOffset updatedAt = FromGameBananaUnixTime(updatedEpoch);
 
+        string resolvedCharacterName = ResolveOnlineCharacterName(characterName, title);
+        bool isCharacterNameInferred = IsGenericOnlineCharacterName(characterName)
+            && !string.Equals(resolvedCharacterName, characterName, StringComparison.OrdinalIgnoreCase);
         return new OnlineModCard
         {
             ItemId = itemId,
             Title = title,
-            CharacterName = characterName,
+            CharacterName = resolvedCharacterName,
+            CategoryId = categoryId > 0 ? categoryId.ToString(CultureInfo.InvariantCulture) : string.Empty,
+            IsCharacterNameInferred = isCharacterNameInferred,
             RootCategoryName = rootCategoryName,
             Author = author,
             Likes = likes,
@@ -2069,6 +2421,87 @@ public sealed partial class MainWindow : Window
         };
     }
 
+    private string ResolveOnlineCharacterName(string? categoryName, string title)
+    {
+        string normalizedCategory = categoryName?.Trim() ?? string.Empty;
+        EndfieldCharacterInfo? categoryCharacter = FindEndfieldCharacter(normalizedCategory);
+        if (categoryCharacter is not null)
+        {
+            return categoryCharacter.EnglishName;
+        }
+
+        if (!string.IsNullOrWhiteSpace(normalizedCategory)
+            && !GenericOnlineCharacterNames.Contains(normalizedCategory))
+        {
+            return normalizedCategory;
+        }
+
+        EndfieldCharacterInfo? titleCharacter = EndfieldCharacters.FirstOrDefault(character =>
+            character.AllNames.Any(alias => ContainsCharacterAlias(title, alias)));
+        if (titleCharacter is not null)
+        {
+            return titleCharacter.EnglishName;
+        }
+
+        return "Uncategorized";
+    }
+
+    private static EndfieldCharacterInfo? FindEndfieldCharacter(string? name)
+    {
+        if (string.IsNullOrWhiteSpace(name))
+        {
+            return null;
+        }
+
+        string normalized = NormalizeCharacterLookup(name);
+        return EndfieldCharacters.FirstOrDefault(character =>
+            character.AllNames.Any(alias => string.Equals(
+                NormalizeCharacterLookup(alias),
+                normalized,
+                StringComparison.OrdinalIgnoreCase)));
+    }
+
+    private static string NormalizeCharacterLookup(string value)
+    {
+        return Regex.Replace(value ?? string.Empty, @"[^\p{L}\p{N}]", string.Empty)
+            .ToLowerInvariant();
+    }
+
+    private static bool ContainsCharacterAlias(string? text, string alias)
+    {
+        if (string.IsNullOrWhiteSpace(text) || string.IsNullOrWhiteSpace(alias))
+        {
+            return false;
+        }
+
+        if (alias.Any(character => character > 127))
+        {
+            return text.Contains(alias, StringComparison.OrdinalIgnoreCase);
+        }
+
+        string pattern = $@"(?<![\p{{L}}\p{{N}}]){Regex.Escape(alias).Replace("\\ ", @"\s*")}(?![\p{{L}}\p{{N}}])";
+        return Regex.IsMatch(text, pattern, RegexOptions.IgnoreCase | RegexOptions.CultureInvariant);
+    }
+
+    private bool MatchesOnlineSearch(OnlineModCard mod, string searchText)
+    {
+        if (mod.Title.Contains(searchText, StringComparison.OrdinalIgnoreCase)
+            || mod.CharacterName.Contains(searchText, StringComparison.OrdinalIgnoreCase))
+        {
+            return true;
+        }
+
+        EndfieldCharacterInfo? character = FindEndfieldCharacter(mod.CharacterName);
+        return character is not null
+            && character.AllNames.Any(name => name.Contains(searchText, StringComparison.OrdinalIgnoreCase));
+    }
+
+    private static bool IsGenericOnlineCharacterName(string? categoryName)
+    {
+        return string.IsNullOrWhiteSpace(categoryName)
+            || GenericOnlineCharacterNames.Contains(categoryName.Trim());
+    }
+
     private static double CalculateOnlineHotness(int likes, int views, int downloads)
     {
         double downloadPart = Math.Log10(downloads + 1) * 0.55d;
@@ -2077,6 +2510,23 @@ public sealed partial class MainWindow : Window
         double weighted = downloadPart + likePart + viewPart;
         double normalized = Math.Min(10d, weighted * 2d);
         return Math.Round(normalized, 2, MidpointRounding.AwayFromZero);
+    }
+
+    private static DateTimeOffset FromGameBananaUnixTime(long value)
+    {
+        if (value <= 0)
+        {
+            return DateTimeOffset.Now;
+        }
+
+        try
+        {
+            return DateTimeOffset.FromUnixTimeSeconds(value).ToLocalTime();
+        }
+        catch (ArgumentOutOfRangeException)
+        {
+            return DateTimeOffset.Now;
+        }
     }
 
     private static int SumGameBananaFileDownloads(JsonElement filesElement)
@@ -2137,7 +2587,12 @@ public sealed partial class MainWindow : Window
 
         if (element.TryGetProperty(propertyName, out JsonElement propertyElement))
         {
-            return propertyElement.GetString();
+            return propertyElement.ValueKind switch
+            {
+                JsonValueKind.String => propertyElement.GetString(),
+                JsonValueKind.Number or JsonValueKind.True or JsonValueKind.False => propertyElement.ToString(),
+                _ => null
+            };
         }
 
         return null;
@@ -2219,43 +2674,15 @@ public sealed partial class MainWindow : Window
             && propertyElement.GetBoolean();
     }
 
-    private static string? TryGetGameBananaString(JsonElement element, int index, string propertyName)
+    private static string ExtractTrailingNumericId(string? url)
     {
-        if (element.ValueKind == JsonValueKind.Array && element.GetArrayLength() > index)
+        if (string.IsNullOrWhiteSpace(url))
         {
-            JsonElement item = element[index];
-            return item.ValueKind == JsonValueKind.String ? item.GetString() : item.ToString();
+            return string.Empty;
         }
 
-        return TryGetStringProperty(element, propertyName);
-    }
-
-    private static long TryGetGameBananaInt64(JsonElement element, int index, string propertyName)
-    {
-        if (element.ValueKind == JsonValueKind.Array && element.GetArrayLength() > index)
-        {
-            JsonElement item = element[index];
-            if (item.TryGetInt64(out long value))
-            {
-                return value;
-            }
-        }
-
-        return TryGetInt64Property(element, propertyName);
-    }
-
-    private static bool TryGetGameBananaBool(JsonElement element, int index, string propertyName)
-    {
-        if (element.ValueKind == JsonValueKind.Array && element.GetArrayLength() > index)
-        {
-            JsonElement item = element[index];
-            if (item.ValueKind is JsonValueKind.True or JsonValueKind.False)
-            {
-                return item.GetBoolean();
-            }
-        }
-
-        return TryGetBoolProperty(element, propertyName);
+        Match match = Regex.Match(url, @"(?<id>\d+)/?$", RegexOptions.CultureInvariant);
+        return match.Success ? match.Groups["id"].Value : string.Empty;
     }
 
     private async void OnOnlinePrevPageClicked(object sender, RoutedEventArgs e)
@@ -2286,15 +2713,176 @@ public sealed partial class MainWindow : Window
         RefreshOnlinePaneV2();
     }
 
-    private void OnOnlineCharacterSelectionChanged(object sender, SelectionChangedEventArgs e)
+    private async void OnOnlineCharacterSelectionChanged(object sender, SelectionChangedEventArgs e)
     {
         if (_isApplyingOnlineCharacterSelection)
         {
             return;
         }
 
-        _onlineCharacterFilter = (OnlineCharacterComboBox.SelectedItem as ComboBoxItem)?.Tag as string ?? string.Empty;
-        RefreshOnlinePaneV2();
+        string character = (OnlineCharacterComboBox.SelectedItem as ComboBoxItem)?.Tag as string ?? string.Empty;
+        await SelectOnlineCharacterAsync(character);
+    }
+
+    private async Task SelectOnlineCharacterAsync(string character)
+    {
+        character ??= string.Empty;
+        if (string.Equals(character, _onlineCharacterFilter, StringComparison.OrdinalIgnoreCase))
+        {
+            return;
+        }
+
+        int animationVersion = ++_onlineCharacterAnimationVersion;
+        await AnimateOnlineListExitAsync();
+        if (animationVersion != _onlineCharacterAnimationVersion)
+        {
+            return;
+        }
+
+        _onlineCharacterFilter = character;
+        _onlineCurrentPage = 1;
+        _onlineTotalCount = 0;
+        _onlineTotalPages = 1;
+        _lastLoadedOnlineConfigKey = null;
+        _activeOnlineDetailMod = null;
+        _isApplyingOnlineCharacterSelection = true;
+        try
+        {
+            OnlineCharacterComboBox.SelectedItem = OnlineCharacterComboBox.Items
+                .OfType<ComboBoxItem>()
+                .FirstOrDefault(item => string.Equals(item.Tag as string ?? string.Empty, character, StringComparison.OrdinalIgnoreCase));
+        }
+        finally
+        {
+            _isApplyingOnlineCharacterSelection = false;
+        }
+
+        _animateOnlineCardsOnNextRefresh = true;
+        await CloseOnlineDetailPaneAsync();
+        await LoadOnlineModsAsync(forceReload: false);
+    }
+
+    private async Task AnimateOnlineListExitAsync()
+    {
+        var visual = ElementCompositionPreview.GetElementVisual(OnlinePreviewPanel);
+        visual.StopAnimation("Opacity");
+        visual.StopAnimation("Offset");
+
+        if (_reduceMotion || OnlinePreviewPanel.Children.Count == 0)
+        {
+            visual.Opacity = 1f;
+            visual.Offset = Vector3.Zero;
+            return;
+        }
+
+        var compositor = visual.Compositor;
+        var easing = compositor.CreateCubicBezierEasingFunction(new Vector2(0.4f, 0f), new Vector2(1f, 1f));
+        var fade = compositor.CreateScalarKeyFrameAnimation();
+        fade.Duration = TimeSpan.FromMilliseconds(110);
+        fade.InsertKeyFrame(1f, 0f, easing);
+        var slide = compositor.CreateVector3KeyFrameAnimation();
+        slide.Duration = TimeSpan.FromMilliseconds(130);
+        slide.InsertKeyFrame(1f, new Vector3(-18f, 0f, 0f), easing);
+        visual.StartAnimation("Opacity", fade);
+        visual.StartAnimation("Offset", slide);
+        await Task.Delay(135);
+        visual.StopAnimation("Opacity");
+        visual.StopAnimation("Offset");
+        visual.Opacity = 1f;
+        visual.Offset = Vector3.Zero;
+    }
+
+    private void AnimateOnlineCardsEntrance()
+    {
+        if (!_animateOnlineCardsOnNextRefresh)
+        {
+            return;
+        }
+
+        _animateOnlineCardsOnNextRefresh = false;
+        int index = 0;
+        foreach (UIElement child in OnlinePreviewPanel.Children.Take(10))
+        {
+            var visual = ElementCompositionPreview.GetElementVisual(child);
+            visual.StopAnimation("Opacity");
+            visual.StopAnimation("Offset");
+            if (_reduceMotion)
+            {
+                visual.Opacity = 1f;
+                visual.Offset = Vector3.Zero;
+                continue;
+            }
+
+            var compositor = visual.Compositor;
+            var easing = compositor.CreateCubicBezierEasingFunction(new Vector2(0.16f, 1f), new Vector2(0.3f, 1f));
+            TimeSpan delay = TimeSpan.FromMilliseconds(Math.Min(index, 7) * 28);
+            visual.Opacity = 0f;
+            visual.Offset = new Vector3(28f, 0f, 0f);
+
+            var fade = compositor.CreateScalarKeyFrameAnimation();
+            fade.DelayTime = delay;
+            fade.Duration = TimeSpan.FromMilliseconds(180);
+            fade.InsertKeyFrame(1f, 1f, easing);
+            var slide = compositor.CreateVector3KeyFrameAnimation();
+            slide.DelayTime = delay;
+            slide.Duration = TimeSpan.FromMilliseconds(230);
+            slide.InsertKeyFrame(1f, Vector3.Zero, easing);
+            visual.StartAnimation("Opacity", fade);
+            visual.StartAnimation("Offset", slide);
+            index++;
+        }
+    }
+
+    private string GetOnlineCategoryPageCacheFile(string categoryId, int page)
+    {
+        string key = Convert.ToHexString(SHA256.HashData(Encoding.UTF8.GetBytes(categoryId))).ToLowerInvariant()[..16];
+        return Path.Combine(_onlinePageCachePath, $"{key}-page-{Math.Max(1, page)}.json");
+    }
+
+    private async Task<OnlineCategoryPageResult?> TryReadOnlineCategoryPageCacheAsync(string categoryId, int page)
+    {
+        try
+        {
+            string cacheFile = GetOnlineCategoryPageCacheFile(categoryId, page);
+            if (!File.Exists(cacheFile) || DateTime.UtcNow - File.GetLastWriteTimeUtc(cacheFile) > TimeSpan.FromHours(6))
+            {
+                return null;
+            }
+
+            string json = await File.ReadAllTextAsync(cacheFile);
+            OnlineCategoryPageCacheEntry? entry = JsonSerializer.Deserialize<OnlineCategoryPageCacheEntry>(json);
+            if (entry is null || entry.Mods.Count == 0)
+            {
+                return null;
+            }
+
+            return new OnlineCategoryPageResult(entry.Mods, entry.TotalCount, entry.Page, entry.PageSize);
+        }
+        catch
+        {
+            return null;
+        }
+    }
+
+    private async Task WriteOnlineCategoryPageCacheAsync(string categoryId, OnlineCategoryPageResult result)
+    {
+        try
+        {
+            Directory.CreateDirectory(_onlinePageCachePath);
+            var entry = new OnlineCategoryPageCacheEntry
+            {
+                CachedAtUtc = DateTimeOffset.UtcNow,
+                Mods = result.Mods,
+                TotalCount = result.TotalCount,
+                Page = result.Page,
+                PageSize = result.PageSize
+            };
+            string json = JsonSerializer.Serialize(entry);
+            await File.WriteAllTextAsync(GetOnlineCategoryPageCacheFile(categoryId, result.Page), json);
+        }
+        catch
+        {
+        }
     }
 
     private void OnOnlineSortSelectionChanged(object sender, SelectionChangedEventArgs e)
@@ -2308,17 +2896,29 @@ public sealed partial class MainWindow : Window
 
     private async Task ShowOnlineModDetailsAsync(OnlineModCard mod)
     {
+        _activeOnlineDetailMod = mod;
+        PrepareOnlineDetailLoadingState(mod);
+        await OpenOnlineDetailPaneAsync();
         SetBusyState(true);
         try
         {
-            _activeOnlineDetailMod = mod;
             OnlineModDetails details = await GetOnlineModDetailsAsync(mod);
             OnlineModDetails displayDetails = await TryTranslateOnlineModDetailsAsync(details);
+            if (_activeOnlineDetailMod?.ItemId != mod.ItemId)
+            {
+                return;
+            }
+
             PopulateOnlineDetailPane(mod, details, displayDetails);
-            OnlineDetailsSplitView.IsPaneOpen = true;
+            AnimateOnlineDetailContentRefresh();
         }
         catch (Exception ex)
         {
+            if (_activeOnlineDetailMod?.ItemId != mod.ItemId)
+            {
+                return;
+            }
+
             await ShowMessageAsync(
                 L("打开 Mod 详情失败：", "Failed to open mod details: ") + ex.Message,
                 L("详情加载失败", "Details load failed"));
@@ -2336,9 +2936,53 @@ public sealed partial class MainWindow : Window
             return cached;
         }
 
+        OnlineModDetails? diskCached = await TryReadOnlineModDetailsCacheAsync(mod.ItemId);
+        if (diskCached is not null)
+        {
+            _onlineModDetailsCache[mod.ItemId] = diskCached;
+            return diskCached;
+        }
+
         OnlineModDetails details = await FetchOnlineModDetailsAsync(mod);
         _onlineModDetailsCache[mod.ItemId] = details;
+        await WriteOnlineModDetailsCacheAsync(mod.ItemId, details);
         return details;
+    }
+
+    private string GetOnlineModDetailsCacheFile(int itemId)
+    {
+        return Path.Combine(_onlineDetailsCachePath, $"mod-{itemId}.json");
+    }
+
+    private async Task<OnlineModDetails?> TryReadOnlineModDetailsCacheAsync(int itemId)
+    {
+        try
+        {
+            string cacheFile = GetOnlineModDetailsCacheFile(itemId);
+            if (!File.Exists(cacheFile) || DateTime.UtcNow - File.GetLastWriteTimeUtc(cacheFile) > TimeSpan.FromDays(3))
+            {
+                return null;
+            }
+
+            string json = await File.ReadAllTextAsync(cacheFile);
+            return JsonSerializer.Deserialize<OnlineModDetails>(json);
+        }
+        catch
+        {
+            return null;
+        }
+    }
+
+    private async Task WriteOnlineModDetailsCacheAsync(int itemId, OnlineModDetails details)
+    {
+        try
+        {
+            Directory.CreateDirectory(_onlineDetailsCachePath);
+            await File.WriteAllTextAsync(GetOnlineModDetailsCacheFile(itemId), JsonSerializer.Serialize(details));
+        }
+        catch
+        {
+        }
     }
 
     private async Task<OnlineModDetails> FetchOnlineModDetailsAsync(OnlineModCard mod)
@@ -2502,7 +3146,7 @@ public sealed partial class MainWindow : Window
                 continue;
             }
 
-            if (TryParseShortcutBindingLine(line, out ShortcutBinding? binding))
+            if (TryParseShortcutBindingLine(line, out ShortcutBinding? binding) && binding is not null)
             {
                 string identity = NormalizeShortcut(binding.Shortcut) + "|" + binding.Action.Trim();
                 if (seen.Add(identity))
@@ -2748,6 +3392,76 @@ public sealed partial class MainWindow : Window
         }
     }
 
+    private void PrepareOnlineDetailLoadingState(OnlineModCard mod)
+    {
+        OnlineDetailPaneTitleTextBlock.Text = mod.Title;
+        string characterSource = mod.IsCharacterNameInferred ? L("（自动识别）", " (detected)") : string.Empty;
+        OnlineDetailPaneMetaTextBlock.Text = $"{L("角色", "Character")}: {mod.CharacterName}{characterSource}    {L("作者", "Author")}: {mod.Author}";
+        OnlineDetailPaneStatusTextBlock.Text = L("正在读取详情和预览图片...", "Loading details and preview images...");
+        OnlineDetailSummaryTextBlock.Text = L("正在准备 Mod 介绍。", "Preparing the mod summary.");
+        OnlineDetailDescriptionTextBlock.Text = string.Empty;
+        OnlineDetailRequirementBorder.Visibility = Visibility.Collapsed;
+        OnlineDetailTranslationNoteTextBlock.Visibility = Visibility.Collapsed;
+        OnlineDetailDownloadHintTextBlock.Text = L("详情加载完成后即可下载或打开原页面。", "Download and page actions will be ready when the details finish loading.");
+        OpenOnlineDetailPageButton.Content = L("打开原页面", "Open Original Page");
+        DownloadOnlineDetailButton.Content = L("加载中...", "Loading...");
+        OpenOnlineDetailPageButton.IsEnabled = !string.IsNullOrWhiteSpace(mod.ProfileUrl);
+        DownloadOnlineDetailButton.IsEnabled = false;
+        PopulateOnlineDetailImages([]);
+        OnlineDetailHeroPlaceholderTextBlock.Text = L("正在加载预览图片...", "Loading preview images...");
+    }
+
+    private async Task OpenOnlineDetailPaneAsync()
+    {
+        int animationVersion = ++_onlineDetailAnimationVersion;
+        bool wasOpen = OnlineDetailsSplitView.IsPaneOpen;
+        OnlineDetailsSplitView.IsPaneOpen = true;
+        await Task.Delay(1);
+        if (animationVersion != _onlineDetailAnimationVersion)
+        {
+            return;
+        }
+
+        var visual = ElementCompositionPreview.GetElementVisual(OnlineDetailPaneBorder);
+        visual.StopAnimation("Opacity");
+        visual.StopAnimation("Offset");
+        if (_reduceMotion)
+        {
+            visual.Opacity = 1f;
+            visual.Offset = Vector3.Zero;
+            return;
+        }
+
+        var compositor = visual.Compositor;
+        var easing = compositor.CreateCubicBezierEasingFunction(new Vector2(0.16f, 1f), new Vector2(0.3f, 1f));
+        visual.Opacity = wasOpen ? 0.72f : 0.12f;
+        visual.Offset = new Vector3(wasOpen ? 14f : 56f, 0f, 0f);
+        var fade = compositor.CreateScalarKeyFrameAnimation();
+        fade.Duration = TimeSpan.FromMilliseconds(wasOpen ? 150 : 230);
+        fade.InsertKeyFrame(1f, 1f, easing);
+        var slide = compositor.CreateVector3KeyFrameAnimation();
+        slide.Duration = TimeSpan.FromMilliseconds(wasOpen ? 180 : 270);
+        slide.InsertKeyFrame(1f, Vector3.Zero, easing);
+        visual.StartAnimation("Opacity", fade);
+        visual.StartAnimation("Offset", slide);
+    }
+
+    private void AnimateOnlineDetailContentRefresh()
+    {
+        if (_reduceMotion)
+        {
+            return;
+        }
+
+        var visual = ElementCompositionPreview.GetElementVisual(OnlineDetailPaneBorder);
+        var compositor = visual.Compositor;
+        var fade = compositor.CreateScalarKeyFrameAnimation();
+        fade.Duration = TimeSpan.FromMilliseconds(160);
+        fade.InsertKeyFrame(0f, 0.78f);
+        fade.InsertKeyFrame(1f, 1f);
+        visual.StartAnimation("Opacity", fade);
+    }
+
     private async Task<Uri?> GetCachedOnlineImageUriAsync(string imageUrl)
     {
         if (!Uri.TryCreate(imageUrl, UriKind.Absolute, out Uri? remoteUri)
@@ -2905,7 +3619,8 @@ public sealed partial class MainWindow : Window
     private void PopulateOnlineDetailPane(OnlineModCard mod, OnlineModDetails rawDetails, OnlineModDetails displayDetails)
     {
         OnlineDetailPaneTitleTextBlock.Text = mod.Title;
-        OnlineDetailPaneMetaTextBlock.Text = $"{L("角色", "Character")}: {mod.CharacterName}    {L("作者", "Author")}: {mod.Author}";
+        string characterSource = mod.IsCharacterNameInferred ? L("（自动识别）", " (detected)") : string.Empty;
+        OnlineDetailPaneMetaTextBlock.Text = $"{L("角色", "Character")}: {mod.CharacterName}{characterSource}    {L("作者", "Author")}: {mod.Author}";
 
         var statusParts = new List<string>
         {
@@ -3344,7 +4059,8 @@ public sealed partial class MainWindow : Window
         Border border = new()
         {
             Style = (Style)Application.Current.Resources["InsetBorderStyle"],
-            Padding = new Thickness(14)
+            Padding = new Thickness(0),
+            CornerRadius = new CornerRadius(12)
         };
         border.Tapped += async (_, args) =>
         {
@@ -3355,16 +4071,31 @@ public sealed partial class MainWindow : Window
 
             await ShowOnlineModDetailsAsync(mod);
         };
+        border.PointerEntered += (_, _) => AnimateOnlineModCardHover(border, true);
+        border.PointerExited += (_, _) => AnimateOnlineModCardHover(border, false);
 
-        Grid rootGrid = new() { ColumnSpacing = 14 };
-        rootGrid.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(120) });
+        Grid rootGrid = new() { ColumnSpacing = 12, Padding = new Thickness(0, 10, 10, 10) };
+        rootGrid.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(4) });
+        rootGrid.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(132) });
         rootGrid.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(1, GridUnitType.Star) });
+        rootGrid.ColumnDefinitions.Add(new ColumnDefinition { Width = GridLength.Auto });
+
+        var accentBar = new Border
+        {
+            Width = 4,
+            Margin = new Thickness(0, 2, 0, 2),
+            CornerRadius = new CornerRadius(2),
+            Background = GetAppThemeBrush("AppNavSelectedBorderBrush")
+        };
+        Grid.SetColumn(accentBar, 0);
+        rootGrid.Children.Add(accentBar);
 
         Border imageHost = new()
         {
             Style = (Style)Application.Current.Resources["InsetBorderStyle"],
-            MinHeight = 68,
-            Height = 68
+            MinHeight = 88,
+            Height = 88,
+            CornerRadius = new CornerRadius(10)
         };
 
         if (!string.IsNullOrWhiteSpace(mod.PreviewUrl))
@@ -3387,83 +4118,141 @@ public sealed partial class MainWindow : Window
             };
         }
 
-        Grid.SetColumn(imageHost, 0);
+        Grid.SetColumn(imageHost, 1);
         rootGrid.Children.Add(imageHost);
 
-        StackPanel contentPanel = new() { Spacing = 8 };
+        StackPanel contentPanel = new() { Spacing = 4, VerticalAlignment = VerticalAlignment.Center };
         contentPanel.Children.Add(new TextBlock
         {
             Text = mod.Title,
-            FontSize = 18,
+            FontSize = 16,
             FontWeight = Microsoft.UI.Text.FontWeights.SemiBold,
-            TextWrapping = TextWrapping.Wrap
+            TextTrimming = TextTrimming.CharacterEllipsis
         });
         contentPanel.Children.Add(new TextBlock
         {
-            Text = $"{L("角色", "Character")}: {mod.CharacterName}",
+            Text = $"{GetOnlineCharacterDisplayName(mod.CharacterName)}{(mod.IsCharacterNameInferred ? L("（自动识别）", " (detected)") : string.Empty)}  ·  {mod.Author}",
             Style = (Style)Application.Current.Resources["MutedTextStyle"],
-            TextWrapping = TextWrapping.Wrap
+            TextTrimming = TextTrimming.CharacterEllipsis
         });
+        var metricsPanel = new StackPanel { Orientation = Orientation.Horizontal, Spacing = 8 };
+        metricsPanel.Children.Add(CreateOnlineMetricBadge($"{L("热度", "Heat")} {mod.HotnessScore:F1}", true));
+        metricsPanel.Children.Add(CreateOnlineMetricBadge($"♥ {mod.Likes}", false));
+        metricsPanel.Children.Add(CreateOnlineMetricBadge($"↓ {mod.Downloads}", false));
+        metricsPanel.Children.Add(CreateOnlineMetricBadge($"◉ {mod.Views}", false));
+        contentPanel.Children.Add(metricsPanel);
         contentPanel.Children.Add(new TextBlock
         {
-            Text = $"{L("作者", "Author")}: {mod.Author}    {L("分类", "Category")}: {mod.RootCategoryName}",
+            Text = $"{L("更新", "Updated")} {mod.UpdatedAt:yyyy-MM-dd}  ·  ID {mod.ItemId}",
             Style = (Style)Application.Current.Resources["CaptionTextStyle"],
-            TextWrapping = TextWrapping.Wrap
-        });
-        contentPanel.Children.Add(new TextBlock
-        {
-            Text = $"{L("点赞", "Likes")}: {mod.Likes}    {L("查看", "Views")}: {mod.Views}    {L("下载量", "Downloads")}: {mod.Downloads}",
-            Style = (Style)Application.Current.Resources["MutedTextStyle"],
-            TextWrapping = TextWrapping.Wrap
-        });
-        contentPanel.Children.Add(new TextBlock
-        {
-            Text = $"{L("热度", "Hotness")}: {mod.HotnessScore:F2}    {L("更新时间", "Updated")}: {mod.UpdatedAt:yyyy-MM-dd HH:mm}",
-            Foreground = (Brush)Application.Current.Resources["AccentFillColorDefaultBrush"],
-            FontWeight = Microsoft.UI.Text.FontWeights.SemiBold,
-            TextWrapping = TextWrapping.Wrap
-        });
-        contentPanel.Children.Add(new TextBlock
-        {
-            Text = $"ID: {mod.ItemId}",
-            Style = (Style)Application.Current.Resources["CaptionTextStyle"]
+            TextTrimming = TextTrimming.CharacterEllipsis
         });
 
-        StackPanel actionsPanel = new() { Orientation = Orientation.Horizontal, Spacing = 10 };
-        Button openPageButton = new()
+        StackPanel actionsPanel = new()
         {
-            Content = L("打开页面", "Open Page"),
-            Style = (Style)Application.Current.Resources["SecondaryButtonStyle"],
-            MinHeight = 36
+            Width = 124,
+            Spacing = 6,
+            VerticalAlignment = VerticalAlignment.Center
         };
-        openPageButton.Click += async (_, _) => await OpenExternalUrlAsync(mod.ProfileUrl, L("打开页面失败", "Open page failed"));
-        actionsPanel.Children.Add(openPageButton);
-
         Button detailsButton = new()
         {
-            Content = L("查看详情", "View Details"),
+            Content = L("查看详情", "Details"),
             Style = (Style)Application.Current.Resources["SecondaryButtonStyle"],
-            MinHeight = 36
+            MinHeight = 36,
+            HorizontalAlignment = HorizontalAlignment.Stretch
         };
         detailsButton.Click += async (_, _) => await ShowOnlineModDetailsAsync(mod);
         actionsPanel.Children.Add(detailsButton);
 
+        Grid quickActions = new()
+        {
+            ColumnSpacing = 6,
+            HorizontalAlignment = HorizontalAlignment.Stretch
+        };
+        quickActions.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(1, GridUnitType.Star) });
+        quickActions.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(1, GridUnitType.Star) });
+
+        Button openPageButton = new()
+        {
+            Content = new FontIcon { Glyph = "\uE774", FontSize = 15 },
+            Style = (Style)Application.Current.Resources["SecondaryButtonStyle"],
+            MinHeight = 34,
+            MinWidth = 0,
+            Padding = new Thickness(0),
+            CornerRadius = new CornerRadius(8),
+            HorizontalAlignment = HorizontalAlignment.Stretch,
+            HorizontalContentAlignment = HorizontalAlignment.Center
+        };
+        ToolTipService.SetToolTip(openPageButton, L("打开原页面", "Open original page"));
+        AutomationProperties.SetName(openPageButton, L("打开原页面", "Open original page"));
+        openPageButton.Click += async (_, _) => await OpenExternalUrlAsync(mod.ProfileUrl, L("打开页面失败", "Open page failed"));
+        quickActions.Children.Add(openPageButton);
+
         Button downloadButton = new()
         {
-            Content = L("下载并解压", "Download and Extract"),
+            Content = new FontIcon { Glyph = "\uE896", FontSize = 15 },
             Style = (Style)Application.Current.Resources["SecondaryButtonStyle"],
-            MinHeight = 36,
+            MinHeight = 34,
+            MinWidth = 0,
+            Padding = new Thickness(0),
+            CornerRadius = new CornerRadius(8),
+            HorizontalAlignment = HorizontalAlignment.Stretch,
+            HorizontalContentAlignment = HorizontalAlignment.Center,
             IsEnabled = !string.IsNullOrWhiteSpace(mod.DownloadUrl)
         };
+        Grid.SetColumn(downloadButton, 1);
+        ToolTipService.SetToolTip(downloadButton, L("下载并解压", "Download and extract"));
+        AutomationProperties.SetName(downloadButton, L("下载并解压", "Download and extract"));
         downloadButton.Click += async (_, _) => await DownloadAndExtractOnlineModAsync(mod);
-        actionsPanel.Children.Add(downloadButton);
+        quickActions.Children.Add(downloadButton);
+        actionsPanel.Children.Add(quickActions);
 
-        contentPanel.Children.Add(actionsPanel);
-        Grid.SetColumn(contentPanel, 1);
+        Grid.SetColumn(contentPanel, 2);
         rootGrid.Children.Add(contentPanel);
+
+        Grid.SetColumn(actionsPanel, 3);
+        rootGrid.Children.Add(actionsPanel);
 
         border.Child = rootGrid;
         return border;
+    }
+
+    private void AnimateOnlineModCardHover(Border card, bool isPointerOver)
+    {
+        card.Background = GetAppThemeBrush(isPointerOver ? "AppSecondarySelectedBrush" : "AppInsetBackgroundBrush");
+        if (_reduceMotion)
+        {
+            return;
+        }
+
+        var visual = ElementCompositionPreview.GetElementVisual(card);
+        visual.StopAnimation("Scale");
+        visual.CenterPoint = new Vector3((float)(card.ActualWidth / 2d), (float)(card.ActualHeight / 2d), 0f);
+        var compositor = visual.Compositor;
+        var easing = compositor.CreateCubicBezierEasingFunction(new Vector2(0.16f, 1f), new Vector2(0.3f, 1f));
+        var scale = compositor.CreateVector3KeyFrameAnimation();
+        scale.Duration = TimeSpan.FromMilliseconds(isPointerOver ? 150 : 120);
+        float value = isPointerOver ? 1.006f : 1f;
+        scale.InsertKeyFrame(1f, new Vector3(value, value, 1f), easing);
+        visual.StartAnimation("Scale", scale);
+    }
+
+    private Border CreateOnlineMetricBadge(string text, bool highlighted)
+    {
+        return new Border
+        {
+            Background = GetAppThemeBrush(highlighted ? "AppAccentSoftBrush" : "AppSecondaryDefaultBrush"),
+            BorderBrush = GetAppThemeBrush(highlighted ? "AppNavSelectedBorderBrush" : "AppCardBorderBrush"),
+            BorderThickness = new Thickness(1),
+            CornerRadius = new CornerRadius(999),
+            Padding = new Thickness(9, 4, 9, 4),
+            Child = new TextBlock
+            {
+                Text = text,
+                FontSize = 12,
+                FontWeight = highlighted ? Microsoft.UI.Text.FontWeights.SemiBold : Microsoft.UI.Text.FontWeights.Normal
+            }
+        };
     }
 
     private async Task OpenExternalUrlAsync(string? url, string failureTitle)
@@ -3881,10 +4670,9 @@ public sealed partial class MainWindow : Window
             SetOnlineStatus(
                 $"已下载并解压到：{extractFolder}",
                 $"Downloaded and extracted to: {extractFolder}");
-
-            await ShowMessageAsync(
-                L($"已完成下载并解压：\n{extractFolder}", $"Download and extraction completed:\n{extractFolder}"),
-                L("下载完成", "Download completed"));
+            ShowAppNotification(
+                $"下载完成：{effectiveMod.Title}",
+                $"Download completed: {effectiveMod.Title}");
         }
         catch (Exception ex)
         {
@@ -5705,11 +6493,45 @@ public sealed partial class MainWindow : Window
         await CheckTrackedModUpdatesAsync(showDialogs: true);
     }
 
-    private void OnCloseOnlineDetailsClicked(object sender, RoutedEventArgs e)
+    private async void OnCloseOnlineDetailsClicked(object sender, RoutedEventArgs e)
     {
+        await CloseOnlineDetailPaneAsync();
+    }
+
+    private async Task CloseOnlineDetailPaneAsync()
+    {
+        int animationVersion = ++_onlineDetailAnimationVersion;
+        var visual = ElementCompositionPreview.GetElementVisual(OnlineDetailPaneBorder);
+        visual.StopAnimation("Opacity");
+        visual.StopAnimation("Offset");
+
+        if (!_reduceMotion && OnlineDetailsSplitView.IsPaneOpen)
+        {
+            var compositor = visual.Compositor;
+            var easing = compositor.CreateCubicBezierEasingFunction(new Vector2(0.4f, 0f), new Vector2(1f, 1f));
+            var fade = compositor.CreateScalarKeyFrameAnimation();
+            fade.Duration = TimeSpan.FromMilliseconds(130);
+            fade.InsertKeyFrame(1f, 0f, easing);
+            var slide = compositor.CreateVector3KeyFrameAnimation();
+            slide.Duration = TimeSpan.FromMilliseconds(160);
+            slide.InsertKeyFrame(1f, new Vector3(42f, 0f, 0f), easing);
+            visual.StartAnimation("Opacity", fade);
+            visual.StartAnimation("Offset", slide);
+            await Task.Delay(165);
+        }
+
+        if (animationVersion != _onlineDetailAnimationVersion)
+        {
+            return;
+        }
+
         _activeOnlineDetailMod = null;
-        OnlineDetailsSplitView.IsPaneOpen = true;
+        OnlineDetailsSplitView.IsPaneOpen = false;
         ResetOnlineDetailPaneToPlaceholder();
+        visual.StopAnimation("Opacity");
+        visual.StopAnimation("Offset");
+        visual.Opacity = 1f;
+        visual.Offset = Vector3.Zero;
     }
 
     private async void OnOpenOnlineDetailPageClicked(object sender, RoutedEventArgs e)
@@ -8073,6 +8895,33 @@ public sealed class WorkspaceRepository
     public string Notes { get; set; } = string.Empty;
 }
 
+public sealed class EndfieldCharacterInfo
+{
+    public EndfieldCharacterInfo(
+        string englishName,
+        string chineseName,
+        string gameBananaCategoryId,
+        string avatarUrl,
+        params string[] aliases)
+    {
+        EnglishName = englishName;
+        ChineseName = chineseName;
+        GameBananaCategoryId = gameBananaCategoryId;
+        AvatarUrl = avatarUrl;
+        AllNames = [englishName, chineseName, .. aliases];
+    }
+
+    public string EnglishName { get; }
+
+    public string ChineseName { get; }
+
+    public string GameBananaCategoryId { get; }
+
+    public string AvatarUrl { get; }
+
+    public string[] AllNames { get; }
+}
+
 public sealed class OnlineModCard
 {
     public int ItemId { get; set; }
@@ -8080,6 +8929,10 @@ public sealed class OnlineModCard
     public string Title { get; set; } = string.Empty;
 
     public string CharacterName { get; set; } = string.Empty;
+
+    public string CategoryId { get; set; } = string.Empty;
+
+    public bool IsCharacterNameInferred { get; set; }
 
     public string RootCategoryName { get; set; } = string.Empty;
 
@@ -8201,6 +9054,19 @@ public sealed class OnlineCategoryPageResult
     public int PageSize { get; }
 
     public int TotalPages => Math.Max(1, (int)Math.Ceiling(TotalCount / (double)PageSize));
+}
+
+public sealed class OnlineCategoryPageCacheEntry
+{
+    public DateTimeOffset CachedAtUtc { get; set; }
+
+    public List<OnlineModCard> Mods { get; set; } = [];
+
+    public int TotalCount { get; set; }
+
+    public int Page { get; set; }
+
+    public int PageSize { get; set; } = 20;
 }
 
 public sealed class BetaShellConfig

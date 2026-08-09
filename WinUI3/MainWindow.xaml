@@ -5,7 +5,7 @@
     xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
     xmlns:local="using:ModFolderCopier.WinUI"
     xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
-    Title="Integrated Mod Manager v3.2.0"
+    Title="Integrated Mod Manager v3.2.1"
     SizeChanged="OnWindowSizeChanged"
     mc:Ignorable="d">
 
@@ -549,40 +549,49 @@
                         <RowDefinition Height="*" />
                     </Grid.RowDefinitions>
 
-                    <Border Grid.Row="0" Style="{StaticResource PageHeaderBorderStyle}">
-                        <StackPanel Spacing="10">
-                            <TextBlock x:Name="OnlineTitleTextBlock" FontSize="30" FontWeight="SemiBold" />
-                            <TextBlock x:Name="OnlineSubtitleTextBlock" Style="{StaticResource MutedTextStyle}" TextWrapping="Wrap" />
-                        </StackPanel>
+                    <Border Grid.Row="0" Style="{StaticResource PageHeaderBorderStyle}" Padding="20,14">
+                        <Grid ColumnSpacing="18">
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="Auto" />
+                                <ColumnDefinition Width="*" />
+                            </Grid.ColumnDefinitions>
+                            <TextBlock x:Name="OnlineTitleTextBlock" FontSize="26" FontWeight="SemiBold" VerticalAlignment="Center" />
+                            <TextBlock
+                                x:Name="OnlineSubtitleTextBlock"
+                                Grid.Column="1"
+                                Style="{StaticResource MutedTextStyle}"
+                                TextTrimming="CharacterEllipsis"
+                                VerticalAlignment="Center" />
+                        </Grid>
                     </Border>
 
                     <SplitView
                         Grid.Row="1"
                         x:Name="OnlineDetailsSplitView"
-                        Margin="0,16,0,0"
+                        Margin="0,10,0,0"
                         DisplayMode="Inline"
-                        IsPaneOpen="True"
-                        OpenPaneLength="540"
+                        IsPaneOpen="False"
+                        OpenPaneLength="600"
                         CompactPaneLength="0"
                         PanePlacement="Right">
                         <SplitView.Content>
-                            <Border Style="{StaticResource CardBorderStyle}">
-                                <Grid RowSpacing="12">
+                            <Border Style="{StaticResource CardBorderStyle}" Padding="16">
+                                <Grid RowSpacing="10">
                                     <Grid.RowDefinitions>
-                                        <RowDefinition Height="Auto" />
-                                        <RowDefinition Height="Auto" />
-                                        <RowDefinition Height="Auto" />
                                         <RowDefinition Height="Auto" />
                                         <RowDefinition Height="Auto" />
                                         <RowDefinition Height="*" />
                                     </Grid.RowDefinitions>
 
-                                    <Grid ColumnSpacing="12">
+                                    <Grid ColumnSpacing="16">
                                         <Grid.ColumnDefinitions>
                                             <ColumnDefinition Width="*" />
                                             <ColumnDefinition Width="Auto" />
                                         </Grid.ColumnDefinitions>
-                                        <TextBlock x:Name="OnlinePreviewTitleTextBlock" Style="{StaticResource SectionTitleTextStyle}" VerticalAlignment="Center" />
+                                        <StackPanel Spacing="3">
+                                            <TextBlock x:Name="OnlinePreviewTitleTextBlock" Style="{StaticResource SectionTitleTextStyle}" />
+                                            <TextBlock x:Name="OnlinePreviewHintTextBlock" Style="{StaticResource MutedTextStyle}" TextTrimming="CharacterEllipsis" />
+                                        </StackPanel>
                                         <Button
                                             x:Name="RefreshOnlineButton"
                                             Grid.Column="1"
@@ -591,86 +600,161 @@
                                             HorizontalAlignment="Right"
                                             Style="{StaticResource SecondaryButtonStyle}" />
                                     </Grid>
-                                    <TextBlock Grid.Row="1" x:Name="OnlinePreviewHintTextBlock" Style="{StaticResource MutedTextStyle}" TextWrapping="Wrap" />
-                                    <TextBlock Grid.Row="2" x:Name="OnlineStatusTextBlock" Style="{StaticResource CaptionTextStyle}" TextWrapping="Wrap" />
-                                    <StackPanel Grid.Row="3" x:Name="OnlineDownloadProgressPanel" Spacing="6" Visibility="Collapsed">
-                                        <TextBlock x:Name="OnlineDownloadProgressTextBlock" Style="{StaticResource CaptionTextStyle}" TextWrapping="Wrap" />
-                                        <ProgressBar x:Name="OnlineDownloadProgressBar" Minimum="0" Maximum="100" Height="8" />
-                                    </StackPanel>
-                                    <Grid Grid.Row="4" ColumnSpacing="8">
+                                    <Grid Grid.Row="1" ColumnSpacing="12">
                                         <Grid.ColumnDefinitions>
                                             <ColumnDefinition Width="*" />
-                                            <ColumnDefinition Width="148" />
-                                            <ColumnDefinition Width="148" />
+                                            <ColumnDefinition Width="Auto" />
                                         </Grid.ColumnDefinitions>
-                                        <TextBox
-                                            x:Name="OnlineSearchTextBox"
-                                            Grid.Column="0"
-                                            MinHeight="40"
-                                            Padding="14,8"
-                                            PlaceholderText="鎼滅储瑙掕壊鍚嶆垨 Mod 鍚嶇О"
-                                            TextChanged="OnOnlineSearchTextChanged" />
-                                        <ComboBox
-                                            x:Name="OnlineCharacterComboBox"
-                                            Grid.Column="1"
-                                            MinHeight="40"
-                                            HorizontalAlignment="Stretch"
-                                            SelectionChanged="OnOnlineCharacterSelectionChanged" />
-                                        <ComboBox
-                                            x:Name="OnlineSortComboBox"
-                                            Grid.Column="2"
-                                            MinHeight="40"
-                                            HorizontalAlignment="Stretch"
-                                            SelectionChanged="OnOnlineSortSelectionChanged" />
-                                    </Grid>
-                                    <Grid Grid.Row="5" RowSpacing="8">
-                                        <Grid.RowDefinitions>
-                                            <RowDefinition Height="Auto" />
-                                            <RowDefinition Height="*" />
-                                        </Grid.RowDefinitions>
-                                        <Grid ColumnSpacing="8">
-                                            <Grid.ColumnDefinitions>
-                                                <ColumnDefinition Width="Auto" />
-                                                <ColumnDefinition Width="*" />
-                                                <ColumnDefinition Width="Auto" />
-                                            </Grid.ColumnDefinitions>
-                                            <Button
-                                                x:Name="OnlinePrevPageButton"
-                                                Click="OnOnlinePrevPageClicked"
-                                                MinHeight="36"
-                                                Style="{StaticResource SecondaryButtonStyle}" />
-                                            <TextBlock
-                                                x:Name="OnlinePaginationTextBlock"
-                                                Grid.Column="1"
-                                                HorizontalAlignment="Center"
-                                                VerticalAlignment="Center"
-                                                Style="{StaticResource CaptionTextStyle}" />
-                                            <Button
-                                                x:Name="OnlineNextPageButton"
-                                                Grid.Column="2"
-                                                Click="OnOnlineNextPageClicked"
-                                                MinHeight="36"
-                                                Style="{StaticResource SecondaryButtonStyle}" />
-                                        </Grid>
-                                        <ScrollViewer Grid.Row="1" VerticalScrollBarVisibility="Auto">
-                                            <StackPanel x:Name="OnlinePreviewPanel" Spacing="8" />
-                                        </ScrollViewer>
                                         <Border
-                                            x:Name="OnlineLoadingOverlay"
-                                            Grid.Row="1"
-                                            Background="{ThemeResource AppCardBackgroundBrush}"
-                                            CornerRadius="12"
-                                            Visibility="Collapsed">
-                                            <StackPanel HorizontalAlignment="Center" VerticalAlignment="Center" Spacing="12">
-                                                <ProgressRing Width="36" Height="36" IsActive="True" />
-                                                <TextBlock x:Name="OnlineLoadingTextBlock" Style="{StaticResource MutedTextStyle}" TextAlignment="Center" TextWrapping="Wrap" />
-                                                <StackPanel Width="260" Spacing="8" Opacity="0.55">
-                                                    <Border Height="10" CornerRadius="5" Background="{ThemeResource AppAccentSoftBrush}" />
-                                                    <Border Height="10" Width="210" HorizontalAlignment="Left" CornerRadius="5" Background="{ThemeResource AppAccentSoftBrush}" />
-                                                    <Border Height="10" Width="235" HorizontalAlignment="Left" CornerRadius="5" Background="{ThemeResource AppAccentSoftBrush}" />
-                                                </StackPanel>
-                                            </StackPanel>
+                                            HorizontalAlignment="Left"
+                                            Background="{ThemeResource AppAccentSoftBrush}"
+                                            CornerRadius="8"
+                                            Padding="10,5">
+                                            <TextBlock
+                                                x:Name="OnlineStatusTextBlock"
+                                                MaxLines="1"
+                                                Style="{StaticResource CaptionTextStyle}"
+                                                TextTrimming="CharacterEllipsis"
+                                                TextWrapping="NoWrap" />
                                         </Border>
+                                        <StackPanel Grid.Column="1" x:Name="OnlineDownloadProgressPanel" Width="280" Spacing="5" Visibility="Collapsed">
+                                            <TextBlock x:Name="OnlineDownloadProgressTextBlock" Style="{StaticResource CaptionTextStyle}" TextTrimming="CharacterEllipsis" />
+                                            <ProgressBar x:Name="OnlineDownloadProgressBar" Minimum="0" Maximum="100" Height="6" />
+                                        </StackPanel>
+                                    </Grid>
+
+                                    <Grid x:Name="OnlineWorkspaceGrid" Grid.Row="2" ColumnSpacing="12" RowSpacing="12">
+                                        <Grid.ColumnDefinitions>
+                                            <ColumnDefinition x:Name="OnlineCharacterRailColumn" Width="168" />
+                                            <ColumnDefinition x:Name="OnlineResultsColumn" Width="*" />
+                                        </Grid.ColumnDefinitions>
+                                        <Grid.RowDefinitions>
+                                            <RowDefinition x:Name="OnlineCharacterRailRow" Height="*" />
+                                            <RowDefinition x:Name="OnlineResultsRow" Height="0" />
+                                        </Grid.RowDefinitions>
+
+                                        <Border x:Name="OnlineCharacterRailHost" Grid.Column="0" Style="{StaticResource InsetBorderStyle}" Padding="8">
+                                            <Grid RowSpacing="8">
+                                                <Grid.RowDefinitions>
+                                                    <RowDefinition Height="Auto" />
+                                                    <RowDefinition Height="*" />
+                                                    <RowDefinition Height="Auto" />
+                                                </Grid.RowDefinitions>
+                                                <TextBlock
+                                                    x:Name="OnlineCharacterRailTitleTextBlock"
+                                                    FontSize="14"
+                                                    FontWeight="SemiBold"
+                                                    TextAlignment="Left"
+                                                    TextTrimming="CharacterEllipsis"
+                                                    TextWrapping="NoWrap" />
+                                                <ScrollViewer
+                                                    x:Name="OnlineCharacterRailScrollViewer"
+                                                    Grid.Row="1"
+                                                    HorizontalContentAlignment="Stretch"
+                                                    HorizontalScrollBarVisibility="Disabled"
+                                                    HorizontalScrollMode="Disabled"
+                                                    VerticalContentAlignment="Stretch"
+                                                    VerticalScrollBarVisibility="Auto"
+                                                    VerticalScrollMode="Enabled">
+                                                    <StackPanel
+                                                        x:Name="OnlineCharacterAvatarPanel"
+                                                        HorizontalAlignment="Stretch"
+                                                        Margin="0,0,12,0"
+                                                        Orientation="Vertical"
+                                                        Spacing="7" />
+                                                </ScrollViewer>
+                                                <TextBlock
+                                                    x:Name="OnlineCharacterRailHintTextBlock"
+                                                    Grid.Row="2"
+                                                    Style="{StaticResource CaptionTextStyle}"
+                                                    TextAlignment="Center"
+                                                    TextTrimming="CharacterEllipsis"
+                                                    Visibility="Collapsed" />
+                                            </Grid>
+                                        </Border>
+
+                                        <Grid x:Name="OnlineResultsHost" Grid.Column="1" RowSpacing="8">
+                                            <Grid.RowDefinitions>
+                                                <RowDefinition Height="Auto" />
+                                                <RowDefinition Height="Auto" />
+                                                <RowDefinition Height="*" />
+                                            </Grid.RowDefinitions>
+                                            <Grid ColumnSpacing="8">
+                                                <Grid.ColumnDefinitions>
+                                                    <ColumnDefinition Width="*" />
+                                                    <ColumnDefinition Width="176" />
+                                                </Grid.ColumnDefinitions>
+                                                <TextBox
+                                                    x:Name="OnlineSearchTextBox"
+                                                    MinHeight="40"
+                                                    Padding="14,8"
+                                                    PlaceholderText="Search character or mod name"
+                                                    TextChanged="OnOnlineSearchTextChanged" />
+                                                <ComboBox
+                                                    x:Name="OnlineCharacterComboBox"
+                                                    Visibility="Collapsed"
+                                                    MinHeight="40"
+                                                    HorizontalAlignment="Stretch"
+                                                    SelectionChanged="OnOnlineCharacterSelectionChanged" />
+                                                <ComboBox
+                                                    x:Name="OnlineSortComboBox"
+                                                    Grid.Column="1"
+                                                    MinHeight="40"
+                                                    HorizontalAlignment="Stretch"
+                                                    SelectionChanged="OnOnlineSortSelectionChanged" />
+                                            </Grid>
+                                            <Grid Grid.Row="1" ColumnSpacing="8">
+                                                <Grid.ColumnDefinitions>
+                                                    <ColumnDefinition Width="Auto" />
+                                                    <ColumnDefinition Width="*" />
+                                                    <ColumnDefinition Width="Auto" />
+                                                </Grid.ColumnDefinitions>
+                                                <Button
+                                                    x:Name="OnlinePrevPageButton"
+                                                    Click="OnOnlinePrevPageClicked"
+                                                    MinHeight="34"
+                                                    Style="{StaticResource SecondaryButtonStyle}" />
+                                                <TextBlock
+                                                    x:Name="OnlinePaginationTextBlock"
+                                                    Grid.Column="1"
+                                                    HorizontalAlignment="Center"
+                                                    VerticalAlignment="Center"
+                                                    Style="{StaticResource CaptionTextStyle}" />
+                                                <Button
+                                                    x:Name="OnlineNextPageButton"
+                                                    Grid.Column="2"
+                                                    Click="OnOnlineNextPageClicked"
+                                                    MinHeight="34"
+                                                    Style="{StaticResource SecondaryButtonStyle}" />
+                                            </Grid>
+                                            <ScrollViewer
+                                                Grid.Row="2"
+                                                HorizontalScrollBarVisibility="Disabled"
+                                                HorizontalScrollMode="Disabled"
+                                                VerticalScrollBarVisibility="Auto"
+                                                VerticalScrollMode="Enabled">
+                                                <StackPanel
+                                                    x:Name="OnlinePreviewPanel"
+                                                    Margin="0,0,14,0"
+                                                    Spacing="7" />
+                                            </ScrollViewer>
+                                            <Border
+                                                x:Name="OnlineLoadingOverlay"
+                                                Grid.Row="2"
+                                                Background="{ThemeResource AppCardBackgroundBrush}"
+                                                CornerRadius="12"
+                                                Visibility="Collapsed">
+                                                <StackPanel HorizontalAlignment="Center" VerticalAlignment="Center" Spacing="12">
+                                                    <ProgressRing Width="36" Height="36" IsActive="True" />
+                                                    <TextBlock x:Name="OnlineLoadingTextBlock" Style="{StaticResource MutedTextStyle}" TextAlignment="Center" TextWrapping="Wrap" />
+                                                    <StackPanel Width="260" Spacing="8" Opacity="0.55">
+                                                        <Border Height="10" CornerRadius="5" Background="{ThemeResource AppAccentSoftBrush}" />
+                                                        <Border Height="10" Width="210" HorizontalAlignment="Left" CornerRadius="5" Background="{ThemeResource AppAccentSoftBrush}" />
+                                                        <Border Height="10" Width="235" HorizontalAlignment="Left" CornerRadius="5" Background="{ThemeResource AppAccentSoftBrush}" />
+                                                    </StackPanel>
+                                                </StackPanel>
+                                            </Border>
+                                        </Grid>
                                     </Grid>
                                 </Grid>
                             </Border>
@@ -710,7 +794,7 @@
                                     </Border>
 
                                     <ScrollViewer Grid.Row="1" VerticalScrollBarVisibility="Auto">
-                                        <StackPanel Spacing="12">
+                                        <StackPanel Margin="0,0,14,0" Spacing="12">
                                             <Border Style="{StaticResource InsetBorderStyle}" Height="320">
                                                 <Grid>
                                                     <Image x:Name="OnlineDetailHeroImage" Stretch="UniformToFill" Visibility="Collapsed" ImageOpened="OnOnlineDetailHeroImageOpened" Tapped="OnOnlineDetailHeroImageTapped" />
@@ -725,7 +809,7 @@
                                             </Border>
 
                                             <ScrollViewer x:Name="OnlineDetailThumbnailScrollViewer" HorizontalScrollBarVisibility="Auto" VerticalScrollBarVisibility="Disabled" Visibility="Collapsed">
-                                                <StackPanel x:Name="OnlineDetailThumbnailPanel" Orientation="Horizontal" Spacing="8" />
+                                                <StackPanel x:Name="OnlineDetailThumbnailPanel" Margin="0,0,0,12" Orientation="Horizontal" Spacing="8" />
                                             </ScrollViewer>
 
                                             <Border x:Name="OnlineDetailRequirementBorder" Style="{StaticResource InsetBorderStyle}" Visibility="Collapsed">
