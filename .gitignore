@@ -1,13 +1,21 @@
-﻿dist/
+# Build output
+dist/
+release/
 WinUI3/bin/
 WinUI3/obj/
-.vs/
-*.user
-*.suo
+*.pdb
+
+# Local user state
 config.ini
 beta-shell.json
-*.log
-*.pdb
+startup.log
+cache/
+WinUI3/cache/
+
+# Editor and OS files
+.vs/
+.vscode/
+*.user
+*.suo
 Thumbs.db
-.DS_Store
-release/
+Desktop.ini

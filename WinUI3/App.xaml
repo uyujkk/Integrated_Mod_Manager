@@ -10,38 +10,74 @@
             </ResourceDictionary.MergedDictionaries>
             <ResourceDictionary.ThemeDictionaries>
                 <ResourceDictionary x:Key="Light">
-                    <SolidColorBrush x:Key="AppPageBackgroundBrush" Color="#F3F6FB" />
-                    <SolidColorBrush x:Key="AppCardBackgroundBrush" Color="#FFFFFF" />
-                    <SolidColorBrush x:Key="AppCardBorderBrush" Color="#D7DFEA" />
-                    <SolidColorBrush x:Key="AppInsetBackgroundBrush" Color="#EEF3F9" />
-                    <SolidColorBrush x:Key="AppAccentSoftBrush" Color="#E7F0FF" />
-                    <SolidColorBrush x:Key="AppNavSelectedBrush" Color="#DCEBFF" />
+                    <SolidColorBrush x:Key="AppPageBackgroundBrush" Color="#D9F4F7FB" />
+                    <SolidColorBrush x:Key="AppCardBackgroundBrush" Color="#F5FFFFFF" />
+                    <SolidColorBrush x:Key="AppElevatedBackgroundBrush" Color="#FFFFFFFF" />
+                    <SolidColorBrush x:Key="AppCardBorderBrush" Color="#180F172A" />
+                    <SolidColorBrush x:Key="AppStrongBorderBrush" Color="#2A2563EB" />
+                    <SolidColorBrush x:Key="AppInsetBackgroundBrush" Color="#B8EDF2F8" />
+                    <SolidColorBrush x:Key="AppAccentBrush" Color="#2563EB" />
+                    <SolidColorBrush x:Key="AppAccentSoftBrush" Color="#DCEAFF" />
+                    <SolidColorBrush x:Key="AppNavSelectedBrush" Color="#E1ECFC" />
                     <SolidColorBrush x:Key="AppNavSelectedForegroundBrush" Color="#0F172A" />
                     <SolidColorBrush x:Key="AppNavDefaultForegroundBrush" Color="#1F2937" />
                     <SolidColorBrush x:Key="AppNavSelectedBorderBrush" Color="#2563EB" />
                     <SolidColorBrush x:Key="AppDisabledForegroundBrush" Color="#94A0AF" />
-                    <SolidColorBrush x:Key="AppSecondaryDefaultBrush" Color="#F7FAFD" />
+                    <SolidColorBrush x:Key="AppSecondaryDefaultBrush" Color="#BFF7F9FC" />
                     <SolidColorBrush x:Key="AppSecondaryDefaultForegroundBrush" Color="#1F2937" />
-                    <SolidColorBrush x:Key="AppSecondarySelectedBrush" Color="#E1EEFF" />
+                    <SolidColorBrush x:Key="AppSecondarySelectedBrush" Color="#DCEAFF" />
                     <SolidColorBrush x:Key="AppSecondarySelectedForegroundBrush" Color="#0F172A" />
-                    <SolidColorBrush x:Key="AppPreviewBackgroundBrush" Color="#EAF0F7" />
+                    <SolidColorBrush x:Key="AppPreviewBackgroundBrush" Color="#D7E5ECF5" />
+                    <SolidColorBrush x:Key="AppSuccessSoftBrush" Color="#E4F6EA" />
+                    <SolidColorBrush x:Key="AppSuccessBrush" Color="#18794E" />
+                    <SolidColorBrush x:Key="AppDangerSoftBrush" Color="#FDEBEC" />
+                    <SolidColorBrush x:Key="AppDangerBrush" Color="#C42B1C" />
+                    <SolidColorBrush x:Key="AccentButtonBackground" Color="#2563EB" />
+                    <SolidColorBrush x:Key="AccentButtonBackgroundPointerOver" Color="#1D4ED8" />
+                    <SolidColorBrush x:Key="AccentButtonBackgroundPressed" Color="#1E40AF" />
+                    <SolidColorBrush x:Key="AccentButtonBackgroundDisabled" Color="#1F2563EB" />
+                    <SolidColorBrush x:Key="AccentButtonForeground" Color="#FFFFFF" />
+                    <SolidColorBrush x:Key="AccentButtonForegroundPointerOver" Color="#FFFFFF" />
+                    <SolidColorBrush x:Key="AccentButtonForegroundPressed" Color="#FFFFFF" />
+                    <SolidColorBrush x:Key="AccentFillColorDefaultBrush" Color="#2563EB" />
+                    <SolidColorBrush x:Key="AccentFillColorSecondaryBrush" Color="#1D4ED8" />
+                    <SolidColorBrush x:Key="AccentFillColorTertiaryBrush" Color="#1E40AF" />
+                    <SolidColorBrush x:Key="AccentFillColorDisabledBrush" Color="#1F2563EB" />
                 </ResourceDictionary>
                 <ResourceDictionary x:Key="Dark">
-                    <SolidColorBrush x:Key="AppPageBackgroundBrush" Color="#11161D" />
-                    <SolidColorBrush x:Key="AppCardBackgroundBrush" Color="#1A212B" />
-                    <SolidColorBrush x:Key="AppCardBorderBrush" Color="#2D3643" />
-                    <SolidColorBrush x:Key="AppInsetBackgroundBrush" Color="#202833" />
-                    <SolidColorBrush x:Key="AppAccentSoftBrush" Color="#18314B" />
-                    <SolidColorBrush x:Key="AppNavSelectedBrush" Color="#24466E" />
+                    <SolidColorBrush x:Key="AppPageBackgroundBrush" Color="#E012171E" />
+                    <SolidColorBrush x:Key="AppCardBackgroundBrush" Color="#E61B222C" />
+                    <SolidColorBrush x:Key="AppElevatedBackgroundBrush" Color="#F5222B36" />
+                    <SolidColorBrush x:Key="AppCardBorderBrush" Color="#24FFFFFF" />
+                    <SolidColorBrush x:Key="AppStrongBorderBrush" Color="#5260A5FA" />
+                    <SolidColorBrush x:Key="AppInsetBackgroundBrush" Color="#B8202833" />
+                    <SolidColorBrush x:Key="AppAccentBrush" Color="#60A5FA" />
+                    <SolidColorBrush x:Key="AppAccentSoftBrush" Color="#263E6B99" />
+                    <SolidColorBrush x:Key="AppNavSelectedBrush" Color="#304E739D" />
                     <SolidColorBrush x:Key="AppNavSelectedForegroundBrush" Color="#F8FBFF" />
                     <SolidColorBrush x:Key="AppNavDefaultForegroundBrush" Color="#F8FAFC" />
                     <SolidColorBrush x:Key="AppNavSelectedBorderBrush" Color="#60A5FA" />
                     <SolidColorBrush x:Key="AppDisabledForegroundBrush" Color="#7D8794" />
-                    <SolidColorBrush x:Key="AppSecondaryDefaultBrush" Color="#242D39" />
+                    <SolidColorBrush x:Key="AppSecondaryDefaultBrush" Color="#D1242D39" />
                     <SolidColorBrush x:Key="AppSecondaryDefaultForegroundBrush" Color="#F8FAFC" />
-                    <SolidColorBrush x:Key="AppSecondarySelectedBrush" Color="#2A4E78" />
+                    <SolidColorBrush x:Key="AppSecondarySelectedBrush" Color="#364F79A3" />
                     <SolidColorBrush x:Key="AppSecondarySelectedForegroundBrush" Color="#FFFFFF" />
-                    <SolidColorBrush x:Key="AppPreviewBackgroundBrush" Color="#141B23" />
+                    <SolidColorBrush x:Key="AppPreviewBackgroundBrush" Color="#D1151B23" />
+                    <SolidColorBrush x:Key="AppSuccessSoftBrush" Color="#25366545" />
+                    <SolidColorBrush x:Key="AppSuccessBrush" Color="#6CCB8E" />
+                    <SolidColorBrush x:Key="AppDangerSoftBrush" Color="#3A7A2924" />
+                    <SolidColorBrush x:Key="AppDangerBrush" Color="#FF8B7E" />
+                    <SolidColorBrush x:Key="AccentButtonBackground" Color="#3B82F6" />
+                    <SolidColorBrush x:Key="AccentButtonBackgroundPointerOver" Color="#60A5FA" />
+                    <SolidColorBrush x:Key="AccentButtonBackgroundPressed" Color="#2563EB" />
+                    <SolidColorBrush x:Key="AccentButtonBackgroundDisabled" Color="#263B82F6" />
+                    <SolidColorBrush x:Key="AccentButtonForeground" Color="#FFFFFF" />
+                    <SolidColorBrush x:Key="AccentButtonForegroundPointerOver" Color="#FFFFFF" />
+                    <SolidColorBrush x:Key="AccentButtonForegroundPressed" Color="#FFFFFF" />
+                    <SolidColorBrush x:Key="AccentFillColorDefaultBrush" Color="#3B82F6" />
+                    <SolidColorBrush x:Key="AccentFillColorSecondaryBrush" Color="#60A5FA" />
+                    <SolidColorBrush x:Key="AccentFillColorTertiaryBrush" Color="#2563EB" />
+                    <SolidColorBrush x:Key="AccentFillColorDisabledBrush" Color="#263B82F6" />
                 </ResourceDictionary>
             </ResourceDictionary.ThemeDictionaries>
 
@@ -49,21 +85,49 @@
                 <Setter Property="Background" Value="{ThemeResource AppCardBackgroundBrush}" />
                 <Setter Property="BorderBrush" Value="{ThemeResource AppCardBorderBrush}" />
                 <Setter Property="BorderThickness" Value="1" />
-                <Setter Property="CornerRadius" Value="18" />
+                <Setter Property="CornerRadius" Value="16" />
                 <Setter Property="Padding" Value="20" />
+            </Style>
+
+            <Style x:Key="PageHeaderBorderStyle" TargetType="Border" BasedOn="{StaticResource CardBorderStyle}">
+                <Setter Property="Background" Value="{ThemeResource AppElevatedBackgroundBrush}" />
+                <Setter Property="BorderBrush" Value="{ThemeResource AppStrongBorderBrush}" />
+                <Setter Property="Padding" Value="22,18" />
+            </Style>
+
+            <Style x:Key="DetailPaneBorderStyle" TargetType="Border" BasedOn="{StaticResource CardBorderStyle}">
+                <Setter Property="Background" Value="{ThemeResource AppElevatedBackgroundBrush}" />
+                <Setter Property="BorderBrush" Value="{ThemeResource AppStrongBorderBrush}" />
+                <Setter Property="Padding" Value="18" />
+            </Style>
+
+            <Style x:Key="StickyActionBorderStyle" TargetType="Border">
+                <Setter Property="Background" Value="{ThemeResource AppElevatedBackgroundBrush}" />
+                <Setter Property="BorderBrush" Value="{ThemeResource AppCardBorderBrush}" />
+                <Setter Property="BorderThickness" Value="1,1,1,0" />
+                <Setter Property="CornerRadius" Value="12" />
+                <Setter Property="Padding" Value="12" />
             </Style>
 
             <Style x:Key="InsetBorderStyle" TargetType="Border">
                 <Setter Property="Background" Value="{ThemeResource AppInsetBackgroundBrush}" />
                 <Setter Property="BorderBrush" Value="{ThemeResource AppCardBorderBrush}" />
                 <Setter Property="BorderThickness" Value="1" />
-                <Setter Property="CornerRadius" Value="12" />
+                <Setter Property="CornerRadius" Value="10" />
+            </Style>
+
+            <Style x:Key="SettingRowBorderStyle" TargetType="Border">
+                <Setter Property="Background" Value="{ThemeResource AppInsetBackgroundBrush}" />
+                <Setter Property="BorderBrush" Value="{ThemeResource AppCardBorderBrush}" />
+                <Setter Property="BorderThickness" Value="1" />
+                <Setter Property="CornerRadius" Value="10" />
+                <Setter Property="Padding" Value="16,13" />
             </Style>
 
             <Style x:Key="SoftBadgeBorderStyle" TargetType="Border">
                 <Setter Property="Background" Value="{ThemeResource AppAccentSoftBrush}" />
                 <Setter Property="CornerRadius" Value="999" />
-                <Setter Property="Padding" Value="10,4" />
+                <Setter Property="Padding" Value="10,5" />
                 <Setter Property="VerticalAlignment" Value="Center" />
             </Style>
 
@@ -85,27 +149,46 @@
                 <Setter Property="FontWeight" Value="SemiBold" />
             </Style>
 
-            <Style x:Key="PrimaryButtonStyle" TargetType="Button">
-                <Setter Property="Foreground" Value="White" />
-                <Setter Property="Background" Value="#2563EB" />
-                <Setter Property="BorderBrush" Value="#2563EB" />
+            <Style x:Key="PrimaryButtonStyle" TargetType="Button" BasedOn="{StaticResource AccentButtonStyle}">
+                <Setter Property="Foreground" Value="#FFFFFF" />
+                <Setter Property="Background" Value="{ThemeResource AppAccentBrush}" />
+                <Setter Property="BorderBrush" Value="{ThemeResource AppAccentBrush}" />
                 <Setter Property="BorderThickness" Value="1" />
-                <Setter Property="CornerRadius" Value="12" />
-                <Setter Property="Padding" Value="18,10" />
+                <Setter Property="CornerRadius" Value="8" />
+                <Setter Property="Padding" Value="18,9" />
                 <Setter Property="MinHeight" Value="40" />
             </Style>
 
             <Style x:Key="SecondaryButtonStyle" TargetType="Button">
-                <Setter Property="Background" Value="{ThemeResource AppInsetBackgroundBrush}" />
-                <Setter Property="BorderBrush" Value="{ThemeResource AppCardBorderBrush}" />
+                <Setter Property="Background" Value="{ThemeResource ControlFillColorDefaultBrush}" />
+                <Setter Property="Foreground" Value="{ThemeResource TextFillColorPrimaryBrush}" />
+                <Setter Property="BorderBrush" Value="{ThemeResource ControlStrokeColorDefaultBrush}" />
                 <Setter Property="BorderThickness" Value="1" />
-                <Setter Property="CornerRadius" Value="12" />
-                <Setter Property="Padding" Value="16,10" />
+                <Setter Property="CornerRadius" Value="8" />
+                <Setter Property="Padding" Value="16,9" />
                 <Setter Property="MinHeight" Value="40" />
+            </Style>
+
+            <Style x:Key="NavigationIconButtonStyle" TargetType="Button" BasedOn="{StaticResource SecondaryButtonStyle}">
+                <Setter Property="Width" Value="48" />
+                <Setter Property="Height" Value="48" />
+                <Setter Property="MinHeight" Value="48" />
+                <Setter Property="Padding" Value="0" />
+                <Setter Property="CornerRadius" Value="12" />
+                <Setter Property="HorizontalAlignment" Value="Center" />
+                <Setter Property="HorizontalContentAlignment" Value="Center" />
+                <Setter Property="UseSystemFocusVisuals" Value="False" />
+            </Style>
+
+            <Style x:Key="DangerButtonStyle" TargetType="Button" BasedOn="{StaticResource SecondaryButtonStyle}">
+                <Setter Property="Foreground" Value="{ThemeResource AppDangerBrush}" />
+                <Setter Property="Background" Value="{ThemeResource AppDangerSoftBrush}" />
+                <Setter Property="BorderBrush" Value="{ThemeResource AppDangerBrush}" />
             </Style>
 
             <Style x:Key="MetricCardStyle" TargetType="Border" BasedOn="{StaticResource CardBorderStyle}">
                 <Setter Property="Padding" Value="18" />
+                <Setter Property="CornerRadius" Value="14" />
             </Style>
 
             <Style x:Key="AppListViewStyle" TargetType="ListView">
@@ -114,6 +197,14 @@
                 <Setter Property="Background" Value="Transparent" />
                 <Setter Property="SelectionMode" Value="Single" />
                 <Setter Property="IsItemClickEnabled" Value="False" />
+            </Style>
+
+            <Style x:Key="AppListViewItemStyle" TargetType="ListViewItem" BasedOn="{StaticResource DefaultListViewItemStyle}">
+                <Setter Property="HorizontalContentAlignment" Value="Stretch" />
+                <Setter Property="CornerRadius" Value="8" />
+                <Setter Property="Margin" Value="0,2" />
+                <Setter Property="MinHeight" Value="44" />
+                <Setter Property="UseSystemFocusVisuals" Value="True" />
             </Style>
 
             <Style x:Key="ShortcutInputTextBoxStyle" TargetType="TextBox">
@@ -126,3 +217,4 @@
         </ResourceDictionary>
     </Application.Resources>
 </Application>
+

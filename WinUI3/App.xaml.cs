@@ -17,3 +17,4 @@ public partial class App : Application
         _window.Activate();
     }
 }
+

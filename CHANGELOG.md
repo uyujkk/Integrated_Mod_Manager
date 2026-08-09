@@ -6,6 +6,24 @@
 
 This document records the major changes in published versions of Integrated Mod Manager.
 
+## v3.2.0
+
+### 中文
+
+- 设置页改为统一的 Fluent 行式布局，新增舒适/紧凑界面密度与减少动态效果选项。
+- 自动记住窗口位置、窗口大小和界面密度，并在启动时将窗口恢复到可用屏幕范围内。
+- 在线 Mod 图片加入本地缓存与自动清理机制，提升重复浏览速度并减少网络调用。
+- 预览图查看器支持滚轮缩放和拖动查看，文件夹列表新增右键快捷操作。
+- 继续统一浅色/深色模式下按钮、列表项、焦点和选中状态的视觉表现。
+
+### English
+
+- Reworked Settings into consistent Fluent rows and added comfortable/compact density plus reduced-motion options.
+- Added window size, position, and density persistence with safe on-screen restoration.
+- Added a self-trimming local cache for online mod images to improve repeat browsing and reduce network calls.
+- Added wheel zoom and panning to the preview viewer plus right-click actions for local folder lists.
+- Further unified button, list-item, focus, and selection visuals across light and dark themes.
+
 ## v3.1.3
 
 ### 中文

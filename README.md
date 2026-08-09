@@ -4,8 +4,8 @@
 
 适用于 Windows 10/11 的 WinUI 3 Mod 管理工具。它以“仓库”为单位管理本地 Mod，支持两层目录浏览、复制切换、压缩包导入、图片预览、快捷键说明、在线 Mod 浏览与下载，以及已安装 Mod 的更新追踪。
 
-- 当前版本：`v3.1.3`
-- 文件版本：`3.1.3.0`
+- 当前版本：`v3.2.0`
+- 文件版本：`3.2.0.0`
 - 工具作者：`uyujkk`
 
 [下载最新版本](https://github.com/uyujkk/Integrated_Mod_Manager/releases/latest) ·
@@ -43,14 +43,15 @@
 | 内容识别 | 尝试从在线说明识别额外访问要求与快捷键说明 |
 | Mod 更新 | 对在线安装并记录来源 ID 的 Mod 手动或定期检查更新 |
 | 软件更新 | 从 GitHub Releases 检查新版本，或从程序目录中的新版发布 ZIP 完成本地更新 |
-| 界面 | 中文/English 切换、浅色/深色主题和自适应布局 |
+| 界面 | 中文/English、浅色/深色、舒适/紧凑密度、减少动态效果和自适应布局 |
 
-## v3.1.3 更新重点
+## v3.2.0 更新重点
 
-- 把新版 `Integrated_Mod_Manager-vX.Y.Z.zip` 放到现有程序文件夹，程序会在下次启动时自动识别并提示安装。
-- 更新在主程序退出后完成，并自动重新启动。
-- 自动保留 `config.ini` 和 `beta-shell.json`，避免仓库、路径、语言、主题、快捷键和 Mod 链接配置丢失。
-- 增加更新包安全校验和失败回滚，避免错误压缩包破坏现有安装。
+- 设置页改为统一的 Fluent 行式布局，新增“舒适/紧凑”界面密度与“减少动态效果”选项。
+- 自动记住窗口位置、窗口大小和界面密度，下次启动恢复上次工作状态。
+- 在线 Mod 图片加入本地缓存并自动清理旧缓存，重复浏览时响应更快、网络请求更少。
+- 预览图查看器支持滚轮缩放和拖动查看，文件夹列表新增右键快捷菜单。
+- 继续统一浅色/深色模式下的按钮、列表项、焦点与选中状态显示。
 
 ## 系统要求
 
@@ -69,8 +70,6 @@
 5. 首次启动后创建或编辑仓库，并设置 Mod 存储文件夹、目标文件夹和可选启动器。
 
 `ModFolderCopier.exe` 是启动入口，实际 WinUI 程序位于 `WinUI3/ModFolderCopier.WinUI.exe`。请保留发布包原有目录结构。
-
-发布包根目录中的 `LocalUpdateAgent.exe` 是本地更新组件。不要单独运行或删除它；主程序只会在用户确认本地更新后调用该组件。
 
 ### SmartScreen 提示
 
@@ -250,7 +249,6 @@ cmd /c build_winui.bat
 ```text
 dist/
 ├─ ModFolderCopier.exe
-├─ LocalUpdateAgent.exe
 └─ WinUI3/
    ├─ ModFolderCopier.WinUI.exe
    └─ ...
@@ -261,7 +259,6 @@ dist/
 ```text
 WinUI3/            WinUI 3 主程序源码与资源
 WinUILauncher.cs   外层启动器
-LocalUpdateAgent.cs 本地 ZIP 更新与配置保留组件
 build_winui.bat    Windows 构建与发布目录整理脚本
 README.md          中文项目说明
 README.en.md       English documentation
@@ -271,7 +268,7 @@ CHANGELOG.md       完整中英更新历史
 LICENSE            MIT 许可证
 ```
 
-`dist/`、`release/`、构建中间文件、调试符号、本地配置和运行日志不会作为源码提交。旧的 Beta 源码副本已从主分支移除，发布代码以根目录和 `WinUI3/` 为准。
+`dist/`、构建中间文件和本地配置不会作为源码提交。
 
 ## 常见问题
 
@@ -290,6 +287,10 @@ LICENSE            MIT 许可证
 ### 预览图没有显示怎么办？
 
 优先把图片命名为 `preview.png` 或 `cover.jpg`，也可以选择 Mod 后直接拖入预览区。
+
+### 在线图片缓存在哪里？
+
+缓存位于程序运行目录的 `WinUI3/cache/online-images`。程序会自动限制缓存大小并清理较旧文件；删除该目录不会影响 Mod 和仓库配置。
 
 ### 更新检查会自动安装吗？
 

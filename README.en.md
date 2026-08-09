@@ -4,8 +4,8 @@
 
 A WinUI 3 mod management tool for Windows 10/11. It organizes local mods into repositories and provides two-level folder browsing, copy-based switching, archive import, image previews, shortcut notes, online mod browsing and downloads, and update tracking for installed mods.
 
-- Current version: `v3.1.3`
-- File version: `3.1.3.0`
+- Current version: `v3.2.0`
+- File version: `3.2.0.0`
 - Tool author: `uyujkk`
 
 [Download Latest Release](https://github.com/uyujkk/Integrated_Mod_Manager/releases/latest) ·
@@ -43,14 +43,15 @@ Integrated Mod Manager is designed to:
 | Content detection | Best-effort detection of access requirements and shortcut instructions |
 | Mod updates | Manually or periodically check online-installed mods for updates |
 | App updates | Check GitHub Releases or apply a newer release ZIP placed in the app folder |
-| Interface | Chinese/English switching, light/dark themes, and responsive layout |
+| Interface | Chinese/English, light/dark themes, comfortable/compact density, reduced motion, and responsive layout |
 
-## v3.1.3 Highlights
+## v3.2.0 Highlights
 
-- Place a newer `Integrated_Mod_Manager-vX.Y.Z.zip` in the existing app folder to detect it automatically on the next launch.
-- The update runs after the main app exits and restarts the app when complete.
-- `config.ini` and `beta-shell.json` are preserved automatically so repositories, paths, language, theme, shortcuts, and mod links remain intact.
-- Invalid packages or failed replacements stop safely and trigger a best-effort rollback.
+- Reworked Settings into consistent Fluent rows and added comfortable/compact density plus reduced-motion preferences.
+- The app now remembers window size, position, and interface density between sessions.
+- Online mod images are cached locally and old cache entries are trimmed automatically for faster repeat browsing.
+- The preview viewer now supports wheel zoom and panning, and local folder lists provide right-click action menus.
+- Refined buttons, list items, focus states, and selections across light and dark themes.
 
 ## Requirements
 
@@ -69,8 +70,6 @@ Integrated Mod Manager is designed to:
 5. On first launch, create or edit a repository and configure its mod storage folder, target folder, and optional launcher.
 
 `ModFolderCopier.exe` is the launcher. The main WinUI executable is `WinUI3/ModFolderCopier.WinUI.exe`. Keep the release directory structure intact.
-
-`LocalUpdateAgent.exe` in the release root applies local updates. Do not run or remove it manually; the main app invokes it only after the user confirms an update.
 
 ### SmartScreen
 
@@ -250,7 +249,6 @@ Output:
 ```text
 dist/
 ├─ ModFolderCopier.exe
-├─ LocalUpdateAgent.exe
 └─ WinUI3/
    ├─ ModFolderCopier.WinUI.exe
    └─ ...
@@ -261,7 +259,6 @@ dist/
 ```text
 WinUI3/            WinUI 3 application source and assets
 WinUILauncher.cs   Outer launcher
-LocalUpdateAgent.cs Local ZIP updater and configuration-preservation component
 build_winui.bat    Windows build and output preparation script
 README.md          Chinese documentation
 README.en.md       English documentation
@@ -271,7 +268,7 @@ CHANGELOG.md       Full bilingual release history
 LICENSE            MIT License
 ```
 
-`dist/`, `release/`, build intermediates, debug symbols, local configuration, and runtime logs are excluded from source commits. The obsolete Beta source copy has been removed from the main branch; the maintained code lives at the repository root and in `WinUI3/`.
+`dist/`, build intermediates, and local configuration are excluded from source commits.
 
 ## Troubleshooting
 
@@ -290,6 +287,10 @@ Make sure `WinUI3/Tools/7z.exe` and `7z.dll` were not removed or quarantined, an
 ### Why is there no preview image?
 
 Name an image `preview.png` or `cover.jpg`, or select the mod and drop an image onto the preview panel.
+
+### Where is the online image cache?
+
+It is stored in `WinUI3/cache/online-images` under the app directory. The app limits its size and removes older files automatically. Deleting this folder does not affect repositories or mod settings.
 
 ### Does update checking install updates automatically?
 

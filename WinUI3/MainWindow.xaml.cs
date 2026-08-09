@@ -5,18 +5,23 @@ using System.Globalization;
 using System.Linq;
 using System.Net;
 using System.Net.Http;
+using System.Numerics;
+using System.Security.Cryptography;
 using System.Text;
 using System.Text.Json;
 using System.Text.RegularExpressions;
 using Microsoft.UI;
 using Microsoft.UI.Input;
+using Microsoft.UI.Windowing;
 using Microsoft.UI.Xaml;
 using Microsoft.UI.Xaml.Automation;
 using Microsoft.UI.Xaml.Controls;
+using Microsoft.UI.Xaml.Hosting;
 using Microsoft.UI.Xaml.Input;
 using Microsoft.UI.Xaml.Media;
 using Microsoft.UI.Xaml.Media.Imaging;
 using Windows.ApplicationModel.DataTransfer;
+using Windows.Graphics;
 using Windows.Storage;
 using Windows.Storage.Pickers;
 using Windows.System;
@@ -27,7 +32,7 @@ namespace ModFolderCopier.WinUI;
 
 public sealed partial class MainWindow : Window
 {
-    private const string AppVersion = "v3.1.3";
+    private const string AppVersion = "v3.2.0";
     private const string GitHubRepositoryUrl = "https://github.com/uyujkk/Integrated_Mod_Manager";
     private const string GitHubLatestReleaseApiUrl = "https://api.github.com/repos/uyujkk/Integrated_Mod_Manager/releases/latest";
     private const string DefaultOnlineSourceSite = "GameBanana";
@@ -83,6 +88,12 @@ public sealed partial class MainWindow : Window
         Minimal
     }
 
+    private enum InterfaceDensity
+    {
+        Comfortable,
+        Compact
+    }
+
     private enum UpdateCheckInterval
     {
         Manual,
@@ -107,6 +118,7 @@ public sealed partial class MainWindow : Window
 
     private readonly string _configPath = Path.Combine(AppContext.BaseDirectory, "config.ini");
     private readonly string _shellConfigPath = Path.Combine(AppContext.BaseDirectory, "beta-shell.json");
+    private readonly string _onlineImageCachePath = Path.Combine(AppContext.BaseDirectory, "cache", "online-images");
     private readonly HttpClient _httpClient = CreateHttpClient();
     private readonly ObservableCollection<FirstLevelFolderItem> _firstLevelItems = [];
     private readonly ObservableCollection<SecondLevelFolderItem> _secondLevelItems = [];
@@ -132,6 +144,9 @@ public sealed partial class MainWindow : Window
     private bool _isApplyingOnlineCharacterSelection;
     private bool _isApplyingUpdateCheckIntervalSelection;
     private bool _isApplyingModUpdateIntervalSelection;
+    private bool _isApplyingAppearanceSettings;
+    private bool _isApplyingDensitySelection;
+    private bool _reduceMotion;
     private int _visibleShortcutRows = 1;
     private TextBox? _activeShortcutKeyBox;
     private string? _currentSecondLevelPath;
@@ -165,7 +180,14 @@ public sealed partial class MainWindow : Window
     private UpdateCheckInterval _modUpdateCheckInterval = UpdateCheckInterval.Manual;
     private DateTimeOffset? _lastModUpdateCheckUtc;
     private TextBox? _lastFocusedTextBox;
+    private int _notificationVersion;
+    private int _onlineHeroImageRequestVersion;
+    private int? _savedWindowX;
+    private int? _savedWindowY;
+    private int? _savedWindowWidth;
+    private int? _savedWindowHeight;
     private readonly HashSet<string> _onlineKnownCharacters = new(StringComparer.OrdinalIgnoreCase);
+    private InterfaceDensity _interfaceDensity = InterfaceDensity.Comfortable;
 
     public MainWindow()
     {
@@ -189,6 +211,7 @@ public sealed partial class MainWindow : Window
         UpdateShellLayout();
         RefreshDashboard();
         RootGrid.Loaded += OnRootGridLoaded;
+        Closed += OnWindowClosed;
         _ = CheckForUpdatesIfDueAsync();
 
         if (Directory.Exists(SourceTextBox.Text))
@@ -347,6 +370,7 @@ public sealed partial class MainWindow : Window
         SettingsTitleTextBlock.Text = L("应用设置", "Application Settings");
         SettingsSubtitleTextBlock.Text = L("把语言、主题、仓库入口和更新检查集中放在这里。", "Language, theme, repository entry points, and update checks are collected here.");
         SettingsAppearanceTitleTextBlock.Text = L("界面与语言", "Appearance and Language");
+        RefreshAppearanceSettings();
         SettingsProjectTitleTextBlock.Text = L("项目链接与软件版本", "Project Links and App Version");
         SettingsProjectHintTextBlock.Text = L("这里保留 GitHub 仓库入口和软件版本检查；Mod 更新请使用左侧的“更新”模块。", "This section keeps the GitHub repository link and app-version checks. Use the Updates section in the left navigation for mod updates.");
         UpdateCheckIntervalLabelTextBlock.Text = L("软件更新频率", "App update interval");
@@ -379,6 +403,34 @@ public sealed partial class MainWindow : Window
             : string.IsNullOrWhiteSpace(_latestReleaseUrl)
                 ? L("检查并获取更新", "Check and Get Update")
                 : L("打开更新页面", "Open Release Page");
+    }
+
+    private void RefreshAppearanceSettings()
+    {
+        LanguageSettingTitleTextBlock.Text = L("显示语言", "Display language");
+        LanguageSettingDescriptionTextBlock.Text = L("切换整个应用的中文或英文界面。", "Switch the entire app between Chinese and English.");
+        ThemeSettingTitleTextBlock.Text = L("应用主题", "App theme");
+        ThemeSettingDescriptionTextBlock.Text = L("在浅色和深色 Fluent 外观之间切换。", "Switch between light and dark Fluent appearances.");
+        MotionSettingTitleTextBlock.Text = L("减少动态效果", "Reduce motion");
+        MotionSettingDescriptionTextBlock.Text = L("关闭页面滑入和图片淡入效果，减少视觉移动。", "Disable page slide-in and image fade effects to reduce visual movement.");
+        DensitySettingTitleTextBlock.Text = L("界面密度", "Interface density");
+        DensitySettingDescriptionTextBlock.Text = L("紧凑模式可以在同一屏幕显示更多内容。", "Compact mode shows more content on the same screen.");
+
+        _isApplyingAppearanceSettings = true;
+        ReduceMotionToggleSwitch.IsOn = _reduceMotion;
+        ReduceMotionToggleSwitch.OnContent = L("开", "On");
+        ReduceMotionToggleSwitch.OffContent = L("关", "Off");
+        _isApplyingAppearanceSettings = false;
+
+        _isApplyingDensitySelection = true;
+        DensityComboBox.Items.Clear();
+        DensityComboBox.Items.Add(new ComboBoxItem { Content = L("舒适", "Comfortable"), Tag = InterfaceDensity.Comfortable });
+        DensityComboBox.Items.Add(new ComboBoxItem { Content = L("紧凑", "Compact"), Tag = InterfaceDensity.Compact });
+        DensityComboBox.SelectedItem = DensityComboBox.Items
+            .OfType<ComboBoxItem>()
+            .First(item => item.Tag is InterfaceDensity density && density == _interfaceDensity);
+        _isApplyingDensitySelection = false;
+        ApplyInterfaceDensity();
     }
 
     private void RefreshOnlineNavigationButtonLabels()
@@ -670,6 +722,14 @@ public sealed partial class MainWindow : Window
             _latestReleaseBody = config?.LatestReleaseBody;
             _latestReleasePublishedAt = config?.LatestReleasePublishedAt;
             _latestReleaseUrl = config?.LatestReleaseUrl;
+            _reduceMotion = config?.ReduceMotion ?? false;
+            _interfaceDensity = string.Equals(config?.InterfaceDensity, "compact", StringComparison.OrdinalIgnoreCase)
+                ? InterfaceDensity.Compact
+                : InterfaceDensity.Comfortable;
+            _savedWindowX = config?.WindowX;
+            _savedWindowY = config?.WindowY;
+            _savedWindowWidth = config?.WindowWidth;
+            _savedWindowHeight = config?.WindowHeight;
         }
         catch
         {
@@ -685,6 +745,12 @@ public sealed partial class MainWindow : Window
             _latestReleaseBody = null;
             _latestReleasePublishedAt = null;
             _latestReleaseUrl = null;
+            _reduceMotion = false;
+            _interfaceDensity = InterfaceDensity.Comfortable;
+            _savedWindowX = null;
+            _savedWindowY = null;
+            _savedWindowWidth = null;
+            _savedWindowHeight = null;
         }
 
         ApplySelectedRepositoryToInputs();
@@ -707,6 +773,12 @@ public sealed partial class MainWindow : Window
                 LatestReleaseBody = _latestReleaseBody,
                 LatestReleasePublishedAt = _latestReleasePublishedAt,
                 LatestReleaseUrl = _latestReleaseUrl,
+                ReduceMotion = _reduceMotion,
+                InterfaceDensity = _interfaceDensity == InterfaceDensity.Compact ? "compact" : "comfortable",
+                WindowX = _savedWindowX,
+                WindowY = _savedWindowY,
+                WindowWidth = _savedWindowWidth,
+                WindowHeight = _savedWindowHeight,
                 Repositories = [.. _repositories]
             };
 
@@ -853,7 +925,157 @@ public sealed partial class MainWindow : Window
         RefreshUpdatesPane();
         RefreshRepositoryActionButtons();
         SaveShellConfig();
+        UIElement activeSection = GetActiveSectionElement();
+        RootGrid.DispatcherQueue.TryEnqueue(() => AnimateSectionEntrance(activeSection));
         RootGrid.Focus(FocusState.Programmatic);
+    }
+
+    private UIElement GetActiveSectionElement()
+    {
+        return _currentPrimarySection switch
+        {
+            PrimarySection.Dashboard => DashboardScrollViewer,
+            PrimarySection.Repository => WorkspaceScrollViewer,
+            PrimarySection.Online => OnlineScrollViewer,
+            PrimarySection.Updates => UpdatesScrollViewer,
+            _ => SettingsScrollViewer
+        };
+    }
+
+    private void AnimateSectionEntrance(UIElement element)
+    {
+        if (_reduceMotion || element.Visibility != Visibility.Visible)
+        {
+            return;
+        }
+
+        var visual = ElementCompositionPreview.GetElementVisual(element);
+        var compositor = visual.Compositor;
+        var easing = compositor.CreateCubicBezierEasingFunction(new Vector2(0.16f, 1f), new Vector2(0.3f, 1f));
+
+        visual.Opacity = 0.25f;
+        visual.Offset = new Vector3(12f, 0f, 0f);
+
+        var fade = compositor.CreateScalarKeyFrameAnimation();
+        fade.Duration = TimeSpan.FromMilliseconds(170);
+        fade.InsertKeyFrame(1f, 1f, easing);
+
+        var slide = compositor.CreateVector3KeyFrameAnimation();
+        slide.Duration = TimeSpan.FromMilliseconds(210);
+        slide.InsertKeyFrame(1f, Vector3.Zero, easing);
+
+        visual.StartAnimation("Opacity", fade);
+        visual.StartAnimation("Offset", slide);
+    }
+
+    private void AnimateImageReveal(UIElement image)
+    {
+        if (_reduceMotion)
+        {
+            ElementCompositionPreview.GetElementVisual(image).Opacity = 1f;
+            return;
+        }
+
+        var visual = ElementCompositionPreview.GetElementVisual(image);
+        var compositor = visual.Compositor;
+        var animation = compositor.CreateScalarKeyFrameAnimation();
+        animation.Duration = TimeSpan.FromMilliseconds(220);
+        animation.InsertKeyFrame(0f, 0f);
+        animation.InsertKeyFrame(1f, 1f);
+        visual.StartAnimation("Opacity", animation);
+    }
+
+    private void OnPreviewImageOpened(object sender, RoutedEventArgs e)
+    {
+        AnimateImageReveal(PreviewImage);
+    }
+
+    private void OnOnlineDetailHeroImageOpened(object sender, RoutedEventArgs e)
+    {
+        AnimateImageReveal(OnlineDetailHeroImage);
+    }
+
+    private async void OnPreviewImageTapped(object sender, TappedRoutedEventArgs e)
+    {
+        await ShowImageViewerAsync(PreviewImage.Source, L("Mod 预览图", "Mod Preview"));
+    }
+
+    private async void OnOnlineDetailHeroImageTapped(object sender, TappedRoutedEventArgs e)
+    {
+        await ShowImageViewerAsync(OnlineDetailHeroImage.Source, L("在线 Mod 图片", "Online Mod Image"));
+    }
+
+    private async Task ShowImageViewerAsync(ImageSource? source, string title)
+    {
+        if (source is null)
+        {
+            return;
+        }
+
+        var viewer = new Grid
+        {
+            Width = 920,
+            Height = 620,
+            MaxWidth = 920,
+            MaxHeight = 620,
+            Background = GetAppThemeBrush("AppPreviewBackgroundBrush")
+        };
+        viewer.RowDefinitions.Add(new RowDefinition { Height = new GridLength(1, GridUnitType.Star) });
+        viewer.RowDefinitions.Add(new RowDefinition { Height = GridLength.Auto });
+        var image = new Image
+        {
+            Source = source,
+            Stretch = Stretch.Uniform,
+            HorizontalAlignment = HorizontalAlignment.Stretch,
+            VerticalAlignment = VerticalAlignment.Stretch
+        };
+        var imageScroller = new ScrollViewer
+        {
+            Content = image,
+            ZoomMode = ZoomMode.Enabled,
+            MinZoomFactor = 0.5f,
+            MaxZoomFactor = 4f,
+            HorizontalScrollMode = ScrollMode.Enabled,
+            VerticalScrollMode = ScrollMode.Enabled,
+            HorizontalScrollBarVisibility = ScrollBarVisibility.Auto,
+            VerticalScrollBarVisibility = ScrollBarVisibility.Auto
+        };
+        viewer.Children.Add(imageScroller);
+        var zoomHint = new TextBlock
+        {
+            Text = L("支持滚轮、触控缩放与拖动查看，缩放范围 50% - 400%。", "Supports wheel, touch zoom, and panning from 50% to 400%."),
+            Margin = new Thickness(12, 8, 12, 10),
+            Style = (Style)Application.Current.Resources["CaptionTextStyle"],
+            HorizontalAlignment = HorizontalAlignment.Center
+        };
+        Grid.SetRow(zoomHint, 1);
+        viewer.Children.Add(zoomHint);
+
+        var dialog = new ContentDialog
+        {
+            Title = title,
+            Content = viewer,
+            CloseButtonText = L("关闭", "Close"),
+            XamlRoot = RootGrid.XamlRoot
+        };
+        await dialog.ShowAsync();
+    }
+
+    private async void ShowAppNotification(string zh, string en, InfoBarSeverity severity = InfoBarSeverity.Success)
+    {
+        int notificationVersion = ++_notificationVersion;
+        AppInfoBar.Severity = severity;
+        AppInfoBar.Title = severity == InfoBarSeverity.Error
+            ? L("操作未完成", "Action not completed")
+            : L("操作完成", "Completed");
+        AppInfoBar.Message = L(zh, en);
+        AppInfoBar.IsOpen = true;
+
+        await Task.Delay(TimeSpan.FromSeconds(3.5));
+        if (notificationVersion == _notificationVersion)
+        {
+            AppInfoBar.IsOpen = false;
+        }
     }
 
     private void RefreshRepositoryActionButtons()
@@ -1202,6 +1424,8 @@ public sealed partial class MainWindow : Window
             : L("在线页面会按当前仓库的来源配置加载内容。", "The online page will load content based on the selected repository configuration.");
 
         RefreshOnlineButton.IsEnabled = canLoadOnlineMods && !_isLoadingOnlineMods;
+        OnlineLoadingOverlay.Visibility = _isLoadingOnlineMods ? Visibility.Visible : Visibility.Collapsed;
+        OnlineLoadingTextBlock.Text = L("正在读取在线 Mod，请稍候...", "Loading online mods, please wait...");
         OnlineStatusTextBlock.Text = string.IsNullOrWhiteSpace(_onlineStatusZh) || string.IsNullOrWhiteSpace(_onlineStatusEn)
             ? L("点击刷新在线列表后，会从 GameBanana 拉取当前分类下的最新 Mod。", "Click Refresh Online List to fetch the latest mods for the current gameid from GameBanana.")
             : L(_onlineStatusZh!, _onlineStatusEn!);
@@ -1434,6 +1658,7 @@ public sealed partial class MainWindow : Window
             SetOnlineStatus(
                 $"已载入分类第 {_onlineCurrentPage} 页，共 {_onlineTotalCount} 个皮肤 Mod。每页显示 20 个，可继续往后翻页。",
                 $"Loaded category page {_onlineCurrentPage}. There are {_onlineTotalCount} skin mods in total, with 20 items per page.");
+            ShowAppNotification("在线 Mod 列表已更新。", "The online mod list has been refreshed.");
         }
         catch (Exception ex)
         {
@@ -2506,21 +2731,120 @@ public sealed partial class MainWindow : Window
         return char.ToUpperInvariant(token[0]) + token[1..].ToLowerInvariant();
     }
 
+    private async Task SetCachedOnlineImageAsync(Image image, string imageUrl)
+    {
+        Uri? imageUri = await GetCachedOnlineImageUriAsync(imageUrl);
+        if (imageUri is null)
+        {
+            return;
+        }
+
+        try
+        {
+            image.Source = new BitmapImage(imageUri);
+        }
+        catch
+        {
+        }
+    }
+
+    private async Task<Uri?> GetCachedOnlineImageUriAsync(string imageUrl)
+    {
+        if (!Uri.TryCreate(imageUrl, UriKind.Absolute, out Uri? remoteUri)
+            || (remoteUri.Scheme != Uri.UriSchemeHttp && remoteUri.Scheme != Uri.UriSchemeHttps))
+        {
+            return null;
+        }
+
+        try
+        {
+            Directory.CreateDirectory(_onlineImageCachePath);
+            string extension = Path.GetExtension(remoteUri.AbsolutePath).ToLowerInvariant();
+            if (!ImageExtensions.Contains(extension, StringComparer.OrdinalIgnoreCase))
+            {
+                extension = ".jpg";
+            }
+
+            string hash = Convert.ToHexString(SHA256.HashData(Encoding.UTF8.GetBytes(imageUrl)));
+            string cachePath = Path.Combine(_onlineImageCachePath, hash + extension);
+            if (!File.Exists(cachePath))
+            {
+                byte[] bytes = await _httpClient.GetByteArrayAsync(remoteUri);
+                if (bytes.Length == 0 || bytes.Length > 25 * 1024 * 1024)
+                {
+                    return remoteUri;
+                }
+
+                string temporaryPath = cachePath + "." + Guid.NewGuid().ToString("N") + ".tmp";
+                await File.WriteAllBytesAsync(temporaryPath, bytes);
+                try
+                {
+                    File.Move(temporaryPath, cachePath, true);
+                }
+                finally
+                {
+                    if (File.Exists(temporaryPath))
+                    {
+                        File.Delete(temporaryPath);
+                    }
+                }
+            }
+
+            File.SetLastAccessTimeUtc(cachePath, DateTime.UtcNow);
+            return new Uri(cachePath);
+        }
+        catch
+        {
+            return remoteUri;
+        }
+    }
+
+    private void TrimOnlineImageCache()
+    {
+        try
+        {
+            if (!Directory.Exists(_onlineImageCachePath))
+            {
+                return;
+            }
+
+            FileInfo[] files = new DirectoryInfo(_onlineImageCachePath)
+                .EnumerateFiles()
+                .OrderBy(file => file.LastAccessTimeUtc)
+                .ToArray();
+            long totalBytes = files.Sum(file => file.Length);
+            const long trimThreshold = 250L * 1024 * 1024;
+            const long targetSize = 200L * 1024 * 1024;
+            if (totalBytes <= trimThreshold)
+            {
+                return;
+            }
+
+            foreach (FileInfo file in files)
+            {
+                file.Delete();
+                totalBytes -= file.Length;
+                if (totalBytes <= targetSize)
+                {
+                    break;
+                }
+            }
+        }
+        catch
+        {
+        }
+    }
+
     private UIElement CreateOnlineDetailImage(string? imageUrl)
     {
-        if (Uri.TryCreate(imageUrl, UriKind.Absolute, out Uri? imageUri))
+        if (Uri.TryCreate(imageUrl, UriKind.Absolute, out _))
         {
-            try
+            var image = new Image
             {
-                return new Image
-                {
-                    Stretch = Stretch.UniformToFill,
-                    Source = new BitmapImage(imageUri)
-                };
-            }
-            catch
-            {
-            }
+                Stretch = Stretch.UniformToFill
+            };
+            _ = SetCachedOnlineImageAsync(image, imageUrl!);
+            return image;
         }
 
         return new TextBlock
@@ -2681,6 +3005,7 @@ public sealed partial class MainWindow : Window
 
         if (usableImages.Count == 0)
         {
+            _onlineHeroImageRequestVersion++;
             OnlineDetailHeroImage.Source = null;
             OnlineDetailHeroImage.Visibility = Visibility.Collapsed;
             OnlineDetailHeroPlaceholderTextBlock.Visibility = Visibility.Visible;
@@ -2717,20 +3042,28 @@ public sealed partial class MainWindow : Window
         }
     }
 
-    private void ShowOnlineDetailHeroImage(string? imageUrl)
+    private async void ShowOnlineDetailHeroImage(string? imageUrl)
     {
-        if (Uri.TryCreate(imageUrl, UriKind.Absolute, out Uri? imageUri))
+        int requestVersion = ++_onlineHeroImageRequestVersion;
+        if (Uri.TryCreate(imageUrl, UriKind.Absolute, out _))
         {
-            try
+            OnlineDetailHeroImage.Source = null;
+            OnlineDetailHeroImage.Visibility = Visibility.Visible;
+            OnlineDetailHeroPlaceholderTextBlock.Visibility = Visibility.Visible;
+            OnlineDetailHeroPlaceholderTextBlock.Text = L("正在加载高清预览...", "Loading high-resolution preview...");
+            Uri? imageUri = await GetCachedOnlineImageUriAsync(imageUrl!);
+            if (requestVersion != _onlineHeroImageRequestVersion)
+            {
+                return;
+            }
+
+            if (imageUri is not null)
             {
                 OnlineDetailHeroImage.Source = new BitmapImage(imageUri);
                 OnlineDetailHeroImage.Visibility = Visibility.Visible;
                 OnlineDetailHeroPlaceholderTextBlock.Visibility = Visibility.Collapsed;
                 OnlineDetailHeroPlaceholderTextBlock.Text = string.Empty;
                 return;
-            }
-            catch
-            {
             }
         }
 
@@ -2931,11 +3264,12 @@ public sealed partial class MainWindow : Window
 
         if (!string.IsNullOrWhiteSpace(mod.PreviewUrl))
         {
-            imageHost.Child = new Image
+            var previewImage = new Image
             {
-                Stretch = Stretch.UniformToFill,
-                Source = new BitmapImage(new Uri(mod.PreviewUrl))
+                Stretch = Stretch.UniformToFill
             };
+            imageHost.Child = previewImage;
+            _ = SetCachedOnlineImageAsync(previewImage, mod.PreviewUrl);
         }
         else
         {
@@ -3035,11 +3369,12 @@ public sealed partial class MainWindow : Window
 
         if (!string.IsNullOrWhiteSpace(mod.PreviewUrl))
         {
-            imageHost.Child = new Image
+            var previewImage = new Image
             {
-                Stretch = Stretch.UniformToFill,
-                Source = new BitmapImage(new Uri(mod.PreviewUrl))
+                Stretch = Stretch.UniformToFill
             };
+            imageHost.Child = previewImage;
+            _ = SetCachedOnlineImageAsync(previewImage, mod.PreviewUrl);
         }
         else
         {
@@ -3206,24 +3541,12 @@ public sealed partial class MainWindow : Window
         };
         if (!string.IsNullOrWhiteSpace(result.PreviewUrl))
         {
-            try
+            var previewImage = new Image
             {
-                previewHost.Child = new Image
-                {
-                    Stretch = Stretch.UniformToFill,
-                    Source = new BitmapImage(new Uri(result.PreviewUrl))
-                };
-            }
-            catch
-            {
-                previewHost.Child = new TextBlock
-                {
-                    Text = L("预览加载失败", "Preview failed"),
-                    HorizontalAlignment = HorizontalAlignment.Center,
-                    VerticalAlignment = VerticalAlignment.Center,
-                    Style = (Style)Application.Current.Resources["CaptionTextStyle"]
-                };
-            }
+                Stretch = Stretch.UniformToFill
+            };
+            previewHost.Child = previewImage;
+            _ = SetCachedOnlineImageAsync(previewImage, result.PreviewUrl);
         }
         else
         {
@@ -4506,6 +4829,8 @@ public sealed partial class MainWindow : Window
         ToolTipService.SetToolTip(OnlineNextPageButton, L("下一页", "Next page"));
         ToolTipService.SetToolTip(OnlineSearchTextBox, L("搜索角色名或 Mod 名称", "Search character or mod name"));
         ToolTipService.SetToolTip(OnlineSortComboBox, L("切换当前在线列表的排序方式", "Change the sort order for the current online list"));
+        ToolTipService.SetToolTip(PreviewImage, L("点击查看大图", "Click to view full size"));
+        ToolTipService.SetToolTip(OnlineDetailHeroImage, L("点击查看大图", "Click to view full size"));
         AutomationProperties.SetName(AddRepositoryButton, L("新建仓库", "Create repository"));
         AutomationProperties.SetName(RenameRepositoryButton, L("编辑当前仓库", "Edit current repository"));
         AutomationProperties.SetName(DeleteRepositoryButton, L("删除当前仓库", "Delete current repository"));
@@ -4518,6 +4843,8 @@ public sealed partial class MainWindow : Window
         AutomationProperties.SetName(OnlineNextPageButton, L("下一页", "Next page"));
         AutomationProperties.SetName(OnlineSearchTextBox, L("搜索角色名或 Mod 名称", "Search character or mod name"));
         AutomationProperties.SetName(OnlineSortComboBox, L("在线列表排序", "Online list sort"));
+        AutomationProperties.SetName(PreviewImage, L("打开 Mod 预览大图", "Open full-size mod preview"));
+        AutomationProperties.SetName(OnlineDetailHeroImage, L("打开在线 Mod 大图", "Open full-size online mod image"));
         InitializeOnlineControls();
 
         DashboardTitleTextBlock.Text = L("仓库总览", "Repository Dashboard");
@@ -4543,6 +4870,7 @@ public sealed partial class MainWindow : Window
         SettingsTitleTextBlock.Text = L("应用设置", "Application Settings");
         SettingsSubtitleTextBlock.Text = L("在这里配置语言、主题、更新检查和项目链接。", "Configure language, theme, update checks, and project links here.");
         SettingsAppearanceTitleTextBlock.Text = L("界面与语言", "Appearance and Language");
+        RefreshAppearanceSettings();
         SettingsProjectTitleTextBlock.Text = L("项目链接与软件版本", "Project Links and App Version");
         SettingsProjectHintTextBlock.Text = L("这里保留 GitHub 仓库入口和软件版本检查；Mod 更新请使用左侧的“更新”模块。", "This section keeps the GitHub repository link and app-version checks. Use the Updates section in the left navigation for mod updates.");
         SettingsPlaceholderTitleTextBlock.Text = L("仓库在线配置", "Repository Online Config");
@@ -4706,12 +5034,12 @@ public sealed partial class MainWindow : Window
     {
         foreach (TextBox box in _shortcutKeyBoxes)
         {
-                box.PlaceholderText = L("快捷键", "Shortcut");
+            box.PlaceholderText = L("快捷键", "Shortcut");
         }
 
         foreach (TextBox box in _shortcutActionBoxes)
         {
-            box.PlaceholderText = L("鎻忚堪", "Description");
+            box.PlaceholderText = L("描述", "Description");
         }
     }
 
@@ -4976,6 +5304,34 @@ public sealed partial class MainWindow : Window
         ApplyFirstLevelFilter();
     }
 
+    private void OnFirstLevelItemRightTapped(object sender, RightTappedRoutedEventArgs e)
+    {
+        if (sender is not FrameworkElement { DataContext: FirstLevelFolderItem item } element)
+        {
+            return;
+        }
+
+        FirstLevelListView.SelectedItem = item;
+        var menu = new MenuFlyout();
+        var openItem = new MenuFlyoutItem
+        {
+            Text = L("打开文件夹", "Open folder"),
+            Icon = new FontIcon { Glyph = "\uE838" }
+        };
+        openItem.Click += (_, _) => OpenDirectory(item.Path, L("第一层文件夹", "First-level folder"));
+        menu.Items.Add(openItem);
+
+        var renameItem = new MenuFlyoutItem
+        {
+            Text = L("重命名", "Rename"),
+            Icon = new FontIcon { Glyph = "\uE70F" }
+        };
+        renameItem.Click += OnRenameFirstLevelClicked;
+        menu.Items.Add(renameItem);
+        menu.ShowAt(element);
+        e.Handled = true;
+    }
+
     private async void OnCreateFirstLevelClicked(object sender, RoutedEventArgs e)
     {
         string sourceDir = (SourceTextBox.Text ?? string.Empty).Trim();
@@ -5088,6 +5444,43 @@ public sealed partial class MainWindow : Window
         {
             await ToggleDirectoryCopyAsync(item);
         }
+    }
+
+    private void OnSecondLevelItemRightTapped(object sender, RightTappedRoutedEventArgs e)
+    {
+        if (sender is not FrameworkElement { DataContext: SecondLevelFolderItem item } element)
+        {
+            return;
+        }
+
+        SecondLevelListView.SelectedItem = item;
+        var menu = new MenuFlyout();
+        var toggleItem = new MenuFlyoutItem
+        {
+            Text = item.State == StateCopiedText ? L("从目标文件夹移除", "Remove from target") : L("复制到目标文件夹", "Copy to target"),
+            Icon = new FontIcon { Glyph = item.State == StateCopiedText ? "\uE74D" : "\uE8B0" }
+        };
+        toggleItem.Click += async (_, _) => await ToggleDirectoryCopyAsync(item);
+        menu.Items.Add(toggleItem);
+
+        var openItem = new MenuFlyoutItem
+        {
+            Text = L("打开 Mod 文件夹", "Open mod folder"),
+            Icon = new FontIcon { Glyph = "\uE838" }
+        };
+        openItem.Click += (_, _) => OpenDirectory(item.Path, L("Mod 文件夹", "Mod folder"));
+        menu.Items.Add(openItem);
+        menu.Items.Add(new MenuFlyoutSeparator());
+
+        var deleteItem = new MenuFlyoutItem
+        {
+            Text = L("删除 Mod...", "Delete mod..."),
+            Icon = new FontIcon { Glyph = "\uE74D" }
+        };
+        deleteItem.Click += OnDeleteSecondLevelClicked;
+        menu.Items.Add(deleteItem);
+        menu.ShowAt(element);
+        e.Handled = true;
     }
 
     private async void OnDeleteSecondLevelClicked(object sender, RoutedEventArgs e)
@@ -5231,6 +5624,47 @@ public sealed partial class MainWindow : Window
     {
         ApplyTheme(!_isDarkTheme);
         SaveConfig();
+    }
+
+    private void OnReduceMotionToggled(object sender, RoutedEventArgs e)
+    {
+        if (_isApplyingAppearanceSettings)
+        {
+            return;
+        }
+
+        _reduceMotion = ReduceMotionToggleSwitch.IsOn;
+        SaveShellConfig();
+        ShowAppNotification(
+            _reduceMotion ? "已减少界面动态效果。" : "已恢复界面动态效果。",
+            _reduceMotion ? "Interface motion has been reduced." : "Interface motion has been restored.",
+            InfoBarSeverity.Informational);
+    }
+
+    private void OnDensitySelectionChanged(object sender, SelectionChangedEventArgs e)
+    {
+        if (_isApplyingDensitySelection || DensityComboBox.SelectedItem is not ComboBoxItem { Tag: InterfaceDensity density })
+        {
+            return;
+        }
+
+        _interfaceDensity = density;
+        ApplyInterfaceDensity();
+        SaveShellConfig();
+    }
+
+    private void ApplyInterfaceDensity()
+    {
+        bool compact = _interfaceDensity == InterfaceDensity.Compact;
+        AppShellGrid.Padding = new Thickness(compact ? 8 : 12);
+        AppShellGrid.RowSpacing = compact ? 8 : 12;
+        HeaderTitleTextBlock.FontSize = compact ? 27 : 30;
+        PrimaryNavBorder.Padding = new Thickness(8, compact ? 8 : 12, 8, compact ? 8 : 12);
+        SecondaryNavBorder.Padding = new Thickness(compact ? 12 : 14);
+        SecondaryNavPanel.Spacing = compact ? 5 : 8;
+        FirstLevelListView.Padding = new Thickness(compact ? 3 : 6);
+        SecondLevelListView.Padding = new Thickness(compact ? 3 : 6);
+        ShortcutRowsPanel.Spacing = compact ? 6 : 10;
     }
 
     private void OnLanguageToggleClicked(object sender, RoutedEventArgs e)
@@ -5412,12 +5846,49 @@ public sealed partial class MainWindow : Window
     private async void OnRootGridLoaded(object sender, RoutedEventArgs e)
     {
         RootGrid.Loaded -= OnRootGridLoaded;
+        RestoreWindowPlacement();
+        TrimOnlineImageCache();
         DetectLocalUpdatePackage();
 
         if (_localUpdatePackageVersion is not null && !_hasPromptedForLocalUpdate)
         {
             await PromptAndStartLocalUpdateAsync();
         }
+    }
+
+    private void RestoreWindowPlacement()
+    {
+        if (_savedWindowWidth is not int width || _savedWindowHeight is not int height)
+        {
+            return;
+        }
+
+        width = Math.Max(1100, width);
+        height = Math.Max(700, height);
+        int x = _savedWindowX ?? AppWindow.Position.X;
+        int y = _savedWindowY ?? AppWindow.Position.Y;
+
+        DisplayArea display = DisplayArea.GetFromPoint(new PointInt32(x, y), DisplayAreaFallback.Primary);
+        RectInt32 workArea = display.WorkArea;
+        width = Math.Min(width, workArea.Width);
+        height = Math.Min(height, workArea.Height);
+        x = Math.Clamp(x, workArea.X, workArea.X + Math.Max(0, workArea.Width - width));
+        y = Math.Clamp(y, workArea.Y, workArea.Y + Math.Max(0, workArea.Height - height));
+        AppWindow.MoveAndResize(new RectInt32(x, y, width, height));
+    }
+
+    private void SaveWindowPlacement()
+    {
+        _savedWindowX = AppWindow.Position.X;
+        _savedWindowY = AppWindow.Position.Y;
+        _savedWindowWidth = AppWindow.Size.Width;
+        _savedWindowHeight = AppWindow.Size.Height;
+    }
+
+    private void OnWindowClosed(object sender, WindowEventArgs args)
+    {
+        SaveWindowPlacement();
+        SaveShellConfig();
     }
 
     private void DetectLocalUpdatePackage()
@@ -5636,9 +6107,27 @@ public sealed partial class MainWindow : Window
         }
     }
 
+    private void OnDropTargetDragLeave(object sender, DragEventArgs e)
+    {
+        if (sender is Border border)
+        {
+            SetDropTargetHighlight(border, false);
+        }
+    }
+
+    private void SetDropTargetHighlight(Border border, bool isActive)
+    {
+        border.BorderBrush = GetAppThemeBrush(isActive ? "AppNavSelectedBorderBrush" : "AppCardBorderBrush");
+        border.BorderThickness = isActive ? new Thickness(2) : new Thickness(1);
+    }
+
     private void OnPreviewDragOver(object sender, DragEventArgs e)
     {
         e.AcceptedOperation = DataPackageOperation.None;
+        if (sender is Border border)
+        {
+            SetDropTargetHighlight(border, false);
+        }
 
         if (GetSelectedSecondLevelItem() is null)
         {
@@ -5648,11 +6137,20 @@ public sealed partial class MainWindow : Window
         if (e.DataView.Contains(StandardDataFormats.StorageItems))
         {
             e.AcceptedOperation = DataPackageOperation.Copy;
+            if (sender is Border activeBorder)
+            {
+                SetDropTargetHighlight(activeBorder, true);
+            }
         }
     }
 
     private async void OnPreviewDrop(object sender, DragEventArgs e)
     {
+        if (sender is Border border)
+        {
+            SetDropTargetHighlight(border, false);
+        }
+
         var item = GetSelectedSecondLevelItem();
         if (item is null)
         {
@@ -5686,6 +6184,10 @@ public sealed partial class MainWindow : Window
     private void OnSecondLevelDragOver(object sender, DragEventArgs e)
     {
         e.AcceptedOperation = DataPackageOperation.None;
+        if (sender is Border border)
+        {
+            SetDropTargetHighlight(border, false);
+        }
 
         if (FirstLevelListView.SelectedItem is null)
         {
@@ -5695,11 +6197,20 @@ public sealed partial class MainWindow : Window
         if (e.DataView.Contains(StandardDataFormats.StorageItems))
         {
             e.AcceptedOperation = DataPackageOperation.Copy;
+            if (sender is Border activeBorder)
+            {
+                SetDropTargetHighlight(activeBorder, true);
+            }
         }
     }
 
     private async void OnSecondLevelDrop(object sender, DragEventArgs e)
     {
+        if (sender is Border border)
+        {
+            SetDropTargetHighlight(border, false);
+        }
+
         FirstLevelFolderItem? item = FirstLevelListView.SelectedItem as FirstLevelFolderItem;
         if (item is null)
         {
@@ -5829,11 +6340,48 @@ public sealed partial class MainWindow : Window
     {
         _isDarkTheme = dark;
         RootGrid.RequestedTheme = dark ? ElementTheme.Dark : ElementTheme.Light;
+        ApplyWindowChrome(dark);
         SetStateColor(CurrentStateTextBlock.Text);
         RefreshPrimaryNavigationVisuals();
         RefreshSecondaryNavigation();
         UpdateShortcutKeyFocusVisuals();
         ApplyLanguage();
+    }
+
+    private void ApplyWindowChrome(bool dark)
+    {
+        try
+        {
+            if (!Microsoft.UI.Windowing.AppWindowTitleBar.IsCustomizationSupported())
+            {
+                return;
+            }
+
+            var titleBar = AppWindow.TitleBar;
+            var foreground = dark ? Colors.White : Colors.Black;
+            var inactiveForeground = dark
+                ? ColorHelper.FromArgb(160, 255, 255, 255)
+                : ColorHelper.FromArgb(150, 0, 0, 0);
+            var background = dark
+                ? ColorHelper.FromArgb(255, 18, 23, 30)
+                : ColorHelper.FromArgb(255, 244, 247, 251);
+            var inactiveBackground = dark
+                ? ColorHelper.FromArgb(255, 24, 29, 37)
+                : ColorHelper.FromArgb(255, 248, 250, 253);
+
+            titleBar.BackgroundColor = background;
+            titleBar.InactiveBackgroundColor = inactiveBackground;
+            titleBar.ForegroundColor = foreground;
+            titleBar.InactiveForegroundColor = inactiveForeground;
+            titleBar.ButtonBackgroundColor = background;
+            titleBar.ButtonInactiveBackgroundColor = inactiveBackground;
+            titleBar.ButtonForegroundColor = foreground;
+            titleBar.ButtonInactiveForegroundColor = inactiveForeground;
+        }
+        catch
+        {
+            // Older Windows builds can reject title-bar color customization.
+        }
     }
 
     private string GetPreferredDownloadStartFolder()
@@ -6342,12 +6890,14 @@ public sealed partial class MainWindow : Window
                 await Task.Run(() => Directory.Delete(targetPath, true));
                 UpdateProgress(100, L("移除完成", "Removal complete"));
                 StatusTextBlock.Text = item.Name + L(" 已从目标文件夹移除。", " was removed from the target folder.");
+                ShowAppNotification($"{item.Name} 已从目标文件夹移除。", $"{item.Name} was removed from the target folder.");
             }
             else
             {
                 var progress = new Progress<ProgressInfo>(info => UpdateProgress(info.Percent, info.Message));
                 await CopyDirectoryWithProgressAsync(item.Path, targetPath, progress);
                 StatusTextBlock.Text = item.Name + L(" 已复制到目标文件夹。", " was copied to the target folder.");
+                ShowAppNotification($"{item.Name} 已复制到目标文件夹。", $"{item.Name} was copied to the target folder.");
             }
         }
         catch (Exception ex)
@@ -6372,6 +6922,7 @@ public sealed partial class MainWindow : Window
             string importedPath = await Task.Run(() => ImportArchiveContents(archivePath, item.Path));
 
             StatusTextBlock.Text = L($"已将 {Path.GetFileName(archivePath)} 解压到 {item.Name}。", $"Extracted {Path.GetFileName(archivePath)} to {item.Name}.");
+            ShowAppNotification($"压缩包已解压到 {item.Name}。", $"The archive was extracted to {item.Name}.");
             await RefreshListsAsync();
             SelectFirstLevelByPath(item.Path);
             SelectSecondLevelByPath(importedPath);
@@ -6416,6 +6967,7 @@ public sealed partial class MainWindow : Window
             });
 
             StatusTextBlock.Text = item.Name + L(" 的预览图已更新。", "'s preview image was updated.");
+            ShowAppNotification($"{item.Name} 的预览图已更新。", $"The preview image for {item.Name} was updated.");
             await RefreshListsAsync();
             SelectSecondLevelByPath(item.Path);
         }
@@ -6999,6 +7551,7 @@ public sealed partial class MainWindow : Window
             await Task.Run(() => ExtractArchiveToDirectory(archivePath, item.Path));
 
             StatusTextBlock.Text = L($"已将 {Path.GetFileName(archivePath)} 导入到 {item.Name}。", $"Imported {Path.GetFileName(archivePath)} into {item.Name}.");
+            ShowAppNotification($"压缩包已导入到 {item.Name}。", $"The archive was imported into {item.Name}.");
             await RefreshListsAsync();
             SelectFirstLevelByPath(item.Path);
         }
@@ -7673,6 +8226,18 @@ public sealed class BetaShellConfig
     public string? LatestReleasePublishedAt { get; set; }
 
     public string? LatestReleaseUrl { get; set; }
+
+    public bool ReduceMotion { get; set; }
+
+    public string? InterfaceDensity { get; set; }
+
+    public int? WindowX { get; set; }
+
+    public int? WindowY { get; set; }
+
+    public int? WindowWidth { get; set; }
+
+    public int? WindowHeight { get; set; }
 
     public List<WorkspaceRepository> Repositories { get; set; } = [];
 }
