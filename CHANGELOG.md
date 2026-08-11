@@ -6,6 +6,58 @@
 
 This document records the major changes in published versions of Integrated Mod Manager.
 
+## v3.4.0
+
+### 中文
+
+- 修复原神、崩坏：星穹铁道和绝区零角色分类可读取数量但不显示 Mod 的匹配问题。
+- 三款游戏改用官方外服英文角色名辅助匹配，同时保留中文 Wiki 头像、中文名和角色链接。
+- 恢复稳定的在线 Mod 列表读取方式，角色目录按月独立更新，避免与 Mod 请求互相阻塞。
+- 修复三款游戏下载量偶发长期缺失的问题，缺失数据改为低频顺序补全并缓存 12 小时。
+- 仓库总览卡片支持双击切换当前仓库。
+- 发布 ZIP 改为仅包含应用与必要运行文件，不再附带 README 和使用文档。
+
+### English
+
+- Fixed character filters that returned category counts but displayed no mods for Genshin Impact, Honkai: Star Rail, and Zenless Zone Zero.
+- Added official global English character names for matching while preserving Chinese Wiki avatars, names, and character links.
+- Restored the stable online mod list loading path and kept the monthly character catalog refresh independent from mod requests.
+- Fixed intermittently missing download counts by filling absent values sequentially at a low request rate and caching them for 12 hours.
+- Added double-click repository switching on dashboard cards.
+- Release ZIPs now contain only the application and required runtime files, without README or user-guide documents.
+
+## v3.3.2
+
+### 中文
+
+- 修复原神、崩坏：星穹铁道和绝区零在线 Mod 下载量长期显示为 0 的问题。
+- 缺失的下载量改为低频顺序补全，并使用 12 小时本地缓存，避免高并发和重复请求。
+- 仓库总览卡片支持双击切换当前仓库，卡片内按钮不会误触发切换。
+
+### English
+
+- Fixed download counts remaining at zero for online Genshin Impact, Honkai: Star Rail, and Zenless Zone Zero mods.
+- Missing counts are now filled sequentially at a low request rate and cached locally for 12 hours.
+- Repository dashboard cards can now be double-clicked to switch the active repository without interfering with card buttons.
+
+## v3.3.1
+
+### 中文
+
+- 原神、崩坏：星穹铁道和绝区零改为读取 HoYoWiki 官方外服英文角色名。
+- 通过官方页面 ID 配对中英文角色，提升 GameBanana 角色分类匹配准确度。
+- 修复选择中文角色后，已读取的英文分类 Mod 被界面二次过滤隐藏的问题。
+- 保留中文 Wiki 的头像、中文名和链接，未配对角色继续使用原翻译回退。
+- 角色目录仍按月独立缓存，不增加 GameBanana 列表请求并发。
+
+### English
+
+- Added official HoYoWiki English character names for Genshin Impact, Honkai: Star Rail, and Zenless Zone Zero.
+- Paired Chinese and English names by official entry page ID for more accurate GameBanana category matching.
+- Fixed loaded mods being hidden by a second exact-name filter when a Chinese character was selected.
+- Preserved Chinese Wiki avatars, names, and links, with the existing translation fallback for unmatched entries.
+- Kept the character catalog on its independent monthly cache without increasing GameBanana list concurrency.
+
 ## v3.3.0
 
 ### 中文

@@ -4,8 +4,8 @@
 
 A WinUI 3 mod management tool for Windows 10/11. It organizes local mods into repositories and provides two-level folder browsing, copy-based switching, archive import, image previews, shortcut notes, online mod browsing and downloads, and update tracking for installed mods.
 
-- Current version: `v3.3.0`
-- File version: `3.3.0.0`
+- Current version: `v3.4.0`
+- File version: `3.4.0.0`
 - Tool author: `uyujkk`
 
 [Download Latest Release](https://github.com/uyujkk/Integrated_Mod_Manager/releases/latest) ·
@@ -45,7 +45,22 @@ Integrated Mod Manager is designed to:
 | App updates | Check GitHub Releases or apply a newer release ZIP placed in the app folder |
 | Interface | Chinese/English, light/dark themes, comfortable/compact density, reduced motion, and responsive layout |
 
-## v3.3.0 Highlights
+## v3.4.0 Highlights
+
+- Fixed character filters that loaded category counts but displayed no mods for Genshin Impact, Honkai: Star Rail, and Zenless Zone Zero.
+- Uses official global English character names for better GameBanana category matching while retaining Chinese Wiki avatars, names, and links.
+- Keeps online mod loading independent from the monthly Wiki character catalog refresh.
+- Fills missing download counts sequentially at a low request rate and caches them for 12 hours.
+- Repository dashboard cards support double-click switching.
+- Release archives now contain only the application and required runtime files, without README or user-guide documents.
+
+## v3.3.2 Highlights
+
+- Missing download counts for Genshin Impact, Honkai: Star Rail, and Zenless Zone Zero mods are filled sequentially and cached locally.
+- Repository dashboard cards support double-click switching.
+
+- Uses official HoYoWiki English character names for Genshin Impact, Honkai: Star Rail, and Zenless Zone Zero category matching.
+- Keeps Chinese names, character avatars, and Wiki links from the official Chinese Wiki with a monthly catalog cache.
 
 - Reworked online browsing into character, mod-list, and details columns on wide windows, with a responsive character rail on smaller windows.
 - Added Endfield Wiki character avatars and bilingual names, mapped to their corresponding GameBanana categories.
