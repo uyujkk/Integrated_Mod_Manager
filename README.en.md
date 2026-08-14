@@ -4,8 +4,8 @@
 
 A WinUI 3 mod management tool for Windows 10/11. It organizes local mods into repositories and provides two-level folder browsing, copy-based switching, archive import, image previews, shortcut notes, online mod browsing and downloads, and update tracking for installed mods.
 
-- Current version: `v3.4.0`
-- File version: `3.4.0.0`
+- Current version: `v3.4.2`
+- File version: `3.4.2.0`
 - Tool author: `uyujkk`
 
 [Download Latest Release](https://github.com/uyujkk/Integrated_Mod_Manager/releases/latest) ·
@@ -44,6 +44,24 @@ Integrated Mod Manager is designed to:
 | Mod updates | Manually or periodically check online-installed mods for updates |
 | App updates | Check GitHub Releases or apply a newer release ZIP placed in the app folder |
 | Interface | Chinese/English, light/dark themes, comfortable/compact density, reduced motion, and responsive layout |
+
+## v3.4.2 Highlights
+
+- Obsolete online requests are cancelled, rate limits trigger exponential cooldown, and usable cache remains visible.
+- The status bar distinguishes live data, cache age, stale cache, cooldown, and stopped requests.
+- Online list and grid layouts now use virtualized containers and only create visible cards.
+- Configuration files use atomic writes and rotating backups, with automatic recovery from a valid backup.
+- App updates retain the latest three version backups and automatically roll back if the updated runtime cannot start.
+- Automatic retries for the same online configuration stop after a timeout, preventing repeated loading and notification loops.
+- Fixed mod cards moving over the search, sort, and pagination controls after selecting a character.
+- Fixed right-edge clipping on the online page, standardized pagination button sizing, and removed redundant clipped tooltips.
+
+## v3.4.1 Highlights
+
+- Character catalogs use local cache first, with stale data shown immediately while a background refresh runs.
+- Character avatars prefer the disk cache, limit uncached downloads to three concurrent requests, and cancel obsolete work.
+- Image requests retry after rate limits or temporary server errors.
+- Refreshing online mods no longer waits for the character catalog refresh.
 
 ## v3.4.0 Highlights
 

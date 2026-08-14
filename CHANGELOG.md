@@ -6,6 +6,55 @@
 
 This document records the major changes in published versions of Integrated Mod Manager.
 
+## v3.4.2
+
+### 中文
+
+- 在线列表支持取消过期请求，切换仓库、角色或重复刷新时不再保留旧请求。
+- GameBanana 返回 `429` 后启用指数冷却并遵循服务器重试时间，避免连续请求加重限流。
+- 新增实时数据、缓存时间、离线缓存、冷却倒计时和超时停止状态提示。
+- 在线列表与方块模式改用 WinUI 虚拟化容器，只为可见项目创建卡片，降低长列表内存与图片请求压力。
+- 配置文件改为原子写入，最近备份自动轮换；主配置损坏时会恢复最近有效备份。
+- 本地更新会在安装目录保留最近三个版本备份；新版本启动失败时自动回滚并重新启动旧版本。
+- 在线列表超时后暂停同一配置的自动重试，避免 5 秒超时通知和加载流程无限循环。
+- 修复角色筛选动画重置布局坐标，导致 Mod 卡片覆盖搜索、排序和翻页控件的问题。
+- 修复在线工作区宽度与右侧内边距计算，统一上一页/下一页按钮尺寸，并移除被裁切的重复提示。
+
+### English
+
+- Online list requests can now be cancelled, so repository, character, and refresh changes do not leave obsolete requests running.
+- `429` responses trigger exponential cooldown while respecting server retry guidance.
+- Added visible live-data, cache-age, stale-cache, cooldown, and timeout status indicators.
+- List and grid modes now use WinUI virtualized containers, creating cards only for visible items.
+- Configuration files use atomic writes and rotating backups, with automatic recovery from the latest valid copy.
+- Local updates retain the latest three version backups and automatically restore the previous version if the new runtime cannot start.
+- Automatic retries for the same online configuration now pause after a timeout, preventing repeated five-second timeout notifications and reload loops.
+- Fixed character-filter animations resetting layout coordinates and moving mod cards over the search, sort, and pagination controls.
+- Corrected online workspace width and right-padding calculations, made both pagination buttons consistent, and removed their clipped duplicate tooltips.
+
+## v3.4.1
+
+### 中文
+
+- 角色列表优先显示本地目录缓存，缓存超过 30 天时继续显示旧数据并在后台更新。
+- 角色头像优先使用磁盘缓存，未缓存头像限制为最多 3 个并发下载。
+- 切换仓库、语言或重建角色栏时取消旧头像任务，避免错位与无效请求。
+- 图片请求遇到 `429` 或临时服务器错误时自动退避重试。
+- 手动刷新在线 Mod 时同步触发后台角色目录更新，但不阻塞 Mod 列表加载。
+
+- 在线 Mod 列表请求超过 5 秒会自动停止；优先显示本地缓存，没有缓存时保留当前内容并关闭加载遮罩。
+- 修复方块模式在窗口或详情面板宽度变化后沿用旧宽度、导致卡片偏左和右侧留白的问题。
+
+### English
+
+- Character lists now show the local catalog cache first and keep stale data visible while refreshing it in the background after 30 days.
+- Character avatars use the disk cache first, with at most three uncached avatar downloads running concurrently.
+- Obsolete avatar tasks are cancelled when switching repositories, changing language, or rebuilding the character rail.
+- Image requests retry with backoff after `429` responses or temporary server errors.
+- Manually refreshing online mods also refreshes the character catalog in the background without blocking the mod list.
+- Online mod list requests now stop automatically after five seconds; local cache is preferred, otherwise current content is preserved and the loading overlay closes.
+- Fixed grid view retaining a stale width after window or details-pane changes, which could shift cards left and leave unused space on the right.
+
 ## v3.4.0
 
 ### 中文

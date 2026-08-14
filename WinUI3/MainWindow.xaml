@@ -5,7 +5,7 @@
     xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
     xmlns:local="using:ModFolderCopier.WinUI"
     xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
-    Title="Integrated Mod Manager v3.4.0"
+    Title="Integrated Mod Manager v3.4.2"
     SizeChanged="OnWindowSizeChanged"
     mc:Ignorable="d">
 
@@ -690,25 +690,46 @@
                                             <ColumnDefinition Width="*" />
                                             <ColumnDefinition Width="Auto" />
                                         </Grid.ColumnDefinitions>
-                                        <Border
-                                            HorizontalAlignment="Left"
-                                            Background="{ThemeResource AppAccentSoftBrush}"
-                                            CornerRadius="8"
-                                            Padding="10,5">
-                                            <TextBlock
-                                                x:Name="OnlineStatusTextBlock"
-                                                MaxLines="1"
-                                                Style="{StaticResource CaptionTextStyle}"
-                                                TextTrimming="CharacterEllipsis"
-                                                TextWrapping="NoWrap" />
-                                        </Border>
+                                        <StackPanel HorizontalAlignment="Left" Orientation="Horizontal" Spacing="8">
+                                            <Border
+                                                Background="{ThemeResource AppAccentSoftBrush}"
+                                                CornerRadius="8"
+                                                Padding="10,5">
+                                                <TextBlock
+                                                    x:Name="OnlineStatusTextBlock"
+                                                    MaxLines="1"
+                                                    Style="{StaticResource CaptionTextStyle}"
+                                                    TextTrimming="CharacterEllipsis"
+                                                    TextWrapping="NoWrap" />
+                                            </Border>
+                                            <Border
+                                                x:Name="OnlineCacheStatusBorder"
+                                                Background="{ThemeResource AppInsetBackgroundBrush}"
+                                                BorderBrush="{ThemeResource AppCardBorderBrush}"
+                                                BorderThickness="1"
+                                                CornerRadius="8"
+                                                Padding="10,5"
+                                                Visibility="Collapsed">
+                                                <TextBlock
+                                                    x:Name="OnlineCacheStatusTextBlock"
+                                                    MaxLines="1"
+                                                    Style="{StaticResource CaptionTextStyle}"
+                                                    TextTrimming="CharacterEllipsis"
+                                                    TextWrapping="NoWrap" />
+                                            </Border>
+                                        </StackPanel>
                                         <StackPanel Grid.Column="1" x:Name="OnlineDownloadProgressPanel" Width="280" Spacing="5" Visibility="Collapsed">
                                             <TextBlock x:Name="OnlineDownloadProgressTextBlock" Style="{StaticResource CaptionTextStyle}" TextTrimming="CharacterEllipsis" />
                                             <ProgressBar x:Name="OnlineDownloadProgressBar" Minimum="0" Maximum="100" Height="6" />
                                         </StackPanel>
                                     </Grid>
 
-                                    <Grid x:Name="OnlineWorkspaceGrid" Grid.Row="2" ColumnSpacing="12" RowSpacing="12">
+                                    <Grid
+                                        x:Name="OnlineWorkspaceGrid"
+                                        Grid.Row="2"
+                                        ColumnSpacing="12"
+                                        RowSpacing="12"
+                                        SizeChanged="OnOnlineWorkspaceGridSizeChanged">
                                         <Grid.ColumnDefinitions>
                                             <ColumnDefinition x:Name="OnlineCharacterRailColumn" Width="188" />
                                             <ColumnDefinition x:Name="OnlineResultsColumn" Width="*" />
@@ -758,13 +779,18 @@
                                             </Grid>
                                         </Border>
 
-                                        <Grid x:Name="OnlineResultsHost" Grid.Column="1" RowSpacing="8">
+                                        <Grid
+                                            x:Name="OnlineResultsHost"
+                                            Grid.Column="1"
+                                            HorizontalAlignment="Stretch"
+                                            RowSpacing="8"
+                                            SizeChanged="OnOnlineResultsHostSizeChanged">
                                             <Grid.RowDefinitions>
-                                                <RowDefinition Height="Auto" />
-                                                <RowDefinition Height="Auto" />
+                                                <RowDefinition Height="40" />
+                                                <RowDefinition Height="34" />
                                                 <RowDefinition Height="*" />
                                             </Grid.RowDefinitions>
-                                            <Grid ColumnSpacing="8">
+                                            <Grid ColumnSpacing="8" Canvas.ZIndex="1">
                                                 <Grid.ColumnDefinitions>
                                                     <ColumnDefinition Width="*" />
                                                     <ColumnDefinition Width="176" />
@@ -788,7 +814,7 @@
                                                     HorizontalAlignment="Stretch"
                                                     SelectionChanged="OnOnlineSortSelectionChanged" />
                                             </Grid>
-                                            <Grid Grid.Row="1" ColumnSpacing="8">
+                                            <Grid Grid.Row="1" ColumnSpacing="8" Canvas.ZIndex="1">
                                                 <Grid.ColumnDefinitions>
                                                     <ColumnDefinition Width="Auto" />
                                                     <ColumnDefinition Width="*" />
@@ -798,6 +824,9 @@
                                                     x:Name="OnlinePrevPageButton"
                                                     Click="OnOnlinePrevPageClicked"
                                                     MinHeight="34"
+                                                    Width="96"
+                                                    Padding="16,6"
+                                                    HorizontalContentAlignment="Center"
                                                     Style="{StaticResource SecondaryButtonStyle}" />
                                                 <TextBlock
                                                     x:Name="OnlinePaginationTextBlock"
@@ -810,28 +839,83 @@
                                                     Grid.Column="2"
                                                     Click="OnOnlineNextPageClicked"
                                                     MinHeight="34"
+                                                    Width="96"
+                                                    Padding="16,6"
+                                                    HorizontalContentAlignment="Center"
                                                     Style="{StaticResource SecondaryButtonStyle}" />
                                             </Grid>
-                                            <ScrollViewer
+                                            <ListView
+                                                x:Name="OnlineVirtualizedListView"
                                                 Grid.Row="2"
-                                                HorizontalScrollBarVisibility="Disabled"
-                                                HorizontalScrollMode="Disabled"
-                                                VerticalScrollBarVisibility="Auto"
-                                                VerticalScrollMode="Enabled">
-                                                <Grid Margin="0,0,14,0">
-                                                    <StackPanel
-                                                        x:Name="OnlinePreviewPanel"
-                                                        Spacing="7" />
-                                                    <VariableSizedWrapGrid
-                                                        x:Name="OnlineGridPreviewPanel"
-                                                        HorizontalAlignment="Stretch"
-                                                        ItemWidth="300"
-                                                        ItemHeight="360"
-                                                        Orientation="Horizontal"
-                                                        SizeChanged="OnOnlineGridPreviewPanelSizeChanged"
-                                                        Visibility="Collapsed" />
-                                                </Grid>
-                                            </ScrollViewer>
+                                                HorizontalContentAlignment="Stretch"
+                                                MinHeight="0"
+                                                Canvas.ZIndex="0"
+                                                ScrollViewer.HorizontalScrollBarVisibility="Disabled"
+                                                ScrollViewer.HorizontalScrollMode="Disabled"
+                                                ScrollViewer.VerticalScrollBarVisibility="Auto"
+                                                ScrollViewer.VerticalScrollMode="Enabled"
+                                                SelectionMode="None">
+                                                <ListView.ItemContainerStyle>
+                                                    <Style TargetType="ListViewItem">
+                                                        <Setter Property="HorizontalContentAlignment" Value="Stretch" />
+                                                        <Setter Property="Margin" Value="0,0,12,7" />
+                                                        <Setter Property="Padding" Value="0" />
+                                                    </Style>
+                                                </ListView.ItemContainerStyle>
+                                                <ListView.ItemTemplate>
+                                                    <DataTemplate>
+                                                        <ContentControl
+                                                            HorizontalContentAlignment="Stretch"
+                                                            DataContextChanged="OnOnlineListCardPresenterDataContextChanged" />
+                                                    </DataTemplate>
+                                                </ListView.ItemTemplate>
+                                                <ListView.ItemsPanel>
+                                                    <ItemsPanelTemplate>
+                                                        <ItemsStackPanel Orientation="Vertical" />
+                                                    </ItemsPanelTemplate>
+                                                </ListView.ItemsPanel>
+                                            </ListView>
+                                            <GridView
+                                                x:Name="OnlineVirtualizedGridView"
+                                                Grid.Row="2"
+                                                HorizontalContentAlignment="Stretch"
+                                                MinHeight="0"
+                                                Canvas.ZIndex="0"
+                                                ScrollViewer.HorizontalScrollBarVisibility="Disabled"
+                                                ScrollViewer.HorizontalScrollMode="Disabled"
+                                                ScrollViewer.VerticalScrollBarVisibility="Auto"
+                                                ScrollViewer.VerticalScrollMode="Enabled"
+                                                SelectionMode="None"
+                                                Visibility="Collapsed">
+                                                <GridView.ItemContainerStyle>
+                                                    <Style TargetType="GridViewItem">
+                                                        <Setter Property="HorizontalContentAlignment" Value="Stretch" />
+                                                        <Setter Property="VerticalContentAlignment" Value="Stretch" />
+                                                        <Setter Property="Margin" Value="0" />
+                                                        <Setter Property="Padding" Value="0" />
+                                                    </Style>
+                                                </GridView.ItemContainerStyle>
+                                                <GridView.ItemTemplate>
+                                                    <DataTemplate>
+                                                        <ContentControl
+                                                            HorizontalContentAlignment="Stretch"
+                                                            VerticalContentAlignment="Stretch"
+                                                            DataContextChanged="OnOnlineGridCardPresenterDataContextChanged" />
+                                                    </DataTemplate>
+                                                </GridView.ItemTemplate>
+                                                <GridView.ItemsPanel>
+                                                    <ItemsPanelTemplate>
+                                                        <ItemsWrapGrid ItemWidth="300" ItemHeight="360" Orientation="Horizontal" />
+                                                    </ItemsPanelTemplate>
+                                                </GridView.ItemsPanel>
+                                            </GridView>
+                                            <ContentControl
+                                                x:Name="OnlineEmptyResultsContentControl"
+                                                Grid.Row="2"
+                                                HorizontalContentAlignment="Stretch"
+                                                VerticalContentAlignment="Top"
+                                                Margin="0,0,12,0"
+                                                Visibility="Collapsed" />
                                             <Border
                                                 x:Name="OnlineLoadingOverlay"
                                                 Grid.Row="2"

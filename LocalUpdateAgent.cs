@@ -11,9 +11,9 @@ using System.Windows.Forms;
 [assembly: AssemblyTitle("Integrated Mod Manager Local Update Agent")]
 [assembly: AssemblyProduct("Integrated Mod Manager")]
 [assembly: AssemblyCopyright("Copyright (c) 2026 uyujkk")]
-[assembly: AssemblyVersion("3.4.0.0")]
-[assembly: AssemblyFileVersion("3.4.0.0")]
-[assembly: AssemblyInformationalVersion("3.4.0")]
+[assembly: AssemblyVersion("3.4.2.0")]
+[assembly: AssemblyFileVersion("3.4.2.0")]
+[assembly: AssemblyInformationalVersion("3.4.2")]
 
 internal static class LocalUpdateAgent
 {
@@ -48,7 +48,8 @@ internal static class LocalUpdateAgent
         options.TryGetValue("expected-version", out expectedVersion);
         bool english = string.Equals(language, "en", StringComparison.OrdinalIgnoreCase);
         string extractionRoot = Path.Combine(Path.GetTempPath(), "IntegratedModManagerUpdate-" + Guid.NewGuid().ToString("N"));
-        string backupRoot = Path.Combine(extractionRoot, "rollback");
+        string updateBackupRoot = string.Empty;
+        string backupFilesRoot = string.Empty;
         var createdFiles = new List<string>();
 
         try
@@ -56,6 +57,11 @@ internal static class LocalUpdateAgent
             packagePath = Path.GetFullPath(packagePath);
             installRoot = Path.GetFullPath(installRoot);
             launcherPath = Path.GetFullPath(launcherPath);
+            string updateBackupsRoot = Path.Combine(installRoot, "backups", "updates");
+            updateBackupRoot = Path.Combine(
+                updateBackupsRoot,
+                DateTime.Now.ToString("yyyyMMdd-HHmmss") + "-v" + NormalizeVersionLabel(expectedVersion));
+            backupFilesRoot = Path.Combine(updateBackupRoot, "files");
 
             if (!File.Exists(packagePath))
             {
@@ -71,20 +77,27 @@ internal static class LocalUpdateAgent
 
             string payloadRoot = FindPayloadRoot(payloadExtractionRoot);
             ValidatePayload(payloadRoot, expectedVersion);
-            BackupFilesThatWillBeReplaced(payloadRoot, installRoot, backupRoot);
+            Directory.CreateDirectory(backupFilesRoot);
+            BackupFilesThatWillBeReplaced(payloadRoot, installRoot, backupFilesRoot);
             CopyPayload(payloadRoot, installRoot, createdFiles);
-            RestorePreservedConfiguration(backupRoot, installRoot);
+            RestorePreservedConfiguration(backupFilesRoot, installRoot);
+            WriteUpdateBackupManifest(updateBackupRoot, installRoot, expectedVersion, createdFiles);
 
-            File.WriteAllText(
-                Path.Combine(installRoot, "update-success.log"),
-                DateTime.Now.ToString("yyyy-MM-dd HH:mm:ss") + Environment.NewLine + Path.GetFileName(packagePath));
-
-            Process.Start(new ProcessStartInfo
+            Process launcherProcess = Process.Start(new ProcessStartInfo
             {
                 FileName = launcherPath,
                 WorkingDirectory = installRoot,
                 UseShellExecute = true
             });
+            if (launcherProcess == null || !WaitForUpdatedRuntimeStart(installRoot, TimeSpan.FromSeconds(12)))
+            {
+                throw new InvalidOperationException("The updated application did not start within 12 seconds.");
+            }
+
+            File.WriteAllText(
+                Path.Combine(installRoot, "update-success.log"),
+                DateTime.Now.ToString("yyyy-MM-dd HH:mm:ss") + Environment.NewLine + Path.GetFileName(packagePath));
+            PruneUpdateBackups(updateBackupsRoot, updateBackupRoot, 3);
 
             return 0;
         }
@@ -92,7 +105,11 @@ internal static class LocalUpdateAgent
         {
             try
             {
-                RollBackFiles(backupRoot, installRoot, createdFiles);
+                RollBackFiles(backupFilesRoot, installRoot, createdFiles);
+                File.WriteAllText(
+                    Path.Combine(installRoot, "update-rollback.log"),
+                    DateTime.Now.ToString("yyyy-MM-dd HH:mm:ss") + Environment.NewLine + ex);
+                TryRestartExistingApplication(launcherPath, installRoot);
                 File.WriteAllText(Path.Combine(Path.GetTempPath(), "IntegratedModManagerUpdate-error.log"), ex.ToString());
             }
             catch
@@ -101,8 +118,8 @@ internal static class LocalUpdateAgent
 
             MessageBox.Show(
                 english
-                    ? "The local update failed. Your existing configuration was kept.\n\n" + ex.Message
-                    : "本地更新失败，现有配置已保留。\n\n" + ex.Message,
+                    ? "The local update failed. The previous version and configuration were restored.\n\n" + ex.Message
+                    : "本地更新失败，已恢复上一版本和现有配置。\n\n" + ex.Message,
                 english ? "Update Failed" : "更新失败",
                 MessageBoxButtons.OK,
                 MessageBoxIcon.Error);
@@ -120,6 +137,110 @@ internal static class LocalUpdateAgent
             catch
             {
             }
+        }
+    }
+
+    private static string NormalizeVersionLabel(string version)
+    {
+        string normalized = string.IsNullOrWhiteSpace(version) ? "unknown" : version.Trim();
+        foreach (char invalid in Path.GetInvalidFileNameChars())
+        {
+            normalized = normalized.Replace(invalid, '-');
+        }
+
+        return normalized;
+    }
+
+    private static void WriteUpdateBackupManifest(
+        string updateBackupRoot,
+        string installRoot,
+        string expectedVersion,
+        IEnumerable<string> createdFiles)
+    {
+        Directory.CreateDirectory(updateBackupRoot);
+        File.WriteAllLines(
+            Path.Combine(updateBackupRoot, "backup-manifest.txt"),
+            new[]
+            {
+                "created_at=" + DateTimeOffset.Now.ToString("O"),
+                "install_root=" + installRoot,
+                "target_version=" + expectedVersion
+            });
+        File.WriteAllLines(
+            Path.Combine(updateBackupRoot, "created-files.txt"),
+            createdFiles.Select(path => GetRelativePath(installRoot, path)));
+    }
+
+    private static bool WaitForUpdatedRuntimeStart(string installRoot, TimeSpan timeout)
+    {
+        string expectedRuntime = Path.GetFullPath(Path.Combine(installRoot, "WinUI3", "ModFolderCopier.WinUI.exe"));
+        DateTime deadline = DateTime.UtcNow.Add(timeout);
+        while (DateTime.UtcNow < deadline)
+        {
+            foreach (Process process in Process.GetProcessesByName("ModFolderCopier.WinUI"))
+            {
+                try
+                {
+                    using (process)
+                    {
+                        string processPath = process.MainModule == null ? string.Empty : process.MainModule.FileName;
+                        if (string.Equals(Path.GetFullPath(processPath), expectedRuntime, StringComparison.OrdinalIgnoreCase))
+                        {
+                            Thread.Sleep(3000);
+                            return !process.HasExited;
+                        }
+                    }
+                }
+                catch
+                {
+                    process.Dispose();
+                }
+            }
+
+            Thread.Sleep(250);
+        }
+
+        return false;
+    }
+
+    private static void TryRestartExistingApplication(string launcherPath, string installRoot)
+    {
+        try
+        {
+            if (File.Exists(launcherPath))
+            {
+                Process.Start(new ProcessStartInfo
+                {
+                    FileName = launcherPath,
+                    WorkingDirectory = installRoot,
+                    UseShellExecute = true
+                });
+            }
+        }
+        catch
+        {
+        }
+    }
+
+    private static void PruneUpdateBackups(string backupsRoot, string currentBackupRoot, int keepCount)
+    {
+        try
+        {
+            if (!Directory.Exists(backupsRoot))
+            {
+                return;
+            }
+
+            foreach (string staleDirectory in Directory.GetDirectories(backupsRoot)
+                         .Where(path => !string.Equals(path, currentBackupRoot, StringComparison.OrdinalIgnoreCase))
+                         .OrderByDescending(Directory.GetLastWriteTimeUtc)
+                         .Skip(Math.Max(0, keepCount - 1)))
+            {
+                Directory.Delete(staleDirectory, true);
+            }
+        }
+        catch
+        {
         }
     }
 
