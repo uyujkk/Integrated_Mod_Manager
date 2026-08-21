@@ -5,7 +5,7 @@
     xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
     xmlns:local="using:ModFolderCopier.WinUI"
     xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
-    Title="Integrated Mod Manager v3.5.1"
+    Title="Integrated Mod Manager v3.6.1"
     SizeChanged="OnWindowSizeChanged"
     mc:Ignorable="d">
 
@@ -757,6 +757,7 @@
                                                 <ScrollViewer
                                                     x:Name="OnlineCharacterRailScrollViewer"
                                                     Grid.Row="1"
+                                                    Padding="0,0,2,0"
                                                     HorizontalContentAlignment="Stretch"
                                                     HorizontalScrollBarVisibility="Disabled"
                                                     HorizontalScrollMode="Disabled"
@@ -766,7 +767,7 @@
                                                     <StackPanel
                                                         x:Name="OnlineCharacterAvatarPanel"
                                                         HorizontalAlignment="Stretch"
-                                                        Margin="0,0,4,0"
+                                                        Margin="0,0,10,0"
                                                         Orientation="Vertical"
                                                         Spacing="6" />
                                                 </ScrollViewer>
@@ -1043,11 +1044,15 @@
                             </StackPanel>
                         </Border>
 
-                        <Grid ColumnSpacing="16">
+                        <Grid x:Name="UpdatesTopGrid" ColumnSpacing="16">
                             <Grid.ColumnDefinitions>
-                                <ColumnDefinition Width="1.15*" />
-                                <ColumnDefinition Width="0.85*" />
+                                <ColumnDefinition x:Name="UpdatesPrimaryColumn" Width="1.15*" />
+                                <ColumnDefinition x:Name="UpdatesSecondaryColumn" Width="0.85*" />
                             </Grid.ColumnDefinitions>
+                            <Grid.RowDefinitions>
+                                <RowDefinition Height="Auto" />
+                                <RowDefinition Height="Auto" />
+                            </Grid.RowDefinitions>
 
                             <Border Grid.Column="0" Style="{StaticResource CardBorderStyle}">
                                 <StackPanel Spacing="12">
@@ -1083,6 +1088,40 @@
                                 </StackPanel>
                             </Border>
                         </Grid>
+
+                        <Border Style="{StaticResource CardBorderStyle}">
+                            <StackPanel Spacing="12">
+                                <Grid ColumnSpacing="12">
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="*" />
+                                        <ColumnDefinition Width="Auto" />
+                                        <ColumnDefinition Width="Auto" />
+                                    </Grid.ColumnDefinitions>
+                                    <StackPanel Spacing="5">
+                                        <TextBlock x:Name="BackupManagerTitleTextBlock" Style="{StaticResource SectionTitleTextStyle}" />
+                                        <TextBlock x:Name="BackupManagerHintTextBlock" Style="{StaticResource MutedTextStyle}" TextWrapping="Wrap" />
+                                    </StackPanel>
+                                    <StackPanel Grid.Column="1" Orientation="Horizontal" Spacing="8" VerticalAlignment="Center">
+                                        <TextBlock x:Name="BackupLimitLabelTextBlock" VerticalAlignment="Center" />
+                                        <NumberBox
+                                            x:Name="BackupLimitNumberBox"
+                                            Width="112"
+                                            Minimum="0.5"
+                                            Maximum="100"
+                                            SmallChange="0.5"
+                                            SpinButtonPlacementMode="Compact"
+                                            ValueChanged="OnBackupLimitValueChanged" />
+                                    </StackPanel>
+                                    <Button
+                                        x:Name="RefreshBackupsButton"
+                                        Grid.Column="2"
+                                        Click="OnRefreshBackupsClicked"
+                                        Style="{StaticResource SecondaryButtonStyle}" />
+                                </Grid>
+                                <TextBlock x:Name="BackupSummaryTextBlock" Style="{StaticResource CaptionTextStyle}" TextWrapping="Wrap" />
+                                <StackPanel x:Name="BackupListPanel" Spacing="10" />
+                            </StackPanel>
+                        </Border>
 
                         <Border Style="{StaticResource CardBorderStyle}">
                             <StackPanel Spacing="12">
@@ -1228,6 +1267,21 @@
                             <StackPanel Spacing="12">
                                 <TextBlock x:Name="SettingsProjectTitleTextBlock" Style="{StaticResource SectionTitleTextStyle}" />
                                 <TextBlock x:Name="SettingsProjectHintTextBlock" Style="{StaticResource MutedTextStyle}" TextWrapping="Wrap" />
+                                <Border Style="{StaticResource SettingRowBorderStyle}">
+                                    <Grid ColumnSpacing="14">
+                                        <Grid.ColumnDefinitions>
+                                            <ColumnDefinition Width="42" />
+                                            <ColumnDefinition Width="*" />
+                                            <ColumnDefinition Width="Auto" />
+                                        </Grid.ColumnDefinitions>
+                                        <FontIcon Glyph="&#xE895;" FontSize="20" HorizontalAlignment="Center" VerticalAlignment="Center" />
+                                        <StackPanel Grid.Column="1" Spacing="3" VerticalAlignment="Center">
+                                            <TextBlock x:Name="StartupUpdateTitleTextBlock" FontWeight="SemiBold" />
+                                            <TextBlock x:Name="StartupUpdateDescriptionTextBlock" Style="{StaticResource CaptionTextStyle}" TextWrapping="Wrap" />
+                                        </StackPanel>
+                                        <ToggleSwitch x:Name="StartupUpdateToggleSwitch" Grid.Column="2" VerticalAlignment="Center" Toggled="OnStartupUpdateToggled" />
+                                    </Grid>
+                                </Border>
                                 <Grid ColumnSpacing="12">
                                     <Grid.ColumnDefinitions>
                                         <ColumnDefinition Width="160" />
@@ -1246,12 +1300,17 @@
                                         PlaceholderText="Select update check interval" />
                                 </Grid>
                                 <TextBlock x:Name="UpdateCheckIntervalHintTextBlock" Style="{StaticResource CaptionTextStyle}" TextWrapping="Wrap" />
-                                <Grid ColumnSpacing="12">
+                                <Grid x:Name="AppUpdateActionsGrid" ColumnSpacing="12" RowSpacing="10">
                                     <Grid.ColumnDefinitions>
-                                        <ColumnDefinition Width="*" />
-                                        <ColumnDefinition Width="*" />
-                                        <ColumnDefinition Width="*" />
+                                        <ColumnDefinition x:Name="AppUpdateActionColumn1" Width="*" />
+                                        <ColumnDefinition x:Name="AppUpdateActionColumn2" Width="*" />
+                                        <ColumnDefinition x:Name="AppUpdateActionColumn3" Width="*" />
                                     </Grid.ColumnDefinitions>
+                                    <Grid.RowDefinitions>
+                                        <RowDefinition Height="Auto" />
+                                        <RowDefinition Height="Auto" />
+                                        <RowDefinition Height="Auto" />
+                                    </Grid.RowDefinitions>
 
                                     <Button
                                         x:Name="OpenGitHubButton"
@@ -1352,6 +1411,22 @@
                                         MinHeight="42"
                                         Style="{StaticResource SecondaryButtonStyle}" />
                                 </StackPanel>
+                            </StackPanel>
+                        </Border>
+
+                        <Border Style="{StaticResource CardBorderStyle}">
+                            <StackPanel Spacing="12">
+                                <TextBlock x:Name="DiagnosticsTitleTextBlock" Style="{StaticResource SectionTitleTextStyle}" />
+                                <TextBlock x:Name="DiagnosticsHintTextBlock" Style="{StaticResource MutedTextStyle}" TextWrapping="Wrap" />
+                                <Grid ColumnSpacing="12">
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="*" />
+                                        <ColumnDefinition Width="*" />
+                                    </Grid.ColumnDefinitions>
+                                    <Button x:Name="ExportDiagnosticsButton" Click="OnExportDiagnosticsClicked" MinHeight="42" Style="{StaticResource SecondaryButtonStyle}" />
+                                    <Button x:Name="SubmitDiagnosticsButton" Grid.Column="1" Click="OnSubmitDiagnosticsClicked" MinHeight="42" Style="{StaticResource PrimaryButtonStyle}" />
+                                </Grid>
+                                <TextBlock x:Name="DiagnosticsStatusTextBlock" Style="{StaticResource CaptionTextStyle}" TextWrapping="Wrap" />
                             </StackPanel>
                         </Border>
                     </StackPanel>

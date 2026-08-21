@@ -4,14 +4,15 @@
 
 适用于 Windows 10/11 的 WinUI 3 Mod 管理工具。它以“仓库”为单位管理本地 Mod，支持两层目录浏览、复制切换、压缩包导入、图片预览、快捷键说明、在线 Mod 浏览与下载，以及已安装 Mod 的更新追踪。
 
-- 当前版本：`v3.5.1`
-- 文件版本：`3.5.1.0`
+- 当前版本：`v3.6.1`
+- 文件版本：`3.6.1.0`
 - 工具作者：`uyujkk`
 
 [下载最新版本](https://github.com/uyujkk/Integrated_Mod_Manager/releases/latest) ·
 [查看全部版本](https://github.com/uyujkk/Integrated_Mod_Manager/releases) ·
 [完整更新日志](./CHANGELOG.md) ·
-[中文使用说明](./使用说明.md) ·
+[详细中文手册](./docs/用户手册.zh-CN.md) ·
+[简洁中文手册](./快速使用手册.md) ·
 [提交问题](https://github.com/uyujkk/Integrated_Mod_Manager/issues)
 
 > 非官方声明：本项目是非官方的爱好者工具，与 XXMI、任何游戏发行商及相关开发者均无隶属、授权、认可或赞助关系。使用 Mod 前请遵守对应游戏、平台和 Mod 作者的规则。
@@ -47,6 +48,21 @@
 | 下载任务 | 集中显示下载与解压进度，支持取消、打开目录和清理完成记录 |
 | 软件更新 | 从 GitHub Releases 检查新版本，或从程序目录中的新版发布 ZIP 完成本地更新 |
 | 界面 | 中文/English、浅色/深色、舒适/紧凑密度、减少动态效果和自适应布局 |
+
+## v3.6.1 更新重点
+
+- 优化在线角色收藏按钮，增加独立预留空间、主题色状态和更清晰的选中反馈，避免遮挡长角色名。
+- 调整角色列表内容与垂直滚动条的间距，避免滚动滑块贴住或覆盖角色卡片。
+- 终末地仓库现在复用其他预设仓库的 GameBanana 下载量回填、缓存和热度重算流程。
+
+## v3.6.0 更新重点
+
+- 可在启动时自动检查 GitHub Release；发现新版本后由用户确认，程序自动下载、显示进度、安装并重启。
+- 在线角色支持按仓库收藏，收藏角色会置顶显示。
+- 安装备份新增历史列表、创建时间、涉及 Mod、占用空间与手动恢复，并可设置磁盘容量上限。
+- 使用 SQLite 保存在线分页、角色目录、详情、下载量、版本信息、收藏和本地 Mod 文件索引，旧 JSON 缓存继续作为兼容回退。
+- 设置页新增脱敏诊断报告，可导出 ZIP，或打开预填的 GitHub Issue 并由用户检查后提交。
+- 新增键盘导航、系统焦点提示、屏幕阅读器名称、响应式排版、高对比度和系统动画偏好适配。
 
 ## v3.5.1 更新重点
 
@@ -311,7 +327,10 @@ WinUILauncher.cs   外层启动器
 build_winui.bat    Windows 构建与发布目录整理脚本
 README.md          中文项目说明
 README.en.md       English documentation
-使用说明.md         中文快速使用说明
+快速使用手册.md     中文简洁手册
+Quick-Start.en.md  English quick-start manual
+docs/              中英文详细用户手册
+使用说明.md         旧链接兼容入口
 CHANGELOG.md       完整中英更新历史
 更新报告.md         当前版本更新报告
 LICENSE            MIT 许可证

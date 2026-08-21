@@ -33,7 +33,7 @@ namespace ModFolderCopier.WinUI;
 
 public sealed partial class MainWindow : Window
 {
-    private const string AppVersion = "v3.5.1";
+    private const string AppVersion = "v3.6.1";
     private const string GitHubRepositoryUrl = "https://github.com/uyujkk/Integrated_Mod_Manager";
     private const string GitHubLatestReleaseApiUrl = "https://api.github.com/repos/uyujkk/Integrated_Mod_Manager/releases/latest";
     private const string DefaultOnlineSourceSite = "GameBanana";
@@ -297,7 +297,11 @@ public sealed partial class MainWindow : Window
 
     public MainWindow()
     {
+        TraceStartupStage("MainWindow constructor entered");
         InitializeComponent();
+        TraceStartupStage("InitializeComponent completed");
+        InitializePersistentDataStore();
+        TraceStartupStage("Persistent data store initialized");
         ExtendsContentIntoTitleBar = false;
         EditOnlineRepositoryButton.Click -= OnEditRepositoryDetailsClicked;
         EditOnlineRepositoryButton.Click += OnEditOnlineRepositoryClicked;
@@ -305,22 +309,28 @@ public sealed partial class MainWindow : Window
         SecondLevelListView.ItemsSource = _secondLevelItems;
         OnlineVirtualizedListView.ItemsSource = _onlineVisibleMods;
         OnlineVirtualizedGridView.ItemsSource = _onlineVisibleMods;
+        TraceStartupStage("List sources attached");
         RegisterTrackedTextInputs();
         BuildShortcutRows();
+        TraceStartupStage("Input handlers and shortcuts initialized");
         LoadConfig();
         LoadShellConfig();
+        TraceStartupStage("Configuration loaded");
         ApplyTheme(_isDarkTheme);
         ApplyLanguage();
+        TraceStartupStage("Theme and language applied");
         InitializeOnlineControls();
         DetectLocalUpdatePackage();
+        TraceStartupStage("Online controls and local update detection initialized");
         RefreshSettingsPane();
         RefreshSecondaryNavigation();
+        TraceStartupStage("Settings and navigation refreshed");
         ApplyShellState(refreshRepository: false);
         UpdateShellLayout();
         RefreshDashboard();
+        TraceStartupStage("Initial shell rendered");
         RootGrid.Loaded += OnRootGridLoaded;
         Closed += OnWindowClosed;
-        _ = CheckForUpdatesIfDueAsync();
 
         if (Directory.Exists(SourceTextBox.Text))
         {
@@ -330,6 +340,8 @@ public sealed partial class MainWindow : Window
         {
             SetDefaultStatus();
         }
+
+        TraceStartupStage("MainWindow constructor completed");
     }
 
     private void RegisterTrackedTextInputs()
@@ -428,6 +440,15 @@ public sealed partial class MainWindow : Window
 
     private async Task CheckForUpdatesIfDueAsync()
     {
+        bool startupCheckDue = _checkAppUpdatesOnStartup
+            && (ShouldAutoCheckForUpdates()
+                || _updateCheckInterval == UpdateCheckInterval.Manual
+                    && (!_lastUpdateCheckUtc.HasValue || DateTimeOffset.UtcNow - _lastUpdateCheckUtc.Value >= TimeSpan.FromMinutes(30)));
+        if (startupCheckDue)
+        {
+            await CheckForUpdatesAsync(showDialogs: false, promptIfAvailable: true);
+        }
+
         if (ShouldAutoCheckForModUpdates())
         {
             await CheckTrackedModUpdatesAsync(showDialogs: false);
@@ -479,6 +500,7 @@ public sealed partial class MainWindow : Window
         SettingsSubtitleTextBlock.Text = L("把语言、主题、仓库入口和更新检查集中放在这里。", "Language, theme, repository entry points, and update checks are collected here.");
         SettingsAppearanceTitleTextBlock.Text = L("界面与语言", "Appearance and Language");
         RefreshAppearanceSettings();
+        RefreshProductivitySettingsText();
         SettingsProjectTitleTextBlock.Text = L("项目链接与软件版本", "Project Links and App Version");
         SettingsProjectHintTextBlock.Text = L("这里保留 GitHub 仓库入口和软件版本检查；Mod 更新请使用左侧的“更新”模块。", "This section keeps the GitHub repository link and app-version checks. Use the Updates section in the left navigation for mod updates.");
         UpdateCheckIntervalLabelTextBlock.Text = L("软件更新频率", "App update interval");
@@ -497,6 +519,7 @@ public sealed partial class MainWindow : Window
         PopulateUpdateCheckIntervalOptions();
         RefreshSettingsOnlineConfigSummary();
         RefreshUpdateDetailsView();
+        RefreshBackupManagerText();
     }
 
     private void RefreshSettingsButtonLabels()
@@ -511,7 +534,9 @@ public sealed partial class MainWindow : Window
             ? L($"安装本地更新 v{_localUpdatePackageVersion}", $"Install Local Update v{_localUpdatePackageVersion}")
             : string.IsNullOrWhiteSpace(_latestReleaseUrl)
                 ? L("检查并获取更新", "Check and Get Update")
-                : L("打开更新页面", "Open Release Page");
+                : !string.IsNullOrWhiteSpace(_latestReleasePackageUrl) && IsReleaseNewer(_latestReleaseTag ?? string.Empty)
+                    ? L("下载并安装更新", "Download and Install Update")
+                    : L("打开更新页面", "Open Release Page");
     }
 
     private void RefreshAppearanceSettings()
@@ -636,7 +661,12 @@ public sealed partial class MainWindow : Window
         List<OnlineCharacterOption> wikiCharacters = _onlineCharacterOptions
             .Where(character => character.IsWikiCharacter)
             .ToList();
-        return wikiCharacters.Count > 0 ? wikiCharacters : _onlineCharacterOptions;
+        IEnumerable<OnlineCharacterOption> source = wikiCharacters.Count > 0 ? wikiCharacters : _onlineCharacterOptions;
+        return source
+            .OrderByDescending(character => IsFavoriteCharacter(character.Key))
+            .ThenBy(character => character.WikiOrder)
+            .ThenBy(character => GetOnlineCharacterDisplayName(character), StringComparer.CurrentCultureIgnoreCase)
+            .ToList();
     }
 
     private void EnsureOnlineCharacterOptionsForRepository(WorkspaceRepository? repository)
@@ -931,6 +961,8 @@ public sealed partial class MainWindow : Window
         DownloadTaskCenterTitleTextBlock.Text = L("下载任务中心", "Download Task Center");
         DownloadTaskCenterHintTextBlock.Text = L("查看在线 Mod 的下载、解压、完成、失败或取消状态。", "Track online mod downloads, extraction, completion, failures, and cancellations.");
         ClearDownloadTasksButton.Content = L("清除已完成", "Clear Finished");
+        RefreshBackupManagerText();
+        _ = RefreshInstallBackupListAsync();
         RefreshConfigurationProfiles();
         RefreshDownloadTaskCenter();
         TrackedModSettingsTitleTextBlock.Text = L("检查方式", "Check Settings");
@@ -1434,7 +1466,7 @@ public sealed partial class MainWindow : Window
 
             string manifest = JsonSerializer.Serialize(transaction, new JsonSerializerOptions { WriteIndented = true });
             File.WriteAllText(Path.Combine(transactionPath, "transaction.json"), manifest, Encoding.UTF8);
-            PruneInstallTransactions(keepCount: 10, preservePath: transactionPath);
+            PruneInstallTransactionsByStorageLimit(transactionPath);
             return transactionPath;
         }
         catch
@@ -1513,22 +1545,6 @@ public sealed partial class MainWindow : Window
         {
             _lastInstallTransactionPath = null;
             SaveShellConfig();
-        }
-    }
-
-    private void PruneInstallTransactions(int keepCount, string preservePath)
-    {
-        if (!Directory.Exists(_modInstallBackupPath))
-        {
-            return;
-        }
-
-        foreach (DirectoryInfo directory in new DirectoryInfo(_modInstallBackupPath).EnumerateDirectories()
-            .Where(item => !string.Equals(item.FullName, preservePath, StringComparison.OrdinalIgnoreCase))
-            .OrderByDescending(item => item.CreationTimeUtc)
-            .Skip(Math.Max(0, keepCount - 1)))
-        {
-            directory.Delete(true);
         }
     }
 
@@ -1769,6 +1785,10 @@ public sealed partial class MainWindow : Window
             _latestReleaseBody = config?.LatestReleaseBody;
             _latestReleasePublishedAt = config?.LatestReleasePublishedAt;
             _latestReleaseUrl = config?.LatestReleaseUrl;
+            _latestReleasePackageUrl = config?.LatestReleasePackageUrl;
+            _latestReleaseSha256Url = config?.LatestReleaseSha256Url;
+            _checkAppUpdatesOnStartup = config?.CheckAppUpdatesOnStartup ?? true;
+            _installBackupLimitGb = Math.Clamp(config?.InstallBackupLimitGb ?? DefaultInstallBackupLimitGb, 0.5, 100);
             _reduceMotion = config?.ReduceMotion ?? false;
             _interfaceDensity = string.Equals(config?.InterfaceDensity, "compact", StringComparison.OrdinalIgnoreCase)
                 ? InterfaceDensity.Compact
@@ -1810,6 +1830,10 @@ public sealed partial class MainWindow : Window
             _latestReleaseBody = null;
             _latestReleasePublishedAt = null;
             _latestReleaseUrl = null;
+            _latestReleasePackageUrl = null;
+            _latestReleaseSha256Url = null;
+            _checkAppUpdatesOnStartup = true;
+            _installBackupLimitGb = DefaultInstallBackupLimitGb;
             _reduceMotion = false;
             _interfaceDensity = InterfaceDensity.Comfortable;
             _onlineCardLayoutMode = OnlineCardLayoutMode.List;
@@ -1880,6 +1904,10 @@ public sealed partial class MainWindow : Window
                 LatestReleaseBody = _latestReleaseBody,
                 LatestReleasePublishedAt = _latestReleasePublishedAt,
                 LatestReleaseUrl = _latestReleaseUrl,
+                LatestReleasePackageUrl = _latestReleasePackageUrl,
+                LatestReleaseSha256Url = _latestReleaseSha256Url,
+                CheckAppUpdatesOnStartup = _checkAppUpdatesOnStartup,
+                InstallBackupLimitGb = _installBackupLimitGb,
                 ReduceMotion = _reduceMotion,
                 InterfaceDensity = _interfaceDensity == InterfaceDensity.Compact ? "compact" : "comfortable",
                 OnlineCardLayout = _onlineCardLayoutMode == OnlineCardLayoutMode.Grid ? "grid" : "list",
@@ -2082,7 +2110,7 @@ public sealed partial class MainWindow : Window
 
     private void AnimateImageReveal(UIElement image)
     {
-        if (_reduceMotion)
+        if (ShouldReduceAnimations)
         {
             ElementCompositionPreview.GetElementVisual(image).Opacity = 1f;
             return;
@@ -2386,7 +2414,7 @@ public sealed partial class MainWindow : Window
             $"{visibleCharacters.Count} categories · Current: {currentRole}");
     }
 
-    private Button CreateOnlineCharacterButton(
+    private FrameworkElement CreateOnlineCharacterButton(
         string character,
         string label,
         string? avatarUrl,
@@ -2496,6 +2524,11 @@ public sealed partial class MainWindow : Window
             };
             compactRow.ColumnDefinitions.Add(new ColumnDefinition { Width = GridLength.Auto });
             compactRow.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(1, GridUnitType.Star) });
+            if (!string.IsNullOrWhiteSpace(character))
+            {
+                // Keep labels and counts clear of the overlaid favorite action.
+                compactRow.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(36) });
+            }
             compactRow.Children.Add(avatarHost);
 
             var textPanel = new StackPanel
@@ -2553,7 +2586,7 @@ public sealed partial class MainWindow : Window
         ToolTipService.SetToolTip(button, string.IsNullOrWhiteSpace(character) ? L("显示全部角色", "Show all characters") : tooltip);
         AutomationProperties.SetName(button, string.IsNullOrWhiteSpace(character) ? L("全部角色", "All characters") : label);
         button.Click += async (_, _) => await SelectOnlineCharacterAsync(character);
-        return button;
+        return WrapCharacterButtonWithFavorite(button, character);
     }
 
     private string GetOnlineCharacterDisplayName(EndfieldCharacterInfo character)
@@ -2618,6 +2651,7 @@ public sealed partial class MainWindow : Window
         }
 
         UpdateOnlineResponsiveLayout(width);
+        UpdateProductivityResponsiveLayout(width);
 
         if (_shellLayoutMode == nextMode)
         {
@@ -2787,7 +2821,7 @@ public sealed partial class MainWindow : Window
         AutomationProperties.SetName(DashboardNavButton, L("仪表板", "Dashboard"));
         AutomationProperties.SetName(RepositoryNavButton, L("仓库", "Repositories"));
         AutomationProperties.SetName(OnlineNavButton, L("在线 Mod", "Online Mods"));
-        AutomationProperties.SetName(UpdatesNavButton, L("鏇存柊", "Updates"));
+        AutomationProperties.SetName(UpdatesNavButton, L("更新", "Updates"));
         AutomationProperties.SetName(SettingsNavButton, L("设置", "Settings"));
     }
 
@@ -3514,8 +3548,7 @@ public sealed partial class MainWindow : Window
             _lastLoadedOnlineConfigKey = configKey;
             _blockedOnlineAutoLoadConfigKey = null;
 
-            if (GetWikiCatalogDescriptor(repository) is not null
-                && pageResult.Mods.Any(mod => mod.Downloads <= 0))
+            if (pageResult.Mods.Any(mod => mod.Downloads <= 0))
             {
                 _ = EnrichMissingGameBananaDownloadsAsync(
                     pageResult,
@@ -4060,6 +4093,15 @@ public sealed partial class MainWindow : Window
 
     private async Task<int?> TryReadGameBananaDownloadMetricCacheAsync(int itemId)
     {
+        CachedValue<GameBananaDownloadMetricCacheEntry>? sqliteMetric = _appDataStore.TryReadCache<GameBananaDownloadMetricCacheEntry>(
+            "download-metric",
+            itemId.ToString(CultureInfo.InvariantCulture),
+            TimeSpan.FromHours(12));
+        if (sqliteMetric is not null)
+        {
+            return sqliteMetric.Value.DownloadCount;
+        }
+
         try
         {
             string cacheFile = GetGameBananaDownloadMetricCacheFile(itemId);
@@ -4089,6 +4131,7 @@ public sealed partial class MainWindow : Window
                 CachedAtUtc = DateTimeOffset.UtcNow,
                 DownloadCount = Math.Max(0, downloadCount)
             };
+            _appDataStore.WriteCache("download-metric", itemId.ToString(CultureInfo.InvariantCulture), entry);
             await File.WriteAllTextAsync(
                 GetGameBananaDownloadMetricCacheFile(itemId),
                 JsonSerializer.Serialize(entry));
@@ -4556,7 +4599,7 @@ public sealed partial class MainWindow : Window
         FrameworkElement resultsElement = GetOnlineResultsElement();
         var visual = ElementCompositionPreview.GetElementVisual(resultsElement);
         visual.StopAnimation("Opacity");
-        if (_reduceMotion)
+        if (ShouldReduceAnimations)
         {
             visual.Opacity = 1f;
             return;
@@ -4583,6 +4626,21 @@ public sealed partial class MainWindow : Window
         int page,
         bool allowExpired = false)
     {
+        string sqliteKey = $"{categoryId}:{Math.Max(1, page)}:{OnlineDisplayPageSize}";
+        CachedValue<OnlineCategoryPageCacheEntry>? sqliteEntry = _appDataStore.TryReadCache<OnlineCategoryPageCacheEntry>(
+            "online-page",
+            sqliteKey,
+            TimeSpan.FromHours(6),
+            allowExpired);
+        if (sqliteEntry?.Value is { Mods.Count: > 0 } stored && stored.PageSize == OnlineDisplayPageSize)
+        {
+            return new OnlineCategoryPageResult(stored.Mods, stored.TotalCount, stored.Page, stored.PageSize)
+            {
+                CachedAtUtc = sqliteEntry.CachedAtUtc,
+                IsFromCache = true
+            };
+        }
+
         try
         {
             string cacheFile = GetOnlineCategoryPageCacheFile(categoryId, page);
@@ -4626,6 +4684,7 @@ public sealed partial class MainWindow : Window
                 Page = result.Page,
                 PageSize = result.PageSize
             };
+            _appDataStore.WriteCache("online-page", $"{categoryId}:{Math.Max(1, result.Page)}:{OnlineDisplayPageSize}", entry);
             string json = JsonSerializer.Serialize(entry);
             await File.WriteAllTextAsync(GetOnlineCategoryPageCacheFile(categoryId, result.Page), json);
         }
@@ -4642,6 +4701,19 @@ public sealed partial class MainWindow : Window
 
     private async Task<OnlineCharacterCatalogCacheSnapshot?> TryReadOnlineCharacterCatalogCacheAsync(string catalogKey)
     {
+        CachedValue<OnlineCharacterCatalogCacheEntry>? sqliteEntry = _appDataStore.TryReadCache<OnlineCharacterCatalogCacheEntry>(
+            "character-catalog",
+            catalogKey,
+            TimeSpan.FromDays(30),
+            allowExpired: true);
+        if (sqliteEntry?.Value.Characters is { Count: > 0 } storedCharacters)
+        {
+            return new OnlineCharacterCatalogCacheSnapshot(
+                storedCharacters,
+                sqliteEntry.CachedAtUtc,
+                !sqliteEntry.IsExpired);
+        }
+
         try
         {
             string cacheFile = GetOnlineCharacterCatalogCacheFile(catalogKey);
@@ -4699,6 +4771,7 @@ public sealed partial class MainWindow : Window
                 CachedAtUtc = checkedAt,
                 Characters = characters
             };
+            _appDataStore.WriteCache("character-catalog", catalogKey, entry, checkedAt);
             await File.WriteAllTextAsync(cacheFile, JsonSerializer.Serialize(entry));
         }
         catch
@@ -5644,6 +5717,15 @@ public sealed partial class MainWindow : Window
 
     private async Task<OnlineModDetails?> TryReadOnlineModDetailsCacheAsync(int itemId)
     {
+        CachedValue<OnlineModDetails>? sqliteDetails = _appDataStore.TryReadCache<OnlineModDetails>(
+            "online-details",
+            itemId.ToString(CultureInfo.InvariantCulture),
+            TimeSpan.FromDays(3));
+        if (sqliteDetails is not null)
+        {
+            return sqliteDetails.Value;
+        }
+
         try
         {
             string cacheFile = GetOnlineModDetailsCacheFile(itemId);
@@ -5663,6 +5745,7 @@ public sealed partial class MainWindow : Window
 
     private async Task WriteOnlineModDetailsCacheAsync(int itemId, OnlineModDetails details)
     {
+        _appDataStore.WriteCache("online-details", itemId.ToString(CultureInfo.InvariantCulture), details);
         try
         {
             Directory.CreateDirectory(_onlineDetailsCachePath);
@@ -6160,7 +6243,7 @@ public sealed partial class MainWindow : Window
         var visual = ElementCompositionPreview.GetElementVisual(OnlineDetailPaneBorder);
         visual.StopAnimation("Opacity");
         visual.StopAnimation("Offset");
-        if (_reduceMotion)
+        if (ShouldReduceAnimations)
         {
             visual.Opacity = 1f;
             visual.Offset = Vector3.Zero;
@@ -6183,7 +6266,7 @@ public sealed partial class MainWindow : Window
 
     private void AnimateOnlineDetailContentRefresh()
     {
-        if (_reduceMotion)
+        if (ShouldReduceAnimations)
         {
             return;
         }
@@ -7272,7 +7355,7 @@ public sealed partial class MainWindow : Window
     private void AnimateOnlineModCardHover(Border card, bool isPointerOver)
     {
         card.Background = GetAppThemeBrush(isPointerOver ? "AppSecondarySelectedBrush" : "AppInsetBackgroundBrush");
-        if (_reduceMotion)
+        if (ShouldReduceAnimations)
         {
             return;
         }
@@ -10029,7 +10112,7 @@ public sealed partial class MainWindow : Window
         visual.StopAnimation("Opacity");
         visual.StopAnimation("Offset");
 
-        if (!_reduceMotion && OnlineDetailsSplitView.IsPaneOpen)
+        if (!ShouldReduceAnimations && OnlineDetailsSplitView.IsPaneOpen)
         {
             var compositor = visual.Compositor;
             var easing = compositor.CreateCubicBezierEasingFunction(new Vector2(0.4f, 0f), new Vector2(1f, 1f));
@@ -10188,21 +10271,43 @@ public sealed partial class MainWindow : Window
             return;
         }
 
+        if (!string.IsNullOrWhiteSpace(_latestReleasePackageUrl) && IsReleaseNewer(_latestReleaseTag ?? string.Empty))
+        {
+            await DownloadAndInstallApplicationUpdateAsync(new LatestReleaseInfo(
+                _latestReleaseTag ?? string.Empty,
+                _latestReleaseTitle ?? string.Empty,
+                _latestReleaseBody ?? string.Empty,
+                _latestReleasePublishedAt ?? string.Empty,
+                _latestReleaseUrl,
+                _latestReleasePackageUrl,
+                _latestReleaseSha256Url));
+            return;
+        }
+
         await OpenExternalUrlAsync(_latestReleaseUrl, L("打开更新页面失败", "Failed to open the update page"));
     }
 
     private async void OnRootGridLoaded(object sender, RoutedEventArgs e)
     {
+        TraceStartupStage("RootGrid loaded");
         RootGrid.Loaded -= OnRootGridLoaded;
+        InitializeAccessibilityFeatures();
+        TraceStartupStage("Accessibility initialized");
+        ApplyTheme(_isDarkTheme);
         RestoreWindowPlacement();
         UpdateOnlineWorkspaceWidthConstraint();
         DispatcherQueue.TryEnqueue(UpdateOnlineWorkspaceWidthConstraint);
         TrimOnlineImageCache();
         DetectLocalUpdatePackage();
+        await RefreshInstallBackupListAsync();
 
         if (_localUpdatePackageVersion is not null && !_hasPromptedForLocalUpdate)
         {
             await PromptAndStartLocalUpdateAsync();
+        }
+        else
+        {
+            await CheckForUpdatesIfDueAsync();
         }
     }
 
@@ -10240,6 +10345,7 @@ public sealed partial class MainWindow : Window
         CancelOnlineModListRequest();
         _onlineCharacterAvatarCancellation.Cancel();
         _onlineCharacterAvatarCancellation.Dispose();
+        RootGrid.ActualThemeChanged -= OnRootActualThemeChanged;
         SaveWindowPlacement();
         SaveShellConfig();
     }
@@ -10370,7 +10476,7 @@ public sealed partial class MainWindow : Window
         return "\"" + value.Replace("\"", "\\\"") + "\"";
     }
 
-    private async Task CheckForUpdatesAsync(bool showDialogs)
+    private async Task CheckForUpdatesAsync(bool showDialogs, bool promptIfAvailable = false)
     {
         if (_isCheckingUpdates)
         {
@@ -10384,73 +10490,47 @@ public sealed partial class MainWindow : Window
             RefreshSettingsPane();
             SetUpdateStatus("正在连接 GitHub Releases 检查更新...", "Checking GitHub Releases for updates...");
 
-            using HttpResponseMessage response = await _httpClient.GetAsync(GitHubLatestReleaseApiUrl);
-            response.EnsureSuccessStatusCode();
+            using var timeout = new CancellationTokenSource(TimeSpan.FromSeconds(20));
+            LatestReleaseInfo release = await FetchLatestReleaseInfoAsync(timeout.Token);
+            ApplyLatestReleaseInfo(release);
 
-            string json = await response.Content.ReadAsStringAsync();
-            using JsonDocument document = JsonDocument.Parse(json);
-            JsonElement root = document.RootElement;
-
-            string latestTag = root.TryGetProperty("tag_name", out JsonElement tagElement)
-                ? tagElement.GetString() ?? string.Empty
-                : string.Empty;
-            string releaseUrl = root.TryGetProperty("html_url", out JsonElement urlElement)
-                ? urlElement.GetString() ?? GitHubRepositoryUrl
-                : GitHubRepositoryUrl;
-            string releaseName = root.TryGetProperty("name", out JsonElement nameElement)
-                ? nameElement.GetString() ?? string.Empty
-                : string.Empty;
-            string releaseBody = root.TryGetProperty("body", out JsonElement bodyElement)
-                ? bodyElement.GetString() ?? string.Empty
-                : string.Empty;
-            string publishedAt = root.TryGetProperty("published_at", out JsonElement publishedElement)
-                ? publishedElement.GetString() ?? string.Empty
-                : string.Empty;
-
-            _lastUpdateCheckUtc = DateTimeOffset.UtcNow;
-            _latestReleaseTag = latestTag;
-            _latestReleaseTitle = string.IsNullOrWhiteSpace(releaseName) ? latestTag : releaseName;
-            _latestReleaseBody = string.IsNullOrWhiteSpace(releaseBody) ? string.Empty : releaseBody.Trim();
-            _latestReleasePublishedAt = publishedAt;
-            _latestReleaseUrl = releaseUrl;
-            SaveShellConfig();
-            RefreshUpdateDetailsView();
-
-            if (string.Equals(latestTag, AppVersion, StringComparison.OrdinalIgnoreCase))
+            if (!TryParseVersion(release.Tag, out _))
             {
-                SetUpdateStatus($"当前已经是最新版本：{latestTag}", $"You are already on the latest version: {latestTag}");
+                SetUpdateStatus("GitHub 返回了结果，但没有读到有效版本号。", "GitHub responded, but no valid version tag was found.");
             }
-            else if (!string.IsNullOrWhiteSpace(latestTag))
+            else if (!IsReleaseNewer(release.Tag))
             {
-                SetUpdateStatus($"检测到新版本：{latestTag}，当前是 {AppVersion}", $"New version detected: {latestTag}. Current version: {AppVersion}");
-
+                SetUpdateStatus($"当前已经是最新版本：{AppVersion}", $"You are already on the latest version: {AppVersion}");
                 if (showDialogs)
                 {
-                    bool openRelease = await ShowConfirmAsync(
-                        L($"已检测到 GitHub 新版本：{latestTag}\n\n是否现在打开 Release 页面？", $"A newer GitHub release was found: {latestTag}\n\nOpen the release page now?"),
-                        L("发现新版本", "Update available"));
-
-                    if (openRelease)
-                    {
-                        Process.Start(new ProcessStartInfo
-                        {
-                            FileName = releaseUrl,
-                            UseShellExecute = true
-                        });
-                    }
+                    ShowAppNotification("当前已经是最新版本。", "The app is up to date.", InfoBarSeverity.Success);
                 }
             }
             else
             {
-                SetUpdateStatus("GitHub 返回了结果，但没有读到有效版本号。", "GitHub responded, but no valid version tag was found.");
+                SetUpdateStatus($"检测到新版本：{release.Tag}，当前是 {AppVersion}", $"New version detected: {release.Tag}. Current version: {AppVersion}");
+                if (showDialogs || promptIfAvailable)
+                {
+                    bool install = await ShowConfirmAsync(
+                        L($"发现新版本 {release.Tag}。\n\n是否自动下载、安装并重启软件？本地仓库、路径和界面设置会保留。",
+                          $"Version {release.Tag} is available.\n\nDownload, install, and restart automatically? Local repositories, paths, and interface settings will be preserved."),
+                        L("软件更新可用", "App Update Available"));
+                    if (install)
+                    {
+                        await DownloadAndInstallApplicationUpdateAsync(release);
+                    }
+                }
             }
         }
         catch (Exception ex)
         {
             SetUpdateStatus("检查更新失败，请稍后重试。", "Update check failed. Please try again later.");
-            await ShowMessageAsync(
-                L("从 GitHub 检查更新失败：", "Failed to check updates from GitHub: ") + ex.Message,
-                L("检查失败", "Check failed"));
+            if (showDialogs)
+            {
+                await ShowMessageAsync(
+                    L("从 GitHub 检查更新失败：", "Failed to check updates from GitHub: ") + ex.Message,
+                    L("检查失败", "Check failed"));
+            }
         }
         finally
         {
@@ -10599,6 +10679,37 @@ public sealed partial class MainWindow : Window
 
     private async void OnRootKeyDown(object sender, KeyRoutedEventArgs e)
     {
+        bool controlDown = InputKeyboardSource.GetKeyStateForCurrentThread(VirtualKey.Control).HasFlag(CoreVirtualKeyStates.Down);
+        bool altDown = InputKeyboardSource.GetKeyStateForCurrentThread(VirtualKey.Menu).HasFlag(CoreVirtualKeyStates.Down);
+
+        if (controlDown && e.Key == VirtualKey.F)
+        {
+            (_currentPrimarySection == PrimarySection.Online ? OnlineSearchTextBox : FirstLevelSearchTextBox).Focus(FocusState.Keyboard);
+            e.Handled = true;
+            return;
+        }
+
+        if (controlDown && e.Key == VirtualKey.U)
+        {
+            NavigateToPrimarySection(PrimarySection.Updates);
+            e.Handled = true;
+            return;
+        }
+
+        if (altDown && e.Key is >= VirtualKey.Number1 and <= VirtualKey.Number5)
+        {
+            NavigateToPrimarySection((PrimarySection)((int)e.Key - (int)VirtualKey.Number1));
+            e.Handled = true;
+            return;
+        }
+
+        if (e.Key == VirtualKey.Escape && OnlineDetailsSplitView.IsPaneOpen)
+        {
+            await CloseOnlineDetailPaneAsync();
+            e.Handled = true;
+            return;
+        }
+
         if (FocusManager.GetFocusedElement(this.Content.XamlRoot) is TextBox)
         {
             return;
@@ -10606,7 +10717,14 @@ public sealed partial class MainWindow : Window
 
         if (e.Key == VirtualKey.F5)
         {
-            await RefreshListsAsync();
+            if (_currentPrimarySection == PrimarySection.Online)
+            {
+                await LoadOnlineModsAsync(forceReload: true);
+            }
+            else
+            {
+                await RefreshListsAsync();
+            }
             e.Handled = true;
             return;
         }
@@ -10692,7 +10810,9 @@ public sealed partial class MainWindow : Window
     private void ApplyTheme(bool dark)
     {
         _isDarkTheme = dark;
-        RootGrid.RequestedTheme = dark ? ElementTheme.Dark : ElementTheme.Light;
+        RootGrid.RequestedTheme = _systemHighContrast
+            ? ElementTheme.Default
+            : dark ? ElementTheme.Dark : ElementTheme.Light;
         ApplyWindowChrome(dark);
         SetStateColor(CurrentStateTextBlock.Text);
         RefreshPrimaryNavigationVisuals();
@@ -11230,30 +11350,11 @@ public sealed partial class MainWindow : Window
         }
 
         SaveConfig();
+        string repositoryId = GetSelectedRepository()?.Id ?? sourceDir;
 
         await Task.Run(() =>
         {
-            var loadedItems = new List<FirstLevelFolderItem>();
-            string[] firstDirs = Directory.GetDirectories(sourceDir);
-            Array.Sort(firstDirs, StringComparer.CurrentCultureIgnoreCase);
-
-            int secondCount = 0;
-            foreach (string firstDir in firstDirs)
-            {
-                var item = new FirstLevelFolderItem(firstDir);
-                string[] secondDirs = Directory.GetDirectories(firstDir);
-                Array.Sort(secondDirs, StringComparer.CurrentCultureIgnoreCase);
-
-                foreach (string secondDir in secondDirs)
-                {
-                    List<string> files = GetFiles(secondDir);
-                    string state = GetFolderCopyState(targetDir, secondDir);
-                    item.Children.Add(new SecondLevelFolderItem(secondDir, files, state));
-                    secondCount++;
-                }
-
-                loadedItems.Add(item);
-            }
+            (List<FirstLevelFolderItem> loadedItems, int secondCount) = LoadFolderItemsUsingIndex(repositoryId, sourceDir, targetDir);
 
             DispatcherQueue.TryEnqueue(() =>
             {
@@ -12901,6 +13002,14 @@ public sealed class BetaShellConfig
     public string? LatestReleasePublishedAt { get; set; }
 
     public string? LatestReleaseUrl { get; set; }
+
+    public string? LatestReleasePackageUrl { get; set; }
+
+    public string? LatestReleaseSha256Url { get; set; }
+
+    public bool? CheckAppUpdatesOnStartup { get; set; }
+
+    public double? InstallBackupLimitGb { get; set; }
 
     public bool ReduceMotion { get; set; }
 

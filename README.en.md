@@ -4,14 +4,15 @@
 
 A WinUI 3 mod management tool for Windows 10/11. It organizes local mods into repositories and provides two-level folder browsing, copy-based switching, archive import, image previews, shortcut notes, online mod browsing and downloads, and update tracking for installed mods.
 
-- Current version: `v3.5.1`
-- File version: `3.5.1.0`
+- Current version: `v3.6.1`
+- File version: `3.6.1.0`
 - Tool author: `uyujkk`
 
 [Download Latest Release](https://github.com/uyujkk/Integrated_Mod_Manager/releases/latest) ·
 [All Releases](https://github.com/uyujkk/Integrated_Mod_Manager/releases) ·
 [Full Changelog](./CHANGELOG.md) ·
-[Chinese User Guide](./使用说明.md) ·
+[Complete English Guide](./docs/User-Guide.en.md) ·
+[English Quick Start](./Quick-Start.en.md) ·
 [Report an Issue](https://github.com/uyujkk/Integrated_Mod_Manager/issues)
 
 > Unofficial notice: This is an unofficial fan-made tool. It is not affiliated with, endorsed by, authorized by, or sponsored by XXMI, any game publisher, or any related developer. Follow the rules of the relevant game, platform, and mod author before using mods.
@@ -47,6 +48,21 @@ Integrated Mod Manager is designed to:
 | Download tasks | Track download and extraction progress, cancel work, open folders, and clear finished entries |
 | App updates | Check GitHub Releases or apply a newer release ZIP placed in the app folder |
 | Interface | Chinese/English, light/dark themes, comfortable/compact density, reduced motion, and responsive layout |
+
+## v3.6.1 Highlights
+
+- Refined online character favorite buttons with reserved layout space, theme-aware states, and clearer selection feedback so long names remain readable.
+- Added stable spacing between character cards and the vertical scroll thumb.
+- Endfield repositories now use the same GameBanana download-count enrichment, cache, and heat-score recalculation path as the other presets.
+
+## v3.6.0 Highlights
+
+- Optional startup update checks now prompt before automatically downloading, showing progress, installing, and restarting.
+- Online characters can be favorited per repository and favorites stay pinned at the top.
+- The backup manager lists creation time, affected mods, disk usage, and manual restore actions, with a configurable storage cap.
+- SQLite now stores online pages, character catalogs, details, download metrics, version data, favorites, and the local mod file index while retaining legacy JSON fallback.
+- Settings can export a sanitized diagnostic ZIP or open a prefilled GitHub issue for user review and submission.
+- Added keyboard navigation, system focus visuals, screen-reader names, responsive layouts, high-contrast handling, and system animation preference support.
 
 ## v3.5.1 Highlights
 
@@ -311,7 +327,10 @@ WinUILauncher.cs   Outer launcher
 build_winui.bat    Windows build and output preparation script
 README.md          Chinese documentation
 README.en.md       English documentation
-使用说明.md         Chinese quick-start guide
+快速使用手册.md     Chinese quick-start manual
+Quick-Start.en.md  English quick-start manual
+docs/              Complete Chinese and English user guides
+使用说明.md         Compatibility entry for older links
 CHANGELOG.md       Full bilingual release history
 更新报告.md         Current release report
 LICENSE            MIT License

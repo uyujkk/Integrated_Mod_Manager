@@ -11,9 +11,9 @@ using System.Windows.Forms;
 [assembly: AssemblyTitle("Integrated Mod Manager Local Update Agent")]
 [assembly: AssemblyProduct("Integrated Mod Manager")]
 [assembly: AssemblyCopyright("Copyright (c) 2026 uyujkk")]
-[assembly: AssemblyVersion("3.5.1.0")]
-[assembly: AssemblyFileVersion("3.5.1.0")]
-[assembly: AssemblyInformationalVersion("3.5.1")]
+[assembly: AssemblyVersion("3.6.1.0")]
+[assembly: AssemblyFileVersion("3.6.1.0")]
+[assembly: AssemblyInformationalVersion("3.6.1")]
 
 internal static class LocalUpdateAgent
 {
@@ -22,7 +22,10 @@ internal static class LocalUpdateAgent
         "config.ini",
         "beta-shell.json",
         Path.Combine("WinUI3", "config.ini"),
-        Path.Combine("WinUI3", "beta-shell.json")
+        Path.Combine("WinUI3", "beta-shell.json"),
+        Path.Combine("WinUI3", "cache", "app-index.db"),
+        Path.Combine("WinUI3", "cache", "app-index.db-wal"),
+        Path.Combine("WinUI3", "cache", "app-index.db-shm")
     };
 
     [STAThread]

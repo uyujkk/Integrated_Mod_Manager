@@ -6,6 +6,46 @@
 
 This document records the major changes in published versions of Integrated Mod Manager.
 
+## v3.6.1
+
+### 中文
+
+- 优化在线角色收藏按钮，为按钮预留独立空间并使用主题色显示收藏状态，避免遮挡长角色名。
+- 调整角色卡片与垂直滚动滑块的间距，修复滑块紧贴或覆盖卡片的问题。
+- 修复终末地在线 Mod 下载量不显示的问题，统一复用其他预设仓库的 GameBanana 下载量回填、SQLite 缓存与热度重算流程。
+- 重写纯文字中英文手册：GitHub 提供完整功能手册，发布包内提供精简快速使用手册。
+
+### English
+
+- Refined online character favorite buttons with reserved space and theme-aware favorite states so long character names remain readable.
+- Corrected spacing between character cards and the vertical scroll thumb.
+- Fixed missing Endfield download counts by using the same GameBanana enrichment, SQLite cache, and heat-score recalculation path as the other presets.
+- Rewrote the text-only Chinese and English manuals: GitHub hosts the complete guides, while the release package includes concise quick-start guides.
+
+## v3.6.0
+
+### 中文
+
+- 新增可关闭的启动更新检查；发现新版本后询问用户，并自动下载 Release ZIP、显示进度、校验、安装和重启。
+- 更新代理继续保留仓库、路径、界面配置和 SQLite 数据；更新失败仍会回滚旧版本。
+- 在线角色新增按仓库收藏和置顶功能。
+- 安装备份新增完整列表，显示创建时间、涉及 Mod 和占用空间，任意备份均可手动恢复。
+- 固定保留 10 份改为用户可设置 0.5 至 100 GB 的磁盘容量上限，并按时间自动清理旧备份。
+- 引入 SQLite 持久化在线分页、角色目录、详情、下载量、版本、收藏与本地文件索引，提高扫描、筛选、搜索和查重速度。
+- 新增脱敏诊断报告导出与 GitHub 问题提交入口，不收集用户本地路径和访问凭据。
+- 新增 Alt+1~5、Ctrl+F、Ctrl+U、F5、Esc 快捷操作，并改进 Tab、焦点、屏幕阅读器、缩放、高对比度与动画偏好适配。
+
+### English
+
+- Added optional startup update checks with confirmation, Release ZIP download progress, verification, installation, and automatic restart.
+- The updater preserves repositories, paths, interface settings, and SQLite data, while retaining rollback on failed startup.
+- Added per-repository online character favorites pinned to the top.
+- Added a complete backup list with creation time, affected mods, storage usage, and manual restore for any entry.
+- Replaced the fixed ten-backup policy with a configurable 0.5-100 GB storage cap and time-based pruning.
+- Added SQLite persistence for online pages, character catalogs, details, download metrics, version data, favorites, and the local file index.
+- Added sanitized diagnostic export and a user-reviewed GitHub issue workflow without collecting private paths or credentials.
+- Added Alt+1-5, Ctrl+F, Ctrl+U, F5, and Escape shortcuts plus better Tab, focus, screen-reader, scaling, high-contrast, and animation-preference support.
+
 ## v3.5.1
 
 ### 中文
