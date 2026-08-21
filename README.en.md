@@ -4,8 +4,8 @@
 
 A WinUI 3 mod management tool for Windows 10/11. It organizes local mods into repositories and provides two-level folder browsing, copy-based switching, archive import, image previews, shortcut notes, online mod browsing and downloads, and update tracking for installed mods.
 
-- Current version: `v3.4.2`
-- File version: `3.4.2.0`
+- Current version: `v3.5.1`
+- File version: `3.5.1.0`
 - Tool author: `uyujkk`
 
 [Download Latest Release](https://github.com/uyujkk/Integrated_Mod_Manager/releases/latest) ·
@@ -42,8 +42,24 @@ Integrated Mod Manager is designed to:
 | Online mods | Load, search, filter, sort, page, preview, download, and extract GameBanana mods |
 | Content detection | Best-effort detection of access requirements and shortcut instructions |
 | Mod updates | Manually or periodically check online-installed mods for updates |
+| Configuration profiles | Save and apply complete enabled-mod setups per repository without touching unknown target folders |
+| Installation safety | Detect file conflicts before installation and create undoable transaction backups |
+| Download tasks | Track download and extraction progress, cancel work, open folders, and clear finished entries |
 | App updates | Check GitHub Releases or apply a newer release ZIP placed in the app folder |
 | Interface | Chinese/English, light/dark themes, comfortable/compact density, reduced motion, and responsive layout |
+
+## v3.5.1 Highlights
+
+- Fixed the online mod list collapsing into a narrow centered column with a large blank area after opening details.
+- The online workspace now uses the width allocated by SplitView and recalculates the character rail and card columns after pane changes.
+
+## v3.5.0 Highlights
+
+- Added per-repository configuration profiles that can be saved, updated, applied, and deleted.
+- Applying a profile only manages mods recognized in the active repository and preserves unknown target folders.
+- Added pre-install conflict detection that reports duplicate relative file paths before continuing.
+- Copy, remove, and profile operations now use transaction backups, automatically roll back on failure, and support manually undoing the latest change.
+- Added a download task center with progress, cancellation, open-folder actions, and finished-task cleanup.
 
 ## v3.4.2 Highlights
 

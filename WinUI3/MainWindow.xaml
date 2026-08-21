@@ -5,7 +5,7 @@
     xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
     xmlns:local="using:ModFolderCopier.WinUI"
     xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
-    Title="Integrated Mod Manager v3.4.2"
+    Title="Integrated Mod Manager v3.5.1"
     SizeChanged="OnWindowSizeChanged"
     mc:Ignorable="d">
 
@@ -727,6 +727,7 @@
                                     <Grid
                                         x:Name="OnlineWorkspaceGrid"
                                         Grid.Row="2"
+                                        HorizontalAlignment="Stretch"
                                         ColumnSpacing="12"
                                         RowSpacing="12"
                                         SizeChanged="OnOnlineWorkspaceGridSizeChanged">
@@ -783,6 +784,7 @@
                                             x:Name="OnlineResultsHost"
                                             Grid.Column="1"
                                             HorizontalAlignment="Stretch"
+                                            MinWidth="0"
                                             RowSpacing="8"
                                             SizeChanged="OnOnlineResultsHostSizeChanged">
                                             <Grid.RowDefinitions>
@@ -1038,6 +1040,64 @@
                             <StackPanel Spacing="10">
                                 <TextBlock x:Name="UpdatesTitleTextBlock" FontSize="30" FontWeight="SemiBold" />
                                 <TextBlock x:Name="UpdatesSubtitleTextBlock" Style="{StaticResource MutedTextStyle}" TextWrapping="Wrap" />
+                            </StackPanel>
+                        </Border>
+
+                        <Grid ColumnSpacing="16">
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="1.15*" />
+                                <ColumnDefinition Width="0.85*" />
+                            </Grid.ColumnDefinitions>
+
+                            <Border Grid.Column="0" Style="{StaticResource CardBorderStyle}">
+                                <StackPanel Spacing="12">
+                                    <TextBlock x:Name="ConfigurationProfilesTitleTextBlock" Style="{StaticResource SectionTitleTextStyle}" />
+                                    <TextBlock x:Name="ConfigurationProfilesHintTextBlock" Style="{StaticResource MutedTextStyle}" TextWrapping="Wrap" />
+                                    <ComboBox
+                                        x:Name="ConfigurationProfileComboBox"
+                                        MinHeight="42"
+                                        SelectionChanged="OnConfigurationProfileSelectionChanged" />
+                                    <Grid ColumnSpacing="10">
+                                        <Grid.ColumnDefinitions>
+                                            <ColumnDefinition Width="*" />
+                                            <ColumnDefinition Width="*" />
+                                            <ColumnDefinition Width="*" />
+                                            <ColumnDefinition Width="Auto" />
+                                        </Grid.ColumnDefinitions>
+                                        <Button x:Name="CreateConfigurationProfileButton" Click="OnCreateConfigurationProfileClicked" Style="{StaticResource SecondaryButtonStyle}" />
+                                        <Button x:Name="UpdateConfigurationProfileButton" Grid.Column="1" Click="OnUpdateConfigurationProfileClicked" Style="{StaticResource SecondaryButtonStyle}" />
+                                        <Button x:Name="ApplyConfigurationProfileButton" Grid.Column="2" Click="OnApplyConfigurationProfileClicked" Style="{StaticResource PrimaryButtonStyle}" />
+                                        <Button x:Name="DeleteConfigurationProfileButton" Grid.Column="3" Click="OnDeleteConfigurationProfileClicked" Style="{StaticResource SecondaryButtonStyle}" />
+                                    </Grid>
+                                    <TextBlock x:Name="ConfigurationProfileSummaryTextBlock" Style="{StaticResource CaptionTextStyle}" TextWrapping="Wrap" />
+                                </StackPanel>
+                            </Border>
+
+                            <Border Grid.Column="1" Style="{StaticResource CardBorderStyle}">
+                                <StackPanel Spacing="12">
+                                    <TextBlock x:Name="InstallSafetyTitleTextBlock" Style="{StaticResource SectionTitleTextStyle}" />
+                                    <TextBlock x:Name="InstallSafetyHintTextBlock" Style="{StaticResource MutedTextStyle}" TextWrapping="Wrap" />
+                                    <ToggleSwitch x:Name="ConflictDetectionToggleSwitch" Toggled="OnConflictDetectionToggled" />
+                                    <Button x:Name="RollbackLastInstallButton" Click="OnRollbackLastInstallClicked" Style="{StaticResource SecondaryButtonStyle}" HorizontalAlignment="Left" />
+                                    <TextBlock x:Name="InstallRollbackStatusTextBlock" Style="{StaticResource CaptionTextStyle}" TextWrapping="Wrap" />
+                                </StackPanel>
+                            </Border>
+                        </Grid>
+
+                        <Border Style="{StaticResource CardBorderStyle}">
+                            <StackPanel Spacing="12">
+                                <Grid ColumnSpacing="12">
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="*" />
+                                        <ColumnDefinition Width="Auto" />
+                                    </Grid.ColumnDefinitions>
+                                    <StackPanel Spacing="6">
+                                        <TextBlock x:Name="DownloadTaskCenterTitleTextBlock" Style="{StaticResource SectionTitleTextStyle}" />
+                                        <TextBlock x:Name="DownloadTaskCenterHintTextBlock" Style="{StaticResource MutedTextStyle}" TextWrapping="Wrap" />
+                                    </StackPanel>
+                                    <Button x:Name="ClearDownloadTasksButton" Grid.Column="1" Click="OnClearDownloadTasksClicked" Style="{StaticResource SecondaryButtonStyle}" />
+                                </Grid>
+                                <StackPanel x:Name="DownloadTaskListPanel" Spacing="10" />
                             </StackPanel>
                         </Border>
 

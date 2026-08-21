@@ -33,7 +33,7 @@ namespace ModFolderCopier.WinUI;
 
 public sealed partial class MainWindow : Window
 {
-    private const string AppVersion = "v3.4.2";
+    private const string AppVersion = "v3.5.1";
     private const string GitHubRepositoryUrl = "https://github.com/uyujkk/Integrated_Mod_Manager";
     private const string GitHubLatestReleaseApiUrl = "https://api.github.com/repos/uyujkk/Integrated_Mod_Manager/releases/latest";
     private const string DefaultOnlineSourceSite = "GameBanana";
@@ -192,6 +192,7 @@ public sealed partial class MainWindow : Window
     private readonly string _onlineDetailsCachePath = Path.Combine(AppContext.BaseDirectory, "cache", "online-details");
     private readonly string _onlineCharacterCachePath = Path.Combine(AppContext.BaseDirectory, "cache", "online-characters");
     private readonly string _configurationBackupPath = Path.Combine(AppContext.BaseDirectory, "backups", "config");
+    private readonly string _modInstallBackupPath = Path.Combine(AppContext.BaseDirectory, "backups", "mod-installs");
     private readonly HttpClient _httpClient = CreateHttpClient();
     private readonly SemaphoreSlim _onlineCharacterAvatarDownloadGate = new(3, 3);
     private readonly ObservableCollection<FirstLevelFolderItem> _firstLevelItems = [];
@@ -211,6 +212,8 @@ public sealed partial class MainWindow : Window
     private readonly List<OnlineCharacterOption> _onlineCharacterOptions = [];
     private readonly List<string> _onlineDetailImageUrls = [];
     private readonly List<TrackedModUpdateResult> _trackedModUpdateResults = [];
+    private readonly List<ModConfigurationProfile> _configurationProfiles = [];
+    private readonly ObservableCollection<DownloadTaskItem> _downloadTasks = [];
 
     private bool _isDarkTheme;
     private bool _isCheckingUpdates;
@@ -226,6 +229,8 @@ public sealed partial class MainWindow : Window
     private bool _isApplyingModUpdateIntervalSelection;
     private bool _isApplyingAppearanceSettings;
     private bool _isApplyingDensitySelection;
+    private bool _isApplyingConfigurationProfileSelection;
+    private bool _enableConflictDetection = true;
     private bool _reduceMotion;
     private int _visibleShortcutRows = 1;
     private TextBox? _activeShortcutKeyBox;
@@ -252,6 +257,8 @@ public sealed partial class MainWindow : Window
     private string _onlineCharacterFilter = string.Empty;
     private string _onlineSearchText = string.Empty;
     private string? _selectedRepositoryId;
+    private string? _selectedConfigurationProfileId;
+    private string? _lastInstallTransactionPath;
     private string _modUpdateStatusEn = string.Empty;
     private string _modUpdateStatusZh = string.Empty;
     private string _updateStatusEn = string.Empty;
@@ -278,6 +285,7 @@ public sealed partial class MainWindow : Window
     private int _onlineModRequestVersion;
     private int _onlineRateLimitStrikeCount;
     private DateTimeOffset? _onlineRateLimitUntilUtc;
+    private DateTimeOffset _lastDownloadTaskUiRefreshUtc = DateTimeOffset.MinValue;
     private CancellationTokenSource? _onlineModListCancellation;
     private bool _animateOnlineCardsOnNextRefresh;
     private int? _savedWindowX;
@@ -905,7 +913,26 @@ public sealed partial class MainWindow : Window
     private void RefreshUpdatesPane()
     {
         UpdatesTitleTextBlock.Text = L("Mod 更新", "Mod Updates");
-        UpdatesSubtitleTextBlock.Text = L("这里会列出已通过在线安装记录下来的 Mod，并支持自动或手动检查它们是否有新版本。", "This page lists mods tracked through online installs and lets you check whether newer versions are available.");
+        UpdatesSubtitleTextBlock.Text = L("集中管理配置方案、安装安全、下载任务和已追踪 Mod 更新。", "Manage profiles, installation safety, download tasks, and tracked mod updates in one place.");
+        ConfigurationProfilesTitleTextBlock.Text = L("配置方案", "Configuration Profiles");
+        ConfigurationProfilesHintTextBlock.Text = L("保存当前目标文件夹中已启用的 Mod，并可一键恢复这组组合。", "Save the mods currently enabled in the target folder and restore the set later.");
+        CreateConfigurationProfileButton.Content = L("新建方案", "New Profile");
+        UpdateConfigurationProfileButton.Content = L("更新方案", "Update Profile");
+        ApplyConfigurationProfileButton.Content = L("应用方案", "Apply Profile");
+        DeleteConfigurationProfileButton.Content = new FontIcon { Glyph = "\uE74D", FontSize = 16 };
+        ToolTipService.SetToolTip(DeleteConfigurationProfileButton, L("删除选中的配置方案", "Delete the selected profile"));
+        InstallSafetyTitleTextBlock.Text = L("安装安全", "Install Safety");
+        InstallSafetyHintTextBlock.Text = L("安装前检查相对文件路径冲突，并为复制、移除和方案切换建立可恢复备份。", "Check relative-file conflicts before installation and create recoverable backups for copy, removal, and profile changes.");
+        ConflictDetectionToggleSwitch.Header = L("安装前检测冲突", "Detect conflicts before install");
+        ConflictDetectionToggleSwitch.OnContent = L("开启", "On");
+        ConflictDetectionToggleSwitch.OffContent = L("关闭", "Off");
+        ConflictDetectionToggleSwitch.IsOn = _enableConflictDetection;
+        RollbackLastInstallButton.Content = L("撤销上次 Mod 操作", "Undo Last Mod Change");
+        DownloadTaskCenterTitleTextBlock.Text = L("下载任务中心", "Download Task Center");
+        DownloadTaskCenterHintTextBlock.Text = L("查看在线 Mod 的下载、解压、完成、失败或取消状态。", "Track online mod downloads, extraction, completion, failures, and cancellations.");
+        ClearDownloadTasksButton.Content = L("清除已完成", "Clear Finished");
+        RefreshConfigurationProfiles();
+        RefreshDownloadTaskCenter();
         TrackedModSettingsTitleTextBlock.Text = L("检查方式", "Check Settings");
         TrackedModSettingsHintTextBlock.Text = L("自动检查会在应用启动时按你设定的频率执行，手动检查会立即刷新所有已记录的在线 Mod。", "Automatic checks run on startup at the selected interval. Manual checks refresh every tracked online mod immediately.");
         ModUpdateIntervalLabelTextBlock.Text = L("检查频率", "Check interval");
@@ -975,6 +1002,714 @@ public sealed partial class MainWindow : Window
         }
     }
 
+    private IEnumerable<ModConfigurationProfile> GetCurrentRepositoryProfiles()
+    {
+        return _configurationProfiles
+            .Where(profile => string.Equals(profile.RepositoryId, _selectedRepositoryId, StringComparison.Ordinal))
+            .OrderBy(profile => profile.Name, StringComparer.CurrentCultureIgnoreCase);
+    }
+
+    private ModConfigurationProfile? GetSelectedConfigurationProfile()
+    {
+        return _configurationProfiles.FirstOrDefault(profile =>
+            string.Equals(profile.Id, _selectedConfigurationProfileId, StringComparison.Ordinal)
+            && string.Equals(profile.RepositoryId, _selectedRepositoryId, StringComparison.Ordinal));
+    }
+
+    private void RefreshConfigurationProfiles()
+    {
+        if (ConfigurationProfileComboBox is null)
+        {
+            return;
+        }
+
+        List<ModConfigurationProfile> profiles = [.. GetCurrentRepositoryProfiles()];
+        if (!profiles.Any(profile => profile.Id == _selectedConfigurationProfileId))
+        {
+            _selectedConfigurationProfileId = profiles.FirstOrDefault()?.Id;
+        }
+
+        _isApplyingConfigurationProfileSelection = true;
+        try
+        {
+            ConfigurationProfileComboBox.Items.Clear();
+            foreach (ModConfigurationProfile profile in profiles)
+            {
+                ConfigurationProfileComboBox.Items.Add(new ComboBoxItem
+                {
+                    Content = $"{profile.Name}  ·  {profile.ModRelativePaths.Count} Mod",
+                    Tag = profile.Id
+                });
+            }
+
+            ConfigurationProfileComboBox.PlaceholderText = profiles.Count == 0
+                ? L("当前仓库还没有配置方案", "No profiles for this repository")
+                : L("选择配置方案", "Select a profile");
+            ConfigurationProfileComboBox.SelectedItem = ConfigurationProfileComboBox.Items
+                .OfType<ComboBoxItem>()
+                .FirstOrDefault(item => string.Equals(item.Tag as string, _selectedConfigurationProfileId, StringComparison.Ordinal));
+        }
+        finally
+        {
+            _isApplyingConfigurationProfileSelection = false;
+        }
+
+        ModConfigurationProfile? selected = GetSelectedConfigurationProfile();
+        bool hasRepository = GetSelectedRepository() is not null;
+        CreateConfigurationProfileButton.IsEnabled = hasRepository;
+        UpdateConfigurationProfileButton.IsEnabled = selected is not null;
+        ApplyConfigurationProfileButton.IsEnabled = selected is not null;
+        DeleteConfigurationProfileButton.IsEnabled = selected is not null;
+        ConfigurationProfileSummaryTextBlock.Text = selected is null
+            ? L("配置方案只会管理当前仓库中能够识别的 Mod。", "Profiles only manage mods recognized in the current repository.")
+            : L(
+                $"{selected.Name}：包含 {selected.ModRelativePaths.Count} 个 Mod，更新于 {selected.UpdatedAtUtc.ToLocalTime():yyyy-MM-dd HH:mm}。",
+                $"{selected.Name}: {selected.ModRelativePaths.Count} mods, updated {selected.UpdatedAtUtc.ToLocalTime():yyyy-MM-dd HH:mm}.");
+
+        RollbackLastInstallButton.IsEnabled = !string.IsNullOrWhiteSpace(_lastInstallTransactionPath)
+            && Directory.Exists(_lastInstallTransactionPath);
+        InstallRollbackStatusTextBlock.Text = RollbackLastInstallButton.IsEnabled
+            ? L("可以撤销最近一次复制、移除或配置方案操作。", "The most recent copy, removal, or profile operation can be undone.")
+            : L("目前没有可撤销的 Mod 操作。", "There is no mod operation to undo.");
+    }
+
+    private List<string> CaptureCurrentConfigurationProfile()
+    {
+        WorkspaceRepository? repository = GetSelectedRepository();
+        if (repository is null || !Directory.Exists(repository.SourcePath) || !Directory.Exists(repository.TargetPath))
+        {
+            return [];
+        }
+
+        HashSet<string> installedNames = Directory.GetDirectories(repository.TargetPath)
+            .Select(Path.GetFileName)
+            .Where(name => !string.IsNullOrWhiteSpace(name))
+            .ToHashSet(StringComparer.OrdinalIgnoreCase)!;
+
+        return Directory.GetDirectories(repository.SourcePath)
+            .SelectMany(firstLevel => Directory.GetDirectories(firstLevel))
+            .Where(modPath => installedNames.Contains(Path.GetFileName(modPath)))
+            .Select(modPath => Path.GetRelativePath(repository.SourcePath, modPath))
+            .Distinct(StringComparer.OrdinalIgnoreCase)
+            .OrderBy(path => path, StringComparer.CurrentCultureIgnoreCase)
+            .ToList();
+    }
+
+    private async void OnCreateConfigurationProfileClicked(object sender, RoutedEventArgs e)
+    {
+        WorkspaceRepository? repository = GetSelectedRepository();
+        if (repository is null)
+        {
+            await ShowMessageAsync(L("请先选择仓库。", "Select a repository first."), L("无法新建方案", "Cannot Create Profile"));
+            return;
+        }
+
+        string? name = await PromptForTextAsync(
+            L("输入配置方案名称。当前目标文件夹中已启用的 Mod 会保存到该方案。", "Enter a profile name. Mods currently enabled in the target folder will be saved."),
+            L("新建配置方案", "New Configuration Profile"),
+            L("常用方案", "My Profile"));
+        name = name?.Trim();
+        if (string.IsNullOrWhiteSpace(name))
+        {
+            return;
+        }
+
+        var profile = new ModConfigurationProfile
+        {
+            RepositoryId = repository.Id,
+            Name = name,
+            ModRelativePaths = CaptureCurrentConfigurationProfile(),
+            UpdatedAtUtc = DateTimeOffset.UtcNow
+        };
+        _configurationProfiles.Add(profile);
+        _selectedConfigurationProfileId = profile.Id;
+        SaveShellConfig();
+        RefreshConfigurationProfiles();
+        ShowAppNotification($"已保存配置方案：{profile.Name}", $"Saved profile: {profile.Name}");
+    }
+
+    private void OnUpdateConfigurationProfileClicked(object sender, RoutedEventArgs e)
+    {
+        ModConfigurationProfile? profile = GetSelectedConfigurationProfile();
+        if (profile is null)
+        {
+            return;
+        }
+
+        profile.ModRelativePaths = CaptureCurrentConfigurationProfile();
+        profile.UpdatedAtUtc = DateTimeOffset.UtcNow;
+        SaveShellConfig();
+        RefreshConfigurationProfiles();
+        ShowAppNotification($"已更新配置方案：{profile.Name}", $"Updated profile: {profile.Name}");
+    }
+
+    private async void OnDeleteConfigurationProfileClicked(object sender, RoutedEventArgs e)
+    {
+        ModConfigurationProfile? profile = GetSelectedConfigurationProfile();
+        if (profile is null)
+        {
+            return;
+        }
+
+        if (!await ShowConfirmAsync(
+            L($"确定删除配置方案“{profile.Name}”吗？这不会删除任何 Mod。", $"Delete the profile \"{profile.Name}\"? This will not delete any mods."),
+            L("删除配置方案", "Delete Configuration Profile")))
+        {
+            return;
+        }
+
+        _configurationProfiles.Remove(profile);
+        _selectedConfigurationProfileId = null;
+        SaveShellConfig();
+        RefreshConfigurationProfiles();
+    }
+
+    private void OnConfigurationProfileSelectionChanged(object sender, SelectionChangedEventArgs e)
+    {
+        if (_isApplyingConfigurationProfileSelection)
+        {
+            return;
+        }
+
+        _selectedConfigurationProfileId = (ConfigurationProfileComboBox.SelectedItem as ComboBoxItem)?.Tag as string;
+        SaveShellConfig();
+        RefreshConfigurationProfiles();
+    }
+
+    private void OnConflictDetectionToggled(object sender, RoutedEventArgs e)
+    {
+        if (ConflictDetectionToggleSwitch is null)
+        {
+            return;
+        }
+
+        _enableConflictDetection = ConflictDetectionToggleSwitch.IsOn;
+        SaveShellConfig();
+    }
+
+    private async void OnApplyConfigurationProfileClicked(object sender, RoutedEventArgs e)
+    {
+        ModConfigurationProfile? profile = GetSelectedConfigurationProfile();
+        WorkspaceRepository? repository = GetSelectedRepository();
+        if (profile is null || repository is null
+            || !Directory.Exists(repository.SourcePath)
+            || !Directory.Exists(repository.TargetPath))
+        {
+            await ShowMessageAsync(
+                L("配置方案或仓库路径无效。", "The profile or repository paths are invalid."),
+                L("无法应用方案", "Cannot Apply Profile"));
+            return;
+        }
+
+        List<string> desiredSources = profile.ModRelativePaths
+            .Select(relativePath => Path.GetFullPath(Path.Combine(repository.SourcePath, relativePath)))
+            .Where(path => IsPathInsideDirectory(path, repository.SourcePath) && Directory.Exists(path))
+            .Distinct(StringComparer.OrdinalIgnoreCase)
+            .GroupBy(Path.GetFileName, StringComparer.OrdinalIgnoreCase)
+            .Select(group => group.First())
+            .ToList();
+        HashSet<string> desiredNames = desiredSources
+            .Select(Path.GetFileName)
+            .Where(name => !string.IsNullOrWhiteSpace(name))
+            .Select(name => name!)
+            .ToHashSet(StringComparer.OrdinalIgnoreCase);
+
+        List<string> knownSourceMods = Directory.GetDirectories(repository.SourcePath)
+            .SelectMany(firstLevel => Directory.GetDirectories(firstLevel))
+            .ToList();
+        List<string> installSources = desiredSources
+            .Where(source => !Directory.Exists(Path.Combine(repository.TargetPath, Path.GetFileName(source))))
+            .ToList();
+        List<string> removeTargets = knownSourceMods
+            .Select(source => Path.Combine(repository.TargetPath, Path.GetFileName(source)))
+            .Where(target => Directory.Exists(target) && !desiredNames.Contains(Path.GetFileName(target)))
+            .Distinct(StringComparer.OrdinalIgnoreCase)
+            .ToList();
+
+        if (installSources.Count == 0 && removeTargets.Count == 0)
+        {
+            ShowAppNotification("目标文件夹已经符合该配置方案。", "The target folder already matches this profile.");
+            return;
+        }
+
+        if (_enableConflictDetection)
+        {
+            List<string> conflicts = await Task.Run(() => installSources
+                .SelectMany(source => DetectModFileConflicts(source, repository.TargetPath, Path.Combine(repository.TargetPath, Path.GetFileName(source))))
+                .Distinct(StringComparer.OrdinalIgnoreCase)
+                .Take(100)
+                .ToList());
+            if (conflicts.Count > 0 && !await ConfirmInstallConflictsAsync(conflicts))
+            {
+                return;
+            }
+        }
+
+        bool confirmed = await ShowConfirmAsync(
+            L(
+                $"应用配置方案“{profile.Name}”？\n\n将安装 {installSources.Count} 个 Mod，移除 {removeTargets.Count} 个 Mod。操作前会自动建立备份。",
+                $"Apply profile \"{profile.Name}\"?\n\n{installSources.Count} mods will be installed and {removeTargets.Count} removed. A backup will be created first."),
+            L("应用配置方案", "Apply Configuration Profile"));
+        if (!confirmed)
+        {
+            return;
+        }
+
+        List<string> affectedTargets = installSources
+            .Select(source => Path.Combine(repository.TargetPath, Path.GetFileName(source)))
+            .Concat(removeTargets)
+            .Distinct(StringComparer.OrdinalIgnoreCase)
+            .ToList();
+        string? transactionPath = null;
+        SetBusyState(true);
+        try
+        {
+            transactionPath = await CreateInstallTransactionAsync(
+                L($"应用配置方案：{profile.Name}", $"Apply profile: {profile.Name}"),
+                repository,
+                affectedTargets);
+
+            foreach (string target in removeTargets)
+            {
+                await Task.Run(() => Directory.Delete(target, true));
+            }
+
+            int completed = 0;
+            foreach (string source in installSources)
+            {
+                string target = Path.Combine(repository.TargetPath, Path.GetFileName(source));
+                var progress = new Progress<ProgressInfo>(info =>
+                {
+                    double itemProgress = info.Percent / 100d;
+                    int percent = (int)Math.Round((completed + itemProgress) * 100d / Math.Max(1, installSources.Count));
+                    UpdateProgress(percent, L($"正在应用方案：{Path.GetFileName(source)}", $"Applying profile: {Path.GetFileName(source)}"));
+                });
+                await CopyDirectoryWithProgressAsync(source, target, progress);
+                completed++;
+            }
+
+            CommitInstallTransaction(transactionPath);
+            UpdateProgress(100, L("配置方案应用完成", "Profile applied"));
+            ShowAppNotification($"已应用配置方案：{profile.Name}", $"Applied profile: {profile.Name}");
+        }
+        catch (Exception ex)
+        {
+            if (!string.IsNullOrWhiteSpace(transactionPath))
+            {
+                await RollbackInstallTransactionAsync(transactionPath, clearLastTransaction: true);
+            }
+
+            await ShowMessageAsync(
+                L("应用配置方案失败，已恢复操作前状态：", "Applying the profile failed and the previous state was restored: ") + ex.Message,
+                L("方案应用失败", "Profile Apply Failed"));
+        }
+        finally
+        {
+            SetBusyState(false);
+            await RefreshListsAsync();
+            RefreshConfigurationProfiles();
+        }
+    }
+
+    private List<string> DetectModFileConflicts(string sourcePath, string targetRoot, string targetPathToIgnore)
+    {
+        HashSet<string> sourceFiles = Directory.GetFiles(sourcePath, "*", SearchOption.AllDirectories)
+            .Select(path => Path.GetRelativePath(sourcePath, path))
+            .Where(IsConflictRelevantRelativePath)
+            .ToHashSet(StringComparer.OrdinalIgnoreCase);
+        var conflicts = new List<string>();
+        foreach (string installedModPath in Directory.GetDirectories(targetRoot))
+        {
+            if (string.Equals(Path.GetFullPath(installedModPath), Path.GetFullPath(targetPathToIgnore), StringComparison.OrdinalIgnoreCase))
+            {
+                continue;
+            }
+
+            foreach (string file in Directory.GetFiles(installedModPath, "*", SearchOption.AllDirectories))
+            {
+                string relativePath = Path.GetRelativePath(installedModPath, file);
+                if (IsConflictRelevantRelativePath(relativePath) && sourceFiles.Contains(relativePath))
+                {
+                    conflicts.Add($"{Path.GetFileName(installedModPath)}  →  {relativePath}");
+                    if (conflicts.Count >= 100)
+                    {
+                        return conflicts;
+                    }
+                }
+            }
+        }
+
+        return conflicts;
+    }
+
+    private static bool IsConflictRelevantRelativePath(string relativePath)
+    {
+        if (relativePath.Contains(Path.DirectorySeparatorChar) || relativePath.Contains(Path.AltDirectorySeparatorChar))
+        {
+            return true;
+        }
+
+        string fileName = Path.GetFileName(relativePath);
+        string baseName = Path.GetFileNameWithoutExtension(fileName);
+        if (baseName.Equals("preview", StringComparison.OrdinalIgnoreCase)
+            || baseName.Equals("cover", StringComparison.OrdinalIgnoreCase)
+            || baseName.Equals("thumbnail", StringComparison.OrdinalIgnoreCase)
+            || baseName.Equals("image", StringComparison.OrdinalIgnoreCase))
+        {
+            return false;
+        }
+
+        return !fileName.StartsWith("readme", StringComparison.OrdinalIgnoreCase)
+            && !fileName.StartsWith("license", StringComparison.OrdinalIgnoreCase)
+            && !fileName.Equals("desktop.ini", StringComparison.OrdinalIgnoreCase);
+    }
+
+    private async Task<bool> ConfirmInstallConflictsAsync(IReadOnlyList<string> conflicts)
+    {
+        string preview = string.Join(Environment.NewLine, conflicts.Take(12));
+        if (conflicts.Count > 12)
+        {
+            preview += Environment.NewLine + L($"……另有 {conflicts.Count - 12} 项", $"...and {conflicts.Count - 12} more");
+        }
+
+        var dialog = new ContentDialog
+        {
+            Title = L("检测到潜在 Mod 冲突", "Potential Mod Conflicts Detected"),
+            Content = new ScrollViewer
+            {
+                MaxHeight = 420,
+                Content = new TextBlock
+                {
+                    Text = L(
+                        $"以下 Mod 包含相同的相对文件路径，可能覆盖同一游戏资源。是否仍要继续？\n\n{preview}",
+                        $"These mods contain matching relative file paths and may override the same game resources. Continue anyway?\n\n{preview}"),
+                    TextWrapping = TextWrapping.Wrap
+                }
+            },
+            PrimaryButtonText = L("仍然继续", "Continue Anyway"),
+            CloseButtonText = L("取消", "Cancel"),
+            DefaultButton = ContentDialogButton.Close,
+            XamlRoot = RootGrid.XamlRoot
+        };
+        return await dialog.ShowAsync() == ContentDialogResult.Primary;
+    }
+
+    private async Task<string> CreateInstallTransactionAsync(string description, WorkspaceRepository repository, IEnumerable<string> affectedTargets)
+    {
+        string transactionPath = Path.Combine(_modInstallBackupPath, $"{DateTimeOffset.UtcNow:yyyyMMdd-HHmmssfff}-{Guid.NewGuid():N}");
+        Directory.CreateDirectory(transactionPath);
+        var transaction = new ModInstallTransaction
+        {
+            Description = description,
+            RepositoryId = repository.Id
+        };
+
+        try
+        {
+            int index = 0;
+            foreach (string targetPath in affectedTargets.Distinct(StringComparer.OrdinalIgnoreCase))
+            {
+                string fullTargetPath = Path.GetFullPath(targetPath);
+                if (!IsPathInsideDirectory(fullTargetPath, repository.TargetPath))
+                {
+                    throw new InvalidOperationException(L("拒绝备份目标文件夹之外的路径。", "Refused to back up a path outside the target folder."));
+                }
+
+                bool existed = Directory.Exists(fullTargetPath);
+                string backupRelativePath = existed ? Path.Combine("files", index.ToString("D4")) : string.Empty;
+                transaction.Entries.Add(new ModInstallBackupEntry
+                {
+                    TargetPath = fullTargetPath,
+                    ExistedBefore = existed,
+                    BackupRelativePath = backupRelativePath
+                });
+                if (existed)
+                {
+                    string backupPath = Path.Combine(transactionPath, backupRelativePath);
+                    await Task.Run(() => CopyDirectoryTree(fullTargetPath, backupPath));
+                }
+
+                index++;
+            }
+
+            string manifest = JsonSerializer.Serialize(transaction, new JsonSerializerOptions { WriteIndented = true });
+            File.WriteAllText(Path.Combine(transactionPath, "transaction.json"), manifest, Encoding.UTF8);
+            PruneInstallTransactions(keepCount: 10, preservePath: transactionPath);
+            return transactionPath;
+        }
+        catch
+        {
+            if (Directory.Exists(transactionPath))
+            {
+                Directory.Delete(transactionPath, true);
+            }
+            throw;
+        }
+    }
+
+    private static void CopyDirectoryTree(string sourcePath, string targetPath)
+    {
+        Directory.CreateDirectory(targetPath);
+        foreach (string directory in Directory.GetDirectories(sourcePath, "*", SearchOption.AllDirectories))
+        {
+            Directory.CreateDirectory(Path.Combine(targetPath, Path.GetRelativePath(sourcePath, directory)));
+        }
+
+        foreach (string file in Directory.GetFiles(sourcePath, "*", SearchOption.AllDirectories))
+        {
+            string destination = Path.Combine(targetPath, Path.GetRelativePath(sourcePath, file));
+            Directory.CreateDirectory(Path.GetDirectoryName(destination)!);
+            File.Copy(file, destination, true);
+        }
+    }
+
+    private void CommitInstallTransaction(string transactionPath)
+    {
+        _lastInstallTransactionPath = transactionPath;
+        SaveShellConfig();
+    }
+
+    private async Task RollbackInstallTransactionAsync(string transactionPath, bool clearLastTransaction)
+    {
+        string manifestPath = Path.Combine(transactionPath, "transaction.json");
+        if (!File.Exists(manifestPath))
+        {
+            throw new FileNotFoundException(L("找不到安装备份清单。", "The install backup manifest was not found."), manifestPath);
+        }
+
+        ModInstallTransaction transaction = JsonSerializer.Deserialize<ModInstallTransaction>(await File.ReadAllTextAsync(manifestPath))
+            ?? throw new InvalidDataException(L("安装备份清单无效。", "The install backup manifest is invalid."));
+        WorkspaceRepository repository = _repositories.FirstOrDefault(item => item.Id == transaction.RepositoryId)
+            ?? throw new InvalidOperationException(L("找不到此备份对应的仓库。", "The repository for this backup no longer exists."));
+
+        await Task.Run(() =>
+        {
+            foreach (ModInstallBackupEntry entry in transaction.Entries)
+            {
+                string targetPath = Path.GetFullPath(entry.TargetPath);
+                if (!IsPathInsideDirectory(targetPath, repository.TargetPath))
+                {
+                    throw new InvalidOperationException(L("备份包含目标文件夹之外的路径，已停止回滚。", "The backup contains a path outside the target folder. Rollback was stopped."));
+                }
+
+                if (Directory.Exists(targetPath))
+                {
+                    Directory.Delete(targetPath, true);
+                }
+
+                if (entry.ExistedBefore)
+                {
+                    string backupPath = Path.Combine(transactionPath, entry.BackupRelativePath);
+                    if (!Directory.Exists(backupPath))
+                    {
+                        throw new DirectoryNotFoundException(L("安装备份内容不完整。", "The install backup is incomplete."));
+                    }
+                    CopyDirectoryTree(backupPath, targetPath);
+                }
+            }
+        });
+
+        if (clearLastTransaction && string.Equals(_lastInstallTransactionPath, transactionPath, StringComparison.OrdinalIgnoreCase))
+        {
+            _lastInstallTransactionPath = null;
+            SaveShellConfig();
+        }
+    }
+
+    private void PruneInstallTransactions(int keepCount, string preservePath)
+    {
+        if (!Directory.Exists(_modInstallBackupPath))
+        {
+            return;
+        }
+
+        foreach (DirectoryInfo directory in new DirectoryInfo(_modInstallBackupPath).EnumerateDirectories()
+            .Where(item => !string.Equals(item.FullName, preservePath, StringComparison.OrdinalIgnoreCase))
+            .OrderByDescending(item => item.CreationTimeUtc)
+            .Skip(Math.Max(0, keepCount - 1)))
+        {
+            directory.Delete(true);
+        }
+    }
+
+    private async void OnRollbackLastInstallClicked(object sender, RoutedEventArgs e)
+    {
+        if (string.IsNullOrWhiteSpace(_lastInstallTransactionPath) || !Directory.Exists(_lastInstallTransactionPath))
+        {
+            RefreshConfigurationProfiles();
+            return;
+        }
+
+        if (!await ShowConfirmAsync(
+            L("撤销最近一次 Mod 复制、移除或方案切换，并恢复操作前文件？", "Undo the most recent mod copy, removal, or profile change and restore the previous files?"),
+            L("撤销 Mod 操作", "Undo Mod Change")))
+        {
+            return;
+        }
+
+        SetBusyState(true);
+        try
+        {
+            await RollbackInstallTransactionAsync(_lastInstallTransactionPath, clearLastTransaction: true);
+            await RefreshListsAsync();
+            ShowAppNotification("已恢复上次 Mod 操作前的状态。", "Restored the state before the last mod operation.");
+        }
+        catch (Exception ex)
+        {
+            await ShowMessageAsync(L("回滚失败：", "Rollback failed: ") + ex.Message, L("无法回滚", "Cannot Roll Back"));
+        }
+        finally
+        {
+            SetBusyState(false);
+            RefreshConfigurationProfiles();
+        }
+    }
+
+    private DownloadTaskItem CreateDownloadTask(OnlineModCard mod, string destinationPath)
+    {
+        var task = new DownloadTaskItem
+        {
+            Title = mod.Title,
+            DestinationPath = destinationPath,
+            State = DownloadTaskState.Queued,
+            StatusZh = "等待开始",
+            StatusEn = "Waiting to start"
+        };
+        _downloadTasks.Insert(0, task);
+        while (_downloadTasks.Count > 30)
+        {
+            DownloadTaskItem? oldestFinished = _downloadTasks.LastOrDefault(item =>
+                item.State is DownloadTaskState.Completed or DownloadTaskState.Failed or DownloadTaskState.Canceled);
+            if (oldestFinished is null)
+            {
+                break;
+            }
+            _downloadTasks.Remove(oldestFinished);
+        }
+        RefreshDownloadTaskCenter();
+        return task;
+    }
+
+    private void UpdateDownloadTask(
+        DownloadTaskItem task,
+        DownloadTaskState state,
+        double progress,
+        string statusZh,
+        string statusEn,
+        bool forceRefresh = false)
+    {
+        task.State = state;
+        task.Progress = Math.Clamp(progress, 0, 100);
+        task.StatusZh = statusZh;
+        task.StatusEn = statusEn;
+
+        DateTimeOffset now = DateTimeOffset.UtcNow;
+        if (!forceRefresh && now - _lastDownloadTaskUiRefreshUtc < TimeSpan.FromMilliseconds(200))
+        {
+            return;
+        }
+        _lastDownloadTaskUiRefreshUtc = now;
+        DispatcherQueue.TryEnqueue(RefreshDownloadTaskCenter);
+    }
+
+    private void RefreshDownloadTaskCenter()
+    {
+        if (DownloadTaskListPanel is null)
+        {
+            return;
+        }
+
+        DownloadTaskListPanel.Children.Clear();
+        if (_downloadTasks.Count == 0)
+        {
+            DownloadTaskListPanel.Children.Add(CreateInfoCard(
+                L("暂无下载任务", "No download tasks"),
+                L("从在线 Mod 页面开始下载后，进度和结果会显示在这里。", "Downloads started from the online browser will appear here.")));
+            ClearDownloadTasksButton.IsEnabled = false;
+            return;
+        }
+
+        ClearDownloadTasksButton.IsEnabled = _downloadTasks.Any(item =>
+            item.State is DownloadTaskState.Completed or DownloadTaskState.Failed or DownloadTaskState.Canceled);
+        foreach (DownloadTaskItem task in _downloadTasks)
+        {
+            DownloadTaskListPanel.Children.Add(CreateDownloadTaskCard(task));
+        }
+    }
+
+    private UIElement CreateDownloadTaskCard(DownloadTaskItem task)
+    {
+        bool active = task.State is DownloadTaskState.Queued or DownloadTaskState.Preparing or DownloadTaskState.Downloading or DownloadTaskState.Extracting or DownloadTaskState.Canceling;
+        var border = new Border
+        {
+            Style = (Style)Application.Current.Resources["InsetBorderStyle"],
+            Padding = new Thickness(14)
+        };
+        var grid = new Grid { ColumnSpacing = 14 };
+        grid.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(1, GridUnitType.Star) });
+        grid.ColumnDefinitions.Add(new ColumnDefinition { Width = GridLength.Auto });
+
+        var content = new StackPanel { Spacing = 6 };
+        content.Children.Add(new TextBlock
+        {
+            Text = task.Title,
+            FontWeight = Microsoft.UI.Text.FontWeights.SemiBold,
+            TextTrimming = TextTrimming.CharacterEllipsis
+        });
+        content.Children.Add(new TextBlock
+        {
+            Text = L(task.StatusZh, task.StatusEn),
+            Style = (Style)Application.Current.Resources["CaptionTextStyle"],
+            TextWrapping = TextWrapping.Wrap
+        });
+        content.Children.Add(new ProgressBar
+        {
+            Minimum = 0,
+            Maximum = 100,
+            Value = task.Progress,
+            Height = 6,
+            IsIndeterminate = active && task.State is not DownloadTaskState.Downloading
+        });
+        grid.Children.Add(content);
+
+        var actionButton = new Button
+        {
+            MinWidth = 104,
+            Style = (Style)Application.Current.Resources["SecondaryButtonStyle"],
+            Content = active ? L("取消", "Cancel") : L("打开目录", "Open Folder"),
+            VerticalAlignment = VerticalAlignment.Center
+        };
+        if (active)
+        {
+            actionButton.Click += (_, _) =>
+            {
+                task.Cancellation.Cancel();
+                UpdateDownloadTask(task, DownloadTaskState.Canceling, task.Progress, "正在取消...", "Canceling...", forceRefresh: true);
+            };
+        }
+        else
+        {
+            actionButton.IsEnabled = Directory.Exists(task.DestinationPath);
+            actionButton.Click += (_, _) => OpenDirectory(task.DestinationPath, L("下载目录", "Download folder"));
+        }
+        Grid.SetColumn(actionButton, 1);
+        grid.Children.Add(actionButton);
+        border.Child = grid;
+        return border;
+    }
+
+    private void OnClearDownloadTasksClicked(object sender, RoutedEventArgs e)
+    {
+        foreach (DownloadTaskItem task in _downloadTasks
+            .Where(item => item.State is DownloadTaskState.Completed or DownloadTaskState.Failed or DownloadTaskState.Canceled)
+            .ToList())
+        {
+            _downloadTasks.Remove(task);
+            task.Cancellation.Dispose();
+        }
+        RefreshDownloadTaskCenter();
+    }
+
     private void LoadShellConfig()
     {
         _repositories.Clear();
@@ -1041,6 +1776,21 @@ public sealed partial class MainWindow : Window
             _onlineCardLayoutMode = string.Equals(config?.OnlineCardLayout, "grid", StringComparison.OrdinalIgnoreCase)
                 ? OnlineCardLayoutMode.Grid
                 : OnlineCardLayoutMode.List;
+            if (config?.ConfigurationProfiles is { Count: > 0 })
+            {
+                _configurationProfiles.AddRange(config.ConfigurationProfiles
+                    .Where(profile => !string.IsNullOrWhiteSpace(profile.Id)
+                        && !string.IsNullOrWhiteSpace(profile.RepositoryId)));
+            }
+
+            _selectedConfigurationProfileId = _configurationProfiles.Any(profile => profile.Id == config?.SelectedConfigurationProfileId)
+                ? config?.SelectedConfigurationProfileId
+                : null;
+            _enableConflictDetection = config?.EnableConflictDetection ?? true;
+            _lastInstallTransactionPath = !string.IsNullOrWhiteSpace(config?.LastInstallTransactionPath)
+                && Directory.Exists(config.LastInstallTransactionPath)
+                    ? config.LastInstallTransactionPath
+                    : null;
             _savedWindowX = config?.WindowX;
             _savedWindowY = config?.WindowY;
             _savedWindowWidth = config?.WindowWidth;
@@ -1133,6 +1883,10 @@ public sealed partial class MainWindow : Window
                 ReduceMotion = _reduceMotion,
                 InterfaceDensity = _interfaceDensity == InterfaceDensity.Compact ? "compact" : "comfortable",
                 OnlineCardLayout = _onlineCardLayoutMode == OnlineCardLayoutMode.Grid ? "grid" : "list",
+                SelectedConfigurationProfileId = _selectedConfigurationProfileId,
+                EnableConflictDetection = _enableConflictDetection,
+                LastInstallTransactionPath = _lastInstallTransactionPath,
+                ConfigurationProfiles = [.. _configurationProfiles],
                 WindowX = _savedWindowX,
                 WindowY = _savedWindowY,
                 WindowWidth = _savedWindowWidth,
@@ -1944,7 +2698,16 @@ public sealed partial class MainWindow : Window
             return;
         }
 
-        bool useHorizontalCharacterRail = windowWidth < 1520;
+        double onlineContentWidth = OnlineDetailsSplitView.ActualWidth > 0
+            ? OnlineDetailsSplitView.ActualWidth
+            : windowWidth;
+        if (OnlineDetailsSplitView.IsPaneOpen
+            && OnlineDetailsSplitView.DisplayMode == SplitViewDisplayMode.Inline)
+        {
+            onlineContentWidth -= OnlineDetailsSplitView.OpenPaneLength;
+        }
+
+        bool useHorizontalCharacterRail = onlineContentWidth < 1040;
         bool characterRailModeChanged = _useHorizontalOnlineCharacterRail != useHorizontalCharacterRail;
         _useHorizontalOnlineCharacterRail = useHorizontalCharacterRail;
         if (useHorizontalCharacterRail)
@@ -4769,52 +5532,22 @@ public sealed partial class MainWindow : Window
     {
         if (OnlineResultsHost is null
             || OnlineWorkspaceGrid is null
-            || OnlineDetailsSplitView is null
-            || RootGrid is null
-            || RootGrid.ActualWidth <= 0)
+            || OnlineVirtualizedGridView is null)
         {
             return;
         }
 
-        double paneWidth = OnlineDetailsSplitView.IsPaneOpen
-            && OnlineDetailsSplitView.DisplayMode == SplitViewDisplayMode.Inline
-                ? OnlineDetailsSplitView.OpenPaneLength
-                : 0;
-        Point workspaceOrigin;
-        Point resultsOrigin;
-        try
-        {
-            workspaceOrigin = OnlineWorkspaceGrid
-                .TransformToVisual(RootGrid)
-                .TransformPoint(new Point(0, 0));
-            resultsOrigin = OnlineResultsHost
-                .TransformToVisual(RootGrid)
-                .TransformPoint(new Point(0, 0));
-        }
-        catch (InvalidOperationException)
-        {
-            return;
-        }
-
-        // Account for the online panel padding as well as the SplitView content edge.
-        const double rightInset = 32;
-        double contentRight = Math.Max(0, RootGrid.ActualWidth - paneWidth - rightInset);
-        double workspaceWidth = Math.Max(640, contentRight - workspaceOrigin.X);
-        if (double.IsNaN(OnlineWorkspaceGrid.Width)
-            || Math.Abs(OnlineWorkspaceGrid.Width - workspaceWidth) > 0.5)
-        {
-            OnlineWorkspaceGrid.Width = workspaceWidth;
-        }
-
-        double availableWidth = Math.Max(320, contentRight - resultsOrigin.X);
-        if (double.IsNaN(OnlineResultsHost.Width)
-            || Math.Abs(OnlineResultsHost.Width - availableWidth) > 0.5)
-        {
-            OnlineResultsHost.Width = availableWidth;
-        }
+        // SplitView already measures its content after reserving the inline details pane.
+        // Explicit widths created a feedback loop because the next calculation used the
+        // centered position of the previously narrowed workspace.
+        OnlineWorkspaceGrid.ClearValue(FrameworkElement.WidthProperty);
+        OnlineResultsHost.ClearValue(FrameworkElement.WidthProperty);
 
         if (_onlineCardLayoutMode == OnlineCardLayoutMode.Grid)
         {
+            double availableWidth = OnlineVirtualizedGridView.ActualWidth > 0
+                ? OnlineVirtualizedGridView.ActualWidth
+                : OnlineResultsHost.ActualWidth;
             UpdateOnlineGridCardMetrics(GetOnlineGridAvailableWidth(availableWidth));
         }
     }
@@ -5412,7 +6145,13 @@ public sealed partial class MainWindow : Window
         bool wasOpen = OnlineDetailsSplitView.IsPaneOpen;
         OnlineDetailsSplitView.IsPaneOpen = true;
         await Task.Delay(1);
+        UpdateOnlineResponsiveLayout(Bounds.Width);
         UpdateOnlineWorkspaceWidthConstraint();
+        DispatcherQueue.TryEnqueue(() =>
+        {
+            UpdateOnlineResponsiveLayout(Bounds.Width);
+            UpdateOnlineWorkspaceWidthConstraint();
+        });
         if (animationVersion != _onlineDetailAnimationVersion)
         {
             return;
@@ -6943,9 +7682,12 @@ public sealed partial class MainWindow : Window
             return;
         }
 
+        DownloadTaskItem downloadTask = CreateDownloadTask(effectiveMod, selectedFolder);
         SetBusyState(true);
         try
         {
+            UpdateDownloadTask(downloadTask, DownloadTaskState.Preparing, 0, "正在读取下载信息...", "Reading download information...", forceRefresh: true);
+            downloadTask.Cancellation.Token.ThrowIfCancellationRequested();
             OnlineModDetails details = await GetOnlineModDetailsAsync(effectiveMod);
 
             SetOnlineDownloadProgress(true, 0, "准备下载...", "Preparing download...");
@@ -6959,7 +7701,7 @@ public sealed partial class MainWindow : Window
 
             SetOnlineStatus(downloadStatusZh, downloadStatusEn);
 
-            string archivePath = await DownloadOnlineModArchiveAsync(effectiveMod, selectedFolder);
+            string archivePath = await DownloadOnlineModArchiveAsync(effectiveMod, selectedFolder, downloadTask, downloadTask.Cancellation.Token);
             string resolvedArchivePath = EnsureDownloadArchiveExtension(archivePath);
             if (!IsSupportedArchiveFile(resolvedArchivePath))
             {
@@ -6971,7 +7713,11 @@ public sealed partial class MainWindow : Window
             string extractFolder = CreateUniqueExtractionFolder(selectedFolder, effectiveMod.Title, effectiveMod.ItemId);
             Directory.CreateDirectory(extractFolder);
 
+            downloadTask.DestinationPath = extractFolder;
+            UpdateDownloadTask(downloadTask, DownloadTaskState.Extracting, 92, "正在解压并写入 Mod 信息...", "Extracting and writing mod metadata...", forceRefresh: true);
+            downloadTask.Cancellation.Token.ThrowIfCancellationRequested();
             await Task.Run(() => ExtractArchiveToDirectory(resolvedArchivePath, extractFolder));
+            downloadTask.Cancellation.Token.ThrowIfCancellationRequested();
             await ApplyTrackedOnlineModMetadataAsync(extractFolder, effectiveMod, details);
 
             WorkspaceRepository? repository = GetSelectedRepository();
@@ -6989,9 +7735,48 @@ public sealed partial class MainWindow : Window
             ShowAppNotification(
                 $"下载完成：{effectiveMod.Title}",
                 $"Download completed: {effectiveMod.Title}");
+            UpdateDownloadTask(downloadTask, DownloadTaskState.Completed, 100, $"已完成：{extractFolder}", $"Completed: {extractFolder}", forceRefresh: true);
+        }
+        catch (OperationCanceledException)
+        {
+            if (!string.IsNullOrWhiteSpace(downloadTask.ArchivePath) && File.Exists(downloadTask.ArchivePath))
+            {
+                try
+                {
+                    File.Delete(downloadTask.ArchivePath);
+                }
+                catch
+                {
+                }
+            }
+            if (!string.Equals(downloadTask.DestinationPath, selectedFolder, StringComparison.OrdinalIgnoreCase)
+                && Directory.Exists(downloadTask.DestinationPath))
+            {
+                try
+                {
+                    Directory.Delete(downloadTask.DestinationPath, true);
+                }
+                catch
+                {
+                }
+            }
+            UpdateDownloadTask(downloadTask, DownloadTaskState.Canceled, downloadTask.Progress, "任务已取消", "Task canceled", forceRefresh: true);
+            SetOnlineStatus("下载任务已取消。", "The download task was canceled.");
         }
         catch (Exception ex)
         {
+            if (!string.Equals(downloadTask.DestinationPath, selectedFolder, StringComparison.OrdinalIgnoreCase)
+                && Directory.Exists(downloadTask.DestinationPath))
+            {
+                try
+                {
+                    Directory.Delete(downloadTask.DestinationPath, true);
+                }
+                catch
+                {
+                }
+            }
+            UpdateDownloadTask(downloadTask, DownloadTaskState.Failed, downloadTask.Progress, $"失败：{ex.Message}", $"Failed: {ex.Message}", forceRefresh: true);
             SetOnlineStatus("下载或解压在线 Mod 失败。", "Failed to download or extract the online mod.");
             string message = ex.Message;
             if (ex is InvalidDataException or IOException)
@@ -7016,7 +7801,11 @@ public sealed partial class MainWindow : Window
         }
     }
 
-    private async Task<string> DownloadOnlineModArchiveAsync(OnlineModCard mod, string destinationFolder)
+    private async Task<string> DownloadOnlineModArchiveAsync(
+        OnlineModCard mod,
+        string destinationFolder,
+        DownloadTaskItem downloadTask,
+        CancellationToken cancellationToken)
     {
         using HttpRequestMessage request = new(HttpMethod.Get, mod.DownloadUrl!);
         request.Headers.Referrer = Uri.TryCreate(mod.ProfileUrl, UriKind.Absolute, out Uri? refererUri)
@@ -7024,38 +7813,48 @@ public sealed partial class MainWindow : Window
             : new Uri("https://gamebanana.com/");
         request.Headers.TryAddWithoutValidation("Accept", "*/*");
 
-        using HttpResponseMessage response = await _httpClient.SendAsync(request, HttpCompletionOption.ResponseHeadersRead);
+        using HttpResponseMessage response = await _httpClient.SendAsync(request, HttpCompletionOption.ResponseHeadersRead, cancellationToken);
         response.EnsureSuccessStatusCode();
 
         string fileName = ResolveDownloadFileName(response, mod);
         string archivePath = Path.Combine(destinationFolder, fileName);
+        downloadTask.ArchivePath = archivePath;
+        UpdateDownloadTask(downloadTask, DownloadTaskState.Downloading, 0, "正在下载...", "Downloading...", forceRefresh: true);
 
         long totalRead = 0;
         long totalLength = mod.FileSizeBytes > 0 ? mod.FileSizeBytes : (response.Content.Headers.ContentLength ?? 0);
         byte[] buffer = new byte[81920];
 
-        await using (Stream remoteStream = await response.Content.ReadAsStreamAsync())
+        await using (Stream remoteStream = await response.Content.ReadAsStreamAsync(cancellationToken))
         {
             await using (FileStream localStream = new(archivePath, FileMode.Create, FileAccess.Write, FileShare.None))
             {
                 int bytesRead;
-                while ((bytesRead = await remoteStream.ReadAsync(buffer.AsMemory(0, buffer.Length))) > 0)
+                while ((bytesRead = await remoteStream.ReadAsync(buffer.AsMemory(0, buffer.Length), cancellationToken)) > 0)
                 {
-                    await localStream.WriteAsync(buffer.AsMemory(0, bytesRead));
+                    await localStream.WriteAsync(buffer.AsMemory(0, bytesRead), cancellationToken);
                     totalRead += bytesRead;
 
                     double percent = totalLength > 0 ? totalRead * 100d / totalLength : 0;
                     string currentSize = FormatFileSize(totalRead);
                     string totalSize = totalLength > 0 ? FormatFileSize(totalLength) : "?";
                     DispatcherQueue.TryEnqueue(() =>
+                    {
                         SetOnlineDownloadProgress(
                             true,
                             percent,
                             $"正在下载：{currentSize} / {totalSize}",
-                            $"Downloading: {currentSize} / {totalSize}"));
+                            $"Downloading: {currentSize} / {totalSize}");
+                        UpdateDownloadTask(
+                            downloadTask,
+                            DownloadTaskState.Downloading,
+                            Math.Min(90, percent * 0.9),
+                            $"正在下载：{currentSize} / {totalSize}",
+                            $"Downloading: {currentSize} / {totalSize}");
+                    });
                 }
 
-                await localStream.FlushAsync();
+                await localStream.FlushAsync(cancellationToken);
             }
         }
 
@@ -8315,7 +9114,7 @@ public sealed partial class MainWindow : Window
             PrimarySection.Dashboard => L("查看全部仓库或单个仓库的预览数据。", "Browse summary data for all repositories or a single repository."),
             PrimarySection.Repository => L("从这里切换工作区，主区继续复用现有单仓库逻辑。", "Switch workspaces here while reusing the existing single-repository view."),
             PrimarySection.Online => L("在线页会按当前仓库的来源映射加载后续内容。", "The online page will use the selected repository as its source mapping context."),
-            PrimarySection.Updates => L("这里会汇总已追踪 Mod 的更新状态，也可以手动检查或设置自动检查频率。", "This page summarizes tracked mod updates and lets you run checks manually or on a schedule."),
+            PrimarySection.Updates => L("这里集中管理配置方案、安装回滚、下载任务和已追踪 Mod 更新。", "Manage profiles, install rollback, download tasks, and tracked mod updates here."),
             _ => L("在这里统一管理语言、主题、更新检查和项目链接。", "Manage language, theme, update checks, and project links here.")
         };
         ToolTipService.SetToolTip(AddRepositoryButton, L("新建仓库", "Create repository"));
@@ -9252,6 +10051,7 @@ public sealed partial class MainWindow : Window
 
         _activeOnlineDetailMod = null;
         OnlineDetailsSplitView.IsPaneOpen = false;
+        UpdateOnlineResponsiveLayout(Bounds.Width);
         UpdateOnlineWorkspaceWidthConstraint();
         ResetOnlineDetailPaneToPlaceholder();
         visual.StopAnimation("Opacity");
@@ -10565,9 +11365,34 @@ public sealed partial class MainWindow : Window
         }
 
         string targetPath = GetTargetDirectoryPath(targetDir, item.Path);
+        WorkspaceRepository? repository = GetSelectedRepository();
+        if (repository is null)
+        {
+            await ShowMessageAsync(L("请先选择仓库。", "Select a repository first."), L("无法操作", "Cannot Continue"));
+            return;
+        }
+        repository.TargetPath = targetDir;
+
+        if (!Directory.Exists(targetPath) && _enableConflictDetection)
+        {
+            List<string> conflicts = await Task.Run(() => DetectModFileConflicts(item.Path, targetDir, targetPath));
+            if (conflicts.Count > 0 && !await ConfirmInstallConflictsAsync(conflicts))
+            {
+                return;
+            }
+        }
+
+        string? transactionPath = null;
         SetBusyState(true);
         try
         {
+            transactionPath = await CreateInstallTransactionAsync(
+                Directory.Exists(targetPath)
+                    ? L($"移除 Mod：{item.Name}", $"Remove mod: {item.Name}")
+                    : L($"安装 Mod：{item.Name}", $"Install mod: {item.Name}"),
+                repository,
+                [targetPath]);
+
             if (Directory.Exists(targetPath))
             {
                 UpdateProgress(15, L("正在移除目录...", "Removing folder..."));
@@ -10583,11 +11408,25 @@ public sealed partial class MainWindow : Window
                 StatusTextBlock.Text = item.Name + L(" 已复制到目标文件夹。", " was copied to the target folder.");
                 ShowAppNotification($"{item.Name} 已复制到目标文件夹。", $"{item.Name} was copied to the target folder.");
             }
+
+            CommitInstallTransaction(transactionPath);
         }
         catch (Exception ex)
         {
+            if (!string.IsNullOrWhiteSpace(transactionPath))
+            {
+                try
+                {
+                    await RollbackInstallTransactionAsync(transactionPath, clearLastTransaction: true);
+                }
+                catch (Exception rollbackError)
+                {
+                    ex = new AggregateException(ex, rollbackError);
+                }
+            }
+
             await ShowMessageAsync(
-                L("操作失败：", "Operation failed: ") + ex.Message,
+                L("操作失败，已尝试恢复操作前状态：", "Operation failed. The app attempted to restore the previous state: ") + ex.Message,
                 L("错误", "Error"));
         }
         finally
@@ -12069,6 +12908,14 @@ public sealed class BetaShellConfig
 
     public string? OnlineCardLayout { get; set; }
 
+    public string? SelectedConfigurationProfileId { get; set; }
+
+    public bool? EnableConflictDetection { get; set; }
+
+    public string? LastInstallTransactionPath { get; set; }
+
+    public List<ModConfigurationProfile> ConfigurationProfiles { get; set; } = [];
+
     public int? WindowX { get; set; }
 
     public int? WindowY { get; set; }
@@ -12078,6 +12925,74 @@ public sealed class BetaShellConfig
     public int? WindowHeight { get; set; }
 
     public List<WorkspaceRepository> Repositories { get; set; } = [];
+}
+
+public sealed class ModConfigurationProfile
+{
+    public string Id { get; set; } = Guid.NewGuid().ToString("N");
+
+    public string RepositoryId { get; set; } = string.Empty;
+
+    public string Name { get; set; } = string.Empty;
+
+    public List<string> ModRelativePaths { get; set; } = [];
+
+    public DateTimeOffset UpdatedAtUtc { get; set; } = DateTimeOffset.UtcNow;
+}
+
+public sealed class ModInstallTransaction
+{
+    public string Id { get; set; } = Guid.NewGuid().ToString("N");
+
+    public string Description { get; set; } = string.Empty;
+
+    public string RepositoryId { get; set; } = string.Empty;
+
+    public DateTimeOffset CreatedAtUtc { get; set; } = DateTimeOffset.UtcNow;
+
+    public List<ModInstallBackupEntry> Entries { get; set; } = [];
+}
+
+public sealed class ModInstallBackupEntry
+{
+    public string TargetPath { get; set; } = string.Empty;
+
+    public bool ExistedBefore { get; set; }
+
+    public string BackupRelativePath { get; set; } = string.Empty;
+}
+
+public sealed class DownloadTaskItem
+{
+    public string Id { get; } = Guid.NewGuid().ToString("N");
+
+    public string Title { get; set; } = string.Empty;
+
+    public string StatusZh { get; set; } = string.Empty;
+
+    public string StatusEn { get; set; } = string.Empty;
+
+    public double Progress { get; set; }
+
+    public string DestinationPath { get; set; } = string.Empty;
+
+    public string ArchivePath { get; set; } = string.Empty;
+
+    public DownloadTaskState State { get; set; } = DownloadTaskState.Queued;
+
+    public CancellationTokenSource Cancellation { get; } = new();
+}
+
+public enum DownloadTaskState
+{
+    Queued,
+    Preparing,
+    Downloading,
+    Extracting,
+    Canceling,
+    Completed,
+    Failed,
+    Canceled
 }
 
 public readonly record struct RepositorySnapshot(int FirstLevelCount, int ModCount, bool IsReady);

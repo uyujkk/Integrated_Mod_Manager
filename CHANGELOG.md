@@ -6,6 +6,40 @@
 
 This document records the major changes in published versions of Integrated Mod Manager.
 
+## v3.5.1
+
+### 中文
+
+- 修复打开在线 Mod 详情后，列表工作区被错误压缩并居中、左侧出现大面积空白的问题。
+- 移除在线工作区和结果区的固定宽度反馈计算，改为直接使用 SplitView 分配的实际可用宽度。
+- 详情面板展开或关闭后重新计算角色栏方向和方块卡片列数。
+
+### English
+
+- Fixed the online mod workspace being narrowed and centered with a large blank area after opening details.
+- Removed the fixed-width feedback calculation and now uses the actual width allocated by SplitView.
+- Recalculates the character rail orientation and grid columns whenever the details pane opens or closes.
+
+## v3.5.0
+
+### 中文
+
+- 新增按仓库保存、更新、应用和删除的配置方案，可快速切换一整套已启用 Mod。
+- 应用配置方案时只管理当前仓库中能够识别的 Mod，目标文件夹里的未知目录保持不变。
+- 新增安装前冲突检测，按相对文件路径检查当前 Mod 与目标文件夹中其他 Mod 的重复文件。
+- 复制、移除及应用配置方案前会建立事务备份；操作失败时自动恢复，也可手动撤销最近一次成功变更。
+- 新增下载任务中心，集中显示下载与解压进度、任务状态，并支持取消任务、打开目录和清理已完成记录。
+- 安装事务备份自动轮换，仅保留最近 10 份，避免长期占用磁盘空间。
+
+### English
+
+- Added per-repository configuration profiles that can be saved, updated, applied, and deleted to switch complete mod setups.
+- Applying a profile only manages mods recognized in the active repository; unknown folders in the target directory remain untouched.
+- Added pre-install conflict detection based on duplicate relative file paths across installed mods.
+- Copy, remove, and profile operations now create transaction backups, automatically restore on failure, and support manually undoing the latest successful change.
+- Added a download task center with download and extraction progress, cancellation, open-folder actions, and finished-task cleanup.
+- Installation transaction backups rotate automatically and retain only the latest 10 entries.
+
 ## v3.4.2
 
 ### 中文
