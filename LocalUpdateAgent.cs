@@ -14,6 +14,9 @@ using System.Windows.Forms;
 [assembly: AssemblyVersion("3.8.0.0")]
 [assembly: AssemblyFileVersion("3.8.0.0")]
 [assembly: AssemblyInformationalVersion("3.8.0")]
+#if UPDATE_AGENT_TESTS
+[assembly: System.Runtime.CompilerServices.InternalsVisibleTo("IntegratedModManager.UpdateAgent.Tests")]
+#endif
 
 internal static class LocalUpdateAgent
 {
@@ -36,6 +39,7 @@ internal static class LocalUpdateAgent
         Path.Combine("WinUI3", "diagnostics") + Path.DirectorySeparatorChar
     };
 
+#if !UPDATE_AGENT_TESTS
     [STAThread]
     private static int Main(string[] args)
     {
@@ -158,8 +162,9 @@ internal static class LocalUpdateAgent
             }
         }
     }
+#endif
 
-    private static string NormalizeVersionLabel(string version)
+    internal static string NormalizeVersionLabel(string version)
     {
         string normalized = string.IsNullOrWhiteSpace(version) ? "unknown" : version.Trim();
         foreach (char invalid in Path.GetInvalidFileNameChars())
@@ -263,7 +268,7 @@ internal static class LocalUpdateAgent
         }
     }
 
-    private static Dictionary<string, string> ParseArguments(string[] args)
+    internal static Dictionary<string, string> ParseArguments(string[] args)
     {
         var options = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
         for (int index = 0; index + 1 < args.Length; index += 2)
@@ -300,7 +305,7 @@ internal static class LocalUpdateAgent
         }
     }
 
-    private static void ExtractZipSafely(string packagePath, string destinationRoot)
+    internal static void ExtractZipSafely(string packagePath, string destinationRoot)
     {
         string normalizedRoot = Path.GetFullPath(destinationRoot).TrimEnd(Path.DirectorySeparatorChar) + Path.DirectorySeparatorChar;
         using (FileStream stream = File.OpenRead(packagePath))
@@ -308,6 +313,11 @@ internal static class LocalUpdateAgent
         {
             foreach (ZipArchiveEntry entry in archive.Entries)
             {
+                if (IsZipLinkEntry(entry))
+                {
+                    throw new InvalidDataException("The update package contains a symbolic link or reparse point: " + entry.FullName);
+                }
+
                 string relativePath = entry.FullName.Replace('/', Path.DirectorySeparatorChar);
                 string destinationPath = Path.GetFullPath(Path.Combine(destinationRoot, relativePath));
                 if (!destinationPath.StartsWith(normalizedRoot, StringComparison.OrdinalIgnoreCase))
@@ -336,7 +346,15 @@ internal static class LocalUpdateAgent
         }
     }
 
-    private static string FindPayloadRoot(string extractionRoot)
+    internal static bool IsZipLinkEntry(ZipArchiveEntry entry)
+    {
+        int unixFileType = (entry.ExternalAttributes >> 16) & 0xF000;
+        bool unixSymbolicLink = unixFileType == 0xA000;
+        bool windowsReparsePoint = (entry.ExternalAttributes & (int)FileAttributes.ReparsePoint) != 0;
+        return unixSymbolicLink || windowsReparsePoint;
+    }
+
+    internal static string FindPayloadRoot(string extractionRoot)
     {
         if (IsPayloadRoot(extractionRoot))
         {
@@ -386,7 +404,7 @@ internal static class LocalUpdateAgent
         }
     }
 
-    private static void BackupFilesThatWillBeReplaced(
+    internal static void BackupFilesThatWillBeReplaced(
         string payloadRoot,
         string installRoot,
         string backupRoot,
@@ -428,7 +446,7 @@ internal static class LocalUpdateAgent
         File.Copy(installedFile, backupFile, true);
     }
 
-    private static void CopyPayload(string payloadRoot, string installRoot, List<string> createdFiles)
+    internal static void CopyPayload(string payloadRoot, string installRoot, List<string> createdFiles)
     {
         foreach (string sourceFile in Directory.GetFiles(payloadRoot, "*", SearchOption.AllDirectories))
         {
@@ -450,7 +468,7 @@ internal static class LocalUpdateAgent
         }
     }
 
-    private static HashSet<string> BuildPayloadManagedFileSet(string payloadRoot)
+    internal static HashSet<string> BuildPayloadManagedFileSet(string payloadRoot)
     {
         var result = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
         foreach (string sourceFile in Directory.GetFiles(payloadRoot, "*", SearchOption.AllDirectories))
@@ -466,7 +484,7 @@ internal static class LocalUpdateAgent
         return result;
     }
 
-    private static HashSet<string> ReadManagedFileSet(string installRoot)
+    internal static HashSet<string> ReadManagedFileSet(string installRoot)
     {
         var result = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
         string manifestPath = Path.Combine(installRoot, ManagedFilesManifestName);
@@ -488,7 +506,7 @@ internal static class LocalUpdateAgent
         return result;
     }
 
-    private static void WriteManagedFileSet(string installRoot, IEnumerable<string> managedFiles, List<string> createdFiles)
+    internal static void WriteManagedFileSet(string installRoot, IEnumerable<string> managedFiles, List<string> createdFiles)
     {
         string manifestPath = Path.Combine(installRoot, ManagedFilesManifestName);
         if (!File.Exists(manifestPath))
@@ -498,7 +516,7 @@ internal static class LocalUpdateAgent
         File.WriteAllLines(manifestPath, managedFiles.OrderBy(path => path, StringComparer.OrdinalIgnoreCase));
     }
 
-    private static void DeleteObsoleteManagedFiles(string installRoot, IEnumerable<string> obsoleteManagedFiles)
+    internal static void DeleteObsoleteManagedFiles(string installRoot, IEnumerable<string> obsoleteManagedFiles)
     {
         foreach (string relativePath in obsoleteManagedFiles)
         {
@@ -510,7 +528,7 @@ internal static class LocalUpdateAgent
         }
     }
 
-    private static void RestorePreservedConfiguration(string backupRoot, string installRoot)
+    internal static void RestorePreservedConfiguration(string backupRoot, string installRoot)
     {
         foreach (string preservedPath in PreservedRelativePaths)
         {
@@ -526,7 +544,7 @@ internal static class LocalUpdateAgent
         }
     }
 
-    private static void RollBackFiles(string backupRoot, string installRoot, List<string> createdFiles)
+    internal static void RollBackFiles(string backupRoot, string installRoot, List<string> createdFiles)
     {
         foreach (string createdFile in createdFiles)
         {
@@ -550,13 +568,13 @@ internal static class LocalUpdateAgent
         }
     }
 
-    private static bool IsPreserved(string relativePath)
+    internal static bool IsPreserved(string relativePath)
     {
         return PreservedRelativePaths.Any(path => string.Equals(path, relativePath, StringComparison.OrdinalIgnoreCase))
             || PreservedDirectoryPrefixes.Any(prefix => relativePath.StartsWith(prefix, StringComparison.OrdinalIgnoreCase));
     }
 
-    private static string GetRelativePath(string root, string path)
+    internal static string GetRelativePath(string root, string path)
     {
         string normalizedRoot = Path.GetFullPath(root).TrimEnd(Path.DirectorySeparatorChar) + Path.DirectorySeparatorChar;
         string normalizedPath = Path.GetFullPath(path);
@@ -568,7 +586,7 @@ internal static class LocalUpdateAgent
         return normalizedPath.Substring(normalizedRoot.Length);
     }
 
-    private static string GetPathInsideRoot(string root, string relativePath)
+    internal static string GetPathInsideRoot(string root, string relativePath)
     {
         if (string.IsNullOrWhiteSpace(relativePath) || Path.IsPathRooted(relativePath))
         {

@@ -3,7 +3,6 @@ using System.Globalization;
 using System.IO.Compression;
 using System.Net.Http.Headers;
 using System.Runtime.InteropServices;
-using System.Security.Cryptography;
 using System.Text;
 using System.Text.Json;
 using System.Text.RegularExpressions;
@@ -367,30 +366,25 @@ public sealed partial class MainWindow
             long? totalBytes = response.Content.Headers.ContentLength;
             AppUpdateProgressBar.IsIndeterminate = !totalBytes.HasValue || totalBytes <= 0;
 
-            await using Stream source = await response.Content.ReadAsStreamAsync(timeout.Token);
-            await using FileStream destination = new(temporaryPath, FileMode.Create, FileAccess.Write, FileShare.None, 1024 * 128, true);
-            byte[] buffer = new byte[1024 * 128];
-            long downloaded = 0;
-            int read;
-            while ((read = await source.ReadAsync(buffer, timeout.Token)) > 0)
+            await using (Stream source = await response.Content.ReadAsStreamAsync(timeout.Token))
             {
-                await destination.WriteAsync(buffer.AsMemory(0, read), timeout.Token);
-                downloaded += read;
-                if (totalBytes is > 0)
+                await UpdatePackageFile.WriteAsync(source, temporaryPath, downloaded =>
                 {
-                    double progress = Math.Clamp(downloaded * 100d / totalBytes.Value, 0, 100);
-                    AppUpdateProgressBar.Value = progress;
-                    AppUpdateProgressTextBlock.Text = L(
-                        $"正在下载更新：{progress:0}%（{FormatStorageSize(downloaded)} / {FormatStorageSize(totalBytes.Value)}）",
-                        $"Downloading update: {progress:0}% ({FormatStorageSize(downloaded)} / {FormatStorageSize(totalBytes.Value)})");
-                }
-                else
-                {
-                    AppUpdateProgressTextBlock.Text = L($"已下载 {FormatStorageSize(downloaded)}", $"Downloaded {FormatStorageSize(downloaded)}");
-                }
+                    if (totalBytes is > 0)
+                    {
+                        double progress = Math.Clamp(downloaded * 100d / totalBytes.Value, 0, 100);
+                        AppUpdateProgressBar.Value = progress;
+                        AppUpdateProgressTextBlock.Text = L(
+                            $"正在下载更新：{progress:0}%（{FormatStorageSize(downloaded)} / {FormatStorageSize(totalBytes.Value)}）",
+                            $"Downloading update: {progress:0}% ({FormatStorageSize(downloaded)} / {FormatStorageSize(totalBytes.Value)})");
+                    }
+                    else
+                    {
+                        AppUpdateProgressTextBlock.Text = L($"已下载 {FormatStorageSize(downloaded)}", $"Downloaded {FormatStorageSize(downloaded)}");
+                    }
+                }, timeout.Token);
             }
 
-            await destination.FlushAsync(timeout.Token);
             if (string.IsNullOrWhiteSpace(release.Sha256Url))
             {
                 throw new InvalidDataException(L(
@@ -403,13 +397,10 @@ public sealed partial class MainWindow
             string packageFileName = Path.GetFileName(new Uri(release.PackageUrl).LocalPath);
             string checksumFileName = Path.GetFileName(new Uri(release.Sha256Url).LocalPath);
             string expectedHash = ParseExpectedSha256(checksumText, packageFileName, checksumFileName);
-            await using (FileStream file = File.OpenRead(temporaryPath))
+            string actualHash = await UpdatePackageFile.ComputeSha256Async(temporaryPath, timeout.Token);
+            if (!actualHash.Equals(expectedHash, StringComparison.OrdinalIgnoreCase))
             {
-                string actualHash = Convert.ToHexString(await SHA256.HashDataAsync(file, timeout.Token));
-                if (!actualHash.Equals(expectedHash, StringComparison.OrdinalIgnoreCase))
-                {
-                    throw new InvalidDataException(L("更新包 SHA-256 校验失败。", "The update package failed SHA-256 verification."));
-                }
+                throw new InvalidDataException(L("更新包 SHA-256 校验失败。", "The update package failed SHA-256 verification."));
             }
 
             File.Move(temporaryPath, finalPath, true);
@@ -422,9 +413,16 @@ public sealed partial class MainWindow
         }
         catch (Exception ex)
         {
-            if (File.Exists(temporaryPath))
+            try
             {
-                File.Delete(temporaryPath);
+                if (File.Exists(temporaryPath))
+                {
+                    File.Delete(temporaryPath);
+                }
+            }
+            catch
+            {
+                // Preserve the original update failure if a scanner still holds the temporary file.
             }
 
             AppUpdateProgressBar.IsIndeterminate = false;

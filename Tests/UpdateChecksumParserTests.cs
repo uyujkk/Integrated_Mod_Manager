@@ -59,4 +59,33 @@ public sealed class UpdateChecksumParserTests
         Assert.Throws<InvalidDataException>(() =>
             UpdateChecksumParser.ParseSha256("not-a-sha256", PackageName, PackageName + ".sha256"));
     }
+
+    [Fact]
+    public void ParseSha256_FindsMatchingEntryAmongMultipleFilesCaseInsensitively()
+    {
+        string anotherHash = new('B', 64);
+        string checksumText = $"{anotherHash}  old-package.zip\r\n\r\n{Hash.ToLowerInvariant()}  {PackageName.ToUpperInvariant()}\r\n";
+
+        string result = UpdateChecksumParser.ParseSha256(checksumText, PackageName, "SHA256SUMS.txt");
+
+        Assert.Equal(Hash.ToLowerInvariant(), result);
+    }
+
+    [Theory]
+    [InlineData("")]
+    [InlineData("   ")]
+    public void ParseSha256_RejectsMissingPackageName(string packageName)
+    {
+        Assert.Throws<ArgumentException>(() =>
+            UpdateChecksumParser.ParseSha256(Hash, packageName, "SHA256SUMS.txt"));
+    }
+
+    [Fact]
+    public void ParseSha256_RejectsHashWithWrongLength()
+    {
+        string shortHash = new('A', 63);
+
+        Assert.Throws<InvalidDataException>(() =>
+            UpdateChecksumParser.ParseSha256(shortHash, PackageName, PackageName + ".sha256"));
+    }
 }

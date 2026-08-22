@@ -57,4 +57,22 @@ public sealed class PathSafetyTests
     {
         Assert.Throws<ArgumentException>(() => PathSafety.ResolveInsideDirectory(string.Empty, "file.txt"));
     }
+
+    [Fact]
+    public void ResolveInsideDirectory_RejectsNullRelativePath()
+    {
+        string root = Path.Combine(Path.GetTempPath(), "imm-path-tests", "root");
+
+        Assert.Throws<ArgumentNullException>(() => PathSafety.ResolveInsideDirectory(root, null!));
+    }
+
+    [Fact]
+    public void ResolveInsideDirectory_NormalizesDotSegmentsInsideRoot()
+    {
+        string root = Path.Combine(Path.GetTempPath(), "imm-path-tests", "root") + Path.DirectorySeparatorChar;
+
+        string result = PathSafety.ResolveInsideDirectory(root, Path.Combine("mods", ".", "preview.png"));
+
+        Assert.Equal(Path.GetFullPath(Path.Combine(root, "mods", "preview.png")), result);
+    }
 }

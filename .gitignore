@@ -5,9 +5,15 @@ WinUI3/bin/
 WinUI3/obj/
 IntegratedModManager.Core/bin/
 IntegratedModManager.Core/obj/
+IntegratedModManager.UpdateAgent.Core/bin/
+IntegratedModManager.UpdateAgent.Core/obj/
 Tests/bin/
 Tests/obj/
 Tests/TestResults/
+UpdaterTests/bin/
+UpdaterTests/obj/
+UpdaterTests/TestResults/
+artifacts/
 *.pdb
 
 # Local user state

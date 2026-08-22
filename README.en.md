@@ -58,7 +58,8 @@ Integrated Mod Manager is designed to:
 - Automatic updates now enforce release-package structure, bind SHA-256 entries to the expected filename, maintain a managed-file manifest, and roll back automatically if the updated runtime does not start.
 - Online requests cancel obsolete work, while preview downloads enforce timeout, media-type, and size limits; important failures are recorded in sanitized logs instead of being silently ignored.
 - SQLite writes, backup recovery, and update cleanup have stronger boundary checks and error reporting.
-- Added a reusable core library with 13 automated tests. GitHub Actions now runs the core suite and builds the WinUI x64 app for every push and pull request.
+- Fixed the `.zip.download` temporary file remaining locked after an automatic-update download, and now reject symbolic-link and reparse-point entries in update ZIP packages.
+- Expanded automated coverage to 45 tests. The local script and GitHub Actions share the same verification path for both suites, coverage collection, and builds of the WinUI x64 app, launcher, and update agent. See [Testing](./TESTING.md).
 
 ## v3.6.1 Highlights
 

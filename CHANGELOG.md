@@ -16,8 +16,10 @@ This document records the major changes in published versions of Integrated Mod 
 - 在线预览图下载新增取消、超时、内容类型和文件大小限制，并使用临时文件完成后再替换正式预览图。
 - 自动更新新增严格包结构校验、SHA-256 文件名绑定校验、托管文件清单、旧文件清理和新版本启动失败自动回滚。
 - SQLite 写入、配置恢复、备份清理和关键异常增加日志与失败保护，减少静默错误。
-- 抽取 `IntegratedModManager.Core` 生产代码库，新增 13 项 xUnit 自动化测试，覆盖路径边界和更新校验文件解析。
-- 新增 GitHub Actions 持续集成：每次推送和拉取请求自动运行测试并构建 WinUI x64 应用。
+- 修复自动更新下载完成后临时文件流未及时释放，导致更新代理无法读取 `.zip.download` 文件的问题。
+- 更新代理会额外拒绝 ZIP 中的符号链接和重解析点条目，避免更新包绕过安装目录边界。
+- 抽取可复用的核心代码库，将自动化测试扩展至 45 项，覆盖路径边界、校验文件解析、下载文件关闭与哈希计算，以及更新事务、回滚和安全解压。
+- 新增统一的本地验证脚本与 GitHub Actions 持续集成：每次推送和拉取请求都会运行两套测试、收集覆盖率，并构建 WinUI x64 应用、启动器和更新代理。
 - 应用、启动器和本地更新组件统一提升至 `v3.8.0`，发布包继续只包含应用及必要运行文件。
 
 ### English
@@ -28,8 +30,10 @@ This document records the major changes in published versions of Integrated Mod 
 - Online preview downloads now enforce cancellation, timeouts, content types, and size limits, with atomic replacement from a temporary file.
 - Automatic updates now enforce package layout, bind SHA-256 entries to the expected package filename, maintain a managed-file manifest, remove obsolete managed files, and roll back when the new runtime cannot start.
 - SQLite writes, configuration recovery, backup cleanup, and critical exception paths have stronger logging and failure protection.
-- Extracted the production `IntegratedModManager.Core` library and added 13 xUnit tests for path boundaries and update-checksum parsing.
-- Added GitHub Actions CI to run tests and build the WinUI x64 application on every push and pull request.
+- Fixed the update download stream not being released before the updater opened the `.zip.download` file.
+- The update agent now also rejects symbolic-link and reparse-point entries in ZIP packages so an update cannot escape the installation boundary.
+- Expanded the reusable core libraries to 45 automated tests covering path boundaries, checksum parsing, download-file disposal and hashing, update transactions, rollback, and safe extraction.
+- Added one shared local verification script and GitHub Actions workflow that run both test suites, collect coverage, and build the WinUI x64 app, launcher, and update agent on every push and pull request.
 - Unified the app, launcher, and local updater at `v3.8.0`; release archives continue to contain only the application and required runtime files.
 
 ## v3.6.1
