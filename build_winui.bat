@@ -33,14 +33,14 @@ if not exist "%PROJECT%" (
 echo Building WinUI 3 project...
 if exist "%MSBUILD%" (
   echo Using MSBuild: %MSBUILD%
-  "%MSBUILD%" "%PROJECT%" /restore /t:Build /p:Configuration=Release /p:Platform=x64 || exit /b 1
+  "%MSBUILD%" "%PROJECT%" /restore /t:Build /p:Configuration=Release /p:Platform=x64 /p:RestoreIgnoreFailedSources=true || exit /b 1
 ) else (
   if not exist "%DOTNET%" (
     echo Neither MSBuild nor dotnet SDK was found.
     exit /b 1
   )
   echo MSBuild not found, falling back to dotnet build.
-  "%DOTNET%" build "%PROJECT%" -c Release -p:Platform=x64 || exit /b 1
+  "%DOTNET%" build "%PROJECT%" -c Release -p:Platform=x64 -p:RestoreIgnoreFailedSources=true || exit /b 1
 )
 
 if not exist "%ROOT%\dist" mkdir "%ROOT%\dist"
@@ -83,6 +83,9 @@ if exist "%APP_ICON%" (
 
 if exist "%OUTPUT%\startup.log" del /f /q "%OUTPUT%\startup.log"
 if exist "%OUTPUT%\ModFolderCopier.WinUI.pdb" del /f /q "%OUTPUT%\ModFolderCopier.WinUI.pdb"
+
+echo Writing managed-file manifest...
+powershell.exe -NoProfile -ExecutionPolicy Bypass -Command "$root=[IO.Path]::GetFullPath('%ROOT%\dist').TrimEnd('\'); $manifest=Join-Path $root '.managed-files.txt'; $excluded=@('config.ini','beta-shell.json','WinUI3\config.ini','WinUI3\beta-shell.json'); $prefixes=@('backups\','WinUI3\backups\','WinUI3\cache\','WinUI3\diagnostics\'); $files=Get-ChildItem -LiteralPath $root -Recurse -File | ForEach-Object { $_.FullName.Substring($root.Length + 1) } | Where-Object { $relative=$_; $keep=$relative -ne '.managed-files.txt' -and $excluded -notcontains $relative; foreach($prefix in $prefixes){ if($relative.StartsWith($prefix,[StringComparison]::OrdinalIgnoreCase)){ $keep=$false; break } }; $keep }; $lines=@($files + '.managed-files.txt' | Sort-Object -Unique); [IO.File]::WriteAllLines($manifest,[string[]]$lines,(New-Object Text.UTF8Encoding($false)))" || exit /b 1
 
 echo WinUI 3 build completed.
 echo Launcher: %LAUNCHER_OUTPUT%

@@ -1,0 +1,51 @@
+name: Build and Test
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: build-and-test-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  core-tests:
+    name: Core tests
+    runs-on: windows-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v6
+      - uses: actions/setup-dotnet@v5
+        with:
+          dotnet-version: 8.0.x
+      - name: Restore tests
+        run: dotnet restore Tests/IntegratedModManager.Core.Tests.csproj
+      - name: Run tests
+        run: dotnet test Tests/IntegratedModManager.Core.Tests.csproj --configuration Release --no-restore --logger "trx;LogFileName=core-tests.trx"
+      - name: Upload test results
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: core-test-results
+          path: Tests/TestResults/*.trx
+          if-no-files-found: error
+
+  winui-build:
+    name: WinUI x64 build
+    needs: core-tests
+    runs-on: windows-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v6
+      - uses: actions/setup-dotnet@v5
+        with:
+          dotnet-version: 8.0.x
+      - uses: microsoft/setup-msbuild@v2
+      - name: Build WinUI 3 application
+        run: msbuild WinUI3/ModFolderCopier.WinUI.csproj /restore /t:Build /p:Configuration=Release /p:Platform=x64 /p:NoWarn=CA1416

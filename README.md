@@ -1,5 +1,7 @@
 # [中文](./README.md) | [English](./README.en.md)
 
+[![构建与测试](https://github.com/uyujkk/Integrated_Mod_Manager/actions/workflows/build-and-test.yml/badge.svg)](https://github.com/uyujkk/Integrated_Mod_Manager/actions/workflows/build-and-test.yml)
+
 # 集成化 Mod 管理器
 
 适用于 Windows 10/11 的 WinUI 3 Mod 管理工具。它以“仓库”为单位管理本地 Mod，支持两层目录浏览、复制切换、压缩包导入、图片预览、快捷键说明、在线 Mod 浏览与下载，以及已安装 Mod 的更新追踪。
@@ -319,10 +321,27 @@ dist/
    └─ ...
 ```
 
+## 自动化测试
+
+核心测试覆盖压缩包路径边界和自动更新 SHA-256 校验解析。测试调用的是主程序实际引用的 `IntegratedModManager.Core`，而不是另写一份测试替身。
+
+```powershell
+dotnet test Tests/IntegratedModManager.Core.Tests.csproj --configuration Release
+```
+
+GitHub Actions 会在推送到 `main`、创建或更新 Pull Request，以及手动触发时执行以下检查：
+
+- 在 Windows runner 上运行全部核心测试。
+- 在测试通过后编译 WinUI 3 x64 Release。
+- 无论测试成功或失败，都上传 `.trx` 测试结果供排查。
+
 ## 项目结构
 
 ```text
 WinUI3/            WinUI 3 主程序源码与资源
+IntegratedModManager.Core/  可独立测试的核心安全逻辑
+Tests/             xUnit 自动化测试工程
+.github/workflows/ GitHub Actions 自动构建与测试
 WinUILauncher.cs   外层启动器
 build_winui.bat    Windows 构建与发布目录整理脚本
 README.md          中文项目说明

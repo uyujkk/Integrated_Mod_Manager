@@ -7,12 +7,16 @@ namespace ModFolderCopier.WinUI;
 public sealed class AppDataStore
 {
     private readonly string _databasePath;
+    private readonly Action<string, Exception>? _errorSink;
     private readonly object _sync = new();
     private bool _available;
+    private int _failureCount;
+    private string? _lastErrorSummary;
 
-    public AppDataStore(string databasePath)
+    public AppDataStore(string databasePath, Action<string, Exception>? errorSink = null)
     {
         _databasePath = databasePath;
+        _errorSink = errorSink;
     }
 
     public bool IsAvailable => _available;
@@ -71,9 +75,10 @@ public sealed class AppDataStore
                 command.ExecuteNonQuery();
                 _available = true;
             }
-            catch
+            catch (Exception ex)
             {
                 _available = false;
+                RecordFailure("Initialize", ex);
             }
         }
     }
@@ -114,8 +119,9 @@ public sealed class AppDataStore
                 T? value = JsonSerializer.Deserialize<T>(reader.GetString(0));
                 return value is null ? null : new CachedValue<T>(value, cachedAt, expired);
             }
-            catch
+            catch (Exception ex)
             {
+                RecordFailure("Read cache", ex);
                 return null;
             }
         }
@@ -147,9 +153,10 @@ public sealed class AppDataStore
                 command.Parameters.AddWithValue("$cachedAt", (cachedAt ?? DateTimeOffset.UtcNow).ToString("O"));
                 command.ExecuteNonQuery();
             }
-            catch
+            catch (Exception ex)
             {
                 // File caches remain available as a compatibility fallback.
+                RecordFailure("Write cache", ex);
             }
         }
     }
@@ -175,8 +182,9 @@ public sealed class AppDataStore
                     result.Add(BuildFavoriteKey(reader.GetString(0), reader.GetString(1)));
                 }
             }
-            catch
+            catch (Exception ex)
             {
+                RecordFailure("Read favorites", ex);
             }
         }
 
@@ -218,8 +226,9 @@ public sealed class AppDataStore
                 command.Parameters.AddWithValue("$characterKey", characterKey);
                 command.ExecuteNonQuery();
             }
-            catch
+            catch (Exception ex)
             {
+                RecordFailure("Write favorite", ex);
             }
         }
     }
@@ -260,8 +269,9 @@ public sealed class AppDataStore
                     });
                 }
             }
-            catch
+            catch (Exception ex)
             {
+                RecordFailure("Read mod index", ex);
                 return [];
             }
         }
@@ -316,8 +326,9 @@ public sealed class AppDataStore
 
                 transaction.Commit();
             }
-            catch
+            catch (Exception ex)
             {
+                RecordFailure("Replace mod index", ex);
             }
         }
     }
@@ -338,10 +349,14 @@ public sealed class AppDataStore
                 command.CommandText = "PRAGMA quick_check;";
                 string result = Convert.ToString(command.ExecuteScalar(), CultureInfo.InvariantCulture) ?? "unknown";
                 long size = File.Exists(_databasePath) ? new FileInfo(_databasePath).Length : 0;
-                return $"SQLite {result}; {size} bytes";
+                string failures = _failureCount == 0
+                    ? "no recorded failures"
+                    : $"{_failureCount} recorded failure(s); last={_lastErrorSummary}";
+                return $"SQLite {result}; {size} bytes; {failures}";
             }
             catch (Exception ex)
             {
+                RecordFailure("Health check", ex);
                 return "SQLite check failed: " + ex.GetType().Name;
             }
         }
@@ -363,6 +378,21 @@ public sealed class AppDataStore
         command.CommandText = "PRAGMA busy_timeout = 3000;";
         command.ExecuteNonQuery();
         return connection;
+    }
+
+    private void RecordFailure(string operation, Exception exception)
+    {
+        _failureCount++;
+        _lastErrorSummary = operation + ": " + exception.GetType().Name
+            + " (0x" + exception.HResult.ToString("X8", CultureInfo.InvariantCulture) + ")";
+        try
+        {
+            _errorSink?.Invoke(operation, exception);
+        }
+        catch
+        {
+            // Diagnostic reporting must never replace the original storage fallback behavior.
+        }
     }
 }
 

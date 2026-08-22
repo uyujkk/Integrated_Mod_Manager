@@ -3,6 +3,11 @@ dist/
 release/
 WinUI3/bin/
 WinUI3/obj/
+IntegratedModManager.Core/bin/
+IntegratedModManager.Core/obj/
+Tests/bin/
+Tests/obj/
+Tests/TestResults/
 *.pdb
 
 # Local user state

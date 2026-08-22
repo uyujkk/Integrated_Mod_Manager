@@ -1,5 +1,7 @@
 # [中文](./README.md) | [English](./README.en.md)
 
+[![Build and Test](https://github.com/uyujkk/Integrated_Mod_Manager/actions/workflows/build-and-test.yml/badge.svg)](https://github.com/uyujkk/Integrated_Mod_Manager/actions/workflows/build-and-test.yml)
+
 # Integrated Mod Manager
 
 A WinUI 3 mod management tool for Windows 10/11. It organizes local mods into repositories and provides two-level folder browsing, copy-based switching, archive import, image previews, shortcut notes, online mod browsing and downloads, and update tracking for installed mods.
@@ -319,10 +321,27 @@ dist/
    └─ ...
 ```
 
+## Automated Tests
+
+The core test suite covers archive path boundaries and SHA-256 parsing for application updates. Tests exercise the same `IntegratedModManager.Core` library referenced by the application instead of a duplicate test-only implementation.
+
+```powershell
+dotnet test Tests/IntegratedModManager.Core.Tests.csproj --configuration Release
+```
+
+GitHub Actions runs the following checks for pushes to `main`, pull requests, and manual workflow dispatches:
+
+- Run all core tests on a Windows runner.
+- Build the WinUI 3 x64 Release configuration after tests pass.
+- Upload the `.trx` test report whether tests pass or fail.
+
 ## Repository Layout
 
 ```text
 WinUI3/            WinUI 3 application source and assets
+IntegratedModManager.Core/  Independently testable safety logic
+Tests/             xUnit automated test project
+.github/workflows/ GitHub Actions build and test workflow
 WinUILauncher.cs   Outer launcher
 build_winui.bat    Windows build and output preparation script
 README.md          Chinese documentation

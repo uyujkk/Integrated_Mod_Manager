@@ -10,6 +10,7 @@ using System.Security.Cryptography;
 using System.Text;
 using System.Text.Json;
 using System.Text.RegularExpressions;
+using IntegratedModManager.Core;
 using Microsoft.UI;
 using Microsoft.UI.Input;
 using Microsoft.UI.Windowing;
@@ -28,6 +29,7 @@ using Windows.Storage.Pickers;
 using Windows.System;
 using Windows.UI.Core;
 using WinRT.Interop;
+using IOFileAttributes = System.IO.FileAttributes;
 
 namespace ModFolderCopier.WinUI;
 
@@ -44,6 +46,8 @@ public sealed partial class MainWindow : Window
     private const int OnlineRawFetchPageSize = 50;
     private const int OnlineRawPageLimit = 80;
     private static readonly TimeSpan OnlineModListRequestTimeout = TimeSpan.FromSeconds(5);
+    private static readonly TimeSpan OnlinePreviewImageRequestTimeout = TimeSpan.FromSeconds(15);
+    private const long MaxOnlinePreviewImageBytes = 20L * 1024 * 1024;
     private const int MaxShortcutRows = 10;
     private static readonly string[] SupportedArchiveExtensions =
     [
@@ -298,6 +302,9 @@ public sealed partial class MainWindow : Window
     public MainWindow()
     {
         TraceStartupStage("MainWindow constructor entered");
+        _appDataStore = new AppDataStore(
+            Path.Combine(AppContext.BaseDirectory, "cache", "app-index.db"),
+            LogPersistentDataStoreIssue);
         InitializeComponent();
         TraceStartupStage("InitializeComponent completed");
         InitializePersistentDataStore();
@@ -1303,7 +1310,7 @@ public sealed partial class MainWindow : Window
 
             foreach (string target in removeTargets)
             {
-                await Task.Run(() => Directory.Delete(target, true));
+                await Task.Run(() => DeleteDirectoryTreeSafely(target));
             }
 
             int completed = 0;
@@ -1345,7 +1352,7 @@ public sealed partial class MainWindow : Window
 
     private List<string> DetectModFileConflicts(string sourcePath, string targetRoot, string targetPathToIgnore)
     {
-        HashSet<string> sourceFiles = Directory.GetFiles(sourcePath, "*", SearchOption.AllDirectories)
+        HashSet<string> sourceFiles = InspectDirectoryTreeSafely(sourcePath).Files
             .Select(path => Path.GetRelativePath(sourcePath, path))
             .Where(IsConflictRelevantRelativePath)
             .ToHashSet(StringComparer.OrdinalIgnoreCase);
@@ -1357,7 +1364,7 @@ public sealed partial class MainWindow : Window
                 continue;
             }
 
-            foreach (string file in Directory.GetFiles(installedModPath, "*", SearchOption.AllDirectories))
+            foreach (string file in InspectDirectoryTreeSafely(installedModPath).Files)
             {
                 string relativePath = Path.GetRelativePath(installedModPath, file);
                 if (IsConflictRelevantRelativePath(relativePath) && sourceFiles.Contains(relativePath))
@@ -1473,7 +1480,14 @@ public sealed partial class MainWindow : Window
         {
             if (Directory.Exists(transactionPath))
             {
-                Directory.Delete(transactionPath, true);
+                try
+                {
+                    DeleteDirectoryTreeSafely(transactionPath);
+                }
+                catch (Exception cleanupException)
+                {
+                    LogApplicationIssue("Install transaction cleanup", cleanupException);
+                }
             }
             throw;
         }
@@ -1481,18 +1495,115 @@ public sealed partial class MainWindow : Window
 
     private static void CopyDirectoryTree(string sourcePath, string targetPath)
     {
+        (List<string> directories, List<string> files) = InspectDirectoryTreeSafely(sourcePath);
         Directory.CreateDirectory(targetPath);
-        foreach (string directory in Directory.GetDirectories(sourcePath, "*", SearchOption.AllDirectories))
+        foreach (string directory in directories)
         {
-            Directory.CreateDirectory(Path.Combine(targetPath, Path.GetRelativePath(sourcePath, directory)));
+            string destination = GetSafePathInsideDirectory(targetPath, Path.GetRelativePath(sourcePath, directory));
+            Directory.CreateDirectory(destination);
         }
 
-        foreach (string file in Directory.GetFiles(sourcePath, "*", SearchOption.AllDirectories))
+        foreach (string file in files)
         {
-            string destination = Path.Combine(targetPath, Path.GetRelativePath(sourcePath, file));
+            string destination = GetSafePathInsideDirectory(targetPath, Path.GetRelativePath(sourcePath, file));
             Directory.CreateDirectory(Path.GetDirectoryName(destination)!);
             File.Copy(file, destination, true);
         }
+    }
+
+    private static (List<string> Directories, List<string> Files) InspectDirectoryTreeSafely(string rootPath)
+    {
+        string fullRoot = Path.GetFullPath(rootPath);
+        if (!Directory.Exists(fullRoot))
+        {
+            throw new DirectoryNotFoundException($"Directory not found: {fullRoot}");
+        }
+
+        if ((File.GetAttributes(fullRoot) & IOFileAttributes.ReparsePoint) != 0)
+        {
+            throw new InvalidDataException("Directory junctions and symbolic links are not supported: " + fullRoot);
+        }
+
+        var directories = new List<string>();
+        var files = new List<string>();
+        var pending = new Stack<string>();
+        pending.Push(fullRoot);
+        var options = new EnumerationOptions
+        {
+            RecurseSubdirectories = false,
+            ReturnSpecialDirectories = false,
+            IgnoreInaccessible = false,
+            AttributesToSkip = 0
+        };
+
+        while (pending.Count > 0)
+        {
+            string current = pending.Pop();
+            foreach (FileSystemInfo entry in new DirectoryInfo(current).EnumerateFileSystemInfos("*", options))
+            {
+                IOFileAttributes attributes = entry.Attributes;
+                if ((attributes & IOFileAttributes.ReparsePoint) != 0)
+                {
+                    throw new InvalidDataException("Directory junctions and symbolic links are not supported: " + entry.FullName);
+                }
+
+                if ((attributes & IOFileAttributes.Directory) != 0)
+                {
+                    directories.Add(entry.FullName);
+                    pending.Push(entry.FullName);
+                }
+                else
+                {
+                    files.Add(entry.FullName);
+                }
+            }
+        }
+
+        directories.Sort(StringComparer.OrdinalIgnoreCase);
+        files.Sort(StringComparer.OrdinalIgnoreCase);
+        return (directories, files);
+    }
+
+    private static string GetSafePathInsideDirectory(string rootPath, string relativePath)
+    {
+        return PathSafety.ResolveInsideDirectory(rootPath, relativePath);
+    }
+
+    private static void DeleteDirectoryTreeSafely(string path)
+    {
+        if (!Directory.Exists(path))
+        {
+            return;
+        }
+
+        IOFileAttributes rootAttributes = File.GetAttributes(path);
+        if ((rootAttributes & IOFileAttributes.ReparsePoint) != 0)
+        {
+            Directory.Delete(path, false);
+            return;
+        }
+
+        foreach (FileSystemInfo entry in new DirectoryInfo(path).EnumerateFileSystemInfos())
+        {
+            IOFileAttributes attributes = entry.Attributes;
+            if ((attributes & IOFileAttributes.Directory) != 0)
+            {
+                if ((attributes & IOFileAttributes.ReparsePoint) != 0)
+                {
+                    Directory.Delete(entry.FullName, false);
+                }
+                else
+                {
+                    DeleteDirectoryTreeSafely(entry.FullName);
+                }
+            }
+            else
+            {
+                File.Delete(entry.FullName);
+            }
+        }
+
+        Directory.Delete(path, false);
     }
 
     private void CommitInstallTransaction(string transactionPath)
@@ -1516,6 +1627,10 @@ public sealed partial class MainWindow : Window
 
         await Task.Run(() =>
         {
+            var restoreItems = new List<(string TargetPath, string? BackupPath, string StagingPath, string DisplacedPath, bool ExistedBefore)>();
+            var uniqueTargets = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+            string restoreToken = Guid.NewGuid().ToString("N");
+
             foreach (ModInstallBackupEntry entry in transaction.Entries)
             {
                 string targetPath = Path.GetFullPath(entry.TargetPath);
@@ -1524,19 +1639,123 @@ public sealed partial class MainWindow : Window
                     throw new InvalidOperationException(L("备份包含目标文件夹之外的路径，已停止回滚。", "The backup contains a path outside the target folder. Rollback was stopped."));
                 }
 
-                if (Directory.Exists(targetPath))
+                if (!uniqueTargets.Add(targetPath))
                 {
-                    Directory.Delete(targetPath, true);
+                    throw new InvalidDataException(L("备份清单包含重复目标。", "The backup manifest contains duplicate targets."));
                 }
 
+                if (File.Exists(targetPath))
+                {
+                    throw new IOException(L("备份目标被同名文件占用。", "A backup target is occupied by a file."));
+                }
+
+                string? backupPath = null;
                 if (entry.ExistedBefore)
                 {
-                    string backupPath = Path.Combine(transactionPath, entry.BackupRelativePath);
+                    if (string.IsNullOrWhiteSpace(entry.BackupRelativePath))
+                    {
+                        throw new InvalidDataException(L("安装备份清单无效。", "The install backup manifest is invalid."));
+                    }
+                    backupPath = GetSafePathInsideDirectory(transactionPath, entry.BackupRelativePath);
                     if (!Directory.Exists(backupPath))
                     {
                         throw new DirectoryNotFoundException(L("安装备份内容不完整。", "The install backup is incomplete."));
                     }
-                    CopyDirectoryTree(backupPath, targetPath);
+                }
+
+                string parentPath = Path.GetDirectoryName(targetPath)
+                    ?? throw new InvalidDataException(L("备份目标路径无效。", "The backup target path is invalid."));
+                Directory.CreateDirectory(parentPath);
+                string targetName = Path.GetFileName(targetPath);
+                string stagingPath = Path.Combine(parentPath, $".{targetName}.restore-{restoreToken}");
+                string displacedPath = Path.Combine(parentPath, $".{targetName}.previous-{restoreToken}");
+                if (Directory.Exists(stagingPath) || Directory.Exists(displacedPath) || File.Exists(stagingPath) || File.Exists(displacedPath))
+                {
+                    throw new IOException(L("无法创建安全恢复临时目录。", "Unable to create safe restore staging directories."));
+                }
+
+                restoreItems.Add((targetPath, backupPath, stagingPath, displacedPath, entry.ExistedBefore));
+            }
+
+            foreach (var item in restoreItems.Where(item => item.ExistedBefore))
+            {
+                CopyDirectoryTree(item.BackupPath!, item.StagingPath);
+            }
+
+            var switchedItems = new List<(string TargetPath, string? BackupPath, string StagingPath, string DisplacedPath, bool ExistedBefore)>();
+            try
+            {
+                try
+                {
+                    foreach (var item in restoreItems)
+                    {
+                        bool displacedCurrent = false;
+                        if (Directory.Exists(item.TargetPath))
+                        {
+                            Directory.Move(item.TargetPath, item.DisplacedPath);
+                            displacedCurrent = true;
+                        }
+
+                        try
+                        {
+                            if (item.ExistedBefore)
+                            {
+                                Directory.Move(item.StagingPath, item.TargetPath);
+                            }
+                            switchedItems.Add(item);
+                        }
+                        catch
+                        {
+                            if (displacedCurrent && Directory.Exists(item.DisplacedPath) && !Directory.Exists(item.TargetPath))
+                            {
+                                Directory.Move(item.DisplacedPath, item.TargetPath);
+                            }
+                            throw;
+                        }
+                    }
+                }
+                catch
+                {
+                    for (int index = switchedItems.Count - 1; index >= 0; index--)
+                    {
+                        var item = switchedItems[index];
+                        if (Directory.Exists(item.TargetPath))
+                        {
+                            DeleteDirectoryTreeSafely(item.TargetPath);
+                        }
+                        if (Directory.Exists(item.DisplacedPath))
+                        {
+                            Directory.Move(item.DisplacedPath, item.TargetPath);
+                        }
+                    }
+                    throw;
+                }
+
+                foreach (var item in switchedItems)
+                {
+                    if (!Directory.Exists(item.DisplacedPath))
+                    {
+                        continue;
+                    }
+
+                    try
+                    {
+                        DeleteDirectoryTreeSafely(item.DisplacedPath);
+                    }
+                    catch (Exception ex)
+                    {
+                        LogApplicationIssue("Restore cleanup", ex);
+                    }
+                }
+            }
+            finally
+            {
+                foreach (var item in restoreItems)
+                {
+                    if (Directory.Exists(item.StagingPath))
+                    {
+                        DeleteDirectoryTreeSafely(item.StagingPath);
+                    }
                 }
             }
         });
@@ -3523,6 +3742,11 @@ public sealed partial class MainWindow : Window
                 await WriteOnlineCategoryPageCacheAsync(cacheCategoryKey, pageResult);
             }
 
+            if (requestVersion != _onlineModRequestVersion || requestCancellation.IsCancellationRequested)
+            {
+                return;
+            }
+
             _onlineMods.Clear();
             _onlineMods.AddRange(pageResult.Mods);
             _onlineKnownCharacters.Clear();
@@ -3601,6 +3825,10 @@ public sealed partial class MainWindow : Window
         }
         catch (OnlineRateLimitException)
         {
+            if (requestVersion != _onlineModRequestVersion || requestCancellation.IsCancellationRequested)
+            {
+                return;
+            }
             _blockedOnlineAutoLoadConfigKey = configKey;
             TryGetOnlineRateLimitDelay(out TimeSpan remaining);
             int seconds = Math.Max(1, (int)Math.Ceiling(remaining.TotalSeconds));
@@ -3619,6 +3847,10 @@ public sealed partial class MainWindow : Window
         }
         catch (OperationCanceledException) when (timeoutCancellation.IsCancellationRequested)
         {
+            if (requestVersion != _onlineModRequestVersion)
+            {
+                return;
+            }
             _blockedOnlineAutoLoadConfigKey = configKey;
             SetOnlineStatus(
                 "连接超过 5 秒，已停止访问；当前内容保持不变。",
@@ -3631,6 +3863,10 @@ public sealed partial class MainWindow : Window
         }
         catch (Exception ex)
         {
+            if (requestVersion != _onlineModRequestVersion || requestCancellation.IsCancellationRequested)
+            {
+                return;
+            }
             _blockedOnlineAutoLoadConfigKey = configKey;
             SetOnlineStatus("读取在线 Mod 失败，请稍后重试。", "Failed to load online mods. Please try again later.");
             SetOnlineCacheStatus("连接失败", "Connection failed");
@@ -7837,7 +8073,7 @@ public sealed partial class MainWindow : Window
             {
                 try
                 {
-                    Directory.Delete(downloadTask.DestinationPath, true);
+                    DeleteDirectoryTreeSafely(downloadTask.DestinationPath);
                 }
                 catch
                 {
@@ -7853,7 +8089,7 @@ public sealed partial class MainWindow : Window
             {
                 try
                 {
-                    Directory.Delete(downloadTask.DestinationPath, true);
+                    DeleteDirectoryTreeSafely(downloadTask.DestinationPath);
                 }
                 catch
                 {
@@ -8299,21 +8535,39 @@ public sealed partial class MainWindow : Window
             return;
         }
 
+        string? temporaryPath = null;
         try
         {
+            if (previewUri.Scheme != Uri.UriSchemeHttps && previewUri.Scheme != Uri.UriSchemeHttp)
+            {
+                throw new InvalidDataException("Unsupported preview image URL scheme.");
+            }
+
             List<string> existingFiles = Directory.GetFiles(modFolder).ToList();
             if (!string.IsNullOrWhiteSpace(FindPreviewImage(modFolder, existingFiles)))
             {
                 return;
             }
 
-            using HttpResponseMessage response = await _httpClient.GetAsync(previewUri);
+            using var timeout = new CancellationTokenSource(OnlinePreviewImageRequestTimeout);
+            using HttpResponseMessage response = await _httpClient.GetAsync(
+                previewUri,
+                HttpCompletionOption.ResponseHeadersRead,
+                timeout.Token);
             response.EnsureSuccessStatusCode();
+            string? mediaType = response.Content.Headers.ContentType?.MediaType?.ToLowerInvariant();
+            if (string.IsNullOrWhiteSpace(mediaType) || !mediaType.StartsWith("image/", StringComparison.Ordinal))
+            {
+                throw new InvalidDataException("The preview response is not an image.");
+            }
+            if (response.Content.Headers.ContentLength is long contentLength && contentLength > MaxOnlinePreviewImageBytes)
+            {
+                throw new InvalidDataException("The preview image exceeds the size limit.");
+            }
 
             string extension = Path.GetExtension(previewUri.AbsolutePath);
             if (string.IsNullOrWhiteSpace(extension) || !ImageExtensions.Contains(extension.ToLowerInvariant()))
             {
-                string? mediaType = response.Content.Headers.ContentType?.MediaType?.ToLowerInvariant();
                 extension = mediaType switch
                 {
                     "image/png" => ".png",
@@ -8325,12 +8579,41 @@ public sealed partial class MainWindow : Window
             }
 
             string previewPath = Path.Combine(modFolder, "preview" + extension);
-            await using Stream sourceStream = await response.Content.ReadAsStreamAsync();
-            await using FileStream fileStream = new(previewPath, FileMode.Create, FileAccess.Write, FileShare.None);
-            await sourceStream.CopyToAsync(fileStream);
+            temporaryPath = previewPath + ".download";
+            await using Stream sourceStream = await response.Content.ReadAsStreamAsync(timeout.Token);
+            await using (FileStream fileStream = new(temporaryPath, FileMode.Create, FileAccess.Write, FileShare.None, 81920, true))
+            {
+                byte[] buffer = new byte[81920];
+                long totalBytes = 0;
+                int read;
+                while ((read = await sourceStream.ReadAsync(buffer, timeout.Token)) > 0)
+                {
+                    totalBytes += read;
+                    if (totalBytes > MaxOnlinePreviewImageBytes)
+                    {
+                        throw new InvalidDataException("The preview image exceeds the size limit.");
+                    }
+                    await fileStream.WriteAsync(buffer.AsMemory(0, read), timeout.Token);
+                }
+                await fileStream.FlushAsync(timeout.Token);
+            }
+            File.Move(temporaryPath, previewPath, true);
+            temporaryPath = null;
         }
-        catch
+        catch (Exception ex)
         {
+            LogApplicationIssue("Preview image download", ex);
+            if (!string.IsNullOrWhiteSpace(temporaryPath) && File.Exists(temporaryPath))
+            {
+                try
+                {
+                    File.Delete(temporaryPath);
+                }
+                catch (Exception cleanupException)
+                {
+                    LogApplicationIssue("Preview image cleanup", cleanupException);
+                }
+            }
         }
     }
 
@@ -9903,7 +10186,7 @@ public sealed partial class MainWindow : Window
             string selectedFirstLevelPath = (FirstLevelListView.SelectedItem as FirstLevelFolderItem)?.Path ?? string.Empty;
             _trackedModOrigins.Remove(item.Path);
             _modLinks.Remove(item.Path);
-            Directory.Delete(item.Path, true);
+            DeleteDirectoryTreeSafely(item.Path);
             SaveConfig();
             await RefreshListsAsync();
             SelectFirstLevelByPath(selectedFirstLevelPath);
@@ -11497,7 +11780,7 @@ public sealed partial class MainWindow : Window
             if (Directory.Exists(targetPath))
             {
                 UpdateProgress(15, L("正在移除目录...", "Removing folder..."));
-                await Task.Run(() => Directory.Delete(targetPath, true));
+                await Task.Run(() => DeleteDirectoryTreeSafely(targetPath));
                 UpdateProgress(100, L("移除完成", "Removal complete"));
                 StatusTextBlock.Text = item.Name + L(" 已从目标文件夹移除。", " was removed from the target folder.");
                 ShowAppNotification($"{item.Name} 已从目标文件夹移除。", $"{item.Name} was removed from the target folder.");
@@ -11611,9 +11894,8 @@ public sealed partial class MainWindow : Window
     {
         await Task.Run(() =>
         {
-            string[] directories = Directory.GetDirectories(sourcePath, "*", SearchOption.AllDirectories);
-            string[] files = Directory.GetFiles(sourcePath, "*", SearchOption.AllDirectories);
-            int totalSteps = directories.Length + files.Length + 1;
+            (List<string> directories, List<string> files) = InspectDirectoryTreeSafely(sourcePath);
+            int totalSteps = directories.Count + files.Count + 1;
             int currentStep = 0;
 
             Directory.CreateDirectory(targetPath);
@@ -11622,16 +11904,16 @@ public sealed partial class MainWindow : Window
 
             foreach (string directory in directories)
             {
-                string relativePath = directory[sourcePath.Length..].TrimStart(Path.DirectorySeparatorChar);
-                Directory.CreateDirectory(Path.Combine(targetPath, relativePath));
+                string relativePath = Path.GetRelativePath(sourcePath, directory);
+                Directory.CreateDirectory(GetSafePathInsideDirectory(targetPath, relativePath));
                 currentStep++;
                 progress.Report(new ProgressInfo(currentStep * 100 / totalSteps, L("正在创建子目录...", "Creating subfolders...")));
             }
 
             foreach (string file in files)
             {
-                string relativePath = file[sourcePath.Length..].TrimStart(Path.DirectorySeparatorChar);
-                string destinationFile = Path.Combine(targetPath, relativePath);
+                string relativePath = Path.GetRelativePath(sourcePath, file);
+                string destinationFile = GetSafePathInsideDirectory(targetPath, relativePath);
                 string? destinationDir = Path.GetDirectoryName(destinationFile);
                 if (!string.IsNullOrEmpty(destinationDir))
                 {
@@ -12170,9 +12452,19 @@ public sealed partial class MainWindow : Window
     private async Task ImportArchiveToSelectedFirstLevelFolderAsync(string archivePath, FirstLevelFolderItem item)
     {
         SetBusyState(true);
+        string stagingDirectory = Path.Combine(Path.GetTempPath(), "ModFolderCopier_Import_" + Guid.NewGuid().ToString("N"));
         try
         {
-            await Task.Run(() => ExtractArchiveToDirectory(archivePath, item.Path));
+            await Task.Run(() =>
+            {
+                Directory.CreateDirectory(stagingDirectory);
+                ExtractArchiveToDirectory(archivePath, stagingDirectory);
+                if (Directory.Exists(item.Path))
+                {
+                    InspectDirectoryTreeSafely(item.Path);
+                }
+                CopyDirectoryTree(stagingDirectory, item.Path);
+            });
 
             StatusTextBlock.Text = L($"已将 {Path.GetFileName(archivePath)} 导入到 {item.Name}。", $"Imported {Path.GetFileName(archivePath)} into {item.Name}.");
             ShowAppNotification($"压缩包已导入到 {item.Name}。", $"The archive was imported into {item.Name}.");
@@ -12187,6 +12479,14 @@ public sealed partial class MainWindow : Window
         }
         finally
         {
+            try
+            {
+                DeleteDirectoryTreeSafely(stagingDirectory);
+            }
+            catch (Exception ex)
+            {
+                LogApplicationIssue("Archive staging cleanup", ex);
+            }
             SetBusyState(false);
         }
     }
@@ -12232,7 +12532,7 @@ public sealed partial class MainWindow : Window
         {
             if (Directory.Exists(tempDirectory))
             {
-                Directory.Delete(tempDirectory, true);
+                DeleteDirectoryTreeSafely(tempDirectory);
             }
         }
     }
@@ -12292,7 +12592,14 @@ public sealed partial class MainWindow : Window
             for (int index = 0; index < entries.Count; index++)
             {
                 ZipArchiveEntry entry = entries[index];
-                string destinationPath = Path.Combine(destinationDirectory, entry.FullName.Replace('/', Path.DirectorySeparatorChar));
+                if (IsZipLinkEntry(entry))
+                {
+                    throw new InvalidDataException(L("压缩包包含不受支持的符号链接。", "The archive contains an unsupported symbolic link."));
+                }
+
+                string destinationPath = GetSafePathInsideDirectory(
+                    destinationDirectory,
+                    entry.FullName.Replace('/', Path.DirectorySeparatorChar));
                 string? destinationFolder = Path.GetDirectoryName(destinationPath);
                 if (!string.IsNullOrEmpty(destinationFolder))
                 {
@@ -12310,20 +12617,34 @@ public sealed partial class MainWindow : Window
 
         if (SevenZipArchiveExtensions.Contains(extension, StringComparer.OrdinalIgnoreCase))
         {
+            ValidateSevenZipArchiveEntries(archivePath, destinationDirectory);
             RunSevenZipExtraction(archivePath, destinationDirectory);
+            InspectDirectoryTreeSafely(destinationDirectory);
             DispatcherQueue.TryEnqueue(() => UpdateProgress(100, L("解压完成", "Extraction complete")));
             return;
         }
 
         if (TarArchiveExtensions.Contains(extension, StringComparer.OrdinalIgnoreCase))
         {
+            ValidateTarArchiveEntries(archivePath, destinationDirectory);
             RunTarExtraction(archivePath, destinationDirectory);
+            InspectDirectoryTreeSafely(destinationDirectory);
             DispatcherQueue.TryEnqueue(() => UpdateProgress(100, L("解压完成", "Extraction complete")));
             return;
         }
 
+        ValidateTarArchiveEntries(archivePath, destinationDirectory);
         RunTarExtraction(archivePath, destinationDirectory);
+        InspectDirectoryTreeSafely(destinationDirectory);
         DispatcherQueue.TryEnqueue(() => UpdateProgress(100, L("解压完成", "Extraction complete")));
+    }
+
+    private static bool IsZipLinkEntry(ZipArchiveEntry entry)
+    {
+        const int UnixFileTypeMask = 0xF000;
+        const int UnixSymbolicLink = 0xA000;
+        int unixMode = (entry.ExternalAttributes >> 16) & UnixFileTypeMask;
+        return unixMode == UnixSymbolicLink;
     }
 
     private static string? FindSevenZipExecutable()
@@ -12360,12 +12681,8 @@ public sealed partial class MainWindow : Window
             CreateNoWindow = true
         };
 
-        using Process process = Process.Start(startInfo)
-            ?? throw new InvalidOperationException(L("无法启动 7-Zip 解压工具。", "Unable to start the 7-Zip extraction tool."));
-        string error = process.StandardError.ReadToEnd();
-        process.WaitForExit();
-
-        if (process.ExitCode != 0)
+        (int exitCode, _, string error) = RunProcessAndCapture(startInfo);
+        if (exitCode != 0)
         {
             throw new InvalidOperationException(string.IsNullOrWhiteSpace(error)
                 ? L("7-Zip 无法解压当前文件。请检查压缩包是否完整。", "7-Zip could not extract this file. Check whether the archive is valid.")
@@ -12385,17 +12702,111 @@ public sealed partial class MainWindow : Window
             CreateNoWindow = true
         };
 
-        using Process process = Process.Start(startInfo)
-            ?? throw new InvalidOperationException(L("无法启动系统解压工具 tar.exe。", "Unable to start tar.exe."));
-        string error = process.StandardError.ReadToEnd();
-        process.WaitForExit();
-
-        if (process.ExitCode != 0)
+        (int exitCode, _, string error) = RunProcessAndCapture(startInfo);
+        if (exitCode != 0)
         {
             throw new InvalidOperationException(string.IsNullOrWhiteSpace(error)
                 ? L("当前系统无法解压该格式，建议尝试 ZIP 或 7Z。", "This system could not extract the selected format. Try ZIP or 7Z instead.")
                 : error.Trim());
         }
+    }
+
+    private void ValidateSevenZipArchiveEntries(string archivePath, string destinationDirectory)
+    {
+        string? sevenZipPath = FindSevenZipExecutable();
+        if (string.IsNullOrWhiteSpace(sevenZipPath))
+        {
+            throw new InvalidOperationException(L(
+                "解压此格式需要 7-Zip。请先安装 7-Zip，或把 7z.exe 和 7z.dll 放到程序目录的 Tools 文件夹中。",
+                "This format requires 7-Zip. Install 7-Zip first, or place 7z.exe and 7z.dll in the app's Tools folder."));
+        }
+
+        var startInfo = new ProcessStartInfo
+        {
+            FileName = sevenZipPath,
+            Arguments = $"l -slt \"{archivePath}\"",
+            UseShellExecute = false,
+            RedirectStandardError = true,
+            RedirectStandardOutput = true,
+            CreateNoWindow = true
+        };
+        (int exitCode, string output, string error) = RunProcessAndCapture(startInfo);
+        if (exitCode != 0)
+        {
+            throw new InvalidDataException(string.IsNullOrWhiteSpace(error) ? "Unable to inspect the archive." : error.Trim());
+        }
+
+        bool readingEntries = false;
+        foreach (string rawLine in output.Split(['\r', '\n'], StringSplitOptions.RemoveEmptyEntries))
+        {
+            string line = rawLine.Trim();
+            if (line.StartsWith("----------", StringComparison.Ordinal))
+            {
+                readingEntries = true;
+                continue;
+            }
+            if (!readingEntries)
+            {
+                continue;
+            }
+            if (line.StartsWith("Symbolic Link =", StringComparison.OrdinalIgnoreCase)
+                || line.StartsWith("Hard Link =", StringComparison.OrdinalIgnoreCase))
+            {
+                throw new InvalidDataException(L("压缩包包含不受支持的链接。", "The archive contains an unsupported link."));
+            }
+            if (line.StartsWith("Path = ", StringComparison.Ordinal))
+            {
+                GetSafePathInsideDirectory(destinationDirectory, line[7..]);
+            }
+        }
+    }
+
+    private void ValidateTarArchiveEntries(string archivePath, string destinationDirectory)
+    {
+        var listInfo = new ProcessStartInfo
+        {
+            FileName = "tar.exe",
+            Arguments = $"-tf \"{archivePath}\"",
+            UseShellExecute = false,
+            RedirectStandardError = true,
+            RedirectStandardOutput = true,
+            CreateNoWindow = true
+        };
+        (int exitCode, string output, string error) = RunProcessAndCapture(listInfo);
+        if (exitCode != 0)
+        {
+            throw new InvalidDataException(string.IsNullOrWhiteSpace(error) ? "Unable to inspect the archive." : error.Trim());
+        }
+        foreach (string entryPath in output.Split(['\r', '\n'], StringSplitOptions.RemoveEmptyEntries))
+        {
+            GetSafePathInsideDirectory(destinationDirectory, entryPath.Trim());
+        }
+
+        listInfo.Arguments = $"-tvf \"{archivePath}\"";
+        (exitCode, output, error) = RunProcessAndCapture(listInfo);
+        if (exitCode != 0)
+        {
+            throw new InvalidDataException(string.IsNullOrWhiteSpace(error) ? "Unable to inspect archive links." : error.Trim());
+        }
+        foreach (string rawLine in output.Split(['\r', '\n'], StringSplitOptions.RemoveEmptyEntries))
+        {
+            string line = rawLine.TrimStart();
+            if (line.Length > 0 && (line[0] == 'l' || line[0] == 'h'))
+            {
+                throw new InvalidDataException(L("压缩包包含不受支持的链接。", "The archive contains an unsupported link."));
+            }
+        }
+    }
+
+    private static (int ExitCode, string Output, string Error) RunProcessAndCapture(ProcessStartInfo startInfo)
+    {
+        using Process process = Process.Start(startInfo)
+            ?? throw new InvalidOperationException("Unable to start the archive tool.");
+        Task<string> outputTask = process.StandardOutput.ReadToEndAsync();
+        Task<string> errorTask = process.StandardError.ReadToEndAsync();
+        process.WaitForExit();
+        Task.WaitAll(outputTask, errorTask);
+        return (process.ExitCode, outputTask.Result, errorTask.Result);
     }
 
     private async Task ShowMessageAsync(string content, string title)

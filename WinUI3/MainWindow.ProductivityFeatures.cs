@@ -7,6 +7,7 @@ using System.Security.Cryptography;
 using System.Text;
 using System.Text.Json;
 using System.Text.RegularExpressions;
+using IntegratedModManager.Core;
 using Microsoft.UI.Xaml;
 using Microsoft.UI.Xaml.Automation;
 using Microsoft.UI.Xaml.Controls;
@@ -18,7 +19,8 @@ namespace ModFolderCopier.WinUI;
 public sealed partial class MainWindow
 {
     private const double DefaultInstallBackupLimitGb = 5;
-    private readonly AppDataStore _appDataStore = new(Path.Combine(AppContext.BaseDirectory, "cache", "app-index.db"));
+    private static readonly object ApplicationErrorLogSync = new();
+    private readonly AppDataStore _appDataStore;
     private readonly HashSet<string> _favoriteCharacterKeys = new(StringComparer.OrdinalIgnoreCase);
     private bool _systemHighContrast;
     private bool _systemAnimationsEnabled = true;
@@ -60,6 +62,27 @@ public sealed partial class MainWindow
         catch
         {
             // Startup tracing must never prevent the application from opening.
+        }
+    }
+
+    private static void LogPersistentDataStoreIssue(string operation, Exception exception)
+        => LogApplicationIssue("SQLite " + operation, exception);
+
+    private static void LogApplicationIssue(string operation, Exception exception)
+    {
+        try
+        {
+            string summary = SanitizeDiagnosticText(exception.Message);
+            lock (ApplicationErrorLogSync)
+            {
+                File.AppendAllText(
+                    Path.Combine(AppContext.BaseDirectory, "app-errors.log"),
+                    $"{DateTimeOffset.Now:O} {operation}: {exception.GetType().Name} (0x{exception.HResult:X8}) {summary}{Environment.NewLine}");
+            }
+        }
+        catch
+        {
+            // Error logging must never interrupt the user operation being diagnosed.
         }
     }
 
@@ -368,19 +391,24 @@ public sealed partial class MainWindow
             }
 
             await destination.FlushAsync(timeout.Token);
-            if (!string.IsNullOrWhiteSpace(release.Sha256Url))
+            if (string.IsNullOrWhiteSpace(release.Sha256Url))
             {
-                AppUpdateProgressTextBlock.Text = L("正在校验更新包...", "Verifying update package...");
-                string checksumText = await _httpClient.GetStringAsync(release.Sha256Url, timeout.Token);
-                string? expectedHash = Regex.Match(checksumText, "(?i)\\b[0-9a-f]{64}\\b").Value;
-                if (!string.IsNullOrWhiteSpace(expectedHash))
+                throw new InvalidDataException(L(
+                    "此 Release 没有提供更新包校验文件，已停止自动更新。",
+                    "This release does not provide a package checksum. Automatic update was stopped."));
+            }
+
+            AppUpdateProgressTextBlock.Text = L("正在校验更新包...", "Verifying update package...");
+            string checksumText = await _httpClient.GetStringAsync(release.Sha256Url, timeout.Token);
+            string packageFileName = Path.GetFileName(new Uri(release.PackageUrl).LocalPath);
+            string checksumFileName = Path.GetFileName(new Uri(release.Sha256Url).LocalPath);
+            string expectedHash = ParseExpectedSha256(checksumText, packageFileName, checksumFileName);
+            await using (FileStream file = File.OpenRead(temporaryPath))
+            {
+                string actualHash = Convert.ToHexString(await SHA256.HashDataAsync(file, timeout.Token));
+                if (!actualHash.Equals(expectedHash, StringComparison.OrdinalIgnoreCase))
                 {
-                    await using FileStream file = File.OpenRead(temporaryPath);
-                    string actualHash = Convert.ToHexString(await SHA256.HashDataAsync(file, timeout.Token));
-                    if (!actualHash.Equals(expectedHash, StringComparison.OrdinalIgnoreCase))
-                    {
-                        throw new InvalidDataException(L("更新包 SHA-256 校验失败。", "The update package failed SHA-256 verification."));
-                    }
+                    throw new InvalidDataException(L("更新包 SHA-256 校验失败。", "The update package failed SHA-256 verification."));
                 }
             }
 
@@ -403,6 +431,11 @@ public sealed partial class MainWindow
             AppUpdateProgressPanel.Visibility = Visibility.Collapsed;
             await ShowMessageAsync(L("下载或安装更新失败：", "Failed to download or install update: ") + ex.Message, L("更新失败", "Update Failed"));
         }
+    }
+
+    private static string ParseExpectedSha256(string checksumText, string packageFileName, string checksumFileName)
+    {
+        return UpdateChecksumParser.ParseSha256(checksumText, packageFileName, checksumFileName);
     }
 
     private void OnStartupUpdateToggled(object sender, RoutedEventArgs e)
@@ -550,7 +583,7 @@ public sealed partial class MainWindow
                     continue;
                 }
 
-                long size = Directory.EnumerateFiles(directory, "*", SearchOption.AllDirectories).Sum(file => new FileInfo(file).Length);
+                long size = GetDirectorySize(directory);
                 string mods = string.Join(", ", transaction.Entries.Select(entry => Path.GetFileName(entry.TargetPath)).Where(name => !string.IsNullOrWhiteSpace(name)).Distinct(StringComparer.OrdinalIgnoreCase).Take(5));
                 if (transaction.Entries.Count > 5)
                 {
@@ -598,35 +631,50 @@ public sealed partial class MainWindow
 
     private void PruneInstallTransactionsByStorageLimit(string? preservePath)
     {
-        if (!Directory.Exists(_modInstallBackupPath))
+        try
         {
-            return;
-        }
+            if (!Directory.Exists(_modInstallBackupPath))
+            {
+                return;
+            }
 
-        string root = Path.GetFullPath(_modInstallBackupPath).TrimEnd(Path.DirectorySeparatorChar) + Path.DirectorySeparatorChar;
-        List<(DirectoryInfo Directory, long Size)> directories = new DirectoryInfo(_modInstallBackupPath).EnumerateDirectories()
-            .Select(directory => (directory, GetDirectorySize(directory.FullName)))
-            .OrderByDescending(item => item.directory.CreationTimeUtc)
-            .ToList();
-        long limitBytes = (long)(_installBackupLimitGb * 1024 * 1024 * 1024);
-        long totalBytes = directories.Sum(item => item.Size);
-        foreach ((DirectoryInfo directory, long size) in directories.OrderBy(item => item.Directory.CreationTimeUtc))
+            string root = Path.GetFullPath(_modInstallBackupPath).TrimEnd(Path.DirectorySeparatorChar) + Path.DirectorySeparatorChar;
+            List<(DirectoryInfo Directory, long Size)> directories = new DirectoryInfo(_modInstallBackupPath).EnumerateDirectories()
+                .Select(directory => (directory, GetDirectorySize(directory.FullName)))
+                .OrderByDescending(item => item.directory.CreationTimeUtc)
+                .ToList();
+            long limitBytes = (long)(_installBackupLimitGb * 1024 * 1024 * 1024);
+            long totalBytes = directories.Sum(item => item.Size);
+            foreach ((DirectoryInfo directory, long size) in directories.OrderBy(item => item.Directory.CreationTimeUtc))
+            {
+                if (totalBytes <= limitBytes)
+                {
+                    break;
+                }
+                if (!string.IsNullOrWhiteSpace(preservePath) && string.Equals(directory.FullName, preservePath, StringComparison.OrdinalIgnoreCase))
+                {
+                    continue;
+                }
+                string resolved = Path.GetFullPath(directory.FullName);
+                if (!resolved.StartsWith(root, StringComparison.OrdinalIgnoreCase))
+                {
+                    continue;
+                }
+
+                try
+                {
+                    DeleteDirectoryTreeSafely(resolved);
+                    totalBytes -= size;
+                }
+                catch (Exception ex)
+                {
+                    LogApplicationIssue("Backup pruning", ex);
+                }
+            }
+        }
+        catch (Exception ex)
         {
-            if (totalBytes <= limitBytes)
-            {
-                break;
-            }
-            if (!string.IsNullOrWhiteSpace(preservePath) && string.Equals(directory.FullName, preservePath, StringComparison.OrdinalIgnoreCase))
-            {
-                continue;
-            }
-            string resolved = Path.GetFullPath(directory.FullName);
-            if (!resolved.StartsWith(root, StringComparison.OrdinalIgnoreCase))
-            {
-                continue;
-            }
-            directory.Delete(true);
-            totalBytes -= size;
+            LogApplicationIssue("Backup pruning inventory", ex);
         }
     }
 
@@ -634,10 +682,11 @@ public sealed partial class MainWindow
     {
         try
         {
-            return Directory.EnumerateFiles(path, "*", SearchOption.AllDirectories).Sum(file => new FileInfo(file).Length);
+            return InspectDirectoryTreeSafely(path).Files.Sum(file => new FileInfo(file).Length);
         }
-        catch
+        catch (Exception ex)
         {
+            LogApplicationIssue("Directory size calculation", ex);
             return 0;
         }
     }
@@ -736,7 +785,7 @@ public sealed partial class MainWindow
 
     private IEnumerable<string> EnumerateDiagnosticLogs()
     {
-        string[] names = ["startup.log", "update-agent.log", "update.log"];
+        string[] names = ["startup.log", "app-errors.log", "update-agent.log", "update.log"];
         foreach (string name in names)
         {
             string path = Path.Combine(AppContext.BaseDirectory, name);

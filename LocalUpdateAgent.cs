@@ -17,6 +17,7 @@ using System.Windows.Forms;
 
 internal static class LocalUpdateAgent
 {
+    private const string ManagedFilesManifestName = ".managed-files.txt";
     private static readonly string[] PreservedRelativePaths =
     {
         "config.ini",
@@ -26,6 +27,13 @@ internal static class LocalUpdateAgent
         Path.Combine("WinUI3", "cache", "app-index.db"),
         Path.Combine("WinUI3", "cache", "app-index.db-wal"),
         Path.Combine("WinUI3", "cache", "app-index.db-shm")
+    };
+    private static readonly string[] PreservedDirectoryPrefixes =
+    {
+        "backups" + Path.DirectorySeparatorChar,
+        Path.Combine("WinUI3", "backups") + Path.DirectorySeparatorChar,
+        Path.Combine("WinUI3", "cache") + Path.DirectorySeparatorChar,
+        Path.Combine("WinUI3", "diagnostics") + Path.DirectorySeparatorChar
     };
 
     [STAThread]
@@ -80,9 +88,17 @@ internal static class LocalUpdateAgent
 
             string payloadRoot = FindPayloadRoot(payloadExtractionRoot);
             ValidatePayload(payloadRoot, expectedVersion);
+            HashSet<string> newManagedFiles = BuildPayloadManagedFileSet(payloadRoot);
+            HashSet<string> previousManagedFiles = ReadManagedFileSet(installRoot);
+            List<string> obsoleteManagedFiles = previousManagedFiles
+                .Except(newManagedFiles, StringComparer.OrdinalIgnoreCase)
+                .Where(path => !IsPreserved(path))
+                .ToList();
             Directory.CreateDirectory(backupFilesRoot);
-            BackupFilesThatWillBeReplaced(payloadRoot, installRoot, backupFilesRoot);
+            BackupFilesThatWillBeReplaced(payloadRoot, installRoot, backupFilesRoot, obsoleteManagedFiles);
             CopyPayload(payloadRoot, installRoot, createdFiles);
+            DeleteObsoleteManagedFiles(installRoot, obsoleteManagedFiles);
+            WriteManagedFileSet(installRoot, newManagedFiles, createdFiles);
             RestorePreservedConfiguration(backupFilesRoot, installRoot);
             WriteUpdateBackupManifest(updateBackupRoot, installRoot, expectedVersion, createdFiles);
 
@@ -134,7 +150,7 @@ internal static class LocalUpdateAgent
             {
                 if (Directory.Exists(extractionRoot))
                 {
-                    Directory.Delete(extractionRoot, true);
+                    DeleteDirectoryTreeSafely(extractionRoot);
                 }
             }
             catch
@@ -239,7 +255,7 @@ internal static class LocalUpdateAgent
                          .OrderByDescending(Directory.GetLastWriteTimeUtc)
                          .Skip(Math.Max(0, keepCount - 1)))
             {
-                Directory.Delete(staleDirectory, true);
+                DeleteDirectoryTreeSafely(staleDirectory);
             }
         }
         catch
@@ -370,12 +386,17 @@ internal static class LocalUpdateAgent
         }
     }
 
-    private static void BackupFilesThatWillBeReplaced(string payloadRoot, string installRoot, string backupRoot)
+    private static void BackupFilesThatWillBeReplaced(
+        string payloadRoot,
+        string installRoot,
+        string backupRoot,
+        IEnumerable<string> obsoleteManagedFiles)
     {
         foreach (string preservedPath in PreservedRelativePaths)
         {
             BackupFileIfPresent(installRoot, backupRoot, preservedPath);
         }
+        BackupFileIfPresent(installRoot, backupRoot, ManagedFilesManifestName);
 
         foreach (string sourceFile in Directory.GetFiles(payloadRoot, "*", SearchOption.AllDirectories))
         {
@@ -387,17 +408,22 @@ internal static class LocalUpdateAgent
 
             BackupFileIfPresent(installRoot, backupRoot, relativePath);
         }
+
+        foreach (string obsoletePath in obsoleteManagedFiles)
+        {
+            BackupFileIfPresent(installRoot, backupRoot, obsoletePath);
+        }
     }
 
     private static void BackupFileIfPresent(string installRoot, string backupRoot, string relativePath)
     {
-        string installedFile = Path.Combine(installRoot, relativePath);
+        string installedFile = GetPathInsideRoot(installRoot, relativePath);
         if (!File.Exists(installedFile))
         {
             return;
         }
 
-        string backupFile = Path.Combine(backupRoot, relativePath);
+        string backupFile = GetPathInsideRoot(backupRoot, relativePath);
         Directory.CreateDirectory(Path.GetDirectoryName(backupFile));
         File.Copy(installedFile, backupFile, true);
     }
@@ -407,12 +433,13 @@ internal static class LocalUpdateAgent
         foreach (string sourceFile in Directory.GetFiles(payloadRoot, "*", SearchOption.AllDirectories))
         {
             string relativePath = GetRelativePath(payloadRoot, sourceFile);
-            if (IsPreserved(relativePath))
+            if (IsPreserved(relativePath)
+                || string.Equals(relativePath, ManagedFilesManifestName, StringComparison.OrdinalIgnoreCase))
             {
                 continue;
             }
 
-            string destinationFile = Path.Combine(installRoot, relativePath);
+            string destinationFile = GetPathInsideRoot(installRoot, relativePath);
             Directory.CreateDirectory(Path.GetDirectoryName(destinationFile));
             if (!File.Exists(destinationFile))
             {
@@ -423,17 +450,77 @@ internal static class LocalUpdateAgent
         }
     }
 
+    private static HashSet<string> BuildPayloadManagedFileSet(string payloadRoot)
+    {
+        var result = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+        foreach (string sourceFile in Directory.GetFiles(payloadRoot, "*", SearchOption.AllDirectories))
+        {
+            string relativePath = GetRelativePath(payloadRoot, sourceFile);
+            if (!IsPreserved(relativePath)
+                && !string.Equals(relativePath, ManagedFilesManifestName, StringComparison.OrdinalIgnoreCase))
+            {
+                result.Add(relativePath);
+            }
+        }
+        result.Add(ManagedFilesManifestName);
+        return result;
+    }
+
+    private static HashSet<string> ReadManagedFileSet(string installRoot)
+    {
+        var result = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+        string manifestPath = Path.Combine(installRoot, ManagedFilesManifestName);
+        if (!File.Exists(manifestPath))
+        {
+            return result;
+        }
+
+        foreach (string rawLine in File.ReadAllLines(manifestPath))
+        {
+            string relativePath = rawLine.Trim();
+            if (string.IsNullOrWhiteSpace(relativePath))
+            {
+                continue;
+            }
+            GetPathInsideRoot(installRoot, relativePath);
+            result.Add(relativePath);
+        }
+        return result;
+    }
+
+    private static void WriteManagedFileSet(string installRoot, IEnumerable<string> managedFiles, List<string> createdFiles)
+    {
+        string manifestPath = Path.Combine(installRoot, ManagedFilesManifestName);
+        if (!File.Exists(manifestPath))
+        {
+            createdFiles.Add(manifestPath);
+        }
+        File.WriteAllLines(manifestPath, managedFiles.OrderBy(path => path, StringComparer.OrdinalIgnoreCase));
+    }
+
+    private static void DeleteObsoleteManagedFiles(string installRoot, IEnumerable<string> obsoleteManagedFiles)
+    {
+        foreach (string relativePath in obsoleteManagedFiles)
+        {
+            string installedFile = GetPathInsideRoot(installRoot, relativePath);
+            if (File.Exists(installedFile))
+            {
+                File.Delete(installedFile);
+            }
+        }
+    }
+
     private static void RestorePreservedConfiguration(string backupRoot, string installRoot)
     {
         foreach (string preservedPath in PreservedRelativePaths)
         {
-            string backupFile = Path.Combine(backupRoot, preservedPath);
+            string backupFile = GetPathInsideRoot(backupRoot, preservedPath);
             if (!File.Exists(backupFile))
             {
                 continue;
             }
 
-            string destinationFile = Path.Combine(installRoot, preservedPath);
+            string destinationFile = GetPathInsideRoot(installRoot, preservedPath);
             Directory.CreateDirectory(Path.GetDirectoryName(destinationFile));
             File.Copy(backupFile, destinationFile, true);
         }
@@ -457,7 +544,7 @@ internal static class LocalUpdateAgent
         foreach (string backupFile in Directory.GetFiles(backupRoot, "*", SearchOption.AllDirectories))
         {
             string relativePath = GetRelativePath(backupRoot, backupFile);
-            string destinationFile = Path.Combine(installRoot, relativePath);
+            string destinationFile = GetPathInsideRoot(installRoot, relativePath);
             Directory.CreateDirectory(Path.GetDirectoryName(destinationFile));
             File.Copy(backupFile, destinationFile, true);
         }
@@ -465,7 +552,8 @@ internal static class LocalUpdateAgent
 
     private static bool IsPreserved(string relativePath)
     {
-        return PreservedRelativePaths.Any(path => string.Equals(path, relativePath, StringComparison.OrdinalIgnoreCase));
+        return PreservedRelativePaths.Any(path => string.Equals(path, relativePath, StringComparison.OrdinalIgnoreCase))
+            || PreservedDirectoryPrefixes.Any(prefix => relativePath.StartsWith(prefix, StringComparison.OrdinalIgnoreCase));
     }
 
     private static string GetRelativePath(string root, string path)
@@ -478,5 +566,58 @@ internal static class LocalUpdateAgent
         }
 
         return normalizedPath.Substring(normalizedRoot.Length);
+    }
+
+    private static string GetPathInsideRoot(string root, string relativePath)
+    {
+        if (string.IsNullOrWhiteSpace(relativePath) || Path.IsPathRooted(relativePath))
+        {
+            throw new InvalidDataException("A managed file path is invalid.");
+        }
+
+        string normalizedRoot = Path.GetFullPath(root).TrimEnd(Path.DirectorySeparatorChar) + Path.DirectorySeparatorChar;
+        string normalizedPath = Path.GetFullPath(Path.Combine(root, relativePath));
+        if (!normalizedPath.StartsWith(normalizedRoot, StringComparison.OrdinalIgnoreCase))
+        {
+            throw new InvalidDataException("A managed file path is outside the installation root.");
+        }
+        return normalizedPath;
+    }
+
+    private static void DeleteDirectoryTreeSafely(string path)
+    {
+        if (!Directory.Exists(path))
+        {
+            return;
+        }
+
+        FileAttributes rootAttributes = File.GetAttributes(path);
+        if ((rootAttributes & FileAttributes.ReparsePoint) != 0)
+        {
+            Directory.Delete(path, false);
+            return;
+        }
+
+        foreach (FileSystemInfo entry in new DirectoryInfo(path).GetFileSystemInfos())
+        {
+            FileAttributes attributes = entry.Attributes;
+            if ((attributes & FileAttributes.Directory) != 0)
+            {
+                if ((attributes & FileAttributes.ReparsePoint) != 0)
+                {
+                    Directory.Delete(entry.FullName, false);
+                }
+                else
+                {
+                    DeleteDirectoryTreeSafely(entry.FullName);
+                }
+            }
+            else
+            {
+                File.Delete(entry.FullName);
+            }
+        }
+
+        Directory.Delete(path, false);
     }
 }
