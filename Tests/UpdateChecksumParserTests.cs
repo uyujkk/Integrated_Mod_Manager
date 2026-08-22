@@ -4,7 +4,7 @@ namespace IntegratedModManager.Core.Tests;
 
 public sealed class UpdateChecksumParserTests
 {
-    private const string PackageName = "Integrated_Mod_Manager-v3.6.1.zip";
+    private const string PackageName = "Integrated_Mod_Manager-v3.8.0.zip";
     private static readonly string Hash = new('A', 64);
 
     [Fact]

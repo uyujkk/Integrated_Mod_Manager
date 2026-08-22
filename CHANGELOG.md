@@ -6,6 +6,32 @@
 
 This document records the major changes in published versions of Integrated Mod Manager.
 
+## v3.8.0 - 重要更新 / Major Update
+
+### 中文
+
+- 完成文件系统、压缩包导入、在线资源下载、本地更新和持久化链路的安全审查与修复。
+- ZIP 解压会拒绝目录穿越和符号链接；7-Zip 与 TAR 在正式解压前验证全部条目，并拒绝符号链接、硬链接和目标目录外路径。
+- 文件夹复制、删除和更新替换会检查重解析点与目标边界，避免操作越过用户选择的仓库、目标文件夹或安装目录。
+- 在线预览图下载新增取消、超时、内容类型和文件大小限制，并使用临时文件完成后再替换正式预览图。
+- 自动更新新增严格包结构校验、SHA-256 文件名绑定校验、托管文件清单、旧文件清理和新版本启动失败自动回滚。
+- SQLite 写入、配置恢复、备份清理和关键异常增加日志与失败保护，减少静默错误。
+- 抽取 `IntegratedModManager.Core` 生产代码库，新增 13 项 xUnit 自动化测试，覆盖路径边界和更新校验文件解析。
+- 新增 GitHub Actions 持续集成：每次推送和拉取请求自动运行测试并构建 WinUI x64 应用。
+- 应用、启动器和本地更新组件统一提升至 `v3.8.0`，发布包继续只包含应用及必要运行文件。
+
+### English
+
+- Completed a security-focused review of filesystem operations, archive import, online downloads, local updates, and persistence paths.
+- ZIP extraction rejects traversal and symbolic links; 7-Zip and TAR entries are validated before extraction and symbolic links, hard links, or paths outside the destination are blocked.
+- Folder copy, deletion, and update replacement now validate reparse points and destination boundaries so operations cannot escape the selected repository, target folder, or install directory.
+- Online preview downloads now enforce cancellation, timeouts, content types, and size limits, with atomic replacement from a temporary file.
+- Automatic updates now enforce package layout, bind SHA-256 entries to the expected package filename, maintain a managed-file manifest, remove obsolete managed files, and roll back when the new runtime cannot start.
+- SQLite writes, configuration recovery, backup cleanup, and critical exception paths have stronger logging and failure protection.
+- Extracted the production `IntegratedModManager.Core` library and added 13 xUnit tests for path boundaries and update-checksum parsing.
+- Added GitHub Actions CI to run tests and build the WinUI x64 application on every push and pull request.
+- Unified the app, launcher, and local updater at `v3.8.0`; release archives continue to contain only the application and required runtime files.
+
 ## v3.6.1
 
 ### 中文

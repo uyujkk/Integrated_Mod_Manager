@@ -82,7 +82,7 @@ if exist "%APP_ICON%" (
 )
 
 if exist "%OUTPUT%\startup.log" del /f /q "%OUTPUT%\startup.log"
-if exist "%OUTPUT%\ModFolderCopier.WinUI.pdb" del /f /q "%OUTPUT%\ModFolderCopier.WinUI.pdb"
+for /r "%OUTPUT%" %%F in (*.pdb) do del /f /q "%%F"
 
 echo Writing managed-file manifest...
 powershell.exe -NoProfile -ExecutionPolicy Bypass -Command "$root=[IO.Path]::GetFullPath('%ROOT%\dist').TrimEnd('\'); $manifest=Join-Path $root '.managed-files.txt'; $excluded=@('config.ini','beta-shell.json','WinUI3\config.ini','WinUI3\beta-shell.json'); $prefixes=@('backups\','WinUI3\backups\','WinUI3\cache\','WinUI3\diagnostics\'); $files=Get-ChildItem -LiteralPath $root -Recurse -File | ForEach-Object { $_.FullName.Substring($root.Length + 1) } | Where-Object { $relative=$_; $keep=$relative -ne '.managed-files.txt' -and $excluded -notcontains $relative; foreach($prefix in $prefixes){ if($relative.StartsWith($prefix,[StringComparison]::OrdinalIgnoreCase)){ $keep=$false; break } }; $keep }; $lines=@($files + '.managed-files.txt' | Sort-Object -Unique); [IO.File]::WriteAllLines($manifest,[string[]]$lines,(New-Object Text.UTF8Encoding($false)))" || exit /b 1

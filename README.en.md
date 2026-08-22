@@ -6,8 +6,8 @@
 
 A WinUI 3 mod management tool for Windows 10/11. It organizes local mods into repositories and provides two-level folder browsing, copy-based switching, archive import, image previews, shortcut notes, online mod browsing and downloads, and update tracking for installed mods.
 
-- Current version: `v3.6.1`
-- File version: `3.6.1.0`
+- Current version: `v3.8.0`
+- File version: `3.8.0.0`
 - Tool author: `uyujkk`
 
 [Download Latest Release](https://github.com/uyujkk/Integrated_Mod_Manager/releases/latest) ·
@@ -50,6 +50,15 @@ Integrated Mod Manager is designed to:
 | Download tasks | Track download and extraction progress, cancel work, open folders, and clear finished entries |
 | App updates | Check GitHub Releases or apply a newer release ZIP placed in the app folder |
 | Interface | Chinese/English, light/dark themes, comfortable/compact density, reduced motion, and responsive layout |
+
+## v3.8.0 Major Update
+
+- Completed a security-focused review of file operations, archive import, online resources, and the local update path.
+- ZIP, 7-Zip, and TAR imports now preflight paths and link entries, rejecting directory traversal, symbolic links, and hard links; folder copy and deletion also block reparse-point escapes.
+- Automatic updates now enforce release-package structure, bind SHA-256 entries to the expected filename, maintain a managed-file manifest, and roll back automatically if the updated runtime does not start.
+- Online requests cancel obsolete work, while preview downloads enforce timeout, media-type, and size limits; important failures are recorded in sanitized logs instead of being silently ignored.
+- SQLite writes, backup recovery, and update cleanup have stronger boundary checks and error reporting.
+- Added a reusable core library with 13 automated tests. GitHub Actions now runs the core suite and builds the WinUI x64 app for every push and pull request.
 
 ## v3.6.1 Highlights
 
