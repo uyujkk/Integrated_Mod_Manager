@@ -1,0 +1,72 @@
+name: Bug 报告 / Bug Report
+description: 报告可以稳定复现的软件问题 / Report a reproducible problem
+title: "[Bug] "
+labels: [bug]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        感谢你的报告。请先使用最新版本复现，并移除个人路径、令牌和其他敏感信息。
+        Thank you. Reproduce with the latest release and remove personal paths, tokens, and other sensitive information.
+  - type: input
+    id: version
+    attributes:
+      label: 软件版本 / App version
+      placeholder: v3.8.0
+    validations:
+      required: true
+  - type: input
+    id: windows
+    attributes:
+      label: Windows 版本 / Windows version
+      placeholder: Windows 11 24H2 x64
+    validations:
+      required: true
+  - type: dropdown
+    id: area
+    attributes:
+      label: 功能区域 / Area
+      options:
+        - 本地 Mod 管理 / Local mod management
+        - 在线 Mod / Online mods
+        - 下载与解压 / Download and extraction
+        - 配置方案与备份 / Profiles and backups
+        - 软件更新 / App update
+        - 界面与辅助功能 / UI and accessibility
+        - 其他 / Other
+    validations:
+      required: true
+  - type: textarea
+    id: steps
+    attributes:
+      label: 复现步骤 / Reproduction steps
+      placeholder: 请按顺序列出操作。List the actions in order.
+    validations:
+      required: true
+  - type: textarea
+    id: expected
+    attributes:
+      label: 预期结果 / Expected behavior
+    validations:
+      required: true
+  - type: textarea
+    id: actual
+    attributes:
+      label: 实际结果 / Actual behavior
+    validations:
+      required: true
+  - type: textarea
+    id: diagnostics
+    attributes:
+      label: 脱敏日志或诊断信息 / Sanitized logs or diagnostics
+      description: 请先检查并删除个人路径、用户名、令牌和凭据。Remove personal paths, usernames, tokens, and credentials.
+      render: text
+  - type: checkboxes
+    id: checks
+    attributes:
+      label: 提交确认 / Checklist
+      options:
+        - label: 我使用的是最新版本，并已搜索现有 Issues。I use the latest release and searched existing issues.
+          required: true
+        - label: 我已移除个人路径、访问凭据和其他敏感信息。I removed personal paths, credentials, and other sensitive information.
+          required: true

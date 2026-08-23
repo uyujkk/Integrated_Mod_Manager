@@ -1,0 +1,44 @@
+name: 功能建议 / Feature Request
+description: 提议新的功能或使用体验改进 / Suggest a feature or usability improvement
+title: "[Feature] "
+labels: [enhancement]
+body:
+  - type: textarea
+    id: problem
+    attributes:
+      label: 要解决的问题 / Problem to solve
+      description: 说明当前使用中遇到的限制，而不只是描述一个按钮。Describe the current limitation, not only a requested button.
+    validations:
+      required: true
+  - type: textarea
+    id: proposal
+    attributes:
+      label: 建议方案 / Proposed solution
+    validations:
+      required: true
+  - type: textarea
+    id: alternatives
+    attributes:
+      label: 可选方案 / Alternatives considered
+  - type: dropdown
+    id: scope
+    attributes:
+      label: 主要影响区域 / Primary area
+      options:
+        - 本地 Mod 管理 / Local mod management
+        - 在线 Mod / Online mods
+        - 下载与解压 / Download and extraction
+        - 配置方案与备份 / Profiles and backups
+        - 软件更新 / App update
+        - 界面与辅助功能 / UI and accessibility
+        - 文档或开发流程 / Documentation or development
+        - 其他 / Other
+    validations:
+      required: true
+  - type: checkboxes
+    id: checks
+    attributes:
+      label: 提交确认 / Checklist
+      options:
+        - label: 我已搜索现有 Issues，确认没有相同建议。I searched existing issues for the same request.
+          required: true
