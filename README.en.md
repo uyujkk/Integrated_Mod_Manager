@@ -13,7 +13,6 @@
   [Download Latest](https://github.com/uyujkk/Integrated_Mod_Manager/releases/latest) ·
   [Quick Start](./Quick-Start.en.md) ·
   [Full Guide](./docs/User-Guide.en.md) ·
-  [Experiment Results](#cross-mod-internal-state-experiments) ·
   [Changelog](./CHANGELOG.md) ·
   [Report an Issue](https://github.com/uyujkk/Integrated_Mod_Manager/issues/new/choose)
 </div>
@@ -26,25 +25,6 @@
 Integrated Mod Manager organizes different games or mod environments into independent repositories. It copies or removes complete mod folders between a local library and the target directory read by the game, while keeping preview images, source links, shortcut notes, online downloads, update records, profiles, and installation backups in one application.
 
 The current stable release is **v3.8.5**, with file version `3.8.5.0`. The tool is maintained by `uyujkk`.
-
-## Cross-Mod Internal-State Experiments
-
-> [!NOTE]
-> The goal was to remember clothing parts, colors, variants, and other internal `$variables` separately for each mod, then restore them when returning to a mod or applying a combined profile. Every prototype below was developed on an independent branch from the untouched v3.8.0 release baseline and did not replace the stable application.
-
-| Experimental version | Approach | Observed result |
-| --- | --- | --- |
-| v3.8.1 Hot Injection Lab | Snapshot and hot-replace the entire `d3dx_user.ini`, then request an F10 reload | The shared file also overwrites other mods and loader state; F10 may write stale in-memory values back first, making restoration unreliable |
-| v3.8.1 Persistent State Lab | Parse and merge scalar `global persist` values; separately test a temporary bridge INI and two manual F10 reloads | Covers only some numeric variables and cannot universally handle in-memory-only state, complex types, later command overrides, or loader-specific sequencing |
-| v3.8.2 EFMI Resident Lab | Generate resident controlled mod copies and switch profiles through `$active_profile` | Works only for standard structures with provable complete gating; arbitrary third-party compatibility, performance, and real-game behavior cannot be guaranteed |
-| v3.8.3—v3.8.5 directory junctions | Let the loader and library reference one physical mod directory | Preserves configuration actually written inside the mod folder; does not cover EFMI's root-level `d3dx_user.ini` or state that exists only in game memory |
-
-> [!WARNING]
-> **Current conclusion: universal, automatic, and reliable persistence of internal `$variables` across arbitrary third-party XXMI / EFMI mods is temporarily infeasible.** The v3.8.1 and v3.8.2 prototypes were never released and are not included in the v3.8.5 package.
-
-v3.8.5 retains both optional directory-junction deployment and the original copy mode. Junctions solve the case where the loader modifies a deployed copy without updating the library source; linking another mod for the same character safely disconnects the previous managed junction. The application does not read or write game-process memory, inject DLLs, press F10 automatically, or bypass anti-cheat systems.
-
-[Read the complete experiment history, failure analysis, support boundaries, and conditions for reconsideration](./docs/跨Mod状态保存试验结论.md)
 
 ## Core Features
 
