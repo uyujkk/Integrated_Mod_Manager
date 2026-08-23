@@ -35,7 +35,7 @@ namespace ModFolderCopier.WinUI;
 
 public sealed partial class MainWindow : Window
 {
-    private const string AppVersion = "v3.8.0";
+    private const string AppVersion = "v3.8.5";
     private const string GitHubRepositoryUrl = "https://github.com/uyujkk/Integrated_Mod_Manager";
     private const string GitHubLatestReleaseApiUrl = "https://api.github.com/repos/uyujkk/Integrated_Mod_Manager/releases/latest";
     private const string DefaultOnlineSourceSite = "GameBanana";
@@ -219,6 +219,7 @@ public sealed partial class MainWindow : Window
     private readonly List<TrackedModUpdateResult> _trackedModUpdateResults = [];
     private readonly List<ModConfigurationProfile> _configurationProfiles = [];
     private readonly ObservableCollection<DownloadTaskItem> _downloadTasks = [];
+    private readonly Dictionary<string, DownloadTaskCardView> _downloadTaskCards = new(StringComparer.Ordinal);
 
     private bool _isDarkTheme;
     private bool _isCheckingUpdates;
@@ -235,6 +236,7 @@ public sealed partial class MainWindow : Window
     private bool _isApplyingAppearanceSettings;
     private bool _isApplyingDensitySelection;
     private bool _isApplyingConfigurationProfileSelection;
+    private bool _isApplyingRepositoryDeploymentMode;
     private bool _enableConflictDetection = true;
     private bool _reduceMotion;
     private int _visibleShortcutRows = 1;
@@ -288,7 +290,8 @@ public sealed partial class MainWindow : Window
     private int _onlineDetailAnimationVersion;
     private int _onlineDownloadEnrichmentVersion;
     private int _onlineModRequestVersion;
-    private DateTimeOffset _lastDownloadTaskUiRefreshUtc = DateTimeOffset.MinValue;
+    private int _previewImageRequestVersion;
+    private string? _foregroundDownloadTaskId;
     private CancellationTokenSource? _onlineModListCancellation;
     private bool _animateOnlineCardsOnNextRefresh;
     private int? _savedWindowX;
@@ -389,7 +392,9 @@ public sealed partial class MainWindow : Window
 
     private string StateCopiedText => L("已复制", "Copied");
 
-    private string StateMissingText => L("未复制", "Not copied");
+    private string StateLinkedText => L("已链接", "Linked");
+
+    private string StateMissingText => L("未部署", "Not deployed");
 
     private string NormalizeUiText(string? value)
     {
@@ -1225,6 +1230,25 @@ public sealed partial class MainWindow : Window
         SaveShellConfig();
     }
 
+    private void OnLinkDeploymentToggled(object sender, RoutedEventArgs e)
+    {
+        if (_isApplyingRepositoryDeploymentMode || LinkDeploymentToggleSwitch is null)
+        {
+            return;
+        }
+
+        WorkspaceRepository? repository = GetSelectedRepository();
+        if (repository is null)
+        {
+            return;
+        }
+
+        repository.UseDirectoryLinks = LinkDeploymentToggleSwitch.IsOn;
+        SaveShellConfig();
+        RefreshLocalizedStates();
+        ApplySecondLevelSelectionState(GetSelectedSecondLevelItem(), preserveStatus: true);
+    }
+
     private async void OnApplyConfigurationProfileClicked(object sender, RoutedEventArgs e)
     {
         ModConfigurationProfile? profile = GetSelectedConfigurationProfile();
@@ -1256,11 +1280,19 @@ public sealed partial class MainWindow : Window
             .SelectMany(firstLevel => Directory.GetDirectories(firstLevel))
             .ToList();
         List<string> installSources = desiredSources
-            .Where(source => !Directory.Exists(Path.Combine(repository.TargetPath, Path.GetFileName(source))))
+            .Where(source => !DeploymentMatches(
+                source,
+                Path.Combine(repository.TargetPath, Path.GetFileName(source)),
+                repository.UseDirectoryLinks))
             .ToList();
         List<string> removeTargets = knownSourceMods
             .Select(source => Path.Combine(repository.TargetPath, Path.GetFileName(source)))
-            .Where(target => Directory.Exists(target) && !desiredNames.Contains(Path.GetFileName(target)))
+            .Where(target => Directory.Exists(target)
+                && (!desiredNames.Contains(Path.GetFileName(target))
+                    || installSources.Any(source => string.Equals(
+                        Path.GetFileName(source),
+                        Path.GetFileName(target),
+                        StringComparison.OrdinalIgnoreCase))))
             .Distinct(StringComparer.OrdinalIgnoreCase)
             .ToList();
 
@@ -1322,7 +1354,7 @@ public sealed partial class MainWindow : Window
                     int percent = (int)Math.Round((completed + itemProgress) * 100d / Math.Max(1, installSources.Count));
                     UpdateProgress(percent, L($"正在应用方案：{Path.GetFileName(source)}", $"Applying profile: {Path.GetFileName(source)}"));
                 });
-                await CopyDirectoryWithProgressAsync(source, target, progress);
+                await DeployModAsync(source, target, repository, progress);
                 completed++;
             }
 
@@ -1351,6 +1383,17 @@ public sealed partial class MainWindow : Window
 
     private List<string> DetectModFileConflicts(string sourcePath, string targetRoot, string targetPathToIgnore)
     {
+        return DetectModFileConflicts(sourcePath, targetRoot, [targetPathToIgnore]);
+    }
+
+    private List<string> DetectModFileConflicts(
+        string sourcePath,
+        string targetRoot,
+        IEnumerable<string> targetPathsToIgnore)
+    {
+        HashSet<string> ignoredTargets = targetPathsToIgnore
+            .Select(Path.GetFullPath)
+            .ToHashSet(StringComparer.OrdinalIgnoreCase);
         HashSet<string> sourceFiles = InspectDirectoryTreeSafely(sourcePath).Files
             .Select(path => Path.GetRelativePath(sourcePath, path))
             .Where(IsConflictRelevantRelativePath)
@@ -1358,14 +1401,21 @@ public sealed partial class MainWindow : Window
         var conflicts = new List<string>();
         foreach (string installedModPath in Directory.GetDirectories(targetRoot))
         {
-            if (string.Equals(Path.GetFullPath(installedModPath), Path.GetFullPath(targetPathToIgnore), StringComparison.OrdinalIgnoreCase))
+            if (ignoredTargets.Contains(Path.GetFullPath(installedModPath)))
             {
                 continue;
             }
 
-            foreach (string file in InspectDirectoryTreeSafely(installedModPath).Files)
+            string inspectionRoot = installedModPath;
+            if (DirectoryLinkDeployment.IsDirectoryLink(installedModPath))
             {
-                string relativePath = Path.GetRelativePath(installedModPath, file);
+                inspectionRoot = DirectoryLinkDeployment.TryGetTarget(installedModPath)
+                    ?? throw new IOException(L("无法读取已安装目录联接的目标。", "Unable to resolve an installed directory junction."));
+            }
+
+            foreach (string file in InspectDirectoryTreeSafely(inspectionRoot).Files)
+            {
+                string relativePath = Path.GetRelativePath(inspectionRoot, file);
                 if (IsConflictRelevantRelativePath(relativePath) && sourceFiles.Contains(relativePath))
                 {
                     conflicts.Add($"{Path.GetFileName(installedModPath)}  →  {relativePath}");
@@ -1454,14 +1504,27 @@ public sealed partial class MainWindow : Window
                 }
 
                 bool existed = Directory.Exists(fullTargetPath);
-                string backupRelativePath = existed ? Path.Combine("files", index.ToString("D4")) : string.Empty;
+                bool wasDirectoryLink = existed && DirectoryLinkDeployment.IsDirectoryLink(fullTargetPath);
+                string? linkTarget = wasDirectoryLink ? DirectoryLinkDeployment.TryGetTarget(fullTargetPath) : null;
+                if (wasDirectoryLink
+                    && (string.IsNullOrWhiteSpace(linkTarget) || !IsPathInsideDirectory(linkTarget, repository.SourcePath)))
+                {
+                    throw new InvalidOperationException(L(
+                        "拒绝备份目标指向仓库之外的目录联接。",
+                        "Refused to back up a directory junction that points outside the repository."));
+                }
+
+                string backupRelativePath = existed && !wasDirectoryLink
+                    ? Path.Combine("files", index.ToString("D4"))
+                    : string.Empty;
                 transaction.Entries.Add(new ModInstallBackupEntry
                 {
                     TargetPath = fullTargetPath,
                     ExistedBefore = existed,
-                    BackupRelativePath = backupRelativePath
+                    BackupRelativePath = backupRelativePath,
+                    LinkTarget = linkTarget
                 });
-                if (existed)
+                if (existed && !wasDirectoryLink)
                 {
                     string backupPath = Path.Combine(transactionPath, backupRelativePath);
                     await Task.Run(() => CopyDirectoryTree(fullTargetPath, backupPath));
@@ -1626,7 +1689,7 @@ public sealed partial class MainWindow : Window
 
         await Task.Run(() =>
         {
-            var restoreItems = new List<(string TargetPath, string? BackupPath, string StagingPath, string DisplacedPath, bool ExistedBefore)>();
+            var restoreItems = new List<(string TargetPath, string? BackupPath, string StagingPath, string DisplacedPath, bool ExistedBefore, string? LinkTarget)>();
             var uniqueTargets = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
             string restoreToken = Guid.NewGuid().ToString("N");
 
@@ -1649,16 +1712,30 @@ public sealed partial class MainWindow : Window
                 }
 
                 string? backupPath = null;
+                string? linkTarget = null;
                 if (entry.ExistedBefore)
                 {
-                    if (string.IsNullOrWhiteSpace(entry.BackupRelativePath))
+                    if (!string.IsNullOrWhiteSpace(entry.LinkTarget))
+                    {
+                        linkTarget = Path.GetFullPath(entry.LinkTarget);
+                        if (!IsPathInsideDirectory(linkTarget, repository.SourcePath) || !Directory.Exists(linkTarget))
+                        {
+                            throw new InvalidDataException(L(
+                                "安装备份中的目录联接目标无效。",
+                                "The directory-junction target in the install backup is invalid."));
+                        }
+                    }
+                    else if (string.IsNullOrWhiteSpace(entry.BackupRelativePath))
                     {
                         throw new InvalidDataException(L("安装备份清单无效。", "The install backup manifest is invalid."));
                     }
-                    backupPath = GetSafePathInsideDirectory(transactionPath, entry.BackupRelativePath);
-                    if (!Directory.Exists(backupPath))
+                    else
                     {
-                        throw new DirectoryNotFoundException(L("安装备份内容不完整。", "The install backup is incomplete."));
+                        backupPath = GetSafePathInsideDirectory(transactionPath, entry.BackupRelativePath);
+                        if (!Directory.Exists(backupPath))
+                        {
+                            throw new DirectoryNotFoundException(L("安装备份内容不完整。", "The install backup is incomplete."));
+                        }
                     }
                 }
 
@@ -1673,15 +1750,22 @@ public sealed partial class MainWindow : Window
                     throw new IOException(L("无法创建安全恢复临时目录。", "Unable to create safe restore staging directories."));
                 }
 
-                restoreItems.Add((targetPath, backupPath, stagingPath, displacedPath, entry.ExistedBefore));
+                restoreItems.Add((targetPath, backupPath, stagingPath, displacedPath, entry.ExistedBefore, linkTarget));
             }
 
             foreach (var item in restoreItems.Where(item => item.ExistedBefore))
             {
-                CopyDirectoryTree(item.BackupPath!, item.StagingPath);
+                if (!string.IsNullOrWhiteSpace(item.LinkTarget))
+                {
+                    DirectoryLinkDeployment.CreateJunction(item.StagingPath, item.LinkTarget);
+                }
+                else
+                {
+                    CopyDirectoryTree(item.BackupPath!, item.StagingPath);
+                }
             }
 
-            var switchedItems = new List<(string TargetPath, string? BackupPath, string StagingPath, string DisplacedPath, bool ExistedBefore)>();
+            var switchedItems = new List<(string TargetPath, string? BackupPath, string StagingPath, string DisplacedPath, bool ExistedBefore, string? LinkTarget)>();
             try
             {
                 try
@@ -1832,18 +1916,23 @@ public sealed partial class MainWindow : Window
         string statusEn,
         bool forceRefresh = false)
     {
+        if (!DownloadProgressPolicy.CanApply(task.State, state))
+        {
+            return;
+        }
+
         task.State = state;
-        task.Progress = Math.Clamp(progress, 0, 100);
+        task.Progress = DownloadProgressPolicy.MergeProgress(task.Progress, progress);
         task.StatusZh = statusZh;
         task.StatusEn = statusEn;
 
         DateTimeOffset now = DateTimeOffset.UtcNow;
-        if (!forceRefresh && now - _lastDownloadTaskUiRefreshUtc < TimeSpan.FromMilliseconds(200))
+        if (!forceRefresh && now - task.LastUiRefreshUtc < TimeSpan.FromMilliseconds(125))
         {
             return;
         }
-        _lastDownloadTaskUiRefreshUtc = now;
-        DispatcherQueue.TryEnqueue(RefreshDownloadTaskCenter);
+        task.LastUiRefreshUtc = now;
+        DispatcherQueue.TryEnqueue(() => RefreshDownloadTaskCard(task));
     }
 
     private void RefreshDownloadTaskCenter()
@@ -1854,6 +1943,7 @@ public sealed partial class MainWindow : Window
         }
 
         DownloadTaskListPanel.Children.Clear();
+        _downloadTaskCards.Clear();
         if (_downloadTasks.Count == 0)
         {
             DownloadTaskListPanel.Children.Add(CreateInfoCard(
@@ -1873,7 +1963,6 @@ public sealed partial class MainWindow : Window
 
     private UIElement CreateDownloadTaskCard(DownloadTaskItem task)
     {
-        bool active = task.State is DownloadTaskState.Queued or DownloadTaskState.Preparing or DownloadTaskState.Downloading or DownloadTaskState.Extracting or DownloadTaskState.Canceling;
         var border = new Border
         {
             Style = (Style)Application.Current.Resources["InsetBorderStyle"],
@@ -1890,46 +1979,63 @@ public sealed partial class MainWindow : Window
             FontWeight = Microsoft.UI.Text.FontWeights.SemiBold,
             TextTrimming = TextTrimming.CharacterEllipsis
         });
-        content.Children.Add(new TextBlock
+        var statusTextBlock = new TextBlock
         {
-            Text = L(task.StatusZh, task.StatusEn),
             Style = (Style)Application.Current.Resources["CaptionTextStyle"],
             TextWrapping = TextWrapping.Wrap
-        });
-        content.Children.Add(new ProgressBar
+        };
+        content.Children.Add(statusTextBlock);
+        var progressBar = new ProgressBar
         {
             Minimum = 0,
             Maximum = 100,
-            Value = task.Progress,
-            Height = 6,
-            IsIndeterminate = active && task.State is not DownloadTaskState.Downloading
-        });
+            Height = 6
+        };
+        content.Children.Add(progressBar);
         grid.Children.Add(content);
 
         var actionButton = new Button
         {
             MinWidth = 104,
             Style = (Style)Application.Current.Resources["SecondaryButtonStyle"],
-            Content = active ? L("取消", "Cancel") : L("打开目录", "Open Folder"),
             VerticalAlignment = VerticalAlignment.Center
         };
-        if (active)
+        actionButton.Click += (_, _) =>
         {
-            actionButton.Click += (_, _) =>
+            if (DownloadProgressPolicy.IsActive(task.State))
             {
                 task.Cancellation.Cancel();
                 UpdateDownloadTask(task, DownloadTaskState.Canceling, task.Progress, "正在取消...", "Canceling...", forceRefresh: true);
-            };
-        }
-        else
-        {
-            actionButton.IsEnabled = Directory.Exists(task.DestinationPath);
-            actionButton.Click += (_, _) => OpenDirectory(task.DestinationPath, L("下载目录", "Download folder"));
-        }
+                return;
+            }
+
+            OpenDirectory(task.DestinationPath, L("下载目录", "Download folder"));
+        };
         Grid.SetColumn(actionButton, 1);
         grid.Children.Add(actionButton);
         border.Child = grid;
+        _downloadTaskCards[task.Id] = new DownloadTaskCardView(statusTextBlock, progressBar, actionButton);
+        RefreshDownloadTaskCard(task);
         return border;
+    }
+
+    private void RefreshDownloadTaskCard(DownloadTaskItem task)
+    {
+        if (!_downloadTaskCards.TryGetValue(task.Id, out DownloadTaskCardView? view))
+        {
+            return;
+        }
+
+        bool active = DownloadProgressPolicy.IsActive(task.State);
+        view.StatusTextBlock.Text = L(task.StatusZh, task.StatusEn);
+        view.ProgressBar.Value = task.Progress;
+        view.ProgressBar.IsIndeterminate = active
+            && (task.State is not DownloadTaskState.Downloading || !task.HasKnownTotalLength);
+        view.ActionButton.Content = active ? L("取消", "Cancel") : L("打开目录", "Open Folder");
+        view.ActionButton.IsEnabled = active
+            ? task.State is not DownloadTaskState.Canceling
+            : Directory.Exists(task.DestinationPath);
+        ClearDownloadTasksButton.IsEnabled = _downloadTasks.Any(item => DownloadProgressPolicy.IsTerminal(item.State));
     }
 
     private void OnClearDownloadTasksClicked(object sender, RoutedEventArgs e)
@@ -2172,12 +2278,50 @@ public sealed partial class MainWindow : Window
         WorkspaceRepository? repository = GetSelectedRepository();
         if (repository is null)
         {
+            _isApplyingRepositoryDeploymentMode = true;
+            LinkDeploymentToggleSwitch.IsOn = false;
+            _isApplyingRepositoryDeploymentMode = false;
             return;
         }
 
         SourceTextBox.Text = repository.SourcePath;
         TargetTextBox.Text = repository.TargetPath;
         LauncherTextBox.Text = repository.LauncherPath;
+        _isApplyingRepositoryDeploymentMode = true;
+        try
+        {
+            LinkDeploymentToggleSwitch.IsOn = repository.UseDirectoryLinks;
+        }
+        finally
+        {
+            _isApplyingRepositoryDeploymentMode = false;
+        }
+    }
+
+    private static bool DeploymentMatches(string sourcePath, string targetPath, bool useDirectoryLinks)
+    {
+        if (!Directory.Exists(targetPath))
+        {
+            return false;
+        }
+
+        bool isLink = DirectoryLinkDeployment.IsDirectoryLink(targetPath);
+        if (!useDirectoryLinks)
+        {
+            return !isLink;
+        }
+
+        if (!isLink)
+        {
+            return false;
+        }
+
+        string? actualTarget = DirectoryLinkDeployment.TryGetTarget(targetPath);
+        return !string.IsNullOrWhiteSpace(actualTarget)
+            && string.Equals(
+                Path.GetFullPath(actualTarget),
+                Path.GetFullPath(sourcePath),
+                StringComparison.OrdinalIgnoreCase);
     }
 
     private void RefreshSecondaryNavigation()
@@ -3556,9 +3700,10 @@ public sealed partial class MainWindow : Window
             : ($"缓存 · {valueZh}", $"Cache · {valueEn}");
     }
 
-    private void SetOnlineDownloadProgress(bool isVisible, double percent, string zh, string en)
+    private void SetOnlineDownloadProgress(bool isVisible, double percent, string zh, string en, bool isIndeterminate = false)
     {
         OnlineDownloadProgressPanel.Visibility = isVisible ? Visibility.Visible : Visibility.Collapsed;
+        OnlineDownloadProgressBar.IsIndeterminate = isVisible && isIndeterminate;
         OnlineDownloadProgressBar.Value = Math.Max(0, Math.Min(100, percent));
         OnlineDownloadProgressTextBlock.Text = L(zh, en);
     }
@@ -7986,6 +8131,7 @@ public sealed partial class MainWindow : Window
         }
 
         DownloadTaskItem downloadTask = CreateDownloadTask(effectiveMod, selectedFolder);
+        _foregroundDownloadTaskId = downloadTask.Id;
         SetBusyState(true);
         try
         {
@@ -7993,7 +8139,7 @@ public sealed partial class MainWindow : Window
             downloadTask.Cancellation.Token.ThrowIfCancellationRequested();
             OnlineModDetails details = await GetOnlineModDetailsAsync(effectiveMod);
 
-            SetOnlineDownloadProgress(true, 0, "准备下载...", "Preparing download...");
+            SetOnlineDownloadProgress(true, 0, "准备下载...", "Preparing download...", isIndeterminate: true);
             string downloadStatusZh = $"正在下载 {effectiveMod.Title}，完成后会自动解压到你选择的文件夹中。";
             string downloadStatusEn = $"Downloading {effectiveMod.Title}. It will be extracted into the folder you selected.";
             if (!string.IsNullOrWhiteSpace(details.AccessRequirementSummary))
@@ -8092,13 +8238,21 @@ public sealed partial class MainWindow : Window
                 }
             }
 
+            string failedArchiveName = Path.GetFileName(downloadTask.ArchivePath);
+            string failureDetails = string.IsNullOrWhiteSpace(failedArchiveName)
+                ? L($"失败原因：{message}", $"Reason: {message}")
+                : L($"文件：{failedArchiveName}\n失败原因：{message}", $"File: {failedArchiveName}\nReason: {message}");
             await ShowMessageAsync(
-                L("下载或解压失败：", "Download or extraction failed: ") + message,
+                failureDetails,
                 L("在线下载失败", "Online download failed"));
         }
         finally
         {
-            SetOnlineDownloadProgress(false, 0, string.Empty, string.Empty);
+            if (string.Equals(_foregroundDownloadTaskId, downloadTask.Id, StringComparison.Ordinal))
+            {
+                _foregroundDownloadTaskId = null;
+                SetOnlineDownloadProgress(false, 0, string.Empty, string.Empty);
+            }
             SetBusyState(false);
             RefreshOnlinePaneV2();
         }
@@ -8122,11 +8276,57 @@ public sealed partial class MainWindow : Window
         string fileName = ResolveDownloadFileName(response, mod);
         string archivePath = Path.Combine(destinationFolder, fileName);
         downloadTask.ArchivePath = archivePath;
-        UpdateDownloadTask(downloadTask, DownloadTaskState.Downloading, 0, "正在下载...", "Downloading...", forceRefresh: true);
 
         long totalRead = 0;
         long totalLength = mod.FileSizeBytes > 0 ? mod.FileSizeBytes : (response.Content.Headers.ContentLength ?? 0);
+        downloadTask.HasKnownTotalLength = totalLength > 0;
+        UpdateDownloadTask(downloadTask, DownloadTaskState.Downloading, 0, "正在下载...", "Downloading...", forceRefresh: true);
         byte[] buffer = new byte[81920];
+        DateTimeOffset lastProgressDispatchUtc = DateTimeOffset.MinValue;
+
+        void QueueProgressUpdate(bool force)
+        {
+            DateTimeOffset now = DateTimeOffset.UtcNow;
+            if (!force && now - lastProgressDispatchUtc < TimeSpan.FromMilliseconds(125))
+            {
+                return;
+            }
+
+            lastProgressDispatchUtc = now;
+            long capturedRead = totalRead;
+            long capturedTotalLength = totalLength;
+            double capturedPercent = capturedTotalLength > 0
+                ? Math.Clamp(capturedRead * 100d / capturedTotalLength, 0, 100)
+                : 0;
+            string currentSize = FormatFileSize(capturedRead);
+            string totalSize = capturedTotalLength > 0 ? FormatFileSize(capturedTotalLength) : "?";
+            DispatcherQueue.TryEnqueue(() =>
+            {
+                if (downloadTask.State is not DownloadTaskState.Downloading)
+                {
+                    return;
+                }
+
+                string statusZh = $"正在下载：{currentSize} / {totalSize}";
+                string statusEn = $"Downloading: {currentSize} / {totalSize}";
+                if (string.Equals(_foregroundDownloadTaskId, downloadTask.Id, StringComparison.Ordinal))
+                {
+                    SetOnlineDownloadProgress(
+                        true,
+                        capturedPercent,
+                        statusZh,
+                        statusEn,
+                        isIndeterminate: capturedTotalLength <= 0);
+                }
+                UpdateDownloadTask(
+                    downloadTask,
+                    DownloadTaskState.Downloading,
+                    Math.Min(90, capturedPercent * 0.9),
+                    statusZh,
+                    statusEn,
+                    forceRefresh: true);
+            });
+        }
 
         await using (Stream remoteStream = await response.Content.ReadAsStreamAsync(cancellationToken))
         {
@@ -8137,29 +8337,13 @@ public sealed partial class MainWindow : Window
                 {
                     await localStream.WriteAsync(buffer.AsMemory(0, bytesRead), cancellationToken);
                     totalRead += bytesRead;
-
-                    double percent = totalLength > 0 ? totalRead * 100d / totalLength : 0;
-                    string currentSize = FormatFileSize(totalRead);
-                    string totalSize = totalLength > 0 ? FormatFileSize(totalLength) : "?";
-                    DispatcherQueue.TryEnqueue(() =>
-                    {
-                        SetOnlineDownloadProgress(
-                            true,
-                            percent,
-                            $"正在下载：{currentSize} / {totalSize}",
-                            $"Downloading: {currentSize} / {totalSize}");
-                        UpdateDownloadTask(
-                            downloadTask,
-                            DownloadTaskState.Downloading,
-                            Math.Min(90, percent * 0.9),
-                            $"正在下载：{currentSize} / {totalSize}",
-                            $"Downloading: {currentSize} / {totalSize}");
-                    });
+                    QueueProgressUpdate(force: false);
                 }
 
                 await localStream.FlushAsync(cancellationToken);
             }
         }
+        QueueProgressUpdate(force: true);
 
         if (mod.FileSizeBytes > 0)
         {
@@ -8528,7 +8712,7 @@ public sealed partial class MainWindow : Window
             }
 
             List<string> existingFiles = Directory.GetFiles(modFolder).ToList();
-            if (!string.IsNullOrWhiteSpace(FindPreviewImage(modFolder, existingFiles)))
+            if (!string.IsNullOrWhiteSpace(FindPreviewImage(existingFiles)))
             {
                 return;
             }
@@ -8926,6 +9110,7 @@ public sealed partial class MainWindow : Window
             Name = result.Name.Trim(),
             SourcePath = result.SourcePath.Trim(),
             TargetPath = result.TargetPath.Trim(),
+            UseDirectoryLinks = result.UseDirectoryLinks,
             LauncherPath = result.LauncherPath.Trim(),
             OnlineSourceSite = result.OnlineSourceSite.Trim(),
             OnlineGameName = result.OnlineGameName.Trim(),
@@ -9142,6 +9327,7 @@ public sealed partial class MainWindow : Window
         repository.Name = result.Name.Trim();
         repository.SourcePath = result.SourcePath.Trim();
         repository.TargetPath = result.TargetPath.Trim();
+        repository.UseDirectoryLinks = result.UseDirectoryLinks;
         repository.LauncherPath = result.LauncherPath.Trim();
         repository.OnlineSourceSite = result.OnlineSourceSite.Trim();
         repository.OnlineGameName = result.OnlineGameName.Trim();
@@ -9550,8 +9736,8 @@ public sealed partial class MainWindow : Window
             "管理两层 Mod 文件夹、预览图、ZIP 导入、快捷键说明和启动器入口。",
             "Manage two-level mod folders, preview images, ZIP imports, per-mod shortcut notes, and launcher access.");
         HeaderCaptionTextBlock.Text = L(
-            "左侧先选第一层分类，再选第二层 Mod。双击第二层可直接复制或移除。",
-            "Select a first-level category first, then a second-level mod. Double-click a mod to copy or remove it.");
+            "左侧先选第一层分类，再选第二层 Mod。双击第二层可按当前模式部署或移除。",
+            "Select a first-level category first, then a second-level mod. Double-click a mod to deploy or remove it using the current mode.");
 
         LanguageToggleButton.Content = _currentLanguage == AppLanguage.ZhCn ? "English" : "中文";
         LanguageToggleButton.IsEnabled = true;
@@ -9572,19 +9758,22 @@ public sealed partial class MainWindow : Window
         OpenLauncherButton.Content = L("打开启动器位置", "Open Launcher Folder");
         LauncherTextBox.PlaceholderText = L("选择 XXMI Launcher.exe 或其他启动器", "Select XXMI Launcher.exe or another launcher");
         PathHintTextBlock.Text = L(
-            "支持刷新目录、导入 ZIP、复制当前第二层文件夹，以及直接运行外部启动器。",
-            "Refresh folders, import ZIP files, copy the selected second-level folder, or run the external launcher.");
+            "链接模式让加载器与仓库使用同一份文件；同一第一层角色改链其他 Mod 时，会自动断开旧链接。复制模式保持 v3.8 原有行为。",
+            "Link mode shares one set of files between the loader and repository. Linking another mod under the same character automatically disconnects the old link. Copy mode keeps the original v3.8 behavior.");
+        LinkDeploymentToggleSwitch.Header = L("使用目录联接部署 Mod（实验）", "Deploy Mods with directory junctions (experimental)");
+        LinkDeploymentToggleSwitch.OnContent = L("链接", "Link");
+        LinkDeploymentToggleSwitch.OffContent = L("复制", "Copy");
         RefreshButton.Content = L("刷新目录", "Refresh");
         ImportZipButton.Content = L("导入到当前选中文件夹", "Import To Selected Folder");
         RunLauncherButton.Content = L("运行启动器", "Run Launcher");
-        ToggleCopyButton.Content = L("复制当前第二层文件夹", "Copy Selected Mod");
+        ToggleCopyButton.Content = L("部署当前第二层 Mod", "Deploy Selected Mod");
 
         FirstCountLabelTextBlock.Text = L("第一层文件夹", "First-level folders");
         FirstCountHintTextBlock.Text = L("当前 Mod 仓库中的分类数量", "Number of categories in the source folder");
         SecondCountLabelTextBlock.Text = L("第二层文件夹", "Second-level folders");
         SecondCountHintTextBlock.Text = L("当前扫描到的 Mod 总数", "Total mod folders found in the current source");
-        CurrentStateLabelTextBlock.Text = L("当前复制状态", "Copy status");
-        CurrentStateHintTextBlock.Text = L("根据目标文件夹中的同名目录判断", "Detected from folders with the same name in the target");
+        CurrentStateLabelTextBlock.Text = L("当前部署状态", "Deployment status");
+        CurrentStateHintTextBlock.Text = L("区分普通副本和目录联接", "Distinguishes normal copies from directory junctions");
         CurrentFolderLabelTextBlock.Text = L("当前第二层文件夹", "Current second-level folder");
         CurrentFolderHintTextBlock.Text = L("这里显示当前选中的 Mod 名称", "Shows the currently selected mod name");
 
@@ -9660,8 +9849,8 @@ public sealed partial class MainWindow : Window
         OpenSourceButton.Content = L("打开 Mod 存储文件夹", "Open Mod Storage");
         OpenTargetButton.Content = L("打开目标文件夹", "Open Target Folder");
         PathHintTextBlock.Text = L(
-            "可以刷新目录、导入 ZIP、将当前第二层 Mod 复制到目标文件夹，也可以直接运行外部启动器。",
-            "Refresh folders, import ZIP files, copy the selected second-level mod into the target folder, or run the external launcher.");
+            "链接模式共享仓库文件；同一角色改链其他 Mod 会自动断开旧链接，移除时也不会删除仓库 Mod。",
+            "Link mode shares repository files. Linking another Mod for the same character disconnects the old link, and removal never deletes the repository Mod.");
         ImportZipButton.Content = L("导入到当前选中文件夹", "Import To Selected Folder");
 
         FirstCountHintTextBlock.Text = L("当前 Mod 存储文件夹中的分类数量", "Number of categories in the mod storage folder");
@@ -10096,7 +10285,18 @@ public sealed partial class MainWindow : Window
 
     private void OnSecondLevelSelectionChanged(object sender, SelectionChangedEventArgs e)
     {
-        ApplySecondLevelSelectionState(GetSelectedSecondLevelItem());
+        try
+        {
+            ApplySecondLevelSelectionState(GetSelectedSecondLevelItem());
+        }
+        catch (Exception ex)
+        {
+            LogApplicationIssue("Mod selection", ex);
+            ClearPreview();
+            StatusTextBlock.Text = L(
+                $"无法读取所选 Mod：{ex.Message}",
+                $"Could not read the selected mod: {ex.Message}");
+        }
     }
 
     private async void OnSecondLevelDoubleTapped(object sender, DoubleTappedRoutedEventArgs e)
@@ -10117,10 +10317,11 @@ public sealed partial class MainWindow : Window
 
         SecondLevelListView.SelectedItem = item;
         var menu = new MenuFlyout();
+        bool isInstalled = item.State == StateCopiedText || item.State == StateLinkedText;
         var toggleItem = new MenuFlyoutItem
         {
-            Text = item.State == StateCopiedText ? L("从目标文件夹移除", "Remove from target") : L("复制到目标文件夹", "Copy to target"),
-            Icon = new FontIcon { Glyph = item.State == StateCopiedText ? "\uE74D" : "\uE8B0" }
+            Text = isInstalled ? L("从目标文件夹移除", "Remove from target") : L("部署到目标文件夹", "Deploy to target"),
+            Icon = new FontIcon { Glyph = isInstalled ? "\uE74D" : "\uE8B0" }
         };
         toggleItem.Click += async (_, _) => await ToggleDirectoryCopyAsync(item);
         menu.Items.Add(toggleItem);
@@ -11707,7 +11908,8 @@ public sealed partial class MainWindow : Window
 
     private void SetStateColor(string? state)
     {
-        if (string.Equals(state, StateCopiedText, StringComparison.CurrentCultureIgnoreCase))
+        if (string.Equals(state, StateCopiedText, StringComparison.CurrentCultureIgnoreCase)
+            || string.Equals(state, StateLinkedText, StringComparison.CurrentCultureIgnoreCase))
         {
             CurrentStateTextBlock.Foreground = CopiedBrush;
         }
@@ -11741,13 +11943,33 @@ public sealed partial class MainWindow : Window
         }
         repository.TargetPath = targetDir;
 
-        if (!Directory.Exists(targetPath) && _enableConflictDetection)
+        bool targetExists = Directory.Exists(targetPath);
+        IReadOnlyList<string> siblingLinksToReplace = Array.Empty<string>();
+        try
         {
-            List<string> conflicts = await Task.Run(() => DetectModFileConflicts(item.Path, targetDir, targetPath));
-            if (conflicts.Count > 0 && !await ConfirmInstallConflictsAsync(conflicts))
+            if (!targetExists && repository.UseDirectoryLinks)
             {
-                return;
+                siblingLinksToReplace = await Task.Run(() =>
+                    DirectoryLinkDeployment.FindSiblingLinksToReplace(item.Path, repository.SourcePath, targetDir));
             }
+
+            if (!targetExists && _enableConflictDetection)
+            {
+                string[] ignoredTargets = [targetPath, .. siblingLinksToReplace];
+                List<string> conflicts = await Task.Run(() => DetectModFileConflicts(item.Path, targetDir, ignoredTargets));
+                if (conflicts.Count > 0 && !await ConfirmInstallConflictsAsync(conflicts))
+                {
+                    return;
+                }
+            }
+        }
+        catch (Exception ex)
+        {
+            LogApplicationIssue("Mod deployment planning", ex);
+            await ShowMessageAsync(
+                L("无法检查所选 Mod 的目录或链接：", "Could not inspect the selected mod directory or links: ") + ex.Message,
+                L("无法操作", "Cannot Continue"));
+            return;
         }
 
         string? transactionPath = null;
@@ -11755,13 +11977,15 @@ public sealed partial class MainWindow : Window
         try
         {
             transactionPath = await CreateInstallTransactionAsync(
-                Directory.Exists(targetPath)
+                targetExists
                     ? L($"移除 Mod：{item.Name}", $"Remove mod: {item.Name}")
+                    : siblingLinksToReplace.Count > 0
+                        ? L($"切换同角色 Mod：{item.Name}", $"Switch same-character mod: {item.Name}")
                     : L($"安装 Mod：{item.Name}", $"Install mod: {item.Name}"),
                 repository,
-                [targetPath]);
+                [targetPath, .. siblingLinksToReplace]);
 
-            if (Directory.Exists(targetPath))
+            if (targetExists)
             {
                 UpdateProgress(15, L("正在移除目录...", "Removing folder..."));
                 await Task.Run(() => DeleteDirectoryTreeSafely(targetPath));
@@ -11771,10 +11995,37 @@ public sealed partial class MainWindow : Window
             }
             else
             {
+                if (siblingLinksToReplace.Count > 0)
+                {
+                    UpdateProgress(10, L("正在断开同角色的旧 Mod 链接...", "Disconnecting the previous link for this character..."));
+                    await Task.Run(() =>
+                    {
+                        foreach (string oldLinkPath in siblingLinksToReplace)
+                        {
+                            DirectoryLinkDeployment.RemoveLink(oldLinkPath);
+                        }
+                    });
+                }
+
                 var progress = new Progress<ProgressInfo>(info => UpdateProgress(info.Percent, info.Message));
-                await CopyDirectoryWithProgressAsync(item.Path, targetPath, progress);
-                StatusTextBlock.Text = item.Name + L(" 已复制到目标文件夹。", " was copied to the target folder.");
-                ShowAppNotification($"{item.Name} 已复制到目标文件夹。", $"{item.Name} was copied to the target folder.");
+                await DeployModAsync(item.Path, targetPath, repository, progress);
+                string replacedNames = string.Join("、", siblingLinksToReplace.Select(Path.GetFileName));
+                StatusTextBlock.Text = repository.UseDirectoryLinks
+                    ? siblingLinksToReplace.Count > 0
+                        ? L($"已断开 {replacedNames}，并链接 {item.Name}。", $"Disconnected {replacedNames} and linked {item.Name}.")
+                        : item.Name + L(" 已链接到目标文件夹。", " was linked into the target folder.")
+                    : item.Name + L(" 已复制到目标文件夹。", " was copied to the target folder.");
+                ShowAppNotification(
+                    repository.UseDirectoryLinks
+                        ? siblingLinksToReplace.Count > 0
+                            ? $"已切换同角色链接：{replacedNames} → {item.Name}"
+                            : $"{item.Name} 已链接到目标文件夹。"
+                        : $"{item.Name} 已复制到目标文件夹。",
+                    repository.UseDirectoryLinks
+                        ? siblingLinksToReplace.Count > 0
+                            ? $"Switched the same-character link: {replacedNames} → {item.Name}"
+                            : $"{item.Name} was linked into the target folder."
+                        : $"{item.Name} was copied to the target folder.");
             }
 
             CommitInstallTransaction(transactionPath);
@@ -11913,6 +12164,29 @@ public sealed partial class MainWindow : Window
         });
     }
 
+    private async Task DeployModAsync(
+        string sourcePath,
+        string targetPath,
+        WorkspaceRepository repository,
+        IProgress<ProgressInfo> progress)
+    {
+        if (!repository.UseDirectoryLinks)
+        {
+            await CopyDirectoryWithProgressAsync(sourcePath, targetPath, progress);
+            return;
+        }
+
+        progress.Report(new ProgressInfo(15, L("正在验证仓库路径...", "Validating repository path...")));
+        string fullSourcePath = Path.GetFullPath(sourcePath);
+        if (!IsPathInsideDirectory(fullSourcePath, repository.SourcePath))
+        {
+            throw new InvalidOperationException(L("拒绝链接仓库之外的目录。", "Refused to link a directory outside the repository."));
+        }
+
+        await Task.Run(() => DirectoryLinkDeployment.CreateJunction(targetPath, fullSourcePath));
+        progress.Report(new ProgressInfo(100, L("目录联接创建完成", "Directory junction created")));
+    }
+
     private void UpdateProgress(int percent, string message)
     {
         CopyProgressBar.Value = percent;
@@ -11923,6 +12197,7 @@ public sealed partial class MainWindow : Window
     {
         ThemeToggleButton.IsEnabled = !busy;
         LanguageToggleButton.IsEnabled = !busy;
+        LinkDeploymentToggleSwitch.IsEnabled = !busy;
         FirstLevelListView.IsEnabled = !busy;
         SecondLevelListView.IsEnabled = !busy;
         OpenModLinkButton.IsEnabled = !busy && !string.IsNullOrWhiteSpace(ModLinkTextBox.Text);
@@ -12267,7 +12542,13 @@ public sealed partial class MainWindow : Window
             return StateNotConfiguredText;
         }
 
-        return Directory.Exists(GetTargetDirectoryPath(targetDir, directoryPath)) ? StateCopiedText : StateMissingText;
+        string targetPath = GetTargetDirectoryPath(targetDir, directoryPath);
+        if (!Directory.Exists(targetPath))
+        {
+            return StateMissingText;
+        }
+
+        return DirectoryLinkDeployment.IsDirectoryLink(targetPath) ? StateLinkedText : StateCopiedText;
     }
 
     private void RefreshLocalizedStates()
@@ -12303,43 +12584,61 @@ public sealed partial class MainWindow : Window
         return SecondLevelListView.SelectedItem as SecondLevelFolderItem;
     }
 
-    private void UpdatePreviewForDirectory(string directoryPath, List<string> files)
+    private async void UpdatePreviewForDirectory(string directoryPath, List<string> files)
     {
-        List<string> liveFiles = Directory.Exists(directoryPath) ? GetFiles(directoryPath) : files;
-        SetPreviewImage(FindPreviewImage(directoryPath, liveFiles));
+        int requestVersion = ++_previewImageRequestVersion;
+        try
+        {
+            List<string> liveFiles = Directory.Exists(directoryPath)
+                ? GetFiles(directoryPath)
+                : files.Where(File.Exists).ToList();
+            await SetPreviewImageAsync(FindPreviewImage(liveFiles), requestVersion);
+        }
+        catch (Exception ex)
+        {
+            LogApplicationIssue("Mod preview selection", ex);
+            if (requestVersion == _previewImageRequestVersion)
+            {
+                PreviewImage.Source = null;
+                PreviewHintTextBlock.Text = L("图片无法读取或格式不受支持。", "The image could not be loaded or is not supported.");
+                PreviewHintTextBlock.Visibility = Visibility.Visible;
+            }
+        }
     }
 
-    private void SetPreviewImage(string? imagePath)
+    private async Task SetPreviewImageAsync(string? imagePath, int requestVersion)
     {
         if (string.IsNullOrWhiteSpace(imagePath) || !File.Exists(imagePath))
         {
-            PreviewImage.Source = null;
-            PreviewHintTextBlock.Text = L("当前第二层文件夹未找到可预览图片。", "No preview image was found for the current second-level folder.");
-            PreviewHintTextBlock.Visibility = Visibility.Visible;
+            if (requestVersion == _previewImageRequestVersion)
+            {
+                PreviewImage.Source = null;
+                PreviewHintTextBlock.Text = L("当前第二层文件夹未找到可预览图片。", "No preview image was found for the current second-level folder.");
+                PreviewHintTextBlock.Visibility = Visibility.Visible;
+            }
             return;
         }
 
-        try
+        StorageFile file = await StorageFile.GetFileFromPathAsync(imagePath);
+        using var stream = await file.OpenReadAsync();
+        var bitmap = new BitmapImage();
+        await bitmap.SetSourceAsync(stream);
+        if (requestVersion == _previewImageRequestVersion)
         {
-            PreviewImage.Source = new BitmapImage(new Uri(imagePath));
+            PreviewImage.Source = bitmap;
             PreviewHintTextBlock.Visibility = Visibility.Collapsed;
-        }
-        catch
-        {
-            PreviewImage.Source = null;
-            PreviewHintTextBlock.Text = L("图片无法读取或格式不受支持。", "The image could not be loaded or is not supported.");
-            PreviewHintTextBlock.Visibility = Visibility.Visible;
         }
     }
 
     private void ClearPreview()
     {
+        _previewImageRequestVersion++;
         PreviewImage.Source = null;
         PreviewHintTextBlock.Text = L("当前第二层文件夹未找到可预览图片。", "No preview image was found for the current second-level folder.");
         PreviewHintTextBlock.Visibility = Visibility.Visible;
     }
 
-    private static string? FindPreviewImage(string directoryPath, List<string> files)
+    private static string? FindPreviewImage(List<string> files)
     {
         string? namedPreview = files.FirstOrDefault(file =>
         {
@@ -12352,7 +12651,7 @@ public sealed partial class MainWindow : Window
             return namedPreview;
         }
 
-        string[] images = Directory.GetFiles(directoryPath)
+        string[] images = files
             .Where(IsImageFile)
             .OrderBy(path => path, StringComparer.CurrentCultureIgnoreCase)
             .ToArray();
@@ -12720,28 +13019,15 @@ public sealed partial class MainWindow : Window
             throw new InvalidDataException(string.IsNullOrWhiteSpace(error) ? "Unable to inspect the archive." : error.Trim());
         }
 
-        bool readingEntries = false;
-        foreach (string rawLine in output.Split(['\r', '\n'], StringSplitOptions.RemoveEmptyEntries))
+        try
         {
-            string line = rawLine.Trim();
-            if (line.StartsWith("----------", StringComparison.Ordinal))
-            {
-                readingEntries = true;
-                continue;
-            }
-            if (!readingEntries)
-            {
-                continue;
-            }
-            if (line.StartsWith("Symbolic Link =", StringComparison.OrdinalIgnoreCase)
-                || line.StartsWith("Hard Link =", StringComparison.OrdinalIgnoreCase))
-            {
-                throw new InvalidDataException(L("压缩包包含不受支持的链接。", "The archive contains an unsupported link."));
-            }
-            if (line.StartsWith("Path = ", StringComparison.Ordinal))
-            {
-                GetSafePathInsideDirectory(destinationDirectory, line[7..]);
-            }
+            SevenZipListingValidator.Validate(output, destinationDirectory);
+        }
+        catch (InvalidDataException ex) when (ex.Message.Contains("unsupported link", StringComparison.OrdinalIgnoreCase))
+        {
+            throw new InvalidDataException(
+                L("压缩包包含真实的符号链接、硬链接或复制链接，已停止解压。", "The archive contains an actual symbolic, hard, or copy link. Extraction was stopped."),
+                ex);
         }
     }
 
@@ -12857,6 +13143,12 @@ public sealed partial class MainWindow : Window
             PlaceholderText = L("目标游戏 Mod 文件夹路径", "Target game mod folder path")
         };
 
+        CheckBox linkDeploymentBox = new()
+        {
+            IsChecked = initial.UseDirectoryLinks,
+            Content = L("使用目录联接部署（仓库与加载器共享同一份 Mod 文件）", "Deploy with directory junctions (repository and loader share the same Mod files)")
+        };
+
         TextBox launcherBox = new()
         {
             Text = initial.LauncherPath,
@@ -12905,6 +13197,7 @@ public sealed partial class MainWindow : Window
         panel.Children.Add(CreateLabeledEditor(L("仓库名称", "Repository name"), nameBox));
         panel.Children.Add(CreateLabeledEditor(L("Mod 仓库路径", "Mod storage path"), sourceBox));
         panel.Children.Add(CreateLabeledEditor(L("目标路径", "Target path"), targetBox));
+        panel.Children.Add(linkDeploymentBox);
         panel.Children.Add(CreateLabeledEditor(L("启动器路径", "Launcher path"), launcherBox));
         panel.Children.Add(CreateLabeledEditor(L("在线来源", "Online source"), siteBox));
         panel.Children.Add(CreateLabeledEditor(L("目标游戏", "Target game"), gameBox));
@@ -12934,6 +13227,7 @@ public sealed partial class MainWindow : Window
             Name = nameBox.Text,
             SourcePath = sourceBox.Text,
             TargetPath = targetBox.Text,
+            UseDirectoryLinks = linkDeploymentBox.IsChecked == true,
             LauncherPath = launcherBox.Text,
             OnlineSourceSite = siteBox.Text,
             OnlineGameName = gameBox.Text,
@@ -13074,6 +13368,8 @@ public sealed class RepositoryEditorResult
 
     public string TargetPath { get; set; } = string.Empty;
 
+    public bool UseDirectoryLinks { get; set; }
+
     public string LauncherPath { get; set; } = string.Empty;
 
     public string OnlineSourceSite { get; set; } = string.Empty;
@@ -13109,6 +13405,8 @@ public sealed class WorkspaceRepository
     public string SourcePath { get; set; } = string.Empty;
 
     public string TargetPath { get; set; } = string.Empty;
+
+    public bool UseDirectoryLinks { get; set; }
 
     public string LauncherPath { get; set; } = string.Empty;
 
@@ -13464,6 +13762,8 @@ public sealed class ModInstallBackupEntry
     public bool ExistedBefore { get; set; }
 
     public string BackupRelativePath { get; set; } = string.Empty;
+
+    public string? LinkTarget { get; set; }
 }
 
 public sealed class DownloadTaskItem
@@ -13484,19 +13784,27 @@ public sealed class DownloadTaskItem
 
     public DownloadTaskState State { get; set; } = DownloadTaskState.Queued;
 
+    public bool HasKnownTotalLength { get; set; }
+
+    public DateTimeOffset LastUiRefreshUtc { get; set; } = DateTimeOffset.MinValue;
+
     public CancellationTokenSource Cancellation { get; } = new();
 }
 
-public enum DownloadTaskState
+public sealed class DownloadTaskCardView
 {
-    Queued,
-    Preparing,
-    Downloading,
-    Extracting,
-    Canceling,
-    Completed,
-    Failed,
-    Canceled
+    public DownloadTaskCardView(TextBlock statusTextBlock, ProgressBar progressBar, Button actionButton)
+    {
+        StatusTextBlock = statusTextBlock;
+        ProgressBar = progressBar;
+        ActionButton = actionButton;
+    }
+
+    public TextBlock StatusTextBlock { get; }
+
+    public ProgressBar ProgressBar { get; }
+
+    public Button ActionButton { get; }
 }
 
 public readonly record struct RepositorySnapshot(int FirstLevelCount, int ModCount, bool IsReady);

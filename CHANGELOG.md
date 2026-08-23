@@ -6,6 +6,84 @@
 
 This document records the major changes in published versions of Integrated Mod Manager.
 
+## v3.8.5 - 选择稳定性与下载进度修复 / Selection Stability and Download Progress Fix
+
+### 中文
+
+- Mod 预览图改为完整等待并捕获错误的文件流加载；快速切换选择时，已过期的图片加载结果不会再覆盖当前选择。
+- 选择 Mod 时的目录、图片、快捷键和链接信息读取加入统一异常边界；双击部署前的同角色链接扫描及冲突扫描也不会再让异常逃逸并终止程序。
+- 下载中心不再周期性销毁并重建整组任务卡和进度条，下载过程中只原位更新当前任务控件。
+- 下载网络分块的界面通知限制为最多每 125 毫秒一次，避免大量过期回调堵塞界面线程。
+- 下载阶段和百分比现在只能向前推进；旧的“下载中”回调不能覆盖“解压中”“正在取消”或完成状态。
+- 无法获知文件总大小时改用不确定进度动画；页面顶部进度只接受当前前台下载任务的更新。
+- 整理 v3.8.1/v3.8.2 跨 Mod 内部状态实验，明确整文件热覆盖、变量桥接和 EFMI 常驻控制器暂时无法可靠通用于任意第三方 Mod，因此不包含在发布包中。
+- 新增试验结论文档，明确目录联接只能保留 Mod 文件夹内部的落盘写入，不等同于恢复 EFMI 根目录或游戏内存中的 `$变量`。
+
+### English
+
+- Mod preview images now load through an awaited file stream with complete error handling; stale image results can no longer replace the current selection during rapid switching.
+- Mod selection has a unified exception boundary around directory, image, shortcut, and link reads. Same-character link inspection and conflict scanning before deployment can no longer terminate the app through an escaped event-handler exception.
+- The download center now updates persistent task controls in place instead of periodically destroying and rebuilding every task card and progress bar.
+- Network-chunk UI notifications are throttled to at most one every 125 milliseconds, preventing stale callbacks from flooding the UI thread.
+- Download phases and percentages are monotonic. Older downloading callbacks cannot overwrite extracting, canceling, or terminal states.
+- Downloads with an unknown total size use an indeterminate animation, and the page header only accepts updates from the current foreground task.
+- Organized the v3.8.1/v3.8.2 cross-mod state experiments. Whole-file hot replacement, variable bridges, and the EFMI resident controller are not reliable for arbitrary third-party mods and are therefore not shipped.
+- Added a conclusions document clarifying that directory junctions preserve writes inside mod folders only; they do not restore root-level EFMI or in-memory `$variables`.
+
+## v3.8.4 - 链接切换与 RAR 修复 / Link Switching and RAR Fix
+
+### 中文
+
+- 修复新版 7-Zip 的 RAR 技术清单包含空 `Symbolic Link`、`Hard Link` 字段时，被误判为压缩包含链接的问题；字段有真实目标时仍会拒绝解压。
+- 链接模式下，部署同一第一层角色目录里的另一个 Mod，会在同一可回滚事务中自动断开该角色的旧目录联接，再创建新联接。
+- 自动断链只处理目标确实指向同角色仓库 Mod 的目录联接，不删除普通复制目录，也不处理其他角色的链接。
+- 冲突扫描会忽略即将被自动断开的旧链接；失败时恢复切换前的旧链接。
+- 收紧路径区域排版，将链接模式开关与说明放进同一横向信息栏；在线解压错误现在显示压缩包文件名和具体原因。
+
+### English
+
+- Fixed false link detection when modern 7-Zip RAR listings include empty `Symbolic Link` and `Hard Link` properties; populated link targets remain blocked.
+- In link mode, deploying another mod under the same first-level character folder now disconnects the previous character junction and creates the new one in the same rollback-capable transaction.
+- Automatic disconnection only removes junctions that resolve to sibling Mods in the same character repository folder. Normal copied folders and other characters are left unchanged.
+- Conflict detection ignores links that are about to be replaced, and a failed switch restores the previous link.
+- Compacted the path section by placing the link toggle and explanation in one horizontal information bar; online extraction errors now include the archive name and the actual reason.
+
+## v3.8.3 - 目录联接部署实验 / Directory Junction Deployment Lab
+
+### 中文
+
+- 在未修改的 v3.8.0 基线上加入每仓库独立的“目录联接部署”开关，原复制模式继续保留。
+- 单个 Mod 和配置方案均可在目标 Mods 文件夹创建 Windows 目录联接，加载器与仓库使用同一份实际文件。
+- 链接状态单独显示为“已链接”；移除操作只删除 reparse point，不递归删除仓库目标。
+- 安装备份和撤销清单可以记录并恢复目录联接目标，不再尝试把链接目标完整复制进备份。
+- 新增真实文件系统测试，覆盖链接写入回仓库、安全移除、事务移动和路径循环保护。
+- 此模式只同步 Mod 文件夹内部写入；XXMI 的 `d3dx_user.ini` 位于 EFMI 根目录，不在目录联接范围内。
+
+### English
+
+- Added a per-repository directory-junction deployment option on the untouched v3.8.0 baseline while retaining copy deployment.
+- Individual mods and configuration profiles can create Windows directory junctions so the loader and repository use the same physical files.
+- Linked mods have a distinct UI state. Removal deletes only the reparse point and never recursively deletes the repository target.
+- Install transactions record and restore junction targets instead of copying the linked target into backup storage.
+- Added real filesystem tests for write-through behavior, safe removal, transactional moves, and path-cycle rejection.
+- This mode shares writes inside the mod folder only; XXMI's root-level `d3dx_user.ini` is outside the junction.
+
+## v3.8.1—v3.8.2 跨 Mod 状态实验（未发布） / Cross-Mod State Experiments (Not Released)
+
+### 中文
+
+- v3.8.1 Hot Injection Lab 尝试完整快照并热替换 `d3dx_user.ini`；共享文件覆盖范围过大，且 F10 重载可能先把旧内存值写回文件。
+- v3.8.1 Persistent State Lab 尝试只合并 `global persist` 标量，并分别实现离线恢复与临时桥接双 F10；它无法覆盖纯内存、复杂类型、后续命令重写和不同加载器分支时序。
+- v3.8.2 EFMI Resident Lab 尝试生成常驻受控 Mod 副本及方案控制器；只适用于能够证明完整门控的标准结构，未完成任意第三方 Mod 兼容性、性能和真实游戏验证。
+- 三种原型均未进入正式发布。通用的跨 Mod `$变量` 自动保存与恢复目前标记为**暂时无法实现**；完整结论见 [试验路线与当前结论](./docs/跨Mod状态保存试验结论.md)。
+
+### English
+
+- v3.8.1 Hot Injection Lab snapshotted and hot-replaced the entire `d3dx_user.ini`; the shared-file scope was too broad, and F10 reload could write stale in-memory values over the replacement.
+- v3.8.1 Persistent State Lab merged scalar `global persist` values through offline restore or a temporary two-F10 bridge; it could not cover in-memory-only state, complex types, later command overrides, or loader-specific sequencing.
+- v3.8.2 EFMI Resident Lab generated resident controlled mod copies and a profile controller; it only supported structures with provable complete gating and lacked arbitrary third-party compatibility, performance, and real-game validation.
+- None of these prototypes entered a release. Universal automatic persistence and restoration of cross-mod `$variables` is currently marked **temporarily infeasible**; see [Experiment Routes and Current Conclusions](./docs/跨Mod状态保存试验结论.md).
+
 ## v3.8.0 - 重要更新 / Major Update
 
 ### 中文

@@ -24,7 +24,7 @@
 
 Integrated Mod Manager organizes different games or mod environments into independent repositories. It copies or removes complete mod folders between a local library and the target directory read by the game, while keeping preview images, source links, shortcut notes, online downloads, update records, profiles, and installation backups in one application.
 
-The current stable release is **v3.8.0**, with file version `3.8.0.0`. The tool is maintained by `uyujkk`.
+The current stable release is **v3.8.5**, with file version `3.8.5.0`. The tool is maintained by `uyujkk`.
 
 ## Core Features
 
@@ -32,6 +32,7 @@ The current stable release is **v3.8.0**, with file version `3.8.0.0`. The tool 
 | --- | --- |
 | Multiple repositories | Keep separate paths and online categories for different games or XXMI setups |
 | Local mod switching | Browse, search, copy, remove, create, rename, and delete two-level mod folders |
+| Optional directory junctions | Let the loader and library share one mod directory, safely replacing the previous link for the same character |
 | Archive import | Import ZIP, 7Z, RAR, ZIPX, CAB, TAR, and common compressed stream formats |
 | Previews and notes | Store an image, source link, shortcut keys, and action descriptions for each mod |
 | Online mod browser | Browse GameBanana entries, filter by character, view details, and download and extract mods |
@@ -78,13 +79,13 @@ Mod Storage Folder
 
 The first level is a character, purpose, or other category. The second level contains the complete mod folders managed by the app.
 
-## v3.8.0 Major Update
+## v3.8.5 Major Update
 
-- Hardened folder copy, deletion, and archive import against traversal, symbolic links, hard links, and reparse-point escapes.
-- Hardened automatic updates with package-structure checks, filename-bound SHA-256 verification, a managed-file manifest, and startup rollback.
-- Added cancellation for obsolete online requests and timeout, media-type, and size limits for preview downloads.
-- Fixed locked update temporary files and strengthened SQLite, backup recovery, cleanup, and error reporting.
-- Expanded automated verification to **62 tests**, with CI coverage gates, a WinUI x64 build, and minimal release-package validation.
+- Added optional Windows directory-junction deployment so writes inside a linked mod folder stay in the library; copy deployment remains available.
+- Switching to another linked mod for the same character safely disconnects the previous junction without touching copied folders or other characters.
+- Fixed false RAR link detection with modern 7-Zip, selection-time crashes, and regressing or jumping download progress.
+- Documented the cross-mod `$variable` research outcome: the v3.8.1/v3.8.2 prototypes are not reliable for arbitrary third-party mods and are not shipped.
+- Expanded automated verification to **99 tests**, with CI coverage gates, a WinUI x64 build, and minimal release-package validation.
 
 See [CHANGELOG.md](./CHANGELOG.md) for the complete bilingual history and [更新报告.md](./更新报告.md) for the current release report.
 
@@ -95,6 +96,7 @@ See [CHANGELOG.md](./CHANGELOG.md) for the complete bilingual history and [更�
 | Quick use | [快速使用手册](./快速使用手册.md) | [Quick Start](./Quick-Start.en.md) |
 | Complete guide | [详细中文手册](./docs/用户手册.zh-CN.md) | [Complete User Guide](./docs/User-Guide.en.md) |
 | Release history | [Bilingual Changelog](./CHANGELOG.md) | [Bilingual Changelog](./CHANGELOG.md) |
+| Cross-mod state experiments | [Current conclusions](./docs/跨Mod状态保存试验结论.md) | [Current conclusions](./docs/跨Mod状态保存试验结论.md) |
 | Tests and builds | [Testing Guide](./TESTING.md) | [Testing Guide](./TESTING.md) |
 | Contributions | [Contributing](./CONTRIBUTING.md) | [Contributing](./CONTRIBUTING.md) |
 | Security | [Security Policy](./SECURITY.md) | [Security Policy](./SECURITY.md) |
@@ -121,7 +123,7 @@ Run the complete test, coverage, WinUI x64 build, and package verification flow:
 powershell -NoProfile -ExecutionPolicy Bypass -File .\scripts\test-all.ps1
 ```
 
-The repository currently has 62 automated tests. GitHub Actions runs the same verification flow on pushes to `main`, pull requests, and manual dispatches. See [TESTING.md](./TESTING.md) for details.
+The repository currently has 99 automated tests. GitHub Actions runs the same verification flow on pushes to `main`, pull requests, and manual dispatches. See [TESTING.md](./TESTING.md) for details.
 
 ## Data and Security
 

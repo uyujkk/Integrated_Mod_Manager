@@ -295,11 +295,24 @@
                             <Button x:Name="OpenLauncherButton" Grid.Column="3" Click="OnOpenLauncherClicked" Style="{StaticResource SecondaryButtonStyle}" />
                         </Grid>
 
-                        <TextBlock
-                            x:Name="PathHintTextBlock"
-                            Grid.Row="4"
-                            Style="{StaticResource MutedTextStyle}"
-                            TextWrapping="Wrap" />
+                        <Border Grid.Row="4" Padding="14,10" Style="{StaticResource InsetBorderStyle}">
+                            <Grid ColumnSpacing="20">
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="Auto" />
+                                    <ColumnDefinition Width="*" />
+                                </Grid.ColumnDefinitions>
+                                <ToggleSwitch
+                                    x:Name="LinkDeploymentToggleSwitch"
+                                    VerticalAlignment="Center"
+                                    Toggled="OnLinkDeploymentToggled" />
+                                <TextBlock
+                                    x:Name="PathHintTextBlock"
+                                    Grid.Column="1"
+                                    VerticalAlignment="Center"
+                                    Style="{StaticResource MutedTextStyle}"
+                                    TextWrapping="Wrap" />
+                            </Grid>
+                        </Border>
 
                         <Grid Grid.Row="5" ColumnSpacing="14">
                             <Grid.ColumnDefinitions>

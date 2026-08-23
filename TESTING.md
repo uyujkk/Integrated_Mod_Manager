@@ -14,9 +14,9 @@ Requirements: Windows, .NET SDK 8, Visual Studio 2022 or Build Tools with the Wi
 powershell -NoProfile -ExecutionPolicy Bypass -File .\scripts\test-all.ps1
 ```
 
-The script runs 62 tests in three suites, enforces coverage gates, builds the WinUI x64 application, compiles both launcher executables, and verifies a minimal release ZIP. Results are written to `artifacts/verification`.
+The script runs 99 tests in three suites, enforces coverage gates, builds the WinUI x64 application, compiles both launcher executables, and verifies a minimal release ZIP. Results are written to `artifacts/verification`.
 
-脚本会串行运行三组共 62 项测试、执行覆盖率门槛、构建 WinUI x64 应用、编译两个启动程序，并验证精简发布 ZIP。结果位于 `artifacts/verification`。
+脚本会串行运行三组共 99 项测试、执行覆盖率门槛、构建 WinUI x64 应用、编译两个启动程序，并验证精简发布 ZIP。结果位于 `artifacts/verification`。
 
 ## Test only / 只运行测试
 

@@ -25,6 +25,7 @@ function Test-IsUserStatePath {
     $normalized = $RelativePath.Replace('/', '\')
     $fileName = [IO.Path]::GetFileName($normalized)
     if ($fileName.EndsWith('.pdb', [StringComparison]::OrdinalIgnoreCase) -or
+        $fileName.EndsWith('.log', [StringComparison]::OrdinalIgnoreCase) -or
         $fileName.EndsWith('.download', [StringComparison]::OrdinalIgnoreCase)) {
         return $true
     }

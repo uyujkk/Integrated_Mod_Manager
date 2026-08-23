@@ -24,7 +24,7 @@
 
 集成化 Mod 管理器以独立“仓库”管理不同游戏或不同 Mod 环境。它可以在本地仓库和游戏实际读取的目标目录之间复制或移除完整 Mod 文件夹，并集中管理预览图、来源链接、快捷键说明、在线下载、更新记录、配置方案和安装备份。
 
-当前稳定版本为 **v3.8.0**，文件版本为 `3.8.0.0`，工具作者为 `uyujkk`。
+当前稳定版本为 **v3.8.5**，文件版本为 `3.8.5.0`，工具作者为 `uyujkk`。
 
 ## 核心功能
 
@@ -32,6 +32,7 @@
 | --- | --- |
 | 多仓库管理 | 为不同游戏、角色或 XXMI 配置保存独立路径与在线分类 |
 | 本地 Mod 切换 | 使用两层目录浏览、搜索、复制、移除、创建、重命名和删除 Mod |
+| 可选目录联接 | 让加载器与仓库使用同一份 Mod 目录；同角色切换时安全断开旧联接 |
 | 压缩包导入 | 支持 ZIP、7Z、RAR、ZIPX、CAB、TAR 及常见压缩流格式 |
 | 预览与说明 | 为每个 Mod 保存预览图、来源链接、快捷键和功能描述 |
 | 在线 Mod 浏览 | 浏览 GameBanana 条目，按角色筛选，查看图片与说明并下载解压 |
@@ -78,13 +79,13 @@ Mod 存储文件夹
 
 第一层是角色、用途或其他分类；第二层是程序实际复制、移除和记录信息的完整 Mod 文件夹。
 
-## v3.8.0 重要更新
+## v3.8.5 重要更新
 
-- 加固文件复制、删除和压缩包导入，阻止目录穿越、符号链接、硬链接与重解析点越界。
-- 加固自动更新，增加发布包结构检查、SHA-256 文件名绑定校验、受管文件清单和启动失败回滚。
-- 在线请求支持取消过期任务；图片下载增加超时、媒体类型和大小限制。
-- 修复更新临时文件被占用的问题，并增强 SQLite、备份恢复和清理错误记录。
-- 自动化测试扩展至 **62 项**，CI 同时检查覆盖率、WinUI x64 构建和精简发布包。
+- 新增可选的 Windows 目录联接部署，加载器对 Mod 文件夹内部文件的写入可直接保留在仓库；原复制模式继续保留。
+- 同一角色切换到另一个链接 Mod 时自动、安全地断开旧联接；普通复制目录与其他角色不受影响。
+- 修复新版 7-Zip 的 RAR 空链接字段误报、选择 Mod 导致程序崩溃，以及下载中心进度条倒退和乱跳。
+- 明确跨 Mod `$变量` 保存的实验结论：v3.8.1/v3.8.2 原型暂时无法可靠通用于任意第三方 Mod，不包含在发布包中。
+- 自动化验证扩展至 **99 项测试**，CI 同时检查覆盖率、WinUI x64 构建和精简发布包。
 
 完整版本历史请查看 [CHANGELOG.md](./CHANGELOG.md)，当前版本摘要请查看 [更新报告.md](./更新报告.md)。
 
@@ -95,6 +96,7 @@ Mod 存储文件夹
 | 快速使用 | [快速使用手册](./快速使用手册.md) | [Quick Start](./Quick-Start.en.md) |
 | 完整用户手册 | [详细中文手册](./docs/用户手册.zh-CN.md) | [Complete User Guide](./docs/User-Guide.en.md) |
 | 更新历史 | [双语更新日志](./CHANGELOG.md) | [Bilingual Changelog](./CHANGELOG.md) |
+| 跨 Mod 状态试验 | [试验路线与当前结论](./docs/跨Mod状态保存试验结论.md) | [Current conclusions](./docs/跨Mod状态保存试验结论.md) |
 | 测试与构建 | [测试说明](./TESTING.md) | [Testing Guide](./TESTING.md) |
 | 参与项目 | [贡献指南](./CONTRIBUTING.md) | [Contributing](./CONTRIBUTING.md) |
 | 安全问题 | [安全策略](./SECURITY.md) | [Security Policy](./SECURITY.md) |
@@ -121,7 +123,7 @@ cmd /c build_winui.bat
 powershell -NoProfile -ExecutionPolicy Bypass -File .\scripts\test-all.ps1
 ```
 
-当前自动化验证包含 62 项测试。GitHub Actions 会在推送到 `main`、Pull Request 和手动触发时执行相同流程。详细信息见 [TESTING.md](./TESTING.md)。
+当前自动化验证包含 99 项测试。GitHub Actions 会在推送到 `main`、Pull Request 和手动触发时执行相同流程。详细信息见 [TESTING.md](./TESTING.md)。
 
 ## 数据与安全
 

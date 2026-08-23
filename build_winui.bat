@@ -33,14 +33,14 @@ if not exist "%PROJECT%" (
 echo Building WinUI 3 project...
 if exist "%MSBUILD%" (
   echo Using MSBuild: %MSBUILD%
-  "%MSBUILD%" "%PROJECT%" /restore /t:Build /p:Configuration=Release /p:Platform=x64 /p:RestoreIgnoreFailedSources=true || exit /b 1
+  "%MSBUILD%" "%PROJECT%" /restore /t:Build /p:Configuration=Release /p:Platform=x64 /p:RestoreIgnoreFailedSources=true /p:NoWarn=CA1416 || exit /b 1
 ) else (
   if not exist "%DOTNET%" (
     echo Neither MSBuild nor dotnet SDK was found.
     exit /b 1
   )
   echo MSBuild not found, falling back to dotnet build.
-  "%DOTNET%" build "%PROJECT%" -c Release -p:Platform=x64 -p:RestoreIgnoreFailedSources=true || exit /b 1
+  "%DOTNET%" build "%PROJECT%" -c Release -p:Platform=x64 -p:RestoreIgnoreFailedSources=true -p:NoWarn=CA1416 || exit /b 1
 )
 
 if not exist "%ROOT%\dist" mkdir "%ROOT%\dist"
