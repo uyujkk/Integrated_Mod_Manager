@@ -198,6 +198,7 @@ public sealed partial class MainWindow : Window
     private readonly string _configurationBackupPath = Path.Combine(AppContext.BaseDirectory, "backups", "config");
     private readonly string _modInstallBackupPath = Path.Combine(AppContext.BaseDirectory, "backups", "mod-installs");
     private readonly HttpClient _httpClient = CreateHttpClient();
+    private readonly RequestCooldown _onlineRateLimit = new();
     private readonly SemaphoreSlim _onlineCharacterAvatarDownloadGate = new(3, 3);
     private readonly ObservableCollection<FirstLevelFolderItem> _firstLevelItems = [];
     private readonly ObservableCollection<SecondLevelFolderItem> _secondLevelItems = [];
@@ -287,8 +288,6 @@ public sealed partial class MainWindow : Window
     private int _onlineDetailAnimationVersion;
     private int _onlineDownloadEnrichmentVersion;
     private int _onlineModRequestVersion;
-    private int _onlineRateLimitStrikeCount;
-    private DateTimeOffset? _onlineRateLimitUntilUtc;
     private DateTimeOffset _lastDownloadTaskUiRefreshUtc = DateTimeOffset.MinValue;
     private CancellationTokenSource? _onlineModListCancellation;
     private bool _animateOnlineCardsOnNextRefresh;
@@ -3505,32 +3504,17 @@ public sealed partial class MainWindow : Window
 
     private bool TryGetOnlineRateLimitDelay(out TimeSpan remaining)
     {
-        remaining = (_onlineRateLimitUntilUtc ?? DateTimeOffset.MinValue) - DateTimeOffset.UtcNow;
-        if (remaining > TimeSpan.Zero)
-        {
-            return true;
-        }
-
-        _onlineRateLimitUntilUtc = null;
-        remaining = TimeSpan.Zero;
-        return false;
+        return _onlineRateLimit.TryGetRemaining(out remaining);
     }
 
     private TimeSpan RegisterOnlineRateLimit(TimeSpan? serverRetryAfter)
     {
-        _onlineRateLimitStrikeCount = Math.Min(_onlineRateLimitStrikeCount + 1, 6);
-        double seconds = Math.Min(300, 15 * Math.Pow(2, _onlineRateLimitStrikeCount - 1));
-        TimeSpan delay = serverRetryAfter is { } serverDelay && serverDelay > TimeSpan.Zero
-            ? TimeSpan.FromSeconds(Math.Min(600, Math.Max(seconds, serverDelay.TotalSeconds)))
-            : TimeSpan.FromSeconds(seconds);
-        _onlineRateLimitUntilUtc = DateTimeOffset.UtcNow.Add(delay);
-        return delay;
+        return _onlineRateLimit.Register(serverRetryAfter);
     }
 
     private void ResetOnlineRateLimit()
     {
-        _onlineRateLimitStrikeCount = 0;
-        _onlineRateLimitUntilUtc = null;
+        _onlineRateLimit.Reset();
     }
 
     private (string Zh, string En) FormatOnlineCacheAge(DateTimeOffset? cachedAtUtc, bool stale)

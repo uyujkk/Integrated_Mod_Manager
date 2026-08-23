@@ -47,3 +47,13 @@ jobs:
             !WinUI3/bin/**/*.pdb
           if-no-files-found: error
           retention-days: 7
+      - name: Upload verified release package
+        if: success()
+        uses: actions/upload-artifact@v4
+        with:
+          name: verified-release-package-${{ github.sha }}
+          path: |
+            artifacts/verification/ReleasePackage/*.zip
+            artifacts/verification/ReleasePackage/*.sha256
+          if-no-files-found: error
+          retention-days: 7

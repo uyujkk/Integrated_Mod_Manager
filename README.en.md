@@ -59,7 +59,7 @@ Integrated Mod Manager is designed to:
 - Online requests cancel obsolete work, while preview downloads enforce timeout, media-type, and size limits; important failures are recorded in sanitized logs instead of being silently ignored.
 - SQLite writes, backup recovery, and update cleanup have stronger boundary checks and error reporting.
 - Fixed the `.zip.download` temporary file remaining locked after an automatic-update download, and now reject symbolic-link and reparse-point entries in update ZIP packages.
-- Expanded automated coverage to 45 tests. The local script and GitHub Actions share the same verification path for both suites, coverage collection, and builds of the WinUI x64 app, launcher, and update agent. See [Testing](./TESTING.md).
+- Expanded automated coverage to 62 tests. The local script and GitHub Actions share one verification path for core safety logic, SQLite persistence, update transactions, coverage gates, the WinUI x64 build, and the minimal release package. See [Testing](./TESTING.md).
 
 ## v3.6.1 Highlights
 
@@ -333,24 +333,30 @@ dist/
 
 ## Automated Tests
 
-The core test suite covers archive path boundaries and SHA-256 parsing for application updates. Tests exercise the same `IntegratedModManager.Core` library referenced by the application instead of a duplicate test-only implementation.
+The repository now has 62 automated tests covering path boundaries, update verification, request cooldown state, SQLite caches/favorites/file indexes, file replacement, preserved configuration, and update rollback. Tests exercise the production assemblies referenced by the app instead of duplicate test-only implementations.
 
 ```powershell
-dotnet test Tests/IntegratedModManager.Core.Tests.csproj --configuration Release
+powershell -NoProfile -ExecutionPolicy Bypass -File .\scripts\test-all.ps1
 ```
 
 GitHub Actions runs the following checks for pushes to `main`, pull requests, and manual workflow dispatches:
 
-- Run all core tests on a Windows runner.
-- Build the WinUI 3 x64 Release configuration after tests pass.
-- Upload the `.trx` test report whether tests pass or fail.
+- Run three suites with 62 tests and collect Cobertura coverage.
+- Enforce separate line and branch coverage gates for the core, data, and updater assemblies.
+- Build WinUI 3 x64 Release, the outer launcher, and the local updater, then verify version consistency.
+- Create a minimal ZIP without configuration, caches, logs, PDBs, or manuals and validate its required files and managed-file manifest.
+- Upload `.trx` reports, coverage, verified build outputs, and the checked release ZIP.
 
 ## Repository Layout
 
 ```text
 WinUI3/            WinUI 3 application source and assets
 IntegratedModManager.Core/  Independently testable safety logic
-Tests/             xUnit automated test project
+IntegratedModManager.Data/  SQLite cache, favorites, and mod file index
+Tests/             Core xUnit test project
+DataStoreTests/    Real temporary SQLite database tests
+UpdaterTests/      Local update transaction and rollback tests
+scripts/           Unified tests, coverage gates, and package verification
 .github/workflows/ GitHub Actions build and test workflow
 WinUILauncher.cs   Outer launcher
 build_winui.bat    Windows build and output preparation script

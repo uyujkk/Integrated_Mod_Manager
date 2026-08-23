@@ -36,6 +36,19 @@ public sealed class LocalUpdateAgentTests
     }
 
     [Fact]
+    public void ExtractZipSafely_CreatesExplicitDirectoryEntries()
+    {
+        using var directory = new TemporaryDirectory();
+        string archivePath = Path.Combine(directory.Path, "update.zip");
+        string destination = Path.Combine(directory.Path, "payload");
+        CreateArchive(archivePath, archive => archive.CreateEntry("WinUI3/cache/"));
+
+        LocalUpdateAgent.ExtractZipSafely(archivePath, destination);
+
+        Assert.True(Directory.Exists(Path.Combine(destination, "WinUI3", "cache")));
+    }
+
+    [Fact]
     public void ExtractZipSafely_RejectsParentTraversal()
     {
         using var directory = new TemporaryDirectory();
@@ -139,6 +152,19 @@ public sealed class LocalUpdateAgentTests
     }
 
     [Fact]
+    public void GetRelativePath_ReturnsNestedPathAndRejectsOutsideFile()
+    {
+        using var directory = new TemporaryDirectory();
+        string root = Path.Combine(directory.Path, "root");
+        string nested = Path.Combine(root, "WinUI3", "app.dll");
+        string outside = Path.Combine(directory.Path, "outside.dll");
+        Directory.CreateDirectory(Path.GetDirectoryName(nested)!);
+
+        Assert.Equal(Path.Combine("WinUI3", "app.dll"), LocalUpdateAgent.GetRelativePath(root, nested));
+        Assert.Throws<InvalidOperationException>(() => LocalUpdateAgent.GetRelativePath(root, outside));
+    }
+
+    [Fact]
     public void PayloadTransaction_RollbackRestoresReplacedFilesAndRemovesCreatedFiles()
     {
         using var directory = new TemporaryDirectory();
@@ -163,6 +189,86 @@ public sealed class LocalUpdateAgentTests
 
         Assert.Equal("old app", File.ReadAllText(Path.Combine(install, "WinUI3", "app.dll")));
         Assert.False(File.Exists(Path.Combine(install, "WinUI3", "new.dll")));
+    }
+
+    [Fact]
+    public void PayloadTransaction_SuccessPreservesConfigurationAndRemovesObsoleteManagedFiles()
+    {
+        using var directory = new TemporaryDirectory();
+        string payload = Path.Combine(directory.Path, "payload");
+        string install = Path.Combine(directory.Path, "install");
+        string backup = Path.Combine(directory.Path, "backup");
+        Directory.CreateDirectory(Path.Combine(payload, "WinUI3"));
+        Directory.CreateDirectory(Path.Combine(install, "WinUI3", "cache"));
+        File.WriteAllText(Path.Combine(payload, "ModFolderCopier.exe"), "new launcher");
+        File.WriteAllText(Path.Combine(payload, "WinUI3", "ModFolderCopier.WinUI.exe"), "new runtime");
+        File.WriteAllText(Path.Combine(payload, "WinUI3", "config.ini"), "package config");
+        File.WriteAllText(Path.Combine(install, "ModFolderCopier.exe"), "old launcher");
+        File.WriteAllText(Path.Combine(install, "WinUI3", "ModFolderCopier.WinUI.exe"), "old runtime");
+        File.WriteAllText(Path.Combine(install, "WinUI3", "obsolete.dll"), "obsolete");
+        File.WriteAllText(Path.Combine(install, "WinUI3", "config.ini"), "user config");
+        File.WriteAllText(Path.Combine(install, "WinUI3", "cache", "page.json"), "user cache");
+        File.WriteAllLines(Path.Combine(install, ".managed-files.txt"),
+        [
+            "ModFolderCopier.exe",
+            Path.Combine("WinUI3", "ModFolderCopier.WinUI.exe"),
+            Path.Combine("WinUI3", "obsolete.dll"),
+            ".managed-files.txt"
+        ]);
+
+        HashSet<string> newManagedFiles = LocalUpdateAgent.BuildPayloadManagedFileSet(payload);
+        HashSet<string> previousManagedFiles = LocalUpdateAgent.ReadManagedFileSet(install);
+        List<string> obsoleteFiles = previousManagedFiles
+            .Except(newManagedFiles, StringComparer.OrdinalIgnoreCase)
+            .Where(path => !LocalUpdateAgent.IsPreserved(path))
+            .ToList();
+        var createdFiles = new List<string>();
+
+        LocalUpdateAgent.BackupFilesThatWillBeReplaced(payload, install, backup, obsoleteFiles);
+        LocalUpdateAgent.CopyPayload(payload, install, createdFiles);
+        LocalUpdateAgent.DeleteObsoleteManagedFiles(install, obsoleteFiles);
+        LocalUpdateAgent.WriteManagedFileSet(install, newManagedFiles, createdFiles);
+        LocalUpdateAgent.RestorePreservedConfiguration(backup, install);
+
+        Assert.Equal("new launcher", File.ReadAllText(Path.Combine(install, "ModFolderCopier.exe")));
+        Assert.Equal("new runtime", File.ReadAllText(Path.Combine(install, "WinUI3", "ModFolderCopier.WinUI.exe")));
+        Assert.False(File.Exists(Path.Combine(install, "WinUI3", "obsolete.dll")));
+        Assert.Equal("user config", File.ReadAllText(Path.Combine(install, "WinUI3", "config.ini")));
+        Assert.Equal("user cache", File.ReadAllText(Path.Combine(install, "WinUI3", "cache", "page.json")));
+        Assert.Equal(
+            newManagedFiles.OrderBy(path => path, StringComparer.OrdinalIgnoreCase),
+            LocalUpdateAgent.ReadManagedFileSet(install).OrderBy(path => path, StringComparer.OrdinalIgnoreCase));
+    }
+
+    [Fact]
+    public void PayloadTransaction_RollbackRestoresDeletedObsoleteFileAndManifest()
+    {
+        using var directory = new TemporaryDirectory();
+        string payload = Path.Combine(directory.Path, "payload");
+        string install = Path.Combine(directory.Path, "install");
+        string backup = Path.Combine(directory.Path, "backup");
+        Directory.CreateDirectory(Path.Combine(payload, "WinUI3"));
+        Directory.CreateDirectory(Path.Combine(install, "WinUI3"));
+        File.WriteAllText(Path.Combine(payload, "WinUI3", "new.dll"), "new");
+        File.WriteAllText(Path.Combine(install, "WinUI3", "obsolete.dll"), "old obsolete");
+        File.WriteAllLines(Path.Combine(install, ".managed-files.txt"),
+            [Path.Combine("WinUI3", "obsolete.dll"), ".managed-files.txt"]);
+        string obsolete = Path.Combine("WinUI3", "obsolete.dll");
+        var createdFiles = new List<string>();
+
+        LocalUpdateAgent.BackupFilesThatWillBeReplaced(payload, install, backup, [obsolete]);
+        LocalUpdateAgent.CopyPayload(payload, install, createdFiles);
+        LocalUpdateAgent.DeleteObsoleteManagedFiles(install, [obsolete]);
+        LocalUpdateAgent.WriteManagedFileSet(
+            install,
+            [Path.Combine("WinUI3", "new.dll"), ".managed-files.txt"],
+            createdFiles);
+
+        LocalUpdateAgent.RollBackFiles(backup, install, createdFiles);
+
+        Assert.Equal("old obsolete", File.ReadAllText(Path.Combine(install, obsolete)));
+        Assert.False(File.Exists(Path.Combine(install, "WinUI3", "new.dll")));
+        Assert.Contains(obsolete, LocalUpdateAgent.ReadManagedFileSet(install));
     }
 
     [Fact]
@@ -200,6 +306,27 @@ public sealed class LocalUpdateAgentTests
         LocalUpdateAgent.RestorePreservedConfiguration(backup, install);
 
         Assert.Equal("restored", File.ReadAllText(Path.Combine(install, "config.ini")));
+    }
+
+    [Fact]
+    public void CopyPayload_DoesNotInstallPackagedUserState()
+    {
+        using var directory = new TemporaryDirectory();
+        string payload = Path.Combine(directory.Path, "payload");
+        string install = Path.Combine(directory.Path, "install");
+        Directory.CreateDirectory(Path.Combine(payload, "WinUI3", "cache"));
+        File.WriteAllText(Path.Combine(payload, "config.ini"), "root config");
+        File.WriteAllText(Path.Combine(payload, "WinUI3", "config.ini"), "runtime config");
+        File.WriteAllText(Path.Combine(payload, "WinUI3", "cache", "page.json"), "cache");
+        File.WriteAllText(Path.Combine(payload, "application.dll"), "application");
+        var createdFiles = new List<string>();
+
+        LocalUpdateAgent.CopyPayload(payload, install, createdFiles);
+
+        Assert.True(File.Exists(Path.Combine(install, "application.dll")));
+        Assert.False(File.Exists(Path.Combine(install, "config.ini")));
+        Assert.False(File.Exists(Path.Combine(install, "WinUI3", "config.ini")));
+        Assert.False(File.Exists(Path.Combine(install, "WinUI3", "cache", "page.json")));
     }
 
     private static void CreateArchive(string path, Action<ZipArchive> build)

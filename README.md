@@ -59,7 +59,7 @@
 - 在线请求可取消过期任务，预览图下载增加超时、类型与大小限制；关键异常写入脱敏日志，避免静默失败和资源无上限占用。
 - SQLite 写入、备份恢复与更新清理流程增强错误记录和边界保护。
 - 修复自动更新下载完成后 `.zip.download` 临时文件仍被占用的问题，并进一步拒绝更新 ZIP 中的符号链接与重解析点条目。
-- 自动化测试扩展至 45 项；本地脚本与 GitHub Actions 使用同一验证流程，运行两套测试、收集覆盖率并构建 WinUI x64 应用、启动器和更新代理。详见 [测试说明](./TESTING.md)。
+- 自动化测试扩展至 62 项；本地脚本与 GitHub Actions 使用同一验证流程，覆盖核心安全逻辑、SQLite 持久化和更新事务，并检查覆盖率、WinUI x64 构建与精简发布包。详见 [测试说明](./TESTING.md)。
 
 ## v3.6.1 更新重点
 
@@ -333,24 +333,30 @@ dist/
 
 ## 自动化测试
 
-核心测试覆盖压缩包路径边界和自动更新 SHA-256 校验解析。测试调用的是主程序实际引用的 `IntegratedModManager.Core`，而不是另写一份测试替身。
+当前共有 62 项自动化测试，覆盖路径边界、更新校验、网络限流状态、SQLite 缓存/收藏/文件索引，以及更新文件替换、配置保留和失败回滚。测试调用主程序实际引用的生产程序集，不使用另写的测试替身。
 
 ```powershell
-dotnet test Tests/IntegratedModManager.Core.Tests.csproj --configuration Release
+powershell -NoProfile -ExecutionPolicy Bypass -File .\scripts\test-all.ps1
 ```
 
 GitHub Actions 会在推送到 `main`、创建或更新 Pull Request，以及手动触发时执行以下检查：
 
-- 在 Windows runner 上运行全部核心测试。
-- 在测试通过后编译 WinUI 3 x64 Release。
-- 无论测试成功或失败，都上传 `.trx` 测试结果供排查。
+- 串行运行三组共 62 项测试并收集 Cobertura 覆盖率。
+- 强制执行核心、数据层和更新代理各自的行/分支覆盖率门槛。
+- 编译 WinUI 3 x64 Release、外层启动器和本地更新器，并检查版本一致性。
+- 生成不含配置、缓存、日志、PDB 和说明文档的精简 ZIP，校验必要文件与受管清单。
+- 上传 `.trx`、覆盖率、构建输出和已验证发布 ZIP 供排查或下载。
 
 ## 项目结构
 
 ```text
 WinUI3/            WinUI 3 主程序源码与资源
 IntegratedModManager.Core/  可独立测试的核心安全逻辑
-Tests/             xUnit 自动化测试工程
+IntegratedModManager.Data/  SQLite 缓存、收藏和 Mod 文件索引
+Tests/             核心逻辑 xUnit 测试工程
+DataStoreTests/    SQLite 真实临时数据库测试工程
+UpdaterTests/      本地更新事务与回滚测试工程
+scripts/           统一测试、覆盖率和发布包验证脚本
 .github/workflows/ GitHub Actions 自动构建与测试
 WinUILauncher.cs   外层启动器
 build_winui.bat    Windows 构建与发布目录整理脚本

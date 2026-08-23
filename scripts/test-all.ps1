@@ -79,6 +79,40 @@ function Assert-FileExists {
     }
 }
 
+function Get-RepositoryRelativePath {
+    param([Parameter(Mandatory)] [string]$Path)
+
+    $fullPath = [IO.Path]::GetFullPath($Path)
+    if (!$fullPath.StartsWith($rootPrefix, [StringComparison]::OrdinalIgnoreCase)) {
+        throw "Path must resolve inside the repository: $fullPath"
+    }
+    return $fullPath.Substring($rootPrefix.Length)
+}
+
+function Assert-CoverageThreshold {
+    param(
+        [Parameter(Mandatory)] [string]$ResultsDirectory,
+        [Parameter(Mandatory)] [double]$MinimumLineRate,
+        [Parameter(Mandatory)] [double]$MinimumBranchRate
+    )
+
+    $coverageFile = Get-ChildItem -LiteralPath $ResultsDirectory -Recurse -Filter 'coverage.cobertura.xml' |
+        Sort-Object LastWriteTimeUtc -Descending |
+        Select-Object -First 1
+    if (!$coverageFile) {
+        throw "Coverage report was not produced in $ResultsDirectory"
+    }
+
+    [xml]$coverage = Get-Content -LiteralPath $coverageFile.FullName
+    $lineRate = [double]::Parse($coverage.coverage.'line-rate', [Globalization.CultureInfo]::InvariantCulture)
+    $branchRate = [double]::Parse($coverage.coverage.'branch-rate', [Globalization.CultureInfo]::InvariantCulture)
+    if ($lineRate -lt $MinimumLineRate -or $branchRate -lt $MinimumBranchRate) {
+        throw ("Coverage threshold failed for {0}: line={1:P1} (min {2:P0}), branch={3:P1} (min {4:P0})" -f
+            $ResultsDirectory, $lineRate, $MinimumLineRate, $branchRate, $MinimumBranchRate)
+    }
+    Write-Host ("Coverage passed: line={0:P1}, branch={1:P1}" -f $lineRate, $branchRate)
+}
+
 if (Test-Path -LiteralPath $artifacts) {
     Remove-Item -LiteralPath $artifacts -Recurse -Force
 }
@@ -86,8 +120,9 @@ New-Item -ItemType Directory -Path $testResults, $smokeOutput -Force | Out-Null
 
 $dotnetCommand = Get-Command dotnet.exe -ErrorAction Stop
 $testProjects = @(
-    @{ Name = "core"; Path = Join-Path $root "Tests\IntegratedModManager.Core.Tests.csproj" },
-    @{ Name = "updater"; Path = Join-Path $root "UpdaterTests\IntegratedModManager.UpdateAgent.Tests.csproj" }
+    @{ Name = "core"; Path = Join-Path $root "Tests\IntegratedModManager.Core.Tests.csproj"; Line = 0.90; Branch = 0.85 },
+    @{ Name = "datastore"; Path = Join-Path $root "DataStoreTests\IntegratedModManager.DataStore.Tests.csproj"; Line = 0.70; Branch = 0.60 },
+    @{ Name = "updater"; Path = Join-Path $root "UpdaterTests\IntegratedModManager.UpdateAgent.Tests.csproj"; Line = 0.60; Branch = 0.55 }
 )
 
 foreach ($testProject in $testProjects) {
@@ -103,6 +138,7 @@ foreach ($testProject in $testProjects) {
         "--results-directory", $projectResults,
         "--collect:XPlat Code Coverage"
     )
+    Assert-CoverageThreshold $projectResults $testProject.Line $testProject.Branch
 }
 
 if (!$SkipBuild) {
@@ -151,6 +187,17 @@ if (!$SkipBuild) {
     if (($declaredVersions | Select-Object -Unique).Count -ne 1) {
         throw "Application, launcher, and updater versions do not match: $($declaredVersions -join ', ')"
     }
+
+    $releaseSource = Join-Path $artifacts "ReleaseSource"
+    New-Item -ItemType Directory -Path (Join-Path $releaseSource "WinUI3") -Force | Out-Null
+    Copy-Item -LiteralPath $launcherOutput -Destination (Join-Path $releaseSource "ModFolderCopier.exe") -Force
+    Copy-Item -LiteralPath $updaterOutput -Destination (Join-Path $releaseSource "LocalUpdateAgent.exe") -Force
+    Copy-Item -Path (Join-Path (Split-Path -Parent $runtimeOutput) '*') `
+        -Destination (Join-Path $releaseSource "WinUI3") -Recurse -Force
+    & (Join-Path $root "scripts\package-release.ps1") `
+        -SourceDirectory (Get-RepositoryRelativePath $releaseSource) `
+        -OutputDirectory (Get-RepositoryRelativePath (Join-Path $artifacts "ReleasePackage")) |
+        Out-Host
 }
 
 Write-Host "All tests and build checks completed successfully."

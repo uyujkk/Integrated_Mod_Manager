@@ -5,6 +5,8 @@ WinUI3/bin/
 WinUI3/obj/
 IntegratedModManager.Core/bin/
 IntegratedModManager.Core/obj/
+IntegratedModManager.Data/bin/
+IntegratedModManager.Data/obj/
 IntegratedModManager.UpdateAgent.Core/bin/
 IntegratedModManager.UpdateAgent.Core/obj/
 Tests/bin/
@@ -13,6 +15,9 @@ Tests/TestResults/
 UpdaterTests/bin/
 UpdaterTests/obj/
 UpdaterTests/TestResults/
+DataStoreTests/bin/
+DataStoreTests/obj/
+DataStoreTests/TestResults/
 artifacts/
 *.pdb
 
