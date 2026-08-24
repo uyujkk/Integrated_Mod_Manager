@@ -4,7 +4,7 @@
 >
 > This is an unofficial fan-made tool. It is not affiliated with, authorized, endorsed, or sponsored by XXMI, any game publisher, or related developers.
 
-[中文详细手册](./用户手册.zh-CN.md) | [English Quick Start](../Quick-Start.en.md) | [Full Changelog](../CHANGELOG.md) | [Latest Release](https://github.com/uyujkk/Integrated_Mod_Manager/releases/latest)
+[中文详细手册](./用户手册.zh-CN.md) | [English Quick Start](./Quick-Start.en.md) | [Full Changelog](../releases/CHANGELOG.md) | [Documentation Index](../README.md) | [Latest Release](https://github.com/uyujkk/Integrated_Mod_Manager/releases/latest)
 
 ## 1. What the app does
 

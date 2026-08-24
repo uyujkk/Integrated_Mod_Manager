@@ -1,6 +1,6 @@
 # Integrated Mod Manager v3.8.5 - Quick Start
 
-[中文快速手册](./快速使用手册.md) | [Complete English Guide](https://github.com/uyujkk/Integrated_Mod_Manager/blob/main/docs/User-Guide.en.md)
+[中文快速手册](./快速使用手册.md) | [Complete English Guide](./User-Guide.en.md) | [Documentation Index](../README.md)
 
 ## Install and configure
 

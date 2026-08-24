@@ -11,9 +11,9 @@
   **中文** · [English](./README.en.md)
 
   [下载最新版](https://github.com/uyujkk/Integrated_Mod_Manager/releases/latest) ·
-  [快速手册](./快速使用手册.md) ·
-  [完整手册](./docs/用户手册.zh-CN.md) ·
-  [更新日志](./CHANGELOG.md) ·
+  [快速手册](./docs/guides/快速使用手册.md) ·
+  [完整手册](./docs/guides/用户手册.zh-CN.md) ·
+  [更新日志](./docs/releases/CHANGELOG.md) ·
   [提交问题](https://github.com/uyujkk/Integrated_Mod_Manager/issues/new/choose)
 </div>
 
@@ -87,17 +87,17 @@ Mod 存储文件夹
 - 明确跨 Mod `$变量` 保存的实验结论：v3.8.1/v3.8.2 原型暂时无法可靠通用于任意第三方 Mod，不包含在发布包中。
 - 自动化验证扩展至 **99 项测试**，CI 同时检查覆盖率、WinUI x64 构建和精简发布包。
 
-完整版本历史请查看 [CHANGELOG.md](./CHANGELOG.md)，当前版本摘要请查看 [更新报告.md](./更新报告.md)。
+完整版本历史请查看 [CHANGELOG](./docs/releases/CHANGELOG.md)，当前版本摘要请查看 [更新报告](./docs/releases/更新报告.md)。
 
 ## 文档导航
 
 | 文档 | 中文 | English |
 | --- | --- | --- |
-| 快速使用 | [快速使用手册](./快速使用手册.md) | [Quick Start](./Quick-Start.en.md) |
-| 完整用户手册 | [详细中文手册](./docs/用户手册.zh-CN.md) | [Complete User Guide](./docs/User-Guide.en.md) |
-| 更新历史 | [双语更新日志](./CHANGELOG.md) | [Bilingual Changelog](./CHANGELOG.md) |
-| 跨 Mod 状态试验 | [试验路线与当前结论](./docs/跨Mod状态保存试验结论.md) | [Current conclusions](./docs/跨Mod状态保存试验结论.md) |
-| 测试与构建 | [测试说明](./TESTING.md) | [Testing Guide](./TESTING.md) |
+| 快速使用 | [快速使用手册](./docs/guides/快速使用手册.md) | [Quick Start](./docs/guides/Quick-Start.en.md) |
+| 完整用户手册 | [详细中文手册](./docs/guides/用户手册.zh-CN.md) | [Complete User Guide](./docs/guides/User-Guide.en.md) |
+| 更新历史 | [双语更新日志](./docs/releases/CHANGELOG.md) | [Bilingual Changelog](./docs/releases/CHANGELOG.md) |
+| 跨 Mod 状态试验 | [试验路线与当前结论](./docs/research/跨Mod状态保存试验结论.md) | [Current conclusions](./docs/research/跨Mod状态保存试验结论.md) |
+| 测试与构建 | [测试说明](./docs/development/TESTING.md) | [Testing Guide](./docs/development/TESTING.md) |
 | 参与项目 | [贡献指南](./CONTRIBUTING.md) | [Contributing](./CONTRIBUTING.md) |
 | 安全问题 | [安全策略](./SECURITY.md) | [Security Policy](./SECURITY.md) |
 
@@ -123,7 +123,7 @@ cmd /c build_winui.bat
 powershell -NoProfile -ExecutionPolicy Bypass -File .\scripts\test-all.ps1
 ```
 
-当前自动化验证包含 99 项测试。GitHub Actions 会在推送到 `main`、Pull Request 和手动触发时执行相同流程。详细信息见 [TESTING.md](./TESTING.md)。
+当前自动化验证包含 99 项测试。GitHub Actions 会在推送到 `main`、Pull Request 和手动触发时执行相同流程。详细信息见 [测试说明](./docs/development/TESTING.md)。
 
 ## 数据与安全
 

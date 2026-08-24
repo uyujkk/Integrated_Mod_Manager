@@ -1,6 +1,6 @@
 # CHANGELOG / 更新日志
 
-[中文说明](./README.md) | [English README](./README.en.md) | [GitHub Releases](https://github.com/uyujkk/Integrated_Mod_Manager/releases)
+[中文说明](../../README.md) | [English README](../../README.en.md) | [文档索引 / Documentation Index](../README.md) | [GitHub Releases](https://github.com/uyujkk/Integrated_Mod_Manager/releases)
 
 本文档记录集成化 Mod 管理器已发布版本的主要变化。
 
@@ -75,14 +75,14 @@ This document records the major changes in published versions of Integrated Mod 
 - v3.8.1 Hot Injection Lab 尝试完整快照并热替换 `d3dx_user.ini`；共享文件覆盖范围过大，且 F10 重载可能先把旧内存值写回文件。
 - v3.8.1 Persistent State Lab 尝试只合并 `global persist` 标量，并分别实现离线恢复与临时桥接双 F10；它无法覆盖纯内存、复杂类型、后续命令重写和不同加载器分支时序。
 - v3.8.2 EFMI Resident Lab 尝试生成常驻受控 Mod 副本及方案控制器；只适用于能够证明完整门控的标准结构，未完成任意第三方 Mod 兼容性、性能和真实游戏验证。
-- 三种原型均未进入正式发布。通用的跨 Mod `$变量` 自动保存与恢复目前标记为**暂时无法实现**；完整结论见 [试验路线与当前结论](./docs/跨Mod状态保存试验结论.md)。
+- 三种原型均未进入正式发布。通用的跨 Mod `$变量` 自动保存与恢复目前标记为**暂时无法实现**；完整结论见 [试验路线与当前结论](../research/跨Mod状态保存试验结论.md)。
 
 ### English
 
 - v3.8.1 Hot Injection Lab snapshotted and hot-replaced the entire `d3dx_user.ini`; the shared-file scope was too broad, and F10 reload could write stale in-memory values over the replacement.
 - v3.8.1 Persistent State Lab merged scalar `global persist` values through offline restore or a temporary two-F10 bridge; it could not cover in-memory-only state, complex types, later command overrides, or loader-specific sequencing.
 - v3.8.2 EFMI Resident Lab generated resident controlled mod copies and a profile controller; it only supported structures with provable complete gating and lacked arbitrary third-party compatibility, performance, and real-game validation.
-- None of these prototypes entered a release. Universal automatic persistence and restoration of cross-mod `$variables` is currently marked **temporarily infeasible**; see [Experiment Routes and Current Conclusions](./docs/跨Mod状态保存试验结论.md).
+- None of these prototypes entered a release. Universal automatic persistence and restoration of cross-mod `$variables` is currently marked **temporarily infeasible**; see [Experiment Routes and Current Conclusions](../research/跨Mod状态保存试验结论.md).
 
 ## v3.8.0 - 重要更新 / Major Update
 

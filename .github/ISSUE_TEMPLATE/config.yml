@@ -1,7 +1,7 @@
 blank_issues_enabled: false
 contact_links:
   - name: 使用文档 / User Guide
-    url: https://github.com/uyujkk/Integrated_Mod_Manager/blob/main/docs/User-Guide.en.md
+    url: https://github.com/uyujkk/Integrated_Mod_Manager/blob/main/docs/guides/User-Guide.en.md
     about: 提交问题前请先查看完整手册。Read the complete guide before opening an issue.
   - name: 安全问题 / Security Issue
     url: https://github.com/uyujkk/Integrated_Mod_Manager/security

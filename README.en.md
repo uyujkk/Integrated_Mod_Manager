@@ -11,9 +11,9 @@
   [中文](./README.md) · **English**
 
   [Download Latest](https://github.com/uyujkk/Integrated_Mod_Manager/releases/latest) ·
-  [Quick Start](./Quick-Start.en.md) ·
-  [Full Guide](./docs/User-Guide.en.md) ·
-  [Changelog](./CHANGELOG.md) ·
+  [Quick Start](./docs/guides/Quick-Start.en.md) ·
+  [Full Guide](./docs/guides/User-Guide.en.md) ·
+  [Changelog](./docs/releases/CHANGELOG.md) ·
   [Report an Issue](https://github.com/uyujkk/Integrated_Mod_Manager/issues/new/choose)
 </div>
 
@@ -87,17 +87,17 @@ The first level is a character, purpose, or other category. The second level con
 - Documented the cross-mod `$variable` research outcome: the v3.8.1/v3.8.2 prototypes are not reliable for arbitrary third-party mods and are not shipped.
 - Expanded automated verification to **99 tests**, with CI coverage gates, a WinUI x64 build, and minimal release-package validation.
 
-See [CHANGELOG.md](./CHANGELOG.md) for the complete bilingual history and [更新报告.md](./更新报告.md) for the current release report.
+See the [Changelog](./docs/releases/CHANGELOG.md) for the complete bilingual history and the [Current Release Report](./docs/releases/更新报告.md) for the current release summary.
 
 ## Documentation
 
 | Document | Chinese | English |
 | --- | --- | --- |
-| Quick use | [快速使用手册](./快速使用手册.md) | [Quick Start](./Quick-Start.en.md) |
-| Complete guide | [详细中文手册](./docs/用户手册.zh-CN.md) | [Complete User Guide](./docs/User-Guide.en.md) |
-| Release history | [Bilingual Changelog](./CHANGELOG.md) | [Bilingual Changelog](./CHANGELOG.md) |
-| Cross-mod state experiments | [Current conclusions](./docs/跨Mod状态保存试验结论.md) | [Current conclusions](./docs/跨Mod状态保存试验结论.md) |
-| Tests and builds | [Testing Guide](./TESTING.md) | [Testing Guide](./TESTING.md) |
+| Quick use | [快速使用手册](./docs/guides/快速使用手册.md) | [Quick Start](./docs/guides/Quick-Start.en.md) |
+| Complete guide | [详细中文手册](./docs/guides/用户手册.zh-CN.md) | [Complete User Guide](./docs/guides/User-Guide.en.md) |
+| Release history | [Bilingual Changelog](./docs/releases/CHANGELOG.md) | [Bilingual Changelog](./docs/releases/CHANGELOG.md) |
+| Cross-mod state experiments | [Current conclusions](./docs/research/跨Mod状态保存试验结论.md) | [Current conclusions](./docs/research/跨Mod状态保存试验结论.md) |
+| Tests and builds | [Testing Guide](./docs/development/TESTING.md) | [Testing Guide](./docs/development/TESTING.md) |
 | Contributions | [Contributing](./CONTRIBUTING.md) | [Contributing](./CONTRIBUTING.md) |
 | Security | [Security Policy](./SECURITY.md) | [Security Policy](./SECURITY.md) |
 
@@ -123,7 +123,7 @@ Run the complete test, coverage, WinUI x64 build, and package verification flow:
 powershell -NoProfile -ExecutionPolicy Bypass -File .\scripts\test-all.ps1
 ```
 
-The repository currently has 99 automated tests. GitHub Actions runs the same verification flow on pushes to `main`, pull requests, and manual dispatches. See [TESTING.md](./TESTING.md) for details.
+The repository currently has 99 automated tests. GitHub Actions runs the same verification flow on pushes to `main`, pull requests, and manual dispatches. See the [Testing Guide](./docs/development/TESTING.md) for details.
 
 ## Data and Security
 
