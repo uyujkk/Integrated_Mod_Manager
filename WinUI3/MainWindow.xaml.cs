@@ -35,7 +35,7 @@ namespace ModFolderCopier.WinUI;
 
 public sealed partial class MainWindow : Window
 {
-    private const string AppVersion = "v3.8.0";
+    private const string AppVersion = "v3.8.2";
     private const string GitHubRepositoryUrl = "https://github.com/uyujkk/Integrated_Mod_Manager";
     private const string GitHubLatestReleaseApiUrl = "https://api.github.com/repos/uyujkk/Integrated_Mod_Manager/releases/latest";
     private const string DefaultOnlineSourceSite = "GameBanana";
@@ -957,6 +957,18 @@ public sealed partial class MainWindow : Window
         ApplyConfigurationProfileButton.Content = L("应用方案", "Apply Profile");
         DeleteConfigurationProfileButton.Content = new FontIcon { Glyph = "\uE74D", FontSize = 16 };
         ToolTipService.SetToolTip(DeleteConfigurationProfileButton, L("删除选中的配置方案", "Delete the selected profile"));
+        EfmiResidentTitleTextBlock.Text = L("EFMI 原生常驻方案（实验）", "EFMI Native Resident Profiles (Experimental)");
+        EfmiResidentHintTextBlock.Text = L(
+            "把当前仓库的全部配置方案转换为 EFMI 内部可切换的常驻控制器。仅生成独立副本，不修改原始 Mod、不读写 d3dx_user.ini，也不会直接写入 EFMI。",
+            "Convert all profiles in this repository into an EFMI-native resident controller. This only generates independent copies; source mods, d3dx_user.ini, and the EFMI installation are not modified.");
+        AnalyzeEfmiResidentButton.Content = L("分析全部方案兼容性", "Analyze All Profiles");
+        GenerateEfmiResidentButton.Content = L("生成到独立文件夹", "Generate to Separate Folder");
+        if (string.IsNullOrWhiteSpace(EfmiResidentStatusTextBlock.Text))
+        {
+            EfmiResidentStatusTextBlock.Text = L(
+                "仅标准 EFMI Tools 结构会自动通过；无法确认完整门控的 Mod 将被拒绝生成。",
+                "Only standard EFMI Tools layouts pass automatically; mods without verifiable complete gating are rejected.");
+        }
         InstallSafetyTitleTextBlock.Text = L("安装安全", "Install Safety");
         InstallSafetyHintTextBlock.Text = L("安装前检查相对文件路径冲突，并为复制、移除和方案切换建立可恢复备份。", "Check relative-file conflicts before installation and create recoverable backups for copy, removal, and profile changes.");
         ConflictDetectionToggleSwitch.Header = L("安装前检测冲突", "Detect conflicts before install");

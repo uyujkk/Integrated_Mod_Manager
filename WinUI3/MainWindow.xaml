@@ -1091,6 +1091,29 @@
 
                         <Border Style="{StaticResource CardBorderStyle}">
                             <StackPanel Spacing="12">
+                                <TextBlock x:Name="EfmiResidentTitleTextBlock" Style="{StaticResource SectionTitleTextStyle}" />
+                                <TextBlock x:Name="EfmiResidentHintTextBlock" Style="{StaticResource MutedTextStyle}" TextWrapping="Wrap" />
+                                <Grid ColumnSpacing="10">
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="*" />
+                                        <ColumnDefinition Width="*" />
+                                    </Grid.ColumnDefinitions>
+                                    <Button
+                                        x:Name="AnalyzeEfmiResidentButton"
+                                        Click="OnAnalyzeEfmiResidentClicked"
+                                        Style="{StaticResource SecondaryButtonStyle}" />
+                                    <Button
+                                        x:Name="GenerateEfmiResidentButton"
+                                        Grid.Column="1"
+                                        Click="OnGenerateEfmiResidentClicked"
+                                        Style="{StaticResource PrimaryButtonStyle}" />
+                                </Grid>
+                                <TextBlock x:Name="EfmiResidentStatusTextBlock" Style="{StaticResource CaptionTextStyle}" TextWrapping="Wrap" />
+                            </StackPanel>
+                        </Border>
+
+                        <Border Style="{StaticResource CardBorderStyle}">
+                            <StackPanel Spacing="12">
                                 <Grid ColumnSpacing="12">
                                     <Grid.ColumnDefinitions>
                                         <ColumnDefinition Width="*" />

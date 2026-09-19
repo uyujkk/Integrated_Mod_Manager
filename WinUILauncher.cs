@@ -8,9 +8,9 @@ using System.Windows.Forms;
 [assembly: AssemblyTitle("集成化mod管理器")]
 [assembly: AssemblyProduct("集成化mod管理器")]
 [assembly: AssemblyCopyright("Copyright (c) 2026 uyujkk")]
-[assembly: AssemblyVersion("3.8.0.0")]
-[assembly: AssemblyFileVersion("3.8.0.0")]
-[assembly: AssemblyInformationalVersion("3.8.0")]
+[assembly: AssemblyVersion("3.8.2.0")]
+[assembly: AssemblyFileVersion("3.8.2.0")]
+[assembly: AssemblyInformationalVersion("3.8.2-efmi-resident-lab")]
 
 internal static class WinUILauncher
 {

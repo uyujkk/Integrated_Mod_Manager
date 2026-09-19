@@ -6,6 +6,20 @@
 
 This document records the major changes in published versions of Integrated Mod Manager.
 
+## v3.8.2 - EFMI Resident Controller Lab
+
+- 基于未修改的 v3.8.0 主线开始开发，没有继承旧的状态文件恢复实验代码。
+- 新增保守的 EFMI Tools Mod 兼容性分析、常驻控制器生成和受控副本生成。
+- 不修改源 Mod、不读取或写入 `d3dx_user.ini`，并拒绝覆盖非空输出目录。
+- 在“Mod 更新”页新增实验入口，可分析当前仓库全部配置方案并生成到独立文件夹。
+- 新增兼容分类、INI 门控、控制器、输出安全和源文件不变性测试。
+
+- Started from the unchanged v3.8.0 mainline; no previous persistent-state experiment code was carried over.
+- Added conservative EFMI Tools compatibility analysis and EFMI-native resident controller generation.
+- Added guarded managed copies without editing source mods or `d3dx_user.ini`.
+- Added an experimental UI for analyzing and generating repository profiles into a separate folder.
+- Added tests for compatibility classification, INI gating, controller generation, output safety, and source immutability.
+
 ## v3.8.0 - 重要更新 / Major Update
 
 ### 中文
