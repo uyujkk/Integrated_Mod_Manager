@@ -136,3 +136,5 @@ The repository currently has 62 automated tests. GitHub Actions runs the same ve
 This project is available under the [MIT License](./LICENSE), copyright `uyujkk`. Third-party components retain their own licenses; bundled 7-Zip files include their license text.
 
 The tool does not include game files or mod content. Rights related to games, characters, images, mods, and third-party services belong to their respective owners.
+> [!CAUTION]
+> **Archived experiment:** This branch preserves the unreleased v3.8.1 Persistent State Lab for research and source history. It did not complete real-game compatibility validation for arbitrary third-party Mods and is not a supported release. Use the `main` branch and GitHub Releases for supported builds.

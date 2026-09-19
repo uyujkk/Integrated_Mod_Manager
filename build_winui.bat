@@ -33,7 +33,7 @@ if not exist "%PROJECT%" (
 echo Building WinUI 3 project...
 if exist "%MSBUILD%" (
   echo Using MSBuild: %MSBUILD%
-  "%MSBUILD%" "%PROJECT%" /restore /t:Build /p:Configuration=Release /p:Platform=x64 /p:RestoreIgnoreFailedSources=true || exit /b 1
+  "%MSBUILD%" "%PROJECT%" /restore /t:Build /p:Configuration=Release /p:Platform=x64 /p:RestoreForce=true /p:RestoreNoCache=true /p:RestoreIgnoreFailedSources=true || exit /b 1
 ) else (
   if not exist "%DOTNET%" (
     echo Neither MSBuild nor dotnet SDK was found.
@@ -41,6 +41,22 @@ if exist "%MSBUILD%" (
   )
   echo MSBuild not found, falling back to dotnet build.
   "%DOTNET%" build "%PROJECT%" -c Release -p:Platform=x64 -p:RestoreIgnoreFailedSources=true || exit /b 1
+)
+
+if not exist "%SOURCE%\Microsoft.WinUI.dll" (
+  echo Windows App SDK runtime is incomplete: Microsoft.WinUI.dll is missing.
+  exit /b 1
+)
+
+if not exist "%SOURCE%\ModFolderCopier.WinUI.deps.json" (
+  echo Runtime dependency manifest is missing.
+  exit /b 1
+)
+
+findstr /C:"Microsoft.WindowsAppSDK" "%SOURCE%\ModFolderCopier.WinUI.deps.json" >nul
+if errorlevel 1 (
+  echo Runtime dependency manifest does not include Microsoft.WindowsAppSDK. Run a forced online restore and rebuild.
+  exit /b 1
 )
 
 if not exist "%ROOT%\dist" mkdir "%ROOT%\dist"

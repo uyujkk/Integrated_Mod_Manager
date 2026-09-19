@@ -6,6 +6,18 @@
 
 This document records the major changes in published versions of Integrated Mod Manager.
 
+## v3.8.1 - Persistent State Lab
+
+- 状态捕获改为等待 `d3dx_user.ini` 稳定后直接读取，不再发送 F10。
+- 新增离线恢复：游戏关闭时精确合并持久变量、备份、验证并启动 XXMI。
+- 新增运行中热恢复：临时 `post` 桥接配合用户手动两次 F10，程序不模拟键盘。
+- 实验版本与正式 v3.8.0 分离，不替换正式发布。
+
+- Capture now waits for a stable `d3dx_user.ini` and reads it directly without sending F10.
+- Added offline restore: precisely merge persistent variables while the game is closed, back up, verify, and start XXMI.
+- Added runtime hot restore using a temporary `post` bridge and two user-initiated F10 reloads; the app does not simulate keyboard input.
+- The lab version is distinct from formal v3.8.0 and does not replace the stable release.
+
 ## v3.8.0 - 重要更新 / Major Update
 
 ### 中文

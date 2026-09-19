@@ -8,9 +8,9 @@ using System.Windows.Forms;
 [assembly: AssemblyTitle("集成化mod管理器")]
 [assembly: AssemblyProduct("集成化mod管理器")]
 [assembly: AssemblyCopyright("Copyright (c) 2026 uyujkk")]
-[assembly: AssemblyVersion("3.8.0.0")]
-[assembly: AssemblyFileVersion("3.8.0.0")]
-[assembly: AssemblyInformationalVersion("3.8.0")]
+[assembly: AssemblyVersion("3.8.1.0")]
+[assembly: AssemblyFileVersion("3.8.1.0")]
+[assembly: AssemblyInformationalVersion("3.8.1-persistent-state-lab")]
 
 internal static class WinUILauncher
 {
@@ -44,6 +44,18 @@ internal static class WinUILauncher
             if (process == null)
             {
                 throw new InvalidOperationException("WinUI 3 程序没有成功启动。");
+            }
+
+            if (process.WaitForExit(2500) && process.ExitCode != 0)
+            {
+                MessageBox.Show(
+                    "WinUI 3 主程序在启动阶段退出。\n\n" +
+                    "退出代码：" + process.ExitCode + "\n\n" +
+                    "请确认 WinUI3 目录完整，并检查 Windows 事件查看器中的 .NET Runtime 记录。",
+                    "启动失败",
+                    MessageBoxButtons.OK,
+                    MessageBoxIcon.Error);
+                return;
             }
         }
         catch (Win32Exception ex)

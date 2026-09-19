@@ -136,3 +136,5 @@ powershell -NoProfile -ExecutionPolicy Bypass -File .\scripts\test-all.ps1
 本项目以 [MIT License](./LICENSE) 发布，版权所有 `uyujkk`。第三方组件保留各自许可证；发布包中的 7-Zip 文件附带其许可证文本。
 
 本工具不包含游戏文件或 Mod 内容。游戏、角色、图片、Mod 和第三方服务的相关权利归各自权利人所有。
+> [!CAUTION]
+> **已归档实验 / Archived experiment**：本分支保存未发布的 v3.8.1 Persistent State Lab，仅用于研究和代码追溯。它未完成任意第三方 Mod 的真实游戏兼容性验证，不属于受支持版本。正式版本请使用 `main` 分支和 GitHub Releases。

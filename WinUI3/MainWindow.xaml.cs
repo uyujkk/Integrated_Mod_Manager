@@ -35,7 +35,7 @@ namespace ModFolderCopier.WinUI;
 
 public sealed partial class MainWindow : Window
 {
-    private const string AppVersion = "v3.8.0";
+    private const string AppVersion = "v3.8.1";
     private const string GitHubRepositoryUrl = "https://github.com/uyujkk/Integrated_Mod_Manager";
     private const string GitHubLatestReleaseApiUrl = "https://api.github.com/repos/uyujkk/Integrated_Mod_Manager/releases/latest";
     private const string DefaultOnlineSourceSite = "GameBanana";
@@ -1109,6 +1109,7 @@ public sealed partial class MainWindow : Window
         InstallRollbackStatusTextBlock.Text = RollbackLastInstallButton.IsEnabled
             ? L("可以撤销最近一次复制、移除或配置方案操作。", "The most recent copy, removal, or profile operation can be undone.")
             : L("目前没有可撤销的 Mod 操作。", "There is no mod operation to undo.");
+        RefreshPersistentModStateSection();
     }
 
     private List<string> CaptureCurrentConfigurationProfile()
@@ -2018,13 +2019,29 @@ public sealed partial class MainWindow : Window
             {
                 _configurationProfiles.AddRange(config.ConfigurationProfiles
                     .Where(profile => !string.IsNullOrWhiteSpace(profile.Id)
-                        && !string.IsNullOrWhiteSpace(profile.RepositoryId)));
+                        && !string.IsNullOrWhiteSpace(profile.RepositoryId))
+                    .Select(profile =>
+                    {
+                        profile.ModRelativePaths ??= [];
+                        profile.PersistentStates ??= [];
+                        profile.PersistentStates = profile.PersistentStates
+                            .Where(IsValidRememberedState)
+                            .ToList();
+                        return profile;
+                    }));
+            }
+
+            if (config?.RememberedModStates is { Count: > 0 })
+            {
+                _rememberedModStates.AddRange(config.RememberedModStates
+                    .Where(IsValidRememberedState));
             }
 
             _selectedConfigurationProfileId = _configurationProfiles.Any(profile => profile.Id == config?.SelectedConfigurationProfileId)
                 ? config?.SelectedConfigurationProfileId
                 : null;
             _enableConflictDetection = config?.EnableConflictDetection ?? true;
+            _persistentUserConfigPath = config?.PersistentUserConfigPath;
             _lastInstallTransactionPath = !string.IsNullOrWhiteSpace(config?.LastInstallTransactionPath)
                 && Directory.Exists(config.LastInstallTransactionPath)
                     ? config.LastInstallTransactionPath
@@ -2130,9 +2147,11 @@ public sealed partial class MainWindow : Window
                 InterfaceDensity = _interfaceDensity == InterfaceDensity.Compact ? "compact" : "comfortable",
                 OnlineCardLayout = _onlineCardLayoutMode == OnlineCardLayoutMode.Grid ? "grid" : "list",
                 SelectedConfigurationProfileId = _selectedConfigurationProfileId,
+                PersistentUserConfigPath = _persistentUserConfigPath,
                 EnableConflictDetection = _enableConflictDetection,
                 LastInstallTransactionPath = _lastInstallTransactionPath,
                 ConfigurationProfiles = [.. _configurationProfiles],
+                RememberedModStates = [.. _rememberedModStates],
                 WindowX = _savedWindowX,
                 WindowY = _savedWindowY,
                 WindowWidth = _savedWindowWidth,
@@ -10097,6 +10116,7 @@ public sealed partial class MainWindow : Window
     private void OnSecondLevelSelectionChanged(object sender, SelectionChangedEventArgs e)
     {
         ApplySecondLevelSelectionState(GetSelectedSecondLevelItem());
+        RefreshPersistentModStateSection();
     }
 
     private async void OnSecondLevelDoubleTapped(object sender, DoubleTappedRoutedEventArgs e)
@@ -13414,11 +13434,15 @@ public sealed class BetaShellConfig
 
     public string? SelectedConfigurationProfileId { get; set; }
 
+    public string? PersistentUserConfigPath { get; set; }
+
     public bool? EnableConflictDetection { get; set; }
 
     public string? LastInstallTransactionPath { get; set; }
 
     public List<ModConfigurationProfile> ConfigurationProfiles { get; set; } = [];
+
+    public List<RememberedModPersistentState> RememberedModStates { get; set; } = [];
 
     public int? WindowX { get; set; }
 
@@ -13441,7 +13465,27 @@ public sealed class ModConfigurationProfile
 
     public List<string> ModRelativePaths { get; set; } = [];
 
+    public List<RememberedModPersistentState> PersistentStates { get; set; } = [];
+
     public DateTimeOffset UpdatedAtUtc { get; set; } = DateTimeOffset.UtcNow;
+}
+
+public sealed class RememberedModPersistentState
+{
+    public string RepositoryId { get; set; } = string.Empty;
+
+    public string ModRelativePath { get; set; } = string.Empty;
+
+    public List<PersistentStateValue> Values { get; set; } = [];
+
+    public DateTimeOffset UpdatedAtUtc { get; set; } = DateTimeOffset.UtcNow;
+}
+
+public sealed class PersistentStateValue
+{
+    public string Name { get; set; } = string.Empty;
+
+    public string Value { get; set; } = string.Empty;
 }
 
 public sealed class ModInstallTransaction
