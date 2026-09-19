@@ -404,3 +404,6 @@ Never silently. After you place a downloaded newer release ZIP in the existing a
 This project is released under the [MIT License](./LICENSE), copyright `uyujkk`. Third-party components retain their own licenses; bundled 7-Zip files include the relevant license text.
 
 This tool manages local files and reads publicly available page data. It does not include game files or mod content. Copyright, licensing, and usage terms for each mod remain with its respective author.
+
+> [!CAUTION]
+> **Archived experiment:** This branch preserves the unreleased v3.8.1 Hot Injection Lab for research and source history. Whole-file replacement followed by F10 did not reliably restore arbitrary Mods' in-game state and is not a supported release. Use the `main` branch and GitHub Releases for supported builds.

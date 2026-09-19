@@ -11,9 +11,9 @@ using System.Windows.Forms;
 [assembly: AssemblyTitle("Integrated Mod Manager Local Update Agent")]
 [assembly: AssemblyProduct("Integrated Mod Manager")]
 [assembly: AssemblyCopyright("Copyright (c) 2026 uyujkk")]
-[assembly: AssemblyVersion("3.8.0.0")]
-[assembly: AssemblyFileVersion("3.8.0.0")]
-[assembly: AssemblyInformationalVersion("3.8.0")]
+[assembly: AssemblyVersion("3.8.1.0")]
+[assembly: AssemblyFileVersion("3.8.1.0")]
+[assembly: AssemblyInformationalVersion("3.8.1-hot-injection-lab")]
 #if UPDATE_AGENT_TESTS
 [assembly: System.Runtime.CompilerServices.InternalsVisibleTo("IntegratedModManager.UpdateAgent.Tests")]
 #endif
@@ -36,6 +36,7 @@ internal static class LocalUpdateAgent
         "backups" + Path.DirectorySeparatorChar,
         Path.Combine("WinUI3", "backups") + Path.DirectorySeparatorChar,
         Path.Combine("WinUI3", "cache") + Path.DirectorySeparatorChar,
+        Path.Combine("WinUI3", "presets") + Path.DirectorySeparatorChar,
         Path.Combine("WinUI3", "diagnostics") + Path.DirectorySeparatorChar
     };
 

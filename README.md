@@ -404,3 +404,6 @@ LICENSE            MIT 许可证
 本项目以 [MIT License](./LICENSE) 发布，版权所有 `uyujkk`。第三方组件保留各自许可证；发布包中的 7-Zip 工具文件附带其许可证文本。
 
 本工具只负责本地文件管理和公开页面信息读取，不附带任何游戏文件或 Mod 内容。Mod 的版权、授权和使用规则归其各自作者所有。
+
+> [!CAUTION]
+> **已归档实验 / Archived experiment**：本分支保存未发布的 v3.8.1 Hot Injection Lab，仅用于研究和代码追溯。整文件替换与 F10 重载没有可靠恢复任意 Mod 的游戏内状态，不属于受支持版本。正式版本请使用 `main` 分支和 GitHub Releases。

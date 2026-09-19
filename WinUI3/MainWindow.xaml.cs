@@ -35,7 +35,7 @@ namespace ModFolderCopier.WinUI;
 
 public sealed partial class MainWindow : Window
 {
-    private const string AppVersion = "v3.8.0";
+    private const string AppVersion = "v3.8.1";
     private const string GitHubRepositoryUrl = "https://github.com/uyujkk/Integrated_Mod_Manager";
     private const string GitHubLatestReleaseApiUrl = "https://api.github.com/repos/uyujkk/Integrated_Mod_Manager/releases/latest";
     private const string DefaultOnlineSourceSite = "GameBanana";
@@ -217,6 +217,7 @@ public sealed partial class MainWindow : Window
     private readonly List<string> _onlineDetailImageUrls = [];
     private readonly List<TrackedModUpdateResult> _trackedModUpdateResults = [];
     private readonly List<ModConfigurationProfile> _configurationProfiles = [];
+    private readonly List<ModStatePreset> _modStatePresets = [];
     private readonly ObservableCollection<DownloadTaskItem> _downloadTasks = [];
 
     private bool _isDarkTheme;
@@ -234,6 +235,7 @@ public sealed partial class MainWindow : Window
     private bool _isApplyingAppearanceSettings;
     private bool _isApplyingDensitySelection;
     private bool _isApplyingConfigurationProfileSelection;
+    private bool _isApplyingModStatePresetSelection;
     private bool _enableConflictDetection = true;
     private bool _reduceMotion;
     private int _visibleShortcutRows = 1;
@@ -262,6 +264,8 @@ public sealed partial class MainWindow : Window
     private string _onlineSearchText = string.Empty;
     private string? _selectedRepositoryId;
     private string? _selectedConfigurationProfileId;
+    private string? _selectedModStatePresetId;
+    private string? _d3dxUserIniPath;
     private string? _lastInstallTransactionPath;
     private string _modUpdateStatusEn = string.Empty;
     private string _modUpdateStatusZh = string.Empty;
@@ -971,6 +975,7 @@ public sealed partial class MainWindow : Window
         RefreshBackupManagerText();
         _ = RefreshInstallBackupListAsync();
         RefreshConfigurationProfiles();
+        RefreshModStatePresetSection();
         RefreshDownloadTaskCenter();
         TrackedModSettingsTitleTextBlock.Text = L("检查方式", "Check Settings");
         TrackedModSettingsHintTextBlock.Text = L("自动检查会在应用启动时按你设定的频率执行，手动检查会立即刷新所有已记录的在线 Mod。", "Automatic checks run on startup at the selected interval. Manual checks refresh every tracked online mod immediately.");
@@ -1948,6 +1953,8 @@ public sealed partial class MainWindow : Window
     private void LoadShellConfig()
     {
         _repositories.Clear();
+        _configurationProfiles.Clear();
+        _modStatePresets.Clear();
 
         WorkspaceRepository fallbackRepository = new()
         {
@@ -2025,6 +2032,20 @@ public sealed partial class MainWindow : Window
             _selectedConfigurationProfileId = _configurationProfiles.Any(profile => profile.Id == config?.SelectedConfigurationProfileId)
                 ? config?.SelectedConfigurationProfileId
                 : null;
+            if (config?.ModStatePresets is { Count: > 0 })
+            {
+                _modStatePresets.AddRange(config.ModStatePresets
+                    .Where(profile => !string.IsNullOrWhiteSpace(profile.Id)
+                        && !string.IsNullOrWhiteSpace(profile.RepositoryId)
+                        && !string.IsNullOrWhiteSpace(profile.SnapshotFileName)
+                        && profile.SnapshotSizeBytes > 0
+                        && !string.IsNullOrWhiteSpace(profile.SnapshotSha256)));
+            }
+
+            _selectedModStatePresetId = _modStatePresets.Any(profile => profile.Id == config?.SelectedModStatePresetId)
+                ? config?.SelectedModStatePresetId
+                : null;
+            _d3dxUserIniPath = config?.D3dxUserIniPath;
             _enableConflictDetection = config?.EnableConflictDetection ?? true;
             _lastInstallTransactionPath = !string.IsNullOrWhiteSpace(config?.LastInstallTransactionPath)
                 && Directory.Exists(config.LastInstallTransactionPath)
@@ -2131,9 +2152,12 @@ public sealed partial class MainWindow : Window
                 InterfaceDensity = _interfaceDensity == InterfaceDensity.Compact ? "compact" : "comfortable",
                 OnlineCardLayout = _onlineCardLayoutMode == OnlineCardLayoutMode.Grid ? "grid" : "list",
                 SelectedConfigurationProfileId = _selectedConfigurationProfileId,
+                SelectedModStatePresetId = _selectedModStatePresetId,
+                D3dxUserIniPath = _d3dxUserIniPath,
                 EnableConflictDetection = _enableConflictDetection,
                 LastInstallTransactionPath = _lastInstallTransactionPath,
                 ConfigurationProfiles = [.. _configurationProfiles],
+                ModStatePresets = [.. _modStatePresets],
                 WindowX = _savedWindowX,
                 WindowY = _savedWindowY,
                 WindowWidth = _savedWindowWidth,
@@ -9459,7 +9483,7 @@ public sealed partial class MainWindow : Window
 
     private void ApplyLanguage()
     {
-        Title = L($"集成化mod管理器 {AppVersion}", $"Integrated Mod Manager {AppVersion}");
+        Title = L($"集成化mod管理器 {AppVersion} - 热注入预设测试版", $"Integrated Mod Manager {AppVersion} - Hot Injection Preset Lab");
 
         BetaTitleTextBlock.Text = _shellLayoutMode == ShellLayoutMode.Compact
             ? "管理器"
@@ -9561,7 +9585,7 @@ public sealed partial class MainWindow : Window
 
         HeaderTitleTextBlock.Text = L("集成化mod管理器", "Integrated Mod Manager");
         HeaderFrameworkBadgeTextBlock.Text = "WinUI 3";
-        HeaderVersionBadgeTextBlock.Text = AppVersion;
+        HeaderVersionBadgeTextBlock.Text = $"{AppVersion} · HOT INJECTION LAB";
         HeaderSubtitleTextBlock.Text = L(
             "管理两层 Mod 文件夹、预览图、ZIP 导入、快捷键说明和启动器入口。",
             "Manage two-level mod folders, preview images, ZIP imports, per-mod shortcut notes, and launcher access.");
@@ -13430,11 +13454,17 @@ public sealed class BetaShellConfig
 
     public string? SelectedConfigurationProfileId { get; set; }
 
+    public string? SelectedModStatePresetId { get; set; }
+
+    public string? D3dxUserIniPath { get; set; }
+
     public bool? EnableConflictDetection { get; set; }
 
     public string? LastInstallTransactionPath { get; set; }
 
     public List<ModConfigurationProfile> ConfigurationProfiles { get; set; } = [];
+
+    public List<ModStatePreset> ModStatePresets { get; set; } = [];
 
     public int? WindowX { get; set; }
 
@@ -13456,6 +13486,27 @@ public sealed class ModConfigurationProfile
     public string Name { get; set; } = string.Empty;
 
     public List<string> ModRelativePaths { get; set; } = [];
+
+    public DateTimeOffset UpdatedAtUtc { get; set; } = DateTimeOffset.UtcNow;
+}
+
+public sealed class ModStatePreset
+{
+    public string Id { get; set; } = Guid.NewGuid().ToString("N");
+
+    public string RepositoryId { get; set; } = string.Empty;
+
+    public string Name { get; set; } = string.Empty;
+
+    public string D3dxUserIniPath { get; set; } = string.Empty;
+
+    public string SnapshotFileName { get; set; } = string.Empty;
+
+    public string SnapshotSha256 { get; set; } = string.Empty;
+
+    public long SnapshotSizeBytes { get; set; }
+
+    public List<string> IncludedModFolderNames { get; set; } = [];
 
     public DateTimeOffset UpdatedAtUtc { get; set; } = DateTimeOffset.UtcNow;
 }
