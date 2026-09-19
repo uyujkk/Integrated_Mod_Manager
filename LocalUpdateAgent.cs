@@ -11,9 +11,9 @@ using System.Windows.Forms;
 [assembly: AssemblyTitle("Integrated Mod Manager Local Update Agent")]
 [assembly: AssemblyProduct("Integrated Mod Manager")]
 [assembly: AssemblyCopyright("Copyright (c) 2026 uyujkk")]
-[assembly: AssemblyVersion("3.8.5.0")]
-[assembly: AssemblyFileVersion("3.8.5.0")]
-[assembly: AssemblyInformationalVersion("3.8.5-selection-progress-fix")]
+[assembly: AssemblyVersion("3.9.0.0")]
+[assembly: AssemblyFileVersion("3.9.0.0")]
+[assembly: AssemblyInformationalVersion("3.9.0-modern-workspace")]
 #if UPDATE_AGENT_TESTS
 [assembly: System.Runtime.CompilerServices.InternalsVisibleTo("IntegratedModManager.UpdateAgent.Tests")]
 #endif
@@ -376,13 +376,17 @@ internal static class LocalUpdateAgent
 
     private static bool IsPayloadRoot(string path)
     {
-        return File.Exists(Path.Combine(path, "ModFolderCopier.exe")) &&
-               File.Exists(Path.Combine(path, "WinUI3", "ModFolderCopier.WinUI.exe"));
+        bool hasLauncher = File.Exists(Path.Combine(path, "IntegratedModManager.exe")) ||
+                           File.Exists(Path.Combine(path, "ModFolderCopier.exe"));
+        return hasLauncher && File.Exists(Path.Combine(path, "WinUI3", "ModFolderCopier.WinUI.exe"));
     }
 
     private static void ValidatePayload(string payloadRoot, string expectedVersionText)
     {
-        var launcherInfo = new FileInfo(Path.Combine(payloadRoot, "ModFolderCopier.exe"));
+        string launcherPath = File.Exists(Path.Combine(payloadRoot, "IntegratedModManager.exe"))
+            ? Path.Combine(payloadRoot, "IntegratedModManager.exe")
+            : Path.Combine(payloadRoot, "ModFolderCopier.exe");
+        var launcherInfo = new FileInfo(launcherPath);
         string runtimePath = Path.Combine(payloadRoot, "WinUI3", "ModFolderCopier.WinUI.exe");
         var runtimeInfo = new FileInfo(runtimePath);
         if (launcherInfo.Length == 0 || runtimeInfo.Length == 0)

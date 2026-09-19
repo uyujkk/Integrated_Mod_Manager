@@ -35,12 +35,14 @@ namespace ModFolderCopier.WinUI;
 
 public sealed partial class MainWindow : Window
 {
-    private const string AppVersion = "v3.8.5";
+    private const string AppVersion = "v3.9.0";
     private const string GitHubRepositoryUrl = "https://github.com/uyujkk/Integrated_Mod_Manager";
     private const string GitHubLatestReleaseApiUrl = "https://api.github.com/repos/uyujkk/Integrated_Mod_Manager/releases/latest";
     private const string DefaultOnlineSourceSite = "GameBanana";
     private const string DefaultOnlineCategoryId = "42770";
-    private const string DefaultOnlineGameName = "";
+    private const string DefaultOnlineGameName = "Arknights: Endfield";
+    private const string EndfieldOfficialWikiUrl = "https://wiki.skland.com/endfield";
+    private const string EndfieldOfficialOperatorCatalogUrl = "https://endfield.hypergryph.com/operator";
     private const string HoYoWikiApiBaseUrl = "https://sg-wiki-api-static.hoyolab.com/hoyowiki/wapi";
     private const int OnlineDisplayPageSize = 40;
     private const int OnlineRawFetchPageSize = 50;
@@ -48,7 +50,8 @@ public sealed partial class MainWindow : Window
     private static readonly TimeSpan OnlineModListRequestTimeout = TimeSpan.FromSeconds(5);
     private static readonly TimeSpan OnlinePreviewImageRequestTimeout = TimeSpan.FromSeconds(15);
     private const long MaxOnlinePreviewImageBytes = 20L * 1024 * 1024;
-    private const int MaxShortcutRows = 10;
+    private const int InitialShortcutRows = 1;
+    private const int ShortcutScanSafetyLimit = 256;
     private static readonly string[] SupportedArchiveExtensions =
     [
         ".tar.gz",
@@ -96,7 +99,13 @@ public sealed partial class MainWindow : Window
             "崩坏：星穹铁道",
             "Honkai: Star Rail",
             "22633",
-            "https://bbs.mihoyo.com/sr/wiki/channel/map/17/18?bbs_presentation_style=no_header")
+            "https://bbs.mihoyo.com/sr/wiki/channel/map/17/18?bbs_presentation_style=no_header"),
+        new(
+            "endfield",
+            "明日方舟：终末地",
+            "Arknights: Endfield",
+            DefaultOnlineCategoryId,
+            EndfieldOfficialWikiUrl)
     ];
     private static readonly EndfieldCharacterInfo[] EndfieldCharacters =
     [
@@ -273,7 +282,7 @@ public sealed partial class MainWindow : Window
     private OnlineModCard? _activeOnlineDetailMod;
     private AppLanguage _currentLanguage = AppLanguage.ZhCn;
     private PrimarySection _currentPrimarySection = PrimarySection.Dashboard;
-    private ShellLayoutMode _shellLayoutMode = ShellLayoutMode.Expanded;
+    private ShellLayoutMode _shellLayoutMode = (ShellLayoutMode)(-1);
     private OnlineSortMode _onlineSortMode = OnlineSortMode.Hotness;
     private OnlineCardLayoutMode _onlineCardLayoutMode = OnlineCardLayoutMode.List;
     private UpdateCheckInterval _updateCheckInterval = UpdateCheckInterval.Manual;
@@ -308,6 +317,7 @@ public sealed partial class MainWindow : Window
             Path.Combine(AppContext.BaseDirectory, "cache", "app-index.db"),
             LogPersistentDataStoreIssue);
         InitializeComponent();
+        ApplyWindowIcon();
         TraceStartupStage("InitializeComponent completed");
         InitializePersistentDataStore();
         TraceStartupStage("Persistent data store initialized");
@@ -324,6 +334,16 @@ public sealed partial class MainWindow : Window
         TraceStartupStage("Input handlers and shortcuts initialized");
         LoadConfig();
         LoadShellConfig();
+        InitializeTraySupport();
+        try
+        {
+            InitializeRefinedWorkspace();
+        }
+        catch (Exception ex)
+        {
+            TraceStartupStage("Refined workspace initialization failed: " + ex);
+            throw;
+        }
         TraceStartupStage("Configuration loaded");
         ApplyTheme(_isDarkTheme);
         ApplyLanguage();
@@ -560,6 +580,8 @@ public sealed partial class MainWindow : Window
         MotionSettingDescriptionTextBlock.Text = L("关闭页面滑入和图片淡入效果，减少视觉移动。", "Disable page slide-in and image fade effects to reduce visual movement.");
         DensitySettingTitleTextBlock.Text = L("界面密度", "Interface density");
         DensitySettingDescriptionTextBlock.Text = L("紧凑模式可以在同一屏幕显示更多内容。", "Compact mode shows more content on the same screen.");
+        RefreshTraySetting();
+        UpdateTrayLanguage();
 
         _isApplyingAppearanceSettings = true;
         ReduceMotionToggleSwitch.IsOn = _reduceMotion;
@@ -710,6 +732,7 @@ public sealed partial class MainWindow : Window
                     DisplayNameEn = character.EnglishName,
                     CategoryId = character.GameBananaCategoryId,
                     AvatarUrl = character.AvatarUrl,
+                    WikiUrl = repository.WikiUrl,
                     Aliases = [.. character.AllNames],
                     IsWikiCharacter = true,
                     WikiOrder = index
@@ -847,7 +870,7 @@ public sealed partial class MainWindow : Window
     {
         return repository is null
             ? string.Empty
-            : $"wiki-monthly-v3|{repository.Id}|wiki={repository.WikiUrl.Trim()}";
+            : $"wiki-monthly-v4|{repository.Id}|wiki={repository.WikiUrl.Trim()}";
     }
 
     private bool IsEndfieldRepository(WorkspaceRepository? repository)
@@ -2063,7 +2086,8 @@ public sealed partial class MainWindow : Window
             LauncherPath = LauncherTextBox.Text ?? string.Empty,
             OnlineSourceSite = DefaultOnlineSourceSite,
             OnlineGameName = DefaultOnlineGameName,
-            OnlineCategoryId = DefaultOnlineCategoryId
+            OnlineCategoryId = DefaultOnlineCategoryId,
+            WikiUrl = EndfieldOfficialWikiUrl
         };
 
         if (!File.Exists(_shellConfigPath))
@@ -2114,6 +2138,7 @@ public sealed partial class MainWindow : Window
             _checkAppUpdatesOnStartup = config?.CheckAppUpdatesOnStartup ?? true;
             _installBackupLimitGb = Math.Clamp(config?.InstallBackupLimitGb ?? DefaultInstallBackupLimitGb, 0.5, 100);
             _reduceMotion = config?.ReduceMotion ?? false;
+            _minimizeToTray = config?.MinimizeToTray ?? false;
             _interfaceDensity = string.Equals(config?.InterfaceDensity, "compact", StringComparison.OrdinalIgnoreCase)
                 ? InterfaceDensity.Compact
                 : InterfaceDensity.Comfortable;
@@ -2159,6 +2184,7 @@ public sealed partial class MainWindow : Window
             _checkAppUpdatesOnStartup = true;
             _installBackupLimitGb = DefaultInstallBackupLimitGb;
             _reduceMotion = false;
+            _minimizeToTray = false;
             _interfaceDensity = InterfaceDensity.Comfortable;
             _onlineCardLayoutMode = OnlineCardLayoutMode.List;
             _savedWindowX = null;
@@ -2233,6 +2259,7 @@ public sealed partial class MainWindow : Window
                 CheckAppUpdatesOnStartup = _checkAppUpdatesOnStartup,
                 InstallBackupLimitGb = _installBackupLimitGb,
                 ReduceMotion = _reduceMotion,
+                MinimizeToTray = _minimizeToTray,
                 InterfaceDensity = _interfaceDensity == InterfaceDensity.Compact ? "compact" : "comfortable",
                 OnlineCardLayout = _onlineCardLayoutMode == OnlineCardLayoutMode.Grid ? "grid" : "list",
                 SelectedConfigurationProfileId = _selectedConfigurationProfileId,
@@ -2401,7 +2428,15 @@ public sealed partial class MainWindow : Window
     private void ApplyShellState(bool refreshRepository)
     {
         DashboardScrollViewer.Visibility = _currentPrimarySection == PrimarySection.Dashboard ? Visibility.Visible : Visibility.Collapsed;
-        WorkspaceScrollViewer.Visibility = _currentPrimarySection == PrimarySection.Repository ? Visibility.Visible : Visibility.Collapsed;
+        if (_workspacePageHost is null)
+        {
+            WorkspaceScrollViewer.Visibility = _currentPrimarySection == PrimarySection.Repository ? Visibility.Visible : Visibility.Collapsed;
+        }
+        else
+        {
+            WorkspaceScrollViewer.Visibility = Visibility.Visible;
+            _workspacePageHost.Visibility = _currentPrimarySection == PrimarySection.Repository ? Visibility.Visible : Visibility.Collapsed;
+        }
         OnlineScrollViewer.Visibility = _currentPrimarySection == PrimarySection.Online ? Visibility.Visible : Visibility.Collapsed;
         UpdatesScrollViewer.Visibility = _currentPrimarySection == PrimarySection.Updates ? Visibility.Visible : Visibility.Collapsed;
         SettingsScrollViewer.Visibility = _currentPrimarySection == PrimarySection.Settings ? Visibility.Visible : Visibility.Collapsed;
@@ -2437,7 +2472,7 @@ public sealed partial class MainWindow : Window
         return _currentPrimarySection switch
         {
             PrimarySection.Dashboard => DashboardScrollViewer,
-            PrimarySection.Repository => WorkspaceScrollViewer,
+            PrimarySection.Repository => _workspacePageHost is not null ? _workspacePageHost : WorkspaceScrollViewer,
             PrimarySection.Online => OnlineScrollViewer,
             PrimarySection.Updates => UpdatesScrollViewer,
             _ => SettingsScrollViewer
@@ -3014,6 +3049,7 @@ public sealed partial class MainWindow : Window
 
         UpdateOnlineResponsiveLayout(width);
         UpdateProductivityResponsiveLayout(width);
+        UpdateRefinedWorkspaceLayout();
 
         if (_shellLayoutMode == nextMode)
         {
@@ -3022,56 +3058,17 @@ public sealed partial class MainWindow : Window
 
         _shellLayoutMode = nextMode;
 
-        switch (_shellLayoutMode)
+        bool expanded = _shellLayoutMode == ShellLayoutMode.Expanded;
+        PrimaryNavColumn.Width = new GridLength(expanded ? 220 : 84);
+        SecondaryNavColumn.Width = new GridLength(0);
+        SecondaryNavBorder.Visibility = Visibility.Collapsed;
+        foreach (Button button in new[] { DashboardNavButton, RepositoryNavButton, OnlineNavButton, UpdatesNavButton, SettingsNavButton })
         {
-            case ShellLayoutMode.Minimal:
-                PrimaryNavColumn.Width = new GridLength(72);
-                SecondaryNavColumn.Width = new GridLength(0);
-                SecondaryNavBorder.Visibility = Visibility.Collapsed;
-                PrimaryNavBorder.Padding = new Thickness(8, 12, 8, 12);
-                DashboardNavButton.HorizontalContentAlignment = HorizontalAlignment.Center;
-                RepositoryNavButton.HorizontalContentAlignment = HorizontalAlignment.Center;
-                OnlineNavButton.HorizontalContentAlignment = HorizontalAlignment.Center;
-                UpdatesNavButton.HorizontalContentAlignment = HorizontalAlignment.Center;
-                SettingsNavButton.HorizontalContentAlignment = HorizontalAlignment.Center;
-                DashboardNavButton.MinHeight = 42;
-                RepositoryNavButton.MinHeight = 42;
-                OnlineNavButton.MinHeight = 42;
-                UpdatesNavButton.MinHeight = 42;
-                SettingsNavButton.MinHeight = 42;
-                break;
-            case ShellLayoutMode.Compact:
-                PrimaryNavColumn.Width = new GridLength(72);
-                SecondaryNavColumn.Width = new GridLength(0);
-                SecondaryNavBorder.Visibility = Visibility.Collapsed;
-                PrimaryNavBorder.Padding = new Thickness(8, 12, 8, 12);
-                DashboardNavButton.HorizontalContentAlignment = HorizontalAlignment.Center;
-                RepositoryNavButton.HorizontalContentAlignment = HorizontalAlignment.Center;
-                OnlineNavButton.HorizontalContentAlignment = HorizontalAlignment.Center;
-                UpdatesNavButton.HorizontalContentAlignment = HorizontalAlignment.Center;
-                SettingsNavButton.HorizontalContentAlignment = HorizontalAlignment.Center;
-                DashboardNavButton.MinHeight = 42;
-                RepositoryNavButton.MinHeight = 42;
-                OnlineNavButton.MinHeight = 42;
-                UpdatesNavButton.MinHeight = 42;
-                SettingsNavButton.MinHeight = 42;
-                break;
-            default:
-                PrimaryNavColumn.Width = new GridLength(72);
-                SecondaryNavColumn.Width = new GridLength(0);
-                SecondaryNavBorder.Visibility = Visibility.Collapsed;
-                PrimaryNavBorder.Padding = new Thickness(8, 12, 8, 12);
-                DashboardNavButton.HorizontalContentAlignment = HorizontalAlignment.Center;
-                RepositoryNavButton.HorizontalContentAlignment = HorizontalAlignment.Center;
-                OnlineNavButton.HorizontalContentAlignment = HorizontalAlignment.Center;
-                UpdatesNavButton.HorizontalContentAlignment = HorizontalAlignment.Center;
-                SettingsNavButton.HorizontalContentAlignment = HorizontalAlignment.Center;
-                DashboardNavButton.MinHeight = 42;
-                RepositoryNavButton.MinHeight = 42;
-                OnlineNavButton.MinHeight = 42;
-                UpdatesNavButton.MinHeight = 42;
-                SettingsNavButton.MinHeight = 42;
-                break;
+            button.Width = expanded ? 202 : 66;
+            button.Height = expanded ? 46 : 60;
+            button.MinHeight = button.Height;
+            button.HorizontalContentAlignment = expanded ? HorizontalAlignment.Left : HorizontalAlignment.Center;
+            button.Padding = expanded ? new Thickness(14, 0, 12, 0) : new Thickness(0);
         }
 
         ApplyPrimaryNavigationContent();
@@ -3168,6 +3165,7 @@ public sealed partial class MainWindow : Window
 
     private void ApplyPrimaryNavigationContent()
     {
+        UpdateRefinedWorkspaceLanguage();
         DashboardNavButton.Content = CreatePrimaryNavContent("\uE80F", L("仪表板", "Dashboard"));
         RepositoryNavButton.Content = CreatePrimaryNavContent("\uE8B7", L("仓库", "Repositories"));
         OnlineNavButton.Content = CreatePrimaryNavContent("\uE774", L("在线", "Online"));
@@ -3195,7 +3193,22 @@ public sealed partial class MainWindow : Window
             FontSize = 16,
             Opacity = 0.88
         };
-        return icon;
+        bool expanded = _shellLayoutMode == ShellLayoutMode.Expanded;
+        var panel = new StackPanel
+        {
+            Orientation = expanded ? Orientation.Horizontal : Orientation.Vertical,
+            Spacing = expanded ? 12 : 6,
+            VerticalAlignment = VerticalAlignment.Center,
+            HorizontalAlignment = expanded ? HorizontalAlignment.Left : HorizontalAlignment.Center
+        };
+        panel.Children.Add(icon);
+        panel.Children.Add(new TextBlock
+        {
+            Text = label, FontSize = expanded ? 14 : 11,
+            VerticalAlignment = VerticalAlignment.Center,
+            HorizontalAlignment = HorizontalAlignment.Center
+        });
+        return panel;
     }
 
     private void RefreshPrimaryNavigationVisuals()
@@ -3211,10 +3224,13 @@ public sealed partial class MainWindow : Window
     {
         Brush backgroundBrush = isSelected
             ? GetAppThemeBrush("AppNavSelectedBrush")
-            : GetAppThemeBrush("AppInsetBackgroundBrush");
+            : GetAppThemeBrush("AppNavDefaultBrush");
+        Brush pointerOverBrush = isSelected
+            ? backgroundBrush
+            : GetAppThemeBrush("AppNavHoverBrush");
         Brush borderBrush = isSelected
             ? GetAppThemeBrush("AppNavSelectedBorderBrush")
-            : GetAppThemeBrush("AppCardBorderBrush");
+            : GetAppThemeBrush("AppNavDefaultBrush");
         Brush foregroundBrush = isSelected
             ? GetAppThemeBrush("AppNavSelectedForegroundBrush")
             : GetAppThemeBrush("AppNavDefaultForegroundBrush");
@@ -3227,12 +3243,12 @@ public sealed partial class MainWindow : Window
         button.Foreground = foregroundBrush;
 
         button.Resources["ButtonBackground"] = backgroundBrush;
-        button.Resources["ButtonBackgroundPointerOver"] = backgroundBrush;
+        button.Resources["ButtonBackgroundPointerOver"] = pointerOverBrush;
         button.Resources["ButtonBackgroundPressed"] = backgroundBrush;
         button.Resources["ButtonBackgroundDisabled"] = disabledBackgroundBrush;
 
         button.Resources["ButtonBorderBrush"] = borderBrush;
-        button.Resources["ButtonBorderBrushPointerOver"] = borderBrush;
+        button.Resources["ButtonBorderBrushPointerOver"] = pointerOverBrush;
         button.Resources["ButtonBorderBrushPressed"] = borderBrush;
         button.Resources["ButtonBorderBrushDisabled"] = disabledBorderBrush;
 
@@ -3290,7 +3306,10 @@ public sealed partial class MainWindow : Window
         RefreshRepositoryPresetStatus(BuiltInRepositoryPresets[0], DashboardZzzPresetStatusTextBlock);
         RefreshRepositoryPresetStatus(BuiltInRepositoryPresets[1], DashboardGenshinPresetStatusTextBlock);
         RefreshRepositoryPresetStatus(BuiltInRepositoryPresets[2], DashboardHsrPresetStatusTextBlock);
+        RefreshRepositoryPresetStatus(BuiltInRepositoryPresets[3], DashboardEndfieldPresetStatusTextBlock);
         DashboardOpenRepositoryButton.IsEnabled = GetSelectedRepository() is not null;
+        RefreshRefinedDashboardPathHeader();
+        RefreshTrayStatus();
     }
 
     private void PopulateDashboardRepositorySwitcher()
@@ -5191,6 +5210,11 @@ public sealed partial class MainWindow : Window
 
     private async Task<List<OnlineCharacterOption>> FetchWikiCharacterCatalogAsync(WorkspaceRepository repository)
     {
+        if (IsEndfieldRepository(repository))
+        {
+            return await FetchEndfieldCharacterCatalogAsync(repository);
+        }
+
         WikiCatalogDescriptor? descriptor = GetWikiCatalogDescriptor(repository);
         if (descriptor is null)
         {
@@ -5259,6 +5283,72 @@ public sealed partial class MainWindow : Window
                 Aliases = ParseWikiCharacterAliases(record.Title, record.AliasName),
                 IsWikiCharacter = true,
                 WikiOrder = index
+            });
+        }
+
+        return characters;
+    }
+
+    private async Task<List<OnlineCharacterOption>> FetchEndfieldCharacterCatalogAsync(WorkspaceRepository repository)
+    {
+        using HttpResponseMessage response = await _httpClient.GetAsync(EndfieldOfficialOperatorCatalogUrl);
+        response.EnsureSuccessStatusCode();
+        string html = await response.Content.ReadAsStringAsync();
+        IReadOnlyList<EndfieldOperatorCatalogEntry> officialOperators = EndfieldOperatorCatalogParser.Parse(html);
+        if (officialOperators.Count == 0)
+        {
+            return [];
+        }
+
+        var characters = new List<OnlineCharacterOption>(officialOperators.Count);
+        int endministratorVariant = 0;
+        foreach (EndfieldOperatorCatalogEntry officialOperator in officialOperators)
+        {
+            string englishName = officialOperator.EnglishName;
+            string chineseName = officialOperator.ChineseName;
+            EndfieldCharacterInfo? fallbackCharacter;
+            if (string.Equals(englishName, "Endministrator", StringComparison.OrdinalIgnoreCase))
+            {
+                bool isMaleVariant = endministratorVariant++ == 0;
+                englishName = isMaleVariant ? "Endministrator (M)" : "Endministrator (F)";
+                chineseName = isMaleVariant ? "管理员 (男)" : "管理员 (女)";
+                fallbackCharacter = EndfieldCharacters.FirstOrDefault(character =>
+                    string.Equals(character.EnglishName, englishName, StringComparison.OrdinalIgnoreCase));
+            }
+            else
+            {
+                fallbackCharacter = EndfieldCharacters.FirstOrDefault(character =>
+                    character.AllNames.Any(name =>
+                        string.Equals(name, englishName, StringComparison.OrdinalIgnoreCase)
+                        || string.Equals(name, chineseName, StringComparison.OrdinalIgnoreCase)));
+            }
+
+            List<string> aliases = new[]
+                {
+                    englishName,
+                    chineseName,
+                    officialOperator.EnglishName,
+                    officialOperator.ChineseName
+                }
+                .Concat(fallbackCharacter?.AllNames ?? [])
+                .Where(name => !string.IsNullOrWhiteSpace(name))
+                .Distinct(StringComparer.OrdinalIgnoreCase)
+                .ToList();
+            characters.Add(new OnlineCharacterOption
+            {
+                Key = englishName,
+                DisplayNameZh = chineseName,
+                DisplayNameEn = englishName,
+                CategoryId = fallbackCharacter?.GameBananaCategoryId ?? string.Empty,
+                AvatarUrl = string.IsNullOrWhiteSpace(officialOperator.AvatarUrl)
+                    ? fallbackCharacter?.AvatarUrl
+                    : officialOperator.AvatarUrl,
+                WikiUrl = string.IsNullOrWhiteSpace(repository.WikiUrl)
+                    ? EndfieldOfficialWikiUrl
+                    : repository.WikiUrl,
+                Aliases = aliases,
+                IsWikiCharacter = true,
+                WikiOrder = Math.Max(0, officialOperator.Order - 1)
             });
         }
 
@@ -5763,11 +5853,6 @@ public sealed partial class MainWindow : Window
 
     private async Task EnsureOnlineCharacterCatalogAsync(WorkspaceRepository repository, bool forceReload)
     {
-        if (IsEndfieldRepository(repository))
-        {
-            return;
-        }
-
         string catalogKey = GetOnlineCharacterCatalogKey(repository);
         if (string.IsNullOrWhiteSpace(catalogKey) || !_loadingOnlineCharacterCatalogKeys.Add(catalogKey))
         {
@@ -5781,7 +5866,8 @@ public sealed partial class MainWindow : Window
                 OnlineCharacterCatalogCacheSnapshot? cachedCatalog = await TryReadOnlineCharacterCatalogCacheAsync(catalogKey);
                 if (cachedCatalog is not null)
                 {
-                    bool requiresWikiCatalog = GetWikiCatalogDescriptor(repository) is not null;
+                    bool requiresWikiCatalog = GetWikiCatalogDescriptor(repository) is not null
+                        || IsEndfieldRepository(repository);
                     if (!requiresWikiCatalog || cachedCatalog.Characters.Any(character => character.IsWikiCharacter))
                     {
                         ApplyManualCharacterMappings(repository, cachedCatalog.Characters);
@@ -5795,7 +5881,8 @@ public sealed partial class MainWindow : Window
             }
 
             List<OnlineCharacterOption> wikiCharacters = await FetchWikiCharacterCatalogAsync(repository);
-            if (GetWikiCatalogDescriptor(repository) is not null && wikiCharacters.Count == 0)
+            if ((GetWikiCatalogDescriptor(repository) is not null || IsEndfieldRepository(repository))
+                && wikiCharacters.Count == 0)
             {
                 return;
             }
@@ -6179,13 +6266,13 @@ public sealed partial class MainWindow : Window
         if (_currentLanguage != AppLanguage.ZhCn)
         {
             return bindings
-                .Take(MaxShortcutRows)
+                .Take(ShortcutScanSafetyLimit)
                 .Select(binding => new ShortcutBinding(binding.Shortcut, binding.Action))
                 .ToList();
         }
 
         var localized = new List<ShortcutBinding>();
-        foreach (ShortcutBinding binding in bindings.Take(MaxShortcutRows))
+        foreach (ShortcutBinding binding in bindings.Take(ShortcutScanSafetyLimit))
         {
             string action = binding.Action;
             if (!string.IsNullOrWhiteSpace(action))
@@ -6288,7 +6375,7 @@ public sealed partial class MainWindow : Window
                 if (seen.Add(identity))
                 {
                     bindings.Add(binding);
-                    if (bindings.Count >= MaxShortcutRows)
+                    if (bindings.Count >= ShortcutScanSafetyLimit)
                     {
                         break;
                     }
@@ -8582,6 +8669,7 @@ public sealed partial class MainWindow : Window
         {
             await TryImportShortcutBindingsFromOnlineDetailsAsync(extractFolder, details);
         }
+        await TryImportShortcutBindingsFromModFilesAsync(extractFolder);
 
         SaveConfig();
         SaveShellConfig();
@@ -8609,7 +8697,7 @@ public sealed partial class MainWindow : Window
         }
 
         _modBindings[modFolder] = localizedBindings
-            .Take(MaxShortcutRows)
+            .Take(ShortcutScanSafetyLimit)
             .Select(binding => new ShortcutBinding(binding.Shortcut, binding.Action))
             .ToList();
 
@@ -8914,6 +9002,19 @@ public sealed partial class MainWindow : Window
             Text = $"{L("目标目录", "Target")}: {TrimPreviewPath(repository.TargetPath)}",
             Opacity = 0.74,
             TextWrapping = TextWrapping.Wrap
+        });
+        stackPanel.Children.Add(new TextBlock
+        {
+            Text = $"{L("启动器", "Launcher")}: {TrimPreviewPath(repository.LauncherPath)}",
+            Opacity = 0.74,
+            TextWrapping = TextWrapping.Wrap
+        });
+        stackPanel.Children.Add(new TextBlock
+        {
+            Text = repository.UseDirectoryLinks
+                ? L("部署方式：目录联接", "Deployment: directory junction")
+                : L("部署方式：复制", "Deployment: copy"),
+            Opacity = 0.74
         });
         stackPanel.Children.Add(new TextBlock
         {
@@ -9629,7 +9730,7 @@ public sealed partial class MainWindow : Window
 
     private void ApplyLanguage()
     {
-        Title = L($"集成化mod管理器 {AppVersion}", $"Integrated Mod Manager {AppVersion}");
+        Title = L($"集成化 Mod 管理器 {AppVersion}", $"Integrated Mod Manager {AppVersion}");
 
         BetaTitleTextBlock.Text = _shellLayoutMode == ShellLayoutMode.Compact
             ? "管理器"
@@ -9697,6 +9798,7 @@ public sealed partial class MainWindow : Window
         DashboardZzzPresetTitleTextBlock.Text = L("绝区零", "Zenless Zone Zero");
         DashboardGenshinPresetTitleTextBlock.Text = L("原神", "Genshin Impact");
         DashboardHsrPresetTitleTextBlock.Text = L("崩坏：星穹铁道", "Honkai: Star Rail");
+        DashboardEndfieldPresetTitleTextBlock.Text = L("明日方舟：终末地", "Arknights: Endfield");
         DashboardRepositoriesTitleTextBlock.Text = L("全部仓库", "All Repositories");
         DashboardRepositoriesHintTextBlock.Text = L("卡片会标记当前仓库；可直接切换、进入管理或打开对应 Wiki。", "Cards mark the active repository and provide direct switching, management, and Wiki access.");
         ToolTipService.SetToolTip(DashboardRepositoryComboBox, L("切换当前工作仓库", "Switch the active repository"));
@@ -9732,9 +9834,7 @@ public sealed partial class MainWindow : Window
         HeaderTitleTextBlock.Text = L("集成化mod管理器", "Integrated Mod Manager");
         HeaderFrameworkBadgeTextBlock.Text = "WinUI 3";
         HeaderVersionBadgeTextBlock.Text = AppVersion;
-        HeaderSubtitleTextBlock.Text = L(
-            "管理两层 Mod 文件夹、预览图、ZIP 导入、快捷键说明和启动器入口。",
-            "Manage two-level mod folders, preview images, ZIP imports, per-mod shortcut notes, and launcher access.");
+        HeaderSubtitleTextBlock.Text = string.Empty;
         HeaderCaptionTextBlock.Text = L(
             "左侧先选第一层分类，再选第二层 Mod。双击第二层可按当前模式部署或移除。",
             "Select a first-level category first, then a second-level mod. Double-click a mod to deploy or remove it using the current mode.");
@@ -9764,9 +9864,10 @@ public sealed partial class MainWindow : Window
         LinkDeploymentToggleSwitch.OnContent = L("链接", "Link");
         LinkDeploymentToggleSwitch.OffContent = L("复制", "Copy");
         RefreshButton.Content = L("刷新目录", "Refresh");
-        ImportZipButton.Content = L("导入到当前选中文件夹", "Import To Selected Folder");
+        ImportZipButton.Content = L("导入 Mod", "Import Mod");
+        ToolTipService.SetToolTip(ImportZipButton, L("导入到当前选中文件夹", "Import into the selected folder"));
         RunLauncherButton.Content = L("运行启动器", "Run Launcher");
-        ToggleCopyButton.Content = L("部署当前第二层 Mod", "Deploy Selected Mod");
+        ToggleCopyButton.Content = L("部署 Mod", "Deploy Mod");
 
         FirstCountLabelTextBlock.Text = L("第一层文件夹", "First-level folders");
         FirstCountHintTextBlock.Text = L("当前 Mod 仓库中的分类数量", "Number of categories in the source folder");
@@ -9777,12 +9878,12 @@ public sealed partial class MainWindow : Window
         CurrentFolderLabelTextBlock.Text = L("当前第二层文件夹", "Current second-level folder");
         CurrentFolderHintTextBlock.Text = L("这里显示当前选中的 Mod 名称", "Shows the currently selected mod name");
 
-        FirstLevelSectionTitleTextBlock.Text = L("第一层文件夹", "First-level folders");
+        FirstLevelSectionTitleTextBlock.Text = L("角色与分类", "Categories");
         FirstLevelSectionSubtitleTextBlock.Text = L("先选择分类目录", "Choose a category folder first");
         FirstLevelSearchTextBox.PlaceholderText = L("搜索第一层文件夹", "Search first-level folders");
         CreateFirstLevelButton.Content = L("新建第一层文件夹", "New Folder");
         RenameFirstLevelButton.Content = L("重命名当前第一层", "Rename");
-        SecondLevelSectionTitleTextBlock.Text = L("第二层文件夹", "Second-level folders");
+        SecondLevelSectionTitleTextBlock.Text = L("Mod 收藏", "Mod Library");
         SecondLevelSectionSubtitleTextBlock.Text = L("再选择具体 Mod", "Then choose a specific mod");
         DeleteSecondLevelButton.Content = L("删除当前第二层 Mod", "Delete Mod");
 
@@ -9790,8 +9891,8 @@ public sealed partial class MainWindow : Window
         ShortcutSectionSubtitleTextBlock.Text = L("当前选中 Mod 的快捷键说明", "Shortcut notes for the selected mod");
         AddShortcutRowButton.Content = L("新增一行", "Add Row");
         ShortcutHintTextBlock.Text = L(
-            "快捷键需要至少两个按键组合。先点选快捷键输入框，再按下组合键即可自动录入；当前窗口聚焦时，会定位并执行对应 Mod。",
-            "Shortcuts must use at least a two-key combination. Click a shortcut box first, then press the combination to capture it; when this window is focused, it will locate and run the corresponding mod.");
+            "下载、导入或首次选择 Mod 时会自动读取 .ini 的 [Key] 段；识别结果可在这里手动修正。管理器全局快捷键仍要求至少两个按键组合。",
+            "After download, import, or first selection, [Key] sections are read from the Mod INI files. Detected notes can be adjusted here; manager-wide shortcuts still require at least two keys.");
 
         PreviewSectionTitleTextBlock.Text = L("默认图片预览", "Image Preview");
         PreviewSectionSubtitleTextBlock.Text = L(
@@ -9851,7 +9952,7 @@ public sealed partial class MainWindow : Window
         PathHintTextBlock.Text = L(
             "链接模式共享仓库文件；同一角色改链其他 Mod 会自动断开旧链接，移除时也不会删除仓库 Mod。",
             "Link mode shares repository files. Linking another Mod for the same character disconnects the old link, and removal never deletes the repository Mod.");
-        ImportZipButton.Content = L("导入到当前选中文件夹", "Import To Selected Folder");
+        ImportZipButton.Content = L("导入 Mod", "Import Mod");
 
         FirstCountHintTextBlock.Text = L("当前 Mod 存储文件夹中的分类数量", "Number of categories in the mod storage folder");
 
@@ -9908,46 +10009,7 @@ public sealed partial class MainWindow : Window
         _shortcutKeyBoxes.Clear();
         _shortcutActionBoxes.Clear();
 
-        for (int index = 0; index < MaxShortcutRows; index++)
-        {
-            var rowGrid = new Grid { ColumnSpacing = 12 };
-            rowGrid.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(1, GridUnitType.Star) });
-            rowGrid.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(2, GridUnitType.Star) });
-
-            var keyBorder = CreateInsetBorder();
-            var keyBox = new TextBox
-            {
-                IsReadOnly = true,
-                Style = (Style)Application.Current.Resources["ShortcutInputTextBoxStyle"]
-            };
-            ConfigureShortcutTextBoxTheme(keyBox);
-            AttachTrackedTextInput(keyBox);
-            keyBox.TextChanged += OnShortcutTextChanged;
-            keyBox.KeyDown += OnShortcutKeyBoxKeyDown;
-            keyBox.GotFocus += OnShortcutKeyBoxGotFocus;
-            keyBox.LostFocus += OnShortcutKeyBoxLostFocus;
-            keyBorder.Child = keyBox;
-
-            var actionBorder = CreateInsetBorder();
-            var actionBox = new TextBox
-            {
-                Style = (Style)Application.Current.Resources["ShortcutInputTextBoxStyle"]
-            };
-            ConfigureShortcutTextBoxTheme(actionBox);
-            AttachTrackedTextInput(actionBox);
-            actionBox.TextChanged += OnShortcutTextChanged;
-            actionBorder.Child = actionBox;
-
-            Grid.SetColumn(keyBorder, 0);
-            Grid.SetColumn(actionBorder, 1);
-            rowGrid.Children.Add(keyBorder);
-            rowGrid.Children.Add(actionBorder);
-
-            ShortcutRowsPanel.Children.Add(rowGrid);
-            _shortcutKeyBorders.Add(keyBorder);
-            _shortcutKeyBoxes.Add(keyBox);
-            _shortcutActionBoxes.Add(actionBox);
-        }
+        EnsureShortcutRowCapacity(InitialShortcutRows);
 
         OnlineTitleTextBlock.Text = L("在线 Mod 浏览", "Online Mod Browser");
         OnlineSubtitleTextBlock.Text = L("这里只保留在线 Mod 列表和右侧详情预览；不同游戏的 GameBanana 皮肤分类已经移到设置页按仓库配置。", "This page now focuses on the online mod list and the right-side detail preview. GameBanana skin categories for different games are configured per repository in Settings.");
@@ -9972,6 +10034,59 @@ public sealed partial class MainWindow : Window
         ApplyShortcutPlaceholders();
         UpdateShortcutRowVisibility();
         UpdateShortcutKeyFocusVisuals();
+        RefreshRefinedActionIcons();
+    }
+
+    private void EnsureShortcutRowCapacity(int requiredRows)
+    {
+        requiredRows = Math.Max(InitialShortcutRows, requiredRows);
+        while (_shortcutKeyBoxes.Count < requiredRows)
+        {
+            AddShortcutRowControls();
+        }
+    }
+
+    private void AddShortcutRowControls()
+    {
+        var rowGrid = new Grid { ColumnSpacing = 12 };
+        rowGrid.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(1, GridUnitType.Star) });
+        rowGrid.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(2, GridUnitType.Star) });
+
+        var keyBorder = CreateInsetBorder();
+        var keyBox = new TextBox
+        {
+            IsReadOnly = true,
+            Style = (Style)Application.Current.Resources["ShortcutInputTextBoxStyle"],
+            PlaceholderText = L("快捷键", "Shortcut")
+        };
+        ConfigureShortcutTextBoxTheme(keyBox);
+        AttachTrackedTextInput(keyBox);
+        keyBox.TextChanged += OnShortcutTextChanged;
+        keyBox.KeyDown += OnShortcutKeyBoxKeyDown;
+        keyBox.GotFocus += OnShortcutKeyBoxGotFocus;
+        keyBox.LostFocus += OnShortcutKeyBoxLostFocus;
+        keyBorder.Child = keyBox;
+
+        var actionBorder = CreateInsetBorder();
+        var actionBox = new TextBox
+        {
+            Style = (Style)Application.Current.Resources["ShortcutInputTextBoxStyle"],
+            PlaceholderText = L("描述", "Description")
+        };
+        ConfigureShortcutTextBoxTheme(actionBox);
+        AttachTrackedTextInput(actionBox);
+        actionBox.TextChanged += OnShortcutTextChanged;
+        actionBorder.Child = actionBox;
+
+        Grid.SetColumn(keyBorder, 0);
+        Grid.SetColumn(actionBorder, 1);
+        rowGrid.Children.Add(keyBorder);
+        rowGrid.Children.Add(actionBorder);
+
+        ShortcutRowsPanel.Children.Add(rowGrid);
+        _shortcutKeyBorders.Add(keyBorder);
+        _shortcutKeyBoxes.Add(keyBox);
+        _shortcutActionBoxes.Add(actionBox);
     }
 
     private static Border CreateInsetBorder()
@@ -10108,26 +10223,39 @@ public sealed partial class MainWindow : Window
 
     private async void OnImportZipClicked(object sender, RoutedEventArgs e)
     {
-        FirstLevelFolderItem? item = FirstLevelListView.SelectedItem as FirstLevelFolderItem;
-        if (item is null)
+        try
         {
-            await ShowMessageAsync(
-                L("请先选择一个第一层分类。", "Select a first-level category first."),
-                L("未选择分类", "No category selected"));
-            return;
-        }
+            FirstLevelFolderItem? item = FirstLevelListView.SelectedItem as FirstLevelFolderItem;
+            if (item is null)
+            {
+                await ShowMessageAsync(
+                    L("请先选择一个第一层分类。", "Select a first-level category first."),
+                    L("未选择分类", "No category selected"));
+                return;
+            }
 
-        var picker = new FileOpenPicker();
-        foreach (string extension in SupportedArchiveExtensions)
-        {
-            picker.FileTypeFilter.Add(extension);
+            var picker = new FileOpenPicker();
+            foreach (string extension in SupportedArchiveExtensions
+                .Select(value => Path.GetExtension(value)!)
+                .Where(extension => !string.IsNullOrWhiteSpace(extension))
+                .Distinct(StringComparer.OrdinalIgnoreCase))
+            {
+                picker.FileTypeFilter.Add(extension!);
+            }
+            picker.SuggestedStartLocation = PickerLocationId.Downloads;
+            InitializeWithWindow.Initialize(picker, WindowNative.GetWindowHandle(this));
+            StorageFile? file = await picker.PickSingleFileAsync();
+            if (file is not null)
+            {
+                await ImportArchiveToSelectedFirstLevelFolderAsync(file.Path, item);
+            }
         }
-        picker.SuggestedStartLocation = PickerLocationId.Downloads;
-        InitializeWithWindow.Initialize(picker, WindowNative.GetWindowHandle(this));
-        StorageFile? file = await picker.PickSingleFileAsync();
-        if (file is not null)
+        catch (Exception ex)
         {
-            await ImportArchiveToSelectedFirstLevelFolderAsync(file.Path, item);
+            LogApplicationIssue("Open archive picker", ex);
+            await ShowMessageAsync(
+                L("无法打开压缩包选择器：", "Could not open the archive picker: ") + ex.Message,
+                L("导入 Mod 失败", "Import Mod Failed"));
         }
     }
 
@@ -10283,11 +10411,21 @@ public sealed partial class MainWindow : Window
         }
     }
 
-    private void OnSecondLevelSelectionChanged(object sender, SelectionChangedEventArgs e)
+    private async void OnSecondLevelSelectionChanged(object sender, SelectionChangedEventArgs e)
     {
         try
         {
-            ApplySecondLevelSelectionState(GetSelectedSecondLevelItem());
+            SecondLevelFolderItem? item = GetSelectedSecondLevelItem();
+            ApplySecondLevelSelectionState(item);
+            if (item is not null
+                && await TryImportShortcutBindingsFromModFilesAsync(item.Path) > 0
+                && string.Equals(_currentSecondLevelPath, item.Path, StringComparison.CurrentCultureIgnoreCase))
+            {
+                LoadBindingsForCurrentMod(item);
+                StatusTextBlock.Text = L(
+                    "已从 Mod 的 INI 配置自动读取快捷键，可在右侧继续修正。",
+                    "Shortcuts were detected from the Mod INI files and can be adjusted on the right.");
+            }
         }
         catch (Exception ex)
         {
@@ -10395,13 +10533,8 @@ public sealed partial class MainWindow : Window
             return;
         }
 
-        if (_visibleShortcutRows >= MaxShortcutRows)
-        {
-            StatusTextBlock.Text = L("快捷键行数已达到上限 10 行。", "Shortcut rows have reached the 10-row limit.");
-            return;
-        }
-
         _visibleShortcutRows++;
+        EnsureShortcutRowCapacity(_visibleShortcutRows);
         UpdateShortcutRowVisibility();
         _shortcutKeyBoxes[_visibleShortcutRows - 1].Focus(FocusState.Programmatic);
         SaveCurrentModBindings();
@@ -10521,7 +10654,7 @@ public sealed partial class MainWindow : Window
         bool compact = _interfaceDensity == InterfaceDensity.Compact;
         AppShellGrid.Padding = new Thickness(compact ? 8 : 12);
         AppShellGrid.RowSpacing = compact ? 8 : 12;
-        HeaderTitleTextBlock.FontSize = compact ? 27 : 30;
+        HeaderTitleTextBlock.FontSize = compact ? 19 : 21;
         PrimaryNavBorder.Padding = new Thickness(8, compact ? 8 : 12, 8, compact ? 8 : 12);
         SecondaryNavBorder.Padding = new Thickness(compact ? 12 : 14);
         SecondaryNavPanel.Spacing = compact ? 5 : 8;
@@ -10532,8 +10665,10 @@ public sealed partial class MainWindow : Window
 
     private void OnLanguageToggleClicked(object sender, RoutedEventArgs e)
     {
+        SaveCurrentModBindings();
         _currentLanguage = _currentLanguage == AppLanguage.ZhCn ? AppLanguage.EnUs : AppLanguage.ZhCn;
         ApplyLanguage();
+        RefreshVisibleShortcutDescriptionsForLanguage();
         RefreshSettingsPane();
         RefreshUpdatesPane();
         SaveConfig();
@@ -10816,6 +10951,7 @@ public sealed partial class MainWindow : Window
         RootGrid.ActualThemeChanged -= OnRootActualThemeChanged;
         SaveWindowPlacement();
         SaveShellConfig();
+        DisposeTraySupport();
     }
 
     private void DetectLocalUpdatePackage()
@@ -10897,7 +11033,11 @@ public sealed partial class MainWindow : Window
         {
             string installRoot = GetInstallRootPath();
             string updaterSource = Path.Combine(installRoot, "LocalUpdateAgent.exe");
-            string launcherPath = Path.Combine(installRoot, "ModFolderCopier.exe");
+            string launcherPath = Path.Combine(installRoot, "IntegratedModManager.exe");
+            if (!File.Exists(launcherPath))
+            {
+                launcherPath = Path.Combine(installRoot, "ModFolderCopier.exe");
+            }
 
             if (!File.Exists(updaterSource))
             {
@@ -11325,6 +11465,22 @@ public sealed partial class MainWindow : Window
         }
     }
 
+    private void ApplyWindowIcon()
+    {
+        try
+        {
+            string iconPath = Path.Combine(AppContext.BaseDirectory, "Assets", "AppIcon.ico");
+            if (File.Exists(iconPath))
+            {
+                AppWindow.SetIcon(iconPath);
+            }
+        }
+        catch (Exception ex)
+        {
+            TraceStartupStage("Window icon could not be applied: " + ex.Message);
+        }
+    }
+
     private string GetPreferredDownloadStartFolder()
     {
         WorkspaceRepository? repository = GetSelectedRepository();
@@ -11539,6 +11695,25 @@ public sealed partial class MainWindow : Window
                         bindings.Add(new ShortcutBinding(DecodeValue(parts[1]), DecodeValue(parts[2])));
                     }
                 }
+                else if (line.StartsWith("binding_auto=", StringComparison.Ordinal))
+                {
+                    string[] parts = line["binding_auto=".Length..].Split('\t');
+                    if (parts.Length == 6
+                        && int.TryParse(DecodeValue(parts[1]), NumberStyles.Integer, CultureInfo.InvariantCulture, out int bindingIndex))
+                    {
+                        string modPath = DecodeValue(parts[0]);
+                        if (_modBindings.TryGetValue(modPath, out List<ShortcutBinding>? bindings)
+                            && bindingIndex >= 0
+                            && bindingIndex < bindings.Count)
+                        {
+                            ShortcutBinding binding = bindings[bindingIndex];
+                            binding.AutoSection = DecodeValue(parts[2]);
+                            binding.AutoBehavior = DecodeValue(parts[3]);
+                            binding.AutoTarget = DecodeValue(parts[4]);
+                            binding.AutoSourceFile = DecodeValue(parts[5]);
+                        }
+                    }
+                }
                 else if (line.StartsWith("mod_link=", StringComparison.Ordinal))
                 {
                     string[] parts = line["mod_link=".Length..].Split('\t');
@@ -11604,14 +11779,25 @@ public sealed partial class MainWindow : Window
 
             foreach ((string path, List<ShortcutBinding> bindings) in _modBindings.OrderBy(item => item.Key, StringComparer.CurrentCultureIgnoreCase))
             {
-                foreach (ShortcutBinding binding in bindings)
+                for (int bindingIndex = 0; bindingIndex < bindings.Count; bindingIndex++)
                 {
+                    ShortcutBinding binding = bindings[bindingIndex];
                     if (string.IsNullOrWhiteSpace(binding.Shortcut) && string.IsNullOrWhiteSpace(binding.Action))
                     {
                         continue;
                     }
 
                     lines.Add("binding=" + EncodeValue(path) + "\t" + EncodeValue(binding.Shortcut) + "\t" + EncodeValue(binding.Action));
+                    if (binding.HasAutoDescription)
+                    {
+                        lines.Add("binding_auto="
+                            + EncodeValue(path) + "\t"
+                            + EncodeValue(bindingIndex.ToString(CultureInfo.InvariantCulture)) + "\t"
+                            + EncodeValue(binding.AutoSection) + "\t"
+                            + EncodeValue(binding.AutoBehavior) + "\t"
+                            + EncodeValue(binding.AutoTarget) + "\t"
+                            + EncodeValue(binding.AutoSourceFile));
+                    }
                 }
             }
 
@@ -11797,7 +11983,7 @@ public sealed partial class MainWindow : Window
         SecondCountTextBlock.Text = "0";
         CurrentFolderTextBlock.Text = StateNotSelectedText;
         CurrentStateTextBlock.Text = StateNotSelectedText;
-        CurrentStateTextBlock.Foreground = NeutralBrush;
+        SetStateColor(CurrentStateTextBlock.Text);
         LoadDefaultShortcutTemplate();
         LoadLinkForCurrentMod(null);
         ClearPreview();
@@ -11848,7 +12034,7 @@ public sealed partial class MainWindow : Window
         ClearPreview();
         CurrentFolderTextBlock.Text = StateNotSelectedText;
         CurrentStateTextBlock.Text = StateNotSelectedText;
-        CurrentStateTextBlock.Foreground = NeutralBrush;
+        SetStateColor(CurrentStateTextBlock.Text);
         _currentSecondLevelPath = null;
         LoadDefaultShortcutTemplate();
         LoadLinkForCurrentMod(null);
@@ -11881,7 +12067,7 @@ public sealed partial class MainWindow : Window
         {
             CurrentFolderTextBlock.Text = StateNotSelectedText;
             CurrentStateTextBlock.Text = StateNotSelectedText;
-            CurrentStateTextBlock.Foreground = NeutralBrush;
+            SetStateColor(CurrentStateTextBlock.Text);
             ClearPreview();
             LoadLinkForCurrentMod(null);
             return;
@@ -12068,6 +12254,7 @@ public sealed partial class MainWindow : Window
             await RefreshListsAsync();
             SelectFirstLevelByPath(item.Path);
             SelectSecondLevelByPath(importedPath);
+            await TryImportShortcutBindingsFromModFilesAsync(importedPath);
         }
         catch (Exception ex)
         {
@@ -12240,11 +12427,12 @@ public sealed partial class MainWindow : Window
 
         if (item is not null && _modBindings.TryGetValue(item.Path, out List<ShortcutBinding>? bindings) && bindings.Count > 0)
         {
-            _visibleShortcutRows = Math.Min(MaxShortcutRows, Math.Max(1, bindings.Count));
+            _visibleShortcutRows = Math.Max(InitialShortcutRows, bindings.Count);
+            EnsureShortcutRowCapacity(_visibleShortcutRows);
             for (int i = 0; i < _visibleShortcutRows; i++)
             {
                 _shortcutKeyBoxes[i].Text = bindings[i].Shortcut;
-                _shortcutActionBoxes[i].Text = bindings[i].Action;
+                _shortcutActionBoxes[i].Text = GetShortcutBindingDisplayAction(bindings[i]);
             }
         }
         else
@@ -12257,6 +12445,163 @@ public sealed partial class MainWindow : Window
         _isLoadingBindings = false;
     }
 
+    private async Task DetectShortcutsForChildModsAsync(string firstLevelDirectory)
+    {
+        if (!Directory.Exists(firstLevelDirectory))
+        {
+            return;
+        }
+
+        string[] modDirectories;
+        try
+        {
+            modDirectories = Directory.GetDirectories(firstLevelDirectory);
+        }
+        catch (Exception ex)
+        {
+            LogApplicationIssue("Enumerate imported Mods for shortcut detection", ex);
+            return;
+        }
+
+        foreach (string modDirectory in modDirectories)
+        {
+            await TryImportShortcutBindingsFromModFilesAsync(modDirectory);
+        }
+    }
+
+    private async Task<int> TryImportShortcutBindingsFromModFilesAsync(string modFolder)
+    {
+        if (string.IsNullOrWhiteSpace(modFolder)
+            || !Directory.Exists(modFolder))
+        {
+            return 0;
+        }
+
+        bool hasExistingBindings = _modBindings.TryGetValue(modFolder, out List<ShortcutBinding>? existing)
+            && existing.Any(binding => !string.IsNullOrWhiteSpace(binding.Shortcut)
+                || !string.IsNullOrWhiteSpace(binding.Action));
+        bool mayContainLegacyAutomaticDescriptions = hasExistingBindings
+            && existing!.Any(binding => IsPossibleLegacyAutomaticShortcutDescription(binding.Action));
+        if (hasExistingBindings && !mayContainLegacyAutomaticDescriptions)
+        {
+            return 0;
+        }
+
+        IReadOnlyList<DetectedModShortcut> detected;
+        try
+        {
+            detected = await Task.Run(() => ModShortcutScanner.ScanDirectory(modFolder, ShortcutScanSafetyLimit));
+        }
+        catch (Exception ex)
+        {
+            LogApplicationIssue("Read Mod shortcut INI", ex);
+            return 0;
+        }
+
+        if (detected.Count == 0)
+        {
+            return 0;
+        }
+
+        if (hasExistingBindings)
+        {
+            int upgradedCount = UpgradeLegacyAutomaticShortcutBindings(existing!, detected);
+            if (upgradedCount > 0)
+            {
+                SaveConfig();
+            }
+
+            return upgradedCount;
+        }
+
+        _modBindings[modFolder] = detected
+            .Take(ShortcutScanSafetyLimit)
+            .Select(CreateAutomaticShortcutBinding)
+            .ToList();
+        SaveConfig();
+        return _modBindings[modFolder].Count;
+    }
+
+    private string DescribeDetectedShortcut(DetectedModShortcut shortcut)
+    {
+        return ModShortcutDescriptionFormatter.Describe(
+            shortcut,
+            useEnglish: _currentLanguage == AppLanguage.EnUs);
+    }
+
+    private ShortcutBinding CreateAutomaticShortcutBinding(DetectedModShortcut shortcut)
+    {
+        return new ShortcutBinding(shortcut.Shortcut, DescribeDetectedShortcut(shortcut))
+        {
+            AutoSection = shortcut.Section,
+            AutoBehavior = shortcut.Behavior,
+            AutoTarget = shortcut.Target,
+            AutoSourceFile = shortcut.SourceFile
+        };
+    }
+
+    private string GetShortcutBindingDisplayAction(ShortcutBinding binding)
+    {
+        return binding.HasAutoDescription
+            ? DescribeDetectedShortcut(ToDetectedModShortcut(binding))
+            : binding.Action;
+    }
+
+    private static DetectedModShortcut ToDetectedModShortcut(ShortcutBinding binding) =>
+        new(
+            binding.Shortcut,
+            binding.AutoSection,
+            binding.AutoBehavior,
+            binding.AutoTarget,
+            binding.AutoSourceFile);
+
+    private static bool IsPossibleLegacyAutomaticShortcutDescription(string? action)
+    {
+        if (string.IsNullOrWhiteSpace(action))
+        {
+            return false;
+        }
+
+        string value = action.Trim();
+        return value.StartsWith("循环切换 ", StringComparison.Ordinal)
+            || value.StartsWith("按住触发 ", StringComparison.Ordinal)
+            || value.StartsWith("切换 ", StringComparison.Ordinal)
+            || value.StartsWith("触发 ", StringComparison.Ordinal)
+            || value.StartsWith("Cycle ", StringComparison.OrdinalIgnoreCase)
+            || value.StartsWith("Hold ", StringComparison.OrdinalIgnoreCase)
+            || value.StartsWith("Toggle ", StringComparison.OrdinalIgnoreCase)
+            || value.StartsWith("Trigger ", StringComparison.OrdinalIgnoreCase);
+    }
+
+    private int UpgradeLegacyAutomaticShortcutBindings(
+        List<ShortcutBinding> existingBindings,
+        IReadOnlyList<DetectedModShortcut> detectedShortcuts)
+    {
+        int upgradedCount = 0;
+        for (int index = 0; index < existingBindings.Count; index++)
+        {
+            ShortcutBinding existingBinding = existingBindings[index];
+            if (existingBinding.HasAutoDescription
+                || !IsPossibleLegacyAutomaticShortcutDescription(existingBinding.Action))
+            {
+                continue;
+            }
+
+            DetectedModShortcut? match = detectedShortcuts.FirstOrDefault(shortcut =>
+                string.Equals(shortcut.Shortcut, existingBinding.Shortcut, StringComparison.OrdinalIgnoreCase)
+                && ModShortcutDescriptionFormatter.MatchesLegacyDescription(existingBinding.Action, shortcut));
+            if (match is null)
+            {
+                continue;
+            }
+
+            existingBindings[index] = CreateAutomaticShortcutBinding(match);
+            upgradedCount++;
+        }
+
+        return upgradedCount;
+    }
+
     private void SaveCurrentModBindings()
     {
         if (_isLoadingBindings || string.IsNullOrEmpty(_currentSecondLevelPath))
@@ -12264,6 +12609,7 @@ public sealed partial class MainWindow : Window
             return;
         }
 
+        _modBindings.TryGetValue(_currentSecondLevelPath, out List<ShortcutBinding>? previousBindings);
         var bindings = new List<ShortcutBinding>();
         for (int i = 0; i < _visibleShortcutRows; i++)
         {
@@ -12271,7 +12617,16 @@ public sealed partial class MainWindow : Window
             string action = (_shortcutActionBoxes[i].Text ?? string.Empty).Trim();
             if (!string.IsNullOrWhiteSpace(shortcut) || !string.IsNullOrWhiteSpace(action))
             {
-                bindings.Add(new ShortcutBinding(shortcut, action));
+                ShortcutBinding? previous = previousBindings is not null && i < previousBindings.Count
+                    ? previousBindings[i]
+                    : null;
+                bool unchangedAutomaticBinding = previous is not null
+                    && previous.HasAutoDescription
+                    && string.Equals(shortcut, previous.Shortcut, StringComparison.Ordinal)
+                    && string.Equals(action, GetShortcutBindingDisplayAction(previous), StringComparison.Ordinal);
+                bindings.Add(unchangedAutomaticBinding
+                    ? previous!
+                    : new ShortcutBinding(shortcut, action));
             }
         }
 
@@ -12325,12 +12680,40 @@ public sealed partial class MainWindow : Window
 
     private void UpdateShortcutRowVisibility()
     {
-        for (int i = 0; i < MaxShortcutRows; i++)
+        EnsureShortcutRowCapacity(_visibleShortcutRows);
+        for (int i = 0; i < ShortcutRowsPanel.Children.Count; i++)
         {
             ShortcutRowsPanel.Children[i].Visibility = i < _visibleShortcutRows ? Visibility.Visible : Visibility.Collapsed;
         }
 
-        ShortcutRowsTextBlock.Text = L($"当前 {_visibleShortcutRows} / {MaxShortcutRows} 行", $"{_visibleShortcutRows} / {MaxShortcutRows} rows");
+        ShortcutRowsTextBlock.Text = L($"当前 {_visibleShortcutRows} 行", $"{_visibleShortcutRows} rows");
+    }
+
+    private void RefreshVisibleShortcutDescriptionsForLanguage()
+    {
+        if (string.IsNullOrWhiteSpace(_currentSecondLevelPath)
+            || !_modBindings.TryGetValue(_currentSecondLevelPath, out List<ShortcutBinding>? bindings)
+            || bindings.Count == 0)
+        {
+            return;
+        }
+
+        EnsureShortcutRowCapacity(bindings.Count);
+        _isLoadingBindings = true;
+        try
+        {
+            for (int i = 0; i < bindings.Count; i++)
+            {
+                if (bindings[i].HasAutoDescription)
+                {
+                    _shortcutActionBoxes[i].Text = GetShortcutBindingDisplayAction(bindings[i]);
+                }
+            }
+        }
+        finally
+        {
+            _isLoadingBindings = false;
+        }
     }
 
     private async Task<bool> TryRunBoundShortcutAsync(string shortcut)
@@ -12753,6 +13136,7 @@ public sealed partial class MainWindow : Window
             ShowAppNotification($"压缩包已导入到 {item.Name}。", $"The archive was imported into {item.Name}.");
             await RefreshListsAsync();
             SelectFirstLevelByPath(item.Path);
+            await DetectShortcutsForChildModsAsync(item.Path);
         }
         catch (Exception ex)
         {
@@ -13706,6 +14090,8 @@ public sealed class BetaShellConfig
 
     public bool ReduceMotion { get; set; }
 
+    public bool MinimizeToTray { get; set; }
+
     public string? InterfaceDensity { get; set; }
 
     public string? OnlineCardLayout { get; set; }
@@ -13858,6 +14244,17 @@ public sealed class ShortcutBinding
     public string Shortcut { get; }
 
     public string Action { get; }
+
+    public string AutoSection { get; set; } = string.Empty;
+
+    public string AutoBehavior { get; set; } = string.Empty;
+
+    public string AutoTarget { get; set; } = string.Empty;
+
+    public string AutoSourceFile { get; set; } = string.Empty;
+
+    public bool HasAutoDescription => !string.IsNullOrWhiteSpace(AutoSection)
+        || !string.IsNullOrWhiteSpace(AutoTarget);
 }
 
 public sealed class ProgressInfo

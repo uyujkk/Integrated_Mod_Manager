@@ -1,4 +1,4 @@
-# Integrated Mod Manager v3.8.5 - Complete User Guide
+# Integrated Mod Manager v3.9.0 - Complete User Guide
 
 > For Windows 10/11 x64. Tool author: uyujkk.
 >
@@ -33,8 +33,8 @@ The left navigation contains:
 
 1. Download `Integrated_Mod_Manager-vX.X.X.zip` from [GitHub Releases](https://github.com/uyujkk/Integrated_Mod_Manager/releases/latest).
 2. Fully extract it to a writable folder. Do not run it from inside the archive.
-3. Keep `ModFolderCopier.exe`, `LocalUpdateAgent.exe`, and the `WinUI3` folder together.
-4. Run `ModFolderCopier.exe`.
+3. Keep `IntegratedModManager.exe`, `LocalUpdateAgent.exe`, the compatibility entry point, and the `WinUI3` folder together.
+4. Run `IntegratedModManager.exe`.
 
 The executable is not currently signed with a commercial code-signing certificate, so SmartScreen may report an unknown publisher. Download only from this project's Releases page, inspect the source if desired, and do not disable Microsoft Defender just to run the app.
 

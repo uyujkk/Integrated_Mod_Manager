@@ -93,6 +93,20 @@ public sealed class LocalUpdateAgentTests
     }
 
     [Fact]
+    public void FindPayloadRoot_AcceptsRenamedOfficialLauncher()
+    {
+        using var directory = new TemporaryDirectory();
+        string payload = Path.Combine(directory.Path, "Integrated_Mod_Manager-v3.9.0");
+        Directory.CreateDirectory(Path.Combine(payload, "WinUI3"));
+        File.WriteAllText(Path.Combine(payload, "IntegratedModManager.exe"), "launcher");
+        File.WriteAllText(Path.Combine(payload, "WinUI3", "ModFolderCopier.WinUI.exe"), "runtime");
+
+        string result = LocalUpdateAgent.FindPayloadRoot(directory.Path);
+
+        Assert.Equal(payload, result, ignoreCase: true);
+    }
+
+    [Fact]
     public void FindPayloadRoot_RejectsUnrelatedArchiveContent()
     {
         using var directory = new TemporaryDirectory();

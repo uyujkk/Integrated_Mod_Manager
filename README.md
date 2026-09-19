@@ -24,7 +24,7 @@
 
 集成化 Mod 管理器以独立“仓库”管理不同游戏或不同 Mod 环境。它可以在本地仓库和游戏实际读取的目标目录之间复制或移除完整 Mod 文件夹，并集中管理预览图、来源链接、快捷键说明、在线下载、更新记录、配置方案和安装备份。
 
-当前稳定版本为 **v3.8.5**，文件版本为 `3.8.5.0`，工具作者为 `uyujkk`。
+当前稳定版本为 **v3.9.0**，文件版本为 `3.9.0.0`，工具作者为 `uyujkk`。
 
 ## 核心功能
 
@@ -47,10 +47,10 @@
 1. 打开 [Releases 最新版本](https://github.com/uyujkk/Integrated_Mod_Manager/releases/latest)。
 2. 下载 `Integrated_Mod_Manager-vX.X.X.zip` 和对应的 `.sha256` 校验文件。
 3. 将 ZIP **完整解压**到一个可写文件夹，不要直接在压缩包内运行。
-4. 双击根目录中的 `ModFolderCopier.exe`。
+4. 双击根目录中的 `IntegratedModManager.exe`。
 5. 创建或选择仓库，设置 Mod 存储文件夹、目标文件夹和可选启动器。
 
-`ModFolderCopier.exe` 是启动入口，WinUI 主程序位于 `WinUI3/ModFolderCopier.WinUI.exe`。请保留发布包原有目录结构。
+`IntegratedModManager.exe` 是正式启动入口。发布包暂时保留 `ModFolderCopier.exe` 作为从 v3.8.5 自动更新时的兼容入口；WinUI 运行文件位于 `WinUI3/ModFolderCopier.WinUI.exe`。请保留发布包原有目录结构。
 
 ### SmartScreen 提示
 
@@ -79,13 +79,15 @@ Mod 存储文件夹
 
 第一层是角色、用途或其他分类；第二层是程序实际复制、移除和记录信息的完整 Mod 文件夹。
 
-## v3.8.5 重要更新
+## v3.9.0 重要更新
 
-- 新增可选的 Windows 目录联接部署，加载器对 Mod 文件夹内部文件的写入可直接保留在仓库；原复制模式继续保留。
-- 同一角色切换到另一个链接 Mod 时自动、安全地断开旧联接；普通复制目录与其他角色不受影响。
-- 修复新版 7-Zip 的 RAR 空链接字段误报、选择 Mod 导致程序崩溃，以及下载中心进度条倒退和乱跳。
-- 明确跨 Mod `$变量` 保存的实验结论：v3.8.1/v3.8.2 原型暂时无法可靠通用于任意第三方 Mod，不包含在发布包中。
-- 自动化验证扩展至 **99 项测试**，CI 同时检查覆盖率、WinUI x64 构建和精简发布包。
+- 完整重构仪表板、仓库工作台、在线浏览、更新和设置界面，提供响应式宽屏、半屏和紧凑布局；仪表板路径区与游戏预设区在宽屏下严格对齐。
+- 仓库路径改为每个仓库独立配置并直接显示在仪表板；支持最小化到系统托盘，并在托盘提示中保留仓库、Mod 数量、在线来源和版本等基础信息。
+- 从 Mod `.ini` 的 `[Key...]` 段只读识别快捷键，自动生成随当前应用语言切换的可读功能说明，并解除原先 10 行编辑限制。
+- 补全《明日方舟：终末地》的 GameBanana/Wiki 预设与在线角色目录更新；保留原神、绝区零和崩坏：星穹铁道预设。
+- 修复导入文件选择导致的崩溃、下载进度倒退或乱跳，并继续保留安全压缩包校验、目录联接部署和失败更新回滚。
+- 应用入口更名为 `IntegratedModManager.exe`，同时保留一代旧入口用于 v3.8.5 到 v3.9.0 的原位自动更新兼容。
+- 自动化验证扩展至 **146 项测试**，并继续检查覆盖率、WinUI x64 构建、发布包结构和更新代理事务。
 
 完整版本历史请查看 [CHANGELOG](./docs/releases/CHANGELOG.md)，当前版本摘要请查看 [更新报告](./docs/releases/更新报告.md)。
 
@@ -123,7 +125,7 @@ cmd /c build_winui.bat
 powershell -NoProfile -ExecutionPolicy Bypass -File .\scripts\test-all.ps1
 ```
 
-当前自动化验证包含 99 项测试。GitHub Actions 会在推送到 `main`、Pull Request 和手动触发时执行相同流程。详细信息见 [测试说明](./docs/development/TESTING.md)。
+当前自动化验证包含 146 项测试。GitHub Actions 会在推送到 `main`、Pull Request 和手动触发时执行相同流程。详细信息见 [测试说明](./docs/development/TESTING.md)。
 
 ## 数据与安全
 

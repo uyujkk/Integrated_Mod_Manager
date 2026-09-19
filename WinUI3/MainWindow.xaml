@@ -5,7 +5,7 @@
     xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
     xmlns:local="using:ModFolderCopier.WinUI"
     xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
-    Title="Integrated Mod Manager v3.8.0"
+    Title="Integrated Mod Manager v3.9.0"
     SizeChanged="OnWindowSizeChanged"
     mc:Ignorable="d">
 
@@ -14,7 +14,7 @@
     </Window.SystemBackdrop>
 
     <Grid x:Name="RootGrid" Background="{ThemeResource AppPageBackgroundBrush}" KeyDown="OnRootKeyDown" PointerPressed="OnRootGridPointerPressed">
-        <Grid x:Name="AppShellGrid" Padding="12" RowSpacing="12">
+        <Grid x:Name="AppShellGrid" Padding="10" RowSpacing="10">
             <Grid.RowDefinitions>
                 <RowDefinition Height="Auto" />
                 <RowDefinition Height="*" />
@@ -27,10 +27,13 @@
                         <ColumnDefinition Width="Auto" />
                     </Grid.ColumnDefinitions>
 
-                    <StackPanel Spacing="7">
-                        <TextBlock x:Name="HeaderTitleTextBlock" FontSize="30" FontWeight="SemiBold" TextWrapping="Wrap" />
-                        <TextBlock x:Name="HeaderSubtitleTextBlock" Style="{StaticResource MutedTextStyle}" TextWrapping="Wrap" />
-                        <TextBlock x:Name="HeaderCaptionTextBlock" Style="{StaticResource CaptionTextStyle}" TextWrapping="Wrap" />
+                    <StackPanel Orientation="Horizontal" Spacing="12" VerticalAlignment="Center">
+                        <Image Width="38" Height="38" Source="Assets/AppIcon.png" Stretch="Uniform" />
+                        <StackPanel VerticalAlignment="Center">
+                            <TextBlock x:Name="HeaderTitleTextBlock" FontSize="21" FontWeight="SemiBold" />
+                            <TextBlock x:Name="HeaderSubtitleTextBlock" Visibility="Collapsed" />
+                            <TextBlock x:Name="HeaderCaptionTextBlock" Visibility="Collapsed" />
+                        </StackPanel>
                     </StackPanel>
 
                     <StackPanel Grid.Column="1" Orientation="Horizontal" Spacing="8" VerticalAlignment="Top">
@@ -51,8 +54,14 @@
                     <ColumnDefinition Width="*" />
                 </Grid.ColumnDefinitions>
 
-            <Border x:Name="PrimaryNavBorder" Grid.Column="0" Style="{StaticResource CardBorderStyle}" Padding="8,12">
-                <StackPanel Spacing="10">
+            <Border x:Name="PrimaryNavBorder" Grid.Column="0" Style="{StaticResource NavigationPaneBorderStyle}">
+                <Grid RowSpacing="8">
+                    <Grid.RowDefinitions>
+                        <RowDefinition Height="Auto" />
+                        <RowDefinition Height="*" />
+                        <RowDefinition Height="Auto" />
+                    </Grid.RowDefinitions>
+                <StackPanel Spacing="6">
                     <StackPanel Visibility="Collapsed" Spacing="4">
                         <TextBlock x:Name="BetaTitleTextBlock" FontSize="15" FontWeight="SemiBold" TextWrapping="Wrap" />
                         <TextBlock x:Name="BetaCaptionTextBlock" Style="{StaticResource CaptionTextStyle}" TextWrapping="Wrap" />
@@ -61,8 +70,9 @@
                     <Button x:Name="RepositoryNavButton" Click="OnRepositoryNavClicked" Style="{StaticResource NavigationIconButtonStyle}" />
                     <Button x:Name="OnlineNavButton" Click="OnOnlineNavClicked" Style="{StaticResource NavigationIconButtonStyle}" />
                     <Button x:Name="UpdatesNavButton" Click="OnUpdatesNavClicked" Style="{StaticResource NavigationIconButtonStyle}" />
-                    <Button x:Name="SettingsNavButton" Click="OnSettingsNavClicked" Style="{StaticResource NavigationIconButtonStyle}" />
                 </StackPanel>
+                    <Button x:Name="SettingsNavButton" Grid.Row="2" Click="OnSettingsNavClicked" Style="{StaticResource NavigationIconButtonStyle}" />
+                </Grid>
             </Border>
 
             <Border x:Name="SecondaryNavBorder" Grid.Column="1" Style="{StaticResource CardBorderStyle}" Padding="14" Visibility="Collapsed">
@@ -85,7 +95,7 @@
                 </Grid>
             </Border>
 
-            <Grid Grid.Column="2">
+            <Grid x:Name="PagesHostGrid" Grid.Column="2">
                 <ScrollViewer x:Name="DashboardScrollViewer" VerticalScrollBarVisibility="Auto" Visibility="Collapsed">
                     <StackPanel Margin="2" Spacing="14">
                         <Border Style="{StaticResource PageHeaderBorderStyle}">
@@ -184,13 +194,18 @@
                         </Grid>
 
                         <Border Style="{StaticResource CardBorderStyle}">
-                            <StackPanel Spacing="12">
+                            <Grid RowSpacing="12">
+                                <Grid.RowDefinitions>
+                                    <RowDefinition Height="Auto" />
+                                    <RowDefinition Height="*" />
+                                </Grid.RowDefinitions>
                                 <StackPanel Spacing="4">
                                     <TextBlock x:Name="DashboardPresetsTitleTextBlock" Style="{StaticResource SectionTitleTextStyle}" />
                                     <TextBlock x:Name="DashboardPresetsHintTextBlock" Style="{StaticResource CaptionTextStyle}" TextWrapping="Wrap" />
                                 </StackPanel>
-                                <Grid ColumnSpacing="12">
+                                <Grid x:Name="DashboardPresetsGrid" Grid.Row="1" ColumnSpacing="12">
                                     <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="*" />
                                         <ColumnDefinition Width="*" />
                                         <ColumnDefinition Width="*" />
                                         <ColumnDefinition Width="*" />
@@ -216,8 +231,15 @@
                                             <TextBlock x:Name="DashboardHsrPresetStatusTextBlock" Style="{StaticResource MutedTextStyle}" TextWrapping="Wrap" />
                                         </StackPanel>
                                     </Button>
+                                    <Button Grid.Column="3" Tag="endfield" Click="OnRepositoryPresetClicked" Style="{StaticResource SecondaryButtonStyle}" Padding="16" HorizontalContentAlignment="Stretch">
+                                        <StackPanel Spacing="6">
+                                            <TextBlock x:Name="DashboardEndfieldPresetTitleTextBlock" FontSize="18" FontWeight="SemiBold" />
+                                            <TextBlock Text="GameBanana · 42770" Style="{StaticResource CaptionTextStyle}" />
+                                            <TextBlock x:Name="DashboardEndfieldPresetStatusTextBlock" Style="{StaticResource MutedTextStyle}" TextWrapping="Wrap" />
+                                        </StackPanel>
+                                    </Button>
                                 </Grid>
-                            </StackPanel>
+                            </Grid>
                         </Border>
 
                         <Border Style="{StaticResource CardBorderStyle}">
@@ -233,7 +255,7 @@
                 </ScrollViewer>
 
                 <ScrollViewer x:Name="WorkspaceScrollViewer" VerticalScrollBarVisibility="Auto">
-            <StackPanel Margin="0,0,16,16" Spacing="14">
+            <StackPanel Margin="2,2,8,16" Spacing="16">
                 <Border Style="{StaticResource CardBorderStyle}">
                     <Grid RowSpacing="12">
                         <Grid.RowDefinitions>
@@ -334,7 +356,7 @@
                     </Grid>
                 </Border>
 
-                        <Grid ColumnSpacing="16">
+                        <Grid x:Name="RepositoryMetricsGrid" ColumnSpacing="12" RowSpacing="12">
                             <Grid.ColumnDefinitions>
                                 <ColumnDefinition Width="1.05*" MinWidth="220" />
                                 <ColumnDefinition Width="1.1*" MinWidth="220" />
@@ -375,7 +397,7 @@
                     </Border>
                 </Grid>
 
-                <Grid ColumnSpacing="16">
+                <Grid x:Name="RepositoryPanelsGrid" ColumnSpacing="16" RowSpacing="16">
                     <Grid.ColumnDefinitions>
                         <ColumnDefinition Width="1.05*" MinWidth="280" />
                         <ColumnDefinition Width="1.1*" MinWidth="320" />
@@ -1272,6 +1294,22 @@
                                             <ComboBox x:Name="DensityComboBox" Grid.Column="2" MinWidth="150" SelectionChanged="OnDensitySelectionChanged" />
                                         </Grid>
                                     </Border>
+
+                                    <Border Style="{StaticResource SettingRowBorderStyle}">
+                                        <Grid ColumnSpacing="14">
+                                            <Grid.ColumnDefinitions>
+                                                <ColumnDefinition Width="42" />
+                                                <ColumnDefinition Width="*" />
+                                                <ColumnDefinition Width="Auto" />
+                                            </Grid.ColumnDefinitions>
+                                            <FontIcon Glyph="&#xE8B7;" FontSize="20" HorizontalAlignment="Center" VerticalAlignment="Center" />
+                                            <StackPanel Grid.Column="1" Spacing="3" VerticalAlignment="Center">
+                                                <TextBlock x:Name="TraySettingTitleTextBlock" FontWeight="SemiBold" />
+                                                <TextBlock x:Name="TraySettingDescriptionTextBlock" Style="{StaticResource CaptionTextStyle}" TextWrapping="Wrap" />
+                                            </StackPanel>
+                                            <ToggleSwitch x:Name="MinimizeToTrayToggleSwitch" Grid.Column="2" VerticalAlignment="Center" Toggled="OnMinimizeToTrayToggled" />
+                                        </Grid>
+                                    </Border>
                                 </StackPanel>
                             </StackPanel>
                         </Border>
@@ -1354,7 +1392,7 @@
                                     <StackPanel Spacing="8">
                                         <TextBlock x:Name="LatestReleaseTitleTextBlock" Style="{StaticResource SectionTitleTextStyle}" TextWrapping="Wrap" />
                                         <TextBlock x:Name="LatestReleaseMetaTextBlock" Style="{StaticResource CaptionTextStyle}" TextWrapping="Wrap" />
-                                        <ScrollViewer MaxHeight="220" VerticalScrollBarVisibility="Auto">
+                                        <ScrollViewer x:Name="UpdateNotesScrollViewer" MaxHeight="150" VerticalScrollBarVisibility="Auto">
                                             <TextBlock x:Name="UpdateNotesTextBlock" TextWrapping="Wrap" />
                                         </ScrollViewer>
                                     </StackPanel>
@@ -1383,7 +1421,12 @@
                                     <Border Grid.Column="1" Style="{StaticResource MetricCardStyle}">
                                         <StackPanel Spacing="8">
                                             <TextBlock x:Name="OnlineSourceLabelTextBlock" Style="{StaticResource MutedTextStyle}" />
-                                            <TextBlock x:Name="OnlineSourceValueTextBlock" Style="{StaticResource MetricValueTextStyle}" />
+                                            <TextBlock
+                                                x:Name="OnlineSourceValueTextBlock"
+                                                FontSize="26"
+                                                FontWeight="SemiBold"
+                                                MaxLines="2"
+                                                TextWrapping="WrapWholeWords" />
                                         </StackPanel>
                                     </Border>
 

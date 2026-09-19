@@ -18,7 +18,8 @@ set "PROJECT=%ROOT%\WinUI3\ModFolderCopier.WinUI.csproj"
 set "SOURCE=%ROOT%\WinUI3\bin\x64\Release\net8.0-windows10.0.19041.0\win-x64"
 set "OUTPUT=%ROOT%\dist\WinUI3"
 set "LAUNCHER_SOURCE=%ROOT%\WinUILauncher.cs"
-set "LAUNCHER_OUTPUT=%ROOT%\dist\ModFolderCopier.exe"
+set "LAUNCHER_OUTPUT=%ROOT%\dist\IntegratedModManager.exe"
+set "LEGACY_LAUNCHER_OUTPUT=%ROOT%\dist\ModFolderCopier.exe"
 set "UPDATER_SOURCE=%ROOT%\LocalUpdateAgent.cs"
 set "UPDATER_OUTPUT=%ROOT%\dist\LocalUpdateAgent.exe"
 set "SEVENZIP_DIR=C:\Program Files\7-Zip"
@@ -70,6 +71,8 @@ if exist "%APP_ICON%" (
   "%CSC%" /nologo /target:winexe /out:"%LAUNCHER_OUTPUT%" /reference:System.dll /reference:System.Windows.Forms.dll "%LAUNCHER_SOURCE%" || exit /b 1
 )
 
+copy /Y "%LAUNCHER_OUTPUT%" "%LEGACY_LAUNCHER_OUTPUT%" >nul || exit /b 1
+
 if not exist "%UPDATER_SOURCE%" (
   echo Local update agent source not found.
   exit /b 1
@@ -89,6 +92,7 @@ powershell.exe -NoProfile -ExecutionPolicy Bypass -Command "$root=[IO.Path]::Get
 
 echo WinUI 3 build completed.
 echo Launcher: %LAUNCHER_OUTPUT%
+echo Legacy:   %LEGACY_LAUNCHER_OUTPUT%
 echo Updater:  %UPDATER_OUTPUT%
 echo Runtime:  %OUTPUT%
 endlocal

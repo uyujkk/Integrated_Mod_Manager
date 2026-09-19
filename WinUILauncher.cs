@@ -5,12 +5,12 @@ using System.IO;
 using System.Reflection;
 using System.Windows.Forms;
 
-[assembly: AssemblyTitle("集成化mod管理器")]
-[assembly: AssemblyProduct("集成化mod管理器")]
+[assembly: AssemblyTitle("Integrated Mod Manager")]
+[assembly: AssemblyProduct("Integrated Mod Manager")]
 [assembly: AssemblyCopyright("Copyright (c) 2026 uyujkk")]
-[assembly: AssemblyVersion("3.8.5.0")]
-[assembly: AssemblyFileVersion("3.8.5.0")]
-[assembly: AssemblyInformationalVersion("3.8.5-selection-progress-fix")]
+[assembly: AssemblyVersion("3.9.0.0")]
+[assembly: AssemblyFileVersion("3.9.0.0")]
+[assembly: AssemblyInformationalVersion("3.9.0-modern-workspace")]
 
 internal static class WinUILauncher
 {

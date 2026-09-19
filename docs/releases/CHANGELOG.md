@@ -6,6 +6,34 @@
 
 This document records the major changes in published versions of Integrated Mod Manager.
 
+## v3.9.0 - 现代化工作台 / Modern Workspace
+
+### 中文
+
+- 完整重构仪表板、仓库工作台、在线浏览、更新与设置页面，宽屏、半屏和紧凑窗口使用独立响应式排版；仪表板主模块在宽屏下共享顶线与底线。
+- 将仓库路径与启动器设置整合到仪表板，每个仓库独立保存并直接显示配置、GameBanana 分类、目标游戏和 Wiki 映射。
+- 新增最小化到系统托盘选项；托盘提示、通知和菜单显示当前仓库、Mod 数量、路径就绪状态、在线来源和应用版本。
+- 新增 Mod 快捷键只读自动识别：扫描 `.ini` 的 `[Key...]` 段，整理按键组合和目标变量，并按当前中文/English 界面生成更可读的功能说明。
+- 快捷键编辑器改为动态行，不再限制 10 行；保留 256 条扫描防御上限以避免异常配置耗尽界面资源。
+- 补全《明日方舟：终末地》的 GameBanana 分类、Wiki 入口和在线干员目录更新，并保留原神、绝区零与崩坏：星穹铁道预设。
+- 修复导入 Mod 的文件选择器异常会终止程序的问题；修复下载中心进度回退、阶段覆盖和任务卡反复重建造成的跳动。
+- 应用图标改为透明背景、多分辨率 Windows 11 Fluent 风格，并显式应用到原生标题栏和发布入口。
+- 正式入口更名为 `IntegratedModManager.exe`。v3.9.0 发布包保留一代 `ModFolderCopier.exe` 兼容入口，使 v3.8.5 的旧更新代理能够验证、安装并重新启动新版本。
+- 版本统一提升到 `v3.9.0` / `3.9.0.0`；发布流程验证三组测试、覆盖率阈值、WinUI x64 构建、精简发布包、SHA-256 和更新代理事务。
+
+### English
+
+- Rebuilt the Dashboard, repository workspace, online browser, update, and settings pages with dedicated responsive layouts for wide, split, and compact windows. Primary Dashboard modules share top and bottom alignment on wide screens.
+- Integrated path and launcher settings into the Dashboard. Every repository stores and displays independent paths, GameBanana category, target game, and Wiki mapping.
+- Added optional minimize-to-system-tray behavior. The tray tooltip, notification, and menu expose the active repository, Mod count, path readiness, online source, and app version.
+- Added read-only Mod shortcut discovery from `.ini` `[Key...]` sections. Key combinations and target variables are normalized into readable descriptions in the active Chinese or English UI language.
+- Replaced the fixed ten-row shortcut editor with dynamic rows, retaining only a 256-entry defensive scan ceiling for malformed input.
+- Added Arknights: Endfield GameBanana category, Wiki entry, and refreshable online operator catalog while retaining Genshin Impact, Zenless Zone Zero, and Honkai: Star Rail presets.
+- Prevented file-picker exceptions during Mod import from terminating the process, and fixed progress regression, phase overwrite, and task-card reconstruction that made downloads jump.
+- Replaced the application icon with a transparent, multi-resolution Windows 11 Fluent-style asset applied to both the native title bar and release entry points.
+- Renamed the official entry point to `IntegratedModManager.exe`. The v3.9.0 package retains one generation of `ModFolderCopier.exe` compatibility so the v3.8.5 updater can validate, install, and restart the new release.
+- Unified the release at `v3.9.0` / `3.9.0.0`; release verification covers all test suites, coverage gates, the WinUI x64 build, minimal package contents, SHA-256 output, and update-agent transactions.
+
 ## v3.8.5 - 选择稳定性与下载进度修复 / Selection Stability and Download Progress Fix
 
 ### 中文

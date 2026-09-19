@@ -1,11 +1,11 @@
-# Integrated Mod Manager v3.8.5 - Quick Start
+# Integrated Mod Manager v3.9.0 - Quick Start
 
 [中文快速手册](./快速使用手册.md) | [Complete English Guide](./User-Guide.en.md) | [Documentation Index](../README.md)
 
 ## Install and configure
 
 1. Fully extract the release archive. Do not run from inside the ZIP.
-2. Run `ModFolderCopier.exe` and keep `WinUI3` and `LocalUpdateAgent.exe` beside it.
+2. Run `IntegratedModManager.exe` and keep `WinUI3`, `LocalUpdateAgent.exe`, and the packaged compatibility files beside it.
 3. Create or select a repository on the Dashboard.
 4. Set **Mod Storage Folder** to the root of your two-level mod library and **Target Folder** to the Mods directory read by the game or XXMI.
 5. Optionally select an external launcher, then refresh.

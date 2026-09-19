@@ -70,6 +70,7 @@ if ($source.Equals($output, [StringComparison]::OrdinalIgnoreCase) -or
 
 $runtimePath = Join-Path $source 'WinUI3\ModFolderCopier.WinUI.exe'
 $requiredSourceFiles = @(
+    (Join-Path $source 'IntegratedModManager.exe'),
     (Join-Path $source 'ModFolderCopier.exe'),
     (Join-Path $source 'LocalUpdateAgent.exe'),
     $runtimePath
@@ -136,6 +137,7 @@ try {
     $entries = @($archive.Entries | Where-Object { ![string]::IsNullOrEmpty($_.Name) })
     $entryNames = @($entries.FullName | ForEach-Object { $_.Replace('/', '\') })
     foreach ($requiredEntry in @(
+        'IntegratedModManager.exe',
         'ModFolderCopier.exe',
         'LocalUpdateAgent.exe',
         'WinUI3\ModFolderCopier.WinUI.exe',

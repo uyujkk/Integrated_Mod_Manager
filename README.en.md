@@ -24,7 +24,7 @@
 
 Integrated Mod Manager organizes different games or mod environments into independent repositories. It copies or removes complete mod folders between a local library and the target directory read by the game, while keeping preview images, source links, shortcut notes, online downloads, update records, profiles, and installation backups in one application.
 
-The current stable release is **v3.8.5**, with file version `3.8.5.0`. The tool is maintained by `uyujkk`.
+The current stable release is **v3.9.0**, with file version `3.9.0.0`. The tool is maintained by `uyujkk`.
 
 ## Core Features
 
@@ -47,10 +47,10 @@ The current stable release is **v3.8.5**, with file version `3.8.5.0`. The tool 
 1. Open the [latest GitHub Release](https://github.com/uyujkk/Integrated_Mod_Manager/releases/latest).
 2. Download `Integrated_Mod_Manager-vX.X.X.zip` and its matching `.sha256` file.
 3. **Fully extract** the ZIP into a writable folder. Do not run it inside the archive.
-4. Run `ModFolderCopier.exe` from the extracted root folder.
+4. Run `IntegratedModManager.exe` from the extracted root folder.
 5. Create or select a repository, then configure the mod storage folder, target folder, and optional launcher.
 
-`ModFolderCopier.exe` is the launcher. The WinUI application is located at `WinUI3/ModFolderCopier.WinUI.exe`. Keep the release directory structure intact.
+`IntegratedModManager.exe` is the official launcher. The package temporarily retains `ModFolderCopier.exe` as a compatibility entry point for in-place updates from v3.8.5. The WinUI runtime is located at `WinUI3/ModFolderCopier.WinUI.exe`. Keep the release directory structure intact.
 
 ### SmartScreen Notice
 
@@ -79,13 +79,15 @@ Mod Storage Folder
 
 The first level is a character, purpose, or other category. The second level contains the complete mod folders managed by the app.
 
-## v3.8.5 Major Update
+## v3.9.0 Major Update
 
-- Added optional Windows directory-junction deployment so writes inside a linked mod folder stay in the library; copy deployment remains available.
-- Switching to another linked mod for the same character safely disconnects the previous junction without touching copied folders or other characters.
-- Fixed false RAR link detection with modern 7-Zip, selection-time crashes, and regressing or jumping download progress.
-- Documented the cross-mod `$variable` research outcome: the v3.8.1/v3.8.2 prototypes are not reliable for arbitrary third-party mods and are not shipped.
-- Expanded automated verification to **99 tests**, with CI coverage gates, a WinUI x64 build, and minimal release-package validation.
+- Rebuilt the Dashboard, repository workspace, online browser, updater, and settings surfaces with responsive wide, split, and compact layouts. Dashboard path and game-preset cards now share an exact baseline on wide screens.
+- Moved per-repository path configuration and status to the Dashboard. The app can minimize to the system tray while keeping repository, Mod count, online source, and version details visible.
+- Added read-only shortcut discovery from `[Key...]` sections in Mod `.ini` files, readable descriptions localized to the current app language, and an editor without the previous 10-row limit.
+- Added Arknights: Endfield GameBanana/Wiki presets and online operator-catalog refresh alongside the existing Genshin Impact, Zenless Zone Zero, and Honkai: Star Rail presets.
+- Fixed archive-picker crashes and regressing or jumping download progress while preserving safe archive validation, directory-junction deployment, and failed-update rollback.
+- Renamed the public launcher to `IntegratedModManager.exe`; one legacy entry point remains in this release so v3.8.5 installations can update in place.
+- Expanded automated verification to **146 tests**, retaining coverage gates, WinUI x64 builds, release-package validation, and update-agent transaction tests.
 
 See the [Changelog](./docs/releases/CHANGELOG.md) for the complete bilingual history and the [Current Release Report](./docs/releases/更新报告.md) for the current release summary.
 
@@ -123,7 +125,7 @@ Run the complete test, coverage, WinUI x64 build, and package verification flow:
 powershell -NoProfile -ExecutionPolicy Bypass -File .\scripts\test-all.ps1
 ```
 
-The repository currently has 99 automated tests. GitHub Actions runs the same verification flow on pushes to `main`, pull requests, and manual dispatches. See the [Testing Guide](./docs/development/TESTING.md) for details.
+The repository currently has 146 automated tests. GitHub Actions runs the same verification flow on pushes to `main`, pull requests, and manual dispatches. See the [Testing Guide](./docs/development/TESTING.md) for details.
 
 ## Data and Security
 

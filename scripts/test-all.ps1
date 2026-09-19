@@ -157,7 +157,8 @@ if (!$SkipBuild) {
     )
 
     $compiler = Find-FrameworkCompiler
-    $launcherOutput = Join-Path $smokeOutput "ModFolderCopier.exe"
+    $launcherOutput = Join-Path $smokeOutput "IntegratedModManager.exe"
+    $legacyLauncherOutput = Join-Path $smokeOutput "ModFolderCopier.exe"
     $updaterOutput = Join-Path $smokeOutput "LocalUpdateAgent.exe"
     $icon = Join-Path $root "WinUI3\Assets\AppIcon.ico"
     $iconArgument = if (Test-Path -LiteralPath $icon) { @("/win32icon:$icon") } else { @() }
@@ -166,6 +167,7 @@ if (!$SkipBuild) {
         "/nologo", "/target:winexe", "/out:$launcherOutput",
         "/reference:System.dll", "/reference:System.Windows.Forms.dll"
     ) + $iconArgument + @(Join-Path $root "WinUILauncher.cs"))
+    Copy-Item -LiteralPath $launcherOutput -Destination $legacyLauncherOutput -Force
 
     Invoke-Checked $compiler (@(
         "/nologo", "/target:winexe", "/out:$updaterOutput",
@@ -177,6 +179,7 @@ if (!$SkipBuild) {
     $runtimeOutput = Join-Path $root "WinUI3\bin\x64\Release\net8.0-windows10.0.19041.0\win-x64\ModFolderCopier.WinUI.exe"
     Assert-FileExists $runtimeOutput
     Assert-FileExists $launcherOutput
+    Assert-FileExists $legacyLauncherOutput
     Assert-FileExists $updaterOutput
 
     $declaredVersions = @(
@@ -187,10 +190,16 @@ if (!$SkipBuild) {
     if (($declaredVersions | Select-Object -Unique).Count -ne 1) {
         throw "Application, launcher, and updater versions do not match: $($declaredVersions -join ', ')"
     }
+    $appVersion = (Select-String -LiteralPath (Join-Path $root "WinUI3\MainWindow.xaml.cs") -Pattern 'AppVersion\s*=\s*"v([^"]+)"').Matches.Groups[1].Value
+    $declaredSemanticVersion = ([Version]$declaredVersions[0]).ToString(3)
+    if ($appVersion -ne $declaredSemanticVersion) {
+        throw "Displayed app version v$appVersion does not match file version $($declaredVersions[0])."
+    }
 
     $releaseSource = Join-Path $artifacts "ReleaseSource"
     New-Item -ItemType Directory -Path (Join-Path $releaseSource "WinUI3") -Force | Out-Null
-    Copy-Item -LiteralPath $launcherOutput -Destination (Join-Path $releaseSource "ModFolderCopier.exe") -Force
+    Copy-Item -LiteralPath $launcherOutput -Destination (Join-Path $releaseSource "IntegratedModManager.exe") -Force
+    Copy-Item -LiteralPath $legacyLauncherOutput -Destination (Join-Path $releaseSource "ModFolderCopier.exe") -Force
     Copy-Item -LiteralPath $updaterOutput -Destination (Join-Path $releaseSource "LocalUpdateAgent.exe") -Force
     Copy-Item -Path (Join-Path (Split-Path -Parent $runtimeOutput) '*') `
         -Destination (Join-Path $releaseSource "WinUI3") -Recurse -Force

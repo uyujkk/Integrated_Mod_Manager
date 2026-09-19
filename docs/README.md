@@ -15,11 +15,12 @@ This directory contains the usage, release, development, and research documentat
 ## 发布记录 / Releases
 
 - [完整双语更新日志 / Full Bilingual Changelog](./releases/CHANGELOG.md)
-- [v3.8.5 更新报告 / v3.8.5 Release Report](./releases/更新报告.md)
+- [v3.9.0 更新报告 / v3.9.0 Release Report](./releases/更新报告.md)
 
 ## 开发文档 / Development
 
 - [测试与构建说明 / Testing and Build Guide](./development/TESTING.md)
+- [v3.9.0 界面设计记录 / v3.9.0 UI Design Record](./development/UI-Design-Preview.md)
 - [贡献指南 / Contributing](../CONTRIBUTING.md)
 - [安全策略 / Security Policy](../SECURITY.md)
 
@@ -27,6 +28,7 @@ This directory contains the usage, release, development, and research documentat
 
 - [跨 Mod 内部状态保存：试验路线与当前结论](./research/跨Mod状态保存试验结论.md)
 - [v3.8.4 目录联接部署实验说明](./research/目录联接部署实验说明.md)
+- [Mod 快捷键识别与游戏内指引研究 / Mod Hotkey Detection and In-Game Guidance](./research/Mod快捷键识别与游戏内指引研究.md)
 
 ## 项目入口 / Project
 
