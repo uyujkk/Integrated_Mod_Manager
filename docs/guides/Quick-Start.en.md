@@ -1,4 +1,4 @@
-# Integrated Mod Manager v3.9.0 - Quick Start
+# Integrated Mod Manager v3.9.4 - Quick Start
 
 [中文快速手册](./快速使用手册.md) | [Complete English Guide](./User-Guide.en.md) | [Documentation Index](../README.md)
 

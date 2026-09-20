@@ -6,6 +6,102 @@
 
 This document records the major changes in published versions of Integrated Mod Manager.
 
+## v3.9.4 - 在线安装与更新工作区完善 / Online Installation and Update Workspace
+
+### 中文
+
+- 宽屏“已追踪 Mod”列表改为响应式双列卡片，窄窗口自动回到单列；配置方案的新建、更新、应用和删除操作统一到紧凑工具行，降低页面高度并改善左右栏对齐。
+- GameBanana 条目包含多个文件时，默认选择最新的可用压缩包；详情页保留手动文件选择入口，并显示文件版本、日期、大小与归档状态。
+- 在线安装使用分类 ID、中英文角色名、Wiki 名称和别名匹配仓库角色目录；明确匹配会自动推荐，歧义或低置信度结果不会自动猜测。
+- 自动下载的本地预览图改为检查最多五张详情截图的真实像素尺寸，优先选择清晰、比例正常的图片；列表缩略图仅作回退，预览失败不阻断安装。
+- 继续优化在线卡片、设置页和更新页的信息层级与宽屏利用率；设置页补充开源依赖、项目仓库和作者 B 站主页入口。
+- 新增独立的 WinUI 3 图形化开发者工具，可检查版本、仓库路径、目录联接、配置、日志、缓存、备份并导出脱敏诊断；不访问游戏内存、不注入游戏，也不进入主程序自动更新包。
+- 主程序、兼容启动器和更新代理统一提升到 `v3.9.4` / `3.9.4.0`；独立开发者工具作为单独的 v3.9.4 下载资产发布。
+
+### English
+
+- Tracked Mods now use a responsive two-column card layout on wide screens and return to one column in narrow windows. Profile create, update, apply, and delete actions share a compact toolbar for better column alignment and lower page height.
+- GameBanana items with multiple files default to the newest usable archive. The details pane retains manual selection and shows version, date, size, and archive state.
+- Online installation matches repository character folders through category IDs, localized names, Wiki names, and aliases. Confident matches are recommended automatically, while ambiguous or low-confidence matches are never guessed.
+- Local previews inspect the decoded dimensions of up to five detail screenshots and prefer a clear image with a usable aspect ratio. The list thumbnail is only a fallback, and preview failure never blocks installation.
+- Online cards, Settings, and Updates continue to receive clearer information hierarchy and better wide-screen use. Settings now includes open-source dependency, project repository, and author Bilibili links.
+- Added a standalone WinUI 3 graphical Developer Tools app for checking versions, repository paths, directory junctions, configuration, logs, caches, backups, and sanitized diagnostics. It does not access game memory, inject into games, or enter the main updater package.
+- The main app, compatibility launcher, and update agent are unified at `v3.9.4` / `3.9.4.0`; standalone Developer Tools is published as a separate v3.9.4 asset.
+
+## v3.9.3 - 高清预览图自动选择 / Clear Preview Image Selection
+
+> 本节记录仅在本地生成、尚未推送或发布到 GitHub 的更新包。
+>
+> This section describes a locally generated update package that has not been pushed or published to GitHub.
+
+### 中文
+
+- 在线安装不再直接保存低清列表缩略图，而是检查最多五张详情截图与缩略图回退项的真实像素尺寸。
+- 优先选择清晰度较高、比例正常的详情图片；过滤解码失败、过小或特别狭长的候选图。
+- 复用已经加载到在线图片缓存中的文件，减少重复下载；预览图处理失败不会中断 Mod 下载、解压或追踪记录。
+- 保留 v3.9.2 的最新压缩包选择、手动文件选择和角色目录自动路由功能。
+- 主程序、兼容启动器和更新代理统一提升到 `v3.9.3` / `3.9.3.0`；独立开发者工具不进入本包。
+
+### English
+
+- Online installation no longer saves the low-resolution list thumbnail directly. It inspects the decoded dimensions of up to five detail screenshots plus the thumbnail fallback.
+- Clear detail images with usable aspect ratios are preferred, while undecodable, undersized, and extremely narrow candidates are filtered out.
+- Files already present in the online image cache are reused to reduce duplicate downloads. Preview processing failures never interrupt Mod download, extraction, or tracking.
+- The newest-archive default, manual file selection, and automatic character-folder routing from v3.9.2 remain included.
+- The main app, compatibility launcher, and update agent are unified at `v3.9.3` / `3.9.3.0`; standalone Developer Tools remains outside this package.
+
+## v3.9.2 - 在线文件选择与角色目录路由 / Online File Selection and Character Folder Routing
+
+> 本节记录仅在本地生成、尚未推送或发布到 GitHub 的更新包。
+>
+> This section describes a locally generated update package that has not been pushed or published to GitHub.
+
+### 中文
+
+- GameBanana 条目包含多个文件时，默认下载最新的可用压缩包；排序不再依赖接口原始返回顺序。
+- 在线详情页新增并保留手动文件选择入口，显示文件名、版本、日期、大小和归档状态。
+- 在线安装的本地预览图改为从详情截图中选择：程序读取候选图实际像素尺寸，优先保存清晰、比例正常的图片，只有详情图不可用时才回退到列表缩略图。
+- 修复下载流程丢失角色上下文的问题；下载前会结合分类 ID、中英文角色名、Wiki 信息与别名匹配仓库一级角色目录。
+- 明确匹配时自动预选角色文件夹并显示“推荐”；歧义或低置信度结果不会自动选择，继续提供仓库根目录和系统文件夹选择器。
+- 修复刷新下载信息时已识别角色名称被通用分类覆盖的问题，并补充本地常用角色目录别名。
+- 主程序、兼容启动器和更新代理统一提升到 `v3.9.2` / `3.9.2.0`；独立开发者工具不进入本包，继续保持独立 v3.9.1 包。
+
+### English
+
+- GameBanana items with multiple files now default to the newest usable archive without depending on the API's original order.
+- The online details pane retains manual file selection with file name, version, date, size, and archive-state metadata.
+- Local previews created during online installation are now selected from detail screenshots by decoded pixel dimensions, preferring a clear image with a usable aspect ratio and falling back to the list thumbnail only when necessary.
+- Fixed loss of character context during download. Category IDs, localized character names, Wiki metadata, and aliases now match first-level character folders before extraction.
+- A confident match is preselected and labeled Recommended. Ambiguous or low-confidence results are not guessed; repository-root and system folder-picker fallbacks remain available.
+- Preserved previously inferred character identity when download metadata refresh returns a generic category, and added a locally used folder-name alias.
+- The main app, compatibility launcher, and update agent are unified at `v3.9.2` / `3.9.2.0`. Standalone Developer Tools remains outside this package at v3.9.1.
+
+## v3.9.1 - 工作区细化与独立开发工具 / Workspace Refinement and Standalone Developer Tools
+
+> 本节记录尚未推送或发布到 GitHub 的本地候选版本。
+>
+> This section describes a local release candidate that has not been pushed or published to GitHub.
+
+### 中文
+
+- 重新整理“更新”页面，将已追踪 Mod、下载任务、配置方案、安装安全和安装备份按使用频率组织，压缩卡片高度并减少宽屏留空。
+- 优化在线 Mod 卡片的角色名称、热度和统计信息样式，使用克制的小圆角矩形、边缘标线和更清晰的层级，不再使用圆形内容框。
+- 在设置页加入所调用开源程序、项目地址和作者 B 站主页；采用固定视口的双列布局，避免设置页整体上下滚动。
+- 新增独立 WinUI 3 图形化开发者工具 `IntegratedModManager.DeveloperTools.exe`，可检查主程序版本、仓库路径、目录联接、配置、日志和存储占用。
+- 开发者工具支持文件搜索、JSON 校验、配置快照和脱敏诊断导出；不会执行任意命令、访问游戏内存、注入游戏或自动上传数据。
+- 主程序与开发者工具使用独立发布包和 SHA-256。开发者工具不编译进主程序，也不写入主程序的自动更新托管文件清单。
+- 主程序、启动器、更新代理和独立开发者工具统一使用 `v3.9.1` / `3.9.1.0` 版本标识。
+
+### English
+
+- Reorganized the Updates page around tracked Mods, download tasks, profiles, installation safety, and backups, reducing card height and unused wide-screen space.
+- Refined online Mod card character, heat, and statistic labels with restrained small-radius rectangles, edge markers, and clearer hierarchy instead of circular content frames.
+- Added open-source dependency, project repository, and author Bilibili links to Settings, using a fixed-viewport two-column layout without whole-page vertical scrolling.
+- Added the standalone WinUI 3 `IntegratedModManager.DeveloperTools.exe` utility for inspecting app versions, repository paths, junctions, configuration, logs, and storage usage.
+- Developer Tools supports file search, JSON validation, configuration snapshots, and sanitized diagnostic export. It does not execute arbitrary commands, access game memory, inject into games, or upload data automatically.
+- The main application and Developer Tools use separate release archives and SHA-256 files. Developer Tools is not compiled into the main app or included in its managed updater payload.
+- Unified the main app, launcher, update agent, and standalone Developer Tools at `v3.9.1` / `3.9.1.0`.
+
 ## v3.9.0 - 现代化工作台 / Modern Workspace
 
 ### 中文

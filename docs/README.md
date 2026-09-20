@@ -15,6 +15,10 @@ This directory contains the usage, release, development, and research documentat
 ## 发布记录 / Releases
 
 - [完整双语更新日志 / Full Bilingual Changelog](./releases/CHANGELOG.md)
+- [v3.9.4 发布报告 / v3.9.4 Release Report](./releases/v3.9.4.md)
+- [v3.9.3 本地更新包报告 / v3.9.3 Local Update Package Report](./releases/v3.9.3.md)
+- [v3.9.2 本地更新包报告 / v3.9.2 Local Update Package Report](./releases/v3.9.2.md)
+- [v3.9.1 本地候选更新报告 / v3.9.1 Local Release Report](./releases/v3.9.1.md)
 - [v3.9.0 更新报告 / v3.9.0 Release Report](./releases/更新报告.md)
 
 ## 开发文档 / Development

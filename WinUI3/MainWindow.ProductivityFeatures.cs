@@ -26,6 +26,7 @@ public sealed partial class MainWindow
     private bool _checkAppUpdatesOnStartup = true;
     private bool _isApplyingStartupUpdateSetting;
     private bool _isApplyingBackupLimitSetting;
+    private bool _useWideTrackedModsLayout;
     private double _installBackupLimitGb = DefaultInstallBackupLimitGb;
     private string? _latestReleasePackageUrl;
     private string? _latestReleaseSha256Url;
@@ -161,14 +162,17 @@ public sealed partial class MainWindow
     private void UpdateProductivityResponsiveLayout(double width)
     {
         bool narrow = width < 1180;
-        UpdatesPrimaryColumn.Width = new GridLength(1, GridUnitType.Star);
+        UpdatesPrimaryColumn.Width = new GridLength(1.35, GridUnitType.Star);
         UpdatesSecondaryColumn.Width = narrow ? new GridLength(0) : new GridLength(0.85, GridUnitType.Star);
-        if (UpdatesTopGrid.Children.Count >= 2)
+
+        Grid.SetColumn(UpdatesSupportPanel, narrow ? 0 : 1);
+        Grid.SetRow(UpdatesSupportPanel, narrow ? 1 : 0);
+
+        bool useWideTrackedModsLayout = !narrow && width >= 1720;
+        if (_useWideTrackedModsLayout != useWideTrackedModsLayout)
         {
-            FrameworkElement secondary = (FrameworkElement)UpdatesTopGrid.Children[1];
-            Grid.SetColumn(secondary, narrow ? 0 : 1);
-            Grid.SetRow(secondary, narrow ? 1 : 0);
-            secondary.Margin = narrow ? new Thickness(0, 12, 0, 0) : new Thickness(0);
+            _useWideTrackedModsLayout = useWideTrackedModsLayout;
+            ApplyTrackedModsListLayout();
         }
 
         bool stackUpdateActions = width < 980;
@@ -468,11 +472,12 @@ public sealed partial class MainWindow
     private void RefreshBackupManagerText()
     {
         BackupManagerTitleTextBlock.Text = L("安装备份", "Install Backups");
-        BackupManagerHintTextBlock.Text = L("每次 Mod 安装、移除或方案切换前自动备份，可从列表手动恢复。旧备份按容量上限自动清理。", "Back up before each mod install, removal, or profile switch. Restore any entry manually; older backups are pruned by the storage limit.");
+        BackupManagerHintTextBlock.Text = L("自动保留安装、移除和方案切换前的状态；展开历史记录后可手动恢复。", "Automatically preserve the state before installs, removals, and profile changes; expand history to restore an entry.");
         BackupLimitLabelTextBlock.Text = L("空间上限 (GB)", "Storage limit (GB)");
         RefreshBackupsButton.Content = L("刷新列表", "Refresh List");
         AutomationProperties.SetName(BackupLimitNumberBox, L("安装备份空间上限 GB", "Install backup storage limit in GB"));
         AutomationProperties.SetName(RefreshBackupsButton, RefreshBackupsButton.Content?.ToString() ?? string.Empty);
+        AutomationProperties.SetName(BackupHistoryExpander, L("展开安装备份历史", "Expand install backup history"));
         _isApplyingBackupLimitSetting = true;
         BackupLimitNumberBox.Value = _installBackupLimitGb;
         _isApplyingBackupLimitSetting = false;

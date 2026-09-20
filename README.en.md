@@ -24,7 +24,7 @@
 
 Integrated Mod Manager organizes different games or mod environments into independent repositories. It copies or removes complete mod folders between a local library and the target directory read by the game, while keeping preview images, source links, shortcut notes, online downloads, update records, profiles, and installation backups in one application.
 
-The current stable release is **v3.9.0**, with file version `3.9.0.0`. The tool is maintained by `uyujkk`.
+The current version is **v3.9.4**, with file version `3.9.4.0`. The tool is maintained by `uyujkk`.
 
 ## Core Features
 
@@ -79,6 +79,16 @@ Mod Storage Folder
 
 The first level is a character, purpose, or other category. The second level contains the complete mod folders managed by the app.
 
+## v3.9.4 Update Summary
+
+- Refined the Updates workspace: tracked Mods use a responsive two-column card layout on wide screens, profile actions share one compact row, and narrow windows automatically return to a single column.
+- Online items with multiple files now default to the newest usable archive. The details pane retains manual selection with version, date, size, and archive state.
+- Online installation decodes real image dimensions and chooses a clear, normally proportioned detail image for the local Mod preview instead of directly saving the low-resolution list thumbnail.
+- Restored automatic character-folder routing through category IDs, localized character names, Wiki names, and aliases. Ambiguous results are never guessed.
+- Improved wide-screen use and information hierarchy across online cards, Settings, and Updates, with open-source dependency, project, and author links in Settings.
+- Added a separately released graphical Developer Tools app for checking versions, repository paths, directory junctions, configuration, logs, caches, backups, and sanitized diagnostics. It remains outside the main updater package.
+- The main app and standalone Developer Tools archives each include a SHA-256 checksum file.
+
 ## v3.9.0 Major Update
 
 - Rebuilt the Dashboard, repository workspace, online browser, updater, and settings surfaces with responsive wide, split, and compact layouts. Dashboard path and game-preset cards now share an exact baseline on wide screens.
@@ -89,7 +99,7 @@ The first level is a character, purpose, or other category. The second level con
 - Renamed the public launcher to `IntegratedModManager.exe`; one legacy entry point remains in this release so v3.8.5 installations can update in place.
 - Expanded automated verification to **146 tests**, retaining coverage gates, WinUI x64 builds, release-package validation, and update-agent transaction tests.
 
-See the [Changelog](./docs/releases/CHANGELOG.md) for the complete bilingual history and the [Current Release Report](./docs/releases/更新报告.md) for the current release summary.
+See the [Changelog](./docs/releases/CHANGELOG.md) for the complete bilingual history and the [v3.9.4 Release Report](./docs/releases/v3.9.4.md) for release and verification details.
 
 ## Documentation
 

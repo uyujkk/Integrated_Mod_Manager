@@ -1,4 +1,4 @@
-# Integrated Mod Manager v3.9.0 - Complete User Guide
+# Integrated Mod Manager v3.9.4 - Complete User Guide
 
 > For Windows 10/11 x64. Tool author: uyujkk.
 >

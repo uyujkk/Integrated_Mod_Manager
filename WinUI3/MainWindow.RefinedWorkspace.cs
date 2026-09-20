@@ -332,12 +332,13 @@ public sealed partial class MainWindow
         _modsBadgeLabel!.Text = "Mods";
         _previewTab!.Header = L("预览与链接", "Preview & Link");
         _shortcutTab!.Header = L("快捷键", "Shortcuts");
-        if (_settingsSectionLabels.Length == 4)
+        if (_settingsSectionLabels.Length == 5)
         {
             _settingsSectionLabels[0].Text = L("界面与语言", "Appearance & Language");
             _settingsSectionLabels[1].Text = L("软件更新", "App Updates");
             _settingsSectionLabels[2].Text = L("仓库在线", "Repository Online");
             _settingsSectionLabels[3].Text = L("诊断工具", "Diagnostics");
+            _settingsSectionLabels[4].Text = L("项目与开源", "Project & Open Source");
             ShowSettingsSection(_selectedSettingsSection);
         }
         RefreshRefinedDashboardPathHeader();
@@ -397,7 +398,7 @@ public sealed partial class MainWindow
 
     private void InitializeResponsiveSettingsLayout()
     {
-        if (SettingsScrollViewer.Content is not StackPanel settingsPanel || settingsPanel.Children.Count < 5)
+        if (SettingsScrollViewer.Content is not StackPanel settingsPanel || settingsPanel.Children.Count < 6)
         {
             return;
         }
@@ -405,17 +406,18 @@ public sealed partial class MainWindow
         if (settingsPanel.Children[1] is not Border appearance
             || settingsPanel.Children[2] is not Border updates
             || settingsPanel.Children[3] is not Border online
-            || settingsPanel.Children[4] is not Border diagnostics)
+            || settingsPanel.Children[4] is not Border diagnostics
+            || settingsPanel.Children[5] is not Border resources)
         {
             return;
         }
 
-        for (int index = 4; index >= 1; index--)
+        for (int index = 5; index >= 1; index--)
         {
             settingsPanel.Children.RemoveAt(index);
         }
 
-        _settingsCards = [appearance, updates, online, diagnostics];
+        _settingsCards = [appearance, updates, online, diagnostics, resources];
         _settingsRootPanel = settingsPanel;
         _settingsHeaderCard = settingsPanel.Children[0] as Border;
         foreach (Border card in _settingsCards)
@@ -429,7 +431,7 @@ public sealed partial class MainWindow
             }
         }
 
-        string[] glyphs = ["\uE790", "\uE895", "\uE774", "\uE9D9"];
+        string[] glyphs = ["\uE790", "\uE895", "\uE774", "\uE9D9", "\uE71B"];
         _settingsSectionButtons = new Button[_settingsCards.Length];
         _settingsSectionLabels = new TextBlock[_settingsCards.Length];
         _settingsNavigationGrid = new Grid { RowSpacing = 8, ColumnSpacing = 8 };
@@ -476,9 +478,11 @@ public sealed partial class MainWindow
 
         _settingsOverviewLeftColumn = CreateSettingsOverviewColumn();
         _settingsOverviewRightColumn = CreateSettingsOverviewColumn();
-        _settingsOverviewGrid = new Grid { ColumnSpacing = 10, VerticalAlignment = VerticalAlignment.Top };
+        _settingsOverviewGrid = new Grid { ColumnSpacing = 10, RowSpacing = 10, VerticalAlignment = VerticalAlignment.Top };
         _settingsOverviewGrid.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(1, GridUnitType.Star) });
         _settingsOverviewGrid.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(1, GridUnitType.Star) });
+        _settingsOverviewGrid.RowDefinitions.Add(new RowDefinition { Height = new GridLength(1, GridUnitType.Star) });
+        _settingsOverviewGrid.RowDefinitions.Add(new RowDefinition { Height = GridLength.Auto });
         _settingsOverviewGrid.Children.Add(_settingsOverviewLeftColumn);
         Grid.SetColumn(_settingsOverviewRightColumn, 1);
         _settingsOverviewGrid.Children.Add(_settingsOverviewRightColumn);
@@ -488,11 +492,14 @@ public sealed partial class MainWindow
         _settingsResponsiveGrid.Children.Add(_settingsContentHost);
 
         settingsPanel.Spacing = 12;
-        settingsPanel.Margin = new Thickness(2, 2, 8, 20);
+        settingsPanel.Margin = new Thickness(2, 2, 8, 2);
         settingsPanel.MaxWidth = 3200;
         settingsPanel.HorizontalAlignment = HorizontalAlignment.Stretch;
         settingsPanel.Children.Add(_settingsResponsiveGrid);
         SettingsScrollViewer.HorizontalScrollBarVisibility = ScrollBarVisibility.Disabled;
+        SettingsScrollViewer.HorizontalScrollMode = ScrollMode.Disabled;
+        SettingsScrollViewer.VerticalScrollBarVisibility = ScrollBarVisibility.Disabled;
+        SettingsScrollViewer.VerticalScrollMode = ScrollMode.Disabled;
         ShowSettingsSection(0);
     }
 
@@ -785,6 +792,7 @@ public sealed partial class MainWindow
             _settingsRootPanel.Width = Math.Max(420, Math.Min(3200, available - 12));
         }
         int mode = available >= 1080 ? 3 : available >= 760 ? 2 : 1;
+        ReflowCards(ProjectResourcesGrid, available >= 900 ? 3 : 2);
         ApplySettingsViewportSizing(mode, available);
         if (_settingsLayoutMode == mode)
         {
@@ -837,6 +845,7 @@ public sealed partial class MainWindow
         }
 
         _settingsOverviewGrid.MinHeight = 0;
+        _settingsOverviewGrid.ClearValue(FrameworkElement.HeightProperty);
         for (int index = 0; index < _settingsCards.Length; index++)
         {
             Border card = _settingsCards[index];
@@ -851,8 +860,7 @@ public sealed partial class MainWindow
         UpdateNotesScrollViewer.MinHeight = 0;
         UpdateNotesScrollViewer.MaxHeight = 150;
 
-        bool fillWideViewport = mode == 3 && availableWidth >= 1600;
-        if (!fillWideViewport || SettingsScrollViewer.ActualHeight <= 0)
+        if (mode != 3 || SettingsScrollViewer.ActualHeight <= 0)
         {
             return;
         }
@@ -860,17 +868,8 @@ public sealed partial class MainWindow
         double headerHeight = _settingsHeaderCard?.ActualHeight > 0
             ? _settingsHeaderCard.ActualHeight
             : 88;
-        double usableHeight = Math.Max(720, SettingsScrollViewer.ActualHeight - headerHeight - 46);
-        double overviewHeight = Math.Max(720, usableHeight * 0.86);
-        _settingsOverviewGrid.MinHeight = overviewHeight;
-        foreach (Border card in _settingsCards)
-        {
-            card.Padding = new Thickness(18);
-            if (card.Child is StackPanel panel)
-            {
-                panel.Spacing = 14;
-            }
-        }
+        double usableHeight = Math.Max(0, SettingsScrollViewer.ActualHeight - headerHeight - 20);
+        _settingsOverviewGrid.Height = usableHeight;
         if (_settingsCards[0].Child is StackPanel appearancePanel)
         {
             appearancePanel.VerticalAlignment = VerticalAlignment.Center;
@@ -879,8 +878,6 @@ public sealed partial class MainWindow
         {
             diagnosticsPanel.VerticalAlignment = VerticalAlignment.Center;
         }
-        UpdateNotesScrollViewer.MinHeight = 180;
-        UpdateNotesScrollViewer.MaxHeight = 300;
     }
 
     private void ArrangeSettingsOverview()
@@ -894,6 +891,7 @@ public sealed partial class MainWindow
         }
 
         _settingsContentHost.Children.Clear();
+        _settingsOverviewGrid.Children.Clear();
         _settingsOverviewLeftColumn.Children.Clear();
         _settingsOverviewRightColumn.Children.Clear();
         foreach (Border card in _settingsCards)
@@ -908,6 +906,13 @@ public sealed partial class MainWindow
         _settingsOverviewRightColumn.Children.Add(_settingsCards[1]);
         Place(_settingsCards[3], 1, 0);
         _settingsOverviewRightColumn.Children.Add(_settingsCards[3]);
+        Place(_settingsOverviewLeftColumn, 0, 0);
+        _settingsOverviewGrid.Children.Add(_settingsOverviewLeftColumn);
+        Place(_settingsOverviewRightColumn, 0, 1);
+        _settingsOverviewGrid.Children.Add(_settingsOverviewRightColumn);
+        Place(_settingsCards[4], 1, 0, 2);
+        _settingsCards[4].VerticalAlignment = VerticalAlignment.Top;
+        _settingsOverviewGrid.Children.Add(_settingsCards[4]);
         _settingsContentHost.Children.Add(_settingsOverviewGrid);
     }
 
@@ -922,6 +927,7 @@ public sealed partial class MainWindow
 
         _settingsOverviewLeftColumn.Children.Clear();
         _settingsOverviewRightColumn.Children.Clear();
+        _settingsOverviewGrid?.Children.Remove(_settingsCards[4]);
         _settingsContentHost.Children.Clear();
         foreach (Border card in _settingsCards)
         {

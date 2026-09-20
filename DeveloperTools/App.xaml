@@ -1,0 +1,66 @@
+<Application
+    x:Class="IntegratedModManager.DeveloperTools.App"
+    xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+    xmlns:controls="using:Microsoft.UI.Xaml.Controls">
+    <Application.Resources>
+        <ResourceDictionary>
+            <ResourceDictionary.MergedDictionaries>
+                <controls:XamlControlsResources />
+            </ResourceDictionary.MergedDictionaries>
+            <ResourceDictionary.ThemeDictionaries>
+                <ResourceDictionary x:Key="Light">
+                    <SolidColorBrush x:Key="ToolPageBrush" Color="#F4F6F9" />
+                    <SolidColorBrush x:Key="ToolCardBrush" Color="#FFFFFF" />
+                    <SolidColorBrush x:Key="ToolInsetBrush" Color="#F0F3F7" />
+                    <SolidColorBrush x:Key="ToolBorderBrush" Color="#1A334155" />
+                    <SolidColorBrush x:Key="ToolMutedBrush" Color="#64748B" />
+                    <SolidColorBrush x:Key="ToolAccentSoftBrush" Color="#DDEAFE" />
+                    <SolidColorBrush x:Key="ToolSuccessBrush" Color="#18794E" />
+                    <SolidColorBrush x:Key="ToolWarningBrush" Color="#9A6700" />
+                    <SolidColorBrush x:Key="AccentButtonBackground" Color="#2563EB" />
+                    <SolidColorBrush x:Key="AccentButtonBackgroundPointerOver" Color="#1D4ED8" />
+                    <SolidColorBrush x:Key="AccentButtonBackgroundPressed" Color="#1E40AF" />
+                    <SolidColorBrush x:Key="AccentButtonForeground" Color="#FFFFFF" />
+                </ResourceDictionary>
+                <ResourceDictionary x:Key="Dark">
+                    <SolidColorBrush x:Key="ToolPageBrush" Color="#0D1117" />
+                    <SolidColorBrush x:Key="ToolCardBrush" Color="#171D26" />
+                    <SolidColorBrush x:Key="ToolInsetBrush" Color="#111720" />
+                    <SolidColorBrush x:Key="ToolBorderBrush" Color="#20FFFFFF" />
+                    <SolidColorBrush x:Key="ToolMutedBrush" Color="#9AA6B2" />
+                    <SolidColorBrush x:Key="ToolAccentSoftBrush" Color="#263A58" />
+                    <SolidColorBrush x:Key="ToolSuccessBrush" Color="#6CCB8E" />
+                    <SolidColorBrush x:Key="ToolWarningBrush" Color="#F4C15D" />
+                    <SolidColorBrush x:Key="AccentButtonBackground" Color="#3B82F6" />
+                    <SolidColorBrush x:Key="AccentButtonBackgroundPointerOver" Color="#60A5FA" />
+                    <SolidColorBrush x:Key="AccentButtonBackgroundPressed" Color="#2563EB" />
+                    <SolidColorBrush x:Key="AccentButtonForeground" Color="#FFFFFF" />
+                </ResourceDictionary>
+            </ResourceDictionary.ThemeDictionaries>
+
+            <Style x:Key="ToolCardStyle" TargetType="Border">
+                <Setter Property="Background" Value="{ThemeResource ToolCardBrush}" />
+                <Setter Property="BorderBrush" Value="{ThemeResource ToolBorderBrush}" />
+                <Setter Property="BorderThickness" Value="1" />
+                <Setter Property="CornerRadius" Value="12" />
+                <Setter Property="Padding" Value="16" />
+            </Style>
+            <Style x:Key="ToolInsetStyle" TargetType="Border">
+                <Setter Property="Background" Value="{ThemeResource ToolInsetBrush}" />
+                <Setter Property="BorderBrush" Value="{ThemeResource ToolBorderBrush}" />
+                <Setter Property="BorderThickness" Value="1" />
+                <Setter Property="CornerRadius" Value="9" />
+                <Setter Property="Padding" Value="12" />
+            </Style>
+            <Style x:Key="ToolMutedTextStyle" TargetType="TextBlock">
+                <Setter Property="Foreground" Value="{ThemeResource ToolMutedBrush}" />
+                <Setter Property="FontSize" Value="13" />
+            </Style>
+            <Style x:Key="ToolSectionTitleStyle" TargetType="TextBlock">
+                <Setter Property="FontSize" Value="18" />
+                <Setter Property="FontWeight" Value="SemiBold" />
+            </Style>
+        </ResourceDictionary>
+    </Application.Resources>
+</Application>

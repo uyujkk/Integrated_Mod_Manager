@@ -11,9 +11,9 @@ using System.Windows.Forms;
 [assembly: AssemblyTitle("Integrated Mod Manager Local Update Agent")]
 [assembly: AssemblyProduct("Integrated Mod Manager")]
 [assembly: AssemblyCopyright("Copyright (c) 2026 uyujkk")]
-[assembly: AssemblyVersion("3.9.0.0")]
-[assembly: AssemblyFileVersion("3.9.0.0")]
-[assembly: AssemblyInformationalVersion("3.9.0-modern-workspace")]
+[assembly: AssemblyVersion("3.9.4.0")]
+[assembly: AssemblyFileVersion("3.9.4.0")]
+[assembly: AssemblyInformationalVersion("3.9.4-update-workspace")]
 #if UPDATE_AGENT_TESTS
 [assembly: System.Runtime.CompilerServices.InternalsVisibleTo("IntegratedModManager.UpdateAgent.Tests")]
 #endif

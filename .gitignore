@@ -18,6 +18,8 @@ UpdaterTests/TestResults/
 DataStoreTests/bin/
 DataStoreTests/obj/
 DataStoreTests/TestResults/
+DeveloperTools/bin/
+DeveloperTools/obj/
 artifacts/
 *.pdb
 

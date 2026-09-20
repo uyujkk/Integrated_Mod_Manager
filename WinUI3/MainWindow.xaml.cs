@@ -24,8 +24,10 @@ using Microsoft.UI.Xaml.Media.Imaging;
 using Windows.ApplicationModel.DataTransfer;
 using Windows.Foundation;
 using Windows.Graphics;
+using Windows.Graphics.Imaging;
 using Windows.Storage;
 using Windows.Storage.Pickers;
+using Windows.Storage.Streams;
 using Windows.System;
 using Windows.UI.Core;
 using WinRT.Interop;
@@ -35,7 +37,7 @@ namespace ModFolderCopier.WinUI;
 
 public sealed partial class MainWindow : Window
 {
-    private const string AppVersion = "v3.9.0";
+    private const string AppVersion = "v3.9.4";
     private const string GitHubRepositoryUrl = "https://github.com/uyujkk/Integrated_Mod_Manager";
     private const string GitHubLatestReleaseApiUrl = "https://api.github.com/repos/uyujkk/Integrated_Mod_Manager/releases/latest";
     private const string DefaultOnlineSourceSite = "GameBanana";
@@ -113,7 +115,7 @@ public sealed partial class MainWindow : Window
         new("Arcane", "诀", "47395", "https://bbs.hycdn.cn/image/common/20260714/4634516/6a55d3861da1e29cd294f0d1_6ad0f152.png"),
         new("Camille", "卡缪", "46924", "https://bbs.hycdn.cn/image/common/20260626/5246026/6a3dfcd1690f9d18da26a0cd_3eac6ad0.png"),
         new("Mi Fu", "弭弗", "46272", "https://bbs.hycdn.cn/image/common/20260605/4826366/6a22112497bfaba8393d24e0_56331367.png", "Mifu"),
-        new("Zhuang Fangyi", "庄方宜", "44984", "https://bbs.hycdn.cn/image/common/20260417/2641152/69e12fbefe4a20e7c0d83e4e_f1525633.png", "Fangyi", "ZFY"),
+        new("Zhuang Fangyi", "庄方宜", "44984", "https://bbs.hycdn.cn/image/common/20260417/2641152/69e12fbefe4a20e7c0d83e4e_f1525633.png", "Fangyi", "ZFY", "庄方怡"),
         new("Rossi", "洛茜", "44510", "https://bbs.hycdn.cn/image/common/20260329/4826366/69c8998745f7d92a73c88faf_2f76db19.png"),
         new("Tangtang", "汤汤", "44247", "https://bbs.hycdn.cn/image/common/20260312/2274383/69b211574298be0edf042cea_f1525633.png"),
         new("Yvonne", "伊冯", "42742", "https://bbs.hycdn.cn/image/common/20260202/4850358/69807e73d262875d5b986600_2f76db19.png"),
@@ -534,6 +536,7 @@ public sealed partial class MainWindow : Window
         RefreshProductivitySettingsText();
         SettingsProjectTitleTextBlock.Text = L("项目链接与软件版本", "Project Links and App Version");
         SettingsProjectHintTextBlock.Text = L("这里保留 GitHub 仓库入口和软件版本检查；Mod 更新请使用左侧的“更新”模块。", "This section keeps the GitHub repository link and app-version checks. Use the Updates section in the left navigation for mod updates.");
+        RefreshProjectResourceText();
         UpdateCheckIntervalLabelTextBlock.Text = L("软件更新频率", "App update interval");
         UpdateCheckIntervalHintTextBlock.Text = L("这里只影响软件版本检查，不影响 Mod 更新检查。Mod 更新频率请到左侧“更新”模块设置。", "This only affects app-version checks, not mod update checks. Configure mod update frequency in the Updates section.");
         RefreshSettingsButtonLabels();
@@ -568,6 +571,28 @@ public sealed partial class MainWindow : Window
                 : !string.IsNullOrWhiteSpace(_latestReleasePackageUrl) && IsReleaseNewer(_latestReleaseTag ?? string.Empty)
                     ? L("下载并安装更新", "Download and Install Update")
                     : L("打开更新页面", "Open Release Page");
+    }
+
+    private void RefreshProjectResourceText()
+    {
+        ProjectResourcesTitleTextBlock.Text = L("项目与开源组件", "Project and Open-Source Components");
+        ProjectResourcesHintTextBlock.Text = L(
+            "列出软件运行时使用或调用的主要开源项目，以及本项目和作者主页。点击任意项目可打开其官方地址。",
+            "Major open-source projects used or invoked at runtime, plus this project and the author's homepage. Select an item to open its official address.");
+
+        foreach (Button resourceButton in ProjectResourcesGrid.Children.OfType<Button>())
+        {
+            if (resourceButton.Tag is not string url || string.IsNullOrWhiteSpace(url))
+            {
+                continue;
+            }
+
+            ToolTipService.SetToolTip(resourceButton, url);
+            string resourceName = resourceButton.Content is StackPanel panel
+                ? panel.Children.OfType<TextBlock>().FirstOrDefault()?.Text ?? url
+                : url;
+            AutomationProperties.SetName(resourceButton, $"{resourceName} · {url}");
+        }
     }
 
     private void RefreshAppearanceSettings()
@@ -977,32 +1002,32 @@ public sealed partial class MainWindow : Window
     private void RefreshUpdatesPane()
     {
         UpdatesTitleTextBlock.Text = L("Mod 更新", "Mod Updates");
-        UpdatesSubtitleTextBlock.Text = L("集中管理配置方案、安装安全、下载任务和已追踪 Mod 更新。", "Manage profiles, installation safety, download tasks, and tracked mod updates in one place.");
+        UpdatesSubtitleTextBlock.Text = L("检查已安装 Mod 的新版本，并集中处理下载、配置方案和安装恢复。", "Check installed mods for new versions and manage downloads, profiles, and recovery in one place.");
         ConfigurationProfilesTitleTextBlock.Text = L("配置方案", "Configuration Profiles");
-        ConfigurationProfilesHintTextBlock.Text = L("保存当前目标文件夹中已启用的 Mod，并可一键恢复这组组合。", "Save the mods currently enabled in the target folder and restore the set later.");
+        ConfigurationProfilesHintTextBlock.Text = L("保存或恢复当前仓库中已启用的 Mod 组合。", "Save or restore the enabled mod set for this repository.");
         CreateConfigurationProfileButton.Content = L("新建方案", "New Profile");
         UpdateConfigurationProfileButton.Content = L("更新方案", "Update Profile");
         ApplyConfigurationProfileButton.Content = L("应用方案", "Apply Profile");
         DeleteConfigurationProfileButton.Content = new FontIcon { Glyph = "\uE74D", FontSize = 16 };
         ToolTipService.SetToolTip(DeleteConfigurationProfileButton, L("删除选中的配置方案", "Delete the selected profile"));
         InstallSafetyTitleTextBlock.Text = L("安装安全", "Install Safety");
-        InstallSafetyHintTextBlock.Text = L("安装前检查相对文件路径冲突，并为复制、移除和方案切换建立可恢复备份。", "Check relative-file conflicts before installation and create recoverable backups for copy, removal, and profile changes.");
+        InstallSafetyHintTextBlock.Text = L("安装前检查文件冲突；复制、移除和方案切换均可通过备份恢复。", "Check file conflicts before installation; copies, removals, and profile changes can be recovered from backups.");
         ConflictDetectionToggleSwitch.Header = L("安装前检测冲突", "Detect conflicts before install");
         ConflictDetectionToggleSwitch.OnContent = L("开启", "On");
         ConflictDetectionToggleSwitch.OffContent = L("关闭", "Off");
         ConflictDetectionToggleSwitch.IsOn = _enableConflictDetection;
         RollbackLastInstallButton.Content = L("撤销上次 Mod 操作", "Undo Last Mod Change");
-        DownloadTaskCenterTitleTextBlock.Text = L("下载任务中心", "Download Task Center");
-        DownloadTaskCenterHintTextBlock.Text = L("查看在线 Mod 的下载、解压、完成、失败或取消状态。", "Track online mod downloads, extraction, completion, failures, and cancellations.");
+        DownloadTaskCenterTitleTextBlock.Text = L("下载任务", "Downloads");
+        DownloadTaskCenterHintTextBlock.Text = L("显示在线 Mod 的下载与解压进度。", "Shows online mod download and extraction progress.");
         ClearDownloadTasksButton.Content = L("清除已完成", "Clear Finished");
         RefreshBackupManagerText();
         _ = RefreshInstallBackupListAsync();
         RefreshConfigurationProfiles();
         RefreshDownloadTaskCenter();
         TrackedModSettingsTitleTextBlock.Text = L("检查方式", "Check Settings");
-        TrackedModSettingsHintTextBlock.Text = L("自动检查会在应用启动时按你设定的频率执行，手动检查会立即刷新所有已记录的在线 Mod。", "Automatic checks run on startup at the selected interval. Manual checks refresh every tracked online mod immediately.");
+        TrackedModSettingsHintTextBlock.Text = L("按设定频率在启动时检查，也可立即刷新当前仓库。", "Check on startup at the selected interval, or refresh this repository now.");
         ModUpdateIntervalLabelTextBlock.Text = L("检查频率", "Check interval");
-        ModUpdateIntervalHintTextBlock.Text = L("只会检查已安装并记录了网站来源 ID 的 Mod。", "Only mods that were installed and saved with a source ID will be checked.");
+        ModUpdateIntervalHintTextBlock.Text = L("仅检查已保存来源 ID 的在线安装 Mod。", "Only online-installed mods with a saved source ID are checked.");
         CheckModUpdatesButton.Content = _isCheckingModUpdates ? L("检查中...", "Checking...") : L("手动检查更新", "Check Now");
         TrackedModsTitleTextBlock.Text = L("已追踪 Mod", "Tracked Mods");
 
@@ -1026,6 +1051,7 @@ public sealed partial class MainWindow : Window
 
         PopulateModUpdateIntervalOptions();
         TrackedModsListPanel.Children.Clear();
+        TrackedModsListPanel.RowDefinitions.Clear();
 
         IEnumerable<TrackedModUpdateResult> orderedResults = _trackedModUpdateResults
             .OrderByDescending(item => item.HasUpdate)
@@ -1059,12 +1085,48 @@ public sealed partial class MainWindow : Window
                 }
             }
 
+            ApplyTrackedModsListLayout();
             return;
         }
 
         foreach (TrackedModUpdateResult result in orderedResults)
         {
             TrackedModsListPanel.Children.Add(CreateTrackedModUpdateCard(result));
+        }
+
+        ApplyTrackedModsListLayout();
+    }
+
+    private void ApplyTrackedModsListLayout()
+    {
+        if (TrackedModsListPanel is null
+            || TrackedModsPrimaryColumn is null
+            || TrackedModsSecondaryColumn is null)
+        {
+            return;
+        }
+
+        int columnCount = _useWideTrackedModsLayout ? 2 : 1;
+        TrackedModsPrimaryColumn.Width = new GridLength(1, GridUnitType.Star);
+        TrackedModsSecondaryColumn.Width = _useWideTrackedModsLayout
+            ? new GridLength(1, GridUnitType.Star)
+            : new GridLength(0);
+
+        TrackedModsListPanel.RowDefinitions.Clear();
+        int childCount = TrackedModsListPanel.Children.Count;
+        int rowCount = Math.Max(1, (int)Math.Ceiling(childCount / (double)columnCount));
+        for (int row = 0; row < rowCount; row++)
+        {
+            TrackedModsListPanel.RowDefinitions.Add(new RowDefinition { Height = GridLength.Auto });
+        }
+
+        for (int index = 0; index < childCount; index++)
+        {
+            FrameworkElement child = (FrameworkElement)TrackedModsListPanel.Children[index];
+            Grid.SetRow(child, index / columnCount);
+            Grid.SetColumn(child, index % columnCount);
+            Grid.SetColumnSpan(child, childCount == 1 && columnCount == 2 ? 2 : 1);
+            child.HorizontalAlignment = HorizontalAlignment.Stretch;
         }
     }
 
@@ -4198,6 +4260,13 @@ public sealed partial class MainWindow : Window
         baseCard.HotnessScore = CalculateOnlineHotness(baseCard.Likes, baseCard.Views, baseCard.Downloads);
         baseCard.FileSizeBytes = enrichedCard.FileSizeBytes > 0 ? enrichedCard.FileSizeBytes : baseCard.FileSizeBytes;
         baseCard.DownloadUrl = !string.IsNullOrWhiteSpace(enrichedCard.DownloadUrl) ? enrichedCard.DownloadUrl : baseCard.DownloadUrl;
+        baseCard.DownloadFileName = !string.IsNullOrWhiteSpace(enrichedCard.DownloadFileName)
+            ? enrichedCard.DownloadFileName
+            : baseCard.DownloadFileName;
+        if (enrichedCard.DownloadFiles.Count > 0)
+        {
+            baseCard.DownloadFiles = enrichedCard.DownloadFiles;
+        }
         baseCard.ProfileUrl = !string.IsNullOrWhiteSpace(enrichedCard.ProfileUrl) ? enrichedCard.ProfileUrl : baseCard.ProfileUrl;
         baseCard.PreviewUrl = !string.IsNullOrWhiteSpace(enrichedCard.PreviewUrl) ? enrichedCard.PreviewUrl : baseCard.PreviewUrl;
         baseCard.HasUpdates = enrichedCard.HasUpdates;
@@ -4432,11 +4501,20 @@ public sealed partial class MainWindow : Window
         bool hasUpdates = TryGetBoolProperty(dataElement, "Updates().bSubmissionHasUpdates()");
 
         JsonElement filesElement = default;
+        List<OnlineDownloadCandidate> downloadFiles = [];
         string? downloadUrl = fallbackDownloadUrl;
+        string downloadFileName = string.Empty;
         long fileSizeBytes = 0;
         if (dataElement.ValueKind == JsonValueKind.Object && dataElement.TryGetProperty("Files().aFiles()", out filesElement))
         {
-            (downloadUrl, fileSizeBytes) = TryGetPrimaryGameBananaFile(filesElement, fallbackDownloadUrl);
+            downloadFiles = ParseGameBananaDownloadFiles(filesElement);
+            OnlineDownloadCandidate? defaultFile = OnlineDownloadSelectionPolicy.SelectDefault(downloadFiles);
+            if (defaultFile is not null)
+            {
+                downloadUrl = defaultFile.DownloadUrl;
+                downloadFileName = defaultFile.FileName;
+                fileSizeBytes = defaultFile.FileSizeBytes;
+            }
             if (downloads <= 0)
             {
                 downloads = SumGameBananaFileDownloads(filesElement);
@@ -4464,6 +4542,8 @@ public sealed partial class MainWindow : Window
             PreviewUrl = previewUrl,
             ProfileUrl = profileUrl,
             DownloadUrl = downloadUrl,
+            DownloadFileName = downloadFileName,
+            DownloadFiles = downloadFiles,
             FileSizeBytes = fileSizeBytes,
             HasUpdates = hasUpdates,
             UpdatedAt = updatedAt
@@ -4738,11 +4818,12 @@ public sealed partial class MainWindow : Window
         return totalDownloads;
     }
 
-    private static (string? DownloadUrl, long FileSizeBytes) TryGetPrimaryGameBananaFile(JsonElement filesElement, string? fallbackDownloadUrl)
+    private static List<OnlineDownloadCandidate> ParseGameBananaDownloadFiles(JsonElement filesElement)
     {
+        List<OnlineDownloadCandidate> files = [];
         if (filesElement.ValueKind != JsonValueKind.Object)
         {
-            return (fallbackDownloadUrl, 0);
+            return files;
         }
 
         foreach (JsonProperty fileProperty in filesElement.EnumerateObject())
@@ -4753,16 +4834,44 @@ public sealed partial class MainWindow : Window
                 continue;
             }
 
+            string fileId = TryGetStringProperty(fileElement, "_idRow") ?? fileProperty.Name;
+            string fileName = TryGetStringProperty(fileElement, "_sFile") ?? string.Empty;
             bool isArchived = TryGetBoolProperty(fileElement, "_bIsArchived");
             string? fileDownloadUrl = TryGetStringProperty(fileElement, "_sDownloadUrl");
             long fileSizeBytes = TryGetInt64Property(fileElement, "_nFilesize");
-            if (!isArchived && !string.IsNullOrWhiteSpace(fileDownloadUrl))
+            long addedEpoch = TryGetInt64Property(fileElement, "_tsDateAdded");
+            if (string.IsNullOrWhiteSpace(fileDownloadUrl))
             {
-                return (fileDownloadUrl, fileSizeBytes);
+                continue;
             }
+
+            DateTimeOffset addedAt = DateTimeOffset.MinValue;
+            if (addedEpoch > 0)
+            {
+                try
+                {
+                    addedAt = DateTimeOffset.FromUnixTimeSeconds(addedEpoch).ToLocalTime();
+                }
+                catch (ArgumentOutOfRangeException)
+                {
+                }
+            }
+
+            files.Add(new OnlineDownloadCandidate
+            {
+                FileId = fileId,
+                FileName = fileName,
+                DownloadUrl = fileDownloadUrl,
+                FileSizeBytes = Math.Max(0, fileSizeBytes),
+                AddedAt = addedAt,
+                IsArchived = isArchived,
+                IsSupportedArchive = IsSupportedArchiveFile(fileName),
+                Version = TryGetStringProperty(fileElement, "_sVersion") ?? string.Empty,
+                Description = TryGetStringProperty(fileElement, "_sDescription") ?? string.Empty
+            });
         }
 
-        return (fallbackDownloadUrl, 0);
+        return OnlineDownloadSelectionPolicy.OrderForManualSelection(files).ToList();
     }
 
     private static string? TryGetStringProperty(JsonElement element, string propertyName)
@@ -7032,14 +7141,51 @@ public sealed partial class MainWindow : Window
                 "You can open the original page here or download and extract it into a folder you choose.");
         }
 
-        OpenOnlineDetailPageButton.Content = L("打开原页面", "Open Original Page");
-        DownloadOnlineDetailButton.Content = !string.IsNullOrWhiteSpace(mod.DownloadUrl)
-            ? L("下载并解压", "Download and Extract")
-            : L("暂无下载", "No Download");
-        OpenOnlineDetailPageButton.IsEnabled = !string.IsNullOrWhiteSpace(mod.ProfileUrl);
-        DownloadOnlineDetailButton.IsEnabled = !string.IsNullOrWhiteSpace(mod.DownloadUrl);
+        UpdateOnlineDetailDownloadControls(mod);
 
         PopulateOnlineDetailImages(displayDetails.ImageUrls);
+    }
+
+    private void UpdateOnlineDetailDownloadControls(OnlineModCard mod)
+    {
+        OnlineDownloadCandidate? defaultFile = OnlineDownloadSelectionPolicy.SelectDefault(mod.DownloadFiles);
+        int availableFileCount = mod.DownloadFiles.Count(file => !string.IsNullOrWhiteSpace(file.DownloadUrl));
+
+        OpenOnlineDetailPageButton.Content = L("打开原页面", "Open Original Page");
+        SelectOnlineDetailDownloadButton.Content = availableFileCount > 0
+            ? L($"选择文件（{availableFileCount}）", $"Select File ({availableFileCount})")
+            : L("选择文件", "Select File");
+        DownloadOnlineDetailButton.Content = !string.IsNullOrWhiteSpace(mod.DownloadUrl) || mod.ItemId > 0
+            ? L("下载最新压缩包", "Download Latest Archive")
+            : L("暂无下载", "No Download");
+
+        OpenOnlineDetailPageButton.IsEnabled = !string.IsNullOrWhiteSpace(mod.ProfileUrl);
+        SelectOnlineDetailDownloadButton.IsEnabled = mod.ItemId > 0;
+        DownloadOnlineDetailButton.IsEnabled = !string.IsNullOrWhiteSpace(mod.DownloadUrl) || mod.ItemId > 0;
+
+        if (defaultFile is not null)
+        {
+            string size = defaultFile.FileSizeBytes > 0 ? $" · {FormatFileSize(defaultFile.FileSizeBytes)}" : string.Empty;
+            string date = defaultFile.AddedAt > DateTimeOffset.MinValue
+                ? $" · {defaultFile.AddedAt:yyyy-MM-dd}"
+                : string.Empty;
+            OnlineDetailDownloadSelectionTextBlock.Text = L(
+                $"默认：{defaultFile.FileName}{size}{date}",
+                $"Default: {defaultFile.FileName}{size}{date}");
+            ToolTipService.SetToolTip(OnlineDetailDownloadSelectionTextBlock, OnlineDetailDownloadSelectionTextBlock.Text);
+        }
+        else if (!string.IsNullOrWhiteSpace(mod.DownloadUrl) || mod.ItemId > 0)
+        {
+            OnlineDetailDownloadSelectionTextBlock.Text = L(
+                "默认下载最新的可用压缩包；可手动选择其他文件。",
+                "The newest available archive is downloaded by default; another file can be selected manually.");
+            ToolTipService.SetToolTip(OnlineDetailDownloadSelectionTextBlock, null);
+        }
+        else
+        {
+            OnlineDetailDownloadSelectionTextBlock.Text = L("当前没有可用下载文件。", "No downloadable file is currently available.");
+            ToolTipService.SetToolTip(OnlineDetailDownloadSelectionTextBlock, null);
+        }
     }
 
     private void ResetOnlineDetailPaneToPlaceholder()
@@ -7056,9 +7202,15 @@ public sealed partial class MainWindow : Window
         OnlineDetailTranslationNoteTextBlock.Visibility = Visibility.Collapsed;
         OnlineDetailTranslationNoteTextBlock.Text = string.Empty;
         OpenOnlineDetailPageButton.IsEnabled = false;
+        SelectOnlineDetailDownloadButton.IsEnabled = false;
         DownloadOnlineDetailButton.IsEnabled = false;
         OpenOnlineDetailPageButton.Content = L("打开原页面", "Open Original Page");
-        DownloadOnlineDetailButton.Content = L("下载并解压", "Download and Extract");
+        SelectOnlineDetailDownloadButton.Content = L("选择文件", "Select File");
+        DownloadOnlineDetailButton.Content = L("下载最新压缩包", "Download Latest Archive");
+        OnlineDetailDownloadSelectionTextBlock.Text = L(
+            "默认下载最新的可用压缩包；也可手动选择文件。",
+            "The newest available archive is downloaded by default; manual file selection is also available.");
+        ToolTipService.SetToolTip(OnlineDetailDownloadSelectionTextBlock, null);
         PopulateOnlineDetailImages([]);
     }
 
@@ -7632,29 +7784,40 @@ public sealed partial class MainWindow : Window
         imageLayer.Children.Add(imageHost);
 
         string characterLabel = GetOnlineCharacterDisplayName(mod.CharacterName);
-        var characterBadge = new Border
+        Grid characterContent = new();
+        characterContent.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(3) });
+        characterContent.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(1, GridUnitType.Star) });
+        characterContent.Children.Add(new Border
         {
-            MaxWidth = 160,
-            Margin = new Thickness(10),
-            Padding = new Thickness(10, 5, 10, 5),
-            HorizontalAlignment = HorizontalAlignment.Left,
-            VerticalAlignment = VerticalAlignment.Bottom,
-            Background = GetAppThemeBrush("AppCardBackgroundBrush"),
-            BorderBrush = GetAppThemeBrush("AppCardBorderBrush"),
-            BorderThickness = new Thickness(1),
-            CornerRadius = new CornerRadius(999),
-            Child = new TextBlock
-            {
-                Text = characterLabel,
-                FontSize = 12,
-                FontWeight = Microsoft.UI.Text.FontWeights.SemiBold,
-                MaxLines = 1,
-                TextTrimming = TextTrimming.CharacterEllipsis
-            }
+            Width = 3,
+            Background = GetAppThemeBrush("AppNavSelectedBorderBrush")
+        });
+        var characterText = new TextBlock
+        {
+            Text = characterLabel,
+            Margin = new Thickness(9, 0, 10, 0),
+            FontSize = 12,
+            FontWeight = Microsoft.UI.Text.FontWeights.SemiBold,
+            Foreground = new SolidColorBrush(Colors.White),
+            VerticalAlignment = VerticalAlignment.Center,
+            MaxLines = 1,
+            TextTrimming = TextTrimming.CharacterEllipsis
         };
-        imageLayer.Children.Add(characterBadge);
+        Grid.SetColumn(characterText, 1);
+        characterContent.Children.Add(characterText);
 
-        Border heatBadge = CreateOnlineMetricBadge($"{L("热度", "Heat")} {mod.HotnessScore:F1}", true);
+        var characterBanner = new Border
+        {
+            Height = 34,
+            HorizontalAlignment = HorizontalAlignment.Stretch,
+            VerticalAlignment = VerticalAlignment.Bottom,
+            Background = new SolidColorBrush(ColorHelper.FromArgb(190, 12, 17, 25)),
+            Child = characterContent
+        };
+        ToolTipService.SetToolTip(characterBanner, characterLabel);
+        imageLayer.Children.Add(characterBanner);
+
+        Border heatBadge = CreateOnlineHeatIndicator(mod.HotnessScore);
         heatBadge.Margin = new Thickness(10);
         heatBadge.HorizontalAlignment = HorizontalAlignment.Right;
         heatBadge.VerticalAlignment = VerticalAlignment.Top;
@@ -7831,8 +7994,8 @@ public sealed partial class MainWindow : Window
             Background = GetAppThemeBrush(highlighted ? "AppAccentSoftBrush" : "AppSecondaryDefaultBrush"),
             BorderBrush = GetAppThemeBrush(highlighted ? "AppNavSelectedBorderBrush" : "AppCardBorderBrush"),
             BorderThickness = new Thickness(1),
-            CornerRadius = new CornerRadius(999),
-            Padding = new Thickness(9, 4, 9, 4),
+            CornerRadius = new CornerRadius(4),
+            Padding = new Thickness(8, 4, 8, 4),
             Child = new TextBlock
             {
                 Text = text,
@@ -7843,6 +8006,43 @@ public sealed partial class MainWindow : Window
                 FontWeight = highlighted ? Microsoft.UI.Text.FontWeights.SemiBold : Microsoft.UI.Text.FontWeights.Normal
             }
         };
+    }
+
+    private Border CreateOnlineHeatIndicator(double hotnessScore)
+    {
+        var content = new StackPanel
+        {
+            Orientation = Orientation.Horizontal,
+            Spacing = 6,
+            VerticalAlignment = VerticalAlignment.Center
+        };
+        content.Children.Add(new TextBlock
+        {
+            Text = L("热度", "HEAT"),
+            FontSize = 10,
+            Foreground = new SolidColorBrush(ColorHelper.FromArgb(210, 255, 255, 255)),
+            VerticalAlignment = VerticalAlignment.Center
+        });
+        content.Children.Add(new TextBlock
+        {
+            Text = hotnessScore.ToString("F1", CultureInfo.CurrentCulture),
+            FontSize = 12,
+            FontWeight = Microsoft.UI.Text.FontWeights.SemiBold,
+            Foreground = new SolidColorBrush(Colors.White),
+            VerticalAlignment = VerticalAlignment.Center
+        });
+
+        var indicator = new Border
+        {
+            Background = new SolidColorBrush(ColorHelper.FromArgb(210, 24, 37, 55)),
+            BorderBrush = GetAppThemeBrush("AppNavSelectedBorderBrush"),
+            BorderThickness = new Thickness(0, 0, 0, 2),
+            CornerRadius = new CornerRadius(3),
+            Padding = new Thickness(8, 4, 8, 4),
+            Child = content
+        };
+        ToolTipService.SetToolTip(indicator, $"{L("热度", "Hotness")}: {hotnessScore:F1}");
+        return indicator;
     }
 
     private async Task OpenExternalUrlAsync(string? url, string failureTitle)
@@ -8158,49 +8358,86 @@ public sealed partial class MainWindow : Window
         };
     }
 
-    private async Task DownloadAndExtractOnlineModAsync(OnlineModCard mod)
+    private async Task<OnlineModCard> RefreshOnlineModDownloadInfoAsync(OnlineModCard mod)
     {
-        OnlineModCard effectiveMod = mod;
         try
         {
-            OnlineModCard? latestMod = await FetchGameBananaModCardAsyncV2(mod.ItemId);
-            if (latestMod is not null)
+            OnlineModCard? latestMod = await FetchGameBananaModCardAsyncV2(
+                mod.ItemId,
+                useEndfieldMetadata: IsEndfieldRepository(GetSelectedRepository()));
+            if (latestMod is null)
             {
-                if (string.IsNullOrWhiteSpace(latestMod.Title))
-                {
-                    latestMod.Title = mod.Title;
-                }
-
-                if (string.IsNullOrWhiteSpace(latestMod.CharacterName))
-                {
-                    latestMod.CharacterName = mod.CharacterName;
-                }
-
-                if (string.IsNullOrWhiteSpace(latestMod.RootCategoryName))
-                {
-                    latestMod.RootCategoryName = mod.RootCategoryName;
-                }
-
-                if (string.IsNullOrWhiteSpace(latestMod.Author))
-                {
-                    latestMod.Author = mod.Author;
-                }
-
-                if (string.IsNullOrWhiteSpace(latestMod.ProfileUrl))
-                {
-                    latestMod.ProfileUrl = mod.ProfileUrl;
-                }
-
-                if (string.IsNullOrWhiteSpace(latestMod.PreviewUrl))
-                {
-                    latestMod.PreviewUrl = mod.PreviewUrl;
-                }
-
-                effectiveMod = latestMod;
+                return mod;
             }
+
+            latestMod.Title = string.IsNullOrWhiteSpace(latestMod.Title) ? mod.Title : latestMod.Title;
+            if (IsGenericOnlineCharacterName(latestMod.CharacterName)
+                && !IsGenericOnlineCharacterName(mod.CharacterName))
+            {
+                latestMod.CharacterName = mod.CharacterName;
+                latestMod.IsCharacterNameInferred = mod.IsCharacterNameInferred;
+            }
+            else if (string.IsNullOrWhiteSpace(latestMod.CharacterName))
+            {
+                latestMod.CharacterName = mod.CharacterName;
+            }
+            latestMod.RootCategoryName = string.IsNullOrWhiteSpace(latestMod.RootCategoryName) ? mod.RootCategoryName : latestMod.RootCategoryName;
+            latestMod.Author = string.IsNullOrWhiteSpace(latestMod.Author) ? mod.Author : latestMod.Author;
+            latestMod.ProfileUrl = string.IsNullOrWhiteSpace(latestMod.ProfileUrl) ? mod.ProfileUrl : latestMod.ProfileUrl;
+            latestMod.PreviewUrl = string.IsNullOrWhiteSpace(latestMod.PreviewUrl) ? mod.PreviewUrl : latestMod.PreviewUrl;
+            latestMod.CategoryId = string.IsNullOrWhiteSpace(latestMod.CategoryId) ? mod.CategoryId : latestMod.CategoryId;
+            return latestMod;
         }
         catch
         {
+            return mod;
+        }
+    }
+
+    private static OnlineModCard WithSelectedDownloadFile(OnlineModCard mod, OnlineDownloadCandidate selectedFile)
+    {
+        return new OnlineModCard
+        {
+            ItemId = mod.ItemId,
+            Title = mod.Title,
+            CharacterName = mod.CharacterName,
+            CategoryId = mod.CategoryId,
+            IsCharacterNameInferred = mod.IsCharacterNameInferred,
+            RootCategoryName = mod.RootCategoryName,
+            Author = mod.Author,
+            Likes = mod.Likes,
+            Views = mod.Views,
+            Downloads = mod.Downloads,
+            HotnessScore = mod.HotnessScore,
+            FileSizeBytes = selectedFile.FileSizeBytes,
+            PreviewUrl = mod.PreviewUrl,
+            ProfileUrl = mod.ProfileUrl,
+            DownloadUrl = selectedFile.DownloadUrl,
+            DownloadFileName = selectedFile.FileName,
+            DownloadFiles = mod.DownloadFiles,
+            HasUpdates = mod.HasUpdates,
+            UpdatedAt = mod.UpdatedAt
+        };
+    }
+
+    private async Task DownloadAndExtractOnlineModAsync(
+        OnlineModCard mod,
+        OnlineDownloadCandidate? selectedFile = null,
+        bool refreshDownloadInfo = true)
+    {
+        OnlineModCard effectiveMod = refreshDownloadInfo
+            ? await RefreshOnlineModDownloadInfoAsync(mod)
+            : mod;
+
+        OnlineDownloadCandidate? effectiveFile = selectedFile is null
+            ? OnlineDownloadSelectionPolicy.SelectDefault(effectiveMod.DownloadFiles)
+            : effectiveMod.DownloadFiles.FirstOrDefault(file =>
+                !string.IsNullOrWhiteSpace(selectedFile.FileId)
+                && string.Equals(file.FileId, selectedFile.FileId, StringComparison.Ordinal))
+                ?? selectedFile;
+        if (effectiveFile is not null)
+        {
+            effectiveMod = WithSelectedDownloadFile(effectiveMod, effectiveFile);
         }
 
         if (string.IsNullOrWhiteSpace(effectiveMod.DownloadUrl))
@@ -8211,7 +8448,7 @@ public sealed partial class MainWindow : Window
             return;
         }
 
-        string? selectedFolder = await PickDownloadFolderAsync();
+        string? selectedFolder = await PickDownloadFolderAsync(effectiveMod);
         if (string.IsNullOrWhiteSpace(selectedFolder))
         {
             return;
@@ -8569,6 +8806,15 @@ public sealed partial class MainWindow : Window
             return fileName.Trim('"');
         }
 
+        if (!string.IsNullOrWhiteSpace(mod.DownloadFileName))
+        {
+            string preferredName = Path.GetFileName(mod.DownloadFileName.Trim());
+            if (!string.IsNullOrWhiteSpace(preferredName))
+            {
+                return SanitizeFileName(preferredName);
+            }
+        }
+
         string? pathName = response.RequestMessage?.RequestUri is Uri uri
             ? Path.GetFileName(uri.LocalPath)
             : null;
@@ -8652,6 +8898,11 @@ public sealed partial class MainWindow : Window
             }
         }
 
+        string? savedPreviewUrl = await SaveOnlinePreviewImageAsync(extractFolder, mod, details);
+        string? trackedPreviewUrl = string.IsNullOrWhiteSpace(savedPreviewUrl)
+            ? mod.PreviewUrl
+            : savedPreviewUrl;
+
         _modLinks[extractFolder] = mod.ProfileUrl;
         _trackedModOrigins[extractFolder] = new TrackedModOrigin
         {
@@ -8660,11 +8911,10 @@ public sealed partial class MainWindow : Window
             ItemId = mod.ItemId,
             Title = mod.Title,
             ProfileUrl = mod.ProfileUrl,
-            PreviewUrl = mod.PreviewUrl,
+            PreviewUrl = trackedPreviewUrl,
             LastKnownUpdatedAt = mod.UpdatedAt
         };
 
-        await SaveOnlinePreviewImageAsync(extractFolder, mod.PreviewUrl);
         if (details is not null)
         {
             await TryImportShortcutBindingsFromOnlineDetailsAsync(extractFolder, details);
@@ -8784,77 +9034,94 @@ public sealed partial class MainWindow : Window
         RefreshUpdatesPane();
     }
 
-    private async Task SaveOnlinePreviewImageAsync(string modFolder, string? previewUrl)
+    private async Task<string?> SaveOnlinePreviewImageAsync(
+        string modFolder,
+        OnlineModCard mod,
+        OnlineModDetails? details)
     {
-        if (string.IsNullOrWhiteSpace(previewUrl) || !Uri.TryCreate(previewUrl, UriKind.Absolute, out Uri? previewUri))
-        {
-            return;
-        }
-
         string? temporaryPath = null;
         try
         {
-            if (previewUri.Scheme != Uri.UriSchemeHttps && previewUri.Scheme != Uri.UriSchemeHttp)
-            {
-                throw new InvalidDataException("Unsupported preview image URL scheme.");
-            }
-
             List<string> existingFiles = Directory.GetFiles(modFolder).ToList();
             if (!string.IsNullOrWhiteSpace(FindPreviewImage(existingFiles)))
             {
-                return;
+                return null;
             }
 
-            using var timeout = new CancellationTokenSource(OnlinePreviewImageRequestTimeout);
-            using HttpResponseMessage response = await _httpClient.GetAsync(
-                previewUri,
-                HttpCompletionOption.ResponseHeadersRead,
-                timeout.Token);
-            response.EnsureSuccessStatusCode();
-            string? mediaType = response.Content.Headers.ContentType?.MediaType?.ToLowerInvariant();
-            if (string.IsNullOrWhiteSpace(mediaType) || !mediaType.StartsWith("image/", StringComparison.Ordinal))
+            List<(string Url, bool IsFallbackThumbnail)> candidateUrls = (details?.ImageUrls ?? [])
+                .Where(url => !string.IsNullOrWhiteSpace(url)
+                    && !string.Equals(url, mod.PreviewUrl, StringComparison.OrdinalIgnoreCase))
+                .Distinct(StringComparer.OrdinalIgnoreCase)
+                .Take(5)
+                .Select(url => (url, false))
+                .ToList();
+            if (!string.IsNullOrWhiteSpace(mod.PreviewUrl)
+                && !candidateUrls.Any(candidate => string.Equals(
+                    candidate.Url,
+                    mod.PreviewUrl,
+                    StringComparison.OrdinalIgnoreCase)))
             {
-                throw new InvalidDataException("The preview response is not an image.");
-            }
-            if (response.Content.Headers.ContentLength is long contentLength && contentLength > MaxOnlinePreviewImageBytes)
-            {
-                throw new InvalidDataException("The preview image exceeds the size limit.");
+                candidateUrls.Add((mod.PreviewUrl, true));
             }
 
-            string extension = Path.GetExtension(previewUri.AbsolutePath);
-            if (string.IsNullOrWhiteSpace(extension) || !ImageExtensions.Contains(extension.ToLowerInvariant()))
+            if (candidateUrls.Count == 0)
             {
-                extension = mediaType switch
+                return null;
+            }
+
+            using var timeout = new CancellationTokenSource(TimeSpan.FromSeconds(30));
+            var downloadedImages = new List<(OnlinePreviewCandidate Candidate, byte[] Bytes)>();
+            for (int index = 0; index < candidateUrls.Count; index++)
+            {
+                (string imageUrl, bool isFallbackThumbnail) = candidateUrls[index];
+                if (!Uri.TryCreate(imageUrl, UriKind.Absolute, out Uri? imageUri)
+                    || (imageUri.Scheme != Uri.UriSchemeHttps && imageUri.Scheme != Uri.UriSchemeHttp))
                 {
-                    "image/png" => ".png",
-                    "image/webp" => ".webp",
-                    "image/gif" => ".gif",
-                    "image/bmp" => ".bmp",
-                    _ => ".jpg"
-                };
+                    continue;
+                }
+
+                byte[]? imageBytes = await GetOnlinePreviewCandidateBytesAsync(
+                    imageUrl,
+                    imageUri,
+                    timeout.Token);
+                if (imageBytes is null || imageBytes.Length == 0 || imageBytes.Length > MaxOnlinePreviewImageBytes)
+                {
+                    continue;
+                }
+
+                (int width, int height) = await TryReadOnlineImageDimensionsAsync(imageBytes);
+                if (width <= 0 || height <= 0)
+                {
+                    continue;
+                }
+
+                downloadedImages.Add((new OnlinePreviewCandidate
+                {
+                    Url = imageUrl,
+                    PixelWidth = width,
+                    PixelHeight = height,
+                    FileSizeBytes = imageBytes.LongLength,
+                    IsFallbackThumbnail = isFallbackThumbnail,
+                    SourceOrder = index
+                }, imageBytes));
             }
 
+            OnlinePreviewCandidate? selected = OnlinePreviewSelectionPolicy.SelectBest(
+                downloadedImages.Select(item => item.Candidate));
+            if (selected is null)
+            {
+                return null;
+            }
+
+            byte[] selectedBytes = downloadedImages.First(item => ReferenceEquals(item.Candidate, selected)).Bytes;
+            Uri selectedUri = new(selected.Url);
+            string extension = GetOnlinePreviewImageExtension(selectedUri, selectedBytes);
             string previewPath = Path.Combine(modFolder, "preview" + extension);
             temporaryPath = previewPath + ".download";
-            await using Stream sourceStream = await response.Content.ReadAsStreamAsync(timeout.Token);
-            await using (FileStream fileStream = new(temporaryPath, FileMode.Create, FileAccess.Write, FileShare.None, 81920, true))
-            {
-                byte[] buffer = new byte[81920];
-                long totalBytes = 0;
-                int read;
-                while ((read = await sourceStream.ReadAsync(buffer, timeout.Token)) > 0)
-                {
-                    totalBytes += read;
-                    if (totalBytes > MaxOnlinePreviewImageBytes)
-                    {
-                        throw new InvalidDataException("The preview image exceeds the size limit.");
-                    }
-                    await fileStream.WriteAsync(buffer.AsMemory(0, read), timeout.Token);
-                }
-                await fileStream.FlushAsync(timeout.Token);
-            }
+            await File.WriteAllBytesAsync(temporaryPath, selectedBytes, timeout.Token);
             File.Move(temporaryPath, previewPath, true);
             temporaryPath = null;
+            return selected.Url;
         }
         catch (Exception ex)
         {
@@ -8870,7 +9137,101 @@ public sealed partial class MainWindow : Window
                     LogApplicationIssue("Preview image cleanup", cleanupException);
                 }
             }
+
+            return null;
         }
+    }
+
+    private async Task<byte[]?> GetOnlinePreviewCandidateBytesAsync(
+        string imageUrl,
+        Uri imageUri,
+        CancellationToken cancellationToken)
+    {
+        Uri? cachedUri = TryGetExistingCachedOnlineImageUri(imageUrl);
+        if (cachedUri is { IsFile: true } && File.Exists(cachedUri.LocalPath))
+        {
+            FileInfo cachedFile = new(cachedUri.LocalPath);
+            if (cachedFile.Length > 0 && cachedFile.Length <= MaxOnlinePreviewImageBytes)
+            {
+                return await File.ReadAllBytesAsync(cachedUri.LocalPath, cancellationToken);
+            }
+        }
+
+        return await DownloadOnlineImageBytesWithRetryAsync(imageUri, cancellationToken);
+    }
+
+    private static async Task<(int Width, int Height)> TryReadOnlineImageDimensionsAsync(byte[] imageBytes)
+    {
+        try
+        {
+            using var randomAccessStream = new InMemoryRandomAccessStream();
+            using (IOutputStream outputStream = randomAccessStream.GetOutputStreamAt(0))
+            using (var writer = new DataWriter(outputStream))
+            {
+                writer.WriteBytes(imageBytes);
+                await writer.StoreAsync();
+                writer.DetachStream();
+            }
+
+            randomAccessStream.Seek(0);
+            BitmapDecoder decoder = await BitmapDecoder.CreateAsync(randomAccessStream);
+            if (decoder.PixelWidth > int.MaxValue || decoder.PixelHeight > int.MaxValue)
+            {
+                return (0, 0);
+            }
+
+            return ((int)decoder.PixelWidth, (int)decoder.PixelHeight);
+        }
+        catch
+        {
+            return (0, 0);
+        }
+    }
+
+    private static string GetOnlinePreviewImageExtension(Uri imageUri, byte[] imageBytes)
+    {
+        string extension = Path.GetExtension(imageUri.AbsolutePath).ToLowerInvariant();
+        if (ImageExtensions.Contains(extension, StringComparer.OrdinalIgnoreCase))
+        {
+            return extension;
+        }
+
+        if (imageBytes.Length >= 8
+            && imageBytes[0] == 0x89
+            && imageBytes[1] == 0x50
+            && imageBytes[2] == 0x4E
+            && imageBytes[3] == 0x47)
+        {
+            return ".png";
+        }
+
+        if (imageBytes.Length >= 6
+            && imageBytes[0] == (byte)'G'
+            && imageBytes[1] == (byte)'I'
+            && imageBytes[2] == (byte)'F')
+        {
+            return ".gif";
+        }
+
+        if (imageBytes.Length >= 12
+            && imageBytes[0] == (byte)'R'
+            && imageBytes[1] == (byte)'I'
+            && imageBytes[2] == (byte)'F'
+            && imageBytes[3] == (byte)'F'
+            && imageBytes[8] == (byte)'W'
+            && imageBytes[9] == (byte)'E'
+            && imageBytes[10] == (byte)'B'
+            && imageBytes[11] == (byte)'P')
+        {
+            return ".webp";
+        }
+
+        if (imageBytes.Length >= 2 && imageBytes[0] == (byte)'B' && imageBytes[1] == (byte)'M')
+        {
+            return ".bmp";
+        }
+
+        return ".jpg";
     }
 
     private static bool IsPathInsideDirectory(string candidatePath, string parentPath)
@@ -9823,6 +10184,7 @@ public sealed partial class MainWindow : Window
         RefreshAppearanceSettings();
         SettingsProjectTitleTextBlock.Text = L("项目链接与软件版本", "Project Links and App Version");
         SettingsProjectHintTextBlock.Text = L("这里保留 GitHub 仓库入口和软件版本检查；Mod 更新请使用左侧的“更新”模块。", "This section keeps the GitHub repository link and app-version checks. Use the Updates section in the left navigation for mod updates.");
+        RefreshProjectResourceText();
         SettingsPlaceholderTitleTextBlock.Text = L("仓库在线配置", "Repository Online Config");
         SettingsPlaceholderTextBlock.Text = L("在线 Mod 页面需要的来源站点、分类 ID 和备注都集中放在这里管理。", "Manage the source site, category ID, and notes used by the online mod page here.");
         OpenGitHubButton.Content = L("打开 GitHub 仓库", "Open GitHub Repository");
@@ -10025,10 +10387,15 @@ public sealed partial class MainWindow : Window
         RefreshSettingsButtonLabels();
         RefreshOnlineNavigationButtonLabels();
         OpenOnlineDetailPageButton.Content = L("打开原页面", "Open Original Page");
-        DownloadOnlineDetailButton.Content = L("下载并解压", "Download and Extract");
+        SelectOnlineDetailDownloadButton.Content = L("选择文件", "Select File");
+        DownloadOnlineDetailButton.Content = L("下载最新压缩包", "Download Latest Archive");
         if (_activeOnlineDetailMod is null)
         {
             ResetOnlineDetailPaneToPlaceholder();
+        }
+        else
+        {
+            UpdateOnlineDetailDownloadControls(_activeOnlineDetailMod);
         }
         OnlineDetailRequirementTitleTextBlock.Text = L("可能存在额外访问要求", "Possible extra access requirements");
         ApplyShortcutPlaceholders();
@@ -10766,6 +11133,175 @@ public sealed partial class MainWindow : Window
         await DownloadAndExtractOnlineModAsync(_activeOnlineDetailMod);
     }
 
+    private async void OnSelectOnlineDetailDownloadClicked(object sender, RoutedEventArgs e)
+    {
+        if (_activeOnlineDetailMod is null)
+        {
+            return;
+        }
+
+        OnlineModCard sourceMod = _activeOnlineDetailMod;
+        SetBusyState(true);
+        OnlineModCard effectiveMod;
+        try
+        {
+            effectiveMod = await RefreshOnlineModDownloadInfoAsync(sourceMod);
+        }
+        finally
+        {
+            SetBusyState(false);
+        }
+
+        if (_activeOnlineDetailMod?.ItemId != sourceMod.ItemId)
+        {
+            return;
+        }
+
+        _activeOnlineDetailMod = effectiveMod;
+        UpdateOnlineDetailDownloadControls(effectiveMod);
+
+        IReadOnlyList<OnlineDownloadCandidate> candidates =
+            OnlineDownloadSelectionPolicy.OrderForManualSelection(effectiveMod.DownloadFiles);
+        if (candidates.Count == 0)
+        {
+            await ShowMessageAsync(
+                L("当前条目没有返回可手动选择的文件；你仍可尝试使用默认下载按钮。", "This item did not return selectable files. You can still try the default download button."),
+                L("没有文件列表", "No file list"));
+            return;
+        }
+
+        OnlineDownloadCandidate? selectedFile = await ShowOnlineDownloadFilePickerAsync(effectiveMod, candidates);
+        if (selectedFile is null)
+        {
+            return;
+        }
+
+        await DownloadAndExtractOnlineModAsync(
+            effectiveMod,
+            selectedFile,
+            refreshDownloadInfo: false);
+    }
+
+    private async Task<OnlineDownloadCandidate?> ShowOnlineDownloadFilePickerAsync(
+        OnlineModCard mod,
+        IReadOnlyList<OnlineDownloadCandidate> candidates)
+    {
+        var fileList = new ListView
+        {
+            SelectionMode = ListViewSelectionMode.Single,
+            MaxHeight = 420,
+            HorizontalContentAlignment = HorizontalAlignment.Stretch
+        };
+
+        OnlineDownloadCandidate? defaultFile = OnlineDownloadSelectionPolicy.SelectDefault(candidates);
+        ListViewItem? defaultItem = null;
+        foreach (OnlineDownloadCandidate candidate in candidates)
+        {
+            string fileName = string.IsNullOrWhiteSpace(candidate.FileName)
+                ? L($"文件 {candidate.FileId}", $"File {candidate.FileId}")
+                : candidate.FileName;
+
+            var title = new TextBlock
+            {
+                Text = fileName,
+                FontWeight = Microsoft.UI.Text.FontWeights.SemiBold,
+                TextWrapping = TextWrapping.Wrap,
+                TextTrimming = TextTrimming.CharacterEllipsis,
+                MaxLines = 2
+            };
+
+            var metadata = new List<string>();
+            if (!string.IsNullOrWhiteSpace(candidate.Version))
+            {
+                metadata.Add(L($"版本 {candidate.Version}", $"Version {candidate.Version}"));
+            }
+            if (candidate.FileSizeBytes > 0)
+            {
+                metadata.Add(FormatFileSize(candidate.FileSizeBytes));
+            }
+            if (candidate.AddedAt > DateTimeOffset.MinValue)
+            {
+                metadata.Add(candidate.AddedAt.ToString("yyyy-MM-dd HH:mm", CultureInfo.CurrentCulture));
+            }
+            metadata.Add(candidate.IsArchived ? L("历史归档", "Archived") : L("当前文件", "Current"));
+            if (!candidate.IsSupportedArchive)
+            {
+                metadata.Add(L("不能自动解压", "Cannot auto-extract"));
+            }
+
+            var details = new StackPanel { Spacing = 3 };
+            details.Children.Add(title);
+            details.Children.Add(new TextBlock
+            {
+                Text = string.Join(" · ", metadata),
+                Style = (Style)Application.Current.Resources["CaptionTextStyle"],
+                TextWrapping = TextWrapping.Wrap
+            });
+            if (!string.IsNullOrWhiteSpace(candidate.Description))
+            {
+                details.Children.Add(new TextBlock
+                {
+                    Text = candidate.Description,
+                    Style = (Style)Application.Current.Resources["MutedTextStyle"],
+                    TextWrapping = TextWrapping.Wrap,
+                    TextTrimming = TextTrimming.CharacterEllipsis,
+                    MaxLines = 2
+                });
+            }
+
+            var item = new ListViewItem
+            {
+                Content = details,
+                Tag = candidate,
+                Padding = new Thickness(10, 8, 10, 8),
+                HorizontalContentAlignment = HorizontalAlignment.Stretch,
+                IsEnabled = candidate.IsSupportedArchive
+            };
+            fileList.Items.Add(item);
+            if (ReferenceEquals(candidate, defaultFile))
+            {
+                defaultItem = item;
+            }
+        }
+
+        fileList.SelectedItem = defaultItem
+            ?? fileList.Items.OfType<ListViewItem>().FirstOrDefault(item => item.IsEnabled);
+
+        var content = new StackPanel
+        {
+            Width = 520,
+            Spacing = 10
+        };
+        content.Children.Add(new TextBlock
+        {
+            Text = L(
+                "默认已选中最新的当前压缩包。历史版本仍可手动选择。",
+                "The newest current archive is selected by default. Archived versions remain available for manual selection."),
+            Style = (Style)Application.Current.Resources["MutedTextStyle"],
+            TextWrapping = TextWrapping.Wrap
+        });
+        content.Children.Add(fileList);
+
+        var dialog = new ContentDialog
+        {
+            Title = L($"选择下载文件 · {mod.Title}", $"Select Download File · {mod.Title}"),
+            Content = content,
+            PrimaryButtonText = L("下载所选文件", "Download Selected"),
+            CloseButtonText = L("取消", "Cancel"),
+            DefaultButton = ContentDialogButton.Primary,
+            IsPrimaryButtonEnabled = fileList.SelectedItem is ListViewItem,
+            XamlRoot = RootGrid.XamlRoot
+        };
+        fileList.SelectionChanged += (_, _) =>
+            dialog.IsPrimaryButtonEnabled = fileList.SelectedItem is ListViewItem { IsEnabled: true };
+
+        ContentDialogResult result = await dialog.ShowAsync();
+        return result == ContentDialogResult.Primary
+            && fileList.SelectedItem is ListViewItem { Tag: OnlineDownloadCandidate selected }
+                ? selected
+                : null;
+    }
+
     private void OnOpenGitHubClicked(object sender, RoutedEventArgs e)
     {
         try
@@ -10784,6 +11320,16 @@ public sealed partial class MainWindow : Window
                 L("打开 GitHub 仓库失败：", "Failed to open the GitHub repository: ") + ex.Message,
                 L("打开失败", "Open failed"));
         }
+    }
+
+    private async void OnExternalResourceClicked(object sender, RoutedEventArgs e)
+    {
+        if (sender is not Button { Tag: string url } || string.IsNullOrWhiteSpace(url))
+        {
+            return;
+        }
+
+        await OpenExternalUrlAsync(url, L("打开项目地址失败", "Failed to open project address"));
     }
 
     private async void OnCheckUpdatesClicked(object sender, RoutedEventArgs e)
@@ -11492,7 +12038,58 @@ public sealed partial class MainWindow : Window
         return Environment.GetFolderPath(Environment.SpecialFolder.DesktopDirectory);
     }
 
-    private async Task<string?> PickDownloadFolderAsync()
+    private IReadOnlyCollection<string> GetCharacterFolderAliases(OnlineModCard mod)
+    {
+        var aliases = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+        void AddAlias(string? value)
+        {
+            if (!string.IsNullOrWhiteSpace(value) && !IsGenericOnlineCharacterName(value))
+            {
+                aliases.Add(value.Trim());
+            }
+        }
+
+        AddAlias(mod.CharacterName);
+
+        string normalizedCharacterName = NormalizeCharacterLookup(mod.CharacterName);
+        OnlineCharacterOption? option = _onlineCharacterOptions.FirstOrDefault(item =>
+            (!string.IsNullOrWhiteSpace(mod.CategoryId)
+                && string.Equals(item.CategoryId, mod.CategoryId, StringComparison.OrdinalIgnoreCase))
+            || string.Equals(NormalizeCharacterLookup(item.Key), normalizedCharacterName, StringComparison.OrdinalIgnoreCase)
+            || item.Aliases.Any(alias => string.Equals(
+                NormalizeCharacterLookup(alias),
+                normalizedCharacterName,
+                StringComparison.OrdinalIgnoreCase)));
+        if (option is not null)
+        {
+            AddAlias(option.Key);
+            AddAlias(option.DisplayNameZh);
+            AddAlias(option.DisplayNameEn);
+            foreach (string alias in option.Aliases)
+            {
+                AddAlias(alias);
+            }
+        }
+
+        EndfieldCharacterInfo? endfieldCharacter = FindEndfieldCharacter(mod.CharacterName)
+            ?? EndfieldCharacters.FirstOrDefault(character =>
+                !string.IsNullOrWhiteSpace(mod.CategoryId)
+                && string.Equals(
+                    character.GameBananaCategoryId,
+                    mod.CategoryId,
+                    StringComparison.OrdinalIgnoreCase));
+        if (endfieldCharacter is not null)
+        {
+            foreach (string alias in endfieldCharacter.AllNames)
+            {
+                AddAlias(alias);
+            }
+        }
+
+        return aliases;
+    }
+
+    private async Task<string?> PickDownloadFolderAsync(OnlineModCard mod)
     {
         WorkspaceRepository? repository = GetSelectedRepository();
         if (repository is not null && Directory.Exists(repository.SourcePath))
@@ -11500,6 +12097,10 @@ public sealed partial class MainWindow : Window
             string[] childFolders = Directory.GetDirectories(repository.SourcePath)
                 .OrderBy(path => path, StringComparer.CurrentCultureIgnoreCase)
                 .ToArray();
+            IReadOnlyCollection<string> characterAliases = GetCharacterFolderAliases(mod);
+            string? suggestedFolder = OnlineDownloadSelectionPolicy.SelectCharacterFolder(
+                childFolders,
+                characterAliases);
 
             ComboBox folderComboBox = new()
             {
@@ -11512,16 +12113,34 @@ public sealed partial class MainWindow : Window
                 Tag = repository.SourcePath
             });
 
+            int suggestedIndex = 0;
             foreach (string childFolder in childFolders)
             {
+                bool isSuggested = !string.IsNullOrWhiteSpace(suggestedFolder)
+                    && string.Equals(childFolder, suggestedFolder, StringComparison.OrdinalIgnoreCase);
                 folderComboBox.Items.Add(new ComboBoxItem
                 {
-                    Content = Path.GetFileName(childFolder),
+                    Content = isSuggested
+                        ? L($"{Path.GetFileName(childFolder)}（推荐）", $"{Path.GetFileName(childFolder)} (Recommended)")
+                        : Path.GetFileName(childFolder),
                     Tag = childFolder
                 });
+                if (isSuggested)
+                {
+                    suggestedIndex = folderComboBox.Items.Count - 1;
+                }
             }
 
-            folderComboBox.SelectedIndex = 0;
+            folderComboBox.SelectedIndex = suggestedIndex;
+
+            string characterDisplayName = GetOnlineCharacterDisplayName(mod.CharacterName);
+            string destinationHint = suggestedFolder is null
+                ? L(
+                    $"未在当前仓库中找到与“{characterDisplayName}”明确匹配的角色文件夹，请确认下载位置。",
+                    $"No folder in this repository could be matched confidently to “{characterDisplayName}”. Please confirm the destination.")
+                : L(
+                    $"已识别角色“{characterDisplayName}”，并预选角色文件夹：{Path.GetFileName(suggestedFolder)}。",
+                    $"Recognized “{characterDisplayName}” and preselected: {Path.GetFileName(suggestedFolder)}.");
 
             ContentDialog dialog = new()
             {
@@ -11534,8 +12153,8 @@ public sealed partial class MainWindow : Window
                         new TextBlock
                         {
                             Text = L(
-                                $"当前仓库的 Mod 仓库目录：\n{repository.SourcePath}\n\n请选择要下载并解压到的文件夹。也可以改为手动选择其他位置。",
-                                $"Current mod repository folder:\n{repository.SourcePath}\n\nChoose which folder should receive the download and extraction. You can also choose another location manually."),
+                                $"当前仓库的 Mod 仓库目录：\n{repository.SourcePath}\n\n{destinationHint}\n下载后会在所选目录中创建独立的 Mod 文件夹。也可以改为手动选择其他位置。",
+                                $"Current mod repository folder:\n{repository.SourcePath}\n\n{destinationHint}\nA separate mod folder will be created inside the selected destination. You can also choose another location manually."),
                             TextWrapping = TextWrapping.Wrap
                         },
                         folderComboBox
@@ -13925,6 +14544,10 @@ public sealed class OnlineModCard
     public string ProfileUrl { get; set; } = string.Empty;
 
     public string? DownloadUrl { get; set; }
+
+    public string DownloadFileName { get; set; } = string.Empty;
+
+    public List<OnlineDownloadCandidate> DownloadFiles { get; set; } = [];
 
     public bool HasUpdates { get; set; }
 

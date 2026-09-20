@@ -5,7 +5,7 @@
     xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
     xmlns:local="using:ModFolderCopier.WinUI"
     xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
-    Title="Integrated Mod Manager v3.9.0"
+    Title="Integrated Mod Manager v3.9.4"
     SizeChanged="OnWindowSizeChanged"
     mc:Ignorable="d">
 
@@ -1046,23 +1046,38 @@
                                     </ScrollViewer>
 
                                     <Border Grid.Row="2" Style="{StaticResource StickyActionBorderStyle}">
-                                        <Grid ColumnSpacing="10">
-                                            <Grid.ColumnDefinitions>
-                                                <ColumnDefinition Width="*" />
-                                                <ColumnDefinition Width="*" />
-                                            </Grid.ColumnDefinitions>
-                                            <Button
-                                                x:Name="OpenOnlineDetailPageButton"
-                                                Click="OnOpenOnlineDetailPageClicked"
-                                                MinHeight="42"
-                                                Style="{StaticResource SecondaryButtonStyle}" />
+                                        <StackPanel Spacing="9">
+                                            <TextBlock
+                                                x:Name="OnlineDetailDownloadSelectionTextBlock"
+                                                Style="{StaticResource CaptionTextStyle}"
+                                                TextTrimming="CharacterEllipsis"
+                                                TextWrapping="NoWrap" />
+                                            <Grid ColumnSpacing="10">
+                                                <Grid.ColumnDefinitions>
+                                                    <ColumnDefinition Width="*" />
+                                                    <ColumnDefinition Width="*" />
+                                                </Grid.ColumnDefinitions>
+                                                <Button
+                                                    x:Name="OpenOnlineDetailPageButton"
+                                                    Click="OnOpenOnlineDetailPageClicked"
+                                                    HorizontalAlignment="Stretch"
+                                                    MinHeight="40"
+                                                    Style="{StaticResource SecondaryButtonStyle}" />
+                                                <Button
+                                                    x:Name="SelectOnlineDetailDownloadButton"
+                                                    Grid.Column="1"
+                                                    Click="OnSelectOnlineDetailDownloadClicked"
+                                                    HorizontalAlignment="Stretch"
+                                                    MinHeight="40"
+                                                    Style="{StaticResource SecondaryButtonStyle}" />
+                                            </Grid>
                                             <Button
                                                 x:Name="DownloadOnlineDetailButton"
-                                                Grid.Column="1"
                                                 Click="OnDownloadOnlineDetailClicked"
+                                                HorizontalAlignment="Stretch"
                                                 MinHeight="42"
                                                 Style="{StaticResource PrimaryButtonStyle}" />
-                                        </Grid>
+                                        </StackPanel>
                                     </Border>
                                 </Grid>
                             </Border>
@@ -1079,9 +1094,9 @@
                             </StackPanel>
                         </Border>
 
-                        <Grid x:Name="UpdatesTopGrid" ColumnSpacing="16">
+                        <Grid x:Name="UpdatesTopGrid" ColumnSpacing="16" RowSpacing="16">
                             <Grid.ColumnDefinitions>
-                                <ColumnDefinition x:Name="UpdatesPrimaryColumn" Width="1.15*" />
+                                <ColumnDefinition x:Name="UpdatesPrimaryColumn" Width="1.35*" />
                                 <ColumnDefinition x:Name="UpdatesSecondaryColumn" Width="0.85*" />
                             </Grid.ColumnDefinitions>
                             <Grid.RowDefinitions>
@@ -1089,136 +1104,180 @@
                                 <RowDefinition Height="Auto" />
                             </Grid.RowDefinitions>
 
-                            <Border Grid.Column="0" Style="{StaticResource CardBorderStyle}">
-                                <StackPanel Spacing="12">
-                                    <TextBlock x:Name="ConfigurationProfilesTitleTextBlock" Style="{StaticResource SectionTitleTextStyle}" />
-                                    <TextBlock x:Name="ConfigurationProfilesHintTextBlock" Style="{StaticResource MutedTextStyle}" TextWrapping="Wrap" />
-                                    <ComboBox
-                                        x:Name="ConfigurationProfileComboBox"
-                                        MinHeight="42"
-                                        SelectionChanged="OnConfigurationProfileSelectionChanged" />
-                                    <Grid ColumnSpacing="10">
+                            <StackPanel x:Name="UpdatesMainPanel" Grid.Column="0" Spacing="16">
+                                <Border x:Name="UpdatesTrackedModsCard" Style="{StaticResource CardBorderStyle}">
+                                    <StackPanel Spacing="14">
+                                    <Grid ColumnSpacing="14">
                                         <Grid.ColumnDefinitions>
-                                            <ColumnDefinition Width="*" />
-                                            <ColumnDefinition Width="*" />
+                                            <ColumnDefinition Width="44" />
                                             <ColumnDefinition Width="*" />
                                             <ColumnDefinition Width="Auto" />
                                         </Grid.ColumnDefinitions>
-                                        <Button x:Name="CreateConfigurationProfileButton" Click="OnCreateConfigurationProfileClicked" Style="{StaticResource SecondaryButtonStyle}" />
-                                        <Button x:Name="UpdateConfigurationProfileButton" Grid.Column="1" Click="OnUpdateConfigurationProfileClicked" Style="{StaticResource SecondaryButtonStyle}" />
-                                        <Button x:Name="ApplyConfigurationProfileButton" Grid.Column="2" Click="OnApplyConfigurationProfileClicked" Style="{StaticResource PrimaryButtonStyle}" />
-                                        <Button x:Name="DeleteConfigurationProfileButton" Grid.Column="3" Click="OnDeleteConfigurationProfileClicked" Style="{StaticResource SecondaryButtonStyle}" />
+                                        <Border
+                                            Width="40"
+                                            Height="40"
+                                            Background="{ThemeResource AccentFillColorSecondaryBrush}"
+                                            CornerRadius="10">
+                                            <FontIcon Glyph="&#xE895;" FontSize="19" HorizontalAlignment="Center" VerticalAlignment="Center" />
+                                        </Border>
+                                        <StackPanel Grid.Column="1" Spacing="4" VerticalAlignment="Center">
+                                            <TextBlock x:Name="TrackedModsTitleTextBlock" Style="{StaticResource SectionTitleTextStyle}" />
+                                            <TextBlock x:Name="TrackedModsSummaryTextBlock" Style="{StaticResource MutedTextStyle}" TextWrapping="Wrap" />
+                                        </StackPanel>
+                                        <Button
+                                            x:Name="CheckModUpdatesButton"
+                                            Grid.Column="2"
+                                            Click="OnCheckModUpdatesClicked"
+                                            MinHeight="42"
+                                            Style="{StaticResource PrimaryButtonStyle}" />
                                     </Grid>
-                                    <TextBlock x:Name="ConfigurationProfileSummaryTextBlock" Style="{StaticResource CaptionTextStyle}" TextWrapping="Wrap" />
-                                </StackPanel>
-                            </Border>
 
-                            <Border Grid.Column="1" Style="{StaticResource CardBorderStyle}">
-                                <StackPanel Spacing="12">
-                                    <TextBlock x:Name="InstallSafetyTitleTextBlock" Style="{StaticResource SectionTitleTextStyle}" />
-                                    <TextBlock x:Name="InstallSafetyHintTextBlock" Style="{StaticResource MutedTextStyle}" TextWrapping="Wrap" />
-                                    <ToggleSwitch x:Name="ConflictDetectionToggleSwitch" Toggled="OnConflictDetectionToggled" />
-                                    <Button x:Name="RollbackLastInstallButton" Click="OnRollbackLastInstallClicked" Style="{StaticResource SecondaryButtonStyle}" HorizontalAlignment="Left" />
-                                    <TextBlock x:Name="InstallRollbackStatusTextBlock" Style="{StaticResource CaptionTextStyle}" TextWrapping="Wrap" />
-                                </StackPanel>
-                            </Border>
+                                    <Border Style="{StaticResource InsetBorderStyle}" Padding="14,12">
+                                        <Grid ColumnSpacing="14">
+                                            <Grid.ColumnDefinitions>
+                                                <ColumnDefinition Width="*" />
+                                                <ColumnDefinition Width="220" />
+                                            </Grid.ColumnDefinitions>
+                                            <StackPanel Spacing="4" VerticalAlignment="Center">
+                                                <TextBlock x:Name="TrackedModSettingsTitleTextBlock" FontWeight="SemiBold" />
+                                                <TextBlock x:Name="TrackedModSettingsHintTextBlock" Style="{StaticResource CaptionTextStyle}" TextWrapping="Wrap" />
+                                                <TextBlock x:Name="ModUpdateStatusTextBlock" Style="{StaticResource CaptionTextStyle}" TextWrapping="Wrap" />
+                                            </StackPanel>
+                                            <StackPanel Grid.Column="1" Spacing="5" VerticalAlignment="Center">
+                                                <TextBlock x:Name="ModUpdateIntervalLabelTextBlock" Style="{StaticResource CaptionTextStyle}" />
+                                                <ComboBox
+                                                    x:Name="ModUpdateIntervalComboBox"
+                                                    MinHeight="42"
+                                                    SelectionChanged="OnModUpdateIntervalSelectionChanged" />
+                                            </StackPanel>
+                                        </Grid>
+                                    </Border>
+
+                                    <TextBlock x:Name="ModUpdateIntervalHintTextBlock" Style="{StaticResource CaptionTextStyle}" TextWrapping="Wrap" />
+                                        <Grid x:Name="TrackedModsListPanel" ColumnSpacing="10" RowSpacing="10">
+                                            <Grid.ColumnDefinitions>
+                                                <ColumnDefinition x:Name="TrackedModsPrimaryColumn" Width="*" />
+                                                <ColumnDefinition x:Name="TrackedModsSecondaryColumn" Width="0" />
+                                            </Grid.ColumnDefinitions>
+                                        </Grid>
+                                    </StackPanel>
+                                </Border>
+
+                                <Border x:Name="UpdatesSafetyCard" Style="{StaticResource CardBorderStyle}">
+                                    <StackPanel x:Name="UpdatesSafetyPanel" Spacing="12">
+                                        <TextBlock x:Name="InstallSafetyTitleTextBlock" Style="{StaticResource SectionTitleTextStyle}" />
+                                        <TextBlock x:Name="InstallSafetyHintTextBlock" Style="{StaticResource MutedTextStyle}" TextWrapping="Wrap" />
+                                        <Grid ColumnSpacing="14">
+                                            <Grid.ColumnDefinitions>
+                                                <ColumnDefinition Width="*" />
+                                                <ColumnDefinition Width="Auto" />
+                                            </Grid.ColumnDefinitions>
+                                            <ToggleSwitch x:Name="ConflictDetectionToggleSwitch" Toggled="OnConflictDetectionToggled" VerticalAlignment="Center" />
+                                            <Button x:Name="RollbackLastInstallButton" Grid.Column="1" Click="OnRollbackLastInstallClicked" Style="{StaticResource SecondaryButtonStyle}" />
+                                        </Grid>
+                                        <TextBlock x:Name="InstallRollbackStatusTextBlock" Style="{StaticResource CaptionTextStyle}" TextWrapping="Wrap" />
+                                    </StackPanel>
+                                </Border>
+                            </StackPanel>
+
+                            <StackPanel x:Name="UpdatesSupportPanel" Grid.Column="1" Spacing="16">
+                                <Border Style="{StaticResource CardBorderStyle}">
+                                    <StackPanel Spacing="12">
+                                        <Grid ColumnSpacing="12">
+                                            <Grid.ColumnDefinitions>
+                                                <ColumnDefinition Width="*" />
+                                                <ColumnDefinition Width="Auto" />
+                                            </Grid.ColumnDefinitions>
+                                            <StackPanel Spacing="5">
+                                                <TextBlock x:Name="DownloadTaskCenterTitleTextBlock" Style="{StaticResource SectionTitleTextStyle}" />
+                                                <TextBlock x:Name="DownloadTaskCenterHintTextBlock" Style="{StaticResource MutedTextStyle}" TextWrapping="Wrap" />
+                                            </StackPanel>
+                                            <Button x:Name="ClearDownloadTasksButton" Grid.Column="1" Click="OnClearDownloadTasksClicked" Style="{StaticResource SecondaryButtonStyle}" />
+                                        </Grid>
+                                        <StackPanel x:Name="DownloadTaskListPanel" Spacing="10" />
+                                    </StackPanel>
+                                </Border>
+
+                                <Border Style="{StaticResource CardBorderStyle}">
+                                    <StackPanel Spacing="12">
+                                        <TextBlock x:Name="ConfigurationProfilesTitleTextBlock" Style="{StaticResource SectionTitleTextStyle}" />
+                                        <TextBlock x:Name="ConfigurationProfilesHintTextBlock" Style="{StaticResource MutedTextStyle}" TextWrapping="Wrap" />
+                                        <ComboBox
+                                            x:Name="ConfigurationProfileComboBox"
+                                            MinHeight="42"
+                                            SelectionChanged="OnConfigurationProfileSelectionChanged" />
+                                        <Grid ColumnSpacing="8">
+                                            <Grid.ColumnDefinitions>
+                                                <ColumnDefinition Width="Auto" />
+                                                <ColumnDefinition Width="Auto" />
+                                                <ColumnDefinition Width="Auto" />
+                                                <ColumnDefinition Width="*" />
+                                                <ColumnDefinition Width="Auto" />
+                                            </Grid.ColumnDefinitions>
+                                            <Button x:Name="CreateConfigurationProfileButton" Click="OnCreateConfigurationProfileClicked" Style="{StaticResource SecondaryButtonStyle}" />
+                                            <Button x:Name="UpdateConfigurationProfileButton" Grid.Column="1" Click="OnUpdateConfigurationProfileClicked" Style="{StaticResource SecondaryButtonStyle}" />
+                                            <Button x:Name="ApplyConfigurationProfileButton" Grid.Column="2" Click="OnApplyConfigurationProfileClicked" Style="{StaticResource PrimaryButtonStyle}" />
+                                            <Button x:Name="DeleteConfigurationProfileButton" Grid.Column="4" Click="OnDeleteConfigurationProfileClicked" Style="{StaticResource SecondaryButtonStyle}" />
+                                        </Grid>
+                                        <TextBlock x:Name="ConfigurationProfileSummaryTextBlock" Style="{StaticResource CaptionTextStyle}" TextWrapping="Wrap" />
+                                    </StackPanel>
+                                </Border>
+
+                                <Border x:Name="UpdatesBackupCard" Style="{StaticResource CardBorderStyle}">
+                                    <StackPanel x:Name="UpdatesBackupPanel" Spacing="12">
+                                        <Grid ColumnSpacing="12">
+                                            <Grid.ColumnDefinitions>
+                                                <ColumnDefinition Width="*" />
+                                                <ColumnDefinition Width="Auto" />
+                                                <ColumnDefinition Width="Auto" />
+                                            </Grid.ColumnDefinitions>
+                                            <StackPanel Spacing="5">
+                                                <TextBlock x:Name="BackupManagerTitleTextBlock" Style="{StaticResource SectionTitleTextStyle}" />
+                                                <TextBlock x:Name="BackupManagerHintTextBlock" Style="{StaticResource MutedTextStyle}" TextWrapping="Wrap" />
+                                            </StackPanel>
+                                            <StackPanel Grid.Column="1" Orientation="Horizontal" Spacing="8" VerticalAlignment="Center">
+                                                <TextBlock x:Name="BackupLimitLabelTextBlock" VerticalAlignment="Center" />
+                                                <NumberBox
+                                                    x:Name="BackupLimitNumberBox"
+                                                    Width="96"
+                                                    Minimum="0.5"
+                                                    Maximum="100"
+                                                    SmallChange="0.5"
+                                                    SpinButtonPlacementMode="Compact"
+                                                    ValueChanged="OnBackupLimitValueChanged" />
+                                            </StackPanel>
+                                            <Button
+                                                x:Name="RefreshBackupsButton"
+                                                Grid.Column="2"
+                                                Click="OnRefreshBackupsClicked"
+                                                Style="{StaticResource SecondaryButtonStyle}" />
+                                        </Grid>
+                                        <Expander
+                                            x:Name="BackupHistoryExpander"
+                                            HorizontalAlignment="Stretch"
+                                            HorizontalContentAlignment="Stretch"
+                                            IsExpanded="False">
+                                            <Expander.Header>
+                                                <TextBlock x:Name="BackupSummaryTextBlock" Style="{StaticResource CaptionTextStyle}" TextWrapping="Wrap" />
+                                            </Expander.Header>
+                                            <ScrollViewer MaxHeight="280" VerticalScrollBarVisibility="Auto">
+                                                <StackPanel x:Name="BackupListPanel" Spacing="10" Margin="0,8,0,0" />
+                                            </ScrollViewer>
+                                        </Expander>
+                                    </StackPanel>
+                                </Border>
+                            </StackPanel>
                         </Grid>
-
-                        <Border Style="{StaticResource CardBorderStyle}">
-                            <StackPanel Spacing="12">
-                                <Grid ColumnSpacing="12">
-                                    <Grid.ColumnDefinitions>
-                                        <ColumnDefinition Width="*" />
-                                        <ColumnDefinition Width="Auto" />
-                                        <ColumnDefinition Width="Auto" />
-                                    </Grid.ColumnDefinitions>
-                                    <StackPanel Spacing="5">
-                                        <TextBlock x:Name="BackupManagerTitleTextBlock" Style="{StaticResource SectionTitleTextStyle}" />
-                                        <TextBlock x:Name="BackupManagerHintTextBlock" Style="{StaticResource MutedTextStyle}" TextWrapping="Wrap" />
-                                    </StackPanel>
-                                    <StackPanel Grid.Column="1" Orientation="Horizontal" Spacing="8" VerticalAlignment="Center">
-                                        <TextBlock x:Name="BackupLimitLabelTextBlock" VerticalAlignment="Center" />
-                                        <NumberBox
-                                            x:Name="BackupLimitNumberBox"
-                                            Width="112"
-                                            Minimum="0.5"
-                                            Maximum="100"
-                                            SmallChange="0.5"
-                                            SpinButtonPlacementMode="Compact"
-                                            ValueChanged="OnBackupLimitValueChanged" />
-                                    </StackPanel>
-                                    <Button
-                                        x:Name="RefreshBackupsButton"
-                                        Grid.Column="2"
-                                        Click="OnRefreshBackupsClicked"
-                                        Style="{StaticResource SecondaryButtonStyle}" />
-                                </Grid>
-                                <TextBlock x:Name="BackupSummaryTextBlock" Style="{StaticResource CaptionTextStyle}" TextWrapping="Wrap" />
-                                <StackPanel x:Name="BackupListPanel" Spacing="10" />
-                            </StackPanel>
-                        </Border>
-
-                        <Border Style="{StaticResource CardBorderStyle}">
-                            <StackPanel Spacing="12">
-                                <Grid ColumnSpacing="12">
-                                    <Grid.ColumnDefinitions>
-                                        <ColumnDefinition Width="*" />
-                                        <ColumnDefinition Width="Auto" />
-                                    </Grid.ColumnDefinitions>
-                                    <StackPanel Spacing="6">
-                                        <TextBlock x:Name="DownloadTaskCenterTitleTextBlock" Style="{StaticResource SectionTitleTextStyle}" />
-                                        <TextBlock x:Name="DownloadTaskCenterHintTextBlock" Style="{StaticResource MutedTextStyle}" TextWrapping="Wrap" />
-                                    </StackPanel>
-                                    <Button x:Name="ClearDownloadTasksButton" Grid.Column="1" Click="OnClearDownloadTasksClicked" Style="{StaticResource SecondaryButtonStyle}" />
-                                </Grid>
-                                <StackPanel x:Name="DownloadTaskListPanel" Spacing="10" />
-                            </StackPanel>
-                        </Border>
-
-                        <Border Style="{StaticResource CardBorderStyle}">
-                            <StackPanel Spacing="12">
-                                <TextBlock x:Name="TrackedModSettingsTitleTextBlock" Style="{StaticResource SectionTitleTextStyle}" />
-                                <TextBlock x:Name="TrackedModSettingsHintTextBlock" Style="{StaticResource MutedTextStyle}" TextWrapping="Wrap" />
-                                <Grid ColumnSpacing="12">
-                                    <Grid.ColumnDefinitions>
-                                        <ColumnDefinition Width="160" />
-                                        <ColumnDefinition Width="*" />
-                                        <ColumnDefinition Width="Auto" />
-                                    </Grid.ColumnDefinitions>
-
-                                    <TextBlock
-                                        x:Name="ModUpdateIntervalLabelTextBlock"
-                                        VerticalAlignment="Center" />
-
-                                    <ComboBox
-                                        x:Name="ModUpdateIntervalComboBox"
-                                        Grid.Column="1"
-                                        MinHeight="42"
-                                        SelectionChanged="OnModUpdateIntervalSelectionChanged" />
-
-                                    <Button
-                                        x:Name="CheckModUpdatesButton"
-                                        Grid.Column="2"
-                                        Click="OnCheckModUpdatesClicked"
-                                        MinHeight="42"
-                                        Style="{StaticResource SecondaryButtonStyle}" />
-                                </Grid>
-                                <TextBlock x:Name="ModUpdateIntervalHintTextBlock" Style="{StaticResource CaptionTextStyle}" TextWrapping="Wrap" />
-                                <TextBlock x:Name="ModUpdateStatusTextBlock" Style="{StaticResource CaptionTextStyle}" TextWrapping="Wrap" />
-                            </StackPanel>
-                        </Border>
-
-                        <Border Style="{StaticResource CardBorderStyle}">
-                            <StackPanel Spacing="12">
-                                <TextBlock x:Name="TrackedModsTitleTextBlock" Style="{StaticResource SectionTitleTextStyle}" />
-                                <TextBlock x:Name="TrackedModsSummaryTextBlock" Style="{StaticResource MutedTextStyle}" TextWrapping="Wrap" />
-                                <StackPanel x:Name="TrackedModsListPanel" Spacing="10" />
-                            </StackPanel>
-                        </Border>
                     </StackPanel>
                 </ScrollViewer>
 
-                <ScrollViewer x:Name="SettingsScrollViewer" VerticalScrollBarVisibility="Auto" Visibility="Collapsed">
+                <ScrollViewer
+                    x:Name="SettingsScrollViewer"
+                    HorizontalScrollBarVisibility="Disabled"
+                    HorizontalScrollMode="Disabled"
+                    VerticalScrollBarVisibility="Disabled"
+                    VerticalScrollMode="Disabled"
+                    Visibility="Collapsed">
                     <StackPanel Margin="6" Spacing="16">
                         <Border Style="{StaticResource PageHeaderBorderStyle}">
                             <StackPanel Spacing="10">
@@ -1483,6 +1542,109 @@
                                     <Button x:Name="SubmitDiagnosticsButton" Grid.Column="1" Click="OnSubmitDiagnosticsClicked" MinHeight="42" Style="{StaticResource PrimaryButtonStyle}" />
                                 </Grid>
                                 <TextBlock x:Name="DiagnosticsStatusTextBlock" Style="{StaticResource CaptionTextStyle}" TextWrapping="Wrap" />
+                            </StackPanel>
+                        </Border>
+
+                        <Border x:Name="ProjectResourcesCard" Style="{StaticResource CardBorderStyle}">
+                            <StackPanel Spacing="10">
+                                <TextBlock x:Name="ProjectResourcesTitleTextBlock" Style="{StaticResource SectionTitleTextStyle}" />
+                                <TextBlock x:Name="ProjectResourcesHintTextBlock" Style="{StaticResource CaptionTextStyle}" TextWrapping="Wrap" />
+                                <Grid x:Name="ProjectResourcesGrid" ColumnSpacing="8" RowSpacing="8">
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="*" />
+                                        <ColumnDefinition Width="*" />
+                                        <ColumnDefinition Width="*" />
+                                    </Grid.ColumnDefinitions>
+                                    <Grid.RowDefinitions>
+                                        <RowDefinition Height="Auto" />
+                                        <RowDefinition Height="Auto" />
+                                    </Grid.RowDefinitions>
+
+                                    <Button
+                                        Tag="https://www.7-zip.org/"
+                                        Click="OnExternalResourceClicked"
+                                        MinHeight="54"
+                                        Padding="12,7"
+                                        HorizontalContentAlignment="Stretch"
+                                        Style="{StaticResource SecondaryButtonStyle}">
+                                        <StackPanel Spacing="2">
+                                            <TextBlock Text="7-Zip" FontWeight="SemiBold" />
+                                            <TextBlock Text="https://www.7-zip.org/" Style="{StaticResource CaptionTextStyle}" TextTrimming="CharacterEllipsis" />
+                                        </StackPanel>
+                                    </Button>
+
+                                    <Button
+                                        Grid.Column="1"
+                                        Tag="https://github.com/microsoft/WindowsAppSDK"
+                                        Click="OnExternalResourceClicked"
+                                        MinHeight="54"
+                                        Padding="12,7"
+                                        HorizontalContentAlignment="Stretch"
+                                        Style="{StaticResource SecondaryButtonStyle}">
+                                        <StackPanel Spacing="2">
+                                            <TextBlock Text="Windows App SDK / WinUI 3" FontWeight="SemiBold" />
+                                            <TextBlock Text="https://github.com/microsoft/WindowsAppSDK" Style="{StaticResource CaptionTextStyle}" TextTrimming="CharacterEllipsis" />
+                                        </StackPanel>
+                                    </Button>
+
+                                    <Button
+                                        Grid.Column="2"
+                                        Tag="https://www.sqlite.org/"
+                                        Click="OnExternalResourceClicked"
+                                        MinHeight="54"
+                                        Padding="12,7"
+                                        HorizontalContentAlignment="Stretch"
+                                        Style="{StaticResource SecondaryButtonStyle}">
+                                        <StackPanel Spacing="2">
+                                            <TextBlock Text="SQLite / Microsoft.Data.Sqlite" FontWeight="SemiBold" />
+                                            <TextBlock Text="https://www.sqlite.org/" Style="{StaticResource CaptionTextStyle}" TextTrimming="CharacterEllipsis" />
+                                        </StackPanel>
+                                    </Button>
+
+                                    <Button
+                                        Grid.Row="1"
+                                        Tag="https://github.com/libarchive/libarchive"
+                                        Click="OnExternalResourceClicked"
+                                        MinHeight="54"
+                                        Padding="12,7"
+                                        HorizontalContentAlignment="Stretch"
+                                        Style="{StaticResource SecondaryButtonStyle}">
+                                        <StackPanel Spacing="2">
+                                            <TextBlock Text="libarchive / Windows tar" FontWeight="SemiBold" />
+                                            <TextBlock Text="https://github.com/libarchive/libarchive" Style="{StaticResource CaptionTextStyle}" TextTrimming="CharacterEllipsis" />
+                                        </StackPanel>
+                                    </Button>
+
+                                    <Button
+                                        Grid.Row="1"
+                                        Grid.Column="1"
+                                        Tag="https://github.com/uyujkk/Integrated_Mod_Manager"
+                                        Click="OnExternalResourceClicked"
+                                        MinHeight="54"
+                                        Padding="12,7"
+                                        HorizontalContentAlignment="Stretch"
+                                        Style="{StaticResource SecondaryButtonStyle}">
+                                        <StackPanel Spacing="2">
+                                            <TextBlock Text="Integrated Mod Manager · GitHub" FontWeight="SemiBold" />
+                                            <TextBlock Text="https://github.com/uyujkk/Integrated_Mod_Manager" Style="{StaticResource CaptionTextStyle}" TextTrimming="CharacterEllipsis" />
+                                        </StackPanel>
+                                    </Button>
+
+                                    <Button
+                                        Grid.Row="1"
+                                        Grid.Column="2"
+                                        Tag="https://space.bilibili.com/476698898"
+                                        Click="OnExternalResourceClicked"
+                                        MinHeight="54"
+                                        Padding="12,7"
+                                        HorizontalContentAlignment="Stretch"
+                                        Style="{StaticResource SecondaryButtonStyle}">
+                                        <StackPanel Spacing="2">
+                                            <TextBlock Text="B站主页 / Bilibili" FontWeight="SemiBold" />
+                                            <TextBlock Text="https://space.bilibili.com/476698898" Style="{StaticResource CaptionTextStyle}" TextTrimming="CharacterEllipsis" />
+                                        </StackPanel>
+                                    </Button>
+                                </Grid>
                             </StackPanel>
                         </Border>
                     </StackPanel>
