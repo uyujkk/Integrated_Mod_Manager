@@ -7,11 +7,39 @@ param(
 $ErrorActionPreference = "Stop"
 $repositoryRoot = Split-Path -Parent $PSScriptRoot
 $projectPath = Join-Path $repositoryRoot "DeveloperTools\IntegratedModManager.DeveloperTools.csproj"
-$msbuildPath = "C:\BuildTools\MSBuild\Current\Bin\MSBuild.exe"
 
-if (-not (Test-Path -LiteralPath $msbuildPath)) {
-    throw "MSBuild was not found at $msbuildPath"
+function Find-MSBuild {
+    $command = Get-Command msbuild.exe -ErrorAction SilentlyContinue
+    if ($command) {
+        return $command.Source
+    }
+
+    $candidates = @(
+        "C:\BuildTools\MSBuild\Current\Bin\MSBuild.exe",
+        "${env:ProgramFiles}\Microsoft Visual Studio\2022\Enterprise\MSBuild\Current\Bin\MSBuild.exe",
+        "${env:ProgramFiles}\Microsoft Visual Studio\2022\Professional\MSBuild\Current\Bin\MSBuild.exe",
+        "${env:ProgramFiles}\Microsoft Visual Studio\2022\Community\MSBuild\Current\Bin\MSBuild.exe",
+        "${env:ProgramFiles(x86)}\Microsoft Visual Studio\2022\BuildTools\MSBuild\Current\Bin\MSBuild.exe"
+    )
+    foreach ($candidate in $candidates) {
+        if (Test-Path -LiteralPath $candidate) {
+            return $candidate
+        }
+    }
+
+    $vswhere = "${env:ProgramFiles(x86)}\Microsoft Visual Studio\Installer\vswhere.exe"
+    if (Test-Path -LiteralPath $vswhere) {
+        $found = & $vswhere -latest -products * -requires Microsoft.Component.MSBuild -find "MSBuild\**\Bin\MSBuild.exe" |
+            Select-Object -First 1
+        if ($found -and (Test-Path -LiteralPath $found)) {
+            return $found
+        }
+    }
+
+    throw "MSBuild was not found. Install Visual Studio 2022 or Build Tools with Windows application build tools."
 }
+
+$msbuildPath = Find-MSBuild
 
 $projectAssetsPath = Join-Path $repositoryRoot "DeveloperTools\obj\project.assets.json"
 $buildArguments = @(
