@@ -100,6 +100,10 @@ If 7-Zip is not found, the app automatically looks for Bandizip's console tool (
 
 The Bandizip fallback first uses Windows `tar.exe` to inspect every entry for unsafe paths, links, and special files. If inspection is unsupported or fails, extraction stops; install 7-Zip for those archives. A failed 7-Zip extraction does not trigger a retry with Bandizip. Downloads and local archive imports use the same selection rules.
 
+The fallback copies the input to a unique temporary archive and keeps it open for shared reading only until all checks and extraction finish. Changes to the original file cannot change the inspected snapshot. Cleanup runs on success or failure; if a remaining process blocks deletion, the original error is preserved and cleanup failure is also reported. Allow enough temporary disk space for this extra copy.
+
+Each `tar.exe` or `bz.exe` invocation has a 10-minute limit, including reading its output. A timeout stops the wait, attempts to terminate the process tree, and reports an error. This also applies to the existing TAR import path. If the parent has already exited while a descendant holds an output pipe, termination of that descendant cannot be confirmed, but the wait remains bounded.
+
 RAR5 receives an additional header check because `tar` does not expose every kind of link. The fallback rejects RAR5 redirection records, quick-open cached headers, split/multivolume archives, encrypted headers, unknown or malformed header layouts, and excessive metadata. Self-extracting executable archives are also rejected. These cases still require the existing 7-Zip path; Bandizip support does not bypass archive checks or add password prompts.
 
 ### 4.5 Preview images and source links

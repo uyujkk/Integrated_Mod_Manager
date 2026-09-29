@@ -58,11 +58,14 @@ public sealed class BandizipArchiveExtractorTests : IDisposable
         });
 
         Assert.Equal(3, commands.Count);
+        string stagedArchive = commands[0].ArgumentList[1];
+        Assert.NotEqual(archive, stagedArchive);
+        Assert.Equal(Path.GetFileName(archive), Path.GetFileName(stagedArchive));
         Assert.Equal(Path.Combine(Environment.SystemDirectory, "tar.exe"), commands[0].FileName);
-        Assert.Equal(new[] { "-tf", archive }, commands[0].ArgumentList);
-        Assert.Equal(new[] { "-tvf", archive }, commands[1].ArgumentList);
+        Assert.Equal(new[] { "-tf", stagedArchive }, commands[0].ArgumentList);
+        Assert.Equal(new[] { "-tvf", stagedArchive }, commands[1].ArgumentList);
         Assert.Equal(executable, commands[2].FileName);
-        Assert.Equal(new[] { "x", "-y", "-aoa", "-consolemode:utf8", "-o:" + destination, "-", archive },
+        Assert.Equal(new[] { "x", "-y", "-aoa", "-consolemode:utf8", "-o:" + destination, "-", stagedArchive },
             commands[2].ArgumentList);
         Assert.All(commands, command =>
         {
@@ -74,6 +77,8 @@ public sealed class BandizipArchiveExtractorTests : IDisposable
             Assert.Equal("utf-8", command.StandardOutputEncoding!.WebName);
             Assert.Equal("utf-8", command.StandardErrorEncoding!.WebName);
         });
+        Assert.False(File.Exists(stagedArchive));
+        Assert.False(Directory.Exists(Path.GetDirectoryName(stagedArchive)));
     }
 
     [Theory]
@@ -167,6 +172,104 @@ public sealed class BandizipArchiveExtractorTests : IDisposable
         File.WriteAllBytes(_archivePath, Convert.FromHexString(bytes));
         Assert.Throws<InvalidDataException>(() => BandizipArchiveExtractor.Extract(
             "bz.exe", _archivePath, _root, _ => throw new Exception("Preflight should stop before starting a tool.")));
+    }
+
+    [Fact]
+    public void Extract_UsesLockedSnapshotEvenWhenSourceChangesAfterInspection()
+    {
+        byte[] original = File.ReadAllBytes(_archivePath);
+        string? stagedArchive = null;
+        int calls = 0;
+
+        BandizipArchiveExtractor.Extract("bz.exe", _archivePath, _root, startInfo =>
+        {
+            string input = startInfo.ArgumentList[^1];
+            stagedArchive ??= input;
+            Assert.NotEqual(_archivePath, input);
+            Assert.Equal(stagedArchive, input);
+            Assert.Equal(original, File.ReadAllBytes(input));
+            if (OperatingSystem.IsWindows())
+            {
+                Assert.Throws<IOException>(() => File.WriteAllText(input, "replaced"));
+                Assert.Throws<IOException>(() => File.Delete(input));
+            }
+            if (++calls == 1)
+            {
+                File.WriteAllText(_archivePath, "the source changed after inspection");
+                return (0, "mod.ini", "");
+            }
+            return calls == 2 ? (0, "-rw-r--r-- mod.ini", "") : (0, "", "");
+        });
+
+        Assert.Equal(3, calls);
+        Assert.Equal("the source changed after inspection", File.ReadAllText(_archivePath));
+        Assert.False(File.Exists(stagedArchive));
+        Assert.False(Directory.Exists(Path.GetDirectoryName(stagedArchive)));
+    }
+
+    [Theory]
+    [InlineData(1)]
+    [InlineData(2)]
+    [InlineData(3)]
+    public void Extract_CleansSnapshotWhenAnArchiveToolTimesOut(int failedCall)
+    {
+        string? stagedArchive = null;
+        int calls = 0;
+        var failure = new TimeoutException("The archive tool exceeded its time limit.");
+
+        Exception actual = Assert.Throws<TimeoutException>(() => BandizipArchiveExtractor.Extract(
+            "bz.exe", _archivePath, _root, startInfo =>
+            {
+                stagedArchive = startInfo.ArgumentList[^1];
+                if (++calls == failedCall)
+                {
+                    throw failure;
+                }
+                return calls == 1 ? (0, "mod.ini", "") : (0, "-rw-r--r-- mod.ini", "");
+            }));
+
+        Assert.Same(failure, actual);
+        Assert.Equal(failedCall, calls);
+        Assert.False(File.Exists(stagedArchive));
+        Assert.False(Directory.Exists(Path.GetDirectoryName(stagedArchive)));
+        Assert.True(File.Exists(_archivePath));
+    }
+
+    [Fact]
+    public void Extract_PreservesTimeoutWhenAStillRunningReaderPreventsCleanup()
+    {
+        if (!OperatingSystem.IsWindows())
+        {
+            return;
+        }
+
+        string? stagedArchive = null;
+        FileStream? remainingReader = null;
+        var failure = new TimeoutException("Termination of the archive tool could not be confirmed.");
+        try
+        {
+            var actual = Assert.Throws<TimeoutException>(() => BandizipArchiveExtractor.Extract(
+                "bz.exe", _archivePath, _root, startInfo =>
+                {
+                    stagedArchive = startInfo.ArgumentList[^1];
+                    remainingReader = new FileStream(stagedArchive, FileMode.Open, FileAccess.Read, FileShare.Read);
+                    throw failure;
+                }));
+
+            Assert.Same(failure, actual);
+            Assert.IsType<IOException>(actual.Data[BandizipArchiveExtractor.StagingCleanupFailureKey]);
+            Assert.True(File.Exists(stagedArchive));
+            Assert.True(File.Exists(_archivePath));
+        }
+        finally
+        {
+            remainingReader?.Dispose();
+            if (stagedArchive is not null)
+            {
+                File.Delete(stagedArchive);
+                Directory.Delete(Path.GetDirectoryName(stagedArchive)!);
+            }
+        }
     }
 
     private string CreateDirectory(string name)

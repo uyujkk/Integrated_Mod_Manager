@@ -9,6 +9,8 @@ namespace IntegratedModManager.Core;
 /// </summary>
 public static class BandizipArchiveExtractor
 {
+    public const string StagingCleanupFailureKey = "ArchiveStagingCleanupFailure";
+
     public static string? FindExecutable(IEnumerable<string> directories)
     {
         // Ignore empty/relative PATH entries instead of searching the working directory.
@@ -19,6 +21,53 @@ public static class BandizipArchiveExtractor
     }
 
     public static void Extract(
+        string executablePath,
+        string archivePath,
+        string destinationDirectory,
+        Func<ProcessStartInfo, (int ExitCode, string Output, string Error)> runProcess)
+    {
+        string stagingDirectory = Directory.CreateTempSubdirectory("ModFolderCopier_Archive_").FullName;
+        string stagedArchivePath = Path.Combine(stagingDirectory, Path.GetFileName(archivePath));
+        Exception? extractionFailure = null;
+        try
+        {
+            // Lock the source while copying, then inspect only our private snapshot.
+            // The caller's file can change afterwards without changing the checked bytes.
+            using (var source = new FileStream(archivePath, FileMode.Open, FileAccess.Read, FileShare.Read))
+            using (var target = new FileStream(stagedArchivePath, FileMode.CreateNew, FileAccess.Write, FileShare.None))
+            {
+                source.CopyTo(target);
+            }
+
+            // Keep this read-only sharing handle alive through every preflight and bz.exe.
+            // On Windows this allows readers but prevents writes, deletion, and replacement.
+            using var archiveLock = new FileStream(stagedArchivePath, FileMode.Open, FileAccess.Read, FileShare.Read);
+            ExtractStaged(executablePath, stagedArchivePath, destinationDirectory, runProcess);
+        }
+        catch (Exception ex)
+        {
+            extractionFailure = ex;
+            throw;
+        }
+        finally
+        {
+            // Only delete the snapshot we created; the user's source is never removed.
+            try
+            {
+                File.Delete(stagedArchivePath);
+                Directory.Delete(stagingDirectory);
+            }
+            catch (Exception cleanupFailure) when (extractionFailure is not null
+                && cleanupFailure is IOException or UnauthorizedAccessException)
+            {
+                // A tool whose termination failed may still hold the archive. Keep the
+                // original failure and attach cleanup details instead of hiding the timeout.
+                extractionFailure.Data[StagingCleanupFailureKey] = cleanupFailure;
+            }
+        }
+    }
+
+    private static void ExtractStaged(
         string executablePath,
         string archivePath,
         string destinationDirectory,

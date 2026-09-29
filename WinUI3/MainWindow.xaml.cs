@@ -52,6 +52,7 @@ public sealed partial class MainWindow : Window
     private static readonly TimeSpan OnlineModListRequestTimeout = TimeSpan.FromSeconds(5);
     private static readonly TimeSpan OnlinePreviewImageRequestTimeout = TimeSpan.FromSeconds(15);
     private const long MaxOnlinePreviewImageBytes = 20L * 1024 * 1024;
+    private const int ArchiveToolTimeoutMinutes = 10;
     private const int InitialShortcutRows = 1;
     private const int ShortcutScanSafetyLimit = 256;
     private static readonly string[] SupportedArchiveExtensions =
@@ -13922,13 +13923,21 @@ public sealed partial class MainWindow : Window
 
                 try
                 {
-                    BandizipArchiveExtractor.Extract(bandizipPath, archivePath, destinationDirectory, RunProcessAndCapture);
+                    BandizipArchiveExtractor.Extract(bandizipPath, archivePath, destinationDirectory, RunArchiveProcessWithTimeout);
+                }
+                catch (TimeoutException ex) when (ex.Data[BandizipArchiveExtractor.StagingCleanupFailureKey] is Exception cleanupFailure)
+                {
+                    throw new TimeoutException(ex.Message + L(
+                        " 临时压缩包清理也失败了：", " Temporary archive cleanup also failed: ") + cleanupFailure.Message, ex);
                 }
                 catch (Exception ex) when (ex is InvalidDataException or InvalidOperationException or System.ComponentModel.Win32Exception)
                 {
+                    string cleanupDetails = ex.Data[BandizipArchiveExtractor.StagingCleanupFailureKey] is Exception cleanupFailure
+                        ? L(" 临时压缩包清理也失败了：", " Temporary archive cleanup also failed: ") + cleanupFailure.Message
+                        : string.Empty;
                     throw new InvalidOperationException(L(
                         "Bandizip 解压失败。压缩包必须先通过 Windows tar 的路径和链接检查；不支持检查的格式请尝试安装 7-Zip。详情：",
-                        "Bandizip extraction failed. The archive must pass Windows tar path and link checks first; try installing 7-Zip if inspection is unsupported. Details: ") + ex.Message, ex);
+                        "Bandizip extraction failed. The archive must pass Windows tar path and link checks first; try installing 7-Zip if inspection is unsupported. Details: ") + ex.Message + cleanupDetails, ex);
                 }
             }
             InspectDirectoryTreeSafely(destinationDirectory);
@@ -14040,12 +14049,13 @@ public sealed partial class MainWindow : Window
             FileName = "tar.exe",
             Arguments = $"-xf \"{archivePath}\" -C \"{destinationDirectory}\"",
             UseShellExecute = false,
+            RedirectStandardInput = true,
             RedirectStandardError = true,
             RedirectStandardOutput = true,
             CreateNoWindow = true
         };
 
-        (int exitCode, _, string error) = RunProcessAndCapture(startInfo);
+        (int exitCode, _, string error) = RunArchiveProcessWithTimeout(startInfo);
         if (exitCode != 0)
         {
             throw new InvalidOperationException(string.IsNullOrWhiteSpace(error)
@@ -14090,11 +14100,12 @@ public sealed partial class MainWindow : Window
             FileName = "tar.exe",
             Arguments = $"-tf \"{archivePath}\"",
             UseShellExecute = false,
+            RedirectStandardInput = true,
             RedirectStandardError = true,
             RedirectStandardOutput = true,
             CreateNoWindow = true
         };
-        (int exitCode, string output, string error) = RunProcessAndCapture(listInfo);
+        (int exitCode, string output, string error) = RunArchiveProcessWithTimeout(listInfo);
         if (exitCode != 0)
         {
             throw new InvalidDataException(string.IsNullOrWhiteSpace(error) ? "Unable to inspect the archive." : error.Trim());
@@ -14105,7 +14116,7 @@ public sealed partial class MainWindow : Window
         }
 
         listInfo.Arguments = $"-tvf \"{archivePath}\"";
-        (exitCode, output, error) = RunProcessAndCapture(listInfo);
+        (exitCode, output, error) = RunArchiveProcessWithTimeout(listInfo);
         if (exitCode != 0)
         {
             throw new InvalidDataException(string.IsNullOrWhiteSpace(error) ? "Unable to inspect archive links." : error.Trim());
@@ -14117,6 +14128,23 @@ public sealed partial class MainWindow : Window
             {
                 throw new InvalidDataException(L("压缩包包含不受支持的链接。", "The archive contains an unsupported link."));
             }
+        }
+    }
+
+    private (int ExitCode, string Output, string Error) RunArchiveProcessWithTimeout(ProcessStartInfo startInfo)
+    {
+        try
+        {
+            return ArchiveProcessRunner.Run(startInfo, TimeSpan.FromMinutes(ArchiveToolTimeoutMinutes));
+        }
+        catch (TimeoutException ex)
+        {
+            string tool = Path.GetFileName(startInfo.FileName);
+            string cleanupDetails = ex.InnerException is null ? string.Empty : L(
+                " 未能确认所有子进程已退出。详情：", " Termination of all child processes could not be confirmed. Details: ") + ex.InnerException.Message;
+            throw new TimeoutException(L(
+                $"{tool} 运行超过 {ArchiveToolTimeoutMinutes} 分钟，任务已停止。请检查压缩包后重试。",
+                $"{tool} exceeded the {ArchiveToolTimeoutMinutes}-minute time limit and the task was stopped. Check the archive before retrying.") + cleanupDetails, ex);
         }
     }
 
