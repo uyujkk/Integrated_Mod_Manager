@@ -55,7 +55,7 @@ The first level is a category; the second-level folder is the complete mod copie
 
 - The executable is not commercially code-signed, so SmartScreen may report an unknown publisher. Download only from the official GitHub Releases page and do not disable Defender.
 - Online features do not bypass logins, captchas, payments, subscriptions, permissions, or author restrictions.
-- RAR/7Z/ZIPX/CAB extraction requires the bundled 7-Zip files under `WinUI3/Tools`.
+- RAR/7Z/ZIPX/CAB prefer bundled or installed 7-Zip. If it is missing, an installed Bandizip with `bz.exe` can be used after Windows `tar.exe` checks the archive.
 - Configuration, SQLite data, cache, and backups are stored under `WinUI3`; updates preserve them when possible.
 - Review configs, screenshots, and diagnostics before sharing them for personal paths or account information.
 

@@ -52,6 +52,7 @@ public sealed partial class MainWindow : Window
     private static readonly TimeSpan OnlineModListRequestTimeout = TimeSpan.FromSeconds(5);
     private static readonly TimeSpan OnlinePreviewImageRequestTimeout = TimeSpan.FromSeconds(15);
     private const long MaxOnlinePreviewImageBytes = 20L * 1024 * 1024;
+    private const int ArchiveToolTimeoutMinutes = 10;
     private const int InitialShortcutRows = 1;
     private const int ShortcutScanSafetyLimit = 256;
     private static readonly string[] SupportedArchiveExtensions =
@@ -72,7 +73,7 @@ public sealed partial class MainWindow : Window
         ".zst",
         ".cab"
     ];
-    private static readonly string[] SevenZipArchiveExtensions = [".7z", ".rar", ".zipx", ".cab"];
+    private static readonly string[] ExternalArchiveExtensions = [".7z", ".rar", ".zipx", ".cab"];
     private static readonly string[] TarArchiveExtensions = [".tar", ".gz", ".tgz", ".bz2", ".xz", ".zst", ".tar.gz", ".tar.bz2", ".tar.xz", ".tar.zst"];
     private static readonly Regex LocalUpdatePackageRegex = new(
         @"^Integrated_Mod_Manager-v(?<version>\d+\.\d+\.\d+)\.zip$",
@@ -13901,10 +13902,44 @@ public sealed partial class MainWindow : Window
             return;
         }
 
-        if (SevenZipArchiveExtensions.Contains(extension, StringComparer.OrdinalIgnoreCase))
+        if (ExternalArchiveExtensions.Contains(extension, StringComparer.OrdinalIgnoreCase))
         {
-            ValidateSevenZipArchiveEntries(archivePath, destinationDirectory);
-            RunSevenZipExtraction(archivePath, destinationDirectory);
+            // Resolve once so inspection and extraction use the same installed tool.
+            string? sevenZipPath = FindSevenZipExecutable();
+            if (sevenZipPath is not null)
+            {
+                ValidateSevenZipArchiveEntries(sevenZipPath, archivePath, destinationDirectory);
+                RunSevenZipExtraction(sevenZipPath, archivePath, destinationDirectory);
+            }
+            else
+            {
+                string? bandizipPath = FindBandizipExecutable();
+                if (bandizipPath is null)
+                {
+                    throw new InvalidOperationException(L(
+                        "解压此格式需要 7-Zip 或 Bandizip。请安装其中一个，或把 7z.exe 和 7z.dll 放到程序目录的 Tools 文件夹中。Bandizip 需要附带的 bz.exe。",
+                        "This format requires 7-Zip or Bandizip. Install either tool, or place 7z.exe and 7z.dll in the app's Tools folder. Bandizip requires its bundled bz.exe."));
+                }
+
+                try
+                {
+                    BandizipArchiveExtractor.Extract(bandizipPath, archivePath, destinationDirectory, RunArchiveProcessWithTimeout);
+                }
+                catch (TimeoutException ex) when (ex.Data[BandizipArchiveExtractor.StagingCleanupFailureKey] is Exception cleanupFailure)
+                {
+                    throw new TimeoutException(ex.Message + L(
+                        " 临时压缩包清理也失败了：", " Temporary archive cleanup also failed: ") + cleanupFailure.Message, ex);
+                }
+                catch (Exception ex) when (ex is InvalidDataException or InvalidOperationException or System.ComponentModel.Win32Exception)
+                {
+                    string cleanupDetails = ex.Data[BandizipArchiveExtractor.StagingCleanupFailureKey] is Exception cleanupFailure
+                        ? L(" 临时压缩包清理也失败了：", " Temporary archive cleanup also failed: ") + cleanupFailure.Message
+                        : string.Empty;
+                    throw new InvalidOperationException(L(
+                        "Bandizip 解压失败。压缩包必须先通过 Windows tar 的路径和链接检查；不支持检查的格式请尝试安装 7-Zip。详情：",
+                        "Bandizip extraction failed. The archive must pass Windows tar path and link checks first; try installing 7-Zip if inspection is unsupported. Details: ") + ex.Message + cleanupDetails, ex);
+                }
+            }
             InspectDirectoryTreeSafely(destinationDirectory);
             DispatcherQueue.TryEnqueue(() => UpdateProgress(100, L("解压完成", "Extraction complete")));
             return;
@@ -13947,16 +13982,47 @@ public sealed partial class MainWindow : Window
         return candidates.FirstOrDefault(File.Exists);
     }
 
-    private void RunSevenZipExtraction(string archivePath, string destinationDirectory)
+    private static string? FindBandizipExecutable()
     {
-        string? sevenZipPath = FindSevenZipExecutable();
-        if (string.IsNullOrWhiteSpace(sevenZipPath))
+        var directories = new List<string>
         {
-            throw new InvalidOperationException(L(
-                "解压此格式需要 7-Zip。请先安装 7-Zip，或把 7z.exe 和 7z.dll 放到程序目录的 Tools 文件夹中。",
-                "This format requires 7-Zip. Install 7-Zip first, or place 7z.exe and 7z.dll in the app's Tools folder."));
+            Path.Combine(AppContext.BaseDirectory, "Tools"),
+            AppContext.BaseDirectory
+        };
+
+        // App Paths also covers installations on custom drives. Resolve the console
+        // sibling instead of launching Bandizip.exe, whose GUI can outlive its process.
+        foreach (Microsoft.Win32.RegistryHive hive in new[] { Microsoft.Win32.RegistryHive.CurrentUser, Microsoft.Win32.RegistryHive.LocalMachine })
+        {
+            foreach (Microsoft.Win32.RegistryView view in new[] { Microsoft.Win32.RegistryView.Registry64, Microsoft.Win32.RegistryView.Registry32 })
+            {
+                try
+                {
+                    using var root = Microsoft.Win32.RegistryKey.OpenBaseKey(hive, view);
+                    using var key = root.OpenSubKey(@"SOFTWARE\Microsoft\Windows\CurrentVersion\App Paths\Bandizip.exe");
+                    if (key?.GetValue(null) is string registeredPath
+                        && Path.GetDirectoryName(registeredPath.Trim('"')) is string directory)
+                    {
+                        directories.Add(directory);
+                    }
+                }
+                catch (Exception ex) when (ex is System.Security.SecurityException or UnauthorizedAccessException or IOException)
+                {
+                    // A restricted registry must not prevent discovery via standard paths.
+                }
+            }
         }
 
+        directories.Add(Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.ProgramFiles), "Bandizip"));
+        directories.Add(Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.ProgramFilesX86), "Bandizip"));
+        directories.Add(Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "Bandizip"));
+        directories.AddRange((Environment.GetEnvironmentVariable("PATH") ?? string.Empty)
+            .Split(Path.PathSeparator).Select(directory => directory.Trim().Trim('"')));
+        return BandizipArchiveExtractor.FindExecutable(directories);
+    }
+
+    private void RunSevenZipExtraction(string sevenZipPath, string archivePath, string destinationDirectory)
+    {
         var startInfo = new ProcessStartInfo
         {
             FileName = sevenZipPath,
@@ -13983,12 +14049,13 @@ public sealed partial class MainWindow : Window
             FileName = "tar.exe",
             Arguments = $"-xf \"{archivePath}\" -C \"{destinationDirectory}\"",
             UseShellExecute = false,
+            RedirectStandardInput = true,
             RedirectStandardError = true,
             RedirectStandardOutput = true,
             CreateNoWindow = true
         };
 
-        (int exitCode, _, string error) = RunProcessAndCapture(startInfo);
+        (int exitCode, _, string error) = RunArchiveProcessWithTimeout(startInfo);
         if (exitCode != 0)
         {
             throw new InvalidOperationException(string.IsNullOrWhiteSpace(error)
@@ -13997,16 +14064,8 @@ public sealed partial class MainWindow : Window
         }
     }
 
-    private void ValidateSevenZipArchiveEntries(string archivePath, string destinationDirectory)
+    private void ValidateSevenZipArchiveEntries(string sevenZipPath, string archivePath, string destinationDirectory)
     {
-        string? sevenZipPath = FindSevenZipExecutable();
-        if (string.IsNullOrWhiteSpace(sevenZipPath))
-        {
-            throw new InvalidOperationException(L(
-                "解压此格式需要 7-Zip。请先安装 7-Zip，或把 7z.exe 和 7z.dll 放到程序目录的 Tools 文件夹中。",
-                "This format requires 7-Zip. Install 7-Zip first, or place 7z.exe and 7z.dll in the app's Tools folder."));
-        }
-
         var startInfo = new ProcessStartInfo
         {
             FileName = sevenZipPath,
@@ -14041,11 +14100,12 @@ public sealed partial class MainWindow : Window
             FileName = "tar.exe",
             Arguments = $"-tf \"{archivePath}\"",
             UseShellExecute = false,
+            RedirectStandardInput = true,
             RedirectStandardError = true,
             RedirectStandardOutput = true,
             CreateNoWindow = true
         };
-        (int exitCode, string output, string error) = RunProcessAndCapture(listInfo);
+        (int exitCode, string output, string error) = RunArchiveProcessWithTimeout(listInfo);
         if (exitCode != 0)
         {
             throw new InvalidDataException(string.IsNullOrWhiteSpace(error) ? "Unable to inspect the archive." : error.Trim());
@@ -14056,7 +14116,7 @@ public sealed partial class MainWindow : Window
         }
 
         listInfo.Arguments = $"-tvf \"{archivePath}\"";
-        (exitCode, output, error) = RunProcessAndCapture(listInfo);
+        (exitCode, output, error) = RunArchiveProcessWithTimeout(listInfo);
         if (exitCode != 0)
         {
             throw new InvalidDataException(string.IsNullOrWhiteSpace(error) ? "Unable to inspect archive links." : error.Trim());
@@ -14071,10 +14131,32 @@ public sealed partial class MainWindow : Window
         }
     }
 
+    private (int ExitCode, string Output, string Error) RunArchiveProcessWithTimeout(ProcessStartInfo startInfo)
+    {
+        try
+        {
+            return ArchiveProcessRunner.Run(startInfo, TimeSpan.FromMinutes(ArchiveToolTimeoutMinutes));
+        }
+        catch (TimeoutException ex)
+        {
+            string tool = Path.GetFileName(startInfo.FileName);
+            string cleanupDetails = ex.InnerException is null ? string.Empty : L(
+                " 未能确认所有子进程已退出。详情：", " Termination of all child processes could not be confirmed. Details: ") + ex.InnerException.Message;
+            throw new TimeoutException(L(
+                $"{tool} 运行超过 {ArchiveToolTimeoutMinutes} 分钟，任务已停止。请检查压缩包后重试。",
+                $"{tool} exceeded the {ArchiveToolTimeoutMinutes}-minute time limit and the task was stopped. Check the archive before retrying.") + cleanupDetails, ex);
+        }
+    }
+
     private static (int ExitCode, string Output, string Error) RunProcessAndCapture(ProcessStartInfo startInfo)
     {
         using Process process = Process.Start(startInfo)
             ?? throw new InvalidOperationException("Unable to start the archive tool.");
+        if (startInfo.RedirectStandardInput)
+        {
+            // A downloaded encrypted archive must fail instead of waiting for a hidden prompt.
+            process.StandardInput.Close();
+        }
         Task<string> outputTask = process.StandardOutput.ReadToEndAsync();
         Task<string> errorTask = process.StandardError.ReadToEndAsync();
         process.WaitForExit();

@@ -119,7 +119,7 @@ Mod 存储文件夹
 - 64 位 Windows（`x64`）。
 - 在线浏览、翻译和更新检查需要网络连接。
 - 发布包为自包含 WinUI 3 应用，普通用户通常不需要安装 .NET SDK 或 Visual Studio。
-- 7Z、RAR、ZIPX 和 CAB 解压依赖发布包内的 7-Zip 文件，请完整解压发布包。
+- 7Z、RAR、ZIPX 和 CAB 优先使用发布包内或已安装的 7-Zip；找不到时自动使用已安装 Bandizip 的 `bz.exe`，并由 Windows `tar.exe` 在解压前检查路径和链接。
 
 ## 从源码构建
 
