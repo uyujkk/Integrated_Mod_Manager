@@ -8,9 +8,9 @@ using System.Windows.Forms;
 [assembly: AssemblyTitle("Integrated Mod Manager")]
 [assembly: AssemblyProduct("Integrated Mod Manager")]
 [assembly: AssemblyCopyright("Copyright (c) 2026 uyujkk")]
-[assembly: AssemblyVersion("3.9.4.0")]
-[assembly: AssemblyFileVersion("3.9.4.0")]
-[assembly: AssemblyInformationalVersion("3.9.4-update-workspace")]
+[assembly: AssemblyVersion("3.9.5.0")]
+[assembly: AssemblyFileVersion("3.9.5.0")]
+[assembly: AssemblyInformationalVersion("3.9.5-bandizip-and-ui")]
 
 internal static class WinUILauncher
 {

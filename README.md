@@ -24,7 +24,7 @@
 
 集成化 Mod 管理器以独立“仓库”管理不同游戏或不同 Mod 环境。它可以在本地仓库和游戏实际读取的目标目录之间复制或移除完整 Mod 文件夹，并集中管理预览图、来源链接、快捷键说明、在线下载、更新记录、配置方案和安装备份。
 
-当前版本为 **v3.9.4**，文件版本为 `3.9.4.0`，工具作者为 `uyujkk`。
+当前版本为 **v3.9.5**，文件版本为 `3.9.5.0`，工具维护者为 `uyujkk`。本次 Bandizip 备用解压功能由 [CaramelizedCUDA](https://github.com/CaramelizedCUDA) 贡献。
 
 ## 核心功能
 
@@ -79,6 +79,15 @@ Mod 存储文件夹
 
 第一层是角色、用途或其他分类；第二层是程序实际复制、移除和记录信息的完整 Mod 文件夹。
 
+## v3.9.5 更新摘要
+
+- 感谢 [CaramelizedCUDA](https://github.com/CaramelizedCUDA) 的 [PR #4](https://github.com/uyujkk/Integrated_Mod_Manager/pull/4)：没有可用 7-Zip 时，可自动发现已安装 Bandizip 的 `bz.exe`，作为 RAR、7Z、ZIPX、CAB 等格式的备用解压工具；原有 7-Zip 优先级和 ZIP/TAR 路径保持不变。
+- Bandizip 路径使用临时快照和压缩包链接/路径检查；不支持或可疑的归档会明确停止，不会绕过原有安全检查。tar/bz 单次调用设有 10 分钟超时，此限制也适用于原有 TAR 导入。
+- 在线 Mod 列表和详情页显示已安装状态；已追踪 Mod 在模块内滚动浏览，安装安全移至右栏，从系统托盘恢复窗口时尝试将应用置前。
+- 主程序和独立开发者工具均提供 v3.9.5 ZIP 与 SHA-256 校验文件。开发者工具仍独立发布，不进入主程序自动更新包。
+
+完整细节见 [v3.9.5 发布报告](./docs/releases/v3.9.5.md)。
+
 ## v3.9.4 更新摘要
 
 - 重新整理“更新”工作区：宽屏下已追踪 Mod 自动使用双列卡片，配置方案操作合并为紧凑的一行；窄窗口仍自动恢复为单列布局。
@@ -99,7 +108,7 @@ Mod 存储文件夹
 - 应用入口更名为 `IntegratedModManager.exe`，同时保留一代旧入口用于 v3.8.5 到 v3.9.0 的原位自动更新兼容。
 - 自动化验证扩展至 **146 项测试**，并继续检查覆盖率、WinUI x64 构建、发布包结构和更新代理事务。
 
-完整版本历史请查看 [CHANGELOG](./docs/releases/CHANGELOG.md)，v3.9.4 发布与验证信息请查看 [发布报告](./docs/releases/v3.9.4.md)。
+完整版本历史请查看 [CHANGELOG](./docs/releases/CHANGELOG.md)，v3.9.5 发布与验证信息请查看 [发布报告](./docs/releases/v3.9.5.md)。
 
 ## 文档导航
 

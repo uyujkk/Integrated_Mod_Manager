@@ -37,7 +37,7 @@ namespace ModFolderCopier.WinUI;
 
 public sealed partial class MainWindow : Window
 {
-    private const string AppVersion = "v3.9.4";
+    private const string AppVersion = "v3.9.5";
     private const string GitHubRepositoryUrl = "https://github.com/uyujkk/Integrated_Mod_Manager";
     private const string GitHubLatestReleaseApiUrl = "https://api.github.com/repos/uyujkk/Integrated_Mod_Manager/releases/latest";
     private const string DefaultOnlineSourceSite = "GameBanana";
@@ -1101,6 +1101,7 @@ public sealed partial class MainWindow : Window
     private void ApplyTrackedModsListLayout()
     {
         if (TrackedModsListPanel is null
+            || TrackedModsScrollViewer is null
             || TrackedModsPrimaryColumn is null
             || TrackedModsSecondaryColumn is null)
         {
@@ -1116,6 +1117,11 @@ public sealed partial class MainWindow : Window
         TrackedModsListPanel.RowDefinitions.Clear();
         int childCount = TrackedModsListPanel.Children.Count;
         int rowCount = Math.Max(1, (int)Math.Ceiling(childCount / (double)columnCount));
+        double expandedListHeight = _useWideTrackedModsLayout ? 510 : 460;
+        TrackedModsScrollViewer.MaxHeight = expandedListHeight;
+        TrackedModsScrollViewer.Height = childCount >= 3
+            ? expandedListHeight
+            : double.NaN;
         for (int row = 0; row < rowCount; row++)
         {
             TrackedModsListPanel.RowDefinitions.Add(new RowDefinition { Height = GridLength.Auto });
@@ -7080,6 +7086,7 @@ public sealed partial class MainWindow : Window
 
     private void PopulateOnlineDetailPane(OnlineModCard mod, OnlineModDetails rawDetails, OnlineModDetails displayDetails)
     {
+        TrackedModOrigin? installedOrigin = FindInstalledOnlineMod(mod);
         OnlineDetailPaneTitleTextBlock.Text = mod.Title;
         string characterSource = mod.IsCharacterNameInferred ? L("（自动识别）", " (detected)") : string.Empty;
         OnlineDetailPaneMetaTextBlock.Text = $"{L("角色", "Character")}: {mod.CharacterName}{characterSource}    {L("作者", "Author")}: {mod.Author}";
@@ -7090,6 +7097,11 @@ public sealed partial class MainWindow : Window
             $"{L("更新时间", "Updated")}: {mod.UpdatedAt:yyyy-MM-dd HH:mm}",
             $"ID: {mod.ItemId}"
         };
+
+        if (installedOrigin is not null)
+        {
+            statusParts.Insert(0, L("已安装", "Installed"));
+        }
 
         if (displayDetails.ShortcutBindings.Count > 0)
         {
@@ -7129,7 +7141,13 @@ public sealed partial class MainWindow : Window
             OnlineDetailTranslationNoteTextBlock.Text = displayDetails.TranslationNote;
         }
 
-        if (!string.IsNullOrWhiteSpace(rawDetails.AccessRequirementSummary))
+        if (installedOrigin is not null)
+        {
+            OnlineDetailDownloadHintTextBlock.Text = L(
+                $"已安装到：{installedOrigin.Path}。仍可重新下载最新压缩包或手动选择其他文件。",
+                $"Installed at: {installedOrigin.Path}. You can still download the latest archive again or select another file manually.");
+        }
+        else if (!string.IsNullOrWhiteSpace(rawDetails.AccessRequirementSummary))
         {
             OnlineDetailDownloadHintTextBlock.Text = L(
                 $"下载时会在状态栏提示这条 Mod 可能存在额外访问要求：{rawDetails.AccessRequirementSummary}",
@@ -7149,6 +7167,7 @@ public sealed partial class MainWindow : Window
 
     private void UpdateOnlineDetailDownloadControls(OnlineModCard mod)
     {
+        bool isInstalled = FindInstalledOnlineMod(mod) is not null;
         OnlineDownloadCandidate? defaultFile = OnlineDownloadSelectionPolicy.SelectDefault(mod.DownloadFiles);
         int availableFileCount = mod.DownloadFiles.Count(file => !string.IsNullOrWhiteSpace(file.DownloadUrl));
 
@@ -7157,7 +7176,9 @@ public sealed partial class MainWindow : Window
             ? L($"选择文件（{availableFileCount}）", $"Select File ({availableFileCount})")
             : L("选择文件", "Select File");
         DownloadOnlineDetailButton.Content = !string.IsNullOrWhiteSpace(mod.DownloadUrl) || mod.ItemId > 0
-            ? L("下载最新压缩包", "Download Latest Archive")
+            ? (isInstalled
+                ? L("重新下载最新压缩包", "Download Latest Again")
+                : L("下载最新压缩包", "Download Latest Archive"))
             : L("暂无下载", "No Download");
 
         OpenOnlineDetailPageButton.IsEnabled = !string.IsNullOrWhiteSpace(mod.ProfileUrl);
@@ -7476,6 +7497,7 @@ public sealed partial class MainWindow : Window
 
     private UIElement CreateOnlineModCard(OnlineModCard mod)
     {
+        TrackedModOrigin? installedOrigin = FindInstalledOnlineMod(mod);
         Border border = new()
         {
             Style = (Style)Application.Current.Resources["InsetBorderStyle"],
@@ -7530,6 +7552,10 @@ public sealed partial class MainWindow : Window
             Style = (Style)Application.Current.Resources["MutedTextStyle"],
             TextWrapping = TextWrapping.Wrap
         });
+        if (installedOrigin is not null)
+        {
+            contentPanel.Children.Add(CreateOnlineInstalledIndicator(installedOrigin.Path));
+        }
         contentPanel.Children.Add(new TextBlock
         {
             Text = $"{L("鏇存柊浜", "Updated")}: {mod.UpdatedAt:yyyy-MM-dd HH:mm}    ID: {mod.ItemId}",
@@ -7572,6 +7598,7 @@ public sealed partial class MainWindow : Window
 
     private UIElement CreateOnlineModCardV2(OnlineModCard mod)
     {
+        TrackedModOrigin? installedOrigin = FindInstalledOnlineMod(mod);
         Border border = new()
         {
             Style = (Style)Application.Current.Resources["InsetBorderStyle"],
@@ -7651,6 +7678,10 @@ public sealed partial class MainWindow : Window
             Style = (Style)Application.Current.Resources["MutedTextStyle"],
             TextTrimming = TextTrimming.CharacterEllipsis
         });
+        if (installedOrigin is not null)
+        {
+            contentPanel.Children.Add(CreateOnlineInstalledIndicator(installedOrigin.Path));
+        }
         var metricsPanel = new StackPanel { Orientation = Orientation.Horizontal, Spacing = 8 };
         metricsPanel.Children.Add(CreateOnlineMetricBadge($"{L("热度", "Heat")} {mod.HotnessScore:F1}", true));
         metricsPanel.Children.Add(CreateOnlineMetricBadge($"♥ {mod.Likes}", false));
@@ -7717,8 +7748,11 @@ public sealed partial class MainWindow : Window
             IsEnabled = !string.IsNullOrWhiteSpace(mod.DownloadUrl)
         };
         Grid.SetColumn(downloadButton, 1);
-        ToolTipService.SetToolTip(downloadButton, L("下载并解压", "Download and extract"));
-        AutomationProperties.SetName(downloadButton, L("下载并解压", "Download and extract"));
+        string downloadActionText = installedOrigin is null
+            ? L("下载并解压", "Download and extract")
+            : L("重新下载并解压", "Download and extract again");
+        ToolTipService.SetToolTip(downloadButton, downloadActionText);
+        AutomationProperties.SetName(downloadButton, downloadActionText);
         downloadButton.Click += async (_, _) => await DownloadAndExtractOnlineModAsync(mod);
         quickActions.Children.Add(downloadButton);
         actionsPanel.Children.Add(quickActions);
@@ -7735,6 +7769,7 @@ public sealed partial class MainWindow : Window
 
     private UIElement CreateOnlineModTile(OnlineModCard mod)
     {
+        TrackedModOrigin? installedOrigin = FindInstalledOnlineMod(mod);
         Border border = new()
         {
             Style = (Style)Application.Current.Resources["InsetBorderStyle"],
@@ -7823,6 +7858,14 @@ public sealed partial class MainWindow : Window
         heatBadge.HorizontalAlignment = HorizontalAlignment.Right;
         heatBadge.VerticalAlignment = VerticalAlignment.Top;
         imageLayer.Children.Add(heatBadge);
+        if (installedOrigin is not null)
+        {
+            Border installedBadge = CreateOnlineInstalledIndicator(installedOrigin.Path);
+            installedBadge.Margin = new Thickness(10);
+            installedBadge.HorizontalAlignment = HorizontalAlignment.Left;
+            installedBadge.VerticalAlignment = VerticalAlignment.Top;
+            imageLayer.Children.Add(installedBadge);
+        }
         root.Children.Add(imageLayer);
 
         StackPanel content = new() { Margin = new Thickness(12, 10, 12, 7), Spacing = 4 };
@@ -7902,7 +7945,11 @@ public sealed partial class MainWindow : Window
             Style = (Style)Application.Current.Resources["SecondaryButtonStyle"]
         };
         Grid.SetColumn(downloadButton, 2);
-        ToolTipService.SetToolTip(downloadButton, L("下载并解压", "Download and extract"));
+        ToolTipService.SetToolTip(
+            downloadButton,
+            installedOrigin is null
+                ? L("下载并解压", "Download and extract")
+                : L("重新下载并解压", "Download and extract again"));
         downloadButton.Click += async (_, _) => await DownloadAndExtractOnlineModAsync(mod);
         actions.Children.Add(downloadButton);
 
@@ -8007,6 +8054,46 @@ public sealed partial class MainWindow : Window
                 FontWeight = highlighted ? Microsoft.UI.Text.FontWeights.SemiBold : Microsoft.UI.Text.FontWeights.Normal
             }
         };
+    }
+
+    private Border CreateOnlineInstalledIndicator(string installedPath)
+    {
+        var content = new StackPanel
+        {
+            Orientation = Orientation.Horizontal,
+            Spacing = 6,
+            VerticalAlignment = VerticalAlignment.Center
+        };
+        content.Children.Add(new FontIcon
+        {
+            Glyph = "\uE73E",
+            FontSize = 12,
+            VerticalAlignment = VerticalAlignment.Center
+        });
+        content.Children.Add(new TextBlock
+        {
+            Text = L("已安装", "Installed"),
+            FontSize = 12,
+            FontWeight = Microsoft.UI.Text.FontWeights.SemiBold,
+            MaxLines = 1,
+            TextTrimming = TextTrimming.CharacterEllipsis,
+            VerticalAlignment = VerticalAlignment.Center
+        });
+
+        var indicator = new Border
+        {
+            HorizontalAlignment = HorizontalAlignment.Left,
+            Background = GetAppThemeBrush("AppAccentSoftBrush"),
+            BorderBrush = GetAppThemeBrush("AppNavSelectedBorderBrush"),
+            BorderThickness = new Thickness(1),
+            CornerRadius = new CornerRadius(4),
+            Padding = new Thickness(8, 4, 8, 4),
+            Child = content
+        };
+        ToolTipService.SetToolTip(
+            indicator,
+            L($"已安装到：{installedPath}", $"Installed at: {installedPath}"));
+        return indicator;
     }
 
     private Border CreateOnlineHeatIndicator(double hotnessScore)
@@ -8966,17 +9053,45 @@ public sealed partial class MainWindow : Window
 
     private static string GetTrackedModIdentity(int itemId, string? profileUrl)
     {
-        if (itemId > 0)
+        return OnlineInstallationDetectionPolicy.BuildIdentity(itemId, profileUrl);
+    }
+
+    private TrackedModOrigin? FindInstalledOnlineMod(OnlineModCard mod)
+    {
+        WorkspaceRepository? repository = GetSelectedRepository();
+        string repositoryPath = repository?.SourcePath ?? string.Empty;
+
+        foreach (TrackedModOrigin origin in _trackedModOrigins.Values)
         {
-            return "itemid:" + itemId.ToString(CultureInfo.InvariantCulture);
+            try
+            {
+                if (!Directory.Exists(origin.Path))
+                {
+                    continue;
+                }
+
+                if (!string.IsNullOrWhiteSpace(repositoryPath)
+                    && !IsPathInsideDirectory(origin.Path, repositoryPath))
+                {
+                    continue;
+                }
+
+                if (OnlineInstallationDetectionPolicy.Matches(
+                    mod.ItemId,
+                    mod.ProfileUrl,
+                    origin.ItemId,
+                    origin.ProfileUrl))
+                {
+                    return origin;
+                }
+            }
+            catch (Exception)
+            {
+                // Ignore stale or inaccessible records while rendering the online browser.
+            }
         }
 
-        if (string.IsNullOrWhiteSpace(profileUrl))
-        {
-            return string.Empty;
-        }
-
-        return profileUrl.Trim().TrimEnd('/').ToLowerInvariant();
+        return null;
     }
 
     private bool DeduplicateTrackedModOrigins()

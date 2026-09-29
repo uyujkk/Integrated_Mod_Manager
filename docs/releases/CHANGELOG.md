@@ -6,6 +6,24 @@
 
 This document records the major changes in published versions of Integrated Mod Manager.
 
+## v3.9.5 - Bandizip 备用解压与工作区细节 / Bandizip Fallback and Workspace Refinements
+
+### 中文
+
+- 感谢 [CaramelizedCUDA](https://github.com/CaramelizedCUDA) 通过 [PR #4](https://github.com/uyujkk/Integrated_Mod_Manager/pull/4) 贡献 Bandizip 备用解压：无可用 7-Zip 时自动发现 `bz.exe`，支持在线下载和本地压缩包导入；原有 7-Zip 优先级及 ZIP/TAR 处理路径保留。
+- Bandizip 路径增加锁定的临时快照、Windows tar 路径/链接检查及有限的 RAR5 头部校验。无法安全检查的归档会停止；不会在 7-Zip 校验或解压失败后改用 Bandizip 重试。
+- tar/bz 每次调用最多等待 10 分钟，超时后尝试终止进程树；这一上限也适用于原有 TAR 导入，7-Zip 执行不变。
+- 在线列表及详情页识别当前仓库已安装的 Mod，保留重新下载和手动选文件；已追踪列表可在卡片内滚动，安装安全移到右栏，托盘恢复时尝试置前窗口。
+- 主程序、兼容入口、更新代理与独立开发者工具统一为 `v3.9.5` / `3.9.5.0`；开发者工具仍单独打包，不进入主程序更新载荷。
+
+### English
+
+- Thanks to [CaramelizedCUDA](https://github.com/CaramelizedCUDA) for the Bandizip fallback in [PR #4](https://github.com/uyujkk/Integrated_Mod_Manager/pull/4). When 7-Zip is unavailable, the app discovers `bz.exe` for online downloads and local archive imports; existing 7-Zip priority and ZIP/TAR paths remain.
+- The Bandizip path adds a locked temporary snapshot, Windows tar path/link inspection, and bounded RAR5 header validation. Archives that cannot be inspected safely stop; failed 7-Zip validation or extraction is never retried with Bandizip.
+- Each tar/bz invocation has a 10-minute limit and attempts process-tree termination on timeout. This limit also applies to the existing TAR import path; 7-Zip execution is unchanged.
+- Online lists and details identify Mods installed in the current repository while retaining re-download and manual file selection. Tracked Mods scroll inside their panel, Install Safety moves to the right column, and tray restoration attempts to foreground the window.
+- The main app, compatibility launcher, update agent, and standalone Developer Tools are unified at `v3.9.5` / `3.9.5.0`. Developer Tools remains a separate package outside the main updater payload.
+
 ## v3.9.4 - 在线安装与更新工作区完善 / Online Installation and Update Workspace
 
 ### 中文

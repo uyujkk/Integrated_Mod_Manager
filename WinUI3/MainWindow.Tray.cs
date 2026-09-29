@@ -8,6 +8,11 @@ public sealed partial class MainWindow
 {
     private const int SwHide = 0;
     private const int SwRestore = 9;
+    private const uint SwpNoSize = 0x0001;
+    private const uint SwpNoMove = 0x0002;
+    private const uint SwpShowWindow = 0x0040;
+    private static readonly nint HwndTopMost = new(-1);
+    private static readonly nint HwndNoTopMost = new(-2);
     private const uint WmAppTray = 0x8000 + 73;
     private const uint WmLeftButtonDoubleClick = 0x0203;
     private const uint WmRightButtonUp = 0x0205;
@@ -163,7 +168,26 @@ public sealed partial class MainWindow
         {
             presenter.Restore();
         }
+
         Activate();
+        BringWindowToTop(_trayWindowHandle);
+        SetWindowPos(
+            _trayWindowHandle,
+            HwndTopMost,
+            0,
+            0,
+            0,
+            0,
+            SwpNoMove | SwpNoSize | SwpShowWindow);
+        SetWindowPos(
+            _trayWindowHandle,
+            HwndNoTopMost,
+            0,
+            0,
+            0,
+            0,
+            SwpNoMove | SwpNoSize | SwpShowWindow);
+        SetForegroundWindow(_trayWindowHandle);
     }
 
     private void OnMinimizeToTrayToggled(object sender, RoutedEventArgs e)
@@ -378,6 +402,21 @@ public sealed partial class MainWindow
     [DllImport("user32.dll")]
     [return: MarshalAs(UnmanagedType.Bool)]
     private static extern bool SetForegroundWindow(nint hwnd);
+
+    [DllImport("user32.dll")]
+    [return: MarshalAs(UnmanagedType.Bool)]
+    private static extern bool BringWindowToTop(nint hwnd);
+
+    [DllImport("user32.dll", SetLastError = true)]
+    [return: MarshalAs(UnmanagedType.Bool)]
+    private static extern bool SetWindowPos(
+        nint hwnd,
+        nint insertAfter,
+        int x,
+        int y,
+        int width,
+        int height,
+        uint flags);
 
     [DllImport("user32.dll")]
     [return: MarshalAs(UnmanagedType.Bool)]

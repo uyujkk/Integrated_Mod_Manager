@@ -24,7 +24,7 @@
 
 Integrated Mod Manager organizes different games or mod environments into independent repositories. It copies or removes complete mod folders between a local library and the target directory read by the game, while keeping preview images, source links, shortcut notes, online downloads, update records, profiles, and installation backups in one application.
 
-The current version is **v3.9.4**, with file version `3.9.4.0`. The tool is maintained by `uyujkk`.
+The current version is **v3.9.5**, with file version `3.9.5.0`. The tool is maintained by `uyujkk`. The Bandizip extraction fallback in this release was contributed by [CaramelizedCUDA](https://github.com/CaramelizedCUDA).
 
 ## Core Features
 
@@ -79,6 +79,15 @@ Mod Storage Folder
 
 The first level is a character, purpose, or other category. The second level contains the complete mod folders managed by the app.
 
+## v3.9.5 Update Summary
+
+- Thanks to [CaramelizedCUDA](https://github.com/CaramelizedCUDA) for [PR #4](https://github.com/uyujkk/Integrated_Mod_Manager/pull/4): when 7-Zip is unavailable, the app can discover an installed Bandizip `bz.exe` and use it as a fallback for RAR, 7Z, ZIPX, CAB, and related archives. Existing 7-Zip priority and ZIP/TAR paths are preserved.
+- The Bandizip path uses a temporary snapshot and archive link/path checks. Unsupported or suspicious archives stop with an explicit error rather than bypassing validation. Each tar/bz invocation has a 10-minute limit; this also applies to the existing TAR import path.
+- Online Mod lists and details now show installed status. Tracked Mods scroll inside their panel, Install Safety moves to the right column, and restoring from the system tray attempts to bring the app to the foreground.
+- Both the main app and standalone Developer Tools have v3.9.5 ZIPs and SHA-256 checksums. Developer Tools remains separate from the main app updater payload.
+
+See the [v3.9.5 Release Report](./docs/releases/v3.9.5.md) for details.
+
 ## v3.9.4 Update Summary
 
 - Refined the Updates workspace: tracked Mods use a responsive two-column card layout on wide screens, profile actions share one compact row, and narrow windows automatically return to a single column.
@@ -99,7 +108,7 @@ The first level is a character, purpose, or other category. The second level con
 - Renamed the public launcher to `IntegratedModManager.exe`; one legacy entry point remains in this release so v3.8.5 installations can update in place.
 - Expanded automated verification to **146 tests**, retaining coverage gates, WinUI x64 builds, release-package validation, and update-agent transaction tests.
 
-See the [Changelog](./docs/releases/CHANGELOG.md) for the complete bilingual history and the [v3.9.4 Release Report](./docs/releases/v3.9.4.md) for release and verification details.
+See the [Changelog](./docs/releases/CHANGELOG.md) for the complete bilingual history and the [v3.9.5 Release Report](./docs/releases/v3.9.5.md) for release and verification details.
 
 ## Documentation
 

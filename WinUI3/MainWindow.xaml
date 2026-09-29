@@ -5,7 +5,7 @@
     xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
     xmlns:local="using:ModFolderCopier.WinUI"
     xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
-    Title="Integrated Mod Manager v3.9.4"
+    Title="Integrated Mod Manager v3.9.5"
     SizeChanged="OnWindowSizeChanged"
     mc:Ignorable="d">
 
@@ -1154,28 +1154,19 @@
                                     </Border>
 
                                     <TextBlock x:Name="ModUpdateIntervalHintTextBlock" Style="{StaticResource CaptionTextStyle}" TextWrapping="Wrap" />
-                                        <Grid x:Name="TrackedModsListPanel" ColumnSpacing="10" RowSpacing="10">
+                                    <ScrollViewer
+                                        x:Name="TrackedModsScrollViewer"
+                                        HorizontalScrollBarVisibility="Disabled"
+                                        HorizontalScrollMode="Disabled"
+                                        VerticalScrollBarVisibility="Auto"
+                                        VerticalScrollMode="Enabled">
+                                        <Grid x:Name="TrackedModsListPanel" ColumnSpacing="10" RowSpacing="10" Margin="0,0,8,0">
                                             <Grid.ColumnDefinitions>
                                                 <ColumnDefinition x:Name="TrackedModsPrimaryColumn" Width="*" />
                                                 <ColumnDefinition x:Name="TrackedModsSecondaryColumn" Width="0" />
                                             </Grid.ColumnDefinitions>
                                         </Grid>
-                                    </StackPanel>
-                                </Border>
-
-                                <Border x:Name="UpdatesSafetyCard" Style="{StaticResource CardBorderStyle}">
-                                    <StackPanel x:Name="UpdatesSafetyPanel" Spacing="12">
-                                        <TextBlock x:Name="InstallSafetyTitleTextBlock" Style="{StaticResource SectionTitleTextStyle}" />
-                                        <TextBlock x:Name="InstallSafetyHintTextBlock" Style="{StaticResource MutedTextStyle}" TextWrapping="Wrap" />
-                                        <Grid ColumnSpacing="14">
-                                            <Grid.ColumnDefinitions>
-                                                <ColumnDefinition Width="*" />
-                                                <ColumnDefinition Width="Auto" />
-                                            </Grid.ColumnDefinitions>
-                                            <ToggleSwitch x:Name="ConflictDetectionToggleSwitch" Toggled="OnConflictDetectionToggled" VerticalAlignment="Center" />
-                                            <Button x:Name="RollbackLastInstallButton" Grid.Column="1" Click="OnRollbackLastInstallClicked" Style="{StaticResource SecondaryButtonStyle}" />
-                                        </Grid>
-                                        <TextBlock x:Name="InstallRollbackStatusTextBlock" Style="{StaticResource CaptionTextStyle}" TextWrapping="Wrap" />
+                                    </ScrollViewer>
                                     </StackPanel>
                                 </Border>
                             </StackPanel>
@@ -1195,6 +1186,22 @@
                                             <Button x:Name="ClearDownloadTasksButton" Grid.Column="1" Click="OnClearDownloadTasksClicked" Style="{StaticResource SecondaryButtonStyle}" />
                                         </Grid>
                                         <StackPanel x:Name="DownloadTaskListPanel" Spacing="10" />
+                                    </StackPanel>
+                                </Border>
+
+                                <Border x:Name="UpdatesSafetyCard" Style="{StaticResource CardBorderStyle}">
+                                    <StackPanel x:Name="UpdatesSafetyPanel" Spacing="12">
+                                        <TextBlock x:Name="InstallSafetyTitleTextBlock" Style="{StaticResource SectionTitleTextStyle}" />
+                                        <TextBlock x:Name="InstallSafetyHintTextBlock" Style="{StaticResource MutedTextStyle}" TextWrapping="Wrap" />
+                                        <Grid ColumnSpacing="14">
+                                            <Grid.ColumnDefinitions>
+                                                <ColumnDefinition Width="*" />
+                                                <ColumnDefinition Width="Auto" />
+                                            </Grid.ColumnDefinitions>
+                                            <ToggleSwitch x:Name="ConflictDetectionToggleSwitch" Toggled="OnConflictDetectionToggled" VerticalAlignment="Center" />
+                                            <Button x:Name="RollbackLastInstallButton" Grid.Column="1" Click="OnRollbackLastInstallClicked" Style="{StaticResource SecondaryButtonStyle}" />
+                                        </Grid>
+                                        <TextBlock x:Name="InstallRollbackStatusTextBlock" Style="{StaticResource CaptionTextStyle}" TextWrapping="Wrap" />
                                     </StackPanel>
                                 </Border>
 

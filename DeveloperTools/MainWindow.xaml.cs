@@ -192,7 +192,7 @@ public sealed partial class MainWindow : Window
         RefreshStorageBreakdown(storage);
 
         var runtime = new StringBuilder();
-        runtime.AppendLine($"{L("开发者工具", "Developer tool")}: v3.9.4");
+        runtime.AppendLine($"{L("开发者工具", "Developer tool")}: v3.9.5");
         runtime.AppendLine($"{L("主程序目录", "Main app root")}: {_rootPath}");
         runtime.AppendLine($"{L("主程序进程", "Main app process")}: {(IsMainAppRunning() ? L("正在运行", "Running") : L("未运行", "Not running"))}");
         runtime.AppendLine($"{L("系统", "OS")}: {RuntimeInformation.OSDescription}");
