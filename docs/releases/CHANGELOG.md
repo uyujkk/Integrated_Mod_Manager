@@ -6,6 +6,11 @@
 
 This document records the major changes in published versions of Integrated Mod Manager.
 
+## 未发布修正 / Unreleased Fix
+
+- 更新器源码现在按主程序 ZIP 文件名精确选择对应的 `.sha256` 附件，仅在没有专属文件时回退到 `SHA256SUMS.txt`；不会误选独立开发者工具的校验文件。此源码修正尚未进入 v3.9.5 二进制包。
+- The updater source now pairs the main ZIP with its exact `.sha256` sidecar, falling back to `SHA256SUMS.txt` only when needed. It will not select the standalone Developer Tools sidecar. This source fix is not included in the v3.9.5 binary package.
+
 ## v3.9.5 - Bandizip 备用解压与工作区细节 / Bandizip Fallback and Workspace Refinements
 
 ### 中文

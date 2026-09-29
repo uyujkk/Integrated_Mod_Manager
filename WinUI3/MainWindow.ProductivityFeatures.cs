@@ -291,7 +291,8 @@ public sealed partial class MainWindow
         string body = root.TryGetProperty("body", out JsonElement bodyElement) ? bodyElement.GetString() ?? string.Empty : string.Empty;
         string publishedAt = root.TryGetProperty("published_at", out JsonElement publishedElement) ? publishedElement.GetString() ?? string.Empty : string.Empty;
         string? packageUrl = null;
-        string? sha256Url = null;
+        string? packageFileName = null;
+        var checksumAssets = new List<(string Name, string DownloadUrl)>();
 
         if (root.TryGetProperty("assets", out JsonElement assets) && assets.ValueKind == JsonValueKind.Array)
         {
@@ -307,15 +308,19 @@ public sealed partial class MainWindow
                 if (LocalUpdatePackageRegex.IsMatch(name))
                 {
                     packageUrl = downloadUrl;
+                    packageFileName = name;
                 }
                 else if (name.EndsWith(".sha256", StringComparison.OrdinalIgnoreCase)
                     || name.Equals("SHA256SUMS.txt", StringComparison.OrdinalIgnoreCase))
                 {
-                    sha256Url = downloadUrl;
+                    checksumAssets.Add((name, downloadUrl));
                 }
             }
         }
 
+        string? sha256Url = packageFileName is null
+            ? null
+            : UpdateReleaseAssetSelector.SelectChecksumUrl(packageFileName, checksumAssets);
         return new LatestReleaseInfo(tag, title, body.Trim(), publishedAt, pageUrl, packageUrl, sha256Url);
     }
 
