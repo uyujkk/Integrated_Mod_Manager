@@ -94,7 +94,13 @@ Supported formats:
 
 Select a first-level folder, then use **Import to selected folder**, or drag an archive onto the second-level area. Online downloads also create an independent folder and extract automatically.
 
-ZIP uses the built-in extractor; 7Z, RAR, ZIPX, and CAB use the bundled 7-Zip files; TAR-family formats use Windows `tar.exe`. Encrypted, damaged, or incomplete multi-volume archives may fail.
+ZIP uses the built-in extractor; 7Z, RAR, ZIPX, and CAB prefer bundled or installed 7-Zip; TAR-family formats use Windows `tar.exe`. Encrypted, damaged, or incomplete multi-volume archives may fail.
+
+If 7-Zip is not found, the app automatically looks for Bandizip's console tool (`bz.exe`) in the app's `Tools` folder, the app folder, registered Bandizip installations, standard installation folders, and `PATH`. A custom installation drive is supported through Bandizip's Windows App Paths registration. Keep `bz.exe` with its Bandizip runtime files; the GUI executable alone is not sufficient. Bandizip is not bundled or installed by the manager.
+
+The Bandizip fallback first uses Windows `tar.exe` to inspect every entry for unsafe paths, links, and special files. If inspection is unsupported or fails, extraction stops; install 7-Zip for those archives. A failed 7-Zip extraction does not trigger a retry with Bandizip. Downloads and local archive imports use the same selection rules.
+
+RAR5 receives an additional header check because `tar` does not expose every kind of link. The fallback rejects RAR5 redirection records, quick-open cached headers, split/multivolume archives, encrypted headers, unknown or malformed header layouts, and excessive metadata. Self-extracting executable archives are also rejected. These cases still require the existing 7-Zip path; Bandizip support does not bypass archive checks or add password prompts.
 
 ### 4.5 Preview images and source links
 

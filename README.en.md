@@ -119,7 +119,7 @@ See the [Changelog](./docs/releases/CHANGELOG.md) for the complete bilingual his
 - 64-bit Windows (`x64`).
 - Online browsing, translation, and update checks require a network connection.
 - Release builds are self-contained WinUI 3 applications; regular users normally do not need the .NET SDK or Visual Studio.
-- 7Z, RAR, ZIPX, and CAB extraction uses the bundled 7-Zip files, so extract the complete release.
+- 7Z, RAR, ZIPX, and CAB prefer bundled or installed 7-Zip. If unavailable, the app uses an installed Bandizip's `bz.exe`, with Windows `tar.exe` checking paths and links before extraction.
 
 ## Build from Source
 
