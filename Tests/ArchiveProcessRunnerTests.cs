@@ -6,6 +6,10 @@ namespace IntegratedModManager.Core.Tests;
 
 public sealed class ArchiveProcessRunnerTests
 {
+    // Windows CI can take several seconds to launch two nested PowerShell processes.
+    // Leave enough time for both PID markers to be written before exercising timeout cleanup.
+    private static readonly TimeSpan ProcessTreeTimeout = TimeSpan.FromSeconds(20);
+
     [Theory]
     [InlineData(0)]
     [InlineData(7)]
@@ -46,11 +50,11 @@ public sealed class ArchiveProcessRunnerTests
         var stopwatch = Stopwatch.StartNew();
 
         var exception = Assert.Throws<TimeoutException>(() =>
-            ArchiveProcessRunner.Run(startInfo, TimeSpan.FromSeconds(5)));
+            ArchiveProcessRunner.Run(startInfo, ProcessTreeTimeout));
 
         Assert.Contains(startInfo.FileName, exception.Message);
         Assert.Null(exception.InnerException);
-        Assert.InRange(stopwatch.Elapsed, TimeSpan.FromSeconds(4), TimeSpan.FromSeconds(12));
+        Assert.InRange(stopwatch.Elapsed, TimeSpan.FromSeconds(18), TimeSpan.FromSeconds(35));
         processes.AssertBothExited();
     }
 
@@ -74,9 +78,9 @@ public sealed class ArchiveProcessRunnerTests
         var stopwatch = Stopwatch.StartNew();
 
         var exception = Assert.Throws<TimeoutException>(() =>
-            ArchiveProcessRunner.Run(CreatePowerShellStartInfo(script), TimeSpan.FromSeconds(5)));
+            ArchiveProcessRunner.Run(CreatePowerShellStartInfo(script), ProcessTreeTimeout));
 
-        Assert.InRange(stopwatch.Elapsed, TimeSpan.FromSeconds(4), TimeSpan.FromSeconds(12));
+        Assert.InRange(stopwatch.Elapsed, TimeSpan.FromSeconds(18), TimeSpan.FromSeconds(35));
         Assert.NotNull(exception.InnerException);
         Assert.Contains("descendant termination could not be confirmed", exception.Message);
         Assert.True(File.Exists(processes.ChildIdPath), "The child must start before the timeout test can be meaningful.");
