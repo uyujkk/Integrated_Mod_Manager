@@ -36,6 +36,6 @@ This directory contains the usage, release, development, and research documentat
 
 ## 项目入口 / Project
 
-- [中文项目首页](../README.md)
-- [English Project Home](../README.en.md)
+- [中文项目首页](../README.zh-CN.md)
+- [English Project Home](../README.md)
 - [GitHub Releases](https://github.com/uyujkk/Integrated_Mod_Manager/releases)

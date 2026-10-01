@@ -1,6 +1,6 @@
 # CHANGELOG / 更新日志
 
-[中文说明](../../README.md) | [English README](../../README.en.md) | [文档索引 / Documentation Index](../README.md) | [GitHub Releases](https://github.com/uyujkk/Integrated_Mod_Manager/releases)
+[中文说明](../../README.zh-CN.md) | [English README](../../README.md) | [文档索引 / Documentation Index](../README.md) | [GitHub Releases](https://github.com/uyujkk/Integrated_Mod_Manager/releases)
 
 本文档记录集成化 Mod 管理器已发布版本的主要变化。
 

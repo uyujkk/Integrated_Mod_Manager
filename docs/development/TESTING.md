@@ -1,6 +1,6 @@
 # Testing / 测试说明
 
-[中文说明](../../README.md) | [English README](../../README.en.md) | [文档索引 / Documentation Index](../README.md)
+[中文说明](../../README.zh-CN.md) | [English README](../../README.md) | [文档索引 / Documentation Index](../README.md)
 
 The repository uses one verification command for local development and GitHub Actions.
 
