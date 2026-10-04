@@ -18,6 +18,7 @@ public sealed partial class MainWindow
     private Border? _shortcutCard;
     private TabViewItem? _previewTab;
     private TabViewItem? _shortcutTab;
+    private TabViewItem? _persistentSlotsTab;
     private TextBlock? _workspaceTitleText;
     private TextBlock? _selectionEyebrowText;
     private TextBlock? _modernFolderText;
@@ -131,8 +132,10 @@ public sealed partial class MainWindow
             InitializeDashboardLayout(dashboardPanel);
         }
 
-        Border statusCard = (Border)oldWorkspace.Children[3];
+        Border statusCard = WorkspaceStatusCard;
         oldWorkspace.Children.Remove(statusCard);
+        oldWorkspace.Children.Remove(PersistentSlotsCard);
+        PersistentSlotsCard.VerticalAlignment = VerticalAlignment.Top;
 
         _selectionEyebrowText = new TextBlock
         {
@@ -173,6 +176,17 @@ public sealed partial class MainWindow
 
         _previewTab = new TabViewItem { Content = _previewCard, IsClosable = false };
         _shortcutTab = new TabViewItem { Content = _shortcutCard, IsClosable = false };
+        _persistentSlotsTab = new TabViewItem
+        {
+            IsClosable = false,
+            Content = new ScrollViewer
+            {
+                Content = PersistentSlotsCard,
+                VerticalScrollBarVisibility = ScrollBarVisibility.Auto,
+                HorizontalScrollMode = ScrollMode.Disabled,
+                HorizontalScrollBarVisibility = ScrollBarVisibility.Disabled
+            }
+        };
         var detailTabs = new TabView
         {
             IsAddTabButtonVisible = false,
@@ -183,6 +197,7 @@ public sealed partial class MainWindow
         };
         detailTabs.TabItems.Add(_previewTab);
         detailTabs.TabItems.Add(_shortcutTab);
+        detailTabs.TabItems.Add(_persistentSlotsTab);
         detailTabs.SelectedIndex = 0;
 
         _workspaceDetailHost = new Grid { RowSpacing = 12 };
@@ -332,6 +347,7 @@ public sealed partial class MainWindow
         _modsBadgeLabel!.Text = "Mods";
         _previewTab!.Header = L("预览与链接", "Preview & Link");
         _shortcutTab!.Header = L("快捷键", "Shortcuts");
+        _persistentSlotsTab!.Header = L("状态槽位", "State Slots");
         if (_settingsSectionLabels.Length == 5)
         {
             _settingsSectionLabels[0].Text = L("界面与语言", "Appearance & Language");

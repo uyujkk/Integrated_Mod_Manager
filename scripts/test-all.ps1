@@ -192,7 +192,10 @@ if (!$SkipBuild) {
     }
     $appVersion = (Select-String -LiteralPath (Join-Path $root "WinUI3\MainWindow.xaml.cs") -Pattern 'AppVersion\s*=\s*"v([^"]+)"').Matches.Groups[1].Value
     $declaredSemanticVersion = ([Version]$declaredVersions[0]).ToString(3)
-    if ($appVersion -ne $declaredSemanticVersion) {
+    # Display labels may include a prerelease suffix and omit the patch zero.
+    $displayVersion = [Version]($appVersion -replace '-.*$', '')
+    $displaySemanticVersion = '{0}.{1}.{2}' -f $displayVersion.Major, $displayVersion.Minor, [Math]::Max(0, $displayVersion.Build)
+    if ($displaySemanticVersion -ne $declaredSemanticVersion) {
         throw "Displayed app version v$appVersion does not match file version $($declaredVersions[0])."
     }
 

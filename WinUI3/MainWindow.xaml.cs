@@ -37,7 +37,8 @@ namespace ModFolderCopier.WinUI;
 
 public sealed partial class MainWindow : Window
 {
-    private const string AppVersion = "v3.9.5";
+    private const string AppVersion = "v4.0-beta";
+    private static bool AppSelfUpdateEnabled => ApplicationReleasePolicy.ApplicationSelfUpdateEnabled;
     private const string GitHubRepositoryUrl = "https://github.com/uyujkk/Integrated_Mod_Manager";
     private const string GitHubLatestReleaseApiUrl = "https://api.github.com/repos/uyujkk/Integrated_Mod_Manager/releases/latest";
     private const string DefaultOnlineSourceSite = "GameBanana";
@@ -230,6 +231,7 @@ public sealed partial class MainWindow : Window
     private readonly List<string> _onlineDetailImageUrls = [];
     private readonly List<TrackedModUpdateResult> _trackedModUpdateResults = [];
     private readonly List<ModConfigurationProfile> _configurationProfiles = [];
+    private readonly List<ModPersistentSlot> _modPersistentSlots = [];
     private readonly ObservableCollection<DownloadTaskItem> _downloadTasks = [];
     private readonly Dictionary<string, DownloadTaskCardView> _downloadTaskCards = new(StringComparer.Ordinal);
 
@@ -474,7 +476,7 @@ public sealed partial class MainWindow : Window
 
     private async Task CheckForUpdatesIfDueAsync()
     {
-        bool startupCheckDue = _checkAppUpdatesOnStartup
+        bool startupCheckDue = AppSelfUpdateEnabled && _checkAppUpdatesOnStartup
             && (ShouldAutoCheckForUpdates()
                 || _updateCheckInterval == UpdateCheckInterval.Manual
                     && (!_lastUpdateCheckUtc.HasValue || DateTimeOffset.UtcNow - _lastUpdateCheckUtc.Value >= TimeSpan.FromMinutes(30)));
@@ -540,6 +542,12 @@ public sealed partial class MainWindow : Window
         RefreshProjectResourceText();
         UpdateCheckIntervalLabelTextBlock.Text = L("软件更新频率", "App update interval");
         UpdateCheckIntervalHintTextBlock.Text = L("这里只影响软件版本检查，不影响 Mod 更新检查。Mod 更新频率请到左侧“更新”模块设置。", "This only affects app-version checks, not mod update checks. Configure mod update frequency in the Updates section.");
+        if (!AppSelfUpdateEnabled)
+        {
+            SettingsProjectHintTextBlock.Text = L("4.0-beta 独立测试版不接入软件自动更新；可手动打开测试版发布页。Mod 更新不受影响。", "This standalone 4.0-beta is not connected to app updates. Open its release page manually; mod updates are unaffected.");
+            UpdateCheckIntervalHintTextBlock.Text = L("测试版已禁用软件更新检查及自动安装，不会替换稳定版。", "App update checks and automatic installation are disabled in this beta. It does not replace the stable app.");
+            UpdateCheckIntervalComboBox.IsEnabled = false;
+        }
         RefreshSettingsButtonLabels();
 
         if (string.IsNullOrWhiteSpace(_updateStatusZh) || string.IsNullOrWhiteSpace(_updateStatusEn))
@@ -565,6 +573,13 @@ public sealed partial class MainWindow : Window
         EditCharacterMappingsButton.Content = L("角色分类映射", "Character Category Mapping");
         OpenGitHubButton.Content = L("打开 GitHub 仓库", "Open GitHub Repository");
         CheckUpdatesButton.Content = _isCheckingUpdates ? L("检查中...", "Checking...") : L("检查软件更新", "Check App Updates");
+        CheckUpdatesButton.IsEnabled = AppSelfUpdateEnabled && !_isCheckingUpdates;
+        if (!AppSelfUpdateEnabled)
+        {
+            CheckUpdatesButton.Content = L("测试版未接入自动更新", "Beta app updates disabled");
+            InstallUpdateButton.Content = L("打开 4.0-beta 发布页", "Open 4.0-beta Release");
+            return;
+        }
         InstallUpdateButton.Content = _localUpdatePackageVersion is not null
             ? L($"安装本地更新 v{_localUpdatePackageVersion}", $"Install Local Update v{_localUpdatePackageVersion}")
             : string.IsNullOrWhiteSpace(_latestReleaseUrl)
@@ -955,6 +970,15 @@ public sealed partial class MainWindow : Window
 
     private void RefreshUpdateDetailsView()
     {
+        if (!AppSelfUpdateEnabled)
+        {
+            LatestReleaseTitleTextBlock.Text = L($"独立测试版：{AppVersion}", $"Standalone beta: {AppVersion}");
+            LatestReleaseMetaTextBlock.Text = L("手动下载 · 与稳定版分开解压使用", "Manual download · extract separately from the stable app");
+            UpdateNotesTextBlock.Text = L(
+                "新增 Mod 组合和持久状态预设：先恢复组合，再定向回写 d3dx_user.ini。\n恢复前请完全退出游戏和加载器；不修改 Mod INI 默认值。\n软件自动更新已禁用，Mod 在线下载和更新功能仍可使用。",
+                "Save mod combinations and persistent-state presets: restore the combination, then patch matching d3dx_user.ini values.\nFully exit the game and loader before restoring. Mod INI defaults stay unchanged.\nApp self-updates are disabled; online mod downloads and updates remain available.");
+            return;
+        }
         string latestTag = string.IsNullOrWhiteSpace(_latestReleaseTag) ? L("尚未检查", "Not checked yet") : _latestReleaseTag!;
         string latestTitle = string.IsNullOrWhiteSpace(_latestReleaseTitle)
             ? L("最新版本信息会显示在这里", "Latest release details will appear here")
@@ -1004,11 +1028,13 @@ public sealed partial class MainWindow : Window
     {
         UpdatesTitleTextBlock.Text = L("Mod 更新", "Mod Updates");
         UpdatesSubtitleTextBlock.Text = L("检查已安装 Mod 的新版本，并集中处理下载、配置方案和安装恢复。", "Check installed mods for new versions and manage downloads, profiles, and recovery in one place.");
-        ConfigurationProfilesTitleTextBlock.Text = L("配置方案", "Configuration Profiles");
-        ConfigurationProfilesHintTextBlock.Text = L("保存或恢复当前仓库中已启用的 Mod 组合。", "Save or restore the enabled mod set for this repository.");
+        ConfigurationProfilesTitleTextBlock.Text = L("Mod 组合预设（实验）", "Mod Combination Presets (Experimental)");
+        ConfigurationProfilesHintTextBlock.Text = L("保存启用组合和持久参数；恢复时先部署组合，再定向回写加载器。", "Save enabled Mods and persistent state; restore deployment first, then loader parameters.");
+        CaptureCombinationStateCheckBox.Content = L("新建/更新时同时保存 d3dx_user.ini 参数", "Include d3dx_user.ini parameters when saving/updating");
+        BrowseCombinationUserIniButton.Content = L("选择文件", "Browse");
         CreateConfigurationProfileButton.Content = L("新建方案", "New Profile");
         UpdateConfigurationProfileButton.Content = L("更新方案", "Update Profile");
-        ApplyConfigurationProfileButton.Content = L("应用方案", "Apply Profile");
+        ApplyConfigurationProfileButton.Content = L("恢复组合", "Restore Combination");
         DeleteConfigurationProfileButton.Content = new FontIcon { Glyph = "\uE74D", FontSize = 16 };
         ToolTipService.SetToolTip(DeleteConfigurationProfileButton, L("删除选中的配置方案", "Delete the selected profile"));
         InstallSafetyTitleTextBlock.Text = L("安装安全", "Install Safety");
@@ -1172,7 +1198,8 @@ public sealed partial class MainWindow : Window
             {
                 ConfigurationProfileComboBox.Items.Add(new ComboBoxItem
                 {
-                    Content = $"{profile.Name}  ·  {profile.ModRelativePaths.Count} Mod",
+                    Content = $"{profile.Name}  ·  {profile.ModRelativePaths.Count} Mod" + (profile.IncludesPersistentState
+                        ? L($" · {profile.PersistentStates.Sum(state => state.Values.Count)} 参数", $" · {profile.PersistentStates.Sum(state => state.Values.Count)} values") : L(" · 仅组合", " · set only")),
                     Tag = profile.Id
                 });
             }
@@ -1190,48 +1217,39 @@ public sealed partial class MainWindow : Window
         }
 
         ModConfigurationProfile? selected = GetSelectedConfigurationProfile();
-        bool hasRepository = GetSelectedRepository() is not null;
+        bool hasRepository = GetSelectedRepository() is not null && !_applyingCombinationProfile && !_restoringPersistentRuntime;
         CreateConfigurationProfileButton.IsEnabled = hasRepository;
-        UpdateConfigurationProfileButton.IsEnabled = selected is not null;
-        ApplyConfigurationProfileButton.IsEnabled = selected is not null;
-        DeleteConfigurationProfileButton.IsEnabled = selected is not null;
+        UpdateConfigurationProfileButton.IsEnabled = selected is not null && hasRepository;
+        ApplyConfigurationProfileButton.IsEnabled = selected is not null && hasRepository;
+        DeleteConfigurationProfileButton.IsEnabled = selected is not null && hasRepository;
+        ConfigurationProfileComboBox.IsEnabled = hasRepository;
+        CaptureCombinationStateCheckBox.IsEnabled = hasRepository;
+        BrowseCombinationUserIniButton.IsEnabled = hasRepository;
+        CombinationUserIniTextBox.Text = GetSelectedRepository()?.PersistentUserIniPath is { Length: > 0 } userIni
+            ? userIni : TryGetDefaultPersistentIniPath(GetSelectedRepository()) ?? string.Empty;
         ConfigurationProfileSummaryTextBlock.Text = selected is null
             ? L("配置方案只会管理当前仓库中能够识别的 Mod。", "Profiles only manage mods recognized in the current repository.")
             : L(
-                $"{selected.Name}：包含 {selected.ModRelativePaths.Count} 个 Mod，更新于 {selected.UpdatedAtUtc.ToLocalTime():yyyy-MM-dd HH:mm}。",
-                $"{selected.Name}: {selected.ModRelativePaths.Count} mods, updated {selected.UpdatedAtUtc.ToLocalTime():yyyy-MM-dd HH:mm}.");
+                $"{selected.Name}：{selected.ModRelativePaths.Count} 个 Mod · {selected.PersistentStates.Sum(state => state.Values.Count)} 个参数。" + (selected.IncludesPersistentState ? "恢复组合后回写参数；请先退出游戏/加载器。" : "旧方案/仅组合，不修改加载器参数。"),
+                $"{selected.Name}: {selected.ModRelativePaths.Count} mods · {selected.PersistentStates.Sum(state => state.Values.Count)} parameters. " + (selected.IncludesPersistentState ? "Restores deployment then state. Close game/loader first." : "Legacy/set-only profile; loader state is unchanged."));
 
         RollbackLastInstallButton.IsEnabled = !string.IsNullOrWhiteSpace(_lastInstallTransactionPath)
             && Directory.Exists(_lastInstallTransactionPath);
         InstallRollbackStatusTextBlock.Text = RollbackLastInstallButton.IsEnabled
-            ? L("可以撤销最近一次复制、移除或配置方案操作。", "The most recent copy, removal, or profile operation can be undone.")
+            ? L("可撤销最近一次 Mod 部署；组合参数另有 d3dx_user.ini.bak 备份。", "Undo covers Mod deployment; combination parameters have a separate d3dx_user.ini .bak backup.")
             : L("目前没有可撤销的 Mod 操作。", "There is no mod operation to undo.");
     }
 
     private List<string> CaptureCurrentConfigurationProfile()
     {
         WorkspaceRepository? repository = GetSelectedRepository();
-        if (repository is null || !Directory.Exists(repository.SourcePath) || !Directory.Exists(repository.TargetPath))
-        {
-            return [];
-        }
-
-        HashSet<string> installedNames = Directory.GetDirectories(repository.TargetPath)
-            .Select(Path.GetFileName)
-            .Where(name => !string.IsNullOrWhiteSpace(name))
-            .ToHashSet(StringComparer.OrdinalIgnoreCase)!;
-
-        return Directory.GetDirectories(repository.SourcePath)
-            .SelectMany(firstLevel => Directory.GetDirectories(firstLevel))
-            .Where(modPath => installedNames.Contains(Path.GetFileName(modPath)))
-            .Select(modPath => Path.GetRelativePath(repository.SourcePath, modPath))
-            .Distinct(StringComparer.OrdinalIgnoreCase)
-            .OrderBy(path => path, StringComparer.CurrentCultureIgnoreCase)
-            .ToList();
+        if (repository is null) throw new InvalidOperationException("Select a repository first.");
+        return [.. ModCombinationDeploymentPolicy.Capture(repository.SourcePath, repository.TargetPath)];
     }
 
     private async void OnCreateConfigurationProfileClicked(object sender, RoutedEventArgs e)
     {
+        if (_applyingCombinationProfile || _restoringPersistentRuntime) return;
         WorkspaceRepository? repository = GetSelectedRepository();
         if (repository is null)
         {
@@ -1240,8 +1258,8 @@ public sealed partial class MainWindow : Window
         }
 
         string? name = await PromptForTextAsync(
-            L("输入配置方案名称。当前目标文件夹中已启用的 Mod 会保存到该方案。", "Enter a profile name. Mods currently enabled in the target folder will be saved."),
-            L("新建配置方案", "New Configuration Profile"),
+            L("输入组合名称。若勾选保存参数，请先在游戏里按 F10 并等待文件保存完成。", "Name this combination. If including state, press F10 in game and wait for the file to be saved first."),
+            L("保存 Mod 组合", "Save Mod Combination"),
             L("常用方案", "My Profile"));
         name = name?.Trim();
         if (string.IsNullOrWhiteSpace(name))
@@ -1249,33 +1267,23 @@ public sealed partial class MainWindow : Window
             return;
         }
 
-        var profile = new ModConfigurationProfile
-        {
-            RepositoryId = repository.Id,
-            Name = name,
-            ModRelativePaths = CaptureCurrentConfigurationProfile(),
-            UpdatedAtUtc = DateTimeOffset.UtcNow
-        };
-        _configurationProfiles.Add(profile);
-        _selectedConfigurationProfileId = profile.Id;
-        SaveShellConfig();
-        RefreshConfigurationProfiles();
-        ShowAppNotification($"已保存配置方案：{profile.Name}", $"Saved profile: {profile.Name}");
+        await SaveCombinationProfileAsync(repository, name, null);
     }
 
-    private void OnUpdateConfigurationProfileClicked(object sender, RoutedEventArgs e)
+    private async void OnUpdateConfigurationProfileClicked(object sender, RoutedEventArgs e)
     {
         ModConfigurationProfile? profile = GetSelectedConfigurationProfile();
-        if (profile is null)
+        if (profile is null || _applyingCombinationProfile || _restoringPersistentRuntime)
         {
             return;
         }
 
-        profile.ModRelativePaths = CaptureCurrentConfigurationProfile();
-        profile.UpdatedAtUtc = DateTimeOffset.UtcNow;
-        SaveShellConfig();
-        RefreshConfigurationProfiles();
-        ShowAppNotification($"已更新配置方案：{profile.Name}", $"Updated profile: {profile.Name}");
+        WorkspaceRepository? repository = GetSelectedRepository();
+        if (repository is null) return;
+        if (!await ShowConfirmAsync(L($"用当前启用组合覆盖“{profile.Name}”？同时保存参数时，请先按 F10 保存游戏状态。",
+            $"Replace '{profile.Name}' with the enabled combination? Save state with F10 first if including parameters."),
+            L("更新组合预设", "Update Combination Preset"))) return;
+        await SaveCombinationProfileAsync(repository, profile.Name, profile);
     }
 
     private async void OnDeleteConfigurationProfileClicked(object sender, RoutedEventArgs e)
@@ -1343,134 +1351,7 @@ public sealed partial class MainWindow : Window
 
     private async void OnApplyConfigurationProfileClicked(object sender, RoutedEventArgs e)
     {
-        ModConfigurationProfile? profile = GetSelectedConfigurationProfile();
-        WorkspaceRepository? repository = GetSelectedRepository();
-        if (profile is null || repository is null
-            || !Directory.Exists(repository.SourcePath)
-            || !Directory.Exists(repository.TargetPath))
-        {
-            await ShowMessageAsync(
-                L("配置方案或仓库路径无效。", "The profile or repository paths are invalid."),
-                L("无法应用方案", "Cannot Apply Profile"));
-            return;
-        }
-
-        List<string> desiredSources = profile.ModRelativePaths
-            .Select(relativePath => Path.GetFullPath(Path.Combine(repository.SourcePath, relativePath)))
-            .Where(path => IsPathInsideDirectory(path, repository.SourcePath) && Directory.Exists(path))
-            .Distinct(StringComparer.OrdinalIgnoreCase)
-            .GroupBy(Path.GetFileName, StringComparer.OrdinalIgnoreCase)
-            .Select(group => group.First())
-            .ToList();
-        HashSet<string> desiredNames = desiredSources
-            .Select(Path.GetFileName)
-            .Where(name => !string.IsNullOrWhiteSpace(name))
-            .Select(name => name!)
-            .ToHashSet(StringComparer.OrdinalIgnoreCase);
-
-        List<string> knownSourceMods = Directory.GetDirectories(repository.SourcePath)
-            .SelectMany(firstLevel => Directory.GetDirectories(firstLevel))
-            .ToList();
-        List<string> installSources = desiredSources
-            .Where(source => !DeploymentMatches(
-                source,
-                Path.Combine(repository.TargetPath, Path.GetFileName(source)),
-                repository.UseDirectoryLinks))
-            .ToList();
-        List<string> removeTargets = knownSourceMods
-            .Select(source => Path.Combine(repository.TargetPath, Path.GetFileName(source)))
-            .Where(target => Directory.Exists(target)
-                && (!desiredNames.Contains(Path.GetFileName(target))
-                    || installSources.Any(source => string.Equals(
-                        Path.GetFileName(source),
-                        Path.GetFileName(target),
-                        StringComparison.OrdinalIgnoreCase))))
-            .Distinct(StringComparer.OrdinalIgnoreCase)
-            .ToList();
-
-        if (installSources.Count == 0 && removeTargets.Count == 0)
-        {
-            ShowAppNotification("目标文件夹已经符合该配置方案。", "The target folder already matches this profile.");
-            return;
-        }
-
-        if (_enableConflictDetection)
-        {
-            List<string> conflicts = await Task.Run(() => installSources
-                .SelectMany(source => DetectModFileConflicts(source, repository.TargetPath, Path.Combine(repository.TargetPath, Path.GetFileName(source))))
-                .Distinct(StringComparer.OrdinalIgnoreCase)
-                .Take(100)
-                .ToList());
-            if (conflicts.Count > 0 && !await ConfirmInstallConflictsAsync(conflicts))
-            {
-                return;
-            }
-        }
-
-        bool confirmed = await ShowConfirmAsync(
-            L(
-                $"应用配置方案“{profile.Name}”？\n\n将安装 {installSources.Count} 个 Mod，移除 {removeTargets.Count} 个 Mod。操作前会自动建立备份。",
-                $"Apply profile \"{profile.Name}\"?\n\n{installSources.Count} mods will be installed and {removeTargets.Count} removed. A backup will be created first."),
-            L("应用配置方案", "Apply Configuration Profile"));
-        if (!confirmed)
-        {
-            return;
-        }
-
-        List<string> affectedTargets = installSources
-            .Select(source => Path.Combine(repository.TargetPath, Path.GetFileName(source)))
-            .Concat(removeTargets)
-            .Distinct(StringComparer.OrdinalIgnoreCase)
-            .ToList();
-        string? transactionPath = null;
-        SetBusyState(true);
-        try
-        {
-            transactionPath = await CreateInstallTransactionAsync(
-                L($"应用配置方案：{profile.Name}", $"Apply profile: {profile.Name}"),
-                repository,
-                affectedTargets);
-
-            foreach (string target in removeTargets)
-            {
-                await Task.Run(() => DeleteDirectoryTreeSafely(target));
-            }
-
-            int completed = 0;
-            foreach (string source in installSources)
-            {
-                string target = Path.Combine(repository.TargetPath, Path.GetFileName(source));
-                var progress = new Progress<ProgressInfo>(info =>
-                {
-                    double itemProgress = info.Percent / 100d;
-                    int percent = (int)Math.Round((completed + itemProgress) * 100d / Math.Max(1, installSources.Count));
-                    UpdateProgress(percent, L($"正在应用方案：{Path.GetFileName(source)}", $"Applying profile: {Path.GetFileName(source)}"));
-                });
-                await DeployModAsync(source, target, repository, progress);
-                completed++;
-            }
-
-            CommitInstallTransaction(transactionPath);
-            UpdateProgress(100, L("配置方案应用完成", "Profile applied"));
-            ShowAppNotification($"已应用配置方案：{profile.Name}", $"Applied profile: {profile.Name}");
-        }
-        catch (Exception ex)
-        {
-            if (!string.IsNullOrWhiteSpace(transactionPath))
-            {
-                await RollbackInstallTransactionAsync(transactionPath, clearLastTransaction: true);
-            }
-
-            await ShowMessageAsync(
-                L("应用配置方案失败，已恢复操作前状态：", "Applying the profile failed and the previous state was restored: ") + ex.Message,
-                L("方案应用失败", "Profile Apply Failed"));
-        }
-        finally
-        {
-            SetBusyState(false);
-            await RefreshListsAsync();
-            RefreshConfigurationProfiles();
-        }
+        await RestoreCombinationProfileAsync();
     }
 
     private List<string> DetectModFileConflicts(string sourcePath, string targetRoot, string targetPathToIgnore)
@@ -2161,9 +2042,11 @@ public sealed partial class MainWindow : Window
 
         if (!File.Exists(_shellConfigPath))
         {
+            fallbackRepository = TryCreatePersistentDemoRepository() ?? fallbackRepository;
             _repositories.Add(fallbackRepository);
             _selectedRepositoryId = fallbackRepository.Id;
             SaveShellConfig();
+            ApplySelectedRepositoryToInputs();
             return;
         }
 
@@ -2193,7 +2076,7 @@ public sealed partial class MainWindow : Window
                 "settings" => PrimarySection.Settings,
                 _ => PrimarySection.Dashboard
             };
-            _updateCheckInterval = ParseUpdateCheckInterval(config?.UpdateCheckInterval);
+            _updateCheckInterval = AppSelfUpdateEnabled ? ParseUpdateCheckInterval(config?.UpdateCheckInterval) : UpdateCheckInterval.Manual;
             _lastUpdateCheckUtc = TryParseDateTimeOffset(config?.LastUpdateCheckUtc);
             _modUpdateCheckInterval = ParseUpdateCheckInterval(config?.ModUpdateCheckInterval);
             _lastModUpdateCheckUtc = TryParseDateTimeOffset(config?.LastModUpdateCheckUtc);
@@ -2204,7 +2087,7 @@ public sealed partial class MainWindow : Window
             _latestReleaseUrl = config?.LatestReleaseUrl;
             _latestReleasePackageUrl = config?.LatestReleasePackageUrl;
             _latestReleaseSha256Url = config?.LatestReleaseSha256Url;
-            _checkAppUpdatesOnStartup = config?.CheckAppUpdatesOnStartup ?? true;
+            _checkAppUpdatesOnStartup = ApplicationReleasePolicy.CanCheckApplicationUpdates(config?.CheckAppUpdatesOnStartup ?? false);
             _installBackupLimitGb = Math.Clamp(config?.InstallBackupLimitGb ?? DefaultInstallBackupLimitGb, 0.5, 100);
             _reduceMotion = config?.ReduceMotion ?? false;
             _minimizeToTray = config?.MinimizeToTray ?? false;
@@ -2219,6 +2102,14 @@ public sealed partial class MainWindow : Window
                 _configurationProfiles.AddRange(config.ConfigurationProfiles
                     .Where(profile => !string.IsNullOrWhiteSpace(profile.Id)
                         && !string.IsNullOrWhiteSpace(profile.RepositoryId)));
+            }
+            if (config?.ModPersistentSlots is { Count: > 0 })
+            {
+                _modPersistentSlots.AddRange(config.ModPersistentSlots.Where(slot =>
+                    !string.IsNullOrWhiteSpace(slot.Id)
+                    && !string.IsNullOrWhiteSpace(slot.RepositoryId)
+                    && !string.IsNullOrWhiteSpace(slot.ModRelativePath)
+                    && slot.Values is { Count: > 0 }));
             }
 
             _selectedConfigurationProfileId = _configurationProfiles.Any(profile => profile.Id == config?.SelectedConfigurationProfileId)
@@ -2250,7 +2141,7 @@ public sealed partial class MainWindow : Window
             _latestReleaseUrl = null;
             _latestReleasePackageUrl = null;
             _latestReleaseSha256Url = null;
-            _checkAppUpdatesOnStartup = true;
+            _checkAppUpdatesOnStartup = false;
             _installBackupLimitGb = DefaultInstallBackupLimitGb;
             _reduceMotion = false;
             _minimizeToTray = false;
@@ -2335,6 +2226,7 @@ public sealed partial class MainWindow : Window
                 EnableConflictDetection = _enableConflictDetection,
                 LastInstallTransactionPath = _lastInstallTransactionPath,
                 ConfigurationProfiles = [.. _configurationProfiles],
+                ModPersistentSlots = [.. _modPersistentSlots],
                 WindowX = _savedWindowX,
                 WindowY = _savedWindowY,
                 WindowWidth = _savedWindowWidth,
@@ -2377,12 +2269,14 @@ public sealed partial class MainWindow : Window
             _isApplyingRepositoryDeploymentMode = true;
             LinkDeploymentToggleSwitch.IsOn = false;
             _isApplyingRepositoryDeploymentMode = false;
+            RefreshPersistentSlotControls();
             return;
         }
 
         SourceTextBox.Text = repository.SourcePath;
         TargetTextBox.Text = repository.TargetPath;
         LauncherTextBox.Text = repository.LauncherPath;
+        RefreshPersistentSlotControls();
         _isApplyingRepositoryDeploymentMode = true;
         try
         {
@@ -10207,7 +10101,7 @@ public sealed partial class MainWindow : Window
 
     private void ApplyLanguage()
     {
-        Title = L($"集成化 Mod 管理器 {AppVersion}", $"Integrated Mod Manager {AppVersion}");
+        Title = L($"集成化 Mod 管理器 {AppVersion} · 测试版", $"Integrated Mod Manager {AppVersion} · Beta");
 
         BetaTitleTextBlock.Text = _shellLayoutMode == ShellLayoutMode.Compact
             ? "管理器"
@@ -10310,7 +10204,7 @@ public sealed partial class MainWindow : Window
             : UpdateStatusTextBlock.Text;
 
         HeaderTitleTextBlock.Text = L("集成化mod管理器", "Integrated Mod Manager");
-        HeaderFrameworkBadgeTextBlock.Text = "WinUI 3";
+        HeaderFrameworkBadgeTextBlock.Text = L("组合与状态预设 · Beta", "Combination & State Presets · Beta");
         HeaderVersionBadgeTextBlock.Text = AppVersion;
         HeaderSubtitleTextBlock.Text = string.Empty;
         HeaderCaptionTextBlock.Text = L(
@@ -10369,8 +10263,8 @@ public sealed partial class MainWindow : Window
         ShortcutSectionSubtitleTextBlock.Text = L("当前选中 Mod 的快捷键说明", "Shortcut notes for the selected mod");
         AddShortcutRowButton.Content = L("新增一行", "Add Row");
         ShortcutHintTextBlock.Text = L(
-            "下载、导入或首次选择 Mod 时会自动读取 .ini 的 [Key] 段；识别结果可在这里手动修正。管理器全局快捷键仍要求至少两个按键组合。",
-            "After download, import, or first selection, [Key] sections are read from the Mod INI files. Detected notes can be adjusted here; manager-wide shortcuts still require at least two keys.");
+            "自动读取 Mod INI 的 [Key] 段，可手动修正；这里只记录游戏快捷键，不会在管理器中跳转或部署 Mod。",
+            "Reads [Key] sections from Mod INIs; notes can be edited. These are game shortcuts only and never select or deploy Mods in the manager.");
 
         PreviewSectionTitleTextBlock.Text = L("默认图片预览", "Image Preview");
         PreviewSectionSubtitleTextBlock.Text = L(
@@ -10437,8 +10331,9 @@ public sealed partial class MainWindow : Window
         ShortcutSectionTitleTextBlock.Text = L("快捷键与描述", "Shortcut and Description");
         ShortcutSectionSubtitleTextBlock.Text = L("为当前选中的 Mod 记录快捷键和描述", "Record a shortcut and description for the selected mod");
         ShortcutHintTextBlock.Text = L(
-            "点击快捷键输入框后可直接按键录入，支持单键、组合键和符号键；当前窗口聚焦时，按已绑定的快捷键会定位并执行对应 Mod。",
-            "Click a shortcut box and press a key to capture it. Single keys, key combinations, and symbol keys are supported; when this window is focused, the bound shortcut will locate and run the corresponding mod.");
+            "点击输入框录入游戏快捷键，支持单键、组合键和符号键；这里只保存说明，不触发 Mod 切换或部署。Tab 与窗口切换组合不会覆盖记录。",
+            "Click a box to record game keys, combinations, or symbols. Notes never switch or deploy Mods. Tab and window-switching combinations do not overwrite the record.");
+        RefreshPersistentSlotControls();
     }
 
     private void ApplyActionButtonPresentation()
@@ -11038,6 +10933,12 @@ public sealed partial class MainWindow : Window
             return;
         }
 
+        // Tab belongs to focus/window navigation. Never overwrite a shortcut
+        // while the user is leaving the app or moving between editor fields.
+        if (e.Key == VirtualKey.Tab
+            || IsModifierDown(VirtualKey.LeftWindows) || IsModifierDown(VirtualKey.RightWindows)
+            || (IsModifierDown(VirtualKey.Menu) && e.Key is VirtualKey.Escape or VirtualKey.F4)) return;
+
         if (e.KeyStatus.WasKeyDown || e.KeyStatus.RepeatCount > 1)
         {
             e.Handled = true;
@@ -11159,7 +11060,7 @@ public sealed partial class MainWindow : Window
 
     private void OnUpdateCheckIntervalSelectionChanged(object sender, SelectionChangedEventArgs e)
     {
-        if (_isApplyingUpdateCheckIntervalSelection || UpdateCheckIntervalComboBox.SelectedItem is not ComboBoxItem { Tag: UpdateCheckInterval interval })
+        if (!AppSelfUpdateEnabled || _isApplyingUpdateCheckIntervalSelection || UpdateCheckIntervalComboBox.SelectedItem is not ComboBoxItem { Tag: UpdateCheckInterval interval })
         {
             return;
         }
@@ -11523,6 +11424,11 @@ public sealed partial class MainWindow : Window
 
     private async void OnInstallUpdateClicked(object sender, RoutedEventArgs e)
     {
+        if (!AppSelfUpdateEnabled)
+        {
+            await OpenExternalUrlAsync(ApplicationReleasePolicy.ReleasePageUrl, L("打开测试版发布页失败", "Failed to open the beta release page"));
+            return;
+        }
         DetectLocalUpdatePackage();
         if (_localUpdatePackageVersion is not null && !string.IsNullOrWhiteSpace(_localUpdatePackagePath))
         {
@@ -11621,6 +11527,11 @@ public sealed partial class MainWindow : Window
         _localUpdatePackagePath = null;
         _localUpdatePackageVersion = null;
 
+        if (!AppSelfUpdateEnabled)
+        {
+            return;
+        }
+
         string installRoot = GetInstallRootPath();
         if (!Directory.Exists(installRoot) || !TryParseVersion(AppVersion, out Version currentVersion))
         {
@@ -11669,6 +11580,7 @@ public sealed partial class MainWindow : Window
 
     private async Task PromptAndStartLocalUpdateAsync()
     {
+        if (!AppSelfUpdateEnabled) { return; }
         if (_localUpdatePackageVersion is null || string.IsNullOrWhiteSpace(_localUpdatePackagePath))
         {
             return;
@@ -11691,6 +11603,7 @@ public sealed partial class MainWindow : Window
 
     private async Task StartLocalUpdateAsync(string packagePath)
     {
+        if (!AppSelfUpdateEnabled) { return; }
         try
         {
             string installRoot = GetInstallRootPath();
@@ -11748,6 +11661,7 @@ public sealed partial class MainWindow : Window
 
     private async Task CheckForUpdatesAsync(bool showDialogs, bool promptIfAvailable = false)
     {
+        if (!AppSelfUpdateEnabled) { return; }
         if (_isCheckingUpdates)
         {
             return;
@@ -11805,7 +11719,7 @@ public sealed partial class MainWindow : Window
         finally
         {
             _isCheckingUpdates = false;
-            CheckUpdatesButton.IsEnabled = true;
+            CheckUpdatesButton.IsEnabled = AppSelfUpdateEnabled;
             RefreshSettingsPane();
         }
     }
@@ -11949,8 +11863,13 @@ public sealed partial class MainWindow : Window
 
     private async void OnRootKeyDown(object sender, KeyRoutedEventArgs e)
     {
+        if (_applyingCombinationProfile || _restoringPersistentRuntime) return;
         bool controlDown = InputKeyboardSource.GetKeyStateForCurrentThread(VirtualKey.Control).HasFlag(CoreVirtualKeyStates.Down);
         bool altDown = InputKeyboardSource.GetKeyStateForCurrentThread(VirtualKey.Menu).HasFlag(CoreVirtualKeyStates.Down);
+
+        if (e.Key == VirtualKey.Tab
+            || IsModifierDown(VirtualKey.LeftWindows) || IsModifierDown(VirtualKey.RightWindows)
+            || (altDown && e.Key is VirtualKey.Escape or VirtualKey.F4)) return;
 
         if (controlDown && e.Key == VirtualKey.F)
         {
@@ -12010,11 +11929,8 @@ public sealed partial class MainWindow : Window
             }
         }
 
-        string shortcut = BuildShortcutFromEvent(e);
-        if (!string.IsNullOrEmpty(shortcut) && await TryRunBoundShortcutAsync(shortcut))
-        {
-            e.Handled = true;
-        }
+        // Mod shortcut rows describe controls used inside the game, not manager
+        // navigation/deployment commands. Never run them on Alt+Tab or other keys.
     }
 
     private void OnRootGridPointerPressed(object sender, PointerRoutedEventArgs e)
@@ -12709,11 +12625,17 @@ public sealed partial class MainWindow : Window
         }
     }
 
+    private int _folderRefreshGeneration;
+
     private async Task RefreshListsAsync()
     {
+        int generation = ++_folderRefreshGeneration;
+        string? previousMod = _currentSecondLevelPath;
+        string? previousCategory = (FirstLevelListView.SelectedItem as FirstLevelFolderItem)?.Path;
         _firstLevelItems.Clear();
         _secondLevelItems.Clear();
         _currentSecondLevelPath = null;
+        RefreshPersistentSlotControls();
         FirstCountTextBlock.Text = "0";
         SecondCountTextBlock.Text = "0";
         CurrentFolderTextBlock.Text = StateNotSelectedText;
@@ -12747,6 +12669,9 @@ public sealed partial class MainWindow : Window
 
             DispatcherQueue.TryEnqueue(() =>
             {
+                if (generation != _folderRefreshGeneration
+                    || !string.Equals(sourceDir, (SourceTextBox.Text ?? string.Empty).Trim(), StringComparison.OrdinalIgnoreCase)
+                    || !string.Equals(targetDir, (TargetTextBox.Text ?? string.Empty).Trim(), StringComparison.OrdinalIgnoreCase)) return;
                 _allFirstLevelItems.Clear();
                 _allFirstLevelItems.AddRange(loadedItems);
                 ApplyFirstLevelFilter();
@@ -12757,7 +12682,9 @@ public sealed partial class MainWindow : Window
                     $"Loaded {_allFirstLevelItems.Count} first-level folders and {secondCount} second-level folders.");
                 if (_firstLevelItems.Count > 0)
                 {
-                    FirstLevelListView.SelectedIndex = 0;
+                    SelectFirstLevelByPath(previousCategory);
+                    if (!string.IsNullOrEmpty(previousMod)) SelectSecondLevelByPath(previousMod);
+                    if (FirstLevelListView.SelectedItem is null) FirstLevelListView.SelectedIndex = 0;
                 }
             });
         });
@@ -12825,6 +12752,7 @@ public sealed partial class MainWindow : Window
         ShowSecondLevelDetails(item, preserveStatus);
         LoadBindingsForCurrentMod(item);
         LoadLinkForCurrentMod(item);
+        RefreshPersistentSlotControls();
     }
 
     private void SetStateColor(string? state)
@@ -13449,47 +13377,6 @@ public sealed partial class MainWindow : Window
         {
             _isLoadingBindings = false;
         }
-    }
-
-    private async Task<bool> TryRunBoundShortcutAsync(string shortcut)
-    {
-        string normalized = NormalizeShortcut(shortcut);
-        foreach ((string path, List<ShortcutBinding> bindings) in _modBindings)
-        {
-            if (bindings.Any(binding => NormalizeShortcut(binding.Shortcut) == normalized))
-            {
-                SecondLevelFolderItem? secondItem = FindSecondLevelByPath(path);
-                if (secondItem is null)
-                {
-                    continue;
-                }
-
-                SelectSecondLevelByPath(secondItem.Path);
-                await EnsureDirectoryCopiedAsync(secondItem);
-                return true;
-            }
-        }
-
-        return false;
-    }
-
-    private async Task EnsureDirectoryCopiedAsync(SecondLevelFolderItem item)
-    {
-        string targetDir = (TargetTextBox.Text ?? string.Empty).Trim();
-        if (string.IsNullOrWhiteSpace(targetDir) || !Directory.Exists(targetDir))
-        {
-            StatusTextBlock.Text = L("快捷键执行失败：请先设置有效的目标文件夹。", "Shortcut failed: choose a valid target folder first.");
-            return;
-        }
-
-        string targetPath = GetTargetDirectoryPath(targetDir, item.Path);
-        if (Directory.Exists(targetPath))
-        {
-            StatusTextBlock.Text = item.Name + L(" 已通过快捷键定位，当前已经复制。", " was located by shortcut and is already copied.");
-            return;
-        }
-
-        await ToggleDirectoryCopyAsync(item);
     }
 
     private void SelectSecondLevelByPath(string? path)
@@ -14610,6 +14497,8 @@ public sealed class WorkspaceRepository
 
     public string LauncherPath { get; set; } = string.Empty;
 
+    public string PersistentUserIniPath { get; set; } = string.Empty;
+
     public string OnlineSourceSite { get; set; } = string.Empty;
 
     public string OnlineGameName { get; set; } = string.Empty;
@@ -14924,6 +14813,8 @@ public sealed class BetaShellConfig
 
     public List<ModConfigurationProfile> ConfigurationProfiles { get; set; } = [];
 
+    public List<ModPersistentSlot> ModPersistentSlots { get; set; } = [];
+
     public int? WindowX { get; set; }
 
     public int? WindowY { get; set; }
@@ -14945,7 +14836,27 @@ public sealed class ModConfigurationProfile
 
     public List<string> ModRelativePaths { get; set; } = [];
 
+    public bool IncludesPersistentState { get; set; }
+
+    public List<ModConfigurationPersistentState> PersistentStates { get; set; } = [];
+
     public DateTimeOffset UpdatedAtUtc { get; set; } = DateTimeOffset.UtcNow;
+}
+
+public sealed class ModConfigurationPersistentState
+{
+    public string ModRelativePath { get; set; } = string.Empty;
+    public List<ModPersistentValue> Values { get; set; } = [];
+}
+
+public sealed class ModPersistentSlot
+{
+    public string Id { get; set; } = Guid.NewGuid().ToString("N");
+    public string RepositoryId { get; set; } = string.Empty;
+    public string ModRelativePath { get; set; } = string.Empty;
+    public string Name { get; set; } = string.Empty;
+    public DateTimeOffset SavedAtUtc { get; set; } = DateTimeOffset.UtcNow;
+    public List<ModPersistentValue> Values { get; set; } = [];
 }
 
 public sealed class ModInstallTransaction

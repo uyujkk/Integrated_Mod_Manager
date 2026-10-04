@@ -23,7 +23,7 @@ public sealed partial class MainWindow
     private readonly HashSet<string> _favoriteCharacterKeys = new(StringComparer.OrdinalIgnoreCase);
     private bool _systemHighContrast;
     private bool _systemAnimationsEnabled = true;
-    private bool _checkAppUpdatesOnStartup = true;
+    private bool _checkAppUpdatesOnStartup = false;
     private bool _isApplyingStartupUpdateSetting;
     private bool _isApplyingBackupLimitSetting;
     private bool _useWideTrackedModsLayout;
@@ -348,6 +348,7 @@ public sealed partial class MainWindow
 
     private async Task DownloadAndInstallApplicationUpdateAsync(LatestReleaseInfo release)
     {
+        if (!AppSelfUpdateEnabled) { return; }
         if (string.IsNullOrWhiteSpace(release.PackageUrl) || !TryParseVersion(release.Tag, out Version releaseVersion))
         {
             await ShowMessageAsync(
@@ -452,7 +453,7 @@ public sealed partial class MainWindow
             return;
         }
 
-        _checkAppUpdatesOnStartup = StartupUpdateToggleSwitch.IsOn;
+        _checkAppUpdatesOnStartup = ApplicationReleasePolicy.CanCheckApplicationUpdates(StartupUpdateToggleSwitch.IsOn);
         SaveShellConfig();
     }
 
@@ -460,8 +461,14 @@ public sealed partial class MainWindow
     {
         StartupUpdateTitleTextBlock.Text = L("启动时检查软件更新", "Check for app updates at startup");
         StartupUpdateDescriptionTextBlock.Text = L("发现新版本时询问是否下载，完成后自动重启并保留本地配置。", "Ask before downloading a new version, then restart automatically while preserving local settings.");
+        if (!AppSelfUpdateEnabled)
+        {
+            _checkAppUpdatesOnStartup = false;
+            StartupUpdateDescriptionTextBlock.Text = L("4.0-beta 不接入软件自动更新，请从测试版发布页手动下载。", "4.0-beta is not connected to app updates. Download manually from its release page.");
+        }
         _isApplyingStartupUpdateSetting = true;
         StartupUpdateToggleSwitch.IsOn = _checkAppUpdatesOnStartup;
+        StartupUpdateToggleSwitch.IsEnabled = AppSelfUpdateEnabled;
         StartupUpdateToggleSwitch.OnContent = L("开", "On");
         StartupUpdateToggleSwitch.OffContent = L("关", "Off");
         _isApplyingStartupUpdateSetting = false;

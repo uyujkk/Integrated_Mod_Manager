@@ -6,7 +6,20 @@
 
 This document records the major changes in published versions of Integrated Mod Manager.
 
-## 未发布修正 / Unreleased Fix
+## v4.0-beta - Mod 组合与状态预设 / Mod Combination and State Presets
+
+- 保存多 Mod 启用组合及数值型持久状态；恢复时先部署组合，再精确回写 `d3dx_user.ini`，不修改 Mod INI 默认值。支持同一 Mod 的多个状态槽位。
+- 恢复前预览并确认游戏/加载器已退出，备份部署及参数文件，拒绝 namespace 冲突、重复部署名和并发修改。
+- 修复 Alt+Tab 触发 Mod 选择/部署路径；游戏快捷键仅作为说明。
+- 独立 Beta 分支、安装目录及预发布包，不接入软件自动更新、不替换稳定版。
+- Save enabled-mod combinations with numeric persistent state. Restore deployment first, then matching `d3dx_user.ini` values, without rewriting Mod INI defaults. Multiple slots per mod are supported.
+- Preview changes, require the user to confirm the game/loader are closed, back up before writing, and reject namespace/name collisions or concurrent edits.
+- Prevent Alt+Tab from entering the mod selection/deployment shortcut path. Game shortcuts remain notes.
+- Independent beta branch and prerelease package; application updates are disabled and the stable release is unchanged.
+
+详见 / See [v4.0-beta](./v4.0-beta.md)。当前实际游戏恢复成功来自用户测试确认，仍需扩展兼容性测试。 / Real-game restoration was confirmed by the user in their setup; broader compatibility remains to be tested.
+
+## 其他未发布修正 / Other Unreleased Fix
 
 - 更新器源码现在按主程序 ZIP 文件名精确选择对应的 `.sha256` 附件，仅在没有专属文件时回退到 `SHA256SUMS.txt`；不会误选独立开发者工具的校验文件。此源码修正尚未进入 v3.9.5 二进制包。
 - The updater source now pairs the main ZIP with its exact `.sha256` sidecar, falling back to `SHA256SUMS.txt` only when needed. It will not select the standalone Developer Tools sidecar. This source fix is not included in the v3.9.5 binary package.

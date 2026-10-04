@@ -22,9 +22,11 @@
 
 ## 项目简介
 
+> **4.0-beta 分支：**[下载独立测试版](https://github.com/uyujkk/Integrated_Mod_Manager/releases/tag/v4.0-beta)，测试 Mod 组合与持久状态预设。请分开解压，运行 `IntegratedModManager-Beta.exe`。本版禁用软件自动更新，稳定版仍为 v3.9.5。操作步骤见[测试指南](./docs/research/state-slots-test-guide.zh-CN.md)。
+
 集成化 Mod 管理器以独立“仓库”管理不同游戏或不同 Mod 环境。它可以在本地仓库和游戏实际读取的目标目录之间复制或移除完整 Mod 文件夹，并集中管理预览图、来源链接、快捷键说明、在线下载、更新记录、配置方案和安装备份。
 
-当前版本为 **v3.9.5**，文件版本为 `3.9.5.0`，工具维护者为 `uyujkk`。本次 Bandizip 备用解压功能由 [CaramelizedCUDA](https://github.com/CaramelizedCUDA) 贡献。
+当前稳定版为 **v3.9.5**，文件版本为 `3.9.5.0`；此分支为 **v4.0-beta**（`4.0.0.0`）。工具维护者为 `uyujkk`，既有 Bandizip 备用解压功能由 [CaramelizedCUDA](https://github.com/CaramelizedCUDA) 贡献。
 
 ## 核心功能
 

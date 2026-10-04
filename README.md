@@ -22,9 +22,11 @@
 
 ## Overview
 
+> **4.0-beta branch:** [Download the independent beta](https://github.com/uyujkk/Integrated_Mod_Manager/releases/tag/v4.0-beta) for mod-combination and persistent-state presets. Extract it separately and run `IntegratedModManager-Beta.exe`. App self-updates are disabled; the stable release remains v3.9.5. See the [beta guide](./docs/guides/Beta-Presets.en.md).
+
 Integrated Mod Manager organizes different games or mod environments into independent repositories. It copies or removes complete mod folders between a local library and the target directory read by the game, while keeping preview images, source links, shortcut notes, online downloads, update records, profiles, and installation backups in one application.
 
-The current version is **v3.9.5**, with file version `3.9.5.0`. The tool is maintained by `uyujkk`. The Bandizip extraction fallback in this release was contributed by [CaramelizedCUDA](https://github.com/CaramelizedCUDA).
+The current stable version is **v3.9.5**, with file version `3.9.5.0`. This branch contains **v4.0-beta** (`4.0.0.0`). The tool is maintained by `uyujkk`. The Bandizip extraction fallback was contributed by [CaramelizedCUDA](https://github.com/CaramelizedCUDA).
 
 ## Core Features
 
