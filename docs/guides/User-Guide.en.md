@@ -1,4 +1,4 @@
-# Integrated Mod Manager v3.9.5 - Complete User Guide
+# Integrated Mod Manager v4.0.0 - Complete User Guide
 
 > For Windows 10/11 x64. Tool author: uyujkk.
 >
@@ -15,9 +15,9 @@ The left navigation contains:
 | Area | Purpose |
 | --- | --- |
 | Dashboard | Review repositories, mod counts, and path health; create or switch repositories |
-| Repository | Manage two-level local folders, copy toggles, previews, links, and shortcut notes |
-| Online | Browse GameBanana by character, inspect images and requirements, then download |
-| Updates | Manage profiles, conflicts, rollback backups, download tasks, and tracked mod updates |
+| Repository | Files, Covers, and combination/state presets; deployment, previews, shortcuts, and state slots |
+| Online | Browse GameBanana by character, inspect images, requirements, and installed status, then download |
+| Updates | Tracked Mods, downloads, install safety, and backups; the preset entry opens Repositories |
 | Settings | Configure language, theme, motion, online categories, app updates, backups, and diagnostics |
 
 ## 2. Installation and startup
@@ -27,7 +27,7 @@ The left navigation contains:
 - Windows 10 version 1809 or later; Windows 11 is recommended.
 - 64-bit Windows (x64).
 - Network access for online mods, translation, update checks, and GitHub reports.
-- The release is self-contained; regular users do not need Visual Studio or the .NET SDK.
+- Windows App SDK files are bundled. The .NET 8 x64 runtime is required; regular users do not need Visual Studio or the .NET SDK.
 
 ### 2.2 Install and run
 
@@ -37,6 +37,10 @@ The left navigation contains:
 4. Run `IntegratedModManager.exe`.
 
 The executable is not currently signed with a commercial code-signing certificate, so SmartScreen may report an unknown publisher. Download only from this project's Releases page, inspect the source if desired, and do not disable Microsoft Defender just to run the app.
+
+### 2.3 Upgrade from an earlier version
+
+Back up the full app, target Mods folder, and active loader's `d3dx_user.ini`. Stable 3.x can update after confirmation. The separate 4.0-beta cannot self-update: extract the stable app separately and migrate your own settings using the [4.0 upgrade guide](./Upgrade-v4.0.en.md). Standalone Developer Tools remains at 3.9.5 and is not bundled with the main app.
 
 ## 3. Repositories and folder model
 
@@ -75,8 +79,9 @@ Mod Storage Folder
 
 ### 4.3 Second-level mods and copy toggling
 
-- Select a mod to load its preview, link, shortcut notes, and current copy state.
-- Double-click it or use the primary copy button to toggle it.
+- Select Files, Covers, or Presets at the top. New configurations default to Files; switching views keeps the logical selection and does not deploy Mods.
+- Single-click selects only, loading previews, links, shortcuts, and deployment state. Wide windows show inline details; narrow windows use Details.
+- Double-click or use the deployment action at the bottom of Details to toggle deployment. Lists scroll inside panels rather than moving the whole page.
 - If the target has no folder with the same name, the whole mod folder is copied.
 - If the same folder already exists, toggling again removes it from the target.
 - The delete button removes the source mod after a confirmation prompt. This is separate from removing a copied target folder.
@@ -114,11 +119,11 @@ After selecting a mod, drag an image onto the preview area to set it. The source
 
 ### 4.6 Shortcut and action notes
 
-- Store up to 10 shortcut/action rows per mod.
+- The shortcut/action editor no longer has a 10-row limit. Automatic INI scanning retains a 256-result safety cap.
 - Focus the shortcut field and press the desired key or chord.
 - Single keys, combinations, function keys, and symbols are supported, for example `Q`, `1`, `F1`, `Ctrl+1`, `Shift+F2`, `Alt+Q`, `/`, `;`, `[`, `]`, and `\`.
 - These are notes for the mod; the app does not register system-wide hotkeys.
-- Online downloads try to extract shortcut instructions. Chinese UI attempts to translate the action text; English UI keeps the source text.
+- Read-only detection from Mod INI `[Key...]` sections formats action descriptions for the current app language. Unknown custom names may need manual editing. Online text extraction and translation supplement this and cannot cover every author's format.
 
 ### 4.7 External launcher
 
@@ -172,7 +177,11 @@ The app does not bypass logins, captchas, payments, subscriptions, permission ch
 
 ### 6.1 Profiles
 
-A profile records a repository's enabled mod set. Create, update, apply, or delete profiles to switch complete combinations for characters, game versions, or test setups.
+Open Presets at the top of Repositories to create, update, delete, or restore this repository's combinations. Save only the enabled Mod set, or include `d3dx_user.ini` values. The member panel shows saved members and value counts; older deployment-only profiles remain supported.
+
+Adjust appearance in game and have the loader save it first (usually F10; check the actual file timestamp). Before restoration, exit the game and loader and review the install/remove and parameter preview. Recognized deployments are restored first, then matching numeric `global persist` values, leaving Mod INIs and unrelated values unchanged. No keys are sent to the game. See the [full preset guide](./Combination-Presets.en.md).
+
+Individual Mod state slots are in Details. They hold different states of the same Mod, not settings transferred to unrelated Mods. Unknown deployments, missing sources, duplicate names, namespace conflicts, invalid values, or concurrent changes prevent restoration.
 
 ### 6.2 Conflict detection
 
@@ -184,6 +193,7 @@ Before installation or profile application, the app checks target paths and file
 - Failed operations roll back automatically; the most recent successful change can also be undone manually.
 - The backup list shows creation time, affected mods, disk usage, and a Restore action.
 - Set a 0.5-100 GB storage cap in Settings. Old backups are pruned by age when the cap is exceeded.
+- Parameter writes create separate `d3dx_user.ini.imm-persist-*.bak` files beside the parameter file. Deployment Undo does not undo parameters. Never restore them while the game is running or overwrite newer valid changes with an old backup.
 
 ### 6.4 Tracked mod updates
 
@@ -197,6 +207,7 @@ Successful online installations store the remote ID, source URL, preview, and la
 - The main app exits, files are replaced, and the app restarts. Repositories, paths, UI settings, per-mod notes, and SQLite data are preserved.
 - Old files are backed up and startup failure triggers rollback.
 - You may also place a correctly named newer release ZIP beside the current executable and restart; the app will detect it and ask whether to update.
+- 4.0.0 uses the stable update channel; the separate beta does not enter it automatically. Use the `.zip.sha256` matching the exact main ZIP filename, not another package's checksum file.
 
 ## 8. Settings, data, and privacy
 
@@ -213,13 +224,15 @@ Successful online installations store the remote ID, source URL, preview, and la
 | File or folder | Purpose |
 | --- | --- |
 | `config.ini` | Theme, language, shortcuts, mod links, and online-install metadata |
-| `beta-shell.json` | Repositories, current page, online categories, and update options |
+| `beta-shell.json` | Repositories, current page, online categories, update options, `ConfigurationProfiles`, and `ModPersistentSlots` |
 | SQLite database | Online pages, characters, details, metrics, favorites, versions, and file index |
 | `cache/online-images` | Re-creatable online image cache |
 | `backups` | Configuration, installation transaction, and software-update backups |
 | `startup.log` | Launcher startup diagnostics when needed |
 
 Configuration writes are atomic and rotated backups are retained. A damaged main configuration is recovered from the latest valid backup when possible.
+
+The loader's `d3dx_user.ini` may be outside the app directory. Select and separately back up the active file. Capturing state depends on the loader saving it; a successful file write alone does not prove correct in-game rendering.
 
 ### 8.3 Diagnostic report
 

@@ -43,14 +43,17 @@ public sealed class ArchiveProcessRunnerTests
 
         using var processes = new TemporaryProcesses();
         string childScript = $"[IO.File]::WriteAllText('{processes.ChildIdPath}', [string]$PID); Start-Sleep -Seconds 600";
-        string script = $"[IO.File]::WriteAllText('{processes.ParentIdPath}', [string]$PID); " +
+        string script = "$ErrorActionPreference = 'Stop'; " + $"[IO.File]::WriteAllText('{processes.ParentIdPath}', [string]$PID); " +
             $"$child = Start-Process -FilePath '{PowerShellPath}' -ArgumentList '-NoProfile','-NonInteractive','-EncodedCommand','{Encode(childScript)}' -WindowStyle Hidden -PassThru; " +
             "Start-Sleep -Seconds 600";
         ProcessStartInfo startInfo = CreatePowerShellStartInfo(script);
         var stopwatch = Stopwatch.StartNew();
 
         var exception = Assert.Throws<TimeoutException>(() =>
-            ArchiveProcessRunner.Run(startInfo, ProcessTreeTimeout));
+        {
+            var result = ArchiveProcessRunner.Run(startInfo, ProcessTreeTimeout);
+            Assert.Fail($"The timeout fixture exited early: {result.ExitCode}. {result.Error} {result.Output}");
+        });
 
         Assert.Contains(startInfo.FileName, exception.Message);
         Assert.Null(exception.InnerException);
@@ -69,7 +72,7 @@ public sealed class ArchiveProcessRunnerTests
         using var processes = new TemporaryProcesses();
         string childScript = $"[IO.File]::WriteAllText('{processes.ChildIdPath}', [string]$PID); Start-Sleep -Seconds 600";
         // Redirecting stdin makes CreateProcess inherit the parent's stdout/stderr handles.
-        string script = $"[IO.File]::WriteAllText('{processes.ParentIdPath}', [string]$PID); " +
+        string script = "$ErrorActionPreference = 'Stop'; " + $"[IO.File]::WriteAllText('{processes.ParentIdPath}', [string]$PID); " +
             "$info = New-Object Diagnostics.ProcessStartInfo; " +
             $"$info.FileName = '{PowerShellPath}'; " +
             $"$info.Arguments = '-NoProfile -NonInteractive -EncodedCommand {Encode(childScript)}'; " +
@@ -78,7 +81,10 @@ public sealed class ArchiveProcessRunnerTests
         var stopwatch = Stopwatch.StartNew();
 
         var exception = Assert.Throws<TimeoutException>(() =>
-            ArchiveProcessRunner.Run(CreatePowerShellStartInfo(script), ProcessTreeTimeout));
+        {
+            var result = ArchiveProcessRunner.Run(CreatePowerShellStartInfo(script), ProcessTreeTimeout);
+            Assert.Fail($"The timeout fixture exited early: {result.ExitCode}. {result.Error} {result.Output}");
+        });
 
         Assert.InRange(stopwatch.Elapsed, TimeSpan.FromSeconds(18), TimeSpan.FromSeconds(35));
         Assert.NotNull(exception.InnerException);

@@ -358,6 +358,7 @@ public sealed partial class MainWindow
             ShowSettingsSection(_selectedSettingsSection);
         }
         RefreshRefinedDashboardPathHeader();
+        UpdateRepositoryWorkspaceLanguageV4();
     }
 
     private void InitializeDashboardLayout(StackPanel dashboardPanel)
@@ -594,6 +595,13 @@ public sealed partial class MainWindow
 
     private void UpdateRefinedWorkspaceLayout()
     {
+        if (_repositoryV4Ready)
+        {
+            UpdateRepositoryWorkspaceLayoutV4();
+            UpdateDashboardLayout();
+            UpdateSettingsLayout();
+            return;
+        }
         if (_workspaceActions is null || _workspaceWorkbench is null || _workspaceDetailHost is null)
         {
             return;

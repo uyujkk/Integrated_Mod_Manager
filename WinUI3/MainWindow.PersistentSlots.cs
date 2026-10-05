@@ -38,7 +38,7 @@ public sealed partial class MainWindow
         WorkspaceRepository? repository = GetSelectedRepository();
         string? modPath = _currentSecondLevelPath;
         string? relative = TryGetCurrentModRelativePath(repository, modPath);
-        PersistentSlotTitleTextBlock.Text = L("内部状态槽位（实验）", "Internal State Slots (Experimental)");
+        PersistentSlotTitleTextBlock.Text = L("Mod 状态槽位", "Mod State Slots");
         PersistentSlotHintTextBlock.Text = L(
             "游戏中按 F10 后保存槽位。恢复时先退出游戏和加载器，再定向写入 d3dx_user.ini；不会自动热重载。",
             "Save after F10. To restore, close the game and loader first; only this slot's d3dx_user.ini keys are written. No automatic hot reload.");
@@ -46,7 +46,7 @@ public sealed partial class MainWindow
         CapturePersistentSlotButton.Content = L("保存新槽位", "Save Slot");
         RestorePersistentRuntimeButton.Content = L("恢复到加载器", "Restore Loader State");
         DeletePersistentSlotButton.Content = L("删除槽位", "Delete Slot");
-        OpenCombinationPresetsButton.Content = L("管理多 Mod 组合预设 → 更新页", "Multi-Mod Combination Presets → Updates");
+        OpenCombinationPresetsButton.Content = L("打开组合预设工作区", "Open Combination Workspace");
         PersistentUserIniTextBox.Text = repository?.PersistentUserIniPath is { Length: > 0 } configured
             ? configured
             : TryGetDefaultPersistentIniPath(repository) ?? string.Empty;

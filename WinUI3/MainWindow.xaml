@@ -5,7 +5,7 @@
     xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
     xmlns:local="using:ModFolderCopier.WinUI"
     xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
-    Title="Integrated Mod Manager v4.0-beta"
+    Title="Integrated Mod Manager v4.0.0"
     SizeChanged="OnWindowSizeChanged"
     mc:Ignorable="d">
 
@@ -14,6 +14,47 @@
     </Window.SystemBackdrop>
 
     <Grid x:Name="RootGrid" Background="{ThemeResource AppPageBackgroundBrush}" KeyDown="OnRootKeyDown" PointerPressed="OnRootGridPointerPressed">
+        <Grid.Resources>
+            <DataTemplate x:Key="RepositoryCoverTemplate" x:DataType="local:SecondLevelFolderItem">
+                <Button Click="OnRepositoryCoverClicked" DoubleTapped="OnSecondLevelDoubleTapped"
+                        RightTapped="OnSecondLevelItemRightTapped" Padding="0"
+                        HorizontalAlignment="Stretch" VerticalAlignment="Stretch"
+                        HorizontalContentAlignment="Stretch" VerticalContentAlignment="Stretch"
+                        AutomationProperties.Name="{x:Bind Name}"
+                        BorderThickness="{x:Bind CoverSelectionThickness, Mode=OneWay}"
+                        BorderBrush="{ThemeResource AppNavSelectedBorderBrush}"
+                        Background="{ThemeResource AppCardBackgroundBrush}">
+                <Grid Margin="4" CornerRadius="6" BorderThickness="1" BorderBrush="{ThemeResource AppCardBorderBrush}"
+                      Background="{ThemeResource AppCardBackgroundBrush}">
+                    <Grid.RowDefinitions>
+                        <RowDefinition Height="{x:Bind CoverPreviewHeight, Mode=OneWay}" />
+                        <RowDefinition Height="*" />
+                    </Grid.RowDefinitions>
+                    <Grid Background="{ThemeResource AppPreviewBackgroundBrush}" CornerRadius="4">
+                        <Image Source="{x:Bind CoverImageSource, Mode=OneWay}" Stretch="Uniform" />
+                        <StackPanel HorizontalAlignment="Center" VerticalAlignment="Center" Spacing="9"
+                                    Visibility="{x:Bind CoverPlaceholderVisibility, Mode=OneWay}">
+                            <FontIcon Glyph="&#xEB9F;" FontSize="28" Opacity="0.75" />
+                            <TextBlock Text="{x:Bind CoverPlaceholder, Mode=OneWay}" FontSize="12" />
+                        </StackPanel>
+                    </Grid>
+                    <Grid Grid.Row="1" Padding="10" RowSpacing="6">
+                        <Grid.RowDefinitions>
+                            <RowDefinition Height="*" />
+                            <RowDefinition Height="Auto" />
+                        </Grid.RowDefinitions>
+                        <TextBlock Text="{x:Bind Name}" FontWeight="SemiBold" FontSize="14" MaxLines="2"
+                                   TextWrapping="Wrap" TextTrimming="CharacterEllipsis" />
+                        <Grid Grid.Row="1" ColumnSpacing="7">
+                            <Grid.ColumnDefinitions><ColumnDefinition Width="Auto" /><ColumnDefinition Width="*" /></Grid.ColumnDefinitions>
+                            <FontIcon Glyph="&#xE8A5;" FontSize="13" VerticalAlignment="Center" Opacity="0.75" />
+                            <TextBlock Grid.Column="1" Text="{x:Bind State, Mode=OneWay}" FontSize="12" TextTrimming="CharacterEllipsis" />
+                        </Grid>
+                    </Grid>
+                </Grid>
+                </Button>
+            </DataTemplate>
+        </Grid.Resources>
         <Grid x:Name="AppShellGrid" Padding="10" RowSpacing="10">
             <Grid.RowDefinitions>
                 <RowDefinition Height="Auto" />
@@ -453,17 +494,15 @@
                                 <ListView x:Name="FirstLevelListView" SingleSelectionFollowsFocus="False" SelectionChanged="OnFirstLevelSelectionChanged" Style="{StaticResource AppListViewStyle}" ItemContainerStyle="{StaticResource AppListViewItemStyle}">
                                     <ListView.ItemTemplate>
                                         <DataTemplate x:DataType="local:FirstLevelFolderItem">
-                                            <Grid Padding="12,10" ColumnSpacing="12" RightTapped="OnFirstLevelItemRightTapped">
+                                            <Grid Padding="8,8" ColumnSpacing="8" RightTapped="OnFirstLevelItemRightTapped">
                                                 <Grid.ColumnDefinitions>
                                                     <ColumnDefinition Width="Auto" />
                                                     <ColumnDefinition Width="*" />
                                                     <ColumnDefinition Width="Auto" />
                                                 </Grid.ColumnDefinitions>
                                                 <FontIcon Glyph="&#xE8B7;" Opacity="0.75" />
-                                                <TextBlock Grid.Column="1" FontWeight="SemiBold" Text="{x:Bind Name}" />
-                                                <Border Grid.Column="2" Style="{StaticResource SoftBadgeBorderStyle}">
-                                                    <TextBlock Style="{StaticResource CaptionTextStyle}" Text="{x:Bind ChildrenCount}" />
-                                                </Border>
+                                                <TextBlock Grid.Column="1" FontWeight="SemiBold" Text="{x:Bind Name}" MaxLines="1" TextTrimming="CharacterEllipsis" VerticalAlignment="Center" />
+                                                <TextBlock Grid.Column="2" FontSize="12" Text="{x:Bind ChildrenCount}" VerticalAlignment="Center" Opacity="0.75" />
                                             </Grid>
                                         </DataTemplate>
                                     </ListView.ItemTemplate>
@@ -508,17 +547,19 @@
                                 <ListView x:Name="SecondLevelListView" SingleSelectionFollowsFocus="False" SelectionChanged="OnSecondLevelSelectionChanged" DoubleTapped="OnSecondLevelDoubleTapped" Style="{StaticResource AppListViewStyle}" ItemContainerStyle="{StaticResource AppListViewItemStyle}">
                                     <ListView.ItemTemplate>
                                         <DataTemplate x:DataType="local:SecondLevelFolderItem">
-                                            <Grid Padding="12,10" ColumnSpacing="12" RightTapped="OnSecondLevelItemRightTapped">
+                                            <Grid Padding="8,10" ColumnSpacing="10" RightTapped="OnSecondLevelItemRightTapped">
                                                 <Grid.ColumnDefinitions>
                                                     <ColumnDefinition Width="Auto" />
                                                     <ColumnDefinition Width="*" />
                                                     <ColumnDefinition Width="Auto" />
                                                 </Grid.ColumnDefinitions>
-                                                <FontIcon Glyph="&#xEA55;" Opacity="0.75" />
+                                                <FontIcon Glyph="&#xE8A5;" FontSize="18" Opacity="0.75" VerticalAlignment="Center" />
                                                 <TextBlock
                                                     Grid.Column="1"
                                                     FontWeight="SemiBold"
-                                                    MaxLines="1"
+                                                    MaxLines="2"
+                                                    TextWrapping="Wrap"
+                                                    VerticalAlignment="Center"
                                                     Text="{x:Bind Name}"
                                                     TextTrimming="CharacterEllipsis" />
                                                 <TextBlock
@@ -526,7 +567,8 @@
                                                     Margin="8,0,0,0"
                                                     HorizontalAlignment="Right"
                                                     Style="{StaticResource CaptionTextStyle}"
-                                                    Text="{x:Bind State}" />
+                                                    VerticalAlignment="Center"
+                                                    Text="{x:Bind State, Mode=OneWay}" />
                                             </Grid>
                                         </DataTemplate>
                                     </ListView.ItemTemplate>

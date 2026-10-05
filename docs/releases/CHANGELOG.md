@@ -2,9 +2,28 @@
 
 [中文说明](../../README.zh-CN.md) | [English README](../../README.md) | [文档索引 / Documentation Index](../README.md) | [GitHub Releases](https://github.com/uyujkk/Integrated_Mod_Manager/releases)
 
-本文档记录集成化 Mod 管理器已发布版本的主要变化。
+本文档记录集成化 Mod 管理器的版本变化；未发布版本会单独标注。
 
-This document records the major changes in published versions of Integrated Mod Manager.
+This document records version changes in Integrated Mod Manager. Unpublished versions are marked separately.
+
+## v4.0.0 - 仓库工作台 / Repository Workspace（正式版 / Stable, 2026-10-05）
+
+- 默认仓库改为文件列表工作台，可切换封面视图；角色、Mod、详情与部署操作分区排列。
+- 新增独立的组合预设工作区，展示组合成员和保存的参数数量，集中管理新建、更新与恢复。
+- 延续 Beta 的组合和状态恢复：先恢复已识别部署，再回写匹配的 `d3dx_user.ini` 参数，不修改 Mod INI。
+- 改善宽屏及窄窗口排版；列表和成员在各自模块内滚动，窄窗口通过详情入口查看预览、快捷键和状态槽位。
+- 保留旧仓库、配置方案和状态槽位；更新器按主程序 ZIP 精确配对 SHA-256 校验附件。
+- 底部状态栏改为单行，空闲隐藏进度条，长路径提供完整提示；修复视图切换及封面首屏布局异常。
+- 正式版重新接入软件更新；4.0-beta 仍保留为独立预发布。自动化验证为 325 项测试。
+- Files is the default repository view, with a switchable cover gallery and clearer character, Mod, details, and deployment sections.
+- A dedicated Combination Presets workspace shows members and saved-value counts, with create, update, and restore actions.
+- Preset restoration keeps the Beta behavior: restore recognized deployments, then matching `d3dx_user.ini` values; Mod INIs are not rewritten.
+- Wide and narrow layouts use panel-local scrolling. Narrow windows retain a Details entry for previews, shortcuts, and state slots.
+- Existing repositories, profiles, and state slots remain supported. The updater pairs the main ZIP with its matching SHA-256 sidecar.
+- The single-line status bar hides idle progress and provides full-path tooltips; view-switching and initial cover-viewport layout issues were fixed.
+- Stable-channel app updates are enabled again. The separate 4.0-beta prerelease is retained. Automated verification includes 325 tests.
+
+详见 / See [v4.0.0](./v4.0.0.md)、[升级指南 / Upgrade Guide](../guides/Upgrade-v4.0.en.md)。
 
 ## v4.0-beta - Mod 组合与状态预设 / Mod Combination and State Presets
 
@@ -19,7 +38,7 @@ This document records the major changes in published versions of Integrated Mod 
 
 详见 / See [v4.0-beta](./v4.0-beta.md)。当前实际游戏恢复成功来自用户测试确认，仍需扩展兼容性测试。 / Real-game restoration was confirmed by the user in their setup; broader compatibility remains to be tested.
 
-## 其他未发布修正 / Other Unreleased Fix
+## 自 3.9.5 后补充，现并入 4.0.0 / Post-3.9.5 Fix Included in 4.0.0
 
 - 更新器源码现在按主程序 ZIP 文件名精确选择对应的 `.sha256` 附件，仅在没有专属文件时回退到 `SHA256SUMS.txt`；不会误选独立开发者工具的校验文件。此源码修正尚未进入 v3.9.5 二进制包。
 - The updater source now pairs the main ZIP with its exact `.sha256` sidecar, falling back to `SHA256SUMS.txt` only when needed. It will not select the standalone Developer Tools sidecar. This source fix is not included in the v3.9.5 binary package.

@@ -1,5 +1,7 @@
 # 4.0-beta: mod combinations and persistent-state presets
 
+> Historical guide for the separately archived beta package. Current stable users should read the [4.0 preset guide](./Combination-Presets.en.md) and [upgrade guide](./Upgrade-v4.0.en.md). The beta launcher/demo instructions below do not apply to the stable package.
+
 ## Install separately
 
 Extract the entire ZIP into a new writable folder and run `IntegratedModManager-Beta.exe`. Keep the adjacent `WinUI3` and `TestData` folders. Windows x64 and the .NET 8 x64 runtime are required. Windows App SDK runtime files are included.

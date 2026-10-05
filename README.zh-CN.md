@@ -22,11 +22,23 @@
 
 ## 项目简介
 
-> **4.0-beta 分支：**[下载独立测试版](https://github.com/uyujkk/Integrated_Mod_Manager/releases/tag/v4.0-beta)，测试 Mod 组合与持久状态预设。请分开解压，运行 `IntegratedModManager-Beta.exe`。本版禁用软件自动更新，稳定版仍为 v3.9.5。操作步骤见[测试指南](./docs/research/state-slots-test-guide.zh-CN.md)。
+**当前正式版：[v4.0.0](https://github.com/uyujkk/Integrated_Mod_Manager/releases/tag/v4.0.0)。**仓库可切换文件列表和封面视图，新增组合预设工作区，集中保存 Mod 组合和持久状态。操作步骤见[4.0 指南](./docs/guides/Combination-Presets.zh-CN.md)。
 
 集成化 Mod 管理器以独立“仓库”管理不同游戏或不同 Mod 环境。它可以在本地仓库和游戏实际读取的目标目录之间复制或移除完整 Mod 文件夹，并集中管理预览图、来源链接、快捷键说明、在线下载、更新记录、配置方案和安装备份。
 
-当前稳定版为 **v3.9.5**，文件版本为 `3.9.5.0`；此分支为 **v4.0-beta**（`4.0.0.0`）。工具维护者为 `uyujkk`，既有 Bandizip 备用解压功能由 [CaramelizedCUDA](https://github.com/CaramelizedCUDA) 贡献。
+主程序、启动器和更新器统一为 **4.0.0**（`4.0.0.0`）。工具维护者为 `uyujkk`，既有 Bandizip 备用解压功能由 [CaramelizedCUDA](https://github.com/CaramelizedCUDA) 贡献；此前的 [4.0-beta](https://github.com/uyujkk/Integrated_Mod_Manager/releases/tag/v4.0-beta) 继续独立保留。
+
+## 4.0 新功能
+
+- 重构仓库工作台：默认文件列表、可切换的封面视图、独立组合预设工作区。
+- 同时保存已启用 Mod 组合及数值型持久参数；恢复时先恢复组合，再回写匹配的 `d3dx_user.ini` 参数。也可为单个 Mod 保存多个状态槽位。
+- 重新排列搜索、预览、快捷键和部署操作；列表在模块内滚动，窄窗口通过详情查看内容。
+- 底部状态栏合并为单行，区分空闲与任务状态，长路径可悬停查看。
+- 正式版重新接入软件更新，修正主程序 ZIP 与校验文件的精确配对，保留现有配置。
+
+保存状态前先让加载器落盘（通常为 F10）；恢复前退出游戏和加载器。不改写 Mod INI 默认值或其他 Mod 的参数。不保证所有 Mod 兼容，也不承诺账号零风险。
+
+[更新说明](./docs/releases/v4.0.0.md) · [升级指南](./docs/guides/Upgrade-v4.0.zh-CN.md) · [Wiki](https://github.com/uyujkk/Integrated_Mod_Manager/wiki)
 
 ## 核心功能
 
@@ -37,6 +49,8 @@
 | 可选目录联接 | 让加载器与仓库使用同一份 Mod 目录；同角色切换时安全断开旧联接 |
 | 压缩包导入 | 支持 ZIP、7Z、RAR、ZIPX、CAB、TAR 及常见压缩流格式 |
 | 预览与说明 | 为每个 Mod 保存预览图、来源链接、快捷键和功能描述 |
+| 仓库工作台 | 文件列表与封面视图可切换，集中显示选择、详情和部署操作 |
+| 组合与状态预设 | 保存已启用 Mod 组合和数值型持久参数，先恢复组合，再回写对应的 `d3dx_user.ini` 参数 |
 | 在线 Mod 浏览 | 浏览 GameBanana 条目，按角色筛选，查看图片与说明并下载解压 |
 | 配置方案 | 保存并应用整套已启用 Mod，不影响无法识别的目标目录 |
 | 安装安全 | 安装前检测冲突，为复制、移除和方案切换创建可恢复备份 |
@@ -60,11 +74,11 @@
 
 ## 快速开始
 
-1. 在“仓库”页面创建仓库。
-2. 将“Mod 存储文件夹”设置为两层 Mod 目录的根目录。
+1. 在“仪表板”创建或选择仓库。
+2. 在仪表板将“Mod 仓库”设置为两层 Mod 目录的根目录。
 3. 将“目标文件夹”设置为游戏或 Mod 加载器实际读取的 Mods 目录。
 4. 选择第一层分类，再选择第二层 Mod。
-5. 双击第二层 Mod 或使用复制按钮完成切换。
+5. 双击第二层 Mod 或使用详情里的部署操作完成切换。单击选择或切换视图不会部署 Mod。
 
 目标文件夹中不存在同名目录时，程序复制整个 Mod；已经存在同名目录时，再次操作会将它从目标文件夹移除。删除仓库中的源 Mod 是另一项独立操作，并会在执行前要求确认。
 
@@ -118,6 +132,8 @@ Mod 存储文件夹
 | --- | --- | --- |
 | 快速使用 | [快速使用手册](./docs/guides/快速使用手册.md) | [Quick Start](./docs/guides/Quick-Start.en.md) |
 | 完整用户手册 | [详细中文手册](./docs/guides/用户手册.zh-CN.md) | [Complete User Guide](./docs/guides/User-Guide.en.md) |
+| 组合与状态预设 | [组合与状态预设](./docs/guides/Combination-Presets.zh-CN.md) | [Combination and State Presets](./docs/guides/Combination-Presets.en.md) |
+| 升级到 4.0 | [升级指南](./docs/guides/Upgrade-v4.0.zh-CN.md) | [Upgrade Guide](./docs/guides/Upgrade-v4.0.en.md) |
 | 更新历史 | [双语更新日志](./docs/releases/CHANGELOG.md) | [Bilingual Changelog](./docs/releases/CHANGELOG.md) |
 | 跨 Mod 状态试验 | [试验路线与当前结论](./docs/research/跨Mod状态保存试验结论.md) | [Current conclusions](./docs/research/跨Mod状态保存试验结论.md) |
 | 测试与构建 | [测试说明](./docs/development/TESTING.md) | [Testing Guide](./docs/development/TESTING.md) |
@@ -129,7 +145,7 @@ Mod 存储文件夹
 - Windows 10 1809 或更高版本，推荐 Windows 11。
 - 64 位 Windows（`x64`）。
 - 在线浏览、翻译和更新检查需要网络连接。
-- 发布包为自包含 WinUI 3 应用，普通用户通常不需要安装 .NET SDK 或 Visual Studio。
+- 发布包包含 Windows App SDK，但需要 .NET 8 x64 运行时；普通用户不需要 .NET SDK 或 Visual Studio。
 - 7Z、RAR、ZIPX 和 CAB 优先使用发布包内或已安装的 7-Zip；找不到时自动使用已安装 Bandizip 的 `bz.exe`，并由 Windows `tar.exe` 在解压前检查路径和链接。
 
 ## 从源码构建
@@ -146,7 +162,7 @@ cmd /c build_winui.bat
 powershell -NoProfile -ExecutionPolicy Bypass -File .\scripts\test-all.ps1
 ```
 
-当前自动化验证包含 146 项测试。GitHub Actions 会在推送到 `main`、Pull Request 和手动触发时执行相同流程。详细信息见 [测试说明](./docs/development/TESTING.md)。
+4.0.0 自动化验证包含 325 项测试。GitHub Actions 会在推送到 `main`、Pull Request 和手动触发时执行相同流程。详细信息及验证边界见[测试说明](./docs/development/TESTING.md)与[4.0 验证记录](./docs/verification/v4.0.0.md)。
 
 ## 数据与安全
 

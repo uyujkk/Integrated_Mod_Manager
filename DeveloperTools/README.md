@@ -2,7 +2,7 @@
 
 独立的 WinUI 3 图形化开发者工具。该项目生成单独的 `IntegratedModManager.DeveloperTools.exe`，不会编译进 Integrated Mod Manager 主程序。
 
-当前版本与主程序同步为 `v3.9.5` / `3.9.5.0`，但使用单独的发布包，不进入主程序自动更新载荷。
+开发者工具仍为 `v3.9.5` / `3.9.5.0`；主程序现为 4.0.0。两者独立版本、独立发布，开发者工具不进入主程序自动更新载荷。本次 4.0.0 不重新发布开发者工具；它不编辑或恢复组合预设参数。
 
 ## 主要功能
 
@@ -39,6 +39,6 @@ powershell.exe -NoProfile -ExecutionPolicy Bypass -File .\scripts\package-develo
 
 Standalone WinUI 3 graphical developer tools. This project produces a separate `IntegratedModManager.DeveloperTools.exe` and is not compiled into the main Integrated Mod Manager application.
 
-Its current version follows the main app at `v3.9.5` / `3.9.5.0`, but it uses a separate release archive and is excluded from the main updater payload.
+Developer Tools remains at `v3.9.5` / `3.9.5.0`, while the main app is now 4.0.0. It is independently versioned and released, is excluded from the main updater payload, and is not republished with 4.0.0. It does not edit or restore combination-preset parameters.
 
 It provides target-directory selection, runtime and storage summaries, repository/path/link validation, configuration and log browsing, search, JSON validation, copy/save actions, read-only configuration snapshots, and sanitized diagnostic export. It does not execute arbitrary commands, access game memory, inject into games, or upload diagnostic data automatically.

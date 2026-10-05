@@ -9,7 +9,7 @@ internal static class BetaLocalization
 
     private static readonly Dictionary<string, string> EnToZh = new(StringComparer.Ordinal)
     {
-        ["Integrated Mod Manager"] = "集成化mod管理器",
+        ["Integrated Mod Manager"] = "集成化 Mod 管理器",
         ["Application Settings"] = "应用设置",
         ["Appearance and Language"] = "界面与语言",
         ["Project Links and App Version"] = "项目链接与软件版本",

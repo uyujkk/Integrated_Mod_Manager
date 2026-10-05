@@ -37,7 +37,7 @@ namespace ModFolderCopier.WinUI;
 
 public sealed partial class MainWindow : Window
 {
-    private const string AppVersion = "v4.0-beta";
+    private const string AppVersion = "v4.0.0";
     private static bool AppSelfUpdateEnabled => ApplicationReleasePolicy.ApplicationSelfUpdateEnabled;
     private const string GitHubRepositoryUrl = "https://github.com/uyujkk/Integrated_Mod_Manager";
     private const string GitHubLatestReleaseApiUrl = "https://api.github.com/repos/uyujkk/Integrated_Mod_Manager/releases/latest";
@@ -343,6 +343,7 @@ public sealed partial class MainWindow : Window
         try
         {
             InitializeRefinedWorkspace();
+            InitializeRepositoryWorkspaceV4();
         }
         catch (Exception ex)
         {
@@ -1238,6 +1239,7 @@ public sealed partial class MainWindow : Window
         InstallRollbackStatusTextBlock.Text = RollbackLastInstallButton.IsEnabled
             ? L("可撤销最近一次 Mod 部署；组合参数另有 d3dx_user.ini.bak 备份。", "Undo covers Mod deployment; combination parameters have a separate d3dx_user.ini .bak backup.")
             : L("目前没有可撤销的 Mod 操作。", "There is no mod operation to undo.");
+        RefreshCombinationWorkspaceV4();
     }
 
     private List<string> CaptureCurrentConfigurationProfile()
@@ -2077,6 +2079,12 @@ public sealed partial class MainWindow : Window
                 _ => PrimarySection.Dashboard
             };
             _updateCheckInterval = AppSelfUpdateEnabled ? ParseUpdateCheckInterval(config?.UpdateCheckInterval) : UpdateCheckInterval.Manual;
+            _repositoryWorkspaceView = config?.RepositoryWorkspaceView switch
+            {
+                "covers" => RepositoryWorkspaceView.Covers,
+                "presets" => RepositoryWorkspaceView.Presets,
+                _ => RepositoryWorkspaceView.List
+            };
             _lastUpdateCheckUtc = TryParseDateTimeOffset(config?.LastUpdateCheckUtc);
             _modUpdateCheckInterval = ParseUpdateCheckInterval(config?.ModUpdateCheckInterval);
             _lastModUpdateCheckUtc = TryParseDateTimeOffset(config?.LastModUpdateCheckUtc);
@@ -2222,6 +2230,7 @@ public sealed partial class MainWindow : Window
                 MinimizeToTray = _minimizeToTray,
                 InterfaceDensity = _interfaceDensity == InterfaceDensity.Compact ? "compact" : "comfortable",
                 OnlineCardLayout = _onlineCardLayoutMode == OnlineCardLayoutMode.Grid ? "grid" : "list",
+                RepositoryWorkspaceView = _repositoryWorkspaceView.ToString().ToLowerInvariant(),
                 SelectedConfigurationProfileId = _selectedConfigurationProfileId,
                 EnableConflictDetection = _enableConflictDetection,
                 LastInstallTransactionPath = _lastInstallTransactionPath,
@@ -10101,7 +10110,7 @@ public sealed partial class MainWindow : Window
 
     private void ApplyLanguage()
     {
-        Title = L($"集成化 Mod 管理器 {AppVersion} · 测试版", $"Integrated Mod Manager {AppVersion} · Beta");
+        Title = L($"集成化 Mod 管理器 {AppVersion}", $"Integrated Mod Manager {AppVersion}");
 
         BetaTitleTextBlock.Text = _shellLayoutMode == ShellLayoutMode.Compact
             ? "管理器"
@@ -10203,8 +10212,8 @@ public sealed partial class MainWindow : Window
             ? L($"当前版本：{AppVersion}", $"Current version: {AppVersion}")
             : UpdateStatusTextBlock.Text;
 
-        HeaderTitleTextBlock.Text = L("集成化mod管理器", "Integrated Mod Manager");
-        HeaderFrameworkBadgeTextBlock.Text = L("组合与状态预设 · Beta", "Combination & State Presets · Beta");
+        HeaderTitleTextBlock.Text = L("集成化 Mod 管理器", "Integrated Mod Manager");
+        HeaderFrameworkBadgeTextBlock.Text = "WinUI 3";
         HeaderVersionBadgeTextBlock.Text = AppVersion;
         HeaderSubtitleTextBlock.Text = string.Empty;
         HeaderCaptionTextBlock.Text = L(
@@ -10791,6 +10800,8 @@ public sealed partial class MainWindow : Window
 
     private async void OnSecondLevelSelectionChanged(object sender, SelectionChangedEventArgs e)
     {
+        if (_syncingRepositorySelection) return;
+        _repositorySelectedMod = SecondLevelListView.SelectedItem as SecondLevelFolderItem;
         try
         {
             SecondLevelFolderItem? item = GetSelectedSecondLevelItem();
@@ -12692,6 +12703,7 @@ public sealed partial class MainWindow : Window
 
     private void PopulateSecondLevelList(FirstLevelFolderItem? firstItem, bool preserveStatus = false)
     {
+        _repositorySelectedMod = null;
         _secondLevelItems.Clear();
         ClearPreview();
         CurrentFolderTextBlock.Text = StateNotSelectedText;
@@ -12703,6 +12715,8 @@ public sealed partial class MainWindow : Window
 
         if (firstItem is null)
         {
+            ApplySecondLevelSelectionState(null, preserveStatus: true);
+            RefreshRepositoryModView();
             return;
         }
 
@@ -12710,6 +12724,7 @@ public sealed partial class MainWindow : Window
         {
             _secondLevelItems.Add(child);
         }
+        RefreshRepositoryModView();
 
         if (!preserveStatus)
         {
@@ -12753,6 +12768,7 @@ public sealed partial class MainWindow : Window
         LoadBindingsForCurrentMod(item);
         LoadLinkForCurrentMod(item);
         RefreshPersistentSlotControls();
+        SyncRepositorySelectionV4(item);
     }
 
     private void SetStateColor(string? state)
@@ -13051,6 +13067,7 @@ public sealed partial class MainWindow : Window
         FirstLevelListView.IsEnabled = !busy;
         SecondLevelListView.IsEnabled = !busy;
         OpenModLinkButton.IsEnabled = !busy && !string.IsNullOrWhiteSpace(ModLinkTextBox.Text);
+        SetRepositoryWorkspaceBusyV4(busy);
     }
 
     private void LoadDefaultShortcutTemplate()
@@ -13396,8 +13413,9 @@ public sealed partial class MainWindow : Window
                 {
                     if (string.Equals(_secondLevelItems[secondIndex].Path, path, StringComparison.CurrentCultureIgnoreCase))
                     {
-                        SecondLevelListView.SelectedIndex = secondIndex;
-                        SecondLevelListView.ScrollIntoView(_secondLevelItems[secondIndex]);
+                        SecondLevelFolderItem selected = _secondLevelItems[secondIndex];
+                        SecondLevelListView.SelectedItem = selected;
+                        if (_repositoryVisibleMods.Contains(selected)) SecondLevelListView.ScrollIntoView(selected);
                         ApplySecondLevelSelectionState(_secondLevelItems[secondIndex], preserveStatus: true);
                         return;
                     }
@@ -13586,7 +13604,7 @@ public sealed partial class MainWindow : Window
 
     private SecondLevelFolderItem? GetSelectedSecondLevelItem()
     {
-        return SecondLevelListView.SelectedItem as SecondLevelFolderItem;
+        return _repositorySelectedMod ?? SecondLevelListView.SelectedItem as SecondLevelFolderItem;
     }
 
     private async void UpdatePreviewForDirectory(string directoryPath, List<string> files)
@@ -13631,6 +13649,7 @@ public sealed partial class MainWindow : Window
         if (requestVersion == _previewImageRequestVersion)
         {
             PreviewImage.Source = bitmap;
+            if (GetSelectedSecondLevelItem() is { } selected) selected.CoverImageSource = bitmap;
             PreviewHintTextBlock.Visibility = Visibility.Collapsed;
         }
     }
@@ -14767,6 +14786,7 @@ public sealed class OnlineCategoryPageCacheEntry
 
 public sealed class BetaShellConfig
 {
+    public string RepositoryWorkspaceView { get; set; } = "list";
     public string? CurrentPrimarySection { get; set; }
 
     public string? SelectedRepositoryId { get; set; }
@@ -14943,8 +14963,16 @@ public sealed class FirstLevelFolderItem
     public int ChildrenCount => Children.Count;
 }
 
-public sealed class SecondLevelFolderItem
+public sealed class SecondLevelFolderItem : System.ComponentModel.INotifyPropertyChanged
 {
+    private string _state = string.Empty;
+    private string _coverPlaceholder = string.Empty;
+    private ImageSource? _coverImageSource;
+    private GridLength _coverPreviewHeight = new(140);
+    private Thickness _coverSelectionThickness = new(0);
+    private double _coverCardWidth = 236;
+    private double _coverCardHeight = 240;
+    public event System.ComponentModel.PropertyChangedEventHandler? PropertyChanged;
     public SecondLevelFolderItem(string path, List<string> files, string state)
     {
         Path = path;
@@ -14959,7 +14987,51 @@ public sealed class SecondLevelFolderItem
 
     public List<string> Files { get; }
 
-    public string State { get; set; }
+    public string State
+    {
+        get => _state;
+        set { if (_state == value) return; _state = value; Changed(nameof(State)); }
+    }
+
+    public ImageSource? CoverImageSource
+    {
+        get => _coverImageSource;
+        set { _coverImageSource = value; Changed(nameof(CoverImageSource)); Changed(nameof(CoverPlaceholderVisibility)); }
+    }
+
+    public Visibility CoverPlaceholderVisibility => CoverImageSource is null ? Visibility.Visible : Visibility.Collapsed;
+
+    public GridLength CoverPreviewHeight
+    {
+        get => _coverPreviewHeight;
+        set { if (_coverPreviewHeight == value) return; _coverPreviewHeight = value; Changed(nameof(CoverPreviewHeight)); }
+    }
+
+    public Thickness CoverSelectionThickness
+    {
+        get => _coverSelectionThickness;
+        set { if (_coverSelectionThickness == value) return; _coverSelectionThickness = value; Changed(nameof(CoverSelectionThickness)); }
+    }
+
+    public double CoverCardWidth
+    {
+        get => _coverCardWidth;
+        set { if (Math.Abs(_coverCardWidth - value) < .5) return; _coverCardWidth = value; Changed(nameof(CoverCardWidth)); }
+    }
+
+    public double CoverCardHeight
+    {
+        get => _coverCardHeight;
+        set { if (Math.Abs(_coverCardHeight - value) < .5) return; _coverCardHeight = value; Changed(nameof(CoverCardHeight)); }
+    }
+
+    public string CoverPlaceholder
+    {
+        get => _coverPlaceholder;
+        set { if (_coverPlaceholder == value) return; _coverPlaceholder = value; Changed(nameof(CoverPlaceholder)); }
+    }
+
+    private void Changed(string name) => PropertyChanged?.Invoke(this, new System.ComponentModel.PropertyChangedEventArgs(name));
 
     public int FilesCount => Files.Count;
 }

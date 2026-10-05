@@ -22,11 +22,23 @@
 
 ## Overview
 
-> **4.0-beta branch:** [Download the independent beta](https://github.com/uyujkk/Integrated_Mod_Manager/releases/tag/v4.0-beta) for mod-combination and persistent-state presets. Extract it separately and run `IntegratedModManager-Beta.exe`. App self-updates are disabled; the stable release remains v3.9.5. See the [beta guide](./docs/guides/Beta-Presets.en.md).
+**Current stable version: [v4.0.0](https://github.com/uyujkk/Integrated_Mod_Manager/releases/tag/v4.0.0).** Browse your library in Files or Covers, and save complete Mod combinations with their persistent settings in the new Presets workspace. See the [4.0 guide](./docs/guides/Combination-Presets.en.md).
 
 Integrated Mod Manager organizes different games or mod environments into independent repositories. It copies or removes complete mod folders between a local library and the target directory read by the game, while keeping preview images, source links, shortcut notes, online downloads, update records, profiles, and installation backups in one application.
 
-The current stable version is **v3.9.5**, with file version `3.9.5.0`. This branch contains **v4.0-beta** (`4.0.0.0`). The tool is maintained by `uyujkk`. The Bandizip extraction fallback was contributed by [CaramelizedCUDA](https://github.com/CaramelizedCUDA).
+The application, launcher, and updater use version **4.0.0** (`4.0.0.0`). The tool is maintained by `uyujkk`. The Bandizip extraction fallback was contributed by [CaramelizedCUDA](https://github.com/CaramelizedCUDA). The earlier [4.0-beta](https://github.com/uyujkk/Integrated_Mod_Manager/releases/tag/v4.0-beta) remains archived separately.
+
+## What's New in 4.0
+
+- A redesigned repository workspace: Files by default, switchable Covers, and a dedicated Combination Presets view.
+- Save the enabled Mod set together with its numeric persistent values; restore the set first, then matching `d3dx_user.ini` values. Individual Mod state slots are also available.
+- Clearer search, preview, shortcut, and deployment controls, with panel-local scrolling and compact-window details.
+- A single-line status bar with idle/task state, readable operation messages, and full-path tooltips.
+- Stable-channel app updates are enabled again, with exact ZIP/checksum pairing and existing settings retained.
+
+Before capturing state, have the loader save it (usually F10). Close the game and loader before restoring. Mod INI defaults and unrelated runtime values are not rewritten. This is not universal compatibility with every Mod or a guarantee against account risk.
+
+[Release notes](./docs/releases/v4.0.0.md) · [Upgrade guide](./docs/guides/Upgrade-v4.0.en.md) · [Wiki](https://github.com/uyujkk/Integrated_Mod_Manager/wiki)
 
 ## Core Features
 
@@ -37,6 +49,8 @@ The current stable version is **v3.9.5**, with file version `3.9.5.0`. This bran
 | Optional directory junctions | Let the loader and library share one mod directory, safely replacing the previous link for the same character |
 | Archive import | Import ZIP, 7Z, RAR, ZIPX, CAB, TAR, and common compressed stream formats |
 | Previews and notes | Store an image, source link, shortcut keys, and action descriptions for each mod |
+| Repository workspace | Switch between a compact file list and cover gallery; keep selection and actions together |
+| Combination and state presets | Save enabled Mod sets with numeric persistent values; restore the set, then matching `d3dx_user.ini` values |
 | Online mod browser | Browse GameBanana entries, filter by character, view details, and download and extract mods |
 | Configuration profiles | Save and apply complete enabled-mod setups without touching unknown target folders |
 | Installation safety | Detect file conflicts and create restorable backups for copy, remove, and profile operations |
@@ -60,11 +74,11 @@ The executable is not signed with a commercial code-signing certificate, so Wind
 
 ## Quick Start
 
-1. Create a repository on the Repositories page.
-2. Set the Mod Storage Folder to the root of a two-level mod directory.
+1. Create or select a repository on the Dashboard.
+2. Set the Mod Storage Folder on the Dashboard to the root of a two-level mod directory.
 3. Set the Target Folder to the Mods directory read by the game or mod loader.
 4. Select a first-level category, then select a second-level mod.
-5. Double-click the mod or use the copy action to toggle it.
+5. Double-click the mod or use the deployment action in Details to toggle it. Selecting a Mod or switching views does not deploy it.
 
 If the target does not contain a folder with the same name, the app copies the complete mod. If it already exists, running the action again removes it from the target. Deleting the source mod from the repository is a separate action and requires confirmation.
 
@@ -118,6 +132,8 @@ See the [Changelog](./docs/releases/CHANGELOG.md) for the complete bilingual his
 | --- | --- | --- |
 | Quick use | [快速使用手册](./docs/guides/快速使用手册.md) | [Quick Start](./docs/guides/Quick-Start.en.md) |
 | Complete guide | [详细中文手册](./docs/guides/用户手册.zh-CN.md) | [Complete User Guide](./docs/guides/User-Guide.en.md) |
+| Combination and state presets | [组合与状态预设](./docs/guides/Combination-Presets.zh-CN.md) | [Combination and State Presets](./docs/guides/Combination-Presets.en.md) |
+| Upgrade to 4.0 | [升级指南](./docs/guides/Upgrade-v4.0.zh-CN.md) | [Upgrade Guide](./docs/guides/Upgrade-v4.0.en.md) |
 | Release history | [Bilingual Changelog](./docs/releases/CHANGELOG.md) | [Bilingual Changelog](./docs/releases/CHANGELOG.md) |
 | Cross-mod state experiments | [Current conclusions](./docs/research/跨Mod状态保存试验结论.md) | [Current conclusions](./docs/research/跨Mod状态保存试验结论.md) |
 | Tests and builds | [Testing Guide](./docs/development/TESTING.md) | [Testing Guide](./docs/development/TESTING.md) |
@@ -129,7 +145,7 @@ See the [Changelog](./docs/releases/CHANGELOG.md) for the complete bilingual his
 - Windows 10 version 1809 or later; Windows 11 is recommended.
 - 64-bit Windows (`x64`).
 - Online browsing, translation, and update checks require a network connection.
-- Release builds are self-contained WinUI 3 applications; regular users normally do not need the .NET SDK or Visual Studio.
+- The release bundles the Windows App SDK but requires the .NET 8 x64 runtime. Regular users do not need the .NET SDK or Visual Studio.
 - 7Z, RAR, ZIPX, and CAB prefer bundled or installed 7-Zip. If unavailable, the app uses an installed Bandizip's `bz.exe`, with Windows `tar.exe` checking paths and links before extraction.
 
 ## Build from Source
@@ -146,7 +162,7 @@ Run the complete test, coverage, WinUI x64 build, and package verification flow:
 powershell -NoProfile -ExecutionPolicy Bypass -File .\scripts\test-all.ps1
 ```
 
-The repository currently has 146 automated tests. GitHub Actions runs the same verification flow on pushes to `main`, pull requests, and manual dispatches. See the [Testing Guide](./docs/development/TESTING.md) for details.
+The 4.0.0 verification contains 325 automated tests. GitHub Actions runs the same verification flow on pushes to `main`, pull requests, and manual dispatches. See the [Testing Guide](./docs/development/TESTING.md) and [4.0 verification record](./docs/verification/v4.0.0.md) for details and testing boundaries.
 
 ## Data and Security
 

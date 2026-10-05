@@ -10,7 +10,11 @@ public sealed partial class MainWindow
 
     private void OnOpenCombinationPresetsClicked(object sender, RoutedEventArgs e)
     {
-        if (!_applyingCombinationProfile && !_restoringPersistentRuntime) NavigateToPrimarySection(PrimarySection.Updates);
+        if (!_applyingCombinationProfile && !_restoringPersistentRuntime)
+        {
+            NavigateToPrimarySection(PrimarySection.Repository);
+            SetRepositoryWorkspaceViewV4(RepositoryWorkspaceView.Presets);
+        }
     }
 
     private void SetCombinationBusy(bool busy)

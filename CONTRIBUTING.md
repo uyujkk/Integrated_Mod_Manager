@@ -32,6 +32,7 @@ powershell -NoProfile -ExecutionPolicy Bypass -File .\scripts\test-all.ps1
 - 新增或修复可测试逻辑时，请同步补充测试。
 - 提交前运行 `scripts/test-all.ps1`，并确保没有测试或构建错误。
 - 界面文字需要同时提供中文和英文，或说明暂未翻译的原因。
+- 修改仓库视图或预设时，请检查宽/窄窗口、模块内滚动、单击不部署、旧配置兼容和其他 Mod 参数保留。不要使用真实游戏文件作为自动测试数据，也不要把文件测试表述为游戏验证。
 
 ## English
 
@@ -63,3 +64,4 @@ powershell -NoProfile -ExecutionPolicy Bypass -File .\scripts\test-all.ps1
 - Add or update tests when changing testable behavior.
 - Run `scripts/test-all.ps1` before submitting and resolve all test or build failures.
 - Provide both Chinese and English interface text, or explain why a translation is not yet available.
+- For repository or preset changes, check wide/compact windows, panel-local scrolling, selection without deployment, old settings, and unrelated values. Use synthetic fixtures, not real game files; distinguish file tests from live game verification.
