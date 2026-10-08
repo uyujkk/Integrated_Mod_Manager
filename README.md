@@ -33,20 +33,11 @@ The application, launcher, and updater use version **4.1.0** (`4.1.0.0`). The to
 
 Real screenshots of an isolated **4.1.0** app using synthetic folders and demonstration presets. No actual online Mod previews, character avatars or local filesystem paths are shown. The demo is not connected to a game or loader.
 
-**Repository workspace** — browse characters and Mods, search your library, and switch between Files, Covers and Presets. This compact window keeps the library visible and opens details separately.
-
-![Repository workspace with synthetic folders and no local paths](./docs/assets/screenshots/repository-workspace-v4.1.jpg)
-
-<details>
-<summary>Combination presets and portable bundles</summary>
-
-Save a Mod set with persistent values, review its members, and export or install a combination bundle. Restore uses a separate preview and confirmation step; the demonstration presets below are not playable Mods.
+**Combination presets and portable bundles** — save a Mod set with persistent values, review its members, and export or install a combination bundle. Restore uses a separate preview and confirmation step; the demonstration presets below are not playable Mods.
 
 ![Combination preset workspace with synthetic members and saved-value counts](./docs/assets/screenshots/combination-presets-v4.1.png)
 
 [How combination presets work](./docs/guides/Combination-Presets.en.md)
-
-</details>
 
 <details>
 <summary>Settings in a restored window</summary>
