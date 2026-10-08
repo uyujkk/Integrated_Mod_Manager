@@ -42,7 +42,7 @@ Real screenshots of an isolated **4.1.0** app using synthetic folders and demons
 
 Save a Mod set with persistent values, review its members, and export or install a combination bundle. Restore uses a separate preview and confirmation step; the demonstration presets below are not playable Mods.
 
-![Combination preset workspace with synthetic members and saved-value counts](./docs/assets/screenshots/combination-presets-v4.1.jpg)
+![Combination preset workspace with synthetic members and saved-value counts](./docs/assets/screenshots/combination-presets-v4.1.png)
 
 [How combination presets work](./docs/guides/Combination-Presets.en.md)
 

@@ -42,7 +42,7 @@
 
 保存 Mod 组合及持久参数，查看预设成员，导出或安装组合包。恢复前另有预览和确认步骤；图中的演示预设不包含可运行的游戏 Mod。
 
-![组合预设工作区：模拟成员及已保存参数数量](./docs/assets/screenshots/combination-presets-v4.1.jpg)
+![组合预设工作区：模拟成员及已保存参数数量](./docs/assets/screenshots/combination-presets-v4.1.png)
 
 [查看组合预设使用方法](./docs/guides/Combination-Presets.zh-CN.md)
 
