@@ -22,23 +22,23 @@
 
 ## 项目简介
 
-**当前正式版：[v4.0.0](https://github.com/uyujkk/Integrated_Mod_Manager/releases/tag/v4.0.0)。**仓库可切换文件列表和封面视图，新增组合预设工作区，集中保存 Mod 组合和持久状态。操作步骤见[4.0 指南](./docs/guides/Combination-Presets.zh-CN.md)。
+**当前正式版：[v4.1.0](https://github.com/uyujkk/Integrated_Mod_Manager/releases/tag/v4.1.0)。**支持将保存好的 Mod 组合、文件和状态参数导出为组合包，在其他仓库预览并安装。操作步骤见[组合预设指南](./docs/guides/Combination-Presets.zh-CN.md)。
 
 集成化 Mod 管理器以独立“仓库”管理不同游戏或不同 Mod 环境。它可以在本地仓库和游戏实际读取的目标目录之间复制或移除完整 Mod 文件夹，并集中管理预览图、来源链接、快捷键说明、在线下载、更新记录、配置方案和安装备份。
 
-主程序、启动器和更新器统一为 **4.0.0**（`4.0.0.0`）。工具维护者为 `uyujkk`，既有 Bandizip 备用解压功能由 [CaramelizedCUDA](https://github.com/CaramelizedCUDA) 贡献；此前的 [4.0-beta](https://github.com/uyujkk/Integrated_Mod_Manager/releases/tag/v4.0-beta) 继续独立保留。
+主程序、启动器和更新器统一为 **4.1.0**（`4.1.0.0`）。工具维护者为 `uyujkk`，既有 Bandizip 备用解压功能由 [CaramelizedCUDA](https://github.com/CaramelizedCUDA) 贡献；此前的 [4.0-beta](https://github.com/uyujkk/Integrated_Mod_Manager/releases/tag/v4.0-beta) 继续独立保留。
 
-## 4.0 新功能
+## 4.1 新功能
 
-- 重构仓库工作台：默认文件列表、可切换的封面视图、独立组合预设工作区。
-- 同时保存已启用 Mod 组合及数值型持久参数；恢复时先恢复组合，再回写匹配的 `d3dx_user.ini` 参数。也可为单个 Mod 保存多个状态槽位。
-- 重新排列搜索、预览、快捷键和部署操作；列表在模块内滚动，窄窗口通过详情查看内容。
-- 底部状态栏合并为单行，区分空闲与任务状态，长路径可悬停查看。
-- 正式版重新接入软件更新，修正主程序 ZIP 与校验文件的精确配对，保留现有配置。
+- 新增组合包导出与安装：打包已保存的预设、Mod 文件及数值状态，在其他仓库预览安装。
+- 文件完全相同的已有 Mod 可直接复用；内容不同的冲突项不覆盖。
+- 优化仓库扫描与大型列表刷新。
+- 修复在线预览图和角色头像显示，完善下载取消与安装状态即时刷新。
+- 优化短窗口排版；设置总览放不下时自动改为分区设置，不再挤压裁切下方模块。
 
 保存状态前先让加载器落盘（通常为 F10）；恢复前退出游戏和加载器。不改写 Mod INI 默认值或其他 Mod 的参数。不保证所有 Mod 兼容，也不承诺账号零风险。
 
-[更新说明](./docs/releases/v4.0.0.md) · [升级指南](./docs/guides/Upgrade-v4.0.zh-CN.md) · [Wiki](https://github.com/uyujkk/Integrated_Mod_Manager/wiki)
+[更新说明](./docs/releases/v4.1.0.md) · [升级指南](./docs/guides/Upgrade-v4.1.zh-CN.md) · [Wiki](https://github.com/uyujkk/Integrated_Mod_Manager/wiki)
 
 ## 核心功能
 
@@ -51,6 +51,7 @@
 | 预览与说明 | 为每个 Mod 保存预览图、来源链接、快捷键和功能描述 |
 | 仓库工作台 | 文件列表与封面视图可切换，集中显示选择、详情和部署操作 |
 | 组合与状态预设 | 保存已启用 Mod 组合和数值型持久参数，先恢复组合，再回写对应的 `d3dx_user.ini` 参数 |
+| 组合包迁移 | 导出所选预设及 Mod 文件；校验、预览、安装后可选择恢复组合和状态 |
 | 在线 Mod 浏览 | 浏览 GameBanana 条目，按角色筛选，查看图片与说明并下载解压 |
 | 配置方案 | 保存并应用整套已启用 Mod，不影响无法识别的目标目录 |
 | 安装安全 | 安装前检测冲突，为复制、移除和方案切换创建可恢复备份 |
@@ -162,7 +163,7 @@ cmd /c build_winui.bat
 powershell -NoProfile -ExecutionPolicy Bypass -File .\scripts\test-all.ps1
 ```
 
-4.0.0 自动化验证包含 325 项测试。GitHub Actions 会在推送到 `main`、Pull Request 和手动触发时执行相同流程。详细信息及验证边界见[测试说明](./docs/development/TESTING.md)与[4.0 验证记录](./docs/verification/v4.0.0.md)。
+GitHub Actions 会在推送到 `main`、Pull Request 和手动触发时执行统一三组验证。测试依赖集中管理，未删除安全用例。当前结果及验证边界见[测试说明](./docs/development/TESTING.md)与[4.1 验证记录](./docs/verification/v4.1.0.md)。
 
 ## 数据与安全
 

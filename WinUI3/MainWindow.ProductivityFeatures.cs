@@ -175,7 +175,12 @@ public sealed partial class MainWindow
             ApplyTrackedModsListLayout();
         }
 
-        bool stackUpdateActions = width < 980;
+        UpdateAppUpdateActionsLayout();
+    }
+
+    private void UpdateAppUpdateActionsLayout()
+    {
+        bool stackUpdateActions = AppUpdateActionsGrid.ActualWidth < 540;
         AppUpdateActionColumn1.Width = new GridLength(1, GridUnitType.Star);
         AppUpdateActionColumn2.Width = stackUpdateActions ? new GridLength(0) : new GridLength(1, GridUnitType.Star);
         AppUpdateActionColumn3.Width = stackUpdateActions ? new GridLength(0) : new GridLength(1, GridUnitType.Star);
@@ -868,78 +873,37 @@ public sealed partial class MainWindow
     private (List<FirstLevelFolderItem> Items, int SecondCount) LoadFolderItemsUsingIndex(
         string repositoryId,
         string sourceDir,
-        string targetDir)
+        string targetDir,
+        CancellationToken cancellationToken,
+        out int warningCount)
     {
-        Dictionary<string, IndexedModFolder> cached = _appDataStore.ReadModIndex(repositoryId, sourceDir)
-            .ToDictionary(item => item.ModPath, StringComparer.OrdinalIgnoreCase);
-        List<IndexedModFolder> refreshedIndex = [];
-        List<FirstLevelFolderItem> loadedItems = [];
-        string[] firstDirs = Directory.GetDirectories(sourceDir);
-        Array.Sort(firstDirs, StringComparer.CurrentCultureIgnoreCase);
-        int secondCount = 0;
-        bool indexChanged = cached.Count == 0;
-
-        foreach (string firstDir in firstDirs)
+        var scanner = new RepositoryScanService(new RepositoryIndexStoreAdapter(_appDataStore));
+        RepositoryScanResult scan;
+        using (var scanTiming = _repositoryPerformance.Measure(RepositoryPerformanceOperation.Scan))
         {
-            var firstItem = new FirstLevelFolderItem(firstDir);
-            string[] secondDirs = Directory.GetDirectories(firstDir);
-            Array.Sort(secondDirs, StringComparer.CurrentCultureIgnoreCase);
-            foreach (string secondDir in secondDirs)
+            scan = scanner.Scan(repositoryId, sourceDir, cancellationToken);
+            scanTiming?.SetCounts(scan.ModCount, scan.CacheHits);
+        }
+        using var projectionTiming = _repositoryPerformance.Measure(RepositoryPerformanceOperation.Projection, scan.ModCount, scan.CacheHits);
+        warningCount = scan.Warnings.Count;
+        foreach (RepositoryScanWarning warning in scan.Warnings)
+        {
+            LogApplicationIssue(warning.Operation, warning.Error);
+        }
+        List<FirstLevelFolderItem> loadedItems = [];
+        foreach (RepositoryScanCategory category in scan.Categories)
+        {
+            cancellationToken.ThrowIfCancellationRequested();
+            var firstItem = new FirstLevelFolderItem(category.Path);
+            foreach (RepositoryModIndexEntry mod in category.Mods)
             {
-                string stamp = Directory.GetLastWriteTimeUtc(secondDir).Ticks.ToString(CultureInfo.InvariantCulture);
-                List<string> files;
-                if (cached.TryGetValue(secondDir, out IndexedModFolder? cachedFolder)
-                    && string.Equals(cachedFolder.FolderStampUtc, stamp, StringComparison.Ordinal)
-                    && cachedFolder.Files.Count == cachedFolder.FileCount)
-                {
-                    files = cachedFolder.Files;
-                }
-                else
-                {
-                    files = GetFiles(secondDir);
-                    indexChanged = true;
-                }
-
-                long bytes = 0;
-                if (!cached.TryGetValue(secondDir, out IndexedModFolder? currentCached)
-                    || !string.Equals(currentCached.FolderStampUtc, stamp, StringComparison.Ordinal))
-                {
-                    foreach (string file in files)
-                    {
-                        try
-                        {
-                            bytes += new FileInfo(file).Length;
-                        }
-                        catch
-                        {
-                        }
-                    }
-                }
-                else
-                {
-                    bytes = currentCached.TotalBytes;
-                }
-
-                refreshedIndex.Add(new IndexedModFolder
-                {
-                    FirstLevelPath = firstDir,
-                    ModPath = secondDir,
-                    FolderStampUtc = stamp,
-                    FileCount = files.Count,
-                    TotalBytes = bytes,
-                    Files = files
-                });
-                firstItem.Children.Add(new SecondLevelFolderItem(secondDir, files, GetFolderCopyState(targetDir, secondDir)));
-                secondCount++;
+                cancellationToken.ThrowIfCancellationRequested();
+                firstItem.Children.Add(new SecondLevelFolderItem(
+                    mod.ModPath, mod.Files.ToList(), GetFolderCopyState(targetDir, mod.ModPath)));
             }
             loadedItems.Add(firstItem);
         }
-
-        if (indexChanged || cached.Count != refreshedIndex.Count)
-        {
-            _appDataStore.ReplaceModIndex(repositoryId, sourceDir, refreshedIndex);
-        }
-        return (loadedItems, secondCount);
+        return (loadedItems, scan.ModCount);
     }
 
     private sealed record LatestReleaseInfo(

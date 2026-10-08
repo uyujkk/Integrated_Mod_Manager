@@ -42,6 +42,7 @@ public sealed partial class MainWindow
     private Grid? _settingsNavigationGrid;
     private Border? _settingsNavigationCard;
     private Grid? _settingsContentHost;
+    private ScrollViewer? _settingsSectionScrollViewer;
     private Grid? _settingsOverviewGrid;
     private Grid? _settingsOverviewLeftColumn;
     private Grid? _settingsOverviewRightColumn;
@@ -355,7 +356,13 @@ public sealed partial class MainWindow
             _settingsSectionLabels[2].Text = L("仓库在线", "Repository Online");
             _settingsSectionLabels[3].Text = L("诊断工具", "Diagnostics");
             _settingsSectionLabels[4].Text = L("项目与开源", "Project & Open Source");
+            for (int index = 0; index < _settingsSectionButtons.Length; index++)
+            {
+                ToolTipService.SetToolTip(_settingsSectionButtons[index], _settingsSectionLabels[index].Text);
+                AutomationProperties.SetName(_settingsSectionButtons[index], _settingsSectionLabels[index].Text);
+            }
             ShowSettingsSection(_selectedSettingsSection);
+            UpdateSettingsLayout();
         }
         RefreshRefinedDashboardPathHeader();
         UpdateRepositoryWorkspaceLanguageV4();
@@ -486,6 +493,8 @@ public sealed partial class MainWindow
             VerticalAlignment = VerticalAlignment.Top,
             Child = _settingsNavigationGrid
         };
+        _settingsNavigationCard.SizeChanged += (_, _) => UpdateSettingsLayout();
+        AppUpdateActionsGrid.SizeChanged += (_, _) => UpdateAppUpdateActionsLayout();
 
         _settingsContentHost = new Grid { VerticalAlignment = VerticalAlignment.Top };
         foreach (Border card in _settingsCards)
@@ -505,8 +514,15 @@ public sealed partial class MainWindow
         _settingsOverviewGrid.Children.Add(_settingsOverviewRightColumn);
 
         _settingsResponsiveGrid = new Grid { ColumnSpacing = 10, RowSpacing = 10 };
+        _settingsSectionScrollViewer = new ScrollViewer
+        {
+            Content = _settingsContentHost,
+            HorizontalScrollBarVisibility = ScrollBarVisibility.Disabled,
+            HorizontalScrollMode = ScrollMode.Disabled,
+            VerticalAlignment = VerticalAlignment.Top
+        };
         _settingsResponsiveGrid.Children.Add(_settingsNavigationCard);
-        _settingsResponsiveGrid.Children.Add(_settingsContentHost);
+        _settingsResponsiveGrid.Children.Add(_settingsSectionScrollViewer);
 
         settingsPanel.Spacing = 12;
         settingsPanel.Margin = new Thickness(2, 2, 8, 2);
@@ -548,6 +564,7 @@ public sealed partial class MainWindow
         }
 
         _selectedSettingsSection = sectionIndex;
+        _settingsSectionScrollViewer?.ChangeView(null, 0, null, true);
         for (int index = 0; index < _settingsCards.Length; index++)
         {
             bool selected = index == sectionIndex;
@@ -801,7 +818,8 @@ public sealed partial class MainWindow
         if (_settingsResponsiveGrid is null
             || _settingsNavigationGrid is null
             || _settingsNavigationCard is null
-            || _settingsContentHost is null)
+            || _settingsContentHost is null
+            || _settingsSectionScrollViewer is null)
         {
             return;
         }
@@ -815,7 +833,29 @@ public sealed partial class MainWindow
         {
             _settingsRootPanel.Width = Math.Max(420, Math.Min(3200, available - 12));
         }
-        int mode = available >= 1080 ? 3 : available >= 760 ? 2 : 1;
+        int mode = IntegratedModManager.Core.SettingsLayoutPolicy.Mode(available, SettingsScrollViewer.ActualHeight);
+        bool shortViewport = SettingsScrollViewer.ActualHeight < 650;
+        TextBlock[] settingDescriptions = [LanguageSettingDescriptionTextBlock, ThemeSettingDescriptionTextBlock,
+            MotionSettingDescriptionTextBlock, DensitySettingDescriptionTextBlock, TraySettingDescriptionTextBlock];
+        TextBlock[] settingTitles = [LanguageSettingTitleTextBlock, ThemeSettingTitleTextBlock,
+            MotionSettingTitleTextBlock, DensitySettingTitleTextBlock, TraySettingTitleTextBlock];
+        for (int index = 0; index < settingDescriptions.Length; index++)
+        {
+            settingDescriptions[index].Visibility = shortViewport ? Visibility.Collapsed : Visibility.Visible;
+            ToolTipService.SetToolTip(settingTitles[index], settingDescriptions[index].Text);
+            AutomationProperties.SetHelpText(settingTitles[index], settingDescriptions[index].Text);
+        }
+        if (_settingsCards[0].Child is StackPanel appearance)
+        {
+            foreach (Border row in appearance.Children.OfType<StackPanel>().SelectMany(panel => panel.Children.OfType<Border>()))
+            {
+                row.Padding = new Thickness(14, shortViewport ? 8 : 10, 14, shortViewport ? 8 : 10);
+            }
+        }
+        foreach (TextBlock label in _settingsSectionLabels)
+        {
+            label.MaxWidth = mode == 2 ? 120 : Math.Max(50, available / 4 - 80);
+        }
         ReflowCards(ProjectResourcesGrid, available >= 900 ? 3 : 2);
         ApplySettingsViewportSizing(mode, available);
         if (_settingsLayoutMode == mode)
@@ -832,17 +872,17 @@ public sealed partial class MainWindow
             _settingsNavigationCard.Visibility = Visibility.Collapsed;
             _settingsResponsiveGrid.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(1, GridUnitType.Star) });
             _settingsResponsiveGrid.RowDefinitions.Add(new RowDefinition { Height = GridLength.Auto });
-            Place(_settingsContentHost, 0, 0);
+            Place(_settingsSectionScrollViewer, 0, 0);
         }
         else if (mode == 2)
         {
             ArrangeSettingsFocus();
             _settingsNavigationCard.Visibility = Visibility.Visible;
-            _settingsResponsiveGrid.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(238) });
+            _settingsResponsiveGrid.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(196) });
             _settingsResponsiveGrid.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(1, GridUnitType.Star) });
             _settingsResponsiveGrid.RowDefinitions.Add(new RowDefinition { Height = GridLength.Auto });
             Place(_settingsNavigationCard, 0, 0);
-            Place(_settingsContentHost, 0, 1);
+            Place(_settingsSectionScrollViewer, 0, 1);
             ReflowCards(_settingsNavigationGrid, 1);
         }
         else
@@ -853,7 +893,7 @@ public sealed partial class MainWindow
             _settingsResponsiveGrid.RowDefinitions.Add(new RowDefinition { Height = GridLength.Auto });
             _settingsResponsiveGrid.RowDefinitions.Add(new RowDefinition { Height = GridLength.Auto });
             Place(_settingsNavigationCard, 0, 0);
-            Place(_settingsContentHost, 1, 0);
+            Place(_settingsSectionScrollViewer, 1, 0);
             ReflowCards(_settingsNavigationGrid, mode == 1 ? 4 : 2);
         }
 
@@ -884,6 +924,17 @@ public sealed partial class MainWindow
         UpdateNotesScrollViewer.MinHeight = 0;
         UpdateNotesScrollViewer.MaxHeight = 150;
 
+        if (_settingsSectionScrollViewer is not null)
+        {
+            double header = _settingsHeaderCard?.ActualHeight > 0 ? _settingsHeaderCard.ActualHeight : 88;
+            double navigation = mode == 1 ? Math.Max(130, _settingsNavigationCard?.ActualHeight ?? 0) : 0;
+            _settingsSectionScrollViewer.MaxHeight = IntegratedModManager.Core.SettingsLayoutPolicy.FocusHeight(
+                SettingsScrollViewer.ActualHeight, header, navigation);
+            _settingsSectionScrollViewer.VerticalScrollMode = mode == 3 ? ScrollMode.Disabled : ScrollMode.Auto;
+            _settingsSectionScrollViewer.VerticalScrollBarVisibility = mode == 3
+                ? ScrollBarVisibility.Disabled : ScrollBarVisibility.Auto;
+        }
+
         if (mode != 3 || SettingsScrollViewer.ActualHeight <= 0)
         {
             return;
@@ -894,6 +945,10 @@ public sealed partial class MainWindow
             : 88;
         double usableHeight = Math.Max(0, SettingsScrollViewer.ActualHeight - headerHeight - 20);
         _settingsOverviewGrid.Height = usableHeight;
+        if (_settingsSectionScrollViewer is not null)
+        {
+            _settingsSectionScrollViewer.MaxHeight = usableHeight;
+        }
         if (_settingsCards[0].Child is StackPanel appearancePanel)
         {
             appearancePanel.VerticalAlignment = VerticalAlignment.Center;
@@ -956,6 +1011,7 @@ public sealed partial class MainWindow
         foreach (Border card in _settingsCards)
         {
             card.VerticalAlignment = VerticalAlignment.Top;
+            Place(card, 0, 0);
             _settingsContentHost.Children.Add(card);
         }
     }

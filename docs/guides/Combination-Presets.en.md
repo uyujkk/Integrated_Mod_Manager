@@ -23,7 +23,13 @@ Existing checks guard unknown target folders, namespace conflicts, duplicate dep
 
 ## Upgrade
 
-4.0.0 is a stable release launched through `IntegratedModManager.exe`; it does not include the beta's demo repository. Existing `config.ini`, `beta-shell.json`, profiles, and state-slot formats are retained; see the [upgrade guide](./Upgrade-v4.0.en.md). Do not copy simulated-repository test settings into a real game environment.
+### 4.1: portable combination bundles
+
+Starting with 4.1.0, Presets has Export Bundle and Install Bundle. Export the selected preset's saved state and all corresponding Mod files; update the profile first for newer state. Installation preview lists new, identical/reusable and conflicting Mods. Different existing contents are not overwritten and folders are not automatically renamed.
+
+Install and Save Preset creates a new profile, then optionally opens the existing restore preview. Close the game/loader before confirming restore. Deployment precedes targeted writes to local `d3dx_user.ini`; original Mod INIs and unrelated keys remain unchanged. Uncheck the option to install/save only. Bundles are unencrypted; inspect private files and redistribution permissions before sharing. Only this application's combination ZIP format is supported, not arbitrary Mod archives. See [bundle details](../development/Combination-Bundles.md).
+
+4.1.0 is launched through `IntegratedModManager.exe`; it does not include demo repositories. Existing `config.ini`, `beta-shell.json`, profiles, and state-slot formats are retained; see the [upgrade guide](./Upgrade-v4.1.en.md). Do not copy simulated-repository test settings into a real game environment.
 
 ## Parameters and Backup Boundaries
 

@@ -37,7 +37,7 @@ namespace ModFolderCopier.WinUI;
 
 public sealed partial class MainWindow : Window
 {
-    private const string AppVersion = "v4.0.0";
+    private const string AppVersion = "v4.1.0";
     private static bool AppSelfUpdateEnabled => ApplicationReleasePolicy.ApplicationSelfUpdateEnabled;
     private const string GitHubRepositoryUrl = "https://github.com/uyujkk/Integrated_Mod_Manager";
     private const string GitHubLatestReleaseApiUrl = "https://api.github.com/repos/uyujkk/Integrated_Mod_Manager/releases/latest";
@@ -213,8 +213,8 @@ public sealed partial class MainWindow : Window
     private readonly HttpClient _httpClient = CreateHttpClient();
     private readonly RequestCooldown _onlineRateLimit = new();
     private readonly SemaphoreSlim _onlineCharacterAvatarDownloadGate = new(3, 3);
-    private readonly ObservableCollection<FirstLevelFolderItem> _firstLevelItems = [];
-    private readonly ObservableCollection<SecondLevelFolderItem> _secondLevelItems = [];
+    private readonly BatchObservableCollection<FirstLevelFolderItem> _firstLevelItems = [];
+    private readonly BatchObservableCollection<SecondLevelFolderItem> _secondLevelItems = [];
     private readonly ObservableCollection<OnlineModCard> _onlineVisibleMods = [];
     private readonly List<FirstLevelFolderItem> _allFirstLevelItems = [];
     private readonly List<Border> _shortcutKeyBorders = [];
@@ -223,7 +223,7 @@ public sealed partial class MainWindow : Window
     private readonly Dictionary<string, List<ShortcutBinding>> _modBindings = new(StringComparer.CurrentCultureIgnoreCase);
     private readonly Dictionary<string, string> _modLinks = new(StringComparer.CurrentCultureIgnoreCase);
     private readonly Dictionary<string, TrackedModOrigin> _trackedModOrigins = new(StringComparer.CurrentCultureIgnoreCase);
-    private readonly Dictionary<int, OnlineModDetails> _onlineModDetailsCache = [];
+    private readonly GameBananaMetadataService _gameBananaMetadataService;
     private readonly Dictionary<string, DateTimeOffset> _lastConfigurationBackupUtc = new(StringComparer.OrdinalIgnoreCase);
     private readonly List<WorkspaceRepository> _repositories = [];
     private readonly List<OnlineModCard> _onlineMods = [];
@@ -321,6 +321,9 @@ public sealed partial class MainWindow : Window
         _appDataStore = new AppDataStore(
             Path.Combine(AppContext.BaseDirectory, "cache", "app-index.db"),
             LogPersistentDataStoreIssue);
+        _gameBananaMetadataService = new GameBananaMetadataService(_httpClient,
+            new OnlineMetadataCacheAdapter(_appDataStore, _onlineDetailsCachePath, LogApplicationIssue),
+            diagnostics: LogApplicationIssue);
         InitializeComponent();
         ApplyWindowIcon();
         TraceStartupStage("InitializeComponent completed");
@@ -1035,7 +1038,7 @@ public sealed partial class MainWindow : Window
         BrowseCombinationUserIniButton.Content = L("选择文件", "Browse");
         CreateConfigurationProfileButton.Content = L("新建方案", "New Profile");
         UpdateConfigurationProfileButton.Content = L("更新方案", "Update Profile");
-        ApplyConfigurationProfileButton.Content = L("恢复组合", "Restore Combination");
+        ApplyConfigurationProfileButton.Content = L("预览并恢复组合", "Preview and Restore");
         DeleteConfigurationProfileButton.Content = new FontIcon { Glyph = "\uE74D", FontSize = 16 };
         ToolTipService.SetToolTip(DeleteConfigurationProfileButton, L("删除选中的配置方案", "Delete the selected profile"));
         InstallSafetyTitleTextBlock.Text = L("安装安全", "Install Safety");
@@ -1226,6 +1229,7 @@ public sealed partial class MainWindow : Window
         ConfigurationProfileComboBox.IsEnabled = hasRepository;
         CaptureCombinationStateCheckBox.IsEnabled = hasRepository;
         BrowseCombinationUserIniButton.IsEnabled = hasRepository;
+        CombinationUserIniTextBox.IsEnabled = hasRepository;
         CombinationUserIniTextBox.Text = GetSelectedRepository()?.PersistentUserIniPath is { Length: > 0 } userIni
             ? userIni : TryGetDefaultPersistentIniPath(GetSelectedRepository()) ?? string.Empty;
         ConfigurationProfileSummaryTextBlock.Text = selected is null
@@ -1240,6 +1244,7 @@ public sealed partial class MainWindow : Window
             ? L("可撤销最近一次 Mod 部署；组合参数另有 d3dx_user.ini.bak 备份。", "Undo covers Mod deployment; combination parameters have a separate d3dx_user.ini .bak backup.")
             : L("目前没有可撤销的 Mod 操作。", "There is no mod operation to undo.");
         RefreshCombinationWorkspaceV4();
+        RefreshCombinationBundleActions();
     }
 
     private List<string> CaptureCurrentConfigurationProfile()
@@ -1878,6 +1883,7 @@ public sealed partial class MainWindow : Window
                 break;
             }
             _downloadTasks.Remove(oldestFinished);
+            oldestFinished.Cancellation.Dispose();
         }
         RefreshDownloadTaskCenter();
         return task;
@@ -1979,6 +1985,7 @@ public sealed partial class MainWindow : Window
         {
             if (DownloadProgressPolicy.IsActive(task.State))
             {
+                if (task.Session?.CanCancel == false) return;
                 task.Cancellation.Cancel();
                 UpdateDownloadTask(task, DownloadTaskState.Canceling, task.Progress, "正在取消...", "Canceling...", forceRefresh: true);
                 return;
@@ -2008,7 +2015,7 @@ public sealed partial class MainWindow : Window
             && (task.State is not DownloadTaskState.Downloading || !task.HasKnownTotalLength);
         view.ActionButton.Content = active ? L("取消", "Cancel") : L("打开目录", "Open Folder");
         view.ActionButton.IsEnabled = active
-            ? task.State is not DownloadTaskState.Canceling
+            ? task.State is not DownloadTaskState.Canceling && task.Session?.CanCancel != false
             : Directory.Exists(task.DestinationPath);
         ClearDownloadTasksButton.IsEnabled = _downloadTasks.Any(item => DownloadProgressPolicy.IsTerminal(item.State));
     }
@@ -2205,7 +2212,7 @@ public sealed partial class MainWindow : Window
         return changed;
     }
 
-    private void SaveShellConfig()
+    private void SaveShellConfig(bool throwOnError = false)
     {
         try
         {
@@ -2248,6 +2255,7 @@ public sealed partial class MainWindow : Window
         }
         catch
         {
+            if (throwOnError) throw;
             StatusTextBlock.Text = L("保存仓库配置失败。", "Failed to save repository config.");
         }
     }
@@ -2657,14 +2665,14 @@ public sealed partial class MainWindow : Window
             int requestVersion = ++loadVersion;
             image.Source = null;
             loadingText.Visibility = Visibility.Visible;
-            Uri? cachedImage = await GetCachedOnlineImageUriAsync(navigationImages[currentIndex]);
+            BitmapImage? cachedImage = await LoadOnlineBitmapAsync(navigationImages[currentIndex]);
             if (requestVersion != loadVersion)
             {
                 return;
             }
 
             loadingText.Visibility = Visibility.Collapsed;
-            image.Source = cachedImage is null ? source : new BitmapImage(cachedImage);
+            image.Source = cachedImage ?? source;
         }
 
         previousButton.Click += async (_, _) => await DisplayImageAsync(currentIndex - 1);
@@ -2825,20 +2833,8 @@ public sealed partial class MainWindow : Window
             avatarLayer.Children.Add(avatar);
             avatarHost.Child = avatarLayer;
 
-            Uri? cachedAvatar = TryGetExistingCachedOnlineImageUri(avatarUrl);
-            if (cachedAvatar is not null)
-            {
-                avatar.Source = new BitmapImage(cachedAvatar);
-                avatar.Opacity = 1;
-            }
-            else
-            {
-                _ = SetCachedOnlineCharacterAvatarAsync(
-                    avatar,
-                    avatarUrl,
-                    avatarRequestVersion,
-                    avatarCancellationToken);
-            }
+            _ = SetCachedOnlineCharacterAvatarAsync(
+                avatar, avatarUrl, avatarRequestVersion, avatarCancellationToken);
         }
         else
         {
@@ -3072,7 +3068,8 @@ public sealed partial class MainWindow : Window
             onlineContentWidth -= OnlineDetailsSplitView.OpenPaneLength;
         }
 
-        bool useHorizontalCharacterRail = onlineContentWidth < 1040;
+        OnlineCharacterRailLayout railLayout = OnlineLayoutPolicy.CharacterRail(onlineContentWidth, RootGrid.ActualHeight);
+        bool useHorizontalCharacterRail = railLayout.Horizontal;
         bool characterRailModeChanged = _useHorizontalOnlineCharacterRail != useHorizontalCharacterRail;
         _useHorizontalOnlineCharacterRail = useHorizontalCharacterRail;
         if (useHorizontalCharacterRail)
@@ -3097,7 +3094,7 @@ public sealed partial class MainWindow : Window
         }
         else
         {
-            OnlineCharacterRailColumn.Width = new GridLength(188);
+            OnlineCharacterRailColumn.Width = new GridLength(railLayout.ColumnWidth);
             OnlineResultsColumn.Width = new GridLength(1, GridUnitType.Star);
             OnlineCharacterRailRow.Height = new GridLength(1, GridUnitType.Star);
             OnlineResultsRow.Height = new GridLength(0);
@@ -3621,6 +3618,9 @@ public sealed partial class MainWindow : Window
 
     private void CancelOnlineModListRequest()
     {
+        // Invalidate even when the next load exits before creating a new request.
+        _onlineModRequestVersion++;
+        _isLoadingOnlineMods = false;
         CancellationTokenSource? cancellation = _onlineModListCancellation;
         _onlineModListCancellation = null;
         if (cancellation is null)
@@ -4365,98 +4365,28 @@ public sealed partial class MainWindow : Window
         return new OnlineModPageResult(modIds, totalCount, page, OnlineRawFetchPageSize);
     }
 
-    private async Task<OnlineModCard?> FetchGameBananaModCardAsyncV2(int itemId, bool useEndfieldMetadata = false)
+    private async Task<OnlineModCard?> FetchGameBananaModCardAsyncV2(
+        int itemId, bool useEndfieldMetadata = false, CancellationToken cancellationToken = default)
     {
-        string fields = string.Join(",",
-            "name",
-            "Category().name",
-            "catid",
-            "RootCategory().name",
-            "likes",
-            "views",
-            "downloads",
-            "Owner().name",
-            "mdate",
-            "Preview().sSubFeedImageUrl()",
-            "Url().sProfileUrl()",
-            "Url().sDownloadUrl()",
-            "Files().aFiles()",
-            "Updates().bSubmissionHasUpdates()");
-        string requestUrl = $"https://api.gamebanana.com/Core/Item/Data?itemtype=Mod&itemid={itemId}&fields={Uri.EscapeDataString(fields)}&return_keys=true&format=json_min";
-        using HttpResponseMessage response = await _httpClient.GetAsync(requestUrl);
-        response.EnsureSuccessStatusCode();
-
-        string json = await response.Content.ReadAsStringAsync();
-        using JsonDocument document = JsonDocument.Parse(json);
-        JsonElement root = document.RootElement;
-
-        JsonElement dataElement = root;
-        if (root.ValueKind == JsonValueKind.Object && root.TryGetProperty("value", out JsonElement wrappedValue))
-        {
-            dataElement = wrappedValue;
-        }
-
-        string title = TryGetStringProperty(dataElement, "name") ?? $"Mod {itemId}";
-        string characterName = TryGetStringProperty(dataElement, "Category().name") ?? L("未分类角色", "Uncategorized");
-        int categoryId = TryGetInt32Property(dataElement, "catid");
-        string rootCategoryName = TryGetStringProperty(dataElement, "RootCategory().name") ?? string.Empty;
-        int likes = TryGetInt32Property(dataElement, "likes");
-        int views = TryGetInt32Property(dataElement, "views");
-        int downloads = TryGetInt32Property(dataElement, "downloads");
-        string author = TryGetStringProperty(dataElement, "Owner().name") ?? L("未知作者", "Unknown author");
-        long updatedEpoch = TryGetInt64Property(dataElement, "mdate");
-        string? previewUrl = TryGetStringProperty(dataElement, "Preview().sSubFeedImageUrl()");
-        string profileUrl = TryGetStringProperty(dataElement, "Url().sProfileUrl()") ?? $"https://gamebanana.com/mods/{itemId}";
-        string? fallbackDownloadUrl = TryGetStringProperty(dataElement, "Url().sDownloadUrl()");
-        bool hasUpdates = TryGetBoolProperty(dataElement, "Updates().bSubmissionHasUpdates()");
-
-        JsonElement filesElement = default;
-        List<OnlineDownloadCandidate> downloadFiles = [];
-        string? downloadUrl = fallbackDownloadUrl;
-        string downloadFileName = string.Empty;
-        long fileSizeBytes = 0;
-        if (dataElement.ValueKind == JsonValueKind.Object && dataElement.TryGetProperty("Files().aFiles()", out filesElement))
-        {
-            downloadFiles = ParseGameBananaDownloadFiles(filesElement);
-            OnlineDownloadCandidate? defaultFile = OnlineDownloadSelectionPolicy.SelectDefault(downloadFiles);
-            if (defaultFile is not null)
-            {
-                downloadUrl = defaultFile.DownloadUrl;
-                downloadFileName = defaultFile.FileName;
-                fileSizeBytes = defaultFile.FileSizeBytes;
-            }
-            if (downloads <= 0)
-            {
-                downloads = SumGameBananaFileDownloads(filesElement);
-            }
-        }
-
-        DateTimeOffset updatedAt = FromGameBananaUnixTime(updatedEpoch);
-
-        string resolvedCharacterName = ResolveOnlineCharacterName(characterName, title, useEndfieldMetadata);
-        bool isCharacterNameInferred = IsGenericOnlineCharacterName(characterName)
-            && !string.Equals(resolvedCharacterName, characterName, StringComparison.OrdinalIgnoreCase);
+        GameBananaModMetadata metadata = await _gameBananaMetadataService.GetModAsync(itemId, cancellationToken);
+        string category = string.IsNullOrWhiteSpace(metadata.CharacterName) ? L("未分类角色", "Uncategorized") : metadata.CharacterName;
+        string character = ResolveOnlineCharacterName(category, metadata.Title, useEndfieldMetadata);
+        OnlineDownloadCandidate? file = OnlineDownloadSelectionPolicy.SelectDefault(metadata.DownloadFiles);
         return new OnlineModCard
         {
-            ItemId = itemId,
-            Title = title,
-            CharacterName = resolvedCharacterName,
-            CategoryId = categoryId > 0 ? categoryId.ToString(CultureInfo.InvariantCulture) : string.Empty,
-            IsCharacterNameInferred = isCharacterNameInferred,
-            RootCategoryName = rootCategoryName,
-            Author = author,
-            Likes = likes,
-            Views = views,
-            Downloads = downloads,
-            HotnessScore = CalculateOnlineHotness(likes, views, downloads),
-            PreviewUrl = previewUrl,
-            ProfileUrl = profileUrl,
-            DownloadUrl = downloadUrl,
-            DownloadFileName = downloadFileName,
-            DownloadFiles = downloadFiles,
-            FileSizeBytes = fileSizeBytes,
-            HasUpdates = hasUpdates,
-            UpdatedAt = updatedAt
+            ItemId = itemId, Title = metadata.Title, CharacterName = character,
+            CategoryId = metadata.CategoryId > 0 ? metadata.CategoryId.ToString(CultureInfo.InvariantCulture) : string.Empty,
+            IsCharacterNameInferred = IsGenericOnlineCharacterName(category)
+                && !string.Equals(character, category, StringComparison.OrdinalIgnoreCase),
+            RootCategoryName = metadata.RootCategoryName,
+            Author = string.IsNullOrWhiteSpace(metadata.Author) ? L("未知作者", "Unknown author") : metadata.Author,
+            Likes = metadata.Likes, Views = metadata.Views, Downloads = metadata.Downloads,
+            HotnessScore = CalculateOnlineHotness(metadata.Likes, metadata.Views, metadata.Downloads),
+            PreviewUrl = metadata.PreviewUrl, ProfileUrl = metadata.ProfileUrl,
+            DownloadUrl = file?.DownloadUrl ?? metadata.FallbackDownloadUrl,
+            DownloadFileName = file?.FileName ?? string.Empty, DownloadFiles = metadata.DownloadFiles.ToList(),
+            FileSizeBytes = file?.FileSizeBytes ?? 0, HasUpdates = metadata.HasUpdates,
+            UpdatedAt = FromGameBananaUnixTime(metadata.UpdatedEpoch)
         };
     }
 
@@ -4706,83 +4636,6 @@ public sealed partial class MainWindow : Window
         }
     }
 
-    private static int SumGameBananaFileDownloads(JsonElement filesElement)
-    {
-        if (filesElement.ValueKind != JsonValueKind.Object)
-        {
-            return 0;
-        }
-
-        int totalDownloads = 0;
-        foreach (JsonProperty property in filesElement.EnumerateObject())
-        {
-            JsonElement fileElement = property.Value;
-            if (fileElement.ValueKind != JsonValueKind.Object)
-            {
-                continue;
-            }
-
-            totalDownloads += TryGetInt32Property(fileElement, "_nDownloadCount");
-        }
-
-        return totalDownloads;
-    }
-
-    private static List<OnlineDownloadCandidate> ParseGameBananaDownloadFiles(JsonElement filesElement)
-    {
-        List<OnlineDownloadCandidate> files = [];
-        if (filesElement.ValueKind != JsonValueKind.Object)
-        {
-            return files;
-        }
-
-        foreach (JsonProperty fileProperty in filesElement.EnumerateObject())
-        {
-            JsonElement fileElement = fileProperty.Value;
-            if (fileElement.ValueKind != JsonValueKind.Object)
-            {
-                continue;
-            }
-
-            string fileId = TryGetStringProperty(fileElement, "_idRow") ?? fileProperty.Name;
-            string fileName = TryGetStringProperty(fileElement, "_sFile") ?? string.Empty;
-            bool isArchived = TryGetBoolProperty(fileElement, "_bIsArchived");
-            string? fileDownloadUrl = TryGetStringProperty(fileElement, "_sDownloadUrl");
-            long fileSizeBytes = TryGetInt64Property(fileElement, "_nFilesize");
-            long addedEpoch = TryGetInt64Property(fileElement, "_tsDateAdded");
-            if (string.IsNullOrWhiteSpace(fileDownloadUrl))
-            {
-                continue;
-            }
-
-            DateTimeOffset addedAt = DateTimeOffset.MinValue;
-            if (addedEpoch > 0)
-            {
-                try
-                {
-                    addedAt = DateTimeOffset.FromUnixTimeSeconds(addedEpoch).ToLocalTime();
-                }
-                catch (ArgumentOutOfRangeException)
-                {
-                }
-            }
-
-            files.Add(new OnlineDownloadCandidate
-            {
-                FileId = fileId,
-                FileName = fileName,
-                DownloadUrl = fileDownloadUrl,
-                FileSizeBytes = Math.Max(0, fileSizeBytes),
-                AddedAt = addedAt,
-                IsArchived = isArchived,
-                IsSupportedArchive = IsSupportedArchiveFile(fileName),
-                Version = TryGetStringProperty(fileElement, "_sVersion") ?? string.Empty,
-                Description = TryGetStringProperty(fileElement, "_sDescription") ?? string.Empty
-            });
-        }
-
-        return OnlineDownloadSelectionPolicy.OrderForManualSelection(files).ToList();
-    }
 
     private static string? TryGetStringProperty(JsonElement element, string propertyName)
     {
@@ -6129,149 +5982,39 @@ public sealed partial class MainWindow : Window
     private async Task ShowOnlineModDetailsAsync(OnlineModCard mod)
     {
         _activeOnlineDetailMod = mod;
-        PrepareOnlineDetailLoadingState(mod);
-        await OpenOnlineDetailPaneAsync();
-        SetBusyState(true);
-        try
-        {
-            OnlineModDetails details = await GetOnlineModDetailsAsync(mod);
-            OnlineModDetails displayDetails = await TryTranslateOnlineModDetailsAsync(details);
-            if (_activeOnlineDetailMod?.ItemId != mod.ItemId)
+        string contextKey = GetOnlineDetailContextKey();
+        await _onlineDetailState.RunLatestAsync(
+            OpenOnlineDetailPaneAsync,
+            token => GetOnlineModDetailsAsync(mod, token),
+            (details, token) => TryTranslateOnlineModDetailsAsync(details).WaitAsync(token),
+            (details, displayDetails) =>
             {
-                return;
-            }
-
-            PopulateOnlineDetailPane(mod, details, displayDetails);
-            AnimateOnlineDetailContentRefresh();
-        }
-        catch (Exception ex)
-        {
-            if (_activeOnlineDetailMod?.ItemId != mod.ItemId)
-            {
-                return;
-            }
-
-            await ShowMessageAsync(
+                PopulateOnlineDetailPane(mod, details, displayDetails);
+                AnimateOnlineDetailContentRefresh();
+            },
+            ex => ReportOnlineActionErrorAsync(
                 L("打开 Mod 详情失败：", "Failed to open mod details: ") + ex.Message,
-                L("详情加载失败", "Details load failed"));
-        }
-        finally
-        {
-            SetBusyState(false);
-        }
-    }
-
-    private async Task<OnlineModDetails> GetOnlineModDetailsAsync(OnlineModCard mod)
-    {
-        if (_onlineModDetailsCache.TryGetValue(mod.ItemId, out OnlineModDetails? cached))
-        {
-            return cached;
-        }
-
-        OnlineModDetails? diskCached = await TryReadOnlineModDetailsCacheAsync(mod.ItemId);
-        if (diskCached is not null)
-        {
-            _onlineModDetailsCache[mod.ItemId] = diskCached;
-            return diskCached;
-        }
-
-        OnlineModDetails details = await FetchOnlineModDetailsAsync(mod);
-        _onlineModDetailsCache[mod.ItemId] = details;
-        await WriteOnlineModDetailsCacheAsync(mod.ItemId, details);
-        return details;
-    }
-
-    private string GetOnlineModDetailsCacheFile(int itemId)
-    {
-        return Path.Combine(_onlineDetailsCachePath, $"mod-{itemId}.json");
-    }
-
-    private async Task<OnlineModDetails?> TryReadOnlineModDetailsCacheAsync(int itemId)
-    {
-        CachedValue<OnlineModDetails>? sqliteDetails = _appDataStore.TryReadCache<OnlineModDetails>(
-            "online-details",
-            itemId.ToString(CultureInfo.InvariantCulture),
-            TimeSpan.FromDays(3));
-        if (sqliteDetails is not null)
-        {
-            return sqliteDetails.Value;
-        }
-
-        try
-        {
-            string cacheFile = GetOnlineModDetailsCacheFile(itemId);
-            if (!File.Exists(cacheFile) || DateTime.UtcNow - File.GetLastWriteTimeUtc(cacheFile) > TimeSpan.FromDays(3))
+                L("详情加载失败", "Details load failed")),
+            () => !_onlineWindowClosed && ReferenceEquals(_activeOnlineDetailMod, mod)
+                && string.Equals(contextKey, GetOnlineDetailContextKey(), StringComparison.Ordinal),
+            loading =>
             {
-                return null;
-            }
-
-            string json = await File.ReadAllTextAsync(cacheFile);
-            return JsonSerializer.Deserialize<OnlineModDetails>(json);
-        }
-        catch
-        {
-            return null;
-        }
+                if (loading) PrepareOnlineDetailLoadingState(mod);
+                else RefreshOnlineDetailActionState();
+            });
     }
 
-    private async Task WriteOnlineModDetailsCacheAsync(int itemId, OnlineModDetails details)
+    private async Task<OnlineModDetails> GetOnlineModDetailsAsync(OnlineModCard mod, CancellationToken cancellationToken = default)
     {
-        _appDataStore.WriteCache("online-details", itemId.ToString(CultureInfo.InvariantCulture), details);
-        try
-        {
-            Directory.CreateDirectory(_onlineDetailsCachePath);
-            await File.WriteAllTextAsync(GetOnlineModDetailsCacheFile(itemId), JsonSerializer.Serialize(details));
-        }
-        catch
-        {
-        }
-    }
-
-    private async Task<OnlineModDetails> FetchOnlineModDetailsAsync(OnlineModCard mod)
-    {
-        string fields = string.Join(",",
-            "name",
-            "description",
-            "text",
-            "screenshots",
-            "Preview().sSubFeedImageUrl()");
-        string requestUrl = $"https://api.gamebanana.com/Core/Item/Data?itemtype=Mod&itemid={mod.ItemId}&fields={Uri.EscapeDataString(fields)}&return_keys=true&format=json_min";
-        using HttpResponseMessage response = await _httpClient.GetAsync(requestUrl);
-        response.EnsureSuccessStatusCode();
-
-        string json = await response.Content.ReadAsStringAsync();
-        using JsonDocument document = JsonDocument.Parse(json);
-        JsonElement root = document.RootElement;
-        JsonElement dataElement = root;
-        if (root.ValueKind == JsonValueKind.Object && root.TryGetProperty("value", out JsonElement wrappedValue))
-        {
-            dataElement = wrappedValue;
-        }
-
-        string summary = TryGetStringProperty(dataElement, "description") ?? string.Empty;
-        string descriptionHtml = TryGetStringProperty(dataElement, "text") ?? string.Empty;
-        string screenshotsJson = TryGetStringProperty(dataElement, "screenshots") ?? string.Empty;
-        string? previewUrl = TryGetStringProperty(dataElement, "Preview().sSubFeedImageUrl()");
-        string plainSummary = StripHtmlToPlainText(summary);
-        string plainDescription = StripHtmlToPlainText(descriptionHtml);
-        string combinedText = string.Join(
-            Environment.NewLine,
-            new[] { plainSummary, plainDescription }
-                .Where(value => !string.IsNullOrWhiteSpace(value)));
-
-        List<string> imageUrls = ParseScreenshotUrls(screenshotsJson);
-        if (!string.IsNullOrWhiteSpace(previewUrl) && !imageUrls.Contains(previewUrl, StringComparer.OrdinalIgnoreCase))
-        {
-            imageUrls.Insert(0, previewUrl);
-        }
-
+        GameBananaDetails raw = await _gameBananaMetadataService.GetDetailsAsync(mod.ItemId, cancellationToken);
+        cancellationToken.ThrowIfCancellationRequested();
+        string text = string.Join(Environment.NewLine,
+            new[] { raw.Summary, raw.Description }.Where(value => !string.IsNullOrWhiteSpace(value)));
         return new OnlineModDetails
         {
-            Summary = plainSummary,
-            Description = plainDescription,
-            ImageUrls = imageUrls,
-            AccessRequirementSummary = ExtractAccessRequirementSummary(combinedText),
-            ShortcutBindings = ExtractShortcutBindingsFromText(combinedText)
+            Summary = raw.Summary, Description = raw.Description, ImageUrls = raw.ImageUrls.ToList(),
+            AccessRequirementSummary = ExtractAccessRequirementSummary(text),
+            ShortcutBindings = ExtractShortcutBindingsFromText(text)
         };
     }
 
@@ -6619,19 +6362,8 @@ public sealed partial class MainWindow : Window
 
     private async Task SetCachedOnlineImageAsync(Image image, string imageUrl)
     {
-        Uri? imageUri = await GetCachedOnlineImageUriAsync(imageUrl);
-        if (imageUri is null)
-        {
-            return;
-        }
-
-        try
-        {
-            image.Source = new BitmapImage(imageUri);
-        }
-        catch
-        {
-        }
+        BitmapImage? bitmap = await LoadOnlineBitmapAsync(imageUrl, decodePixelWidth: 640);
+        if (bitmap is not null) image.Source = bitmap;
     }
 
     private async Task SetCachedOnlineCharacterAvatarAsync(
@@ -6646,24 +6378,23 @@ public sealed partial class MainWindow : Window
             await _onlineCharacterAvatarDownloadGate.WaitAsync(cancellationToken);
             enteredGate = true;
 
-            Uri? imageUri = TryGetExistingCachedOnlineImageUri(imageUrl)
-                ?? await GetCachedOnlineImageUriAsync(imageUrl, cancellationToken);
-            if (imageUri is null
-                || !imageUri.IsFile
+            BitmapImage? bitmap = await LoadOnlineBitmapAsync(imageUrl, cancellationToken, 128);
+            if (bitmap is null
                 || cancellationToken.IsCancellationRequested
                 || requestVersion != _onlineCharacterAvatarRequestVersion)
             {
                 return;
             }
 
-            image.Source = new BitmapImage(imageUri);
+            image.Source = bitmap;
             image.Opacity = 1;
         }
         catch (OperationCanceledException)
         {
         }
-        catch
+        catch (Exception exception)
         {
+            LogApplicationIssue("Online character avatar", exception);
         }
         finally
         {
@@ -6689,6 +6420,7 @@ public sealed partial class MainWindow : Window
         DownloadOnlineDetailButton.Content = L("加载中...", "Loading...");
         OpenOnlineDetailPageButton.IsEnabled = !string.IsNullOrWhiteSpace(mod.ProfileUrl);
         DownloadOnlineDetailButton.IsEnabled = false;
+        SelectOnlineDetailDownloadButton.IsEnabled = false;
         PopulateOnlineDetailImages([]);
         OnlineDetailHeroPlaceholderTextBlock.Text = L("正在加载预览图片...", "Loading preview images...");
     }
@@ -6790,7 +6522,8 @@ public sealed partial class MainWindow : Window
 
     private async Task<Uri?> GetCachedOnlineImageUriAsync(
         string imageUrl,
-        CancellationToken cancellationToken = default)
+        CancellationToken cancellationToken = default,
+        bool forceRefresh = false)
     {
         if (!Uri.TryCreate(imageUrl, UriKind.Absolute, out Uri? remoteUri)
             || (remoteUri.Scheme != Uri.UriSchemeHttp && remoteUri.Scheme != Uri.UriSchemeHttps))
@@ -6802,17 +6535,18 @@ public sealed partial class MainWindow : Window
         {
             Directory.CreateDirectory(_onlineImageCachePath);
             string cachePath = GetOnlineImageCacheFilePath(remoteUri, imageUrl);
-            if (!File.Exists(cachePath))
+            if (forceRefresh || !File.Exists(cachePath)
+                || new FileInfo(cachePath).Length is <= 0 or > 26214400)
             {
                 byte[]? bytes = await DownloadOnlineImageBytesWithRetryAsync(remoteUri, cancellationToken);
                 if (bytes is null)
                 {
-                    return remoteUri;
+                    return null;
                 }
 
                 if (bytes.Length == 0 || bytes.Length > 25 * 1024 * 1024)
                 {
-                    return remoteUri;
+                    return null;
                 }
 
                 string temporaryPath = cachePath + "." + Guid.NewGuid().ToString("N") + ".tmp";
@@ -6837,9 +6571,10 @@ public sealed partial class MainWindow : Window
         {
             return null;
         }
-        catch
+        catch (Exception exception)
         {
-            return remoteUri;
+            LogApplicationIssue("Online image cache", exception);
+            return null;
         }
     }
 
@@ -6847,6 +6582,9 @@ public sealed partial class MainWindow : Window
         Uri remoteUri,
         CancellationToken cancellationToken)
     {
+        using var timeout = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
+        timeout.CancelAfter(OnlinePreviewImageRequestTimeout);
+        cancellationToken = timeout.Token;
         const int maxAttempts = 3;
         for (int attempt = 0; attempt < maxAttempts; attempt++)
         {
@@ -6868,6 +6606,9 @@ public sealed partial class MainWindow : Window
                 || (int)response.StatusCode >= 500;
             if (!retryable || attempt == maxAttempts - 1)
             {
+                LogApplicationIssue("Online image download",
+                    new HttpRequestException($"Image server returned HTTP {(int)response.StatusCode}.",
+                        null, response.StatusCode));
                 return null;
             }
 
@@ -7087,6 +6828,11 @@ public sealed partial class MainWindow : Window
         OpenOnlineDetailPageButton.IsEnabled = !string.IsNullOrWhiteSpace(mod.ProfileUrl);
         SelectOnlineDetailDownloadButton.IsEnabled = mod.ItemId > 0;
         DownloadOnlineDetailButton.IsEnabled = !string.IsNullOrWhiteSpace(mod.DownloadUrl) || mod.ItemId > 0;
+        if (_onlineDetailState.IsLoading || IsOnlineDownloadActionBlocked(mod))
+        {
+            SelectOnlineDetailDownloadButton.IsEnabled = false;
+            DownloadOnlineDetailButton.IsEnabled = false;
+        }
 
         if (defaultFile is not null)
         {
@@ -7206,15 +6952,15 @@ public sealed partial class MainWindow : Window
             OnlineDetailHeroImage.Visibility = Visibility.Visible;
             OnlineDetailHeroPlaceholderTextBlock.Visibility = Visibility.Visible;
             OnlineDetailHeroPlaceholderTextBlock.Text = L("正在加载高清预览...", "Loading high-resolution preview...");
-            Uri? imageUri = await GetCachedOnlineImageUriAsync(imageUrl!);
+            BitmapImage? bitmap = await LoadOnlineBitmapAsync(imageUrl!);
             if (requestVersion != _onlineHeroImageRequestVersion)
             {
                 return;
             }
 
-            if (imageUri is not null)
+            if (bitmap is not null)
             {
-                OnlineDetailHeroImage.Source = new BitmapImage(imageUri);
+                OnlineDetailHeroImage.Source = bitmap;
                 OnlineDetailHeroImage.Visibility = Visibility.Visible;
                 OnlineDetailHeroPlaceholderTextBlock.Visibility = Visibility.Collapsed;
                 OnlineDetailHeroPlaceholderTextBlock.Text = string.Empty;
@@ -7329,58 +7075,9 @@ public sealed partial class MainWindow : Window
         return chunks.Count == 0 ? [text] : chunks;
     }
 
-    private static List<string> ParseScreenshotUrls(string screenshotsJson)
-    {
-        List<string> urls = [];
-        if (string.IsNullOrWhiteSpace(screenshotsJson))
-        {
-            return urls;
-        }
-
-        try
-        {
-            using JsonDocument screenshotsDocument = JsonDocument.Parse(screenshotsJson);
-            if (screenshotsDocument.RootElement.ValueKind != JsonValueKind.Array)
-            {
-                return urls;
-            }
-
-            foreach (JsonElement item in screenshotsDocument.RootElement.EnumerateArray())
-            {
-                string? fileName = TryGetStringProperty(item, "_sFile800")
-                    ?? TryGetStringProperty(item, "_sFile530")
-                    ?? TryGetStringProperty(item, "_sFile");
-                if (!string.IsNullOrWhiteSpace(fileName))
-                {
-                    urls.Add("https://images.gamebanana.com/img/ss/mods/" + fileName);
-                }
-            }
-        }
-        catch
-        {
-            return urls;
-        }
-
-        return urls;
-    }
 
     private static string StripHtmlToPlainText(string value)
-    {
-        if (string.IsNullOrWhiteSpace(value))
-        {
-            return string.Empty;
-        }
-
-        string text = value;
-        text = Regex.Replace(text, @"<\s*br\s*/?>", "\n", RegexOptions.IgnoreCase);
-        text = Regex.Replace(text, @"<\s*/?(p|div|h\d|li|ul|ol)\b[^>]*>", "\n", RegexOptions.IgnoreCase);
-        text = Regex.Replace(text, "<[^>]+>", " ");
-        text = WebUtility.HtmlDecode(text);
-        text = Regex.Replace(text, @"[ \t]+\n", "\n");
-        text = Regex.Replace(text, @"\n{3,}", "\n\n");
-        text = Regex.Replace(text, @"[ \t]{2,}", " ");
-        return text.Trim();
-    }
+        => GameBananaMetadataParser.PlainText(value);
 
     private static bool IsSourceInsideButton(DependencyObject? source)
     {
@@ -7486,9 +7183,9 @@ public sealed partial class MainWindow : Window
             Content = L("下载文件", "Download"),
             Style = (Style)Application.Current.Resources["SecondaryButtonStyle"],
             MinHeight = 36,
-            IsEnabled = !string.IsNullOrWhiteSpace(mod.DownloadUrl)
+            IsEnabled = !string.IsNullOrWhiteSpace(mod.DownloadUrl) && !IsOnlineDownloadActionBlocked(mod)
         };
-        downloadButton.Click += async (_, _) => await DownloadAndExtractOnlineModAsync(mod);
+        downloadButton.Click += async (_, _) => await RunOnlineCardDownloadAsync(mod, downloadButton);
         actionsPanel.Children.Add(downloadButton);
 
         contentPanel.Children.Add(actionsPanel);
@@ -7648,7 +7345,7 @@ public sealed partial class MainWindow : Window
             CornerRadius = new CornerRadius(8),
             HorizontalAlignment = HorizontalAlignment.Stretch,
             HorizontalContentAlignment = HorizontalAlignment.Center,
-            IsEnabled = !string.IsNullOrWhiteSpace(mod.DownloadUrl)
+            IsEnabled = !string.IsNullOrWhiteSpace(mod.DownloadUrl) && !IsOnlineDownloadActionBlocked(mod)
         };
         Grid.SetColumn(downloadButton, 1);
         string downloadActionText = installedOrigin is null
@@ -7656,7 +7353,7 @@ public sealed partial class MainWindow : Window
             : L("重新下载并解压", "Download and extract again");
         ToolTipService.SetToolTip(downloadButton, downloadActionText);
         AutomationProperties.SetName(downloadButton, downloadActionText);
-        downloadButton.Click += async (_, _) => await DownloadAndExtractOnlineModAsync(mod);
+        downloadButton.Click += async (_, _) => await RunOnlineCardDownloadAsync(mod, downloadButton);
         quickActions.Children.Add(downloadButton);
         actionsPanel.Children.Add(quickActions);
 
@@ -7844,7 +7541,7 @@ public sealed partial class MainWindow : Window
             MinWidth = 38,
             MinHeight = 36,
             Padding = new Thickness(0),
-            IsEnabled = !string.IsNullOrWhiteSpace(mod.DownloadUrl),
+            IsEnabled = !string.IsNullOrWhiteSpace(mod.DownloadUrl) && !IsOnlineDownloadActionBlocked(mod),
             Style = (Style)Application.Current.Resources["SecondaryButtonStyle"]
         };
         Grid.SetColumn(downloadButton, 2);
@@ -7853,7 +7550,7 @@ public sealed partial class MainWindow : Window
             installedOrigin is null
                 ? L("下载并解压", "Download and extract")
                 : L("重新下载并解压", "Download and extract again"));
-        downloadButton.Click += async (_, _) => await DownloadAndExtractOnlineModAsync(mod);
+        downloadButton.Click += async (_, _) => await RunOnlineCardDownloadAsync(mod, downloadButton);
         actions.Children.Add(downloadButton);
 
         Grid.SetRow(actions, 2);
@@ -8349,13 +8046,15 @@ public sealed partial class MainWindow : Window
         };
     }
 
-    private async Task<OnlineModCard> RefreshOnlineModDownloadInfoAsync(OnlineModCard mod)
+    private async Task<OnlineModCard> RefreshOnlineModDownloadInfoAsync(OnlineModCard mod, bool? useEndfieldMetadata = null,
+        CancellationToken cancellationToken = default)
     {
         try
         {
             OnlineModCard? latestMod = await FetchGameBananaModCardAsyncV2(
                 mod.ItemId,
-                useEndfieldMetadata: IsEndfieldRepository(GetSelectedRepository()));
+                useEndfieldMetadata: useEndfieldMetadata ?? IsEndfieldRepository(GetSelectedRepository()),
+                cancellationToken: cancellationToken);
             if (latestMod is null)
             {
                 return mod;
@@ -8379,6 +8078,7 @@ public sealed partial class MainWindow : Window
             latestMod.CategoryId = string.IsNullOrWhiteSpace(latestMod.CategoryId) ? mod.CategoryId : latestMod.CategoryId;
             return latestMod;
         }
+        catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested) { throw; }
         catch
         {
             return mod;
@@ -8414,11 +8114,48 @@ public sealed partial class MainWindow : Window
     private async Task DownloadAndExtractOnlineModAsync(
         OnlineModCard mod,
         OnlineDownloadCandidate? selectedFile = null,
-        bool refreshDownloadInfo = true)
+        bool refreshDownloadInfo = true,
+        OnlineDownloadContext? capturedContext = null,
+        bool? capturedEndfieldMetadata = null,
+        IReadOnlyCollection<string>? capturedCharacterAliases = null)
     {
+        WorkspaceRepository? initialRepository = GetSelectedRepository();
+        OnlineDownloadContext context = capturedContext ?? CaptureOnlineDownloadContext(initialRepository);
+        bool useEndfieldMetadata = capturedEndfieldMetadata ?? IsEndfieldRepository(initialRepository);
+        IReadOnlyCollection<string> characterAliases = capturedCharacterAliases ?? GetCharacterFolderAliases(mod);
+        using OnlineDownloadActionAdapter.Lease? action = _onlineDownloadActions.TryBegin(context, GetOnlineDownloadIdentity(mod));
+        if (action is null) return;
+        try
+        {
+            RefreshOnlineDetailActionState();
+            await DownloadAndExtractOnlineModCoreAsync(mod, selectedFile, refreshDownloadInfo,
+                context, useEndfieldMetadata, characterAliases, action);
+        }
+        catch (OperationCanceledException) when (action.Token.IsCancellationRequested) { }
+        catch (Exception ex)
+        {
+            LogApplicationIssue("Prepare online download", ex);
+            await ReportOnlineActionErrorAsync(L("准备下载失败：", "Failed to prepare download: ") + ex.Message,
+                L("在线下载失败", "Online download failed"));
+        }
+        finally
+        {
+            action.Dispose();
+            RefreshOnlineDetailActionState();
+            if (!_onlineWindowClosed) RefreshOnlinePaneV2();
+        }
+    }
+
+    private async Task DownloadAndExtractOnlineModCoreAsync(
+        OnlineModCard mod, OnlineDownloadCandidate? selectedFile, bool refreshDownloadInfo,
+        OnlineDownloadContext context, bool useEndfieldMetadata,
+        IReadOnlyCollection<string> characterAliases, OnlineDownloadActionAdapter.Lease action)
+    {
+        action.Token.ThrowIfCancellationRequested();
         OnlineModCard effectiveMod = refreshDownloadInfo
-            ? await RefreshOnlineModDownloadInfoAsync(mod)
+            ? await RefreshOnlineModDownloadInfoAsync(mod, useEndfieldMetadata, action.Token)
             : mod;
+        action.Token.ThrowIfCancellationRequested();
 
         OnlineDownloadCandidate? effectiveFile = selectedFile is null
             ? OnlineDownloadSelectionPolicy.SelectDefault(effectiveMod.DownloadFiles)
@@ -8431,6 +8168,9 @@ public sealed partial class MainWindow : Window
             effectiveMod = WithSelectedDownloadFile(effectiveMod, effectiveFile);
         }
 
+        if (!IsGenericOnlineCharacterName(effectiveMod.CharacterName))
+            characterAliases = characterAliases.Append(effectiveMod.CharacterName).Distinct(StringComparer.OrdinalIgnoreCase).ToArray();
+
         if (string.IsNullOrWhiteSpace(effectiveMod.DownloadUrl))
         {
             await ShowMessageAsync(
@@ -8439,20 +8179,26 @@ public sealed partial class MainWindow : Window
             return;
         }
 
-        string? selectedFolder = await PickDownloadFolderAsync(effectiveMod);
+        string? selectedFolder = await PickDownloadFolderAsync(effectiveMod, context, characterAliases);
+        action.Token.ThrowIfCancellationRequested();
         if (string.IsNullOrWhiteSpace(selectedFolder))
         {
             return;
         }
 
         DownloadTaskItem downloadTask = CreateDownloadTask(effectiveMod, selectedFolder);
+        action.MarkTaskStarted();
+        var session = new OnlineDownloadSession(context, selectedFolder);
+        downloadTask.Session = session;
         _foregroundDownloadTaskId = downloadTask.Id;
-        SetBusyState(true);
+        SetOnlineInstallBusy(true);
         try
         {
+            // The picker is finished; a different visible Mod can now start its own task.
+            RefreshOnlineDetailActionState();
             UpdateDownloadTask(downloadTask, DownloadTaskState.Preparing, 0, "正在读取下载信息...", "Reading download information...", forceRefresh: true);
             downloadTask.Cancellation.Token.ThrowIfCancellationRequested();
-            OnlineModDetails details = await GetOnlineModDetailsAsync(effectiveMod);
+            OnlineModDetails details = await GetOnlineModDetailsAsync(effectiveMod, downloadTask.Cancellation.Token);
 
             SetOnlineDownloadProgress(true, 0, "准备下载...", "Preparing download...", isIndeterminate: true);
             string downloadStatusZh = $"正在下载 {effectiveMod.Title}，完成后会自动解压到你选择的文件夹中。";
@@ -8466,7 +8212,10 @@ public sealed partial class MainWindow : Window
             SetOnlineStatus(downloadStatusZh, downloadStatusEn);
 
             string archivePath = await DownloadOnlineModArchiveAsync(effectiveMod, selectedFolder, downloadTask, downloadTask.Cancellation.Token);
+            session.RegisterArchive(archivePath);
             string resolvedArchivePath = EnsureDownloadArchiveExtension(archivePath);
+            session.RegisterArchive(resolvedArchivePath);
+            downloadTask.ArchivePath = resolvedArchivePath;
             if (!IsSupportedArchiveFile(resolvedArchivePath))
             {
                 throw new InvalidOperationException(L(
@@ -8475,71 +8224,64 @@ public sealed partial class MainWindow : Window
             }
 
             string extractFolder = CreateUniqueExtractionFolder(selectedFolder, effectiveMod.Title, effectiveMod.ItemId);
+            // Do not acquire or later delete a pre-existing extraction folder.
+            if (File.Exists(extractFolder) || Directory.Exists(extractFolder))
+                throw new IOException(L("解压目标已存在，请重试以创建独立目录。", "The extraction destination already exists. Retry to create a separate folder."));
             Directory.CreateDirectory(extractFolder);
+            session.RegisterExtraction(extractFolder);
 
             downloadTask.DestinationPath = extractFolder;
             UpdateDownloadTask(downloadTask, DownloadTaskState.Extracting, 92, "正在解压并写入 Mod 信息...", "Extracting and writing mod metadata...", forceRefresh: true);
             downloadTask.Cancellation.Token.ThrowIfCancellationRequested();
             await Task.Run(() => ExtractArchiveToDirectory(resolvedArchivePath, extractFolder));
             downloadTask.Cancellation.Token.ThrowIfCancellationRequested();
-            await ApplyTrackedOnlineModMetadataAsync(extractFolder, effectiveMod, details);
+            PreparedOnlineInstallMetadata prepared = await session.PrepareAndCommitAsync(
+                token => PrepareOnlineInstallMetadataAsync(extractFolder, effectiveMod, details, token),
+                metadata => CommitOnlineInstallMetadata(extractFolder, metadata),
+                downloadTask.Cancellation.Token);
+            UpdateDownloadTask(downloadTask, DownloadTaskState.Completed, 100,
+                prepared.PersistenceWarning is null ? $"已完成：{extractFolder}" : $"已安装，但配置保存失败：{extractFolder}",
+                prepared.PersistenceWarning is null ? $"Completed: {extractFolder}" : $"Installed, but config could not be saved: {extractFolder}",
+                forceRefresh: true);
 
-            WorkspaceRepository? repository = GetSelectedRepository();
-            if (repository is not null
-                && !string.IsNullOrWhiteSpace(repository.SourcePath)
-                && IsPathInsideDirectory(extractFolder, repository.SourcePath))
+            // A failed refresh/notification must never turn a committed installation into a
+            // failed task or delete it. A changed repository must not receive the old selection.
+            try
             {
-                await RefreshListsAsync();
-                SelectSecondLevelByPath(extractFolder);
+                WorkspaceRepository? repository = GetSelectedRepository();
+                if (repository?.Id == context.RepositoryId
+                    && string.Equals(repository.SourcePath, context.RepositoryPath, StringComparison.OrdinalIgnoreCase)
+                    && !string.IsNullOrWhiteSpace(context.RepositoryPath)
+                    && IsPathInsideDirectory(extractFolder, context.RepositoryPath))
+                {
+                    await RefreshListsAsync();
+                    repository = GetSelectedRepository();
+                    if (repository?.Id == context.RepositoryId
+                        && string.Equals(repository.SourcePath, context.RepositoryPath, StringComparison.OrdinalIgnoreCase))
+                        SelectSecondLevelByPath(extractFolder);
+                }
+                SetOnlineStatus($"已下载并解压到：{extractFolder}", $"Downloaded and extracted to: {extractFolder}");
+                RefreshUpdatesPane();
+                ShowAppNotification($"下载完成：{effectiveMod.Title}", $"Download completed: {effectiveMod.Title}");
+                if (prepared.PersistenceWarning is not null)
+                    await ShowMessageAsync(L("Mod 已安装，但安装记录保存失败。请检查应用目录的写入权限并重新保存配置。",
+                        "The mod is installed, but its tracking record could not be saved. Check application-folder permissions and save the configuration again."),
+                        L("安装记录未保存", "Tracking record not saved"));
             }
-
-            SetOnlineStatus(
-                $"已下载并解压到：{extractFolder}",
-                $"Downloaded and extracted to: {extractFolder}");
-            ShowAppNotification(
-                $"下载完成：{effectiveMod.Title}",
-                $"Download completed: {effectiveMod.Title}");
-            UpdateDownloadTask(downloadTask, DownloadTaskState.Completed, 100, $"已完成：{extractFolder}", $"Completed: {extractFolder}", forceRefresh: true);
+            catch (Exception refreshException)
+            {
+                LogApplicationIssue("Refresh after online installation", refreshException);
+            }
         }
         catch (OperationCanceledException)
         {
-            if (!string.IsNullOrWhiteSpace(downloadTask.ArchivePath) && File.Exists(downloadTask.ArchivePath))
-            {
-                try
-                {
-                    File.Delete(downloadTask.ArchivePath);
-                }
-                catch
-                {
-                }
-            }
-            if (!string.Equals(downloadTask.DestinationPath, selectedFolder, StringComparison.OrdinalIgnoreCase)
-                && Directory.Exists(downloadTask.DestinationPath))
-            {
-                try
-                {
-                    DeleteDirectoryTreeSafely(downloadTask.DestinationPath);
-                }
-                catch
-                {
-                }
-            }
+            CleanupOnlineDownload(session, canceled: true);
             UpdateDownloadTask(downloadTask, DownloadTaskState.Canceled, downloadTask.Progress, "任务已取消", "Task canceled", forceRefresh: true);
             SetOnlineStatus("下载任务已取消。", "The download task was canceled.");
         }
         catch (Exception ex)
         {
-            if (!string.Equals(downloadTask.DestinationPath, selectedFolder, StringComparison.OrdinalIgnoreCase)
-                && Directory.Exists(downloadTask.DestinationPath))
-            {
-                try
-                {
-                    DeleteDirectoryTreeSafely(downloadTask.DestinationPath);
-                }
-                catch
-                {
-                }
-            }
+            CleanupOnlineDownload(session, canceled: false);
             UpdateDownloadTask(downloadTask, DownloadTaskState.Failed, downloadTask.Progress, $"失败：{ex.Message}", $"Failed: {ex.Message}", forceRefresh: true);
             SetOnlineStatus("下载或解压在线 Mod 失败。", "Failed to download or extract the online mod.");
             string message = ex.Message;
@@ -8568,8 +8310,9 @@ public sealed partial class MainWindow : Window
                 _foregroundDownloadTaskId = null;
                 SetOnlineDownloadProgress(false, 0, string.Empty, string.Empty);
             }
-            SetBusyState(false);
-            RefreshOnlinePaneV2();
+            SetOnlineInstallBusy(false);
+            try { RefreshOnlinePaneV2(); }
+            catch (Exception refreshException) { LogApplicationIssue("Refresh online task UI", refreshException); }
         }
     }
 
@@ -8579,101 +8322,36 @@ public sealed partial class MainWindow : Window
         DownloadTaskItem downloadTask,
         CancellationToken cancellationToken)
     {
-        using HttpRequestMessage request = new(HttpMethod.Get, mod.DownloadUrl!);
-        request.Headers.Referrer = Uri.TryCreate(mod.ProfileUrl, UriKind.Absolute, out Uri? refererUri)
-            ? refererUri
-            : new Uri("https://gamebanana.com/");
-        request.Headers.TryAddWithoutValidation("Accept", "*/*");
-
-        using HttpResponseMessage response = await _httpClient.SendAsync(request, HttpCompletionOption.ResponseHeadersRead, cancellationToken);
-        response.EnsureSuccessStatusCode();
-
-        string fileName = ResolveDownloadFileName(response, mod);
-        string archivePath = Path.Combine(destinationFolder, fileName);
-        downloadTask.ArchivePath = archivePath;
-
-        long totalRead = 0;
-        long totalLength = mod.FileSizeBytes > 0 ? mod.FileSizeBytes : (response.Content.Headers.ContentLength ?? 0);
-        downloadTask.HasKnownTotalLength = totalLength > 0;
-        UpdateDownloadTask(downloadTask, DownloadTaskState.Downloading, 0, "正在下载...", "Downloading...", forceRefresh: true);
-        byte[] buffer = new byte[81920];
-        DateTimeOffset lastProgressDispatchUtc = DateTimeOffset.MinValue;
-
-        void QueueProgressUpdate(bool force)
+        var service = new OnlineArchiveDownloadService(_httpClient);
+        try
         {
-            DateTimeOffset now = DateTimeOffset.UtcNow;
-            if (!force && now - lastProgressDispatchUtc < TimeSpan.FromMilliseconds(125))
-            {
-                return;
-            }
-
-            lastProgressDispatchUtc = now;
-            long capturedRead = totalRead;
-            long capturedTotalLength = totalLength;
-            double capturedPercent = capturedTotalLength > 0
-                ? Math.Clamp(capturedRead * 100d / capturedTotalLength, 0, 100)
-                : 0;
-            string currentSize = FormatFileSize(capturedRead);
-            string totalSize = capturedTotalLength > 0 ? FormatFileSize(capturedTotalLength) : "?";
-            DispatcherQueue.TryEnqueue(() =>
-            {
-                if (downloadTask.State is not DownloadTaskState.Downloading)
+            OnlineArchiveDownloadResult result = await service.DownloadAsync(
+                new(mod.DownloadUrl!, mod.ProfileUrl, mod.DownloadFileName, mod.Title, mod.ItemId, mod.FileSizeBytes),
+                destinationFolder,
+                progress => DispatcherQueue.TryEnqueue(() =>
                 {
-                    return;
-                }
-
-                string statusZh = $"正在下载：{currentSize} / {totalSize}";
-                string statusEn = $"Downloading: {currentSize} / {totalSize}";
-                if (string.Equals(_foregroundDownloadTaskId, downloadTask.Id, StringComparison.Ordinal))
-                {
-                    SetOnlineDownloadProgress(
-                        true,
-                        capturedPercent,
-                        statusZh,
-                        statusEn,
-                        isIndeterminate: capturedTotalLength <= 0);
-                }
-                UpdateDownloadTask(
-                    downloadTask,
-                    DownloadTaskState.Downloading,
-                    Math.Min(90, capturedPercent * 0.9),
-                    statusZh,
-                    statusEn,
-                    forceRefresh: true);
-            });
+                    if (downloadTask.State is not (DownloadTaskState.Preparing or DownloadTaskState.Downloading)) return;
+                    downloadTask.HasKnownTotalLength = progress.TotalBytes > 0;
+                    string currentSize = FormatFileSize(progress.BytesRead);
+                    string totalSize = progress.TotalBytes > 0 ? FormatFileSize(progress.TotalBytes) : "?";
+                    string statusZh = $"正在下载：{currentSize} / {totalSize}";
+                    string statusEn = $"Downloading: {currentSize} / {totalSize}";
+                    if (string.Equals(_foregroundDownloadTaskId, downloadTask.Id, StringComparison.Ordinal))
+                        SetOnlineDownloadProgress(true, progress.Percent, statusZh, statusEn,
+                            isIndeterminate: progress.TotalBytes <= 0);
+                    UpdateDownloadTask(downloadTask, DownloadTaskState.Downloading,
+                        Math.Min(90, progress.Percent * 0.9), statusZh, statusEn, forceRefresh: true);
+                }),
+                cancellationToken);
+            downloadTask.ArchivePath = result.ArchivePath;
+            return result.ArchivePath;
         }
-
-        await using (Stream remoteStream = await response.Content.ReadAsStreamAsync(cancellationToken))
+        catch (OnlineArchiveSizeException ex)
         {
-            await using (FileStream localStream = new(archivePath, FileMode.Create, FileAccess.Write, FileShare.None))
-            {
-                int bytesRead;
-                while ((bytesRead = await remoteStream.ReadAsync(buffer.AsMemory(0, buffer.Length), cancellationToken)) > 0)
-                {
-                    await localStream.WriteAsync(buffer.AsMemory(0, bytesRead), cancellationToken);
-                    totalRead += bytesRead;
-                    QueueProgressUpdate(force: false);
-                }
-
-                await localStream.FlushAsync(cancellationToken);
-            }
+            throw new InvalidOperationException(L(
+                $"下载文件大小异常，预期约 {FormatFileSize(ex.ExpectedBytes)}，实际为 {FormatFileSize(ex.ActualBytes)}。",
+                $"Downloaded file size is incorrect. Expected about {FormatFileSize(ex.ExpectedBytes)}, received {FormatFileSize(ex.ActualBytes)}."), ex);
         }
-        QueueProgressUpdate(force: true);
-
-        if (mod.FileSizeBytes > 0)
-        {
-            long actualSize = new FileInfo(archivePath).Length;
-            if (Math.Abs(actualSize - mod.FileSizeBytes) > 1024)
-            {
-                throw new InvalidOperationException(L(
-                    $"下载文件大小异常，预期约 {FormatFileSize(mod.FileSizeBytes)}，实际只有 {FormatFileSize(actualSize)}。",
-                    $"Downloaded file size is incorrect. Expected about {FormatFileSize(mod.FileSizeBytes)}, but only got {FormatFileSize(actualSize)}."));
-            }
-        }
-
-        EnsureDownloadedFileLooksValid(archivePath, response);
-
-        return archivePath;
     }
 
     private string EnsureDownloadArchiveExtension(string archivePath)
@@ -8683,96 +8361,16 @@ public sealed partial class MainWindow : Window
             return archivePath;
         }
 
-        string detectedExtension = DetectArchiveExtension(archivePath);
+        string detectedExtension = OnlineDownloadFilePolicy.DetectArchiveExtension(archivePath);
         if (string.IsNullOrWhiteSpace(detectedExtension))
         {
             return archivePath;
         }
 
-        string renamedPath = archivePath + detectedExtension;
-        if (File.Exists(renamedPath))
-        {
-            File.Delete(renamedPath);
-        }
-
-        File.Move(archivePath, renamedPath);
-        return renamedPath;
+        return OnlineDownloadFilePolicy.MoveWithoutOverwrite(archivePath, archivePath + detectedExtension);
     }
 
-    private static string DetectArchiveExtension(string filePath)
-    {
-        byte[] header = new byte[8];
-        using FileStream stream = new(filePath, FileMode.Open, FileAccess.Read, FileShare.Read);
-        int bytesRead = stream.Read(header, 0, header.Length);
 
-        if (bytesRead >= 4
-            && header[0] == 0x50
-            && header[1] == 0x4B
-            && header[2] is 0x03 or 0x05 or 0x07
-            && header[3] is 0x04 or 0x06 or 0x08)
-        {
-            return ".zip";
-        }
-
-        if (bytesRead >= 6
-            && header[0] == 0x37
-            && header[1] == 0x7A
-            && header[2] == 0xBC
-            && header[3] == 0xAF
-            && header[4] == 0x27
-            && header[5] == 0x1C)
-        {
-            return ".7z";
-        }
-
-        if (bytesRead >= 6
-            && header[0] == 0x52
-            && header[1] == 0x61
-            && header[2] == 0x72
-            && header[3] == 0x21
-            && header[4] == 0x1A
-            && header[5] == 0x07)
-        {
-            return ".rar";
-        }
-
-        if (bytesRead >= 2
-            && header[0] == 0x1F
-            && header[1] == 0x8B)
-        {
-            return ".gz";
-        }
-
-        if (bytesRead >= 3
-            && header[0] == 0x42
-            && header[1] == 0x5A
-            && header[2] == 0x68)
-        {
-            return ".bz2";
-        }
-
-        if (bytesRead >= 6
-            && header[0] == 0xFD
-            && header[1] == 0x37
-            && header[2] == 0x7A
-            && header[3] == 0x58
-            && header[4] == 0x5A
-            && header[5] == 0x00)
-        {
-            return ".xz";
-        }
-
-        if (bytesRead >= 4
-            && header[0] == 0x28
-            && header[1] == 0xB5
-            && header[2] == 0x2F
-            && header[3] == 0xFD)
-        {
-            return ".zst";
-        }
-
-        return string.Empty;
-    }
 
     private static string FormatFileSize(long bytes)
     {
@@ -8788,62 +8386,7 @@ public sealed partial class MainWindow : Window
         return $"{size:0.##} {units[unitIndex]}";
     }
 
-    private static string ResolveDownloadFileName(HttpResponseMessage response, OnlineModCard mod)
-    {
-        string? fileName = response.Content.Headers.ContentDisposition?.FileNameStar
-            ?? response.Content.Headers.ContentDisposition?.FileName;
-        if (!string.IsNullOrWhiteSpace(fileName))
-        {
-            return fileName.Trim('"');
-        }
 
-        if (!string.IsNullOrWhiteSpace(mod.DownloadFileName))
-        {
-            string preferredName = Path.GetFileName(mod.DownloadFileName.Trim());
-            if (!string.IsNullOrWhiteSpace(preferredName))
-            {
-                return SanitizeFileName(preferredName);
-            }
-        }
-
-        string? pathName = response.RequestMessage?.RequestUri is Uri uri
-            ? Path.GetFileName(uri.LocalPath)
-            : null;
-        if (!string.IsNullOrWhiteSpace(pathName) && Path.HasExtension(pathName))
-        {
-            return pathName;
-        }
-
-        string safeTitle = SanitizeFileName(mod.Title);
-        return $"{safeTitle}-{mod.ItemId}.zip";
-    }
-
-    private static void EnsureDownloadedFileLooksValid(string archivePath, HttpResponseMessage response)
-    {
-        string detectedExtension = DetectArchiveExtension(archivePath);
-        if (!string.IsNullOrWhiteSpace(detectedExtension))
-        {
-            return;
-        }
-
-        string? mediaType = response.Content.Headers.ContentType?.MediaType?.ToLowerInvariant();
-        string preview = ReadFilePreviewText(archivePath, 512);
-        if ((mediaType is not null && (mediaType.Contains("text/") || mediaType.Contains("html") || mediaType.Contains("json")))
-            || preview.Contains("<html", StringComparison.OrdinalIgnoreCase)
-            || preview.Contains("<!doctype", StringComparison.OrdinalIgnoreCase)
-            || preview.Contains("too many requests", StringComparison.OrdinalIgnoreCase)
-            || preview.Contains("rate limit", StringComparison.OrdinalIgnoreCase))
-        {
-            throw new InvalidDataException("The download returned a web page or text response instead of an archive.");
-        }
-    }
-
-    private static string ReadFilePreviewText(string filePath, int maxBytes)
-    {
-        byte[] bytes = File.ReadAllBytes(filePath);
-        int length = Math.Min(bytes.Length, maxBytes);
-        return Encoding.UTF8.GetString(bytes, 0, length);
-    }
 
     private static string CreateUniqueExtractionFolder(string parentFolder, string title, int itemId)
     {
@@ -8872,87 +8415,7 @@ public sealed partial class MainWindow : Window
         }
     }
 
-    private async Task ApplyTrackedOnlineModMetadataAsync(string extractFolder, OnlineModCard mod, OnlineModDetails? details)
-    {
-        string identity = GetTrackedModIdentity(mod.ItemId, mod.ProfileUrl);
-        if (!string.IsNullOrWhiteSpace(identity))
-        {
-            foreach (string duplicatePath in _trackedModOrigins.Values
-                .Where(origin =>
-                    !string.Equals(origin.Path, extractFolder, StringComparison.CurrentCultureIgnoreCase)
-                    && string.Equals(GetTrackedModIdentity(origin.ItemId, origin.ProfileUrl), identity, StringComparison.OrdinalIgnoreCase))
-                .Select(origin => origin.Path)
-                .ToList())
-            {
-                _trackedModOrigins.Remove(duplicatePath);
-                _trackedModUpdateResults.RemoveAll(result => string.Equals(result.Path, duplicatePath, StringComparison.CurrentCultureIgnoreCase));
-            }
-        }
 
-        string? savedPreviewUrl = await SaveOnlinePreviewImageAsync(extractFolder, mod, details);
-        string? trackedPreviewUrl = string.IsNullOrWhiteSpace(savedPreviewUrl)
-            ? mod.PreviewUrl
-            : savedPreviewUrl;
-
-        _modLinks[extractFolder] = mod.ProfileUrl;
-        _trackedModOrigins[extractFolder] = new TrackedModOrigin
-        {
-            Path = extractFolder,
-            SourceSite = DefaultOnlineSourceSite,
-            ItemId = mod.ItemId,
-            Title = mod.Title,
-            ProfileUrl = mod.ProfileUrl,
-            PreviewUrl = trackedPreviewUrl,
-            LastKnownUpdatedAt = mod.UpdatedAt
-        };
-
-        if (details is not null)
-        {
-            await TryImportShortcutBindingsFromOnlineDetailsAsync(extractFolder, details);
-        }
-        await TryImportShortcutBindingsFromModFilesAsync(extractFolder);
-
-        SaveConfig();
-        SaveShellConfig();
-    }
-
-    private async Task TryImportShortcutBindingsFromOnlineDetailsAsync(string modFolder, OnlineModDetails details)
-    {
-        if (details.ShortcutBindings.Count == 0)
-        {
-            return;
-        }
-
-        if (_modBindings.TryGetValue(modFolder, out List<ShortcutBinding>? existingBindings)
-            && existingBindings.Any(binding =>
-                !string.IsNullOrWhiteSpace(binding.Shortcut)
-                || !string.IsNullOrWhiteSpace(binding.Action)))
-        {
-            return;
-        }
-
-        List<ShortcutBinding> localizedBindings = await BuildLocalizedShortcutBindingsAsync(details.ShortcutBindings);
-        if (localizedBindings.Count == 0)
-        {
-            return;
-        }
-
-        _modBindings[modFolder] = localizedBindings
-            .Take(ShortcutScanSafetyLimit)
-            .Select(binding => new ShortcutBinding(binding.Shortcut, binding.Action))
-            .ToList();
-
-        if (string.Equals(_currentSecondLevelPath, modFolder, StringComparison.CurrentCultureIgnoreCase))
-        {
-            SecondLevelFolderItem? selectedItem = GetSelectedSecondLevelItem();
-            if (selectedItem is not null && string.Equals(selectedItem.Path, modFolder, StringComparison.CurrentCultureIgnoreCase))
-            {
-                LoadBindingsForCurrentMod(selectedItem);
-            }
-        }
-
-        SaveConfig();
-    }
 
     private static string GetTrackedModIdentity(int itemId, string? profileUrl)
     {
@@ -8999,37 +8462,17 @@ public sealed partial class MainWindow : Window
 
     private bool DeduplicateTrackedModOrigins()
     {
-        var identityToPath = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
-        bool changed = false;
-
-        foreach (TrackedModOrigin origin in _trackedModOrigins.Values
-            .OrderByDescending(item => Directory.Exists(item.Path))
-            .ThenByDescending(item => item.LastKnownUpdatedAt ?? DateTimeOffset.MinValue)
-            .ThenBy(item => item.Path, StringComparer.CurrentCultureIgnoreCase)
-            .ToList())
+        IReadOnlyList<string> stalePaths = OnlineTrackingScopePolicy.FindStaleDuplicatePaths(
+            _trackedModOrigins.Values.Select(origin => new OnlineTrackedInstallation(
+                origin.Path, GetTrackedModIdentity(origin.ItemId, origin.ProfileUrl),
+                Directory.Exists(origin.Path), origin.LastKnownUpdatedAt)),
+            _repositories.Select(repository => repository.SourcePath));
+        foreach (string path in stalePaths)
         {
-            string identity = GetTrackedModIdentity(origin.ItemId, origin.ProfileUrl);
-            if (string.IsNullOrWhiteSpace(identity))
-            {
-                continue;
-            }
-
-            if (identityToPath.TryGetValue(identity, out string? existingPath))
-            {
-                if (!string.Equals(existingPath, origin.Path, StringComparison.CurrentCultureIgnoreCase))
-                {
-                    _trackedModOrigins.Remove(origin.Path);
-                    _trackedModUpdateResults.RemoveAll(result => string.Equals(result.Path, origin.Path, StringComparison.CurrentCultureIgnoreCase));
-                    changed = true;
-                }
-            }
-            else
-            {
-                identityToPath[identity] = origin.Path;
-            }
+            _trackedModOrigins.Remove(path);
+            _trackedModUpdateResults.RemoveAll(result => string.Equals(result.Path, path, StringComparison.CurrentCultureIgnoreCase));
         }
-
-        return changed;
+        return stalePaths.Count > 0;
     }
 
     private async Task RemoveTrackedModRecordAsync(TrackedModUpdateResult result)
@@ -9056,7 +8499,8 @@ public sealed partial class MainWindow : Window
     private async Task<string?> SaveOnlinePreviewImageAsync(
         string modFolder,
         OnlineModCard mod,
-        OnlineModDetails? details)
+        OnlineModDetails? details,
+        CancellationToken cancellationToken = default)
     {
         string? temporaryPath = null;
         try
@@ -9088,7 +8532,8 @@ public sealed partial class MainWindow : Window
                 return null;
             }
 
-            using var timeout = new CancellationTokenSource(TimeSpan.FromSeconds(30));
+            using var timeout = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
+            timeout.CancelAfter(TimeSpan.FromSeconds(30));
             var downloadedImages = new List<(OnlinePreviewCandidate Candidate, byte[] Bytes)>();
             for (int index = 0; index < candidateUrls.Count; index++)
             {
@@ -9138,6 +8583,7 @@ public sealed partial class MainWindow : Window
             string previewPath = Path.Combine(modFolder, "preview" + extension);
             temporaryPath = previewPath + ".download";
             await File.WriteAllBytesAsync(temporaryPath, selectedBytes, timeout.Token);
+            cancellationToken.ThrowIfCancellationRequested();
             File.Move(temporaryPath, previewPath, true);
             temporaryPath = null;
             return selected.Url;
@@ -9157,6 +8603,7 @@ public sealed partial class MainWindow : Window
                 }
             }
 
+            cancellationToken.ThrowIfCancellationRequested();
             return null;
         }
     }
@@ -9513,6 +8960,8 @@ public sealed partial class MainWindow : Window
 
     private void ResetOnlineRepositoryContext()
     {
+        CancelOnlineModListRequest();
+        InvalidateOnlineDetailRequest();
         _onlineDownloadEnrichmentVersion++;
         _onlineCurrentPage = 1;
         _onlineTotalCount = 0;
@@ -9815,13 +9264,7 @@ public sealed partial class MainWindow : Window
         repository.OnlineCategoryId = result.OnlineCategoryId.Trim();
         repository.WikiUrl = result.WikiUrl.Trim();
         repository.Notes = result.Notes.Trim();
-        _onlineCurrentPage = 1;
-        _onlineTotalCount = 0;
-        _onlineTotalPages = 1;
-        _onlineCharacterFilter = string.Empty;
-        _onlineKnownCharacters.Clear();
-        _lastLoadedOnlineConfigKey = null;
-        _onlineMods.Clear();
+        ResetOnlineRepositoryContext();
 
         ApplySelectedRepositoryToInputs();
         SaveShellConfig();
@@ -9853,14 +9296,7 @@ public sealed partial class MainWindow : Window
         repository.OnlineCategoryId = result.OnlineCategoryId.Trim();
         repository.WikiUrl = result.WikiUrl.Trim();
         repository.Notes = result.Notes.Trim();
-        _onlineCurrentPage = 1;
-        _onlineTotalCount = 0;
-        _onlineTotalPages = 1;
-        _onlineCharacterFilter = string.Empty;
-        _onlineKnownCharacters.Clear();
-        _lastLoadedOnlineConfigKey = null;
-        _onlineMods.Clear();
-        _activeOnlineDetailMod = null;
+        ResetOnlineRepositoryContext();
 
         SaveShellConfig();
         RefreshSettingsPane();
@@ -11067,6 +10503,9 @@ public sealed partial class MainWindow : Window
         RefreshSettingsPane();
         RefreshUpdatesPane();
         SaveConfig();
+        // Re-project the same raw cache in the new language; reject the older translation.
+        if (OnlineDetailsSplitView.IsPaneOpen && _activeOnlineDetailMod is OnlineModCard mod)
+            _ = ShowOnlineModDetailsAsync(mod);
     }
 
     private void OnUpdateCheckIntervalSelectionChanged(object sender, SelectionChangedEventArgs e)
@@ -11105,6 +10544,11 @@ public sealed partial class MainWindow : Window
 
     private async Task CloseOnlineDetailPaneAsync()
     {
+        // Close takes effect before the animation awaits, not 165ms later.
+        InvalidateOnlineDetailRequest();
+        _activeOnlineDetailMod = null;
+        DownloadOnlineDetailButton.IsEnabled = false;
+        SelectOnlineDetailDownloadButton.IsEnabled = false;
         int animationVersion = ++_onlineDetailAnimationVersion;
         var visual = ElementCompositionPreview.GetElementVisual(OnlineDetailPaneBorder);
         visual.StopAnimation("Opacity");
@@ -11169,55 +10613,64 @@ public sealed partial class MainWindow : Window
         }
 
         OnlineModCard sourceMod = _activeOnlineDetailMod;
-        SetBusyState(true);
-        OnlineModCard effectiveMod;
+        WorkspaceRepository? downloadRepository = GetSelectedRepository();
+        OnlineDownloadContext downloadContext = CaptureOnlineDownloadContext(downloadRepository);
+        bool useEndfieldMetadata = IsEndfieldRepository(downloadRepository);
+        IReadOnlyCollection<string> characterAliases = GetCharacterFolderAliases(sourceMod);
+        string detailContext = GetOnlineDetailContextKey();
+        using OnlineDownloadActionAdapter.Lease? action = _onlineDownloadActions.TryBegin(
+            downloadContext, GetOnlineDownloadIdentity(sourceMod));
+        if (action is null) return;
         try
         {
-            effectiveMod = await RefreshOnlineModDownloadInfoAsync(sourceMod);
+            RefreshOnlineDetailActionState();
+            OnlineModCard effectiveMod = await RefreshOnlineModDownloadInfoAsync(sourceMod, useEndfieldMetadata, action.Token);
+            action.Token.ThrowIfCancellationRequested();
+            if (!ReferenceEquals(_activeOnlineDetailMod, sourceMod)
+                || !string.Equals(detailContext, GetOnlineDetailContextKey(), StringComparison.Ordinal)) return;
+
+            _activeOnlineDetailMod = effectiveMod;
+            UpdateOnlineDetailDownloadControls(effectiveMod);
+            IReadOnlyList<OnlineDownloadCandidate> candidates =
+                OnlineDownloadSelectionPolicy.OrderForManualSelection(effectiveMod.DownloadFiles);
+            if (candidates.Count == 0)
+            {
+                await ShowMessageAsync(
+                    L("当前条目没有返回可手动选择的文件；你仍可尝试使用默认下载按钮。", "This item did not return selectable files. You can still try the default download button."),
+                    L("没有文件列表", "No file list"));
+                return;
+            }
+
+            OnlineDownloadCandidate? selectedFile = await ShowOnlineDownloadFilePickerAsync(effectiveMod, candidates);
+            action.Token.ThrowIfCancellationRequested();
+            if (selectedFile is null || !ReferenceEquals(_activeOnlineDetailMod, effectiveMod)
+                || !string.Equals(detailContext, GetOnlineDetailContextKey(), StringComparison.Ordinal)) return;
+            await DownloadAndExtractOnlineModCoreAsync(effectiveMod, selectedFile, false,
+                downloadContext, useEndfieldMetadata, characterAliases, action);
+        }
+        catch (OperationCanceledException) when (action.Token.IsCancellationRequested) { }
+        catch (Exception ex)
+        {
+            LogApplicationIssue("Select online download file", ex);
+            await ReportOnlineActionErrorAsync(L("选择下载文件失败：", "Failed to select download file: ") + ex.Message,
+                L("在线下载失败", "Online download failed"));
         }
         finally
         {
-            SetBusyState(false);
+            action.Dispose();
+            RefreshOnlineDetailActionState();
+            if (!_onlineWindowClosed) RefreshOnlinePaneV2();
         }
-
-        if (_activeOnlineDetailMod?.ItemId != sourceMod.ItemId)
-        {
-            return;
-        }
-
-        _activeOnlineDetailMod = effectiveMod;
-        UpdateOnlineDetailDownloadControls(effectiveMod);
-
-        IReadOnlyList<OnlineDownloadCandidate> candidates =
-            OnlineDownloadSelectionPolicy.OrderForManualSelection(effectiveMod.DownloadFiles);
-        if (candidates.Count == 0)
-        {
-            await ShowMessageAsync(
-                L("当前条目没有返回可手动选择的文件；你仍可尝试使用默认下载按钮。", "This item did not return selectable files. You can still try the default download button."),
-                L("没有文件列表", "No file list"));
-            return;
-        }
-
-        OnlineDownloadCandidate? selectedFile = await ShowOnlineDownloadFilePickerAsync(effectiveMod, candidates);
-        if (selectedFile is null)
-        {
-            return;
-        }
-
-        await DownloadAndExtractOnlineModAsync(
-            effectiveMod,
-            selectedFile,
-            refreshDownloadInfo: false);
     }
 
     private async Task<OnlineDownloadCandidate?> ShowOnlineDownloadFilePickerAsync(
         OnlineModCard mod,
         IReadOnlyList<OnlineDownloadCandidate> candidates)
     {
+        DialogViewport viewport = DialogViewportPolicy.Selection(RootGrid.ActualWidth, RootGrid.ActualHeight);
         var fileList = new ListView
         {
             SelectionMode = ListViewSelectionMode.Single,
-            MaxHeight = 420,
             HorizontalContentAlignment = HorizontalAlignment.Stretch
         };
 
@@ -11295,11 +10748,14 @@ public sealed partial class MainWindow : Window
         fileList.SelectedItem = defaultItem
             ?? fileList.Items.OfType<ListViewItem>().FirstOrDefault(item => item.IsEnabled);
 
-        var content = new StackPanel
+        var content = new Grid
         {
-            Width = 520,
-            Spacing = 10
+            Width = Math.Min(620, viewport.MaxWidth - 48),
+            Height = Math.Min(480, viewport.ContentHeight),
+            RowSpacing = 10
         };
+        content.RowDefinitions.Add(new() { Height = GridLength.Auto });
+        content.RowDefinitions.Add(new() { Height = new GridLength(1, GridUnitType.Star) });
         content.Children.Add(new TextBlock
         {
             Text = L(
@@ -11308,6 +10764,7 @@ public sealed partial class MainWindow : Window
             Style = (Style)Application.Current.Resources["MutedTextStyle"],
             TextWrapping = TextWrapping.Wrap
         });
+        Grid.SetRow(fileList, 1);
         content.Children.Add(fileList);
 
         var dialog = new ContentDialog
@@ -11318,6 +10775,7 @@ public sealed partial class MainWindow : Window
             CloseButtonText = L("取消", "Cancel"),
             DefaultButton = ContentDialogButton.Primary,
             IsPrimaryButtonEnabled = fileList.SelectedItem is ListViewItem,
+            RequestedTheme = RootGrid.ActualTheme,
             XamlRoot = RootGrid.XamlRoot
         };
         fileList.SelectionChanged += (_, _) =>
@@ -11524,6 +10982,12 @@ public sealed partial class MainWindow : Window
 
     private void OnWindowClosed(object sender, WindowEventArgs args)
     {
+        _bundleOperationCancellation?.Cancel();
+        _onlineWindowClosed = true;
+        InvalidateOnlineDetailRequest();
+        _onlineDownloadActions.CancelPreparation();
+        ++_folderRefreshGeneration;
+        _folderRefreshCancellation?.Cancel();
         CancelOnlineModListRequest();
         _onlineCharacterAvatarCancellation.Cancel();
         _onlineCharacterAvatarCancellation.Dispose();
@@ -12132,22 +11596,23 @@ public sealed partial class MainWindow : Window
         return aliases;
     }
 
-    private async Task<string?> PickDownloadFolderAsync(OnlineModCard mod)
+    private async Task<string?> PickDownloadFolderAsync(OnlineModCard mod, OnlineDownloadContext context,
+        IReadOnlyCollection<string> characterAliases)
     {
-        WorkspaceRepository? repository = GetSelectedRepository();
-        if (repository is not null && Directory.Exists(repository.SourcePath))
+        var repository = new WorkspaceRepository { Id = context.RepositoryId, SourcePath = context.RepositoryPath };
+        if (Directory.Exists(repository.SourcePath))
         {
             string[] childFolders = Directory.GetDirectories(repository.SourcePath)
                 .OrderBy(path => path, StringComparer.CurrentCultureIgnoreCase)
                 .ToArray();
-            IReadOnlyCollection<string> characterAliases = GetCharacterFolderAliases(mod);
             string? suggestedFolder = OnlineDownloadSelectionPolicy.SelectCharacterFolder(
                 childFolders,
                 characterAliases);
 
+            DialogViewport viewport = DialogViewportPolicy.Selection(RootGrid.ActualWidth, RootGrid.ActualHeight);
             ComboBox folderComboBox = new()
             {
-                MinWidth = 420,
+                HorizontalAlignment = HorizontalAlignment.Stretch,
                 MinHeight = 40
             };
             folderComboBox.Items.Add(new ComboBoxItem
@@ -12188,27 +11653,35 @@ public sealed partial class MainWindow : Window
             ContentDialog dialog = new()
             {
                 Title = L("选择下载位置", "Choose download location"),
-                Content = new StackPanel
+                Content = new ScrollViewer
                 {
-                    Spacing = 10,
-                    Children =
+                    MaxHeight = viewport.ContentHeight,
+                    HorizontalScrollBarVisibility = ScrollBarVisibility.Disabled,
+                    Content = new StackPanel
                     {
-                        new TextBlock
+                        Width = Math.Min(620, viewport.MaxWidth - 48),
+                        Spacing = 10,
+                        Children =
                         {
-                            Text = L(
-                                $"当前仓库的 Mod 仓库目录：\n{repository.SourcePath}\n\n{destinationHint}\n下载后会在所选目录中创建独立的 Mod 文件夹。也可以改为手动选择其他位置。",
-                                $"Current mod repository folder:\n{repository.SourcePath}\n\n{destinationHint}\nA separate mod folder will be created inside the selected destination. You can also choose another location manually."),
-                            TextWrapping = TextWrapping.Wrap
-                        },
-                        folderComboBox
+                            new TextBlock
+                            {
+                                Text = L(
+                                    $"当前仓库的 Mod 仓库目录：\n{repository.SourcePath}\n\n{destinationHint}\n下载后会在所选目录中创建独立的 Mod 文件夹。也可以改为手动选择其他位置。",
+                                    $"Current mod repository folder:\n{repository.SourcePath}\n\n{destinationHint}\nA separate mod folder will be created inside the selected destination. You can also choose another location manually."),
+                                TextWrapping = TextWrapping.Wrap
+                            },
+                            folderComboBox
+                        }
                     }
                 },
                 PrimaryButtonText = L("使用选中文件夹", "Use selected folder"),
                 SecondaryButtonText = L("手动选择其他位置", "Choose another location"),
                 CloseButtonText = L("取消", "Cancel"),
                 DefaultButton = ContentDialogButton.Primary,
-                XamlRoot = RootGrid.XamlRoot
+                XamlRoot = RootGrid.XamlRoot,
+                RequestedTheme = RootGrid.ActualTheme
             };
+            dialog.Resources["ContentDialogMaxWidth"] = viewport.MaxWidth;
 
             ContentDialogResult result = await dialog.ShowAsync();
             if (result == ContentDialogResult.Primary)
@@ -12424,7 +11897,7 @@ public sealed partial class MainWindow : Window
         LoadLinkForCurrentMod(null);
     }
 
-    private void SaveConfig()
+    private bool SaveConfig()
     {
         try
         {
@@ -12485,10 +11958,12 @@ public sealed partial class MainWindow : Window
 
             WriteConfigurationTextWithBackup(_configPath, string.Join(Environment.NewLine, lines) + Environment.NewLine);
             SaveShellConfig();
+            return true;
         }
         catch
         {
             StatusTextBlock.Text = L("配置保存失败，但不影响当前使用。", "Failed to save config, but the app can continue.");
+            return false;
         }
     }
 
@@ -12637,12 +12112,17 @@ public sealed partial class MainWindow : Window
     }
 
     private int _folderRefreshGeneration;
+    private CancellationTokenSource? _folderRefreshCancellation;
 
     private async Task RefreshListsAsync()
     {
+        using var timing = MeasureRepositoryUi(RepositoryPerformanceOperation.Refresh, _allFirstLevelItems.Sum(first => first.Children.Count));
+        _folderRefreshCancellation?.Cancel();
         int generation = ++_folderRefreshGeneration;
         string? previousMod = _currentSecondLevelPath;
         string? previousCategory = (FirstLevelListView.SelectedItem as FirstLevelFolderItem)?.Path;
+        _allFirstLevelItems.Clear();
+        _repositorySelectedMod = null;
         _firstLevelItems.Clear();
         _secondLevelItems.Clear();
         _currentSecondLevelPath = null;
@@ -12673,38 +12153,59 @@ public sealed partial class MainWindow : Window
 
         SaveConfig();
         string repositoryId = GetSelectedRepository()?.Id ?? sourceDir;
-
-        await Task.Run(() =>
+        using var cancellation = new CancellationTokenSource();
+        _folderRefreshCancellation = cancellation;
+        try
         {
-            (List<FirstLevelFolderItem> loadedItems, int secondCount) = LoadFolderItemsUsingIndex(repositoryId, sourceDir, targetDir);
-
-            DispatcherQueue.TryEnqueue(() =>
+            var loaded = await Task.Run(() =>
             {
-                if (generation != _folderRefreshGeneration
-                    || !string.Equals(sourceDir, (SourceTextBox.Text ?? string.Empty).Trim(), StringComparison.OrdinalIgnoreCase)
-                    || !string.Equals(targetDir, (TargetTextBox.Text ?? string.Empty).Trim(), StringComparison.OrdinalIgnoreCase)) return;
-                _allFirstLevelItems.Clear();
-                _allFirstLevelItems.AddRange(loadedItems);
-                ApplyFirstLevelFilter();
-                FirstCountTextBlock.Text = _allFirstLevelItems.Count.ToString();
-                SecondCountTextBlock.Text = secondCount.ToString();
-                StatusTextBlock.Text = L(
-                    $"已加载 {_allFirstLevelItems.Count} 个第一层目录，{secondCount} 个第二层目录。",
-                    $"Loaded {_allFirstLevelItems.Count} first-level folders and {secondCount} second-level folders.");
-                if (_firstLevelItems.Count > 0)
-                {
-                    SelectFirstLevelByPath(previousCategory);
-                    if (!string.IsNullOrEmpty(previousMod)) SelectSecondLevelByPath(previousMod);
-                    if (FirstLevelListView.SelectedItem is null) FirstLevelListView.SelectedIndex = 0;
-                }
-            });
-        });
+                var items = LoadFolderItemsUsingIndex(repositoryId, sourceDir, targetDir,
+                    cancellation.Token, out int warnings);
+                return (items.Items, items.SecondCount, Warnings: warnings);
+            }, cancellation.Token);
+
+            if (cancellation.IsCancellationRequested || generation != _folderRefreshGeneration
+                || !string.Equals(sourceDir, (SourceTextBox.Text ?? string.Empty).Trim(), StringComparison.OrdinalIgnoreCase)
+                || !string.Equals(targetDir, (TargetTextBox.Text ?? string.Empty).Trim(), StringComparison.OrdinalIgnoreCase)) return;
+            _allFirstLevelItems.Clear();
+            _allFirstLevelItems.AddRange(loaded.Items);
+            timing?.SetCounts(loaded.SecondCount);
+            ApplyFirstLevelFilter();
+            FirstCountTextBlock.Text = _allFirstLevelItems.Count.ToString();
+            SecondCountTextBlock.Text = loaded.SecondCount.ToString();
+            StatusTextBlock.Text = loaded.Warnings == 0
+                ? L($"已加载 {_allFirstLevelItems.Count} 个第一层目录，{loaded.SecondCount} 个第二层目录。",
+                    $"Loaded {_allFirstLevelItems.Count} first-level folders and {loaded.SecondCount} second-level folders.")
+                : L($"已加载 {_allFirstLevelItems.Count} 个分类、{loaded.SecondCount} 个 Mod；扫描或缓存有 {loaded.Warnings} 项问题，请查看诊断日志。",
+                    $"Loaded {_allFirstLevelItems.Count} categories and {loaded.SecondCount} mods; {loaded.Warnings} scan/cache issue(s). See diagnostics.");
+            if (_firstLevelItems.Count > 0)
+            {
+                SelectFirstLevelByPath(previousCategory);
+                if (!string.IsNullOrEmpty(previousMod)) SelectSecondLevelByPath(previousMod);
+                if (FirstLevelListView.SelectedItem is null) FirstLevelListView.SelectedIndex = 0;
+            }
+        }
+        catch (OperationCanceledException) when (cancellation.IsCancellationRequested)
+        {
+            // A newer refresh/repository owns the display. Do not overwrite it.
+        }
+        catch (Exception ex)
+        {
+            LogApplicationIssue("Refresh repository folders", ex);
+            if (generation == _folderRefreshGeneration && !cancellation.IsCancellationRequested)
+                StatusTextBlock.Text = L("仓库扫描失败，未覆盖已有索引。请检查路径或访问权限后重试。",
+                    "Repository scan failed; the existing index was preserved. Check the path/permissions and retry.");
+        }
+        finally
+        {
+            if (ReferenceEquals(_folderRefreshCancellation, cancellation)) _folderRefreshCancellation = null;
+        }
     }
 
     private void PopulateSecondLevelList(FirstLevelFolderItem? firstItem, bool preserveStatus = false)
     {
+        using var timing = MeasureRepositoryUi(RepositoryPerformanceOperation.Populate, firstItem?.Children.Count ?? 0);
         _repositorySelectedMod = null;
-        _secondLevelItems.Clear();
         ClearPreview();
         CurrentFolderTextBlock.Text = StateNotSelectedText;
         CurrentStateTextBlock.Text = StateNotSelectedText;
@@ -12715,15 +12216,13 @@ public sealed partial class MainWindow : Window
 
         if (firstItem is null)
         {
+            _secondLevelItems.ReplaceAll([]);
             ApplySecondLevelSelectionState(null, preserveStatus: true);
             RefreshRepositoryModView();
             return;
         }
 
-        foreach (SecondLevelFolderItem child in firstItem.Children)
-        {
-            _secondLevelItems.Add(child);
-        }
+        _secondLevelItems.ReplaceAll(firstItem.Children);
         RefreshRepositoryModView();
 
         if (!preserveStatus)
@@ -13642,10 +13141,7 @@ public sealed partial class MainWindow : Window
             return;
         }
 
-        StorageFile file = await StorageFile.GetFileFromPathAsync(imagePath);
-        using var stream = await file.OpenReadAsync();
-        var bitmap = new BitmapImage();
-        await bitmap.SetSourceAsync(stream);
+        BitmapImage bitmap = await LoadLocalBitmapAsync(imagePath);
         if (requestVersion == _previewImageRequestVersion)
         {
             PreviewImage.Source = bitmap;
@@ -13718,17 +13214,12 @@ public sealed partial class MainWindow : Window
         string keyword = (FirstLevelSearchTextBox.Text ?? string.Empty).Trim();
         string? selectedPath = FirstLevelListView.SelectedItem is FirstLevelFolderItem selected ? selected.Path : null;
 
-        _firstLevelItems.Clear();
-
         IEnumerable<FirstLevelFolderItem> filtered = string.IsNullOrWhiteSpace(keyword)
             ? _allFirstLevelItems
             : _allFirstLevelItems.Where(item =>
                 item.Name.Contains(keyword, StringComparison.CurrentCultureIgnoreCase));
 
-        foreach (FirstLevelFolderItem item in filtered)
-        {
-            _firstLevelItems.Add(item);
-        }
+        _firstLevelItems.ReplaceAll(filtered);
 
         if (!string.IsNullOrEmpty(selectedPath))
         {
@@ -14187,11 +13678,18 @@ public sealed partial class MainWindow : Window
 
     private async Task ShowMessageAsync(string content, string title)
     {
+        DialogViewport viewport = DialogViewportPolicy.Selection(RootGrid.ActualWidth, RootGrid.ActualHeight);
         var dialog = new ContentDialog
         {
             Title = title,
-            Content = content,
+            Content = new ScrollViewer
+            {
+                MaxHeight = viewport.ContentHeight,
+                HorizontalScrollBarVisibility = ScrollBarVisibility.Disabled,
+                Content = new TextBlock { Text = content, TextWrapping = TextWrapping.Wrap }
+            },
             CloseButtonText = L("确定", "OK"),
+            RequestedTheme = RootGrid.ActualTheme,
             XamlRoot = RootGrid.XamlRoot
         };
 
@@ -14441,17 +13939,20 @@ public sealed partial class MainWindow : Window
 
     private async Task<bool> ShowConfirmAsync(string content, string title)
     {
+        DialogViewport viewport = DialogViewportPolicy.Selection(RootGrid.ActualWidth, RootGrid.ActualHeight);
         var dialog = new ContentDialog
         {
             Title = title,
-            Content = new TextBlock
+            Content = new ScrollViewer
             {
-                Text = content,
-                TextWrapping = TextWrapping.Wrap
+                MaxHeight = viewport.ContentHeight,
+                HorizontalScrollBarVisibility = ScrollBarVisibility.Disabled,
+                Content = new TextBlock { Text = content, TextWrapping = TextWrapping.Wrap }
             },
             PrimaryButtonText = L("确认", "Confirm"),
             CloseButtonText = L("取消", "Cancel"),
             DefaultButton = ContentDialogButton.Close,
+            RequestedTheme = RootGrid.ActualTheme,
             XamlRoot = RootGrid.XamlRoot
         };
 
@@ -14905,6 +14406,7 @@ public sealed class ModInstallBackupEntry
 
 public sealed class DownloadTaskItem
 {
+    public OnlineDownloadSession? Session { get; set; }
     public string Id { get; } = Guid.NewGuid().ToString("N");
 
     public string Title { get; set; } = string.Empty;

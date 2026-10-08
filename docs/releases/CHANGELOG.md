@@ -6,6 +6,19 @@
 
 This document records version changes in Integrated Mod Manager. Unpublished versions are marked separately.
 
+## v4.1.0 - 组合包与体验优化 / Portable Bundles and Usability (2026-10-07)
+
+- 导出已保存组合、Mod 文件与数值状态，预览安装组合包；相同文件复用，冲突内容不覆盖。
+- 优化仓库扫描与列表刷新；完善在线下载取消、安装状态刷新，修复预览和头像显示。
+- 短窗口设置按宽度及高度切换分区布局，避免下方模块被挤压裁切。
+- 测试依赖集中管理、开发说明精简，保留安全测试与历史验证记录。
+- Export saved combinations, Mod files and numeric state; preview installation, reuse identical files and reject conflicts.
+- Improved scanning, list refresh, download cancellation and installed-state refresh; repaired preview/avatar rendering.
+- Settings considers both width and height, using sections when the overview cannot fit.
+- Consolidated test dependencies and documentation without removing safety tests or historical evidence.
+
+[Release notes / 更新说明](./v4.1.0.md)
+
 ## v4.0.0 - 仓库工作台 / Repository Workspace（正式版 / Stable, 2026-10-05）
 
 - 默认仓库改为文件列表工作台，可切换封面视图；角色、Mod、详情与部署操作分区排列。

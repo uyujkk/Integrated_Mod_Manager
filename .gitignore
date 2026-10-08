@@ -20,6 +20,8 @@ DataStoreTests/obj/
 DataStoreTests/TestResults/
 DeveloperTools/bin/
 DeveloperTools/obj/
+RepositoryPerformance/bin/
+RepositoryPerformance/obj/
 artifacts/
 *.pdb
 

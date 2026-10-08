@@ -17,8 +17,8 @@ public sealed class ApplicationReleasePolicyTests
     [Fact]
     public void StableUsesReleaseChannelAndConsistentVersion()
     {
-        Assert.Equal("v4.0.0", ApplicationReleasePolicy.VersionLabel);
-        Assert.Equal(new Version(4, 0, 0, 0), Version.Parse(ApplicationReleasePolicy.FileVersion));
+        Assert.Equal("v4.1.0", ApplicationReleasePolicy.VersionLabel);
+        Assert.Equal(new Version(4, 1, 0, 0), Version.Parse(ApplicationReleasePolicy.FileVersion));
         Assert.Equal("https://github.com/uyujkk/Integrated_Mod_Manager/releases/latest", ApplicationReleasePolicy.ReleasePageUrl);
     }
 }

@@ -22,23 +22,23 @@
 
 ## Overview
 
-**Current stable version: [v4.0.0](https://github.com/uyujkk/Integrated_Mod_Manager/releases/tag/v4.0.0).** Browse your library in Files or Covers, and save complete Mod combinations with their persistent settings in the new Presets workspace. See the [4.0 guide](./docs/guides/Combination-Presets.en.md).
+**Current stable version: [v4.1.0](https://github.com/uyujkk/Integrated_Mod_Manager/releases/tag/v4.1.0).** Export saved Mod combinations with their files and persistent settings, then install them in another repository. See the [preset guide](./docs/guides/Combination-Presets.en.md).
 
 Integrated Mod Manager organizes different games or mod environments into independent repositories. It copies or removes complete mod folders between a local library and the target directory read by the game, while keeping preview images, source links, shortcut notes, online downloads, update records, profiles, and installation backups in one application.
 
-The application, launcher, and updater use version **4.0.0** (`4.0.0.0`). The tool is maintained by `uyujkk`. The Bandizip extraction fallback was contributed by [CaramelizedCUDA](https://github.com/CaramelizedCUDA). The earlier [4.0-beta](https://github.com/uyujkk/Integrated_Mod_Manager/releases/tag/v4.0-beta) remains archived separately.
+The application, launcher, and updater use version **4.1.0** (`4.1.0.0`). The tool is maintained by `uyujkk`. The Bandizip extraction fallback was contributed by [CaramelizedCUDA](https://github.com/CaramelizedCUDA). The earlier [4.0-beta](https://github.com/uyujkk/Integrated_Mod_Manager/releases/tag/v4.0-beta) remains archived separately.
 
-## What's New in 4.0
+## What's New in 4.1
 
-- A redesigned repository workspace: Files by default, switchable Covers, and a dedicated Combination Presets view.
-- Save the enabled Mod set together with its numeric persistent values; restore the set first, then matching `d3dx_user.ini` values. Individual Mod state slots are also available.
-- Clearer search, preview, shortcut, and deployment controls, with panel-local scrolling and compact-window details.
-- A single-line status bar with idle/task state, readable operation messages, and full-path tooltips.
-- Stable-channel app updates are enabled again, with exact ZIP/checksum pairing and existing settings retained.
+- Portable combination bundles: export a saved preset with its Mod files and numeric state, then preview and install it in another repository.
+- Identical installed Mods can be reused; different existing files are never overwritten by bundle import.
+- Faster repository scanning and smoother large-library refreshes.
+- Fixed online previews and character avatars; improved download cancellation and immediate installed-state refresh.
+- Better short-window layouts, including section-based Settings when the full overview cannot fit.
 
 Before capturing state, have the loader save it (usually F10). Close the game and loader before restoring. Mod INI defaults and unrelated runtime values are not rewritten. This is not universal compatibility with every Mod or a guarantee against account risk.
 
-[Release notes](./docs/releases/v4.0.0.md) · [Upgrade guide](./docs/guides/Upgrade-v4.0.en.md) · [Wiki](https://github.com/uyujkk/Integrated_Mod_Manager/wiki)
+[Release notes](./docs/releases/v4.1.0.md) · [Upgrade guide](./docs/guides/Upgrade-v4.1.en.md) · [Wiki](https://github.com/uyujkk/Integrated_Mod_Manager/wiki)
 
 ## Core Features
 
@@ -51,6 +51,7 @@ Before capturing state, have the loader save it (usually F10). Close the game an
 | Previews and notes | Store an image, source link, shortcut keys, and action descriptions for each mod |
 | Repository workspace | Switch between a compact file list and cover gallery; keep selection and actions together |
 | Combination and state presets | Save enabled Mod sets with numeric persistent values; restore the set, then matching `d3dx_user.ini` values |
+| Portable combination bundles | Export selected saved presets with Mod files; validate, preview, install and optionally restore them in another repository |
 | Online mod browser | Browse GameBanana entries, filter by character, view details, and download and extract mods |
 | Configuration profiles | Save and apply complete enabled-mod setups without touching unknown target folders |
 | Installation safety | Detect file conflicts and create restorable backups for copy, remove, and profile operations |
@@ -162,7 +163,7 @@ Run the complete test, coverage, WinUI x64 build, and package verification flow:
 powershell -NoProfile -ExecutionPolicy Bypass -File .\scripts\test-all.ps1
 ```
 
-The 4.0.0 verification contains 325 automated tests. GitHub Actions runs the same verification flow on pushes to `main`, pull requests, and manual dispatches. See the [Testing Guide](./docs/development/TESTING.md) and [4.0 verification record](./docs/verification/v4.0.0.md) for details and testing boundaries.
+GitHub Actions runs the same three-suite verification flow on pushes to `main`, pull requests, and manual dispatches. Test dependencies are centralized without removing safety cases. See the [Testing Guide](./docs/development/TESTING.md) and [4.1 verification record](./docs/verification/v4.1.0.md) for current results and testing boundaries.
 
 ## Data and Security
 

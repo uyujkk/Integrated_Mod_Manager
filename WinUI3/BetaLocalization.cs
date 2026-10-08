@@ -270,11 +270,21 @@ internal static class BetaLocalization
         if (EnToZh.TryGetValue(en, out string? mapped))
         {
             string normalizedMapped = NormalizeChineseText(mapped);
-            return string.IsNullOrWhiteSpace(normalizedMapped) ? en : normalizedMapped;
+            return string.IsNullOrWhiteSpace(normalizedMapped) ? en : PreserveBoundaryWhitespace(zh, normalizedMapped);
         }
 
         string normalizedZh = NormalizeChineseText(zh);
-        return string.IsNullOrWhiteSpace(normalizedZh) ? en : normalizedZh;
+        return string.IsNullOrWhiteSpace(normalizedZh) ? en : PreserveBoundaryWhitespace(zh, normalizedZh);
+    }
+
+    private static string PreserveBoundaryWhitespace(string original, string translated)
+    {
+        int start = 0, end = original.Length;
+        while (start < end && char.IsWhiteSpace(original[start])) start++;
+        while (end > start && char.IsWhiteSpace(original[end - 1])) end--;
+        // Messages are composed from localized fragments. Trimming their separators
+        // joined preview summaries, backup paths and instructions into one line.
+        return original[..start] + translated + original[end..];
     }
 
     public static string NormalizeChineseText(string? value)

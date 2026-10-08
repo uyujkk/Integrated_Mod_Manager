@@ -4,10 +4,12 @@
 
 This directory contains the usage, release, development, and research documentation for Integrated Mod Manager. The repository root is reserved for GitHub-recognized files, build entry points, and source-code entry points.
 
-当前正式版 / Current stable: **[v4.0.0](https://github.com/uyujkk/Integrated_Mod_Manager/releases/tag/v4.0.0)**。历史发布报告与实验记录保留原版本事实，不代表当前功能边界。Historical release and experiment reports retain their original context; use the current guides below.
+当前正式版 / Current stable: **[v4.1.0](https://github.com/uyujkk/Integrated_Mod_Manager/releases/tag/v4.1.0)**。历史发布报告与实验记录保留原版本事实，不代表当前功能边界。Historical release and experiment reports retain their original context; use the current guides below.
 
 ## 使用指南 / Guides
 
+- [升级到 4.1](./guides/Upgrade-v4.1.zh-CN.md)
+- [Upgrade to 4.1](./guides/Upgrade-v4.1.en.md)
 - [4.0 组合预设指南](./guides/Combination-Presets.zh-CN.md)
 - [4.0 Combination Presets Guide](./guides/Combination-Presets.en.md)
 - [升级到 4.0](./guides/Upgrade-v4.0.zh-CN.md)
@@ -20,6 +22,7 @@ This directory contains the usage, release, development, and research documentat
 
 ## 发布记录 / Releases
 
+- [v4.1.0 组合包与体验优化 / Portable Bundles and Usability](./releases/v4.1.0.md)
 - [v4.0.0 正式版更新说明 / Stable Release Notes](./releases/v4.0.0.md)
 - [v4.0-beta 历史测试版 / Historical Beta](./releases/v4.0-beta.md)
 - [完整双语更新日志 / Full Bilingual Changelog](./releases/CHANGELOG.md)
@@ -32,8 +35,29 @@ This directory contains the usage, release, development, and research documentat
 
 ## 开发文档 / Development
 
+- [v4.1.0 验证记录 / Verification Record](./verification/v4.1.0.md)
 - [v4.0.0 验证记录 / Verification Record](./verification/v4.0.0.md)
 - [测试与构建说明 / Testing and Build Guide](./development/TESTING.md)
+- [分步优化路线 / Incremental Optimization](./development/Optimization-Roadmap.md)
+- [回归检查清单 / Regression Checklist](./development/Regression-Checklist.md)
+- [仓库扫描优化本地验证 / Local Repository Scan Verification](./verification/repository-scan-opt1-20261005.md)
+- [组合恢复预览本地验证 / Local Combination Preview Verification](./verification/combination-preview-opt2-20261005.md)
+- [仓库性能诊断 / Repository Performance](./development/Repository-Performance.md)
+- [第三阶段性能验证 / Local Performance Verification](./verification/repository-performance-opt3-20261005.md)
+- [在线下载服务 / Online Download Transport](./development/Online-Download-Service.md)
+- [第四阶段传输验证 / Local Download Verification](./verification/online-download-opt4-20261005.md)
+- [下载任务与安装信息提交 / Download Execution and Metadata Commit](./development/Online-Download-Execution.md)
+- [任务执行本地验证 / Local Execution Verification](./verification/online-execution-opt5-20261005.md)
+- [在线元数据服务 / Online Metadata Service](./development/Online-Metadata-Service.md)
+- [元数据本地验证 / Local Metadata Verification](./verification/online-metadata-opt6-20261005.md)
+- [在线页面状态与下载入口 / Online Page State and Download Actions](./development/Online-Page-State.md)
+- [页面状态本地验证 / Local Page State Verification](./verification/online-state-opt7-20261007.md)
+- [组合预设压缩包 / Combination Preset Bundles](./development/Combination-Bundles.md)
+- [组合包本地验证 / Local Bundle Verification](./verification/combination-bundle-opt8-20261007.md)
+- [组合包窗口与模拟流程验证 / Native Bundle and Synthetic Workflow](./verification/combination-bundle-opt9-20261007.md)
+- [组合包复用、冲突与取消验证 / Bundle Reuse, Conflicts and Cancellation](./verification/combination-bundle-opt10-20261007.md)
+- [四项合并回归与窗口修复 / Combined Regression and Native UI Repairs](./verification/combined-regression-opt11-20261007.md)
+- [在线图片缓存显示修复 / Online Image Cache Rendering Repair](./verification/online-image-stream-fix-20261007.md)
 - [v3.9.0 界面设计记录 / v3.9.0 UI Design Record](./development/UI-Design-Preview.md)
 - [贡献指南 / Contributing](../CONTRIBUTING.md)
 - [安全策略 / Security Policy](../SECURITY.md)

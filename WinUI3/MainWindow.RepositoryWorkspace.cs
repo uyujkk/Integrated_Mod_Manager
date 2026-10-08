@@ -24,7 +24,9 @@ public sealed partial class MainWindow
     private bool _repositoryWorkspaceBusy;
     private SecondLevelFolderItem? _repositorySelectedMod;
     private RepositoryWorkspaceView _repositoryWorkspaceView;
-    private readonly ObservableCollection<SecondLevelFolderItem> _repositoryVisibleMods = [];
+    private readonly BatchObservableCollection<SecondLevelFolderItem> _repositoryVisibleMods = [];
+    private int _repositoryCatalogRevision;
+    private int _repositoryViewRevision = -1;
     private readonly HashSet<SecondLevelFolderItem> _repositoryCoversLoading = [];
     private Grid? _repositoryToolbar;
     private Grid? _repositoryHeader;
@@ -388,7 +390,9 @@ public sealed partial class MainWindow
         RepositoryMove(CreateConfigurationProfileButton, list, 2);
         CreateConfigurationProfileButton.HorizontalAlignment = HorizontalAlignment.Stretch;
         RepositoryDecorateButton(CreateConfigurationProfileButton, "\uE710");
-        _combinationWorkspace.Children.Add(RepositoryCard(list));
+        InitializeCombinationBundleActions();
+        var presetCard = RepositoryCard(list); Grid.SetRow(presetCard, 1);
+        _combinationWorkspace.Children.Add(presetCard);
 
         var member = RepositoryRows(GridLength.Auto, GridLength.Auto, new GridLength(1, GridUnitType.Star));
         var heading = RepositoryColumns(new GridLength(1, GridUnitType.Star), GridLength.Auto, GridLength.Auto);
@@ -406,7 +410,7 @@ public sealed partial class MainWindow
             HorizontalScrollBarVisibility = ScrollBarVisibility.Disabled, VerticalScrollBarVisibility = ScrollBarVisibility.Auto
         };
         Grid.SetRow(members, 2); member.Children.Add(members);
-        var memberCard = RepositoryCard(member); Grid.SetColumn(memberCard, 1); _combinationWorkspace.Children.Add(memberCard);
+        var memberCard = RepositoryCard(member); Grid.SetColumn(memberCard, 1); Grid.SetRow(memberCard, 1); _combinationWorkspace.Children.Add(memberCard);
 
         var recovery = RepositoryRows(GridLength.Auto, new GridLength(1, GridUnitType.Star), GridLength.Auto);
         _combinationRecoveryTitle = RepositoryText(16, true); recovery.Children.Add(_combinationRecoveryTitle);
@@ -433,7 +437,7 @@ public sealed partial class MainWindow
         ApplyConfigurationProfileButton.MinHeight = 40; ApplyConfigurationProfileButton.HorizontalAlignment = HorizontalAlignment.Stretch;
         RepositoryDecorateButton(ApplyConfigurationProfileButton, "\uE777");
         _combinationRecoveryCard = RepositoryCard(recovery);
-        Grid.SetColumn(_combinationRecoveryCard, 2); _combinationWorkspace.Children.Add(_combinationRecoveryCard);
+        Grid.SetColumn(_combinationRecoveryCard, 2); Grid.SetRow(_combinationRecoveryCard, 1); _combinationWorkspace.Children.Add(_combinationRecoveryCard);
 
         // Keep the original selection control as the sole selected-profile authority.
         RepositoryDetach(ConfigurationProfileComboBox);
@@ -470,6 +474,7 @@ public sealed partial class MainWindow
         _repositoryCategoryTitle!.Text = L("角色", "Characters");
         _repositoryModTitle!.Text = FirstLevelListView.SelectedItem is FirstLevelFolderItem role ? role.Name : L("Mod 文件", "Mod Files");
         _repositoryModSearch!.PlaceholderText = L("搜索当前角色的 Mod", "Search this character's Mods");
+        AutomationProperties.SetName(_repositoryModSearch, L("搜索 Mod", "Search Mods"));
         FirstLevelSearchTextBox.PlaceholderText = L("搜索角色", "Search characters");
         string[] labels = [L("文件列表", "Files"), L("封面视图", "Covers"), L("组合预设", "Presets")];
         string[] glyphs = ["\uEA37", "\uE80A", "\uE8F1"];
@@ -540,18 +545,19 @@ public sealed partial class MainWindow
         _repositoryToolbarCommands!.HorizontalAlignment = width < 720 ? HorizontalAlignment.Left : HorizontalAlignment.Right;
         _repositoryCountText!.Visibility = width < 620 ? Visibility.Collapsed : Visibility.Visible;
         _combinationWorkspace!.ColumnDefinitions.Clear(); _combinationWorkspace.RowDefinitions.Clear();
-        bool inlineRecovery = width >= 780;
+        bool inlineRecovery = RepositoryWorkspacePolicy.InlineCombinationRecovery(width, height);
         _combinationWorkspace.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(width >= 1100 ? 220 : 160) });
         _combinationWorkspace.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(1, GridUnitType.Star) });
         _combinationWorkspace.ColumnDefinitions.Add(new ColumnDefinition { Width = inlineRecovery ? new GridLength(width >= 1100 ? 320 : 260) : new GridLength(0) });
+        _combinationWorkspace.RowDefinitions.Add(new RowDefinition { Height = GridLength.Auto });
         _combinationWorkspace.RowDefinitions.Add(new RowDefinition { Height = new GridLength(1, GridUnitType.Star) });
         if (!inlineRecovery)
         {
-            double recoveryHeight = Math.Clamp((height - 80) * .48, 140, 240);
+            double recoveryHeight = RepositoryWorkspacePolicy.StackedRecoveryHeight(height);
             _combinationWorkspace.RowDefinitions.Add(new RowDefinition { Height = new GridLength(recoveryHeight) });
-            Place(_combinationRecoveryCard!, 1, 0, 2);
+            Place(_combinationRecoveryCard!, 2, 0, 2);
         }
-        else Place(_combinationRecoveryCard!, 0, 2);
+        else Place(_combinationRecoveryCard!, 1, 2);
     }
 
     private void UpdateRepositoryCoverLayoutV4()
@@ -573,6 +579,7 @@ public sealed partial class MainWindow
     private void ApplyRepositoryCoverLayoutV4()
     {
         if (_repositoryCoverWrap is null || _repositoryCoverGrid!.ActualWidth <= 0) return;
+        using var timing = MeasureRepositoryUi(RepositoryPerformanceOperation.CoverLayout, _repositoryVisibleMods.Count);
         double actualGallery = Math.Max(140, _repositoryCoverGrid.ActualWidth - 24);
         if (double.IsNaN(_repositoryCoverRepeater!.Width) || Math.Abs(_repositoryCoverRepeater.Width - actualGallery) > .5)
             _repositoryCoverRepeater.Width = actualGallery;
@@ -593,14 +600,21 @@ public sealed partial class MainWindow
 
     private void OnRepositoryCatalogChanged(object? sender, NotifyCollectionChangedEventArgs args)
     {
+        _repositoryCatalogRevision++;
         if (_repositoryRefreshQueued) return;
         _repositoryRefreshQueued = true;
-        DispatcherQueue.TryEnqueue(() => { _repositoryRefreshQueued = false; RefreshRepositoryModView(); });
+        if (!DispatcherQueue.TryEnqueue(() =>
+        {
+            _repositoryRefreshQueued = false;
+            // Explicit population/search may already have applied this snapshot.
+            if (_repositoryViewRevision != _repositoryCatalogRevision) RefreshRepositoryModView();
+        })) _repositoryRefreshQueued = false;
     }
 
     private void RefreshRepositoryModView()
     {
         if (!_repositoryV4Ready) return;
+        using var timing = MeasureRepositoryUi(RepositoryPerformanceOperation.Filter, _secondLevelItems.Count);
         string? current = _repositorySelectedMod?.Path ?? _currentSecondLevelPath;
         string? path = RepositoryWorkspacePolicy.PreserveSelection(_secondLevelItems.Select(mod => mod.Path), current);
         _repositorySelectedMod = _secondLevelItems.FirstOrDefault(mod => string.Equals(mod.Path, path, StringComparison.OrdinalIgnoreCase));
@@ -609,12 +623,13 @@ public sealed partial class MainWindow
         _syncingRepositorySelection = true;
         try
         {
-            _repositoryVisibleMods.Clear();
-            foreach (var mod in visible) { mod.CoverPlaceholder = L("未设置预览图", "No preview image"); _repositoryVisibleMods.Add(mod); }
+            foreach (var mod in visible) mod.CoverPlaceholder = L("未设置预览图", "No preview image");
+            _repositoryVisibleMods.ReplaceAll(visible);
             SecondLevelListView.SelectedItem = visible.Contains(_repositorySelectedMod) ? _repositorySelectedMod : null;
             UpdateRepositoryCoverSelectionV4();
         }
         finally { _syncingRepositorySelection = false; }
+        _repositoryViewRevision = _repositoryCatalogRevision;
         _repositoryModTitle!.Text = FirstLevelListView.SelectedItem is FirstLevelFolderItem role ? role.Name : L("Mod 文件", "Mod Files");
         _repositoryModCount!.Text = L($"{visible.Length} / {_secondLevelItems.Count} 个 Mod", $"{visible.Length} / {_secondLevelItems.Count} Mods");
         _repositoryEmptyMessage!.Visibility = visible.Length == 0 ? Visibility.Visible : Visibility.Collapsed;
@@ -658,10 +673,7 @@ public sealed partial class MainWindow
         {
             string? path = FindPreviewImage(mod.Files);
             if (path is null || !File.Exists(path) || new FileInfo(path).Length > MaxOnlinePreviewImageBytes) return;
-            var file = await StorageFile.GetFileFromPathAsync(path);
-            using var stream = await file.OpenReadAsync();
-            var bitmap = new BitmapImage { DecodePixelWidth = 420 };
-            await bitmap.SetSourceAsync(stream);
+            BitmapImage bitmap = await LoadLocalBitmapAsync(path, decodePixelWidth: 420);
             mod.CoverImageSource = bitmap;
         }
         catch (Exception exception) { LogApplicationIssue("Repository cover", exception); }

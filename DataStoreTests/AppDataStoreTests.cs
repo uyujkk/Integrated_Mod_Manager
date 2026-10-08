@@ -1,4 +1,5 @@
 using Microsoft.Data.Sqlite;
+using IntegratedModManager.Core;
 using ModFolderCopier.WinUI;
 using Xunit;
 
@@ -115,6 +116,41 @@ public sealed class AppDataStoreTests
         Assert.Empty(store.ReadFavorites());
         Assert.Empty(store.ReadModIndex("repo", "root"));
         Assert.Equal("SQLite unavailable", store.GetHealthSummary());
+    }
+
+    [Fact]
+    public void RepositoryScannerAdapterKeepsExistingSchemaAndCacheRoundTrip()
+    {
+        using var directory = new TemporaryDirectory();
+        AppDataStore store = CreateStore(directory);
+        string root = Path.Combine(directory.Path, "source");
+        string mod = Path.Combine(root, "character", "mod");
+        Directory.CreateDirectory(mod);
+        File.WriteAllText(Path.Combine(mod, "mod.ini"), "test");
+        var scanner = new RepositoryScanService(new RepositoryIndexStoreAdapter(store));
+
+        RepositoryScanResult cold = scanner.Scan("repo", root);
+        RepositoryScanResult warm = scanner.Scan("repo", root);
+        IndexedModFolder cached = Assert.Single(store.ReadModIndex("repo", root));
+        Assert.Equal(1, cold.ModCount);
+        Assert.Equal(1, warm.CacheHits);
+        Assert.Equal(mod, cached.ModPath);
+        Assert.Equal(4, cached.TotalBytes);
+        Assert.Equal(Path.Combine(mod, "mod.ini"), Assert.Single(cached.Files));
+        Assert.Empty(store.ReadModIndex("another-repo", root));
+        Assert.Empty(store.ReadModIndex("repo", directory.Path));
+    }
+
+    [Fact]
+    public void RepositoryScannerWorksWithoutAvailableSqlite()
+    {
+        using var directory = new TemporaryDirectory();
+        string root = Path.Combine(directory.Path, "source");
+        Directory.CreateDirectory(Path.Combine(root, "character", "mod"));
+        var unavailable = new AppDataStore(Path.Combine(directory.Path, "not-initialized.db"));
+        var scanner = new RepositoryScanService(new RepositoryIndexStoreAdapter(unavailable));
+        Assert.Equal(1, scanner.Scan("repo", root).ModCount);
+        Assert.False(File.Exists(Path.Combine(directory.Path, "not-initialized.db")));
     }
 
     private static AppDataStore CreateStore(TemporaryDirectory directory)

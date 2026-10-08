@@ -92,6 +92,7 @@ function Get-RepositoryRelativePath {
 function Assert-CoverageThreshold {
     param(
         [Parameter(Mandatory)] [string]$ResultsDirectory,
+        [Parameter(Mandatory)] [string]$AssemblyName,
         [Parameter(Mandatory)] [double]$MinimumLineRate,
         [Parameter(Mandatory)] [double]$MinimumBranchRate
     )
@@ -104,13 +105,20 @@ function Assert-CoverageThreshold {
     }
 
     [xml]$coverage = Get-Content -LiteralPath $coverageFile.FullName
-    $lineRate = [double]::Parse($coverage.coverage.'line-rate', [Globalization.CultureInfo]::InvariantCulture)
-    $branchRate = [double]::Parse($coverage.coverage.'branch-rate', [Globalization.CultureInfo]::InvariantCulture)
+    $assemblyCoverage = @($coverage.coverage.packages.package | Where-Object { $_.name -eq $AssemblyName })
+    if ($assemblyCoverage.Count -ne 1) {
+        throw "Expected exactly one coverage assembly '$AssemblyName' in $($coverageFile.FullName)."
+    }
+    # Referenced assemblies are also instrumented by Coverlet. Enforce each
+    # documented component gate against that component, not an aggregate of
+    # unrelated dependencies. Missing/duplicate components fail closed.
+    $lineRate = [double]::Parse($assemblyCoverage[0].'line-rate', [Globalization.CultureInfo]::InvariantCulture)
+    $branchRate = [double]::Parse($assemblyCoverage[0].'branch-rate', [Globalization.CultureInfo]::InvariantCulture)
     if ($lineRate -lt $MinimumLineRate -or $branchRate -lt $MinimumBranchRate) {
         throw ("Coverage threshold failed for {0}: line={1:P1} (min {2:P0}), branch={3:P1} (min {4:P0})" -f
             $ResultsDirectory, $lineRate, $MinimumLineRate, $branchRate, $MinimumBranchRate)
     }
-    Write-Host ("Coverage passed: line={0:P1}, branch={1:P1}" -f $lineRate, $branchRate)
+    Write-Host ("Coverage passed ({0}): line={1:P1}, branch={2:P1}" -f $AssemblyName, $lineRate, $branchRate)
 }
 
 if (Test-Path -LiteralPath $artifacts) {
@@ -120,10 +128,12 @@ New-Item -ItemType Directory -Path $testResults, $smokeOutput -Force | Out-Null
 
 $dotnetCommand = Get-Command dotnet.exe -ErrorAction Stop
 $testProjects = @(
-    @{ Name = "core"; Path = Join-Path $root "Tests\IntegratedModManager.Core.Tests.csproj"; Line = 0.90; Branch = 0.85 },
-    @{ Name = "datastore"; Path = Join-Path $root "DataStoreTests\IntegratedModManager.DataStore.Tests.csproj"; Line = 0.70; Branch = 0.60 },
-    @{ Name = "updater"; Path = Join-Path $root "UpdaterTests\IntegratedModManager.UpdateAgent.Tests.csproj"; Line = 0.60; Branch = 0.55 }
+    @{ Name = "core"; Assembly = "IntegratedModManager.Core"; Path = Join-Path $root "Tests\IntegratedModManager.Core.Tests.csproj"; Line = 0.90; Branch = 0.85 },
+    @{ Name = "datastore"; Assembly = "IntegratedModManager.Data"; Path = Join-Path $root "DataStoreTests\IntegratedModManager.DataStore.Tests.csproj"; Line = 0.70; Branch = 0.60 },
+    @{ Name = "updater"; Assembly = "IntegratedModManager.UpdateAgent.Core"; Path = Join-Path $root "UpdaterTests\IntegratedModManager.UpdateAgent.Tests.csproj"; Line = 0.60; Branch = 0.55 }
 )
+
+& (Join-Path $PSScriptRoot "test-coverage-gate.ps1")
 
 foreach ($testProject in $testProjects) {
     $projectResults = Join-Path $testResults $testProject.Name
@@ -138,7 +148,7 @@ foreach ($testProject in $testProjects) {
         "--results-directory", $projectResults,
         "--collect:XPlat Code Coverage"
     )
-    Assert-CoverageThreshold $projectResults $testProject.Line $testProject.Branch
+    Assert-CoverageThreshold $projectResults $testProject.Assembly $testProject.Line $testProject.Branch
 }
 
 if (!$SkipBuild) {

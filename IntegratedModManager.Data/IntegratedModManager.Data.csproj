@@ -12,5 +12,6 @@
 
   <ItemGroup>
     <Compile Include="..\WinUI3\AppDataStore.cs" Link="AppDataStore.cs" />
+    <ProjectReference Include="..\IntegratedModManager.Core\IntegratedModManager.Core.csproj" />
   </ItemGroup>
 </Project>

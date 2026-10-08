@@ -5,6 +5,26 @@ namespace IntegratedModManager.Core.Tests;
 public sealed class RepositoryWorkspacePolicyTests
 {
     [Theory]
+    [InlineData(773, 290, true)]
+    [InlineData(773, 1000, false)]
+    [InlineData(719, 290, false)]
+    [InlineData(780, 1000, true)]
+    [InlineData(double.NaN, 290, false)]
+    public void ShortViewportsKeepRecoveryBesideThePresetBrowser(double width, double height, bool expected)
+        => Assert.Equal(expected, RepositoryWorkspacePolicy.InlineCombinationRecovery(width, height));
+
+    [Theory]
+    [InlineData(314, 120)]
+    [InlineData(400, 140)]
+    [InlineData(580, 203)]
+    [InlineData(1000, 220)]
+    [InlineData(double.NaN, 120)]
+    [InlineData(double.PositiveInfinity, 120)]
+    [InlineData(-1, 120)]
+    public void StackedRecoveryReservesRoomForCommandsAndBrowsing(double height, double expected)
+        => Assert.Equal(expected, RepositoryWorkspacePolicy.StackedRecoveryHeight(height), 4);
+
+    [Theory]
     [InlineData(320, false)]
     [InlineData(760, false)]
     [InlineData(979, false)]

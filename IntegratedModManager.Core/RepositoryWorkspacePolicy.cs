@@ -8,6 +8,15 @@ public readonly record struct RepositoryWorkspaceLayout(
 /// <summary>Pure presentation rules; switching a view never changes a deployment or saved preset.</summary>
 public static class RepositoryWorkspacePolicy
 {
+    // Reserve the majority of a short viewport for browsable presets and members.
+    // Recovery details scroll independently; its primary action stays outside that scroll.
+    public static double StackedRecoveryHeight(double viewportHeight)
+        => Math.Clamp((double.IsFinite(viewportHeight) ? Math.Max(0, viewportHeight) : 0) * .35, 120, 220);
+
+    public static bool InlineCombinationRecovery(double width, double height)
+        => double.IsFinite(width) && (width >= 780
+            || (width >= 720 && double.IsFinite(height) && height > 0 && height < 420));
+
     public static RepositoryWorkspaceLayout Layout(double availableWidth)
     {
         double width = double.IsFinite(availableWidth) ? Math.Max(0, availableWidth) : 0;

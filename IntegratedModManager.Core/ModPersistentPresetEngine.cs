@@ -13,12 +13,17 @@ public sealed record ModPersistentFileEdit(string Path, byte[] OriginalBytes, by
 public sealed record ModPersistentSourceState(
     string ModDirectory, string DeployedRelativePath, IReadOnlyList<ModPersistentValue> Values);
 
+public enum ModPersistentChangeKind { Changed, Added, Unchanged }
+public sealed record ModPersistentValueChange(
+    ModPersistentValue Saved, string? PreviousValue, ModPersistentChangeKind Kind);
+
 public sealed record ModPersistentRuntimeRestorePlan(
     ModPersistentFileEdit Edit, IReadOnlyList<ModPersistentValue> Values,
     int ChangedCount, int AddedCount, int UnchangedCount,
     string ModDirectory, string DeployedRelativePath)
 {
     public IReadOnlyList<ModPersistentSourceState> Sources { get; init; } = [];
+    public IReadOnlyList<ModPersistentValueChange> Changes { get; init; } = [];
 }
 
 public static class ModPersistentPresetEngine
@@ -195,14 +200,27 @@ public static class ModPersistentPresetEngine
         ArgumentNullException.ThrowIfNull(sources);
         foreach (ModPersistentSourceState source in sources)
         {
-            ValidateRoot(source.ModDirectory);
-            NormalizeRelative(source.DeployedRelativePath);
-            if (source.Values.Count > 0)
-                ValidateSlotDeclarations(source.ModDirectory, source.DeployedRelativePath, source.Values.ToArray());
+            ValidateSourceState(source);
         }
         ModPersistentValue[] values = sources.SelectMany(source => source.Values).ToArray();
         if (values.Length == 0) throw new InvalidDataException("The combination has no persistent parameters to restore.");
         return BuildRuntimeRestorePlan(userIniPath, values) with { Sources = sources.ToArray() };
+    }
+
+    // Read-only declaration/namespace validation for each preview item. Keeping
+    // it here prevents the UI/preview service from inventing a second parser.
+    public static void ValidateSourceState(ModPersistentSourceState source)
+    {
+        ArgumentNullException.ThrowIfNull(source);
+        ArgumentNullException.ThrowIfNull(source.Values);
+        if (source.Values.Any(value => value is null || string.IsNullOrWhiteSpace(value.RelativeIniPath)
+            || string.IsNullOrWhiteSpace(value.Variable) || string.IsNullOrWhiteSpace(value.RuntimeKey)
+            || string.IsNullOrWhiteSpace(value.Value)))
+            throw new InvalidDataException("The preset contains an incomplete persistent value.");
+        ValidateRoot(source.ModDirectory);
+        NormalizeRelative(source.DeployedRelativePath);
+        if (source.Values.Count > 0)
+            ValidateSlotDeclarations(source.ModDirectory, source.DeployedRelativePath, source.Values.ToArray());
     }
 
     private static ModPersistentRuntimeRestorePlan BuildRuntimeRestorePlan(
@@ -224,6 +242,7 @@ public static class ModPersistentPresetEngine
                 throw new InvalidDataException("The slot contains ambiguous duplicate runtime keys.");
 
         var replacements = new List<(int Start, int Length, string Text)>();
+        var changes = new List<ModPersistentValueChange>();
         var found = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
         int constantsCount = 0, constantsEnd = text.Length, offset = 0, changed = 0, unchanged = 0;
         bool inConstants = false;
@@ -248,10 +267,15 @@ public static class ModPersistentPresetEngine
                     if (!assignment.Success || !IsSafeNumber(assignment.Groups["value"].Value))
                         throw new InvalidDataException("A selected runtime key has an unsupported value.");
                     Group valueGroup = assignment.Groups["value"];
-                    if (valueGroup.Value == wanted.Value) unchanged++;
+                    if (valueGroup.Value == wanted.Value)
+                    {
+                        unchanged++;
+                        changes.Add(new(wanted, valueGroup.Value, ModPersistentChangeKind.Unchanged));
+                    }
                     else
                     {
                         changed++;
+                        changes.Add(new(wanted, valueGroup.Value, ModPersistentChangeKind.Changed));
                         replacements.Add((offset + valueGroup.Index, valueGroup.Length, wanted.Value));
                     }
                 }
@@ -262,6 +286,7 @@ public static class ModPersistentPresetEngine
             throw new InvalidDataException("d3dx_user.ini must have exactly one [Constants] section.");
 
         ModPersistentValue[] missing = desired.Where(pair => !found.Contains(pair.Key)).Select(pair => pair.Value).ToArray();
+        changes.AddRange(missing.Select(value => new ModPersistentValueChange(value, null, ModPersistentChangeKind.Added)));
         if (missing.Length > 0)
         {
             string newline = text.Contains("\r\n", StringComparison.Ordinal) ? "\r\n" : "\n";
@@ -275,7 +300,8 @@ public static class ModPersistentPresetEngine
             updated.Remove(replacement.Start, replacement.Length).Insert(replacement.Start, replacement.Text);
         return new ModPersistentRuntimeRestorePlan(
             new ModPersistentFileEdit(path, original, Encode(updated.ToString(), encoding)),
-            values.ToArray(), changed, missing.Length, unchanged, string.Empty, string.Empty);
+            values.ToArray(), changed, missing.Length, unchanged, string.Empty, string.Empty)
+        { Changes = changes.ToArray() };
     }
 
     // The caller must close the game/loader first. A concurrently running loader can
