@@ -4,7 +4,7 @@
 
 This directory contains the usage, release, development, and research documentation for Integrated Mod Manager. The repository root is reserved for GitHub-recognized files, build entry points, and source-code entry points.
 
-当前正式版 / Current stable: **[v4.1.0](https://github.com/uyujkk/Integrated_Mod_Manager/releases/tag/v4.1.0)**。历史发布报告与实验记录保留原版本事实，不代表当前功能边界。Historical release and experiment reports retain their original context; use the current guides below.
+发布准备 / Release preparation (2026-10-07): **v4.1.0** 源码、标签和草稿包已上传；截至本次文档更新，公开正式版仍为 **[v4.0.0](https://github.com/uyujkk/Integrated_Mod_Manager/releases/tag/v4.0.0)**。最新公开版本请以 [GitHub Releases](https://github.com/uyujkk/Integrated_Mod_Manager/releases/latest) 为准。历史发布报告与实验记录保留原版本事实。The 4.1 source/tag and draft assets are uploaded, but this documentation push does not publish the release; historical reports retain their original context.
 
 ## 使用指南 / Guides
 
@@ -35,6 +35,7 @@ This directory contains the usage, release, development, and research documentat
 
 ## 开发文档 / Development
 
+- [4.1 源码优化总览 / Source Optimization Record](./development/Source-Optimization-v4.1.md)
 - [v4.1.0 验证记录 / Verification Record](./verification/v4.1.0.md)
 - [v4.0.0 验证记录 / Verification Record](./verification/v4.0.0.md)
 - [测试与构建说明 / Testing and Build Guide](./development/TESTING.md)

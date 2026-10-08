@@ -1,5 +1,7 @@
 # Incremental optimization / 分步优化
 
+Historical opt1–opt11 development sequence. For the consolidated 4.1 code and verification boundaries, read [Source Optimization Record](./Source-Optimization-v4.1.md). 下文保留各阶段当时的版本和本地开发限制；当前源码优化总览见链接，不将历史“未推送”状态当成当前状态。
+
 ## Scope / 范围
 
 Development branch: `optimization/repository-scan`, based on stable 4.0.0.

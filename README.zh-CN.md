@@ -138,6 +138,7 @@ Mod 存储文件夹
 | 更新历史 | [双语更新日志](./docs/releases/CHANGELOG.md) | [Bilingual Changelog](./docs/releases/CHANGELOG.md) |
 | 跨 Mod 状态试验 | [试验路线与当前结论](./docs/research/跨Mod状态保存试验结论.md) | [Current conclusions](./docs/research/跨Mod状态保存试验结论.md) |
 | 测试与构建 | [测试说明](./docs/development/TESTING.md) | [Testing Guide](./docs/development/TESTING.md) |
+| 4.1 源码优化 | [源码优化记录](./docs/development/Source-Optimization-v4.1.md) | [Source Optimization Record](./docs/development/Source-Optimization-v4.1.md) |
 | 参与项目 | [贡献指南](./CONTRIBUTING.md) | [Contributing](./CONTRIBUTING.md) |
 | 安全问题 | [安全策略](./SECURITY.md) | [Security Policy](./SECURITY.md) |
 
