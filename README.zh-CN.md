@@ -14,6 +14,7 @@
   [快速手册](./docs/guides/快速使用手册.md) ·
   [完整手册](./docs/guides/用户手册.zh-CN.md) ·
   [更新日志](./docs/releases/CHANGELOG.md) ·
+  [界面预览](#界面预览) ·
   [提交问题](https://github.com/uyujkk/Integrated_Mod_Manager/issues/new/choose)
 </div>
 
@@ -27,6 +28,34 @@
 集成化 Mod 管理器以独立“仓库”管理不同游戏或不同 Mod 环境。它可以在本地仓库和游戏实际读取的目标目录之间复制或移除完整 Mod 文件夹，并集中管理预览图、来源链接、快捷键说明、在线下载、更新记录、配置方案和安装备份。
 
 主程序、启动器和更新器统一为 **4.1.0**（`4.1.0.0`）。工具维护者为 `uyujkk`，既有 Bandizip 备用解压功能由 [CaramelizedCUDA](https://github.com/CaramelizedCUDA) 贡献；此前的 [4.0-beta](https://github.com/uyujkk/Integrated_Mod_Manager/releases/tag/v4.0-beta) 继续独立保留。
+
+## 界面预览
+
+以下为 **4.1.0 隔离应用的真实截图**，只使用模拟目录和演示预设，未连接游戏或加载器。画面不包含实际在线 Mod 预览、角色头像或本地文件系统路径。截图采用英文界面，应用也支持中文。
+
+**仓库工作台**：按角色浏览和搜索 Mod，在文件列表、封面和组合预设之间切换。紧凑窗口保留浏览空间，详情单独打开。
+
+![仓库工作台：模拟目录，不显示本地路径](./docs/assets/screenshots/repository-workspace-v4.1.jpg)
+
+<details>
+<summary>组合预设与组合包</summary>
+
+保存 Mod 组合及持久参数，查看预设成员，导出或安装组合包。恢复前另有预览和确认步骤；图中的演示预设不包含可运行的游戏 Mod。
+
+![组合预设工作区：模拟成员及已保存参数数量](./docs/assets/screenshots/combination-presets-v4.1.jpg)
+
+[查看组合预设使用方法](./docs/guides/Combination-Presets.zh-CN.md)
+
+</details>
+
+<details>
+<summary>非最大化窗口中的设置页</summary>
+
+总览放不下时自动改为分区设置，语言、主题、密度和托盘选项保持可见，不再挤压下方模块。
+
+![非最大化窗口：设置页分区显示](./docs/assets/screenshots/settings-sections-v4.1.jpg)
+
+</details>
 
 ## 4.1 新功能
 

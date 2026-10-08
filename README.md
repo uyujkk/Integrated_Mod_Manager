@@ -14,6 +14,7 @@
   [Quick Start](./docs/guides/Quick-Start.en.md) ·
   [Full Guide](./docs/guides/User-Guide.en.md) ·
   [Changelog](./docs/releases/CHANGELOG.md) ·
+  [Screenshots](#interface-preview) ·
   [Report an Issue](https://github.com/uyujkk/Integrated_Mod_Manager/issues/new/choose)
 </div>
 
@@ -27,6 +28,34 @@
 Integrated Mod Manager organizes different games or mod environments into independent repositories. It copies or removes complete mod folders between a local library and the target directory read by the game, while keeping preview images, source links, shortcut notes, online downloads, update records, profiles, and installation backups in one application.
 
 The application, launcher, and updater use version **4.1.0** (`4.1.0.0`). The tool is maintained by `uyujkk`. The Bandizip extraction fallback was contributed by [CaramelizedCUDA](https://github.com/CaramelizedCUDA). The earlier [4.0-beta](https://github.com/uyujkk/Integrated_Mod_Manager/releases/tag/v4.0-beta) remains archived separately.
+
+## Interface Preview
+
+Real screenshots of an isolated **4.1.0** app using synthetic folders and demonstration presets. No actual online Mod previews, character avatars or local filesystem paths are shown. The demo is not connected to a game or loader.
+
+**Repository workspace** — browse characters and Mods, search your library, and switch between Files, Covers and Presets. This compact window keeps the library visible and opens details separately.
+
+![Repository workspace with synthetic folders and no local paths](./docs/assets/screenshots/repository-workspace-v4.1.jpg)
+
+<details>
+<summary>Combination presets and portable bundles</summary>
+
+Save a Mod set with persistent values, review its members, and export or install a combination bundle. Restore uses a separate preview and confirmation step; the demonstration presets below are not playable Mods.
+
+![Combination preset workspace with synthetic members and saved-value counts](./docs/assets/screenshots/combination-presets-v4.1.jpg)
+
+[How combination presets work](./docs/guides/Combination-Presets.en.md)
+
+</details>
+
+<details>
+<summary>Settings in a restored window</summary>
+
+When the full overview cannot fit, Settings switches to sections. Language, theme, density and tray controls stay accessible without squeezing the lower cards out of view.
+
+![Section-based Settings in a non-maximized window](./docs/assets/screenshots/settings-sections-v4.1.jpg)
+
+</details>
 
 ## What's New in 4.1
 

@@ -37,7 +37,7 @@ See [performance scope](./Repository-Performance.md) and [measurement evidence](
 - 测试直接链接生产页面/图片适配器，避免另写一套测试模型；另有真实隔离 SQLite、模拟 HTTP、文本 Mod 和真实 ZIP 用例。编译通过不等于所有原生窗口、真实网站或游戏场景验证完成。
 - [GitHub Build and Test](https://github.com/uyujkk/Integrated_Mod_Manager/actions/runs/37722853990) completed successfully for the pinned release commit. Native-window evidence and the final UI-only rebuild scope are documented in [4.1 verification](../verification/v4.1.0.md).
 
-These results belong to the recorded 4.1 build. This documentation-only follow-up does not claim a new full test run. 截至本记录更新时，4.1 安装包仍为 GitHub Release 草稿；源码推送不等于公开发布。
+These results belong to the recorded 4.1 build. Documentation-only follow-ups do not claim a new full test run. The package was still a draft when this record was first uploaded; [v4.1.0](https://github.com/uyujkk/Integrated_Mod_Manager/releases/tag/v4.1.0) is now publicly released. 本记录首次上传时安装包仍为草稿，现已正式发布；后续截图与文档提交不移动发布标签或替换安装包。
 
 ## Remaining limits / 仍需注意
 
