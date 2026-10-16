@@ -12,6 +12,8 @@
 
 ### 报告安全问题
 
+4.1.1 可在明确确认风险后下载并调用独立 EndfieldBridge；它可能改变正常启动链，并通过另行安装的 XXMI / EFMI 加载 Mod。管理器不自动适配 EFMI 或确认授权，下载校验不能证明账号安全。详情见[桥接器风险说明](./docs/guides/Endfield-Bridge.md)。
+
 请不要在公开 Issue 中发布可直接利用的漏洞细节、个人路径、访问令牌或用户数据。如果仓库已启用 GitHub Private Vulnerability Reporting，请优先使用 Security 页面中的私密报告入口；否则请先创建一个不包含漏洞细节的普通 Issue，请求作者提供私密联系方式。
 
 报告建议包含：
@@ -33,6 +35,8 @@ Security fixes are guaranteed only for the latest release. Confirm that the issu
 4.0 presets write to the selected loader's `d3dx_user.ini` after confirmation. Exit the game and loader and keep backups first. The shared file may contain multiple Mods' values and private paths; do not publish it in full. The manager does not access game memory or inject, but cannot guarantee that third-party Mod use is free of account risk.
 
 ### Reporting a Vulnerability
+
+Version 4.1.1 can download and invoke the separate EndfieldBridge after explicit risk consent. It may change the normal launch chain and use a separately installed XXMI / EFMI to load Mods. The manager does not adapt EFMI or approve commands automatically; checksum verification does not establish account safety. See the [bridge risk guide](./docs/guides/Endfield-Bridge.md).
 
 Do not publish directly exploitable details, personal paths, access tokens, or user data in a public issue. If GitHub Private Vulnerability Reporting is enabled, use the private reporting option on the Security page. Otherwise, open a public issue without vulnerability details and ask the maintainer for a private contact method.
 

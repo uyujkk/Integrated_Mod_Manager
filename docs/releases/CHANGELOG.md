@@ -6,6 +6,17 @@
 
 This document records version changes in Integrated Mod Manager. Unpublished versions are marked separately.
 
+## v4.1.1 - 可选启动桥接 / Optional Launch Bridge (2026-10-15)
+
+- 新增可选 EndfieldBridge 下载引导与仓库级启动选择；默认不勾选风险确认，原有加载器路径保留。
+- 固定版本下载、SHA-256 校验与安全解压；取消或失败不启用，保留独立桥接的许可证、来源和对应源码入口。
+- 首次打开配置而非启动游戏；提示账号风险、XXMI 授权以及切回原启动链前恢复 EFMI 的要求。
+- Added an optional EndfieldBridge offer and per-repository launch choice, with explicit risk consent and the original loader path preserved.
+- Pinned downloads, SHA-256 verification and bounded extraction; failures do not enable the bridge. Its license, notices and source link remain included.
+- First use opens configuration, not the game. Documented account risk, XXMI authorization and EFMI restoration before switching back.
+
+[使用与风险 / Usage and risks](../guides/Endfield-Bridge.md)
+
 ## v4.1.0 - 组合包与体验优化 / Portable Bundles and Usability (2026-10-07)
 
 - 导出已保存组合、Mod 文件与数值状态，预览安装组合包；相同文件复用，冲突内容不覆盖。

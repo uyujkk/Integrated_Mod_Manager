@@ -4,10 +4,13 @@
 
 This directory contains the usage, release, development, and research documentation for Integrated Mod Manager. The repository root is reserved for GitHub-recognized files, build entry points, and source-code entry points.
 
-当前正式版 / Current stable: **[v4.1.0](https://github.com/uyujkk/Integrated_Mod_Manager/releases/tag/v4.1.0)**。最新公开版本请以 [GitHub Releases](https://github.com/uyujkk/Integrated_Mod_Manager/releases/latest) 为准。历史发布报告与实验记录保留原版本事实。Historical reports retain their original context; screenshot/documentation updates do not replace the published package.
+当前正式版 / Current stable: **[v4.1.1](https://github.com/uyujkk/Integrated_Mod_Manager/releases/tag/v4.1.1)**。最新公开版本请以 [GitHub Releases](https://github.com/uyujkk/Integrated_Mod_Manager/releases/latest) 为准。历史发布报告与实验记录保留原版本事实。Historical reports retain their original context; screenshot/documentation updates do not replace the published package.
 
 ## 使用指南 / Guides
 
+- [可选终末地桥接器：使用与风险 / Optional Endfield Bridge](./guides/Endfield-Bridge.md)
+- [升级到 4.1.1](./guides/Upgrade-v4.1.1.zh-CN.md)
+- [Upgrade to 4.1.1](./guides/Upgrade-v4.1.1.en.md)
 - [升级到 4.1](./guides/Upgrade-v4.1.zh-CN.md)
 - [Upgrade to 4.1](./guides/Upgrade-v4.1.en.md)
 - [4.0 组合预设指南](./guides/Combination-Presets.zh-CN.md)
@@ -22,6 +25,7 @@ This directory contains the usage, release, development, and research documentat
 
 ## 发布记录 / Releases
 
+- [v4.1.1 可选启动桥接 / Optional Launch Bridge](./releases/v4.1.1.md)
 - [v4.1.0 组合包与体验优化 / Portable Bundles and Usability](./releases/v4.1.0.md)
 - [v4.0.0 正式版更新说明 / Stable Release Notes](./releases/v4.0.0.md)
 - [v4.0-beta 历史测试版 / Historical Beta](./releases/v4.0-beta.md)
@@ -35,6 +39,8 @@ This directory contains the usage, release, development, and research documentat
 
 ## 开发文档 / Development
 
+- [v4.1.1 发布验证 / Release Verification](./verification/v4.1.1.md)
+- [可选桥接器本地验证 / Optional Bridge Integration Verification](./verification/endfield-bridge-integration-20261015.md)
 - [4.1 源码优化总览 / Source Optimization Record](./development/Source-Optimization-v4.1.md)
 - [v4.1.0 验证记录 / Verification Record](./verification/v4.1.0.md)
 - [v4.0.0 验证记录 / Verification Record](./verification/v4.0.0.md)

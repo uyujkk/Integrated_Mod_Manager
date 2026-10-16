@@ -306,6 +306,7 @@
                             <RowDefinition Height="Auto" />
                             <RowDefinition Height="Auto" />
                             <RowDefinition Height="Auto" />
+                            <RowDefinition Height="Auto" />
                         </Grid.RowDefinitions>
 
                         <StackPanel Spacing="6">
@@ -358,7 +359,11 @@
                             <Button x:Name="OpenLauncherButton" Grid.Column="3" Click="OnOpenLauncherClicked" Style="{StaticResource SecondaryButtonStyle}" />
                         </Grid>
 
-                        <Border Grid.Row="4" Padding="14,10" Style="{StaticResource InsetBorderStyle}">
+                        <Button x:Name="BridgeOptionsButton" Grid.Row="4" Click="OnBridgeOptionsClicked"
+                                Visibility="Collapsed" HorizontalAlignment="Stretch" HorizontalContentAlignment="Left"
+                                Padding="10,6" Style="{StaticResource SecondaryButtonStyle}" />
+
+                        <Border Grid.Row="5" Padding="14,10" Style="{StaticResource InsetBorderStyle}">
                             <Grid ColumnSpacing="20">
                                 <Grid.ColumnDefinitions>
                                     <ColumnDefinition Width="Auto" />
@@ -377,7 +382,7 @@
                             </Grid>
                         </Border>
 
-                        <Grid Grid.Row="5" ColumnSpacing="14">
+                        <Grid Grid.Row="6" ColumnSpacing="14">
                             <Grid.ColumnDefinitions>
                                 <ColumnDefinition Width="*" />
                                 <ColumnDefinition Width="Auto" />

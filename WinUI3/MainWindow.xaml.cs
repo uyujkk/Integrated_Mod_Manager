@@ -37,7 +37,7 @@ namespace ModFolderCopier.WinUI;
 
 public sealed partial class MainWindow : Window
 {
-    private const string AppVersion = "v4.1.0";
+    private const string AppVersion = "v4.1.1";
     private static bool AppSelfUpdateEnabled => ApplicationReleasePolicy.ApplicationSelfUpdateEnabled;
     private const string GitHubRepositoryUrl = "https://github.com/uyujkk/Integrated_Mod_Manager";
     private const string GitHubLatestReleaseApiUrl = "https://api.github.com/repos/uyujkk/Integrated_Mod_Manager/releases/latest";
@@ -567,6 +567,7 @@ public sealed partial class MainWindow : Window
         RefreshSettingsOnlineConfigSummary();
         RefreshUpdateDetailsView();
         RefreshBackupManagerText();
+        RefreshEndfieldBridgeControls();
     }
 
     private void RefreshSettingsButtonLabels()
@@ -2103,6 +2104,7 @@ public sealed partial class MainWindow : Window
             _latestReleasePackageUrl = config?.LatestReleasePackageUrl;
             _latestReleaseSha256Url = config?.LatestReleaseSha256Url;
             _checkAppUpdatesOnStartup = ApplicationReleasePolicy.CanCheckApplicationUpdates(config?.CheckAppUpdatesOnStartup ?? false);
+            _endfieldBridgeOfferRevision = config?.EndfieldBridgeOfferRevision ?? 0;
             _installBackupLimitGb = Math.Clamp(config?.InstallBackupLimitGb ?? DefaultInstallBackupLimitGb, 0.5, 100);
             _reduceMotion = config?.ReduceMotion ?? false;
             _minimizeToTray = config?.MinimizeToTray ?? false;
@@ -2232,6 +2234,7 @@ public sealed partial class MainWindow : Window
                 LatestReleasePackageUrl = _latestReleasePackageUrl,
                 LatestReleaseSha256Url = _latestReleaseSha256Url,
                 CheckAppUpdatesOnStartup = _checkAppUpdatesOnStartup,
+                EndfieldBridgeOfferRevision = _endfieldBridgeOfferRevision,
                 InstallBackupLimitGb = _installBackupLimitGb,
                 ReduceMotion = _reduceMotion,
                 MinimizeToTray = _minimizeToTray,
@@ -2293,6 +2296,7 @@ public sealed partial class MainWindow : Window
         SourceTextBox.Text = repository.SourcePath;
         TargetTextBox.Text = repository.TargetPath;
         LauncherTextBox.Text = repository.LauncherPath;
+        RefreshEndfieldBridgeControls();
         RefreshPersistentSlotControls();
         _isApplyingRepositoryDeploymentMode = true;
         try
@@ -10012,35 +10016,7 @@ public sealed partial class MainWindow : Window
 
     private void OnOpenLauncherClicked(object sender, RoutedEventArgs e) => OpenFileLocation(LauncherTextBox.Text, L("启动器", "launcher"));
 
-    private async void OnRunLauncherClicked(object sender, RoutedEventArgs e)
-    {
-        string launcherPath = (LauncherTextBox.Text ?? string.Empty).Trim();
-        if (string.IsNullOrWhiteSpace(launcherPath) || !File.Exists(launcherPath))
-        {
-            await ShowMessageAsync(
-                L("请先设置有效的 XXMI 启动器路径。", "Set a valid launcher path first."),
-                L("未设置启动器", "Launcher not set"));
-            return;
-        }
-
-        try
-        {
-            Process.Start(new ProcessStartInfo
-            {
-                FileName = launcherPath,
-                WorkingDirectory = Path.GetDirectoryName(launcherPath) ?? AppContext.BaseDirectory,
-                UseShellExecute = true
-            });
-            StatusTextBlock.Text = L("已启动外部启动器。", "External launcher started.");
-            SaveConfig();
-        }
-        catch (Exception ex)
-        {
-            await ShowMessageAsync(
-                L("运行启动器失败：", "Failed to run launcher: ") + ex.Message,
-                L("启动失败", "Launch failed"));
-        }
-    }
+    private async void OnRunLauncherClicked(object sender, RoutedEventArgs e) => await RunRepositoryLauncherAsync();
 
     private async void OnRefreshClicked(object sender, RoutedEventArgs e) => await RefreshListsAsync();
 
@@ -10941,6 +10917,8 @@ public sealed partial class MainWindow : Window
         DetectLocalUpdatePackage();
         await RefreshInstallBackupListAsync();
 
+        await OfferEndfieldBridgeAfterUpgradeAsync();
+
         if (_localUpdatePackageVersion is not null && !_hasPromptedForLocalUpdate)
         {
             await PromptAndStartLocalUpdateAsync();
@@ -10982,6 +10960,7 @@ public sealed partial class MainWindow : Window
 
     private void OnWindowClosed(object sender, WindowEventArgs args)
     {
+        _bridgeDownloadCancellation?.Cancel();
         _bundleOperationCancellation?.Cancel();
         _onlineWindowClosed = true;
         InvalidateOnlineDetailRequest();
@@ -14017,6 +13996,8 @@ public sealed class WorkspaceRepository
 
     public string LauncherPath { get; set; } = string.Empty;
 
+    public bool UseEndfieldBridge { get; set; }
+
     public string PersistentUserIniPath { get; set; } = string.Empty;
 
     public string OnlineSourceSite { get; set; } = string.Empty;
@@ -14287,6 +14268,8 @@ public sealed class OnlineCategoryPageCacheEntry
 
 public sealed class BetaShellConfig
 {
+    public int EndfieldBridgeOfferRevision { get; set; }
+
     public string RepositoryWorkspaceView { get; set; } = "list";
     public string? CurrentPrimarySection { get; set; }
 

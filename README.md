@@ -23,13 +23,15 @@
 
 ## Overview
 
-**Current stable version: [v4.1.0](https://github.com/uyujkk/Integrated_Mod_Manager/releases/tag/v4.1.0).** Export saved Mod combinations with their files and persistent settings, then install them in another repository. See the [preset guide](./docs/guides/Combination-Presets.en.md).
+**Current stable version: [v4.1.1](https://github.com/uyujkk/Integrated_Mod_Manager/releases/tag/v4.1.1).** Adds an optional EndfieldBridge download and per-repository launch choice. Existing combination presets and portable bundles remain supported. See the [bridge and risk guide](./docs/guides/Endfield-Bridge.md) and [preset guide](./docs/guides/Combination-Presets.en.md).
 
 Integrated Mod Manager organizes different games or mod environments into independent repositories. It copies or removes complete mod folders between a local library and the target directory read by the game, while keeping preview images, source links, shortcut notes, online downloads, update records, profiles, and installation backups in one application.
 
-The application, launcher, and updater use version **4.1.0** (`4.1.0.0`). The tool is maintained by `uyujkk`. The Bandizip extraction fallback was contributed by [CaramelizedCUDA](https://github.com/CaramelizedCUDA). The earlier [4.0-beta](https://github.com/uyujkk/Integrated_Mod_Manager/releases/tag/v4.0-beta) remains archived separately.
+The application, launcher, and updater use version **4.1.1** (`4.1.1.0`). The tool is maintained by `uyujkk`. The Bandizip extraction fallback was contributed by [CaramelizedCUDA](https://github.com/CaramelizedCUDA). The earlier [4.0-beta](https://github.com/uyujkk/Integrated_Mod_Manager/releases/tag/v4.0-beta) remains archived separately.
 
 ## Interface Preview
+
+The screenshots below show the 4.1.0 interface. Version 4.1.1 adds an optional standalone EndfieldBridge entry under the repository launcher settings; opening the manager does not auto-launch the game.
 
 Real screenshots of an isolated **4.1.0** app using synthetic folders and demonstration presets. No actual online Mod previews, character avatars or local filesystem paths are shown. The demo is not connected to a game or loader.
 
@@ -47,6 +49,16 @@ When the full overview cannot fit, Settings switches to sections. Language, them
 ![Section-based Settings in a non-maximized window](./docs/assets/screenshots/settings-sections-v4.1.jpg)
 
 </details>
+
+## What's New in 4.1.1
+
+- Optional EndfieldBridge download after upgrading, with explicit risk consent and SHA-256 verification.
+- Save the launch method per Endfield repository; declining preserves the existing loader and checks standard XXMI locations when no path is configured.
+- First use opens bridge configuration rather than starting the game. Launch-method controls remain accessible in narrow windows.
+
+The bridge is downloaded separately, not bundled. Third-party launching and Mods may lead to account penalties or bans. Restore EFMI inside the bridge before switching back if previously adapted.
+
+[4.1.1 release notes](./docs/releases/v4.1.1.md) · [Upgrade guide](./docs/guides/Upgrade-v4.1.1.en.md) · [Bridge setup and risks](./docs/guides/Endfield-Bridge.md)
 
 ## What's New in 4.1
 

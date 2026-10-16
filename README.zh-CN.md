@@ -23,13 +23,15 @@
 
 ## 项目简介
 
-**当前正式版：[v4.1.0](https://github.com/uyujkk/Integrated_Mod_Manager/releases/tag/v4.1.0)。**支持将保存好的 Mod 组合、文件和状态参数导出为组合包，在其他仓库预览并安装。操作步骤见[组合预设指南](./docs/guides/Combination-Presets.zh-CN.md)。
+**当前正式版：[v4.1.1](https://github.com/uyujkk/Integrated_Mod_Manager/releases/tag/v4.1.1)。**新增可选终末地桥接器下载与仓库级启动方式选择，保留组合预设和组合包功能。使用前请阅读[桥接器与账号风险说明](./docs/guides/Endfield-Bridge.md)及[组合预设指南](./docs/guides/Combination-Presets.zh-CN.md)。
 
 集成化 Mod 管理器以独立“仓库”管理不同游戏或不同 Mod 环境。它可以在本地仓库和游戏实际读取的目标目录之间复制或移除完整 Mod 文件夹，并集中管理预览图、来源链接、快捷键说明、在线下载、更新记录、配置方案和安装备份。
 
-主程序、启动器和更新器统一为 **4.1.0**（`4.1.0.0`）。工具维护者为 `uyujkk`，既有 Bandizip 备用解压功能由 [CaramelizedCUDA](https://github.com/CaramelizedCUDA) 贡献；此前的 [4.0-beta](https://github.com/uyujkk/Integrated_Mod_Manager/releases/tag/v4.0-beta) 继续独立保留。
+主程序、启动器和更新器统一为 **4.1.1**（`4.1.1.0`）。工具维护者为 `uyujkk`，既有 Bandizip 备用解压功能由 [CaramelizedCUDA](https://github.com/CaramelizedCUDA) 贡献；此前的 [4.0-beta](https://github.com/uyujkk/Integrated_Mod_Manager/releases/tag/v4.0-beta) 继续独立保留。
 
 ## 界面预览
+
+以下截图展示 4.1.0 界面。4.1.1 在仓库启动器设置中增加了独立桥接器入口；打开管理器不会自动启动游戏。
 
 以下为 **4.1.0 隔离应用的真实截图**，只使用模拟目录和演示预设，未连接游戏或加载器。画面不包含实际在线 Mod 预览、角色头像或本地文件系统路径。截图采用英文界面，应用也支持中文。
 
@@ -47,6 +49,16 @@
 ![非最大化窗口：设置页分区显示](./docs/assets/screenshots/settings-sections-v4.1.jpg)
 
 </details>
+
+## 4.1.1 更新
+
+- 升级后可选下载终末地桥接器，需要明确确认风险，并进行 SHA-256 校验。
+- 按终末地仓库保存启动方式；不下载则保留原有加载器，未配置路径时查找 XXMI 标准安装位置。
+- 首次打开桥接配置而非启动游戏；启动方式按钮适配窄窗口。
+
+桥接器独立下载，不捆绑在主程序包中。第三方启动与 Mod 可能导致账号处罚或封禁；曾适配 EFMI 时，切回原有加载器前先在桥接器中恢复 EFMI。
+
+[4.1.1 更新说明](./docs/releases/v4.1.1.md) · [升级指南](./docs/guides/Upgrade-v4.1.1.zh-CN.md) · [桥接配置与风险](./docs/guides/Endfield-Bridge.md)
 
 ## 4.1 新功能
 
