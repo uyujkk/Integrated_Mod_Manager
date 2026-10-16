@@ -196,7 +196,7 @@ Run the complete test, coverage, WinUI x64 build, and package verification flow:
 powershell -NoProfile -ExecutionPolicy Bypass -File .\scripts\test-all.ps1
 ```
 
-GitHub Actions runs the same three-suite verification flow on pushes to `main`, pull requests, and manual dispatches. Test dependencies are centralized without removing safety cases. See the [Testing Guide](./docs/development/TESTING.md) and [4.1 verification record](./docs/verification/v4.1.0.md) for current results and testing boundaries.
+GitHub Actions runs the same three-suite verification flow on pushes to `main`, pull requests, and manual dispatches. Test dependencies are centralized without removing safety cases. See the [Testing Guide](./docs/development/TESTING.md) and [4.1.1 verification record](./docs/verification/v4.1.1.md) for current results and testing boundaries.
 
 ## Data and Security
 

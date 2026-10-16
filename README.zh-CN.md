@@ -196,7 +196,7 @@ cmd /c build_winui.bat
 powershell -NoProfile -ExecutionPolicy Bypass -File .\scripts\test-all.ps1
 ```
 
-GitHub Actions 会在推送到 `main`、Pull Request 和手动触发时执行统一三组验证。测试依赖集中管理，未删除安全用例。当前结果及验证边界见[测试说明](./docs/development/TESTING.md)与[4.1 验证记录](./docs/verification/v4.1.0.md)。
+GitHub Actions 会在推送到 `main`、Pull Request 和手动触发时执行统一三组验证。测试依赖集中管理，未删除安全用例。当前结果及验证边界见[测试说明](./docs/development/TESTING.md)与[4.1.1 验证记录](./docs/verification/v4.1.1.md)。
 
 ## 数据与安全
 
