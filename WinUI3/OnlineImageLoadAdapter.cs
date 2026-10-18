@@ -1,5 +1,50 @@
 namespace ModFolderCopier.WinUI;
 
+// Hero and thumbnail controls often request the same URL in the same UI turn.
+// Hold the same-image lease through decoding: publishing a second download while
+// WinRT still reads the first file can fail with access denied during File.Move.
+internal sealed class OnlineImageLoadCoordinator
+{
+    private sealed class Entry
+    {
+        internal readonly SemaphoreSlim Gate = new(1, 1);
+        internal int Users;
+    }
+
+    private readonly Dictionary<string, Entry> _entries = new(StringComparer.Ordinal);
+
+    internal async Task<T?> RunAsync<T>(string key, Func<Task<T?>> load, CancellationToken token = default) where T : class
+    {
+        Entry entry;
+        lock (_entries)
+        {
+            if (!_entries.TryGetValue(key, out entry!)) _entries.Add(key, entry = new Entry());
+            entry.Users++;
+        }
+        bool acquired = false;
+        try
+        {
+            await entry.Gate.WaitAsync(token);
+            acquired = true;
+            token.ThrowIfCancellationRequested();
+            return await load();
+        }
+        catch (OperationCanceledException) when (token.IsCancellationRequested) { return null; }
+        finally
+        {
+            if (acquired) entry.Gate.Release();
+            lock (_entries)
+            {
+                if (--entry.Users == 0)
+                {
+                    _entries.Remove(key);
+                    entry.Gate.Dispose();
+                }
+            }
+        }
+    }
+}
+
 // Decode downloaded files explicitly; a file URI assignment is not load success.
 internal static class OnlineImageLoadAdapter
 {

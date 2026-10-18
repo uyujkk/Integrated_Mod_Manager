@@ -1,3 +1,5 @@
+> 当前工作区为 **4.2.0-preview.3 开发预览整合版（预发布通道）**。版本范围、入口和未解决问题见 [4.2 整合说明](docs/releases/v4.2.0-preview.3.md)。下文保留 4.1.1 基础版文档。
+
 <div align="center">
   <img src="./WinUI3/Assets/AppIcon.png" width="96" alt="集成化 Mod 管理器图标">
   <h1>集成化 Mod 管理器</h1>

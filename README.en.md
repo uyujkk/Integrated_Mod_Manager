@@ -1,3 +1,5 @@
+> This checkout is the **4.2.0-preview.3 integration preview (prerelease channel)**. See the [integration notes](docs/releases/v4.2.0-preview.3.md) for scope and unresolved issues. The 4.1.1 stable channel and base documentation are retained.
+
 # English README
 
 The English project homepage is now [README.md](./README.md). The [Chinese version](./README.zh-CN.md) is also available.

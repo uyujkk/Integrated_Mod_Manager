@@ -15,7 +15,7 @@ public sealed class GameBananaMetadataService
     public const int DefaultMaxBytes = 4 * 1024 * 1024;
     public static readonly TimeSpan CacheLifetime = TimeSpan.FromDays(3);
     private const string DetailsFields = "name,description,text,screenshots,Preview().sSubFeedImageUrl()";
-    private const string CardFields = "name,Category().name,catid,RootCategory().name,likes,views,downloads,Owner().name,mdate,Preview().sSubFeedImageUrl(),Url().sProfileUrl(),Url().sDownloadUrl(),Files().aFiles(),Updates().bSubmissionHasUpdates()";
+    private const string CardFields = "name,Category().name,catid,RootCategory().name,likes,views,downloads,userid,Owner().name,mdate,Preview().sSubFeedImageUrl(),Url().sProfileUrl(),Url().sDownloadUrl(),Files().aFiles(),Updates().bSubmissionHasUpdates()";
     private readonly HttpClient _client;
     private readonly IOnlineMetadataCache? _cache;
     private readonly TimeProvider _clock;

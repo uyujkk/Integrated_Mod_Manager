@@ -102,7 +102,7 @@ public sealed partial class MainWindow
         DeleteSecondLevelButton.MinHeight = 32; DeleteSecondLevelButton.Padding = new Thickness(6);
         RepositoryDecorateButton(DeleteSecondLevelButton, "\uE74D", true);
         modGrid.Children.Add(modHeading);
-        Grid.SetRow(_repositoryModSearch, 1); modGrid.Children.Add(_repositoryModSearch);
+        InitializeLocalTagControls(modGrid);
 
         _repositoryCoverWrap = new UniformGridLayout
         {
@@ -235,6 +235,7 @@ public sealed partial class MainWindow
         }).ToArray();
         _repositoryOpenDetails = RepositoryButton("\uE8A5", async (_, _) => await ShowRepositoryDetailsV4Async());
         _repositoryViewButtons.Children.Add(_repositoryOpenDetails);
+        InitializeExistingModImportCommands(_repositoryViewButtons);
         switchRow.Children.Add(_repositoryViewButtons);
         _repositoryCountText = RepositoryText(12);
         Grid.SetColumn(_repositoryCountText, 1); switchRow.Children.Add(_repositoryCountText);
@@ -474,6 +475,7 @@ public sealed partial class MainWindow
         _repositoryCategoryTitle!.Text = L("角色", "Characters");
         _repositoryModTitle!.Text = FirstLevelListView.SelectedItem is FirstLevelFolderItem role ? role.Name : L("Mod 文件", "Mod Files");
         _repositoryModSearch!.PlaceholderText = L("搜索当前角色的 Mod", "Search this character's Mods");
+        if (_localTagsButton is not null) _localTagsButton.Content = L("标签", "Tags");
         AutomationProperties.SetName(_repositoryModSearch, L("搜索 Mod", "Search Mods"));
         FirstLevelSearchTextBox.PlaceholderText = L("搜索角色", "Search characters");
         string[] labels = [L("文件列表", "Files"), L("封面视图", "Covers"), L("组合预设", "Presets")];
@@ -618,8 +620,8 @@ public sealed partial class MainWindow
         string? current = _repositorySelectedMod?.Path ?? _currentSecondLevelPath;
         string? path = RepositoryWorkspacePolicy.PreserveSelection(_secondLevelItems.Select(mod => mod.Path), current);
         _repositorySelectedMod = _secondLevelItems.FirstOrDefault(mod => string.Equals(mod.Path, path, StringComparison.OrdinalIgnoreCase));
-        var visible = _secondLevelItems.Where(mod => RepositoryWorkspacePolicy.MatchesQuery(mod.Name,
-            Path.GetFileName(Path.GetDirectoryName(mod.Path)) ?? string.Empty, _repositoryModSearch!.Text)).ToArray();
+        SelectedLocalLibrary();
+        var visible = _secondLevelItems.Where(MatchesLocalLibraryFilter).ToArray();
         _syncingRepositorySelection = true;
         try
         {
@@ -632,6 +634,11 @@ public sealed partial class MainWindow
         _repositoryViewRevision = _repositoryCatalogRevision;
         _repositoryModTitle!.Text = FirstLevelListView.SelectedItem is FirstLevelFolderItem role ? role.Name : L("Mod 文件", "Mod Files");
         _repositoryModCount!.Text = L($"{visible.Length} / {_secondLevelItems.Count} 个 Mod", $"{visible.Length} / {_secondLevelItems.Count} Mods");
+        if (_localFiltersButton is not null)
+        {
+            _localFiltersButton.Content = string.IsNullOrEmpty(_localTagFilter) ? L("筛选", "Filters") : L("标签筛选中", "Tag active");
+            ToolTipService.SetToolTip(_localFiltersButton, L("标签：", "Tag: ") + _localTagFilter);
+        }
         _repositoryEmptyMessage!.Visibility = visible.Length == 0 ? Visibility.Visible : Visibility.Collapsed;
         _repositoryEmptyMessage.Text = _secondLevelItems.Count > 0
             ? L("未找到匹配的 Mod。请调整搜索内容。", "No matching Mods. Try another search.")
@@ -684,7 +691,7 @@ public sealed partial class MainWindow
     {
         if (_repositorySelectedPath is null) return;
         var mod = GetSelectedSecondLevelItem();
-        _repositorySelectedPath.Text = mod?.Path ?? L("选择一个 Mod", "Select a Mod");
+        _repositorySelectedPath.Text = mod is null ? L("选择一个 Mod", "Select a Mod") : mod.Path + LocalModTagSummary(mod.Path);
         ToolTipService.SetToolTip(_repositorySelectedPath, mod?.Path);
         _repositoryOpenModFolder!.IsEnabled = mod is not null && !_repositoryWorkspaceBusy;
         _repositoryOpenDetails!.IsEnabled = mod is not null && !_repositoryWorkspaceBusy;

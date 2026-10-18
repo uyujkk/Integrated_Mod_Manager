@@ -1,3 +1,5 @@
+> This checkout is the **4.2.0-preview.3 local integration preview**. See the [integration notes](docs/releases/v4.2.0-preview.3.md) for scope and unresolved issues. The 4.1.1 base documentation is retained below.
+
 <div align="center">
   <img src="./WinUI3/Assets/AppIcon.png" width="96" alt="Integrated Mod Manager icon">
   <h1>Integrated Mod Manager</h1>

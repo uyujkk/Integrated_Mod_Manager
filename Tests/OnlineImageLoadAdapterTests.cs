@@ -5,6 +5,46 @@ namespace IntegratedModManager.Tests;
 
 public sealed class OnlineImageLoadAdapterTests
 {
+    [Fact]
+    public async Task SameImageWaitsForDecodeWhileOtherImagesCanLoad()
+    {
+        var coordinator = new OnlineImageLoadCoordinator();
+        var releaseDecode = new TaskCompletionSource<object?>(TaskCreationOptions.RunContinuationsAsynchronously);
+        bool secondStarted = false;
+        Task<object?> first = coordinator.RunAsync("same", () => releaseDecode.Task);
+        Task<object?> second = coordinator.RunAsync("same", () => { secondStarted = true; return Task.FromResult<object?>(new object()); });
+        Assert.False(secondStarted);
+        Assert.NotNull(await coordinator.RunAsync("other", () => Task.FromResult<object?>(new object())).WaitAsync(TimeSpan.FromSeconds(5)));
+        releaseDecode.SetResult(new object());
+        Assert.NotNull(await first.WaitAsync(TimeSpan.FromSeconds(5)));
+        Assert.NotNull(await second.WaitAsync(TimeSpan.FromSeconds(5)));
+        Assert.True(secondStarted);
+    }
+
+    [Fact]
+    public async Task CanceledImageWaiterDoesNotStartOrBlockFollowingRequest()
+    {
+        var coordinator = new OnlineImageLoadCoordinator();
+        var releaseDecode = new TaskCompletionSource<object?>(TaskCreationOptions.RunContinuationsAsynchronously);
+        Task<object?> first = coordinator.RunAsync("same", () => releaseDecode.Task);
+        using var cancel = new CancellationTokenSource();
+        Task<object?> canceled = coordinator.RunAsync<object>("same", () => throw new Exception("Canceled waiter must not start"), cancel.Token);
+        cancel.Cancel();
+        Assert.Null(await canceled.WaitAsync(TimeSpan.FromSeconds(5)));
+        Task<object?> next = coordinator.RunAsync("same", () => Task.FromResult<object?>(new object()));
+        releaseDecode.SetResult(new object());
+        await first.WaitAsync(TimeSpan.FromSeconds(5));
+        Assert.NotNull(await next.WaitAsync(TimeSpan.FromSeconds(5)));
+    }
+
+    [Fact]
+    public async Task FailedImageLoadReleasesItsLease()
+    {
+        var coordinator = new OnlineImageLoadCoordinator();
+        await Assert.ThrowsAsync<IOException>(() => coordinator.RunAsync<object>("same", () => throw new IOException("decode failed")));
+        Assert.NotNull(await coordinator.RunAsync("same", () => Task.FromResult<object?>(new object())).WaitAsync(TimeSpan.FromSeconds(5)));
+    }
+
     private static readonly Uri CachedFile = new("G:\\cache\\image.jpg");
 
     [Fact]

@@ -29,6 +29,7 @@ public sealed partial class MainWindow
     private void RefreshOnlineDetailActionState()
     {
         if (_onlineWindowClosed) return;
+        RefreshOnlineCardStates();
         if (_activeOnlineDetailMod is not OnlineModCard mod) return;
         UpdateOnlineDetailDownloadControls(mod);
         if (_onlineDetailState.IsLoading)

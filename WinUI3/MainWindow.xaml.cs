@@ -1,4 +1,4 @@
-﻿using System.Collections.ObjectModel;
+using System.Collections.ObjectModel;
 using System.Diagnostics;
 using System.IO.Compression;
 using System.Globalization;
@@ -37,7 +37,7 @@ namespace ModFolderCopier.WinUI;
 
 public sealed partial class MainWindow : Window
 {
-    private const string AppVersion = "v4.1.1";
+    private const string AppVersion = "v4.2.0-preview.3";
     private static bool AppSelfUpdateEnabled => ApplicationReleasePolicy.ApplicationSelfUpdateEnabled;
     private const string GitHubRepositoryUrl = "https://github.com/uyujkk/Integrated_Mod_Manager";
     private const string GitHubLatestReleaseApiUrl = "https://api.github.com/repos/uyujkk/Integrated_Mod_Manager/releases/latest";
@@ -354,10 +354,12 @@ public sealed partial class MainWindow : Window
             throw;
         }
         TraceStartupStage("Configuration loaded");
+        LoadDownloadTasks();
         ApplyTheme(_isDarkTheme);
         ApplyLanguage();
         TraceStartupStage("Theme and language applied");
         InitializeOnlineControls();
+        InitializeBrowseSessionTracking();
         DetectLocalUpdatePackage();
         TraceStartupStage("Online controls and local update detection initialized");
         RefreshSettingsPane();
@@ -548,7 +550,7 @@ public sealed partial class MainWindow : Window
         UpdateCheckIntervalHintTextBlock.Text = L("这里只影响软件版本检查，不影响 Mod 更新检查。Mod 更新频率请到左侧“更新”模块设置。", "This only affects app-version checks, not mod update checks. Configure mod update frequency in the Updates section.");
         if (!AppSelfUpdateEnabled)
         {
-            SettingsProjectHintTextBlock.Text = L("4.0-beta 独立测试版不接入软件自动更新；可手动打开测试版发布页。Mod 更新不受影响。", "This standalone 4.0-beta is not connected to app updates. Open its release page manually; mod updates are unaffected.");
+            SettingsProjectHintTextBlock.Text = L("4.2 开发预览版已关闭软件自动更新；公开发布页供查阅，当前本地整合包请按随包说明使用。Mod 更新不受影响。", "App updates are disabled in this 4.2 development preview. Public releases are available for reference; follow the included guide for this local package. Mod updates are unaffected.");
             UpdateCheckIntervalHintTextBlock.Text = L("测试版已禁用软件更新检查及自动安装，不会替换稳定版。", "App update checks and automatic installation are disabled in this beta. It does not replace the stable app.");
             UpdateCheckIntervalComboBox.IsEnabled = false;
         }
@@ -582,7 +584,7 @@ public sealed partial class MainWindow : Window
         if (!AppSelfUpdateEnabled)
         {
             CheckUpdatesButton.Content = L("测试版未接入自动更新", "Beta app updates disabled");
-            InstallUpdateButton.Content = L("打开 4.0-beta 发布页", "Open 4.0-beta Release");
+            InstallUpdateButton.Content = L("查看公开发布页", "View Public Releases");
             return;
         }
         InstallUpdateButton.Content = _localUpdatePackageVersion is not null
@@ -686,7 +688,7 @@ public sealed partial class MainWindow : Window
 
     private void InitializeOnlineControls()
     {
-        OnlineSearchTextBox.PlaceholderText = L("搜索角色名或 Mod 名称", "Search character or mod name");
+        OnlineSearchTextBox.PlaceholderText = L("搜索当前页：角色、Mod 或作者", "Search this page: character, mod or author");
         OnlineSortComboBox.Items.Clear();
         OnlineSortComboBox.Items.Add(new ComboBoxItem { Content = L("按热度排序", "Sort by hotness"), Tag = OnlineSortMode.Hotness });
         OnlineSortComboBox.Items.Add(new ComboBoxItem { Content = L("按下载量排序", "Sort by downloads"), Tag = OnlineSortMode.Downloads });
@@ -980,8 +982,8 @@ public sealed partial class MainWindow : Window
             LatestReleaseTitleTextBlock.Text = L($"独立测试版：{AppVersion}", $"Standalone beta: {AppVersion}");
             LatestReleaseMetaTextBlock.Text = L("手动下载 · 与稳定版分开解压使用", "Manual download · extract separately from the stable app");
             UpdateNotesTextBlock.Text = L(
-                "新增 Mod 组合和持久状态预设：先恢复组合，再定向回写 d3dx_user.ini。\n恢复前请完全退出游戏和加载器；不修改 Mod INI 默认值。\n软件自动更新已禁用，Mod 在线下载和更新功能仍可使用。",
-                "Save mod combinations and persistent-state presets: restore the combination, then patch matching d3dx_user.ini values.\nFully exit the game and loader before restoring. Mod INI defaults stay unchanged.\nApp self-updates are disabled; online mod downloads and updates remain available.");
+                "4.2 开发预览整合包：浏览保位、作者跨页浏览与收藏、下载队列和重试、旧库复制导入及图片缓存修正。\n曾出现一次详情页原生闪退，根因尚未确认，请查看随包已知问题。\n软件自动更新已禁用，Mod 在线下载和更新功能仍可使用。",
+                "4.2 integration preview: stable browsing position, paginated author browsing and saved items, download queues and retry, existing-library copy import, and image-cache fixes.\nA native details-page crash remains unresolved; see the included known issues.\nApp self-updates are disabled; online mod downloads and updates remain available.");
             return;
         }
         string latestTag = string.IsNullOrWhiteSpace(_latestReleaseTag) ? L("尚未检查", "Not checked yet") : _latestReleaseTag!;
@@ -1869,6 +1871,7 @@ public sealed partial class MainWindow : Window
         var task = new DownloadTaskItem
         {
             Title = mod.Title,
+            SourceIdentity = GetOnlineDownloadIdentity(mod),
             DestinationPath = destinationPath,
             State = DownloadTaskState.Queued,
             StatusZh = "等待开始",
@@ -1903,10 +1906,12 @@ public sealed partial class MainWindow : Window
             return;
         }
 
+        bool phaseChanged = task.State != state;
         task.State = state;
         task.Progress = DownloadProgressPolicy.MergeProgress(task.Progress, progress);
         task.StatusZh = statusZh;
         task.StatusEn = statusEn;
+        if (!_onlineWindowClosed && (phaseChanged || DownloadProgressPolicy.IsTerminal(state))) PersistDownloadTasks();
 
         DateTimeOffset now = DateTimeOffset.UtcNow;
         if (!forceRefresh && now - task.LastUiRefreshUtc < TimeSpan.FromMilliseconds(125))
@@ -1914,7 +1919,12 @@ public sealed partial class MainWindow : Window
             return;
         }
         task.LastUiRefreshUtc = now;
-        DispatcherQueue.TryEnqueue(() => RefreshDownloadTaskCard(task));
+        DispatcherQueue.TryEnqueue(() =>
+        {
+            if (_onlineWindowClosed) return;
+            RefreshDownloadTaskCard(task);
+            RefreshOnlineCardStates(refreshInstalled: DownloadProgressPolicy.IsTerminal(task.State));
+        });
     }
 
     private void RefreshDownloadTaskCenter()
@@ -1982,7 +1992,7 @@ public sealed partial class MainWindow : Window
             Style = (Style)Application.Current.Resources["SecondaryButtonStyle"],
             VerticalAlignment = VerticalAlignment.Center
         };
-        actionButton.Click += (_, _) =>
+        actionButton.Click += async (_, _) =>
         {
             if (DownloadProgressPolicy.IsActive(task.State))
             {
@@ -1992,7 +2002,9 @@ public sealed partial class MainWindow : Window
                 return;
             }
 
-            OpenDirectory(task.DestinationPath, L("下载目录", "Download folder"));
+            if (task.State is DownloadTaskState.Failed or DownloadTaskState.Canceled && task.RetryRequest is not null)
+                await RetryOnlineDownloadAsync(task);
+            else OpenDirectory(task.DestinationPath, L("下载目录", "Download folder"));
         };
         Grid.SetColumn(actionButton, 1);
         grid.Children.Add(actionButton);
@@ -2014,10 +2026,11 @@ public sealed partial class MainWindow : Window
         view.ProgressBar.Value = task.Progress;
         view.ProgressBar.IsIndeterminate = active
             && (task.State is not DownloadTaskState.Downloading || !task.HasKnownTotalLength);
-        view.ActionButton.Content = active ? L("取消", "Cancel") : L("打开目录", "Open Folder");
+        bool retry = task.State is DownloadTaskState.Failed or DownloadTaskState.Canceled && task.RetryRequest is not null;
+        view.ActionButton.Content = active ? L("取消", "Cancel") : retry ? L("重试", "Retry") : L("打开目录", "Open Folder");
         view.ActionButton.IsEnabled = active
             ? task.State is not DownloadTaskState.Canceling && task.Session?.CanCancel != false
-            : Directory.Exists(task.DestinationPath);
+            : retry ? !task.RetryInProgress && !_onlineDownloadActions.IsPreparing : Directory.Exists(task.DestinationPath);
         ClearDownloadTasksButton.IsEnabled = _downloadTasks.Any(item => DownloadProgressPolicy.IsTerminal(item.State));
     }
 
@@ -2031,6 +2044,8 @@ public sealed partial class MainWindow : Window
             task.Cancellation.Dispose();
         }
         RefreshDownloadTaskCenter();
+        RefreshOnlineCardStates();
+        PersistDownloadTasks();
     }
 
     private void LoadShellConfig()
@@ -2086,6 +2101,16 @@ public sealed partial class MainWindow : Window
                 "settings" => PrimarySection.Settings,
                 _ => PrimarySection.Dashboard
             };
+            _onlinePreferences = config?.OnlinePreferences ?? new();
+            _onlinePreferences.ConcurrentDownloads = Math.Clamp(_onlinePreferences.ConcurrentDownloads, 1, 4);
+            _onlinePreferences.Authors ??= [];
+            _onlinePreferences.SavedMods ??= [];
+            _onlinePreferences.DownloadFolders ??= new(StringComparer.OrdinalIgnoreCase);
+            _onlinePreferences.BrowseSessions ??= [];
+            _onlinePreferences.RecentAuthors ??= [];
+            _localLibraries = config?.LocalLibraries ?? new(StringComparer.OrdinalIgnoreCase);
+            foreach (var library in _localLibraries.Values) library.Normalize();
+            _onlineDownloadScheduler.Limit = _onlinePreferences.ConcurrentDownloads;
             _updateCheckInterval = AppSelfUpdateEnabled ? ParseUpdateCheckInterval(config?.UpdateCheckInterval) : UpdateCheckInterval.Manual;
             _repositoryWorkspaceView = config?.RepositoryWorkspaceView switch
             {
@@ -2218,9 +2243,12 @@ public sealed partial class MainWindow : Window
     {
         try
         {
+            CaptureOnlineBrowseSession();
             var config = new BetaShellConfig
             {
                 CurrentPrimarySection = _currentPrimarySection.ToString().ToLowerInvariant(),
+                OnlinePreferences = _onlinePreferences,
+                LocalLibraries = _localLibraries,
                 SelectedRepositoryId = _selectedRepositoryId,
                 UpdateCheckInterval = _updateCheckInterval.ToString(),
                 LastUpdateCheckUtc = _lastUpdateCheckUtc?.ToString("O"),
@@ -2270,6 +2298,7 @@ public sealed partial class MainWindow : Window
 
     private void SaveSelectedRepositoryFromInputs()
     {
+        CaptureOnlineBrowseSession();
         WorkspaceRepository? repository = GetSelectedRepository();
         if (repository is null)
         {
@@ -3048,6 +3077,7 @@ public sealed partial class MainWindow : Window
 
     private void UpdateOnlineResponsiveLayout(double windowWidth)
     {
+        TraceOnlineUiState("Responsive layout");
         if (OnlineDetailsSplitView is null
             || OnlineWorkspaceGrid is null
             || OnlineCharacterRailColumn is null
@@ -3369,6 +3399,7 @@ public sealed partial class MainWindow : Window
 
     private void RefreshOnlinePaneV2()
     {
+        EnsureOnlineBrowseSession();
         RefreshOnlineNavigationButtonLabels();
         WorkspaceRepository? repository = GetSelectedRepository();
         bool hasRepository = repository is not null;
@@ -3379,7 +3410,7 @@ public sealed partial class MainWindow : Window
         bool canLoadOnlineMods = hasRepository && isSupportedSource && !string.IsNullOrWhiteSpace(effectiveCategoryId);
         string requestCategoryId = GetOnlineRequestCategoryId(repository);
         string configKey = hasRepository
-            ? $"{repository!.Id}|{effectiveSource}|{requestCategoryId}|character={_onlineCharacterFilter}|page={_onlineCurrentPage}"
+            ? $"{repository!.Id}|{effectiveSource}|{requestCategoryId}|character={_onlineCharacterFilter}|page={_onlineCurrentPage}{OnlineAuthorKey}"
             : string.Empty;
 
         if (!string.IsNullOrEmpty(_lastLoadedOnlineConfigKey)
@@ -3421,6 +3452,7 @@ public sealed partial class MainWindow : Window
             : string.Empty;
         List<OnlineModCard> filteredMods = canLoadOnlineMods ? GetFilteredOnlineMods() : [];
         List<OnlineModCard> visibleMods = GetVisibleOnlineMods(filteredMods);
+        RefreshOnlineFilterSummary(visibleMods.Count, _onlineMods.Count);
         OnlinePaginationTextBlock.Text = canLoadOnlineMods
             ? L(
                 $"第 {_onlineCurrentPage} / {_onlineTotalPages} 页，共 {_onlineTotalCount} 个 Mod",
@@ -3428,7 +3460,7 @@ public sealed partial class MainWindow : Window
             : L("等待在线配置", "Waiting for online config");
         OnlinePrevPageButton.IsEnabled = canLoadOnlineMods && !_isLoadingOnlineMods && _onlineCurrentPage > 1;
         OnlineNextPageButton.IsEnabled = canLoadOnlineMods && !_isLoadingOnlineMods && _onlineCurrentPage < _onlineTotalPages;
-        OnlineSearchTextBox.PlaceholderText = L("搜索角色名或 Mod 名称", "Search character or mod name");
+        OnlineSearchTextBox.PlaceholderText = L("搜索当前页：角色、Mod 或作者", "Search this page: character, mod or author");
         OnlineSearchTextBox.IsEnabled = canLoadOnlineMods && !_isLoadingOnlineMods;
         OnlineCharacterComboBox.IsEnabled = canLoadOnlineMods && !_isLoadingOnlineMods;
         OnlineSortComboBox.IsEnabled = canLoadOnlineMods && !_isLoadingOnlineMods;
@@ -3436,7 +3468,13 @@ public sealed partial class MainWindow : Window
         RefreshOnlineCharacterAvatarStrip();
         UpdateOnlineCardLayoutControls();
 
-        _onlineVisibleMods.Clear();
+        // Status-only refreshes must not reset either virtualized view's scroll position.
+        bool resultsChanged = OnlineBrowseStateAdapter.Synchronize(_onlineVisibleMods, visibleMods);
+        RefreshOnlineCardPresentation();
+        RefreshOnlineCardStates();
+        ToolTipService.SetToolTip(OnlineSearchTextBox, L(
+            "搜索当前页的角色、Mod 名称或作者；输入 author:作者名 可仅按作者筛选。清空搜索可恢复当前页。",
+            "Search this page by character, mod title or author. Use author:name for author-only search. Clear to show this page again."));
         OnlineEmptyResultsContentControl.Content = null;
         OnlineEmptyResultsContentControl.Visibility = Visibility.Collapsed;
 
@@ -3473,15 +3511,8 @@ public sealed partial class MainWindow : Window
             {
                 ShowOnlineEmptyResults(CreateOnlinePreviewCard(
                     L("没有匹配的皮肤 Mod", "No matching skin mods"),
-                    L("当前页只显示分类名中包含 Skins 的条目。你可以翻页，或者尝试用角色名和 Mod 名称搜索。", "This page only shows entries whose category name contains Skins. Try another page, or search by character and mod name."),
+                    L("当前页只显示 Skins 分类。可清空搜索、切换角色或翻页；支持搜索角色、Mod 名称和作者。", "This page shows Skins entries. Clear your search, change character or try another page. Search supports characters, mod titles and authors."),
                     L("筛选结果为空", "No results")));
-            }
-            else
-            {
-                foreach (OnlineModCard mod in visibleMods)
-                {
-                    _onlineVisibleMods.Add(mod);
-                }
             }
         }
 
@@ -3491,7 +3522,8 @@ public sealed partial class MainWindow : Window
                 GetOnlineGridAvailableWidth(OnlineVirtualizedGridView.ActualWidth)));
         }
         DispatcherQueue.TryEnqueue(UpdateOnlineWorkspaceWidthConstraint);
-        AnimateOnlineCardsEntrance();
+        if (resultsChanged || _animateOnlineCardsOnNextRefresh) AnimateOnlineCardsEntrance();
+        QueueRestoreOnlineBrowsePosition();
 
         if (_currentPrimarySection == PrimarySection.Online
             && canLoadOnlineMods
@@ -3537,6 +3569,9 @@ public sealed partial class MainWindow : Window
         {
             query = query.Where(mod => MatchesOnlineSearch(mod, _onlineSearchText));
         }
+
+        if (_onlineAuthorWorkFilter == 1) query = query.Where(mod => FindInstalledOnlineMod(mod) is not null);
+        else if (_onlineAuthorWorkFilter == 2) query = query.Where(IsSavedOnlineMod);
 
         query = _onlineSortMode switch
         {
@@ -3716,6 +3751,8 @@ public sealed partial class MainWindow : Window
 
     private async Task LoadOnlineModsAsync(bool forceReload)
     {
+        EnsureOnlineBrowseSession();
+        SaveShellConfig();
         CancelOnlineModListRequest();
         WorkspaceRepository? repository = GetSelectedRepository();
         if (repository is null)
@@ -3735,7 +3772,8 @@ public sealed partial class MainWindow : Window
             return;
         }
 
-        string configKey = $"{repository.Id}|{source}|{categoryId}|character={_onlineCharacterFilter}|page={_onlineCurrentPage}";
+        int authorId = _onlineAuthorId;
+        string configKey = $"{repository.Id}|{source}|{categoryId}|character={_onlineCharacterFilter}|page={_onlineCurrentPage}{OnlineAuthorKey}";
         if (forceReload)
         {
             _blockedOnlineAutoLoadConfigKey = null;
@@ -3776,9 +3814,9 @@ public sealed partial class MainWindow : Window
         {
             bool needsCharacterFallback = !string.IsNullOrWhiteSpace(_onlineCharacterFilter)
                 && string.Equals(categoryId, baseCategoryId, StringComparison.OrdinalIgnoreCase);
-            string cacheCategoryKey = needsCharacterFallback
+            string cacheCategoryKey = (needsCharacterFallback
                 ? $"category-v3|{baseCategoryId}-character-{_onlineCharacterFilter}"
-                : $"category-v3|{categoryId}";
+                : $"category-v3|{categoryId}") + (authorId > 0 ? $"|author={authorId}" : string.Empty);
             OnlineCategoryPageResult? cachedPage = forceReload
                 ? null
                 : await TryReadOnlineCategoryPageCacheAsync(cacheCategoryKey, _onlineCurrentPage);
@@ -3812,7 +3850,7 @@ public sealed partial class MainWindow : Window
                 try
                 {
                     pageResult = cachedPage
-                        ?? (needsCharacterFallback
+                        ?? (needsCharacterFallback && authorId == 0
                             ? await FetchGameBananaCharacterFallbackPageAsync(
                                 baseCategoryId,
                                 _onlineCharacterFilter,
@@ -3823,7 +3861,8 @@ public sealed partial class MainWindow : Window
                                 categoryId,
                                 _onlineCurrentPage,
                                 useEndfieldMetadata: useEndfieldMetadata,
-                                cancellationToken: linkedCancellation.Token));
+                                cancellationToken: linkedCancellation.Token,
+                                authorId: authorId));
                     if (!loadedFromCache)
                     {
                         ResetOnlineRateLimit();
@@ -3868,6 +3907,15 @@ public sealed partial class MainWindow : Window
 
             if (requestVersion != _onlineModRequestVersion || requestCancellation.IsCancellationRequested)
             {
+                return;
+            }
+
+            // A remembered author/category may have fewer pages after entries are removed.
+            if (_onlineCurrentPage > Math.Max(1, pageResult.TotalPages))
+            {
+                _onlineCurrentPage = Math.Max(1, pageResult.TotalPages);
+                ResetOnlineBrowsePosition();
+                await LoadOnlineModsAsync(forceReload: false);
                 return;
             }
 
@@ -4117,11 +4165,12 @@ public sealed partial class MainWindow : Window
         int page,
         int pageSize = OnlineDisplayPageSize,
         bool? useEndfieldMetadata = null,
-        CancellationToken cancellationToken = default)
+        CancellationToken cancellationToken = default,
+        int authorId = 0)
     {
         bool shouldUseEndfieldMetadata = useEndfieldMetadata ?? IsEndfieldCategoryId(categoryId);
         pageSize = Math.Clamp(pageSize, 1, 50);
-        string requestUrl = $"https://gamebanana.com/apiv11/Mod/Index?_aFilters%5BGeneric_Category%5D={Uri.EscapeDataString(categoryId)}&_nPerpage={pageSize}&_nPage={page}";
+        string requestUrl = OnlineBrowsePolicy.CategoryPageUrl(categoryId, page, pageSize, authorId);
         using HttpResponseMessage response = await _httpClient.GetAsync(requestUrl, cancellationToken);
         if (response.StatusCode == HttpStatusCode.TooManyRequests)
         {
@@ -4189,6 +4238,7 @@ public sealed partial class MainWindow : Window
         {
             baseCard.Author = enrichedCard.Author;
         }
+        if (enrichedCard.AuthorId > 0) baseCard.AuthorId = enrichedCard.AuthorId;
 
         if (!string.IsNullOrWhiteSpace(enrichedCard.CharacterName))
         {
@@ -4225,9 +4275,11 @@ public sealed partial class MainWindow : Window
         string title = TryGetStringProperty(record, "_sName") ?? $"Mod {itemId}";
         string profileUrl = TryGetStringProperty(record, "_sProfileUrl") ?? $"https://gamebanana.com/mods/{itemId}";
         string author = string.Empty;
+        int authorId = 0;
         if (record.TryGetProperty("_aSubmitter", out JsonElement submitterElement))
         {
             author = TryGetStringProperty(submitterElement, "_sName") ?? string.Empty;
+            authorId = TryGetInt32Property(submitterElement, "_idRow");
         }
 
         string rootCategoryName = string.Empty;
@@ -4293,6 +4345,7 @@ public sealed partial class MainWindow : Window
             IsCharacterNameInferred = isCharacterNameInferred,
             RootCategoryName = string.IsNullOrWhiteSpace(rootCategoryName) ? "Skins" : rootCategoryName,
             Author = string.IsNullOrWhiteSpace(author) ? L("未知作者", "Unknown author") : author,
+            AuthorId = authorId,
             Likes = likes,
             Views = views,
             Downloads = downloads,
@@ -4384,11 +4437,13 @@ public sealed partial class MainWindow : Window
                 && !string.Equals(character, category, StringComparison.OrdinalIgnoreCase),
             RootCategoryName = metadata.RootCategoryName,
             Author = string.IsNullOrWhiteSpace(metadata.Author) ? L("未知作者", "Unknown author") : metadata.Author,
+            AuthorId = metadata.AuthorId,
             Likes = metadata.Likes, Views = metadata.Views, Downloads = metadata.Downloads,
             HotnessScore = CalculateOnlineHotness(metadata.Likes, metadata.Views, metadata.Downloads),
             PreviewUrl = metadata.PreviewUrl, ProfileUrl = metadata.ProfileUrl,
             DownloadUrl = file?.DownloadUrl ?? metadata.FallbackDownloadUrl,
             DownloadFileName = file?.FileName ?? string.Empty, DownloadFiles = metadata.DownloadFiles.ToList(),
+            DownloadFileId = file?.FileId ?? string.Empty,
             FileSizeBytes = file?.FileSizeBytes ?? 0, HasUpdates = metadata.HasUpdates,
             UpdatedAt = FromGameBananaUnixTime(metadata.UpdatedEpoch)
         };
@@ -4591,20 +4646,10 @@ public sealed partial class MainWindow : Window
 
     private bool MatchesOnlineSearch(OnlineModCard mod, string searchText)
     {
-        if (mod.Title.Contains(searchText, StringComparison.OrdinalIgnoreCase)
-            || mod.CharacterName.Contains(searchText, StringComparison.OrdinalIgnoreCase))
-        {
-            return true;
-        }
-
-        if (!IsEndfieldRepository(GetSelectedRepository()))
-        {
-            return false;
-        }
-
-        EndfieldCharacterInfo? character = FindEndfieldCharacter(mod.CharacterName);
-        return character is not null
-            && character.AllNames.Any(name => name.Contains(searchText, StringComparison.OrdinalIgnoreCase));
+        EndfieldCharacterInfo? character = IsEndfieldRepository(GetSelectedRepository())
+            ? FindEndfieldCharacter(mod.CharacterName) : null;
+        return OnlineBrowseStateAdapter.MatchesSearch(mod.Title, mod.CharacterName, mod.Author,
+            searchText, character?.AllNames);
     }
 
     private static bool IsGenericOnlineCharacterName(string? categoryName)
@@ -4755,6 +4800,7 @@ public sealed partial class MainWindow : Window
             return;
         }
 
+        ResetOnlineBrowsePosition();
         _onlineCurrentPage--;
         await LoadOnlineModsAsync(forceReload: false);
     }
@@ -4766,6 +4812,7 @@ public sealed partial class MainWindow : Window
             return;
         }
 
+        ResetOnlineBrowsePosition();
         _onlineCurrentPage++;
         await LoadOnlineModsAsync(forceReload: false);
     }
@@ -4773,12 +4820,16 @@ public sealed partial class MainWindow : Window
     private void OnOnlineSearchTextChanged(object sender, TextChangedEventArgs e)
     {
         _onlineSearchText = OnlineSearchTextBox.Text?.Trim() ?? string.Empty;
+        if (_resettingOnlineFilters) return;
+        ResetOnlineBrowsePosition();
         RefreshOnlinePaneV2();
+        _browseSaveTimer?.Stop();
+        _browseSaveTimer?.Start();
     }
 
     private async void OnOnlineCharacterSelectionChanged(object sender, SelectionChangedEventArgs e)
     {
-        if (_isApplyingOnlineCharacterSelection)
+        if (_isApplyingOnlineCharacterSelection || _restoringBrowseControls)
         {
             return;
         }
@@ -4802,6 +4853,7 @@ public sealed partial class MainWindow : Window
             return;
         }
 
+        ResetOnlineBrowsePosition();
         _onlineCharacterFilter = character;
         _onlineCurrentPage = 1;
         _onlineTotalCount = 0;
@@ -5845,10 +5897,14 @@ public sealed partial class MainWindow : Window
 
     private void OnOnlineSortSelectionChanged(object sender, SelectionChangedEventArgs e)
     {
+        if (_restoringBrowseControls) return;
         if (OnlineSortComboBox.SelectedItem is ComboBoxItem { Tag: OnlineSortMode sortMode })
         {
+            if (_onlineSortMode == sortMode) return;
+            ResetOnlineBrowsePosition();
             _onlineSortMode = sortMode;
             RefreshOnlinePaneV2();
+            SaveShellConfig();
         }
     }
 
@@ -5869,6 +5925,8 @@ public sealed partial class MainWindow : Window
             return;
         }
 
+        CaptureOnlineBrowseSession();
+        _pendingBrowsePosition = _activeBrowseSessionKey is not null && _onlinePreferences.BrowseSessions.TryGetValue(_activeBrowseSessionKey, out var savedPosition) ? savedPosition : new();
         _onlineCardLayoutMode = layoutMode;
         _animateOnlineCardsOnNextRefresh = true;
         SaveShellConfig();
@@ -5918,6 +5976,7 @@ public sealed partial class MainWindow : Window
 
     private void OnOnlineResultsHostSizeChanged(object sender, SizeChangedEventArgs e)
     {
+        TraceOnlineUiState("Results size changed");
         if (_onlineCardLayoutMode == OnlineCardLayoutMode.Grid)
         {
             UpdateOnlineGridCardMetrics(GetOnlineGridAvailableWidth(e.NewSize.Width));
@@ -5926,6 +5985,7 @@ public sealed partial class MainWindow : Window
 
     private void OnOnlineWorkspaceGridSizeChanged(object sender, SizeChangedEventArgs e)
     {
+        TraceOnlineUiState("Workspace size changed");
         UpdateOnlineWorkspaceWidthConstraint();
     }
 
@@ -5985,6 +6045,7 @@ public sealed partial class MainWindow : Window
 
     private async Task ShowOnlineModDetailsAsync(OnlineModCard mod)
     {
+        TraceOnlineUiState("Details requested", mod.ItemId);
         _activeOnlineDetailMod = mod;
         string contextKey = GetOnlineDetailContextKey();
         await _onlineDetailState.RunLatestAsync(
@@ -6431,14 +6492,17 @@ public sealed partial class MainWindow : Window
 
     private async Task OpenOnlineDetailPaneAsync()
     {
+        TraceOnlineUiState("Pane opening");
         int animationVersion = ++_onlineDetailAnimationVersion;
         bool wasOpen = OnlineDetailsSplitView.IsPaneOpen;
         OnlineDetailsSplitView.IsPaneOpen = true;
         await Task.Delay(1);
+        if (_onlineWindowClosed || animationVersion != _onlineDetailAnimationVersion) return;
         UpdateOnlineResponsiveLayout(Bounds.Width);
         UpdateOnlineWorkspaceWidthConstraint();
         DispatcherQueue.TryEnqueue(() =>
         {
+            if (_onlineWindowClosed || animationVersion != _onlineDetailAnimationVersion) return;
             UpdateOnlineResponsiveLayout(Bounds.Width);
             UpdateOnlineWorkspaceWidthConstraint();
         });
@@ -6577,6 +6641,7 @@ public sealed partial class MainWindow : Window
         }
         catch (Exception exception)
         {
+            UiCrashDiagnostics.Write("Image cache failure", exception.ToString());
             LogApplicationIssue("Online image cache", exception);
             return null;
         }
@@ -6734,6 +6799,7 @@ public sealed partial class MainWindow : Window
 
     private void PopulateOnlineDetailPane(OnlineModCard mod, OnlineModDetails rawDetails, OnlineModDetails displayDetails)
     {
+        TraceOnlineUiState("Details publishing", mod.ItemId);
         TrackedModOrigin? installedOrigin = FindInstalledOnlineMod(mod);
         OnlineDetailPaneTitleTextBlock.Text = mod.Title;
         string characterSource = mod.IsCharacterNameInferred ? L("（自动识别）", " (detected)") : string.Empty;
@@ -6945,6 +7011,7 @@ public sealed partial class MainWindow : Window
 
     private async void ShowOnlineDetailHeroImage(string? imageUrl, int imageIndex = 0)
     {
+        TraceOnlineUiState("Hero requested");
         _onlineDetailImageIndex = Math.Clamp(
             imageIndex,
             0,
@@ -6964,6 +7031,7 @@ public sealed partial class MainWindow : Window
 
             if (bitmap is not null)
             {
+                TraceOnlineUiState("Hero assigning decoded bitmap");
                 OnlineDetailHeroImage.Source = bitmap;
                 OnlineDetailHeroImage.Visibility = Visibility.Visible;
                 OnlineDetailHeroPlaceholderTextBlock.Visibility = Visibility.Collapsed;
@@ -7088,7 +7156,7 @@ public sealed partial class MainWindow : Window
         DependencyObject? current = source;
         while (current is not null)
         {
-            if (current is Button)
+            if (current is Microsoft.UI.Xaml.Controls.Primitives.ButtonBase)
             {
                 return true;
             }
@@ -7205,6 +7273,7 @@ public sealed partial class MainWindow : Window
         TrackedModOrigin? installedOrigin = FindInstalledOnlineMod(mod);
         Border border = new()
         {
+            ContextFlyout = CreateOnlineCardMenu(mod),
             Style = (Style)Application.Current.Resources["InsetBorderStyle"],
             Padding = new Thickness(0),
             CornerRadius = new CornerRadius(12)
@@ -7276,28 +7345,35 @@ public sealed partial class MainWindow : Window
             FontWeight = Microsoft.UI.Text.FontWeights.SemiBold,
             TextTrimming = TextTrimming.CharacterEllipsis
         });
-        contentPanel.Children.Add(new TextBlock
+        var authorRow = new Grid { ColumnSpacing = 6 };
+        authorRow.ColumnDefinitions.Add(new ColumnDefinition { Width = GridLength.Auto });
+        authorRow.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(1, GridUnitType.Star) });
+        authorRow.Children.Add(new TextBlock
         {
-            Text = $"{GetOnlineCharacterDisplayName(mod.CharacterName)}{(mod.IsCharacterNameInferred ? L("（自动识别）", " (detected)") : string.Empty)}  ·  {mod.Author}",
+            Text = $"{GetOnlineCharacterDisplayName(mod.CharacterName)}{(mod.IsCharacterNameInferred ? L("（自动识别）", " (detected)") : string.Empty)} ·",
             Style = (Style)Application.Current.Resources["MutedTextStyle"],
-            TextTrimming = TextTrimming.CharacterEllipsis
+            VerticalAlignment = VerticalAlignment.Center
         });
-        if (installedOrigin is not null)
-        {
-            contentPanel.Children.Add(CreateOnlineInstalledIndicator(installedOrigin.Path));
-        }
+        HyperlinkButton authorLink = CreateOnlineAuthorLink(mod);
+        Grid.SetColumn(authorLink, 1);
+        authorRow.Children.Add(authorLink);
+        contentPanel.Children.Add(authorRow);
+        // Reserve badge space so finishing an installation does not resize the row.
+        var installedHost = new ContentControl { Height = 24, HorizontalContentAlignment = HorizontalAlignment.Left };
+        contentPanel.Children.Add(installedHost);
         var metricsPanel = new StackPanel { Orientation = Orientation.Horizontal, Spacing = 8 };
         metricsPanel.Children.Add(CreateOnlineMetricBadge($"{L("热度", "Heat")} {mod.HotnessScore:F1}", true));
         metricsPanel.Children.Add(CreateOnlineMetricBadge($"♥ {mod.Likes}", false));
         metricsPanel.Children.Add(CreateOnlineMetricBadge($"↓ {mod.Downloads}", false));
         metricsPanel.Children.Add(CreateOnlineMetricBadge($"◉ {mod.Views}", false));
         contentPanel.Children.Add(metricsPanel);
-        contentPanel.Children.Add(new TextBlock
+        var cardStatus = new TextBlock
         {
             Text = $"{L("更新", "Updated")} {mod.UpdatedAt:yyyy-MM-dd}  ·  ID {mod.ItemId}",
             Style = (Style)Application.Current.Resources["CaptionTextStyle"],
             TextTrimming = TextTrimming.CharacterEllipsis
-        });
+        };
+        contentPanel.Children.Add(cardStatus);
 
         StackPanel actionsPanel = new()
         {
@@ -7360,6 +7436,7 @@ public sealed partial class MainWindow : Window
         downloadButton.Click += async (_, _) => await RunOnlineCardDownloadAsync(mod, downloadButton);
         quickActions.Children.Add(downloadButton);
         actionsPanel.Children.Add(quickActions);
+        TrackOnlineCardState(mod, downloadButton, installedHost, cardStatus, cardStatus.Text);
 
         Grid.SetColumn(contentPanel, 2);
         rootGrid.Children.Add(contentPanel);
@@ -7376,6 +7453,7 @@ public sealed partial class MainWindow : Window
         TrackedModOrigin? installedOrigin = FindInstalledOnlineMod(mod);
         Border border = new()
         {
+            ContextFlyout = CreateOnlineCardMenu(mod),
             Style = (Style)Application.Current.Resources["InsetBorderStyle"],
             Tag = "OnlineModTile",
             Height = 350,
@@ -7462,14 +7540,12 @@ public sealed partial class MainWindow : Window
         heatBadge.HorizontalAlignment = HorizontalAlignment.Right;
         heatBadge.VerticalAlignment = VerticalAlignment.Top;
         imageLayer.Children.Add(heatBadge);
-        if (installedOrigin is not null)
+        var installedHost = new ContentControl
         {
-            Border installedBadge = CreateOnlineInstalledIndicator(installedOrigin.Path);
-            installedBadge.Margin = new Thickness(10);
-            installedBadge.HorizontalAlignment = HorizontalAlignment.Left;
-            installedBadge.VerticalAlignment = VerticalAlignment.Top;
-            imageLayer.Children.Add(installedBadge);
-        }
+            Margin = new Thickness(10), HorizontalAlignment = HorizontalAlignment.Left,
+            VerticalAlignment = VerticalAlignment.Top
+        };
+        imageLayer.Children.Add(installedHost);
         root.Children.Add(imageLayer);
 
         StackPanel content = new() { Margin = new Thickness(12, 10, 12, 7), Spacing = 4 };
@@ -7482,18 +7558,14 @@ public sealed partial class MainWindow : Window
             TextTrimming = TextTrimming.CharacterEllipsis,
             TextWrapping = TextWrapping.Wrap
         });
-        content.Children.Add(new TextBlock
-        {
-            Text = $"{L("作者", "By")} {mod.Author}",
-            Style = (Style)Application.Current.Resources["MutedTextStyle"],
-            TextTrimming = TextTrimming.CharacterEllipsis
-        });
-        content.Children.Add(new TextBlock
+        content.Children.Add(CreateOnlineAuthorLink(mod));
+        var cardStatus = new TextBlock
         {
             Text = $"{L("更新", "Updated")} {mod.UpdatedAt:yyyy-MM-dd}",
             Style = (Style)Application.Current.Resources["CaptionTextStyle"],
             TextTrimming = TextTrimming.CharacterEllipsis
-        });
+        };
+        content.Children.Add(cardStatus);
 
         Grid metrics = new() { ColumnSpacing = 6, Margin = new Thickness(0, 2, 0, 0) };
         metrics.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(1, GridUnitType.Star) });
@@ -7558,6 +7630,7 @@ public sealed partial class MainWindow : Window
         actions.Children.Add(downloadButton);
 
         Grid.SetRow(actions, 2);
+        TrackOnlineCardState(mod, downloadButton, installedHost, cardStatus, cardStatus.Text);
         root.Children.Add(actions);
         border.Child = root;
         return border;
@@ -8051,7 +8124,7 @@ public sealed partial class MainWindow : Window
     }
 
     private async Task<OnlineModCard> RefreshOnlineModDownloadInfoAsync(OnlineModCard mod, bool? useEndfieldMetadata = null,
-        CancellationToken cancellationToken = default)
+        CancellationToken cancellationToken = default, bool requireDownloadInfo = false)
     {
         try
         {
@@ -8061,6 +8134,7 @@ public sealed partial class MainWindow : Window
                 cancellationToken: cancellationToken);
             if (latestMod is null)
             {
+                if (requireDownloadInfo) throw new InvalidDataException("Download file metadata is unavailable.");
                 return mod;
             }
 
@@ -8077,13 +8151,14 @@ public sealed partial class MainWindow : Window
             }
             latestMod.RootCategoryName = string.IsNullOrWhiteSpace(latestMod.RootCategoryName) ? mod.RootCategoryName : latestMod.RootCategoryName;
             latestMod.Author = string.IsNullOrWhiteSpace(latestMod.Author) ? mod.Author : latestMod.Author;
+            if (latestMod.AuthorId <= 0) latestMod.AuthorId = mod.AuthorId;
             latestMod.ProfileUrl = string.IsNullOrWhiteSpace(latestMod.ProfileUrl) ? mod.ProfileUrl : latestMod.ProfileUrl;
             latestMod.PreviewUrl = string.IsNullOrWhiteSpace(latestMod.PreviewUrl) ? mod.PreviewUrl : latestMod.PreviewUrl;
             latestMod.CategoryId = string.IsNullOrWhiteSpace(latestMod.CategoryId) ? mod.CategoryId : latestMod.CategoryId;
             return latestMod;
         }
         catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested) { throw; }
-        catch
+        catch when (!requireDownloadInfo)
         {
             return mod;
         }
@@ -8100,6 +8175,7 @@ public sealed partial class MainWindow : Window
             IsCharacterNameInferred = mod.IsCharacterNameInferred,
             RootCategoryName = mod.RootCategoryName,
             Author = mod.Author,
+            AuthorId = mod.AuthorId,
             Likes = mod.Likes,
             Views = mod.Views,
             Downloads = mod.Downloads,
@@ -8109,6 +8185,7 @@ public sealed partial class MainWindow : Window
             ProfileUrl = mod.ProfileUrl,
             DownloadUrl = selectedFile.DownloadUrl,
             DownloadFileName = selectedFile.FileName,
+            DownloadFileId = selectedFile.FileId,
             DownloadFiles = mod.DownloadFiles,
             HasUpdates = mod.HasUpdates,
             UpdatedAt = mod.UpdatedAt
@@ -8121,7 +8198,8 @@ public sealed partial class MainWindow : Window
         bool refreshDownloadInfo = true,
         OnlineDownloadContext? capturedContext = null,
         bool? capturedEndfieldMetadata = null,
-        IReadOnlyCollection<string>? capturedCharacterAliases = null)
+        IReadOnlyCollection<string>? capturedCharacterAliases = null,
+        string? confirmedDestination = null, bool batchConfirmed = false)
     {
         WorkspaceRepository? initialRepository = GetSelectedRepository();
         OnlineDownloadContext context = capturedContext ?? CaptureOnlineDownloadContext(initialRepository);
@@ -8133,7 +8211,7 @@ public sealed partial class MainWindow : Window
         {
             RefreshOnlineDetailActionState();
             await DownloadAndExtractOnlineModCoreAsync(mod, selectedFile, refreshDownloadInfo,
-                context, useEndfieldMetadata, characterAliases, action);
+                context, useEndfieldMetadata, characterAliases, action, confirmedDestination, batchConfirmed);
         }
         catch (OperationCanceledException) when (action.Token.IsCancellationRequested) { }
         catch (Exception ex)
@@ -8153,13 +8231,18 @@ public sealed partial class MainWindow : Window
     private async Task DownloadAndExtractOnlineModCoreAsync(
         OnlineModCard mod, OnlineDownloadCandidate? selectedFile, bool refreshDownloadInfo,
         OnlineDownloadContext context, bool useEndfieldMetadata,
-        IReadOnlyCollection<string> characterAliases, OnlineDownloadActionAdapter.Lease action)
+        IReadOnlyCollection<string> characterAliases, OnlineDownloadActionAdapter.Lease action,
+        string? confirmedDestination = null, bool batchConfirmed = false)
     {
         action.Token.ThrowIfCancellationRequested();
         OnlineModCard effectiveMod = refreshDownloadInfo
             ? await RefreshOnlineModDownloadInfoAsync(mod, useEndfieldMetadata, action.Token)
             : mod;
         action.Token.ThrowIfCancellationRequested();
+
+        if (confirmedDestination is not null && selectedFile is { FileId.Length: > 0 }
+            && !effectiveMod.DownloadFiles.Any(file => file.FileId == selectedFile.FileId))
+            throw new InvalidOperationException(L("原下载文件已不在当前文件列表中，请打开详情重新选择。", "The original file is no longer listed. Open details and select a file again."));
 
         OnlineDownloadCandidate? effectiveFile = selectedFile is null
             ? OnlineDownloadSelectionPolicy.SelectDefault(effectiveMod.DownloadFiles)
@@ -8183,7 +8266,9 @@ public sealed partial class MainWindow : Window
             return;
         }
 
-        string? selectedFolder = await PickDownloadFolderAsync(effectiveMod, context, characterAliases);
+        if (!batchConfirmed && !await ConfirmOnlineDuplicateAsync(effectiveMod, effectiveFile, context)) return;
+        action.Token.ThrowIfCancellationRequested();
+        string? selectedFolder = await ResolveOnlineDownloadFolderAsync(effectiveMod, context, characterAliases, confirmedDestination);
         action.Token.ThrowIfCancellationRequested();
         if (string.IsNullOrWhiteSpace(selectedFolder))
         {
@@ -8191,13 +8276,20 @@ public sealed partial class MainWindow : Window
         }
 
         DownloadTaskItem downloadTask = CreateDownloadTask(effectiveMod, selectedFolder);
+        downloadTask.RetryRequest = new OnlineDownloadRetryRequest(effectiveMod, effectiveFile, context,
+            useEndfieldMetadata, characterAliases.ToArray(), selectedFolder);
         action.MarkTaskStarted();
         var session = new OnlineDownloadSession(context, selectedFolder);
         downloadTask.Session = session;
-        _foregroundDownloadTaskId = downloadTask.Id;
-        SetOnlineInstallBusy(true);
+        bool installBusy = false;
         try
         {
+            PersistDownloadTasks(required: true);
+            RefreshOnlineDetailActionState();
+            using IDisposable execution = await _onlineDownloadScheduler.AcquireAsync(downloadTask.Cancellation.Token);
+            _foregroundDownloadTaskId = downloadTask.Id;
+            SetOnlineInstallBusy(true);
+            installBusy = true;
             // The picker is finished; a different visible Mod can now start its own task.
             RefreshOnlineDetailActionState();
             UpdateDownloadTask(downloadTask, DownloadTaskState.Preparing, 0, "正在读取下载信息...", "Reading download information...", forceRefresh: true);
@@ -8300,22 +8392,25 @@ public sealed partial class MainWindow : Window
             }
 
             string failedArchiveName = Path.GetFileName(downloadTask.ArchivePath);
-            string failureDetails = string.IsNullOrWhiteSpace(failedArchiveName)
-                ? L($"失败原因：{message}", $"Reason: {message}")
-                : L($"文件：{failedArchiveName}\n失败原因：{message}", $"File: {failedArchiveName}\nReason: {message}");
-            await ShowMessageAsync(
-                failureDetails,
-                L("在线下载失败", "Online download failed"));
+            UpdateDownloadTask(downloadTask, DownloadTaskState.Failed, downloadTask.Progress,
+                $"{failedArchiveName}\n失败原因：{message}", $"{failedArchiveName}\nReason: {message}", forceRefresh: true);
+            ShowAppNotification($"下载失败：{effectiveMod.Title}。可在任务中心查看原因并重试。",
+                $"Download failed: {effectiveMod.Title}. See the task center for details and retry.", InfoBarSeverity.Error);
         }
         finally
         {
-            if (string.Equals(_foregroundDownloadTaskId, downloadTask.Id, StringComparison.Ordinal))
+            if (!_onlineWindowClosed && string.Equals(_foregroundDownloadTaskId, downloadTask.Id, StringComparison.Ordinal))
             {
                 _foregroundDownloadTaskId = null;
                 SetOnlineDownloadProgress(false, 0, string.Empty, string.Empty);
             }
-            SetOnlineInstallBusy(false);
-            try { RefreshOnlinePaneV2(); }
+            if (!_onlineWindowClosed && !_downloadTasks.Any(task => DownloadProgressPolicy.IsActive(task.State)))
+            {
+                _foregroundDownloadTaskId = null;
+                SetOnlineDownloadProgress(false, 0, string.Empty, string.Empty);
+            }
+            if (installBusy && !_onlineWindowClosed) SetOnlineInstallBusy(false);
+            try { if (!_onlineWindowClosed) RefreshOnlinePaneV2(); }
             catch (Exception refreshException) { LogApplicationIssue("Refresh online task UI", refreshException); }
         }
     }
@@ -8964,6 +9059,9 @@ public sealed partial class MainWindow : Window
 
     private void ResetOnlineRepositoryContext()
     {
+        _activeBrowseSessionKey = null;
+        _pendingBrowsePosition = null;
+        ++_browseRestoreRevision;
         CancelOnlineModListRequest();
         InvalidateOnlineDetailRequest();
         _onlineDownloadEnrichmentVersion++;
@@ -8972,6 +9070,8 @@ public sealed partial class MainWindow : Window
         _onlineTotalPages = 1;
         _onlineCharacterFilter = string.Empty;
         _onlineKnownCharacters.Clear();
+        _onlineAuthorId = 0;
+        _onlineAuthorName = string.Empty;
         _lastLoadedOnlineConfigKey = null;
         _onlineMods.Clear();
         _activeOnlineDetailMod = null;
@@ -9121,13 +9221,7 @@ public sealed partial class MainWindow : Window
 
         SaveSelectedRepositoryFromInputs();
         _selectedRepositoryId = key == "all-repositories" ? null : key;
-        _onlineCurrentPage = 1;
-        _onlineTotalCount = 0;
-        _onlineTotalPages = 1;
-        _onlineCharacterFilter = string.Empty;
-        _onlineKnownCharacters.Clear();
-        _lastLoadedOnlineConfigKey = null;
-        _onlineMods.Clear();
+        ResetOnlineRepositoryContext();
         ApplyShellState(refreshRepository: _currentPrimarySection == PrimarySection.Repository);
     }
 
@@ -9584,7 +9678,7 @@ public sealed partial class MainWindow : Window
         ToolTipService.SetToolTip(RefreshOnlineButton, L("刷新在线 Mod 列表", "Refresh online mod list"));
         ToolTipService.SetToolTip(OnlinePrevPageButton, null);
         ToolTipService.SetToolTip(OnlineNextPageButton, null);
-        ToolTipService.SetToolTip(OnlineSearchTextBox, L("搜索角色名或 Mod 名称", "Search character or mod name"));
+        ToolTipService.SetToolTip(OnlineSearchTextBox, L("搜索当前页的角色、Mod 或作者；author:作者名 仅搜索作者", "Search this page by character, mod or author; author:name searches authors only"));
         ToolTipService.SetToolTip(OnlineSortComboBox, L("切换当前在线列表的排序方式", "Change the sort order for the current online list"));
         ToolTipService.SetToolTip(PreviewImage, L("点击查看大图", "Click to view full size"));
         ToolTipService.SetToolTip(OnlineDetailHeroImage, L("点击查看大图", "Click to view full size"));
@@ -9598,7 +9692,7 @@ public sealed partial class MainWindow : Window
         AutomationProperties.SetName(RefreshOnlineButton, L("刷新在线 Mod 列表", "Refresh online mod list"));
         AutomationProperties.SetName(OnlinePrevPageButton, L("上一页", "Previous page"));
         AutomationProperties.SetName(OnlineNextPageButton, L("下一页", "Next page"));
-        AutomationProperties.SetName(OnlineSearchTextBox, L("搜索角色名或 Mod 名称", "Search character or mod name"));
+        AutomationProperties.SetName(OnlineSearchTextBox, L("搜索当前页的角色、Mod 或作者", "Search this page by character, mod or author"));
         AutomationProperties.SetName(OnlineSortComboBox, L("在线列表排序", "Online list sort"));
         AutomationProperties.SetName(PreviewImage, L("打开 Mod 预览大图", "Open full-size mod preview"));
         AutomationProperties.SetName(OnlineDetailHeroImage, L("打开在线 Mod 大图", "Open full-size online mod image"));
@@ -10197,7 +10291,11 @@ public sealed partial class MainWindow : Window
                 return;
             }
 
+            var tagLibrary = SelectedLocalLibrary();
+            string oldRoleRelative = WorkspaceIdentity.Relative(GetSelectedRepository()!.SourcePath, item.Path);
             Directory.Move(item.Path, newPath);
+            tagLibrary?.RenameCharacter(oldRoleRelative, WorkspaceIdentity.Relative(GetSelectedRepository()!.SourcePath, newPath));
+            SaveShellConfig();
             await RefreshListsAsync();
             SelectFirstLevelByPath(newPath);
             StatusTextBlock.Text = L($"已重命名第一层文件夹为：{trimmed}", $"Renamed first-level folder to: {trimmed}");
@@ -10274,6 +10372,9 @@ public sealed partial class MainWindow : Window
         menu.Items.Add(openItem);
         menu.Items.Add(new MenuFlyoutSeparator());
 
+        var tagsItem = new MenuFlyoutItem { Text = L("编辑标签…", "Edit tags…") };
+        tagsItem.Click += async (_, _) => await EditLocalTagsAsync(item);
+        menu.Items.Add(tagsItem);
         var deleteItem = new MenuFlyoutItem
         {
             Text = L("删除 Mod...", "Delete mod..."),
@@ -10520,6 +10621,7 @@ public sealed partial class MainWindow : Window
 
     private async Task CloseOnlineDetailPaneAsync()
     {
+        if (_onlineWindowClosed) return;
         // Close takes effect before the animation awaits, not 165ms later.
         InvalidateOnlineDetailRequest();
         _activeOnlineDetailMod = null;
@@ -10545,7 +10647,7 @@ public sealed partial class MainWindow : Window
             await Task.Delay(165);
         }
 
-        if (animationVersion != _onlineDetailAnimationVersion)
+        if (_onlineWindowClosed || animationVersion != _onlineDetailAnimationVersion)
         {
             return;
         }
@@ -10871,7 +10973,7 @@ public sealed partial class MainWindow : Window
     {
         if (!AppSelfUpdateEnabled)
         {
-            await OpenExternalUrlAsync(ApplicationReleasePolicy.ReleasePageUrl, L("打开测试版发布页失败", "Failed to open the beta release page"));
+            await OpenExternalUrlAsync(ApplicationReleasePolicy.ReleasePageUrl, L("打开公开发布页失败", "Failed to open the public release page"));
             return;
         }
         DetectLocalUpdatePackage();
@@ -10918,6 +11020,9 @@ public sealed partial class MainWindow : Window
         await RefreshInstallBackupListAsync();
 
         await OfferEndfieldBridgeAfterUpgradeAsync();
+        if (_restoredInterruptedDownloads > 0)
+            ShowAppNotification($"已恢复 {_restoredInterruptedDownloads} 个中断任务，请到更新页检查后手动重试。", $"Restored {_restoredInterruptedDownloads} interrupted tasks. Review them in Updates and retry manually.");
+        await NotifyInterruptedImportsAsync();
 
         if (_localUpdatePackageVersion is not null && !_hasPromptedForLocalUpdate)
         {
@@ -10960,11 +11065,21 @@ public sealed partial class MainWindow : Window
 
     private void OnWindowClosed(object sender, WindowEventArgs args)
     {
+        CaptureOnlineBrowseSession();
+        _browseSaveTimer?.Stop();
+        ++_browseRestoreRevision;
+        UiCrashDiagnostics.RecordAction("Window closed", width: RootGrid.ActualWidth, height: RootGrid.ActualHeight, closed: true);
+        _onlineWindowClosed = true;
+        ++_onlineDetailAnimationVersion;
+        PersistDownloadTasks();
         _bridgeDownloadCancellation?.Cancel();
         _bundleOperationCancellation?.Cancel();
+        _existingModImportCancellation?.Cancel();
         _onlineWindowClosed = true;
         InvalidateOnlineDetailRequest();
         _onlineDownloadActions.CancelPreparation();
+        foreach (DownloadTaskItem task in _downloadTasks.Where(task => DownloadProgressPolicy.IsActive(task.State)))
+            if (task.Session?.CanCancel != false) task.Cancellation.Cancel();
         ++_folderRefreshGeneration;
         _folderRefreshCancellation?.Cancel();
         CancelOnlineModListRequest();
@@ -11856,7 +11971,9 @@ public sealed partial class MainWindow : Window
                             Title = DecodeValue(parts[3]),
                             ProfileUrl = DecodeValue(parts[4]),
                             PreviewUrl = DecodeValue(parts[5]),
-                            LastKnownUpdatedAt = TryParseDateTimeOffset(DecodeValue(parts[6]))
+                            LastKnownUpdatedAt = TryParseDateTimeOffset(DecodeValue(parts[6])),
+                            DownloadFileId = parts.Length > 7 ? DecodeValue(parts[7]) : string.Empty,
+                            DownloadFileName = parts.Length > 8 ? DecodeValue(parts[8]) : string.Empty
                         };
                     }
                 }
@@ -11932,7 +12049,8 @@ public sealed partial class MainWindow : Window
                     + EncodeValue(origin.Title) + "\t"
                     + EncodeValue(origin.ProfileUrl) + "\t"
                     + EncodeValue(origin.PreviewUrl ?? string.Empty) + "\t"
-                    + EncodeValue(origin.LastKnownUpdatedAt?.ToString("O") ?? string.Empty));
+                    + EncodeValue(origin.LastKnownUpdatedAt?.ToString("O") ?? string.Empty) + "\t"
+                    + EncodeValue(origin.DownloadFileId) + "\t" + EncodeValue(origin.DownloadFileName));
             }
 
             WriteConfigurationTextWithBackup(_configPath, string.Join(Environment.NewLine, lines) + Environment.NewLine);
@@ -14102,6 +14220,7 @@ public sealed class GameBananaDownloadMetricCacheEntry
 
 public sealed class OnlineModCard
 {
+    public int AuthorId { get; set; }
     public int ItemId { get; set; }
 
     public string Title { get; set; } = string.Empty;
@@ -14133,6 +14252,7 @@ public sealed class OnlineModCard
     public string? DownloadUrl { get; set; }
 
     public string DownloadFileName { get; set; } = string.Empty;
+    public string DownloadFileId { get; set; } = string.Empty;
 
     public List<OnlineDownloadCandidate> DownloadFiles { get; set; } = [];
 
@@ -14158,6 +14278,8 @@ public sealed class OnlineModDetails
 
 public sealed class TrackedModOrigin
 {
+    public string DownloadFileId { get; set; } = string.Empty;
+    public string DownloadFileName { get; set; } = string.Empty;
     public string Path { get; set; } = string.Empty;
 
     public string SourceSite { get; set; } = string.Empty;
@@ -14268,6 +14390,8 @@ public sealed class OnlineCategoryPageCacheEntry
 
 public sealed class BetaShellConfig
 {
+    public Dictionary<string, LocalLibraryState>? LocalLibraries { get; set; }
+    public OnlineWorkspacePreferences? OnlinePreferences { get; set; }
     public int EndfieldBridgeOfferRevision { get; set; }
 
     public string RepositoryWorkspaceView { get; set; } = "list";
@@ -14389,8 +14513,13 @@ public sealed class ModInstallBackupEntry
 
 public sealed class DownloadTaskItem
 {
+    public bool RestoredFromJournal { get; set; }
+    public bool Interrupted { get; set; }
+    public OnlineDownloadRetryRequest? RetryRequest { get; set; }
+    public bool RetryInProgress { get; set; }
+    public string SourceIdentity { get; set; } = string.Empty;
     public OnlineDownloadSession? Session { get; set; }
-    public string Id { get; } = Guid.NewGuid().ToString("N");
+    public string Id { get; init; } = Guid.NewGuid().ToString("N");
 
     public string Title { get; set; } = string.Empty;
 
