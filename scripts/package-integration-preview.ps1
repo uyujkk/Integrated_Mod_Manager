@@ -69,7 +69,7 @@ Copy-Item -LiteralPath (Join-Path $taskRoot 'LICENSE') -Destination $taskApp
 Copy-Item -LiteralPath (Join-Path $taskRoot '开始使用.md') -Destination $taskApp
 
 # Ship user documentation and public release history, without following source-code links.
-foreach ($folder in @('docs\guides','docs\releases','docs\assets')) {
+foreach ($folder in @('docs\guides','docs\releases','docs\assets','docs\verification')) {
     $sourceRoot = Join-Path $taskRoot $folder
     foreach ($file in Get-ChildItem -LiteralPath $sourceRoot -Recurse -File) {
         if ($file.Extension -notin @('.md','.png','.jpg','.jpeg','.svg','.gif','.webp')) { continue }
