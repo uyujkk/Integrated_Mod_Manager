@@ -24,6 +24,7 @@ public sealed record GameBananaModMetadata
     public int CategoryId { get; init; }
     public string RootCategoryName { get; init; } = string.Empty;
     public string Author { get; init; } = string.Empty;
+    public int AuthorId { get; init; }
     public int Likes { get; init; }
     public int Views { get; init; }
     public int Downloads { get; init; }
@@ -84,7 +85,7 @@ public static class GameBananaMetadataParser
             ItemId = itemId, Title = Text(data, "name") ?? $"Mod {itemId}",
             CharacterName = Text(data, "Category().name") ?? string.Empty,
             CategoryId = Count(data, "catid"), RootCategoryName = Text(data, "RootCategory().name") ?? string.Empty,
-            Author = Text(data, "Owner().name") ?? string.Empty, Likes = Count(data, "likes"), Views = Count(data, "views"),
+            Author = Text(data, "Owner().name") ?? string.Empty, AuthorId = Count(data, "userid"), Likes = Count(data, "likes"), Views = Count(data, "views"),
             Downloads = downloads > 0 ? downloads : (int)Math.Min(int.MaxValue, fileDownloads),
             UpdatedEpoch = Number(data, "mdate"), PreviewUrl = WebUrl(Text(data, "Preview().sSubFeedImageUrl()")),
             ProfileUrl = WebUrl(Text(data, "Url().sProfileUrl()")) ?? $"https://gamebanana.com/mods/{itemId}",

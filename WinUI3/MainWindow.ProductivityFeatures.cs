@@ -469,7 +469,7 @@ public sealed partial class MainWindow
         if (!AppSelfUpdateEnabled)
         {
             _checkAppUpdatesOnStartup = false;
-            StartupUpdateDescriptionTextBlock.Text = L("4.0-beta 不接入软件自动更新，请从测试版发布页手动下载。", "4.0-beta is not connected to app updates. Download manually from its release page.");
+            StartupUpdateDescriptionTextBlock.Text = L("4.2 开发预览版不检查或自动安装软件更新，请按随包说明使用独立整合包。", "This 4.2 development preview does not check for or automatically install app updates. Use the standalone package as described in the included guide.");
         }
         _isApplyingStartupUpdateSetting = true;
         StartupUpdateToggleSwitch.IsOn = _checkAppUpdatesOnStartup;
@@ -805,7 +805,12 @@ public sealed partial class MainWindow
 
     private IEnumerable<string> EnumerateDiagnosticLogs()
     {
-        string[] names = ["startup.log", "app-errors.log", "update-agent.log", "update.log"];
+        foreach (string name in new[] { "ui-action-context.json", "ui-action-context.json.previous" })
+        {
+            string actionPath = Path.Combine(AppContext.BaseDirectory, "diagnostics", name);
+            if (File.Exists(actionPath)) yield return actionPath;
+        }
+        string[] names = ["startup.log", "app-errors.log", "update-agent.log", "update.log", "ui-diagnostics.log"];
         foreach (string name in names)
         {
             string path = Path.Combine(AppContext.BaseDirectory, name);

@@ -7,7 +7,7 @@ public sealed class ApplicationReleasePolicyTests
     [Theory]
     [InlineData(false)]
     [InlineData(true)]
-    public void StableAppChecksRespectSavedConfiguration(bool requested)
+    public void StableReleaseHonorsSavedUpdatePreference(bool requested)
     {
         Assert.False(ApplicationReleasePolicy.IsPrerelease);
         Assert.True(ApplicationReleasePolicy.ApplicationSelfUpdateEnabled);
@@ -15,10 +15,10 @@ public sealed class ApplicationReleasePolicyTests
     }
 
     [Fact]
-    public void StableUsesReleaseChannelAndConsistentVersion()
+    public void StableReleaseUsesConsistentVersionAndPublicUpdateLink()
     {
-        Assert.Equal("v4.1.1", ApplicationReleasePolicy.VersionLabel);
-        Assert.Equal(new Version(4, 1, 1, 0), Version.Parse(ApplicationReleasePolicy.FileVersion));
+        Assert.Equal("v4.2.0", ApplicationReleasePolicy.VersionLabel);
+        Assert.Equal(new Version(4, 2, 0, 0), Version.Parse(ApplicationReleasePolicy.FileVersion));
         Assert.Equal("https://github.com/uyujkk/Integrated_Mod_Manager/releases/latest", ApplicationReleasePolicy.ReleasePageUrl);
     }
 }

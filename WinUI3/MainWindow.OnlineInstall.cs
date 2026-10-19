@@ -44,6 +44,7 @@ public sealed partial class MainWindow
             {
                 Path = extractFolder, SourceSite = DefaultOnlineSourceSite, ItemId = mod.ItemId,
                 Title = mod.Title, ProfileUrl = mod.ProfileUrl,
+                DownloadFileId = mod.DownloadFileId, DownloadFileName = mod.DownloadFileName,
                 PreviewUrl = string.IsNullOrWhiteSpace(previewUrl) ? mod.PreviewUrl : previewUrl,
                 LastKnownUpdatedAt = mod.UpdatedAt
             },

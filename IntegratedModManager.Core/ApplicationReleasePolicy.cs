@@ -1,10 +1,10 @@
 namespace IntegratedModManager.Core;
 
-/// <summary>The stable channel; application checks remain controlled by the user's saved preferences.</summary>
+/// <summary>Stable release channel; application update checks retain the user's saved preference.</summary>
 public static class ApplicationReleasePolicy
 {
-    public const string VersionLabel = "v4.1.1";
-    public const string FileVersion = "4.1.1.0";
+    public const string VersionLabel = "v4.2.0";
+    public const string FileVersion = "4.2.0.0";
     public const string ReleasePageUrl = "https://github.com/uyujkk/Integrated_Mod_Manager/releases/latest";
     public static bool IsPrerelease => false;
     public static bool ApplicationSelfUpdateEnabled => !IsPrerelease;

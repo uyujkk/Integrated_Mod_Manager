@@ -10,6 +10,7 @@
   <ItemGroup>
     <ProjectReference Include="..\IntegratedModManager.Core\IntegratedModManager.Core.csproj" />
     <Compile Include="..\WinUI3\OnlinePageStateAdapter.cs" Link="WindowAdapters\OnlinePageStateAdapter.cs" />
+    <Compile Include="..\WinUI3\OnlineBrowseStateAdapter.cs" Link="WindowAdapters\OnlineBrowseStateAdapter.cs" />
     <Compile Include="..\WinUI3\BetaLocalization.cs" Link="WindowAdapters\BetaLocalization.cs" />
     <Compile Include="..\WinUI3\OnlineImageLoadAdapter.cs" Link="WindowAdapters\OnlineImageLoadAdapter.cs" />
   </ItemGroup>

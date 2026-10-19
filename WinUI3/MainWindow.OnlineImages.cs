@@ -5,9 +5,11 @@ namespace ModFolderCopier.WinUI;
 
 public sealed partial class MainWindow
 {
+    private readonly OnlineImageLoadCoordinator _onlineImageLoads = new();
+
     private Task<BitmapImage?> LoadOnlineBitmapAsync(
         string imageUrl, CancellationToken cancellationToken = default, int decodePixelWidth = 0)
-        => OnlineImageLoadAdapter.LoadAsync(imageUrl,
+        => _onlineImageLoads.RunAsync(imageUrl, () => OnlineImageLoadAdapter.LoadAsync(imageUrl,
             (url, refresh, token) => GetCachedOnlineImageUriAsync(url, token, refresh),
             async (source, token) =>
             {
@@ -18,7 +20,7 @@ public sealed partial class MainWindow
                 token.ThrowIfCancellationRequested();
                 return bitmap;
             },
-            exception => LogApplicationIssue("Online image decode", exception), cancellationToken);
+            exception => LogApplicationIssue("Online image decode", exception), cancellationToken), cancellationToken);
 
     private static async Task<BitmapImage> LoadLocalBitmapAsync(string path, int decodePixelWidth = 0)
     {

@@ -900,6 +900,7 @@
                                             SizeChanged="OnOnlineResultsHostSizeChanged">
                                             <Grid.RowDefinitions>
                                                 <RowDefinition Height="40" />
+                                                <RowDefinition Height="Auto" />
                                                 <RowDefinition Height="34" />
                                                 <RowDefinition Height="*" />
                                             </Grid.RowDefinitions>
@@ -912,7 +913,7 @@
                                                     x:Name="OnlineSearchTextBox"
                                                     MinHeight="40"
                                                     Padding="14,8"
-                                                    PlaceholderText="Search character or mod name"
+                                                    PlaceholderText="Search this page: character, mod or author"
                                                     TextChanged="OnOnlineSearchTextChanged" />
                                                 <ComboBox
                                                     x:Name="OnlineCharacterComboBox"
@@ -928,6 +929,19 @@
                                                     SelectionChanged="OnOnlineSortSelectionChanged" />
                                             </Grid>
                                             <Grid Grid.Row="1" ColumnSpacing="8" Canvas.ZIndex="1">
+                                                <Grid.ColumnDefinitions>
+                                                    <ColumnDefinition Width="*" />
+                                                    <ColumnDefinition Width="Auto" />
+                                                </Grid.ColumnDefinitions>
+                                                <TextBlock x:Name="OnlineFilterSummaryTextBlock" VerticalAlignment="Center" TextTrimming="CharacterEllipsis" Style="{StaticResource CaptionTextStyle}" />
+                                                <StackPanel Grid.Column="1" Orientation="Horizontal" Spacing="6">
+                                                    <Button x:Name="OnlineWorkFilterButton" MinHeight="28" Padding="8,2" Click="OnOnlineWorkFilterClicked" Style="{StaticResource SecondaryButtonStyle}" />
+                                                    <Button x:Name="ClearOnlineFiltersButton" MinHeight="28" Padding="8,2" Click="OnClearOnlineFiltersClicked" Style="{StaticResource SecondaryButtonStyle}" />
+                                                    <Button x:Name="OnlineSavedItemsButton" Width="30" Height="28" Padding="0" Click="OnOnlineSavedItemsClicked" Style="{StaticResource SecondaryButtonStyle}"><FontIcon FontSize="14" Glyph="&#xE734;" /></Button>
+                                                    <Button x:Name="OnlineDownloadOptionsButton" Width="30" Height="28" Padding="0" Click="OnOnlineDownloadOptionsClicked" Style="{StaticResource SecondaryButtonStyle}"><FontIcon FontSize="14" Glyph="&#xE713;" /></Button>
+                                                </StackPanel>
+                                            </Grid>
+                                            <Grid Grid.Row="2" ColumnSpacing="8" Canvas.ZIndex="1">
                                                 <Grid.ColumnDefinitions>
                                                     <ColumnDefinition Width="Auto" />
                                                     <ColumnDefinition Width="*" />
@@ -959,7 +973,7 @@
                                             </Grid>
                                             <ListView
                                                 x:Name="OnlineVirtualizedListView"
-                                                Grid.Row="2"
+                                                Grid.Row="3"
                                                 HorizontalContentAlignment="Stretch"
                                                 MinHeight="0"
                                                 Canvas.ZIndex="0"
@@ -979,6 +993,7 @@
                                                     <DataTemplate>
                                                         <ContentControl
                                                             HorizontalContentAlignment="Stretch"
+                                                            Tag="OnlineListCardPresenter"
                                                             DataContextChanged="OnOnlineListCardPresenterDataContextChanged" />
                                                     </DataTemplate>
                                                 </ListView.ItemTemplate>
@@ -990,7 +1005,7 @@
                                             </ListView>
                                             <GridView
                                                 x:Name="OnlineVirtualizedGridView"
-                                                Grid.Row="2"
+                                                Grid.Row="3"
                                                 HorizontalContentAlignment="Stretch"
                                                 MinHeight="0"
                                                 Canvas.ZIndex="0"
@@ -1013,6 +1028,7 @@
                                                         <ContentControl
                                                             HorizontalContentAlignment="Stretch"
                                                             VerticalContentAlignment="Stretch"
+                                                            Tag="OnlineGridCardPresenter"
                                                             DataContextChanged="OnOnlineGridCardPresenterDataContextChanged" />
                                                     </DataTemplate>
                                                 </GridView.ItemTemplate>
@@ -1024,7 +1040,7 @@
                                             </GridView>
                                             <ContentControl
                                                 x:Name="OnlineEmptyResultsContentControl"
-                                                Grid.Row="2"
+                                                Grid.Row="3"
                                                 HorizontalContentAlignment="Stretch"
                                                 VerticalContentAlignment="Top"
                                                 Margin="0,0,12,0"

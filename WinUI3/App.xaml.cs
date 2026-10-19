@@ -8,8 +8,10 @@ public partial class App : Application
 
     public App()
     {
+        UiCrashDiagnostics.RecordAction("Application starting");
         UnhandledException += (_, args) =>
         {
+            UiCrashDiagnostics.RecordAction("Unhandled UI exception");
             // Keep local diagnostics without suppressing an unrecoverable UI failure.
             try
             {
@@ -21,6 +23,13 @@ public partial class App : Application
             catch { /* Diagnostics must not replace the original failure. */ }
         };
         InitializeComponent();
+        if (UiCrashDiagnostics.Enabled)
+        {
+            DebugSettings.LayoutCycleTracingLevel = LayoutCycleTracingLevel.High;
+            UiCrashDiagnostics.Write("Diagnostics enabled", "LayoutCycleTracingLevel=High");
+            AppDomain.CurrentDomain.UnhandledException += (_, args) =>
+                UiCrashDiagnostics.Write("Unhandled managed exception", args.ExceptionObject.ToString() ?? string.Empty);
+        }
     }
 
     protected override void OnLaunched(LaunchActivatedEventArgs args)
