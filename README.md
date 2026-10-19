@@ -1,4 +1,4 @@
-> This checkout is the **4.2.0-preview.3 local integration preview**. See the [integration notes](docs/releases/v4.2.0-preview.3.md) for scope and unresolved issues. The 4.1.1 base documentation is retained below.
+> **v4.2.0 stable release.** See the [release notes](docs/releases/v4.2.0.md) for new features, upgrade guidance, and known issues.
 
 <div align="center">
   <img src="./WinUI3/Assets/AppIcon.png" width="96" alt="Integrated Mod Manager icon">
@@ -25,11 +25,11 @@
 
 ## Overview
 
-**Current stable version: [v4.1.1](https://github.com/uyujkk/Integrated_Mod_Manager/releases/tag/v4.1.1).** Adds an optional EndfieldBridge download and per-repository launch choice. Existing combination presets and portable bundles remain supported. See the [bridge and risk guide](./docs/guides/Endfield-Bridge.md) and [preset guide](./docs/guides/Combination-Presets.en.md).
+**Current stable version: [v4.2.0](https://github.com/uyujkk/Integrated_Mod_Manager/releases/tag/v4.2.0).** Preserves browsing position during downloads and adds author tools, saved download lists, per-repository browsing sessions, local tags, and saved filters. Existing combination presets and portable bundles remain supported. See the [bridge and risk guide](./docs/guides/Endfield-Bridge.md) and [preset guide](./docs/guides/Combination-Presets.en.md).
 
 Integrated Mod Manager organizes different games or mod environments into independent repositories. It copies or removes complete mod folders between a local library and the target directory read by the game, while keeping preview images, source links, shortcut notes, online downloads, update records, profiles, and installation backups in one application.
 
-The application, launcher, and updater use version **4.1.1** (`4.1.1.0`). The tool is maintained by `uyujkk`. The Bandizip extraction fallback was contributed by [CaramelizedCUDA](https://github.com/CaramelizedCUDA). The earlier [4.0-beta](https://github.com/uyujkk/Integrated_Mod_Manager/releases/tag/v4.0-beta) remains archived separately.
+The application, launcher, and updater use version **4.2.0** (`4.2.0.0`). The tool is maintained by `uyujkk`. The Bandizip extraction fallback was contributed by [CaramelizedCUDA](https://github.com/CaramelizedCUDA). The earlier [4.0-beta](https://github.com/uyujkk/Integrated_Mod_Manager/releases/tag/v4.0-beta) remains archived separately.
 
 ## Interface Preview
 
@@ -51,6 +51,16 @@ When the full overview cannot fit, Settings switches to sections. Language, them
 ![Section-based Settings in a non-maximized window](./docs/assets/screenshots/settings-sections-v4.1.jpg)
 
 </details>
+
+## What's New in 4.2
+
+- Download progress updates in place; browsing sessions are saved per repository.
+- Search and manage saved or recent authors, and batch download saved Mods after reviewing files and destinations.
+- Apply local tags in batches and save library filters.
+- Recover interrupted download/import tasks and export local diagnostics.
+- Stable application update checks honor your saved preference. The native detail-page crash remains an unresolved known issue.
+
+[Release notes and known issues](./docs/releases/v4.2.0.md) · [Verification scope](./docs/verification/v4.2.0.md)
 
 ## What's New in 4.1.1
 
@@ -198,7 +208,7 @@ Run the complete test, coverage, WinUI x64 build, and package verification flow:
 powershell -NoProfile -ExecutionPolicy Bypass -File .\scripts\test-all.ps1
 ```
 
-GitHub Actions runs the same three-suite verification flow on pushes to `main`, pull requests, and manual dispatches. Test dependencies are centralized without removing safety cases. See the [Testing Guide](./docs/development/TESTING.md) and [4.1.1 verification record](./docs/verification/v4.1.1.md) for current results and testing boundaries.
+GitHub Actions runs the same three-suite verification flow on pushes to `main`, pull requests, and manual dispatches. Test dependencies are centralized without removing safety cases. See the [Testing Guide](./docs/development/TESTING.md) and [4.1.1 verification record](./docs/verification/v4.2.0.md) for current results and testing boundaries.
 
 ## Data and Security
 

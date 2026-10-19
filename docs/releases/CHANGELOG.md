@@ -6,6 +6,14 @@
 
 This document records version changes in Integrated Mod Manager. Unpublished versions are marked separately.
 
+## v4.2.0 — 2026-10-18
+
+- 下载不再重置浏览位置，按仓库保存和恢复浏览进度。
+- 新增作者管理、稍后下载批量清单、本地批量标签与保存筛选。
+- 完善并发下载、取消重试、旧库导入与中断恢复、缓存与本地诊断。
+- 统一正式版版本号并恢复遵循用户偏好的应用更新检查。
+- 详情页原生闪退根因仍未确认；完整升级说明和限制见 [v4.2.0](v4.2.0.md)。
+
 ## v4.1.1 - 可选启动桥接 / Optional Launch Bridge (2026-10-15)
 
 - 新增可选 EndfieldBridge 下载引导与仓库级启动选择；默认不勾选风险确认，原有加载器路径保留。
