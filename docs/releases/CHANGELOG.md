@@ -6,6 +6,12 @@
 
 This document records version changes in Integrated Mod Manager. Unpublished versions are marked separately.
 
+## v4.3.0 — 2026-10-21（正式版 / Stable）
+
+内置终末地启动、INI 冲突提示、联接和压缩包导入修复，以及单实例与界面异常保护；恢复正式版软件更新检查。发布包整体按 AGPL-3.0-only 分发。完整双语更新及已知问题见 [v4.3.0](v4.3.0.md)。
+
+Integrated Endfield launch, INI conflict warnings, link and archive-import fixes, single-instance handling and UI exception reporting; stable app-update checks restored. Packages are AGPL-3.0-only as a whole. See [v4.3.0](v4.3.0.md).
+
 ## v4.3.0-preview.1 — 2026-10-21（预发布 / Prerelease）
 
 开发预览版，关闭软件自身自动更新；发布包整体按 AGPL-3.0-only 分发。详见 [v4.3.0-preview.1](v4.3.0-preview.1.md)。Development preview with application self-update off; the package as a whole is AGPL-3.0-only.

@@ -1,5 +1,4 @@
-> **v4.2.0 正式版。** 新增功能、升级方式与已知问题见 [4.2 发布说明](docs/releases/v4.2.0.md)。历史版本与说明继续保留。
-> **v4.3.0-preview.1 预发布版**新增内置终末地启动，发布包整体按 AGPL-3.0-only 分发，见 [预览说明](docs/releases/v4.3.0-preview.1.md)。
+> **v4.3.0 正式版。** 新增功能、升级方式与已知问题见 [4.3 发布说明](docs/releases/v4.3.0.md)。历史版本与说明继续保留。
 
 <div align="center">
   <img src="./WinUI3/Assets/AppIcon.png" width="96" alt="集成化 Mod 管理器图标">
@@ -26,11 +25,11 @@
 
 ## 项目简介
 
-**当前正式版：[v4.2.0](https://github.com/uyujkk/Integrated_Mod_Manager/releases/tag/v4.2.0)。**下载时保留浏览位置，新增作者管理、稍后下载批量清单、按仓库恢复浏览、本地标签与保存筛选；保留组合预设、组合包和可选桥接器。使用前请阅读[桥接器与账号风险说明](./docs/guides/Endfield-Bridge.md)及[组合预设指南](./docs/guides/Combination-Presets.zh-CN.md)。
+**当前正式版：[v4.3.0](https://github.com/uyujkk/Integrated_Mod_Manager/releases/tag/v4.3.0)。**新增内置终末地启动、INI 冲突提示、失效联接和压缩包导入修复、单实例与界面异常保护；保留浏览下载、旧库整理、组合预设和组合包功能。使用前请阅读[桥接器与账号风险说明](./docs/guides/Endfield-Bridge.md)及[组合预设指南](./docs/guides/Combination-Presets.zh-CN.md)。
 
 集成化 Mod 管理器以独立“仓库”管理不同游戏或不同 Mod 环境。它可以在本地仓库和游戏实际读取的目标目录之间复制或移除完整 Mod 文件夹，并集中管理预览图、来源链接、快捷键说明、在线下载、更新记录、配置方案和安装备份。
 
-主程序、启动器和更新器统一为 **4.2.0**（`4.2.0.0`）。工具维护者为 `uyujkk`，既有 Bandizip 备用解压功能由 [CaramelizedCUDA](https://github.com/CaramelizedCUDA) 贡献；此前的 [4.0-beta](https://github.com/uyujkk/Integrated_Mod_Manager/releases/tag/v4.0-beta) 继续独立保留。
+主程序、启动器和更新器统一为 **4.3.0**（`4.3.0.0`）。工具维护者为 `uyujkk`，既有 Bandizip 备用解压功能由 [CaramelizedCUDA](https://github.com/CaramelizedCUDA) 贡献；此前的 [4.0-beta](https://github.com/uyujkk/Integrated_Mod_Manager/releases/tag/v4.0-beta) 继续独立保留。
 
 ## 界面预览
 
@@ -61,7 +60,7 @@
 - 完善下载队列、旧库导入中断恢复及本地诊断。
 - 正式版更新检查遵循用户保存的开关；详情页原生闪退根因仍未确认。
 
-[4.2 发布说明与已知问题](./docs/releases/v4.2.0.md) · [验证范围](./docs/verification/v4.2.0.md)
+[4.3 发布说明与已知问题](./docs/releases/v4.3.0.md) · [验证范围](./docs/verification/v4.3.0.md)
 
 ## 4.1.1 更新
 
@@ -209,7 +208,7 @@ cmd /c build_winui.bat
 powershell -NoProfile -ExecutionPolicy Bypass -File .\scripts\test-all.ps1
 ```
 
-GitHub Actions 会在推送到 `main`、Pull Request 和手动触发时执行统一三组验证。测试依赖集中管理，未删除安全用例。当前结果及验证边界见[测试说明](./docs/development/TESTING.md)与[4.1.1 验证记录](./docs/verification/v4.2.0.md)。
+GitHub Actions 会在推送到 `main`、Pull Request 和手动触发时执行统一四组验证。测试依赖集中管理，未删除安全用例。当前结果及验证边界见[测试说明](./docs/development/TESTING.md)与[4.3.0 验证记录](./docs/verification/v4.3.0.md)。
 
 ## 数据与安全
 
@@ -221,6 +220,6 @@ GitHub Actions 会在推送到 `main`、Pull Request 和手动触发时执行统
 
 ## 许可证与声明
 
-源码文件以 [MIT License](./LICENSE) 发布，版权所有 `uyujkk`；内置终末地启动组件 [`IntegratedModManager.EndfieldLaunch/`](./IntegratedModManager.EndfieldLaunch/) 除外，它以 **AGPL-3.0-only** 授权（源自 EndfieldBridge、endfield-nolauncher 与 Better-Endfield，见其 [NOTICE](./IntegratedModManager.EndfieldLaunch/NOTICE.md)）。由于程序包含该组件，**自下一版本起，发布包整体按 AGPL-3.0-only 分发**；v4.2.0 及之前的版本仍为 MIT。详见 [LICENSING.md](./LICENSING.md)。第三方组件保留各自许可证；发布包中的 7-Zip 文件附带其许可证文本。
+源码文件以 [MIT License](./LICENSE) 发布，版权所有 `uyujkk`；内置终末地启动组件 [`IntegratedModManager.EndfieldLaunch/`](./IntegratedModManager.EndfieldLaunch/) 除外，它以 **AGPL-3.0-only** 授权（源自 EndfieldBridge、endfield-nolauncher 与 Better-Endfield，见其 [NOTICE](./IntegratedModManager.EndfieldLaunch/NOTICE.md)）。由于程序包含该组件，**自 v4.3.0 起，发布包整体按 AGPL-3.0-only 分发**；v4.2.0 及之前的版本仍为 MIT。详见 [LICENSING.md](./LICENSING.md)。第三方组件保留各自许可证；发布包中的 7-Zip 文件附带其许可证文本。
 
 本工具不包含游戏文件或 Mod 内容。游戏、角色、图片、Mod 和第三方服务的相关权利归各自权利人所有。
