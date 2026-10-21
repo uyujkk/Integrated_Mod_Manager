@@ -6,8 +6,12 @@ public partial class App : Application
 {
     private Window? _window;
 
+    // Read from the AppInstance.Activated callback, which runs off the UI thread.
+    internal static App? Instance { get; private set; }
+
     public App()
     {
+        Instance = this;
         UiCrashDiagnostics.RecordAction("Application starting");
         UnhandledException += (_, args) =>
         {
@@ -36,6 +40,15 @@ public partial class App : Application
     {
         _window = new MainWindow();
         _window.Activate();
+    }
+
+    // A second launch from the same install directory was redirected here.
+    internal void OnExternalActivation()
+    {
+        if (_window is MainWindow mainWindow)
+        {
+            mainWindow.DispatcherQueue.TryEnqueue(mainWindow.RestoreFromExternalActivation);
+        }
     }
 }
 

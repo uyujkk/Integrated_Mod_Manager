@@ -17,6 +17,8 @@
     <EnablePreviewMsixTooling>false</EnablePreviewMsixTooling>
     <LangVersion>latest</LangVersion>
     <ApplicationIcon>Assets\AppIcon.ico</ApplicationIcon>
+    <!-- Program.cs owns Main so a second launch can be redirected to the running instance. -->
+    <DefineConstants>$(DefineConstants);DISABLE_XAML_GENERATED_MAIN</DefineConstants>
   </PropertyGroup>
 
   <PropertyGroup Condition="'$(AppxMSBuildToolsPath)' == '' and Exists('$(MSBuildProgramFiles32)\Microsoft Visual Studio\2022\BuildTools\MSBuild\Microsoft\VisualStudio\v17.0\AppxPackage\Microsoft.Build.Packaging.Pri.Tasks.dll')">
