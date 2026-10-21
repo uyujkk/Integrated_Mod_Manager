@@ -48,25 +48,32 @@ public sealed partial class MainWindow
         AutomationProperties.SetName(link, hint);
         link.Click += async (_, _) =>
         {
-            string context = GetOnlineDetailContextKey();
-            link.IsEnabled = false;
             try
             {
-                if (mod.AuthorId <= 0 && mod.ItemId > 0)
-                {
-                    using var cancellation = new CancellationTokenSource(TimeSpan.FromSeconds(5));
-                    try { mod.AuthorId = (await _gameBananaMetadataService.GetModAsync(mod.ItemId, cancellation.Token)).AuthorId; }
-                    catch (Exception ex) when (ex is HttpRequestException or OperationCanceledException or TimeoutException or InvalidDataException or System.Text.Json.JsonException)
-                    { LogApplicationIssue("Resolve cached author identity", ex); }
-                }
-                if (!_onlineWindowClosed && context == GetOnlineDetailContextKey())
+                string context = GetOnlineDetailContextKey();
+                link.IsEnabled = false;
+                try
                 {
                     if (mod.AuthorId <= 0 && mod.ItemId > 0)
-                        ShowAppNotification("作者身份暂未获取，先筛选当前页。", "Author identity unavailable; filtering this page instead.");
-                    await BrowseOnlineAuthorAsync(mod.AuthorId, mod.Author);
+                    {
+                        using var cancellation = new CancellationTokenSource(TimeSpan.FromSeconds(5));
+                        try { mod.AuthorId = (await _gameBananaMetadataService.GetModAsync(mod.ItemId, cancellation.Token)).AuthorId; }
+                        catch (Exception ex) when (ex is HttpRequestException or OperationCanceledException or TimeoutException or InvalidDataException or System.Text.Json.JsonException)
+                        { LogApplicationIssue("Resolve cached author identity", ex); }
+                    }
+                    if (!_onlineWindowClosed && context == GetOnlineDetailContextKey())
+                    {
+                        if (mod.AuthorId <= 0 && mod.ItemId > 0)
+                            ShowAppNotification("作者身份暂未获取，先筛选当前页。", "Author identity unavailable; filtering this page instead.");
+                        await BrowseOnlineAuthorAsync(mod.AuthorId, mod.Author);
+                    }
                 }
+                finally { if (!_onlineWindowClosed) link.IsEnabled = true; }
             }
-            finally { if (!_onlineWindowClosed) link.IsEnabled = true; }
+            catch (Exception ex)
+            {
+                ReportUiActionFailure("link.Click", ex);
+            }
         };
         link.ContextFlyout = CreateOnlineCardMenu(mod);
         return link;

@@ -38,26 +38,33 @@ public sealed partial class MainWindow
 
     private async void OnClearOnlineFiltersClicked(object sender, RoutedEventArgs e)
     {
-        UiCrashDiagnostics.RecordAction("Clear online filters");
-        ResetOnlineBrowsePosition();
-        _onlineAuthorWorkFilter = 0;
-        bool reload = _onlineAuthorId > 0 || _onlineCharacterFilter.Length > 0;
-        _onlineAuthorId = 0;
-        _onlineAuthorName = string.Empty;
-        _onlineCharacterFilter = string.Empty;
-        _onlineCharacterStripSignature = null;
-        PopulateOnlineCharacterOptions();
-        _resettingOnlineFilters = true;
-        try { OnlineSearchTextBox.Text = string.Empty; _onlineSearchText = string.Empty; }
-        finally { _resettingOnlineFilters = false; }
-        if (reload)
+        try
         {
-            _onlineCurrentPage = 1;
-            _lastLoadedOnlineConfigKey = null;
-            _onlineMods.Clear();
-            await LoadOnlineModsAsync(forceReload: false);
+            UiCrashDiagnostics.RecordAction("Clear online filters");
+            ResetOnlineBrowsePosition();
+            _onlineAuthorWorkFilter = 0;
+            bool reload = _onlineAuthorId > 0 || _onlineCharacterFilter.Length > 0;
+            _onlineAuthorId = 0;
+            _onlineAuthorName = string.Empty;
+            _onlineCharacterFilter = string.Empty;
+            _onlineCharacterStripSignature = null;
+            PopulateOnlineCharacterOptions();
+            _resettingOnlineFilters = true;
+            try { OnlineSearchTextBox.Text = string.Empty; _onlineSearchText = string.Empty; }
+            finally { _resettingOnlineFilters = false; }
+            if (reload)
+            {
+                _onlineCurrentPage = 1;
+                _lastLoadedOnlineConfigKey = null;
+                _onlineMods.Clear();
+                await LoadOnlineModsAsync(forceReload: false);
+            }
+            else RefreshOnlinePaneV2();
         }
-        else RefreshOnlinePaneV2();
+        catch (Exception ex)
+        {
+            ReportUiActionFailure("OnClearOnlineFiltersClicked", ex);
+        }
     }
 
     private void RefreshOnlineFilterSummary(int matches, int loaded)
@@ -103,7 +110,7 @@ public sealed partial class MainWindow
         save.Click += (_, _) => ToggleSavedOnlineMod(mod);
         menu.Items.Add(save);
         var author = new MenuFlyoutItem { Text = L("查看作者作品（跨页）", "Browse author (all pages)"), IsEnabled = mod.AuthorId > 0 };
-        author.Click += async (_, _) => await BrowseOnlineAuthorAsync(mod.AuthorId, mod.Author);
+        author.Click += async (_, _) => await RunUiActionAsync("BrowseOnlineAuthorAsync", () => BrowseOnlineAuthorAsync(mod.AuthorId, mod.Author));
         menu.Items.Add(author);
         bool savedAuthor = _onlinePreferences.Authors.Any(item => item.Id == mod.AuthorId
             && item.CategoryId == GetEffectiveOnlineCategoryId(GetSelectedRepository()));

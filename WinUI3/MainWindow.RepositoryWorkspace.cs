@@ -675,16 +675,23 @@ public sealed partial class MainWindow
 
     private async void LoadRepositoryCoverV4(SecondLevelFolderItem mod)
     {
-        if (mod.CoverImageSource is not null || !_repositoryCoversLoading.Add(mod)) return;
         try
         {
-            string? path = FindPreviewImage(mod.Files);
-            if (path is null || !File.Exists(path) || new FileInfo(path).Length > MaxOnlinePreviewImageBytes) return;
-            BitmapImage bitmap = await LoadLocalBitmapAsync(path, decodePixelWidth: 420);
-            mod.CoverImageSource = bitmap;
+            if (mod.CoverImageSource is not null || !_repositoryCoversLoading.Add(mod)) return;
+            try
+            {
+                string? path = FindPreviewImage(mod.Files);
+                if (path is null || !File.Exists(path) || new FileInfo(path).Length > MaxOnlinePreviewImageBytes) return;
+                BitmapImage bitmap = await LoadLocalBitmapAsync(path, decodePixelWidth: 420);
+                mod.CoverImageSource = bitmap;
+            }
+            catch (Exception exception) { LogApplicationIssue("Repository cover", exception); }
+            finally { _repositoryCoversLoading.Remove(mod); }
         }
-        catch (Exception exception) { LogApplicationIssue("Repository cover", exception); }
-        finally { _repositoryCoversLoading.Remove(mod); }
+        catch (Exception ex)
+        {
+            ReportUiActionFailure("LoadRepositoryCoverV4", ex);
+        }
     }
 
     private void UpdateRepositorySelectedMetadataV4()

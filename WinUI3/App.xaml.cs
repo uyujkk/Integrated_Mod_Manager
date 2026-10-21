@@ -26,6 +26,13 @@ public partial class App : Application
             }
             catch { /* Diagnostics must not replace the original failure. */ }
         };
+        // Fire-and-forget tasks ("_ = SomethingAsync()") lose their exceptions silently;
+        // record them so failures that never reach a handler still leave evidence.
+        TaskScheduler.UnobservedTaskException += (_, args) =>
+        {
+            MainWindow.LogApplicationIssueWithStack("Unobserved task exception", args.Exception);
+            args.SetObserved();
+        };
         InitializeComponent();
         if (UiCrashDiagnostics.Enabled)
         {

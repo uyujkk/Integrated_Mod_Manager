@@ -68,15 +68,17 @@ public sealed partial class MainWindow
     private static void LogPersistentDataStoreIssue(string operation, Exception exception)
         => LogApplicationIssue("SQLite " + operation, exception);
 
-    private static void LogApplicationIssue(string operation, Exception exception)
+    internal static void LogApplicationIssue(string operation, Exception exception)
     {
         try
         {
             string summary = SanitizeDiagnosticText(exception.Message);
             lock (ApplicationErrorLogSync)
             {
+                string logPath = Path.Combine(AppContext.BaseDirectory, "app-errors.log");
+                LogFileRotation.RotateIfLarger(logPath);
                 File.AppendAllText(
-                    Path.Combine(AppContext.BaseDirectory, "app-errors.log"),
+                    logPath,
                     $"{DateTimeOffset.Now:O} {operation}: {exception.GetType().Name} (0x{exception.HResult:X8}) {summary}{Environment.NewLine}");
             }
         }
@@ -502,20 +504,34 @@ public sealed partial class MainWindow
 
     private async void OnBackupLimitValueChanged(NumberBox sender, NumberBoxValueChangedEventArgs args)
     {
-        if (_isApplyingBackupLimitSetting || double.IsNaN(args.NewValue))
+        try
         {
-            return;
-        }
+            if (_isApplyingBackupLimitSetting || double.IsNaN(args.NewValue))
+            {
+                return;
+            }
 
-        _installBackupLimitGb = Math.Clamp(args.NewValue, 0.5, 100);
-        SaveShellConfig();
-        await Task.Run(() => PruneInstallTransactionsByStorageLimit(null));
-        await RefreshInstallBackupListAsync();
+            _installBackupLimitGb = Math.Clamp(args.NewValue, 0.5, 100);
+            SaveShellConfig();
+            await Task.Run(() => PruneInstallTransactionsByStorageLimit(null));
+            await RefreshInstallBackupListAsync();
+        }
+        catch (Exception ex)
+        {
+            ReportUiActionFailure("OnBackupLimitValueChanged", ex);
+        }
     }
 
     private async void OnRefreshBackupsClicked(object sender, RoutedEventArgs e)
     {
-        await RefreshInstallBackupListAsync();
+        try
+        {
+            await RefreshInstallBackupListAsync();
+        }
+        catch (Exception ex)
+        {
+            ReportUiActionFailure("OnRefreshBackupsClicked", ex);
+        }
     }
 
     private async Task RefreshInstallBackupListAsync()
@@ -621,31 +637,38 @@ public sealed partial class MainWindow
 
     private async void OnRestoreInstallBackupClicked(object sender, RoutedEventArgs e)
     {
-        if (sender is not Button { Tag: string backupPath } || !Directory.Exists(backupPath))
-        {
-            return;
-        }
-
-        if (!await ShowConfirmAsync(L("恢复此备份会替换对应 Mod 的当前文件。是否继续？", "Restoring this backup replaces the current files for the affected mods. Continue?"), L("恢复安装备份", "Restore Install Backup")))
-        {
-            return;
-        }
-
-        SetBusyState(true);
         try
         {
-            await RollbackInstallTransactionAsync(backupPath, clearLastTransaction: true);
-            await RefreshListsAsync();
-            await RefreshInstallBackupListAsync();
-            ShowAppNotification("备份已恢复。", "Backup restored.");
+            if (sender is not Button { Tag: string backupPath } || !Directory.Exists(backupPath))
+            {
+                return;
+            }
+
+            if (!await ShowConfirmAsync(L("恢复此备份会替换对应 Mod 的当前文件。是否继续？", "Restoring this backup replaces the current files for the affected mods. Continue?"), L("恢复安装备份", "Restore Install Backup")))
+            {
+                return;
+            }
+
+            SetBusyState(true);
+            try
+            {
+                await RollbackInstallTransactionAsync(backupPath, clearLastTransaction: true);
+                await RefreshListsAsync();
+                await RefreshInstallBackupListAsync();
+                ShowAppNotification("备份已恢复。", "Backup restored.");
+            }
+            catch (Exception ex)
+            {
+                await ShowMessageAsync(L("恢复备份失败：", "Failed to restore backup: ") + ex.Message, L("恢复失败", "Restore Failed"));
+            }
+            finally
+            {
+                SetBusyState(false);
+            }
         }
         catch (Exception ex)
         {
-            await ShowMessageAsync(L("恢复备份失败：", "Failed to restore backup: ") + ex.Message, L("恢复失败", "Restore Failed"));
-        }
-        finally
-        {
-            SetBusyState(false);
+            ReportUiActionFailure("OnRestoreInstallBackupClicked", ex);
         }
     }
 
@@ -713,27 +736,41 @@ public sealed partial class MainWindow
 
     private async void OnExportDiagnosticsClicked(object sender, RoutedEventArgs e)
     {
-        string path = await CreateDiagnosticReportAsync();
-        DiagnosticsStatusTextBlock.Text = L($"已导出：{Path.GetFileName(path)}", $"Exported: {Path.GetFileName(path)}");
-        Process.Start(new ProcessStartInfo { FileName = Path.GetDirectoryName(path)!, UseShellExecute = true });
+        try
+        {
+            string path = await CreateDiagnosticReportAsync();
+            DiagnosticsStatusTextBlock.Text = L($"已导出：{Path.GetFileName(path)}", $"Exported: {Path.GetFileName(path)}");
+            Process.Start(new ProcessStartInfo { FileName = Path.GetDirectoryName(path)!, UseShellExecute = true });
+        }
+        catch (Exception ex)
+        {
+            ReportUiActionFailure("OnExportDiagnosticsClicked", ex);
+        }
     }
 
     private async void OnSubmitDiagnosticsClicked(object sender, RoutedEventArgs e)
     {
-        string path = await CreateDiagnosticReportAsync();
-        bool confirmed = await ShowConfirmAsync(
-            L($"诊断报告已生成：{Path.GetFileName(path)}\n\n将打开 GitHub 新建 Issue 页面。请先检查内容，再自行附加此 ZIP 并提交。程序不会保存 GitHub 凭据。是否继续？",
-              $"Diagnostic report created: {Path.GetFileName(path)}\n\nGitHub's new issue page will open. Review the content, optionally attach this ZIP, and submit it yourself. The app does not store GitHub credentials. Continue?"),
-            L("提交错误报告", "Report an Issue"));
-        if (!confirmed)
+        try
         {
-            return;
-        }
+            string path = await CreateDiagnosticReportAsync();
+            bool confirmed = await ShowConfirmAsync(
+                L($"诊断报告已生成：{Path.GetFileName(path)}\n\n将打开 GitHub 新建 Issue 页面。请先检查内容，再自行附加此 ZIP 并提交。程序不会保存 GitHub 凭据。是否继续？",
+                  $"Diagnostic report created: {Path.GetFileName(path)}\n\nGitHub's new issue page will open. Review the content, optionally attach this ZIP, and submit it yourself. The app does not store GitHub credentials. Continue?"),
+                L("提交错误报告", "Report an Issue"));
+            if (!confirmed)
+            {
+                return;
+            }
 
-        string body = Uri.EscapeDataString($"App version: {AppVersion}\nOS: {Environment.OSVersion.VersionString}\nArchitecture: {RuntimeInformation.OSArchitecture}\n\nA sanitized diagnostic report was generated locally: {Path.GetFileName(path)}\nPlease attach it after reviewing the archive.");
-        string url = $"{GitHubRepositoryUrl}/issues/new?title={Uri.EscapeDataString("Bug report " + AppVersion)}&body={body}";
-        await Launcher.LaunchUriAsync(new Uri(url));
-        Process.Start(new ProcessStartInfo { FileName = Path.GetDirectoryName(path)!, UseShellExecute = true });
+            string body = Uri.EscapeDataString($"App version: {AppVersion}\nOS: {Environment.OSVersion.VersionString}\nArchitecture: {RuntimeInformation.OSArchitecture}\n\nA sanitized diagnostic report was generated locally: {Path.GetFileName(path)}\nPlease attach it after reviewing the archive.");
+            string url = $"{GitHubRepositoryUrl}/issues/new?title={Uri.EscapeDataString("Bug report " + AppVersion)}&body={body}";
+            await Launcher.LaunchUriAsync(new Uri(url));
+            Process.Start(new ProcessStartInfo { FileName = Path.GetDirectoryName(path)!, UseShellExecute = true });
+        }
+        catch (Exception ex)
+        {
+            ReportUiActionFailure("OnSubmitDiagnosticsClicked", ex);
+        }
     }
 
     private async Task<string> CreateDiagnosticReportAsync()

@@ -53,9 +53,16 @@ public sealed partial class MainWindow
 
     private async void OnBridgeOptionsClicked(object sender, RoutedEventArgs e)
     {
-        SaveSelectedRepositoryFromInputs();
-        if (GetSelectedRepository() is { } repository && CanUseEndfieldBridge(repository))
-            await ShowEndfieldBridgeOptionsAsync(repository, isUpgradeOffer: false);
+        try
+        {
+            SaveSelectedRepositoryFromInputs();
+            if (GetSelectedRepository() is { } repository && CanUseEndfieldBridge(repository))
+                await ShowEndfieldBridgeOptionsAsync(repository, isUpgradeOffer: false);
+        }
+        catch (Exception ex)
+        {
+            ReportUiActionFailure("OnBridgeOptionsClicked", ex);
+        }
     }
 
     private async Task ShowEndfieldBridgeOptionsAsync(WorkspaceRepository repository, bool isUpgradeOffer)
@@ -97,7 +104,7 @@ public sealed partial class MainWindow
             });
             var links = new StackPanel { Spacing = 6 };
             var release = new Button { Content = L("查看发布、风险和对应源码", "Release, risks and corresponding source") };
-            release.Click += async (_, _) => await OpenExternalUrlAsync(EndfieldBridgeIntegration.ReleaseUrl, L("打开页面失败", "Failed to open page"));
+            release.Click += async (_, _) => await RunUiActionAsync("OpenExternalUrlAsync", () => OpenExternalUrlAsync(EndfieldBridgeIntegration.ReleaseUrl, L("打开页面失败", "Failed to open page")));
             links.Children.Add(release);
             if (installed)
             {
