@@ -33,6 +33,8 @@
   <ItemGroup>
     <ProjectReference Include="..\IntegratedModManager.Core\IntegratedModManager.Core.csproj" />
     <ProjectReference Include="..\IntegratedModManager.Data\IntegratedModManager.Data.csproj" />
+    <!-- AGPL-3.0-only component: builds that include it are distributed under AGPL-3.0-only as a whole. -->
+    <ProjectReference Include="..\IntegratedModManager.EndfieldLaunch\IntegratedModManager.EndfieldLaunch.csproj" />
   </ItemGroup>
 
   <ItemGroup>

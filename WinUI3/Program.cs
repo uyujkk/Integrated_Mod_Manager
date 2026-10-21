@@ -1,5 +1,6 @@
 using System.Runtime.InteropServices;
 using IntegratedModManager.Core;
+using IntegratedModManager.EndfieldLaunch;
 using Microsoft.UI.Dispatching;
 using Microsoft.UI.Xaml;
 using Microsoft.Windows.AppLifecycle;
@@ -18,6 +19,13 @@ public static class Program
     [STAThread]
     private static int Main(string[] args)
     {
+        // Endfield launch requests run without any window, before XAML starts and without
+        // taking the single-instance key, so they never interfere with the open manager.
+        if (LaunchCommand.IsLaunchCommand(args))
+        {
+            return LaunchCommand.Run(args, EndfieldLaunchDataDirectory, Environment.ProcessPath ?? Path.Combine(AppContext.BaseDirectory, "ModFolderCopier.WinUI.exe"));
+        }
+
         XamlCheckProcessRequirements();
         WinRT.ComWrappersSupport.InitializeComWrappers();
 
@@ -34,6 +42,9 @@ public static class Program
         });
         return 0;
     }
+
+    // Restore metadata lives with the other recovery data the updater and packager preserve.
+    internal static string EndfieldLaunchDataDirectory => Path.Combine(AppContext.BaseDirectory, "backups", "endfield-launch");
 
     private static bool TryRedirectToRunningInstance()
     {
