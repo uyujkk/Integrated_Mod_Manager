@@ -125,16 +125,28 @@ if (![IO.Path]::GetExtension($PackageName).Equals('.zip', [StringComparison]::Or
 }
 
 $packagePath = Join-Path $output $PackageName
+Add-Type -AssemblyName System.IO.Compression
 Add-Type -AssemblyName System.IO.Compression.FileSystem
-[IO.Compression.ZipFile]::CreateFromDirectory(
-    $staging,
-    $packagePath,
-    [IO.Compression.CompressionLevel]::Optimal,
-    $false)
+# Write entries explicitly with '/' separators: ZipFile.CreateFromDirectory on .NET
+# Framework (Windows PowerShell 5.1) stores '\', which the ZIP format does not allow.
+$writer = [IO.Compression.ZipFile]::Open($packagePath, [IO.Compression.ZipArchiveMode]::Create)
+try {
+    foreach ($file in Get-ChildItem -LiteralPath $staging -Recurse -File | Sort-Object FullName) {
+        $entryName = $file.FullName.Substring($stagingPrefix.Length).Replace('\', '/')
+        [void][IO.Compression.ZipFileExtensions]::CreateEntryFromFile(
+            $writer, $file.FullName, $entryName, [IO.Compression.CompressionLevel]::Optimal)
+    }
+}
+finally {
+    $writer.Dispose()
+}
 
 $archive = [IO.Compression.ZipFile]::OpenRead($packagePath)
 try {
     $entries = @($archive.Entries | Where-Object { ![string]::IsNullOrEmpty($_.Name) })
+    if (@($entries | Where-Object { $_.FullName.Contains('\') }).Count -gt 0) {
+        throw "Release package entries must use '/' separators."
+    }
     $entryNames = @($entries.FullName | ForEach-Object { $_.Replace('/', '\') })
     foreach ($requiredEntry in @(
         'IntegratedModManager.exe',
