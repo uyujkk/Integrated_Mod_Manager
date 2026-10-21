@@ -51,7 +51,7 @@ public sealed class LauncherTests : IDisposable
     public void SessionCreatesTargetUnderSuspendedParentAndCleansOnlyTheParent()
     {
         uint parentId;
-        using (LaunchSession session = LaunchSession.Create(Cmd, Cmd, "/c exit 7", _log.Add, verifyParent: false))
+        using (LaunchSession session = LaunchSession.Create(Cmd, Cmd, "/c exit 7", _log.Add, verifyParent: false, NativeMethods.CreateNoWindow))
         {
             parentId = session.ParentId;
             Assert.NotEqual(0u, session.TargetId);
@@ -99,7 +99,7 @@ public sealed class LauncherTests : IDisposable
             Assert.Equal(_fixture.Game, game);
             Assert.Equal("-force-d3d11", arguments);
             if (parent == tampered) throw new OfficialSignatureException("签名验证未通过", "verification failed");
-            return LaunchSession.Create(Cmd, Cmd, "/c exit 3", _log.Add, verifyParent: false);
+            return LaunchSession.Create(Cmd, Cmd, "/c exit 3", _log.Add, verifyParent: false, NativeMethods.CreateNoWindow);
         }, _ => [tampered, good]);
 
         Assert.Equal(3, code);
@@ -112,7 +112,7 @@ public sealed class LauncherTests : IDisposable
         launcher.LaunchGame(profile, null, (parent, _, _) =>
         {
             attempts.Add(parent);
-            return LaunchSession.Create(Cmd, Cmd, "/c exit 0", _log.Add, verifyParent: false);
+            return LaunchSession.Create(Cmd, Cmd, "/c exit 0", _log.Add, verifyParent: false, NativeMethods.CreateNoWindow);
         }, _ => [tampered, good]);
         Assert.Equal(good, attempts[0]);
     }

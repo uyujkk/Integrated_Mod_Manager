@@ -11384,7 +11384,6 @@ public sealed partial class MainWindow : Window
         _onlineWindowClosed = true;
         ++_onlineDetailAnimationVersion;
         PersistDownloadTasks();
-        _bridgeDownloadCancellation?.Cancel();
         _bundleOperationCancellation?.Cancel();
         _existingModImportCancellation?.Cancel();
         _onlineWindowClosed = true;
@@ -11485,6 +11484,15 @@ public sealed partial class MainWindow : Window
     private async Task StartLocalUpdateAsync(string packagePath)
     {
         if (!AppSelfUpdateEnabled) { return; }
+        if (IntegratedModManager.EndfieldLaunch.LaunchCommand.IsLaunchRunning())
+        {
+            // The window-less launch process runs this executable until the game exits.
+            await ShowMessageAsync(
+                L("终末地启动会话仍在运行，更新需要替换正在使用的程序文件。请先退出游戏再更新。", "An Endfield launch session is still running and the update must replace files it uses. Exit the game, then update."),
+                L("暂不能更新", "Update unavailable"));
+            return;
+        }
+
         try
         {
             string installRoot = GetInstallRootPath();
@@ -14457,7 +14465,19 @@ public sealed class WorkspaceRepository
 
     public string LauncherPath { get; set; } = string.Empty;
 
+    /// <summary>Use the integrated Endfield launch instead of running LauncherPath directly.</summary>
     public bool UseEndfieldBridge { get; set; }
+
+    public bool EndfieldRiskAccepted { get; set; }
+
+    public string EndfieldGamePath { get; set; } = string.Empty;
+
+    /// <summary>Optional explicit official Games.exe; empty means discover and verify it.</summary>
+    public string EndfieldParentPath { get; set; } = string.Empty;
+
+    public string EndfieldGameArguments { get; set; } = "-force-d3d11";
+
+    public bool EndfieldUseMods { get; set; }
 
     public string PersistentUserIniPath { get; set; } = string.Empty;
 

@@ -222,7 +222,10 @@ public sealed class LaunchSession : IDisposable
     public static LaunchSession Create(string parentExe, string target, string arguments, Action<LaunchText> log) =>
         Create(parentExe, target, arguments, log, verifyParent: true);
 
-    internal static LaunchSession Create(string parentExe, string target, string arguments, Action<LaunchText> log, bool verifyParent)
+    // extraTargetFlags exists for tests: a console target (cmd.exe) cannot attach to the console of
+    // a parent that is still suspended, so tests give it its own hidden console. Game launches pass none.
+    internal static LaunchSession Create(string parentExe, string target, string arguments, Action<LaunchText> log, bool verifyParent,
+        uint extraTargetFlags = 0)
     {
         var session = new LaunchSession(log);
         try
@@ -278,7 +281,7 @@ public sealed class LaunchSession : IDisposable
                 };
                 var command = new StringBuilder(CommandLine.Quote(target) + (string.IsNullOrWhiteSpace(arguments) ? string.Empty : " " + arguments));
                 if (command.Length >= 32767) throw new EndfieldLaunchException("游戏启动参数过长。", "Game arguments are too long.");
-                if (!NativeMethods.CreateProcessW(target, command, IntPtr.Zero, IntPtr.Zero, false, NativeMethods.ExtendedStartupInfoPresent,
+                if (!NativeMethods.CreateProcessW(target, command, IntPtr.Zero, IntPtr.Zero, false, NativeMethods.ExtendedStartupInfoPresent | extraTargetFlags,
                         IntPtr.Zero, Path.GetDirectoryName(target)!, ref extended, out NativeMethods.ProcessInformation child))
                 {
                     throw NativeMethods.Error("创建目标进程失败", "Failed to create the target process");
