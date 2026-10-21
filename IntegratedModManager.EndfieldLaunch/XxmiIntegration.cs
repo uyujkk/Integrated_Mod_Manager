@@ -25,6 +25,7 @@ public sealed class XxmiIntegration
         @"^""[^""]*\\EndfieldBridge\.exe"" --game-only(?: --from-xxmi)?$",
         RegexOptions.IgnoreCase | RegexOptions.CultureInvariant);
     private static readonly JsonSerializerOptions JsonOptions = new() { WriteIndented = true };
+    internal const int KeptSetupBackups = 5;
 
     private readonly LaunchStore _store;
     private readonly Func<string, bool> _isProcessRunning;
@@ -209,7 +210,7 @@ public sealed class XxmiIntegration
 
     /// <summary>Backs up XXMI's config, records the first restore point, then points EFMI at the manager.</summary>
     /// <returns>The full-file backup path.</returns>
-    public string Apply(LaunchProfile profile, string? restoreStatePath = null)
+    public string Apply(LaunchProfile profile, string? restoreStatePath = null, bool allowConfigured = false)
     {
         string path = ConfigPath(profile.Xxmi);
         string stateFile = restoreStatePath ?? _store.RestoreStatePath;
@@ -220,7 +221,20 @@ public sealed class XxmiIntegration
             throw new EndfieldLaunchException("游戏路径必须包含 Endfield.exe 和同目录 Endfield_Data。", "The game path must contain Endfield.exe alongside Endfield_Data.");
         }
 
-        if (IsConfigured(profile)) throw new EndfieldLaunchException("已适配，不覆盖首次备份。", "Setup is already complete. The original backup was kept.");
+        if (File.Exists(stateFile) && Read(stateFile)["config"]?.ToString() is var stateConfig && !SamePath(stateConfig, path))
+        {
+            if (!string.IsNullOrWhiteSpace(stateConfig) && File.Exists(stateConfig))
+            {
+                throw new EndfieldLaunchException($"已有另一套 XXMI 的恢复点（{stateConfig}），请先恢复原配置，再适配新的 XXMI。",
+                    $"A restore point exists for another XXMI installation ({stateConfig}). Restore it before setting up a different installation.");
+            }
+
+            // The XXMI installation that restore point belongs to is gone, so it can never be
+            // restored. Retire it (kept on disk, never deleted) instead of blocking every setup.
+            Retire(stateFile, "stale");
+        }
+
+        if (!allowConfigured && IsConfigured(profile)) throw new EndfieldLaunchException("已适配，不覆盖首次备份。", "Setup is already complete. The original backup was kept.");
         string original = File.ReadAllText(path);
         JsonObject document = JsonNode.Parse(original)!.AsObject();
         JsonObject efmi = Efmi(document);
@@ -243,19 +257,24 @@ public sealed class XxmiIntegration
         bool preserve = false;
         if (File.Exists(stateFile) && IsOwnedCommand(efmi["custom_launch"]?.ToString()))
         {
-            preserve = Read(stateFile)["config"]?.ToString() == path;
+            preserve = SamePath(Read(stateFile)["config"]?.ToString(), path);
         }
 
-        if (!preserve)
+        JsonObject state;
+        if (preserve) state = Read(stateFile);
+        else
         {
+            // The command is no longer ours, so the old restore point describes values the user
+            // has since replaced. Keep it on disk rather than silently overwriting it.
+            if (File.Exists(stateFile)) Retire(stateFile, "superseded");
+
             var fields = new JsonObject();
             foreach (string key in Fields)
             {
                 fields[key] = new JsonObject { ["exists"] = efmi.ContainsKey(key), ["value"] = efmi[key]?.DeepClone() };
             }
 
-            var state = new JsonObject { ["schema"] = 2, ["config"] = path, ["backup"] = backup, ["fields"] = fields };
-            LaunchStore.WriteAtomic(stateFile, state.ToJsonString(JsonOptions));
+            state = new JsonObject { ["schema"] = 3, ["config"] = path, ["backup"] = backup, ["fields"] = fields };
         }
 
         string previousCommand = efmi["custom_launch"]?.ToString() ?? string.Empty;
@@ -271,7 +290,16 @@ public sealed class XxmiIntegration
             throw new EndfieldLaunchException("XXMI 配置已被其他程序修改，已停止写入。", "Another program changed the XXMI configuration. No write was performed.");
         }
 
+        // Keep the original values, but refresh the expected installed values after repair/migration.
+        // XXMI adds its own authorization signature later; that change must not block restore.
+        var applied = new JsonObject();
+        foreach (string key in Fields.Where(key => key != "custom_launch_signature"))
+            applied[key] = new JsonObject { ["exists"] = efmi.ContainsKey(key), ["value"] = efmi[key]?.DeepClone() };
+        state["applied"] = applied;
+        state["schema"] = 3;
+        LaunchStore.WriteAtomic(stateFile, state.ToJsonString(JsonOptions));
         LaunchStore.WriteAtomic(path, document.ToJsonString(JsonOptions));
+        PruneSetupBackups(path, state["backup"]?.ToString());
         return backup;
     }
 
@@ -286,6 +314,12 @@ public sealed class XxmiIntegration
 
         JsonObject state = Read(stateFile);
         string path = state["config"]!.GetValue<string>();
+        if (!File.Exists(path))
+        {
+            throw new EndfieldLaunchException($"恢复点对应的 XXMI 配置已不存在：{path}\n无法恢复。适配新的 XXMI 时，这个失效的恢复点会自动存档作废。",
+                $"The XXMI configuration of this restore point no longer exists: {path}\nIt cannot be restored. Setting up another XXMI retires it automatically.");
+        }
+
         EnsureClosed();
         string original = File.ReadAllText(path);
         JsonObject document = JsonNode.Parse(original)!.AsObject();
@@ -293,6 +327,26 @@ public sealed class XxmiIntegration
         if (!IsOwnedCommand(efmi["custom_launch"]?.ToString()))
         {
             throw new EndfieldLaunchException("自定义命令已改变，停止恢复以保留你的新设置。", "The custom command changed. Restore was stopped to preserve your new settings.");
+        }
+
+        if (state["applied"] is JsonObject applied)
+        {
+            foreach (string key in Fields.Where(key => key != "custom_launch_signature"))
+            {
+                if (applied[key] is not JsonObject expected
+                    || expected["exists"]?.GetValue<bool>() != efmi.ContainsKey(key)
+                    || !SameFieldValue(key, expected["value"], efmi[key]))
+                {
+                    throw new EndfieldLaunchException($"EFMI 字段 {key} 已改变，停止恢复以保留你的新设置。", $"EFMI field {key} changed. Restore was stopped to preserve your new settings.");
+                }
+            }
+        }
+        else
+        {
+            // Older restore points did not record what was installed. Require re-adaptation
+            // to establish those values while preserving the original pre-bridge fields.
+            throw new EndfieldLaunchException("旧恢复点缺少适配后字段记录，请先重新适配 EFMI，再执行恢复。原始恢复点会保留。",
+                "The old restore point has no installed-field record. Set up EFMI again before restoring; the original restore point is kept.");
         }
 
         File.Copy(path, path + ".before-restore-" + DateTime.Now.ToString("yyyyMMddHHmmssfff") + ".bak");
@@ -330,6 +384,56 @@ public sealed class XxmiIntegration
         if (legacy["config"]?.GetValue<string>() is not { Length: > 0 }) return false;
         LaunchStore.WriteAtomic(_store.RestoreStatePath, legacy.ToJsonString(JsonOptions));
         return true;
+    }
+
+    /// <summary>
+    /// XXMI may rewrite a folder when it saves (separators, case, a trailing slash), so
+    /// game_folder compares as a path; every other field must match exactly.
+    /// </summary>
+    internal static bool SameFieldValue(string key, JsonNode? expected, JsonNode? actual)
+    {
+        if (JsonNode.DeepEquals(expected, actual)) return true;
+        if (key != "game_folder" || expected is not JsonValue || actual is not JsonValue) return false;
+        return expected.GetValueKind() == JsonValueKind.String && actual.GetValueKind() == JsonValueKind.String
+            && SamePath(expected.GetValue<string>(), actual.GetValue<string>());
+    }
+
+    internal static bool SamePath(string? left, string? right)
+    {
+        if (string.IsNullOrWhiteSpace(left) || string.IsNullOrWhiteSpace(right)) return false;
+        try
+        {
+            return string.Equals(Path.TrimEndingDirectorySeparator(Path.GetFullPath(left.Trim())),
+                Path.TrimEndingDirectorySeparator(Path.GetFullPath(right.Trim())), StringComparison.OrdinalIgnoreCase);
+        }
+        catch (Exception ex) when (ex is ArgumentException or NotSupportedException or PathTooLongException)
+        {
+            return string.Equals(left, right, StringComparison.OrdinalIgnoreCase);
+        }
+    }
+
+    private static void Retire(string stateFile, string reason) =>
+        File.Move(stateFile, stateFile + "." + reason + "-" + DateTime.Now.ToString("yyyyMMddHHmmssfff"));
+
+    /// <summary>Keeps the first setup backup and the newest few; older re-adapt backups are removed.</summary>
+    private static void PruneSetupBackups(string configPath, string? firstBackup)
+    {
+        try
+        {
+            string directory = Path.GetDirectoryName(configPath)!;
+            string prefix = Path.GetFileName(configPath) + ".imm-endfield-";
+            foreach (string old in Directory.GetFiles(directory, prefix + "*.bak")
+                .OrderByDescending(Path.GetFileName, StringComparer.Ordinal)
+                .Skip(KeptSetupBackups)
+                .Where(file => !SamePath(file, firstBackup)))
+            {
+                File.Delete(old);
+            }
+        }
+        catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
+        {
+            // Pruning is housekeeping; a locked backup must not fail the setup.
+        }
     }
 
     public void EnsureClosed()

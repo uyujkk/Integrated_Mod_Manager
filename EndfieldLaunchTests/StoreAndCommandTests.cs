@@ -116,6 +116,59 @@ public sealed class StoreAndCommandTests : IDisposable
     }
 
     [Fact]
+    public void EfmiSetupSavesCallbackProfileBeforeFirstLaunchAndRefreshesExistingSetup()
+    {
+        LaunchProfile profile = _fixture.CreateXxmi("{\"Importers\":{\"EFMI\":{\"Importer\":{\"xxmi_dll_inject_mode\":\"DIRECT\"}}}}");
+        profile.Parent = Path.Combine(_fixture.Root, "Official", "Games.exe");
+        profile.Language = "en-US";
+        profile.SessionId = "old-request";
+        var service = new EndfieldLaunchService(_fixture.Store.DataDirectory, _fixture.ManagerExecutable, _ => false);
+
+        Assert.False(File.Exists(_fixture.Store.ProfilePath));
+        Assert.NotNull(service.ConfigureXxmi(profile));
+        LaunchProfile callback = new LaunchStore(_fixture.Store.DataDirectory).LoadProfile();
+        Assert.Equal((profile.Game, profile.Xxmi, profile.Parent, true, "en-US", string.Empty),
+            (callback.Game, callback.Xxmi, callback.Parent, callback.WithMods, callback.Language, callback.SessionId));
+        Assert.Equal("old-request", profile.SessionId);
+        Assert.False(profile.WithMods);
+
+        string originalRestore = File.ReadAllText(_fixture.Store.RestoreStatePath);
+        string signature = _fixture.Authorize(service.Integration.Command);
+        profile.Parent = Path.Combine(_fixture.Root, "NewOfficial", "Games.exe");
+        Assert.Null(service.ConfigureXxmi(profile));
+        Assert.Equal(profile.Parent, _fixture.Store.LoadProfile().Parent);
+        Assert.Equal(originalRestore, File.ReadAllText(_fixture.Store.RestoreStatePath));
+        Assert.Equal(signature, XxmiIntegration.Efmi(XxmiIntegration.Read(_fixture.XxmiConfig))["custom_launch_signature"]!.ToString());
+    }
+
+    [Fact]
+    public void SavingSettingsRefreshesCallbackAndRefusesInvalidOrActiveSessionChanges()
+    {
+        var service = new EndfieldLaunchService(_fixture.Store.DataDirectory, _fixture.ManagerExecutable, _ => false);
+        var profile = new LaunchProfile { Game = _fixture.Game, SessionId = "old-request", GameArguments = "-popupwindow" };
+        service.SaveSettings(profile);
+        Assert.Equal(string.Empty, _fixture.Store.LoadProfile().SessionId);
+        Assert.Equal("-popupwindow", _fixture.Store.LoadProfile().GameArguments);
+        string original = File.ReadAllText(_fixture.Store.ProfilePath);
+
+        Assert.Throws<EndfieldLaunchException>(() => service.SaveSettings(new LaunchProfile { Game = "missing" }));
+        string incomplete = _fixture.CreateGame("incomplete");
+        Directory.Delete(Path.Combine(Path.GetDirectoryName(incomplete)!, "Endfield_Data"));
+        Assert.Throws<EndfieldLaunchException>(() => service.SaveSettings(new LaunchProfile { Game = incomplete }));
+        using (new Mutex(false, LaunchCommand.RunningMutexName))
+        {
+            Assert.Contains("正在运行", Assert.Throws<EndfieldLaunchException>(() => service.SaveSettings(profile)).Text.Zh);
+            LaunchProfile xxmi = _fixture.CreateXxmi("{\"Importers\":{\"EFMI\":{\"Importer\":{\"xxmi_dll_inject_mode\":\"DIRECT\"}}}}");
+            string config = File.ReadAllText(_fixture.XxmiConfig);
+            Assert.Throws<EndfieldLaunchException>(() => service.ConfigureXxmi(xxmi));
+            Assert.Equal(config, File.ReadAllText(_fixture.XxmiConfig));
+            Assert.False(File.Exists(_fixture.Store.RestoreStatePath));
+        }
+
+        Assert.Equal(original, File.ReadAllText(_fixture.Store.ProfilePath));
+    }
+
+    [Fact]
     public void ServiceChecksGameAndLauncherAndReadsLegacyBridgeSettings()
     {
         var service = new EndfieldLaunchService(_fixture.Store.DataDirectory, _fixture.ManagerExecutable, _ => false);

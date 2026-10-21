@@ -19,6 +19,43 @@ public sealed class EndfieldLaunchService
 
     public XxmiIntegration Integration { get; }
 
+    /// <summary>Saves settings for XXMI callbacks even before the first manager launch.</summary>
+    public void SaveSettings(LaunchProfile profile)
+    {
+        if (LaunchCommand.IsLaunchRunning())
+        {
+            throw new EndfieldLaunchException("启动会话正在运行，请结束后再保存设置。", "A launch session is running. Wait for it to end before saving settings.");
+        }
+
+        EndfieldGame.ValidateProfile(profile);
+        if (!EndfieldGame.IsValidGame(profile.Game))
+        {
+            throw new EndfieldLaunchException("游戏路径必须包含 Endfield.exe 和同目录 Endfield_Data。", "The game path must contain Endfield.exe alongside Endfield_Data.");
+        }
+
+        LaunchProfile saved = profile.Clone();
+        saved.SessionId = string.Empty;
+        Store.SaveProfile(saved);
+    }
+
+    /// <summary>Adapts EFMI and persists the callback profile. Returns null if already configured.</summary>
+    public string? ConfigureXxmi(LaunchProfile profile)
+    {
+        Integration.EnsureClosed();
+        if (LaunchCommand.IsLaunchRunning())
+        {
+            throw new EndfieldLaunchException("启动会话正在运行，请结束后再适配。", "A launch session is running. Wait for it to end before setup.");
+        }
+
+        bool configured = Integration.IsConfigured(profile);
+        if (configured) Integration.ValidateMode(profile);
+        string backup = Integration.Apply(profile, allowConfigured: true);
+        LaunchProfile saved = profile.Clone();
+        saved.WithMods = true;
+        SaveSettings(saved);
+        return configured ? null : backup;
+    }
+
     /// <summary>Checks the game path, the official launcher signature and, with Mods, the EFMI setup.</summary>
     public LaunchText Check(LaunchProfile profile)
     {

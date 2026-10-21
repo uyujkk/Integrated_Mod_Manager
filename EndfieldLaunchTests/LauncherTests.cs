@@ -74,7 +74,7 @@ public sealed class LauncherTests : IDisposable
         string explicitChoice = Path.Combine(_fixture.Root, "explicit", "Games.exe");
         var profile = new LaunchProfile { Game = _fixture.Game };
 
-        IReadOnlyList<string> discovered = EndfieldGame.ParentCandidates(profile, cached, _ => [older, newer, cached, Path.Combine(_fixture.Root, "gone", "Games.exe")]);
+        string[] discovered = EndfieldGame.ParentCandidates(profile, cached, _ => [older, newer, cached, Path.Combine(_fixture.Root, "gone", "Games.exe")]).ToArray();
         profile.Parent = explicitChoice;
 
         Assert.Equal(new[] { cached, older, newer }, discovered);
@@ -113,7 +113,7 @@ public sealed class LauncherTests : IDisposable
         {
             attempts.Add(parent);
             return LaunchSession.Create(Cmd, Cmd, "/c exit 0", _log.Add, verifyParent: false, NativeMethods.CreateNoWindow);
-        }, _ => [tampered, good]);
+        }, _ => throw new InvalidOperationException("Discovery must not run when the cached candidate succeeds."));
         Assert.Equal(good, attempts[0]);
     }
 

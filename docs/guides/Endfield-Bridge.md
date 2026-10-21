@@ -16,7 +16,9 @@
 3. 需要 Mod 时，选择实际的 **XXMI 启动器**，打开“通过 XXMI / EFMI 加载 Mod”。
 4. 点击**检测配置**：检查游戏路径、官方签名；开启 Mod 时还会检查 EFMI 适配是否完整。
 5. 首次使用 Mod：先退出游戏和 XXMI，点击**备份并适配 EFMI**。管理器会备份 XXMI 配置，只改 EFMI 的七个启动字段，并记下首次恢复点。
-6. 勾选风险确认后保存。之后“运行启动器”会弹出一次 UAC，然后在后台启动，不再弹出桥接窗口。
+6. 开启内置启动并勾选风险确认后，再适配 EFMI 并保存。适配会立即写入 XXMI 配置及其回调所需的启动设置；关闭设置页或点击取消不会撤销已执行的适配。之后“运行启动器”会弹出一次 UAC，然后在后台启动，不再弹出桥接窗口。
+
+适配成功后，无需先从管理器启动一次，XXMI 回调就能读取已保存的路径和参数。单独使用 XXMI 时仍需以管理员身份运行；修改设置后请保存。启动会话运行期间会拒绝覆盖回调配置。
 
 首次通过 XXMI 启动时，XXMI 会提示自定义命令未验证。请核对命令指向本管理器的 `ModFolderCopier.WinUI.exe --endfield-game-only --from-xxmi`，然后选择**保持**；选择“重置”会清空命令。
 
@@ -24,6 +26,7 @@
 
 在设置页选择“原有加载器”只改变管理器的入口。如果之前适配过 EFMI，请先点击**恢复 EFMI**，把七个字段还原为适配前的值，再切换。
 移动管理器目录前也要先恢复：XXMI 的自定义命令里写的是管理器的绝对路径。
+恢复前会核对适配时写入的字段。若后来修改了游戏目录、启动模式或识别进程，会停止恢复并保留当前配置；XXMI 后续生成的命令授权签名和其他非启动字段不会因此被误判。旧恢复点缺少适配后记录时，请重新点击“备份并适配 EFMI”补齐记录，再恢复，适配前的原始字段会保留。切换到另一套 XXMI 安装前，须先恢复当前安装，避免丢失恢复点。如果原来那套 XXMI 已被删除，它的恢复点无法再用，适配新安装时会自动把它存档作废（文件保留在 `backups/endfield-launch`，不会删除）。游戏目录只按路径比较，XXMI 改写大小写或斜杠不会阻止恢复。XXMI 配置旁的 `.imm-endfield-*.bak` 备份会保留首次那份和最近 5 份。
 
 ### 从旧版独立 EndfieldBridge 迁移
 
@@ -54,13 +57,17 @@ Open it from Dashboard → Current Repository Paths → **Launch method**. The c
 3. For Mods, select the actual **XXMI launcher** and turn on *Load Mods through XXMI / EFMI*.
 4. Use **Check** to verify the game path and the official signature. With Mods on, it also checks that the EFMI setup is complete.
 5. Before the first Mod launch, exit the game and XXMI, then use **Back up and set up EFMI**. The XXMI configuration is backed up, only seven EFMI launch fields change, and the first restore point is kept.
-6. Confirm the risk and save. **Run Launcher** then shows one UAC prompt and launches in the background, without a bridge window.
+6. Enable integrated launch and confirm the risk before setting up EFMI, then save. Setup immediately writes both the XXMI configuration and the profile its callback needs; cancelling or closing the settings does not undo completed setup. **Run Launcher** then shows one UAC prompt and launches in the background, without a bridge window.
+
+After setup, XXMI callbacks can read the saved paths and arguments without a prior launch from the manager. Run XXMI as administrator when using it independently, and save after editing settings. An active launch session blocks replacement of its callback profile.
 
 On the first XXMI launch, XXMI reports an unverified custom command. Check that it points to this manager's `ModFolderCopier.WinUI.exe --endfield-game-only --from-xxmi`, then choose **Keep**. Choosing *Reset* clears the command.
 
 ### Switching back
 
 Choosing *Existing loader* only changes the manager's entry. If EFMI was set up, use **Restore EFMI** first, which returns the seven fields to their values before setup. Restore before moving the manager folder too, because XXMI's command contains the manager's absolute path.
+
+Restore checks the fields installed during setup. Later changes to the game folder, launch mode or process settings stop restoration and leave the current configuration intact. XXMI's later command authorization signature and unrelated settings do not block restoration. For an older restore point without an installed-field record, run **Back up and set up EFMI** again before restoring; the original pre-bridge fields are retained. Restore the current XXMI installation before adapting a different one, so its restore point cannot be lost. If that installation has been removed, its restore point can no longer be used; setting up the new installation retires it automatically (the file stays in `backups/endfield-launch` and is not deleted). The game folder is compared as a path, so XXMI rewriting its case or separators does not block restoration. Next to the XXMI configuration, the first `.imm-endfield-*.bak` backup and the five newest are kept.
 
 ### Migrating from the standalone EndfieldBridge
 

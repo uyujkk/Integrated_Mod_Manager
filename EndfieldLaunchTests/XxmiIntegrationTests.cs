@@ -129,6 +129,69 @@ public sealed class XxmiIntegrationTests : IDisposable
         Assert.Equal("HOOK", efmi["xxmi_dll_inject_mode"]!.ToString());
     }
 
+    [Theory]
+    [InlineData("game_launch")]
+    [InlineData("start_method")]
+    [InlineData("game_folder")]
+    [InlineData("game_process_exe")]
+    [InlineData("game_process_exe_enabled")]
+    public void RestoreRefusesLaterLaunchFieldEditsWithoutWritingAnything(string field)
+    {
+        LaunchProfile profile = _fixture.CreateXxmi(OriginalConfig);
+        XxmiIntegration integration = Integration();
+        integration.Apply(profile);
+        if (field == "game_process_exe_enabled") _fixture.EditEfmi(efmi => efmi[field] = false);
+        else _fixture.EditEfmi(efmi => efmi[field] = "user changed this");
+        string editedConfig = File.ReadAllText(_fixture.XxmiConfig);
+        string restore = File.ReadAllText(_fixture.Store.RestoreStatePath);
+
+        var error = Assert.Throws<EndfieldLaunchException>(() => integration.Restore());
+
+        Assert.Contains(field, error.Text.En);
+        Assert.Equal(editedConfig, File.ReadAllText(_fixture.XxmiConfig));
+        Assert.Equal(restore, File.ReadAllText(_fixture.Store.RestoreStatePath));
+        Assert.Empty(Directory.GetFiles(Path.GetDirectoryName(_fixture.XxmiConfig)!, "*.before-restore-*.bak"));
+    }
+
+    [Fact]
+    public void RestoreAllowsXxmiAuthorizationAndPreservesUnrelatedUserChanges()
+    {
+        LaunchProfile profile = _fixture.CreateXxmi(OriginalConfig);
+        XxmiIntegration integration = Integration();
+        integration.Apply(profile);
+        _fixture.Authorize(integration.Command);
+        _fixture.EditEfmi(efmi => efmi["launch_options"] = "user's later arguments");
+
+        integration.Restore();
+
+        JsonObject efmi = XxmiIntegration.Efmi(XxmiIntegration.Read(_fixture.XxmiConfig));
+        Assert.Equal("previous", efmi["custom_launch"]!.ToString());
+        Assert.Equal("keep", efmi["custom_launch_signature"]!.ToString());
+        Assert.Equal("user's later arguments", efmi["launch_options"]!.ToString());
+    }
+
+    [Fact]
+    public void ExistingSetupCanUpgradeOldRestoreRecordWithoutLosingOriginalFields()
+    {
+        LaunchProfile profile = _fixture.CreateXxmi(OriginalConfig);
+        XxmiIntegration integration = Integration();
+        integration.Apply(profile);
+        JsonObject state = XxmiIntegration.Read(_fixture.Store.RestoreStatePath);
+        JsonNode originalFields = state["fields"]!.DeepClone();
+        state.Remove("applied");
+        state["schema"] = 2;
+        File.WriteAllText(_fixture.Store.RestoreStatePath, state.ToJsonString());
+        string config = File.ReadAllText(_fixture.XxmiConfig);
+
+        Assert.Contains("旧恢复点", Assert.Throws<EndfieldLaunchException>(() => integration.Restore()).Text.Zh);
+        Assert.Equal(config, File.ReadAllText(_fixture.XxmiConfig));
+        var service = new EndfieldLaunchService(_fixture.Store.DataDirectory, _fixture.ManagerExecutable, _ => false);
+        Assert.Null(service.ConfigureXxmi(profile));
+        Assert.True(JsonNode.DeepEquals(originalFields, XxmiIntegration.Read(_fixture.Store.RestoreStatePath)["fields"]));
+        integration.Restore();
+        Assert.True(JsonNode.DeepEquals(JsonNode.Parse(OriginalConfig), XxmiIntegration.Read(_fixture.XxmiConfig)));
+    }
+
     [Fact]
     public void ImportReadsArgumentsAndProtectsValidGamePath()
     {
@@ -205,6 +268,109 @@ public sealed class XxmiIntegrationTests : IDisposable
         integration.Apply(profile);
         _fixture.EditEfmi(efmi => efmi["custom_launch"] = "\"C:\\Mine\\custom.exe\"");
         Assert.Contains("命令已改变", Assert.Throws<EndfieldLaunchException>(() => integration.Restore()).Text.Zh);
+    }
+
+    [Fact]
+    public void ApplyingAnotherXxmiInstallationKeepsTheExistingRestorePoint()
+    {
+        LaunchProfile profile = _fixture.CreateXxmi(OriginalConfig);
+        XxmiIntegration integration = Integration();
+        integration.Apply(profile);
+        string originalState = File.ReadAllText(_fixture.Store.RestoreStatePath);
+        string second = Path.Combine(_fixture.Root, "OtherXXMI");
+        Directory.CreateDirectory(second);
+        string config = Path.Combine(second, "XXMI Launcher Config.json");
+        File.WriteAllText(config, OriginalConfig);
+        var other = profile.Clone();
+        other.Xxmi = Path.Combine(second, "XXMI Launcher.exe");
+
+        Assert.Contains("另一套 XXMI", Assert.Throws<EndfieldLaunchException>(() => integration.Apply(other)).Text.Zh);
+        Assert.Equal(originalState, File.ReadAllText(_fixture.Store.RestoreStatePath));
+        Assert.Equal(OriginalConfig, File.ReadAllText(config));
+        integration.Restore();
+        Assert.True(JsonNode.DeepEquals(JsonNode.Parse(OriginalConfig), XxmiIntegration.Read(_fixture.XxmiConfig)));
+    }
+    [Fact]
+    public void RestorePointOfARemovedXxmiIsRetiredInsteadOfBlockingSetup()
+    {
+        string second = Path.Combine(_fixture.Root, "OldXXMI");
+        Directory.CreateDirectory(second);
+        string oldConfig = Path.Combine(second, "XXMI Launcher Config.json");
+        File.WriteAllText(oldConfig, OriginalConfig);
+        LaunchProfile old = _fixture.CreateXxmi(OriginalConfig).Clone();
+        old.Xxmi = Path.Combine(second, "XXMI Launcher.exe");
+        XxmiIntegration integration = Integration();
+        integration.Apply(old);
+        string staleState = File.ReadAllText(_fixture.Store.RestoreStatePath);
+        Directory.Delete(second, recursive: true);
+
+        Assert.Contains("已不存在", Assert.Throws<EndfieldLaunchException>(() => integration.Restore()).Text.Zh);
+        Assert.Equal(staleState, File.ReadAllText(_fixture.Store.RestoreStatePath));
+
+        LaunchProfile current = new() { Game = _fixture.Game, Xxmi = _fixture.XxmiExecutable };
+        integration.Apply(current);
+        string retired = Assert.Single(Directory.GetFiles(_fixture.Store.DataDirectory, Path.GetFileName(_fixture.Store.RestoreStatePath) + ".stale-*"));
+        Assert.Equal(staleState, File.ReadAllText(retired));
+        Assert.True(XxmiIntegration.SamePath(_fixture.XxmiConfig, XxmiIntegration.Read(_fixture.Store.RestoreStatePath)["config"]!.ToString()));
+        integration.Restore();
+        Assert.True(JsonNode.DeepEquals(JsonNode.Parse(OriginalConfig), XxmiIntegration.Read(_fixture.XxmiConfig)));
+    }
+
+    [Fact]
+    public void RestoreToleratesXxmiRewritingTheGameFolderAsAnEquivalentPath()
+    {
+        LaunchProfile profile = _fixture.CreateXxmi(OriginalConfig);
+        XxmiIntegration integration = Integration();
+        integration.Apply(profile);
+        string folder = Path.GetDirectoryName(_fixture.Game)!;
+        _fixture.EditEfmi(efmi => efmi["game_folder"] = folder.ToUpperInvariant() + Path.DirectorySeparatorChar);
+
+        integration.Restore();
+
+        Assert.True(JsonNode.DeepEquals(JsonNode.Parse(OriginalConfig), XxmiIntegration.Read(_fixture.XxmiConfig)));
+    }
+
+    [Theory]
+    [InlineData("game_folder", "C:\\Games\\Endfield", "c:/games/endfield/", true)]
+    [InlineData("game_folder", "C:\\Games\\Endfield", "C:\\Games\\Other", false)]
+    [InlineData("game_process_exe", "Endfield.exe", "endfield.exe", false)]
+    [InlineData("game_folder", "C:\\Games", null, false)]
+    public void OnlyTheGameFolderComparesAsAPath(string key, string expected, string? actual, bool same) =>
+        Assert.Equal(same, XxmiIntegration.SameFieldValue(key, JsonValue.Create(expected), actual is null ? null : JsonValue.Create(actual)));
+
+    [Fact]
+    public void ReadaptingKeepsTheFirstBackupAndOnlyTheNewestFew()
+    {
+        LaunchProfile profile = _fixture.CreateXxmi(OriginalConfig);
+        XxmiIntegration integration = Integration();
+        string first = integration.Apply(profile);
+        for (int i = 0; i < XxmiIntegration.KeptSetupBackups + 3; i++)
+        {
+            Thread.Sleep(2);
+            integration.Apply(profile, allowConfigured: true);
+        }
+
+        string[] backups = Directory.GetFiles(Path.GetDirectoryName(_fixture.XxmiConfig)!, "*.imm-endfield-*.bak");
+        Assert.Equal(XxmiIntegration.KeptSetupBackups + 1, backups.Length);
+        Assert.Contains(first, backups);
+        Assert.Equal(OriginalConfig, File.ReadAllText(first));
+    }
+
+    [Fact]
+    public void ForeignCommandSetupArchivesTheReplacedRestorePoint()
+    {
+        LaunchProfile profile = _fixture.CreateXxmi(OriginalConfig);
+        XxmiIntegration integration = Integration();
+        integration.Apply(profile);
+        string firstState = File.ReadAllText(_fixture.Store.RestoreStatePath);
+        _fixture.EditEfmi(efmi => efmi["custom_launch"] = "user's own launcher");
+
+        integration.Apply(profile);
+
+        string archived = Assert.Single(Directory.GetFiles(_fixture.Store.DataDirectory, Path.GetFileName(_fixture.Store.RestoreStatePath) + ".superseded-*"));
+        Assert.Equal(firstState, File.ReadAllText(archived));
+        integration.Restore();
+        Assert.Equal("user's own launcher", XxmiIntegration.Efmi(XxmiIntegration.Read(_fixture.XxmiConfig))["custom_launch"]!.ToString());
     }
 
     [Fact]

@@ -256,14 +256,20 @@ public sealed partial class MainWindow
                 service.Integration.Import(profile);
                 gameBox.Text = profile.Game;
                 argumentsBox.Text = profile.GameArguments;
-                if (service.Integration.IsConfigured(profile))
+                if (!integrated.IsOn || consent.IsChecked != true)
                 {
-                    Show(new LaunchText("适配已完成，原始恢复点未覆盖。\n", "Setup is already complete; the original restore point was kept.\n") + service.Integration.AuthorizationStatus(profile));
+                    Show(new LaunchText("请先开启内置启动并勾选账号风险确认，再适配 EFMI。", "Enable integrated launch and confirm the account risk before setting up EFMI."), failure: true);
                     return Task.CompletedTask;
                 }
 
-                string backup = service.Integration.Apply(profile);
+                string? backup = service.ConfigureXxmi(profile);
                 modsSwitch.IsOn = true;
+                if (backup is null)
+                {
+                    Show(new LaunchText("适配已完成，启动配置已同步，原始恢复点未覆盖。\n", "Setup is complete; the launch profile was saved and the original restore point kept.\n") + service.Integration.AuthorizationStatus(profile));
+                    return Task.CompletedTask;
+                }
+
                 Show(new LaunchText($"已适配 EFMI。完整备份：{backup}\n首次启动时 XXMI 会提示命令未验证：核对命令指向本管理器后选择“保持”。\n",
                     $"EFMI is set up. Full backup: {backup}\nOn first launch XXMI reports an unverified command: check that it points to this manager, then choose Keep.\n") + service.Integration.Inspect(profile));
                 return Task.CompletedTask;
@@ -282,7 +288,6 @@ public sealed partial class MainWindow
                 return Task.CompletedTask;
             }));
             actions.Children.Add(actionRow.Panel);
-            actions.Children.Add(outputBorder);
             body.Children.Add(new Border { Style = (Style)Application.Current.Resources["InsetBorderStyle"], Padding = new Thickness(14, 12, 14, 14), Child = actions });
 
             var legal = new StackPanel { Spacing = 8 };
@@ -307,17 +312,30 @@ public sealed partial class MainWindow
             });
             body.Children.Add(consent);
 
+            // Keep operation results visible when Save validates fields far below the viewport.
+            var content = new Grid { MaxHeight = viewport.ContentHeight + 60, RowSpacing = 10 };
+            content.RowDefinitions.Add(new RowDefinition { Height = GridLength.Auto });
+            content.RowDefinitions.Add(new RowDefinition { Height = new GridLength(1, GridUnitType.Star) });
+            var resultViewer = new ScrollViewer
+            {
+                Content = outputBorder, MaxHeight = 160,
+                HorizontalScrollBarVisibility = ScrollBarVisibility.Disabled,
+                HorizontalScrollMode = ScrollMode.Disabled
+            };
+            content.Children.Add(resultViewer);
+            var settingsViewer = new ScrollViewer
+            {
+                Content = body,
+                HorizontalScrollBarVisibility = ScrollBarVisibility.Disabled,
+                HorizontalScrollMode = ScrollMode.Disabled,
+                Padding = new Thickness(0, 0, 12, 0)
+            };
+            Grid.SetRow(settingsViewer, 1);
+            content.Children.Add(settingsViewer);
             var dialog = new ContentDialog
             {
                 Title = L("终末地启动设置", "Endfield launch settings"),
-                Content = new ScrollViewer
-                {
-                    Content = body,
-                    MaxHeight = viewport.ContentHeight + 60,
-                    HorizontalScrollBarVisibility = ScrollBarVisibility.Disabled,
-                    HorizontalScrollMode = ScrollMode.Disabled,
-                    Padding = new Thickness(0, 0, 12, 0)
-                },
+                Content = content,
                 PrimaryButtonText = L("保存", "Save"),
                 CloseButtonText = L("取消", "Cancel"),
                 DefaultButton = ContentDialogButton.Primary,
@@ -336,6 +354,20 @@ public sealed partial class MainWindow
             consent.Checked += (_, _) => RefreshState();
             consent.Unchecked += (_, _) => RefreshState();
             RefreshState();
+
+            dialog.PrimaryButtonClick += (_, args) =>
+            {
+                if (!integrated.IsOn) return;
+                try
+                {
+                    service.SaveSettings(CurrentProfile());
+                }
+                catch (Exception ex)
+                {
+                    args.Cancel = true;
+                    Show(ex is EndfieldLaunchException known ? known.Text : LaunchText.Both(ex.Message), failure: true);
+                }
+            };
 
             ContentDialogResult result = await dialog.ShowAsync();
             _endfieldBridgeOfferRevision = EndfieldBridgeIntegration.OfferRevision;

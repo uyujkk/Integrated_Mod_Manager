@@ -41,26 +41,34 @@ public static class EndfieldGame
     /// Discovery does not verify signatures: <see cref="LaunchSession.Create(string,string,string,Action{LaunchText})"/>
     /// verifies the one actually used while holding it open.
     /// </summary>
-    public static IReadOnlyList<string> ParentCandidates(LaunchProfile profile, string? cachedParent, Func<string, IEnumerable<string>>? discover = null)
+    public static IEnumerable<string> ParentCandidates(LaunchProfile profile, string? cachedParent, Func<string, IEnumerable<string>>? discover = null)
     {
-        if (!string.IsNullOrWhiteSpace(profile.Parent)) return [profile.Parent];
-        var ordered = new List<string>();
+        if (!string.IsNullOrWhiteSpace(profile.Parent))
+        {
+            yield return profile.Parent;
+            yield break;
+        }
         var seen = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
-        void Add(string path)
+        string? Candidate(string path)
         {
             try
             {
                 string full = Path.GetFullPath(path);
-                if (File.Exists(full) && seen.Add(full)) ordered.Add(full);
+                if (File.Exists(full) && seen.Add(full)) return full;
             }
             catch (Exception ex) when (ex is ArgumentException or NotSupportedException or PathTooLongException)
             {
             }
+
+            return null;
         }
 
-        if (!string.IsNullOrWhiteSpace(cachedParent)) Add(cachedParent);
-        foreach (string candidate in (discover ?? DiscoverParents)(profile.Game)) Add(candidate);
-        return ordered;
+        if (!string.IsNullOrWhiteSpace(cachedParent) && Candidate(cachedParent) is { } cached) yield return cached;
+        // Discovery runs only if the caller rejects the cached candidate and asks for another.
+        foreach (string candidate in (discover ?? DiscoverParents)(profile.Game))
+        {
+            if (Candidate(candidate) is { } found) yield return found;
+        }
     }
 
     /// <summary>Games.exe in versioned subfolders of the launcher root, newest first.</summary>
