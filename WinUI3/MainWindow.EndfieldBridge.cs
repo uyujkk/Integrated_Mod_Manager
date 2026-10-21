@@ -138,15 +138,12 @@ public sealed partial class MainWindow
                 OffContent = L("关闭 · 直接启动游戏", "Off · Start the game directly"),
                 IsOn = repository.EndfieldUseMods
             };
-            var integrated = new RadioButton
+            var integrated = new ToggleSwitch
             {
-                Content = L("内置终末地启动（官方父进程直启，无需额外下载）", "Integrated Endfield launch (official parent, no extra download)"),
-                GroupName = "EndfieldLaunchMode", IsChecked = repository.UseEndfieldBridge
-            };
-            var existing = new RadioButton
-            {
-                Content = L("原有加载器：直接运行上面的 XXMI 或其他启动器", "Existing loader: run the XXMI or other launcher above directly"),
-                GroupName = "EndfieldLaunchMode", IsChecked = !repository.UseEndfieldBridge
+                Header = L("启动方式", "Launch method"),
+                OnContent = L("内置终末地启动：官方父进程直启，无需额外下载", "Integrated Endfield launch: official parent, no extra download"),
+                OffContent = L("原有加载器：直接运行下方的 XXMI 或其他启动器", "Existing loader: run the XXMI or other launcher below directly"),
+                IsOn = repository.UseEndfieldBridge
             };
             var output = new TextBlock { TextWrapping = TextWrapping.Wrap, IsTextSelectionEnabled = true, FontFamily = new Microsoft.UI.Xaml.Media.FontFamily("Consolas"), FontSize = 12 };
             var outputBorder = new Border { Style = (Style)Application.Current.Resources["InsetBorderStyle"], Padding = new Thickness(12, 10, 12, 10), Child = output, Visibility = Visibility.Collapsed };
@@ -203,7 +200,8 @@ public sealed partial class MainWindow
                 return button;
             }
 
-            var body = new StackPanel { Spacing = 14 };
+            // ContentDialog sizes to its content, so a width is needed for the larger max width to apply.
+            var body = new StackPanel { Spacing = 14, Width = Math.Max(320, Math.Min(760, viewport.MaxWidth - 72)) };
             body.Children.Add(new TextBlock
             {
                 Text = isUpgradeOffer
@@ -219,11 +217,7 @@ public sealed partial class MainWindow
                 Title = L("账号风险", "Account risk"), Message = BridgeRiskText
             });
 
-            var mode = new StackPanel { Spacing = 4 };
-            mode.Children.Add(SectionTitle(L("启动方式", "Launch method")));
-            mode.Children.Add(integrated);
-            mode.Children.Add(existing);
-            body.Children.Add(mode);
+            body.Children.Add(integrated);
 
             var paths = new Grid { ColumnSpacing = 10, RowSpacing = 10 };
             paths.ColumnDefinitions.Add(new ColumnDefinition { Width = GridLength.Auto });
@@ -289,7 +283,7 @@ public sealed partial class MainWindow
             }));
             actions.Children.Add(actionRow.Panel);
             actions.Children.Add(outputBorder);
-            body.Children.Add(actions);
+            body.Children.Add(new Border { Style = (Style)Application.Current.Resources["InsetBorderStyle"], Padding = new Thickness(14, 12, 14, 14), Child = actions });
 
             var legal = new StackPanel { Spacing = 8 };
             legal.Children.Add(new TextBlock
@@ -333,13 +327,12 @@ public sealed partial class MainWindow
             dialog.Resources["ContentDialogMaxWidth"] = Math.Min(860, viewport.MaxWidth);
             void RefreshState()
             {
-                bool useIntegrated = integrated.IsChecked == true;
+                bool useIntegrated = integrated.IsOn;
                 consent.Visibility = useIntegrated ? Visibility.Visible : Visibility.Collapsed;
                 dialog.IsPrimaryButtonEnabled = !useIntegrated || consent.IsChecked == true;
             }
 
-            integrated.Checked += (_, _) => RefreshState();
-            existing.Checked += (_, _) => RefreshState();
+            integrated.Toggled += (_, _) => RefreshState();
             consent.Checked += (_, _) => RefreshState();
             consent.Unchecked += (_, _) => RefreshState();
             RefreshState();
@@ -348,7 +341,7 @@ public sealed partial class MainWindow
             _endfieldBridgeOfferRevision = EndfieldBridgeIntegration.OfferRevision;
             if (result == ContentDialogResult.Primary)
             {
-                repository.UseEndfieldBridge = integrated.IsChecked == true;
+                repository.UseEndfieldBridge = integrated.IsOn;
                 if (repository.UseEndfieldBridge) repository.EndfieldRiskAccepted = true;
                 repository.EndfieldGamePath = gameBox.Text.Trim();
                 repository.EndfieldParentPath = parentBox.Text.Trim();
@@ -387,14 +380,19 @@ public sealed partial class MainWindow
         {
             grid.RowDefinitions.Add(new RowDefinition { Height = GridLength.Auto });
             var caption = new TextBlock { Text = label, VerticalAlignment = VerticalAlignment.Center };
+            // Same inset field as the main window's path boxes; the app's TextBox style is borderless.
+            box.BorderThickness = new Thickness(0);
+            box.Padding = new Thickness(12, 8, 12, 8);
+            box.Background = new Microsoft.UI.Xaml.Media.SolidColorBrush(Microsoft.UI.Colors.Transparent);
+            var field = new Border { Style = (Style)Application.Current.Resources["InsetBorderStyle"], Child = box };
             Grid.SetRow(caption, row);
-            Grid.SetRow(box, row);
-            Grid.SetColumn(box, 1);
+            Grid.SetRow(field, row);
+            Grid.SetColumn(field, 1);
             grid.Children.Add(caption);
-            grid.Children.Add(box);
+            grid.Children.Add(field);
             if (extension is null)
             {
-                Grid.SetColumnSpan(box, 2);
+                Grid.SetColumnSpan(field, 2);
                 return;
             }
 

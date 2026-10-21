@@ -11,6 +11,10 @@ This document records version changes in Integrated Mod Manager. Unpublished ver
 - 同一安装目录只运行一个实例；再次启动会恢复并前置已有窗口（含托盘隐藏状态），不同安装目录仍可并存。
 - 所有异步界面操作的意外异常会记录调用栈并提示，不再直接导致程序退出；记录后台任务中未观察到的异常；`app-errors.log` 超过 1 MB 自动轮转。
 - 安装前冲突检测新增 INI 层检查：提示与已启用 Mod 覆盖相同 `TextureOverride`/`ShaderOverride` 哈希（考虑 `match_first_index`）或绑定相同快捷键的情况；跳过 `DISABLED` 文件与目录，尊重 `match_priority`/`allow_duplicate_hash`。仅作提示，不阻止部署。
+- 终末地启动内置到管理器：不再单独下载 EndfieldBridge，也不再经过 cmd 和桥接窗口，“运行启动器”只弹一次 UAC。改用 .NET 8 运行时；官方 `Games.exe` 签名在持有文件句柄期间只校验一次，并缓存上次通过校验的文件。新增原生“终末地启动设置”页：可检测配置，读取、适配、恢复 EFMI，打开启动日志；自动迁移旧桥接器的设置与 EFMI 恢复点。
+- 许可证：启动组件以 AGPL-3.0-only 授权，包含它的发布包整体按 AGPL-3.0-only 分发；其他源码文件仍为 MIT，v4.2.0 及之前的版本不变。见 [LICENSING.md](../../LICENSING.md)。
+- The Endfield launch is built into the manager: no separate EndfieldBridge download, no cmd shim or bridge window, and one UAC prompt for Run Launcher. Uses the .NET 8 runtime; the official `Games.exe` signature is verified once while its handle is held, and the last verified file is cached. A native Endfield launch settings page offers checks, EFMI import / setup / restore and the launch log, and migrates settings and the EFMI restore point from the old bridge.
+- Licensing: the launch component is AGPL-3.0-only and release packages that include it are distributed as a whole under AGPL-3.0-only. Other source files remain MIT, and v4.2.0 and earlier are unchanged. See [LICENSING.md](../../LICENSING.md).
 - One instance per install directory; a second launch restores and focuses the running window (including from the tray). Separate install directories can still run side by side.
 - Unexpected exceptions in async UI actions are logged with a stack trace and reported instead of closing the app; unobserved background task exceptions are recorded; `app-errors.log` rotates at 1 MB.
 - The pre-install conflict check now also compares INI files: shared `TextureOverride`/`ShaderOverride` hashes (aware of `match_first_index`) and shared shortcuts with enabled Mods. `DISABLED` files and folders are skipped and `match_priority`/`allow_duplicate_hash` are honoured. Advisory only; deployment is never blocked.

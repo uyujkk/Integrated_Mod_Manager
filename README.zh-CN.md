@@ -220,6 +220,6 @@ GitHub Actions 会在推送到 `main`、Pull Request 和手动触发时执行统
 
 ## 许可证与声明
 
-本项目以 [MIT License](./LICENSE) 发布，版权所有 `uyujkk`。第三方组件保留各自许可证；发布包中的 7-Zip 文件附带其许可证文本。
+源码文件以 [MIT License](./LICENSE) 发布，版权所有 `uyujkk`；内置终末地启动组件 [`IntegratedModManager.EndfieldLaunch/`](./IntegratedModManager.EndfieldLaunch/) 除外，它以 **AGPL-3.0-only** 授权（源自 EndfieldBridge、endfield-nolauncher 与 Better-Endfield，见其 [NOTICE](./IntegratedModManager.EndfieldLaunch/NOTICE.md)）。由于程序包含该组件，**自下一版本起，发布包整体按 AGPL-3.0-only 分发**；v4.2.0 及之前的版本仍为 MIT。详见 [LICENSING.md](./LICENSING.md)。第三方组件保留各自许可证；发布包中的 7-Zip 文件附带其许可证文本。
 
 本工具不包含游戏文件或 Mod 内容。游戏、角色、图片、Mod 和第三方服务的相关权利归各自权利人所有。
