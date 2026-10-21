@@ -157,7 +157,9 @@ try {
         }
     }
 
-    foreach ($managedFile in Get-Content -LiteralPath $manifestPath) {
+    # The manifest is UTF-8 without BOM; Windows PowerShell 5.1 would otherwise read it
+    # in the ANSI code page and misread non-ASCII file names such as the Chinese guides.
+    foreach ($managedFile in Get-Content -LiteralPath $manifestPath -Encoding UTF8) {
         if ($entryNames -notcontains $managedFile.Replace('/', '\')) {
             throw "Managed-file manifest references a missing package entry: $managedFile"
         }
