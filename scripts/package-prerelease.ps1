@@ -4,7 +4,11 @@ param(
     [string]$BaseTag = 'v4.2.0',
     [string]$VerificationDirectory = 'artifacts\verification\v4.3.0-preview.1',
     [switch]$ForGitHubPrerelease,
-    [string]$CiUrl = ''
+    [string]$CiUrl = '',
+    # Only for machines without git: JSON exported by git elsewhere from this same
+    # working tree (Commit, Branch, Dirty, BaseCommit, Files). The commit is checked
+    # against .git directly and every listed file is hashed here.
+    [string]$SourceInfoPath = ''
 )
 
 # Packages a GitHub prerelease from the output of scripts\test-all.ps1. The ZIP is the
@@ -22,14 +26,42 @@ function Resolve-TaskPath([string]$relative) {
     return $full
 }
 function Invoke-Git { git -c "safe.directory=$($taskRoot.Replace('\','/'))" -c core.quotepath=false -C $taskRoot @args }
+function Get-CheckedOutCommit {
+    $gitDir = Join-Path $taskRoot '.git'
+    $head = (Get-Content -LiteralPath (Join-Path $gitDir 'HEAD') -Raw).Trim()
+    if ($head -notmatch '^ref: (?<ref>refs/.+)$') { return $head }
+    $ref = $Matches.ref
+    $loose = Join-Path $gitDir ($ref.Replace('/', '\'))
+    if (Test-Path -LiteralPath $loose) { return (Get-Content -LiteralPath $loose -Raw).Trim() }
+    foreach ($line in Get-Content -LiteralPath (Join-Path $gitDir 'packed-refs')) {
+        if ($line -match ('^(?<sha>[0-9a-f]{40}) ' + [regex]::Escape($ref) + '$')) { return $Matches.sha }
+    }
+    throw ('Could not resolve ' + $ref)
+}
 
 $taskVerification = Resolve-TaskPath $VerificationDirectory
-$taskSourceCommit = Invoke-Git rev-parse HEAD
-if ($LASTEXITCODE -ne 0) { throw 'Could not identify source commit.' }
-$taskSourceBranch = Invoke-Git branch --show-current
-$taskBaseCommit = Invoke-Git rev-parse --short "$BaseTag^{commit}"
-if ($LASTEXITCODE -ne 0) { throw ('Base tag not found: ' + $BaseTag) }
-$taskSourceDirty = @(Invoke-Git status --porcelain).Count -gt 0
+$taskSourceInfoOrigin = 'git'
+if (Get-Command git -ErrorAction SilentlyContinue) {
+    $taskSourceCommit = Invoke-Git rev-parse HEAD
+    if ($LASTEXITCODE -ne 0) { throw 'Could not identify source commit.' }
+    $taskSourceBranch = Invoke-Git branch --show-current
+    $taskBaseCommit = Invoke-Git rev-parse --short "$BaseTag^{commit}"
+    if ($LASTEXITCODE -ne 0) { throw ('Base tag not found: ' + $BaseTag) }
+    $taskSourceDirty = @(Invoke-Git status --porcelain).Count -gt 0
+    $taskSourceFiles = @(Invoke-Git ls-files --cached --others --exclude-standard | Sort-Object -Unique)
+    if ($LASTEXITCODE -ne 0 -or $taskSourceFiles.Count -eq 0) { throw 'Could not inventory prerelease source.' }
+} else {
+    if ([string]::IsNullOrWhiteSpace($SourceInfoPath)) { throw 'git is not available; pass -SourceInfoPath exported by git from this working tree.' }
+    $exported = Get-Content -LiteralPath (Resolve-TaskPath $SourceInfoPath) -Raw -Encoding utf8 | ConvertFrom-Json
+    $taskSourceCommit = [string]$exported.Commit
+    if ($taskSourceCommit -notmatch '^[0-9a-f]{40}$' -or $taskSourceCommit -ne (Get-CheckedOutCommit)) { throw 'Exported source info does not match the checked-out commit.' }
+    $taskSourceBranch = [string]$exported.Branch
+    $taskBaseCommit = [string]$exported.BaseCommit
+    $taskSourceDirty = [bool]$exported.Dirty
+    $taskSourceFiles = @($exported.Files | ForEach-Object { [string]$_ } | Sort-Object -Unique)
+    if ($taskSourceFiles.Count -eq 0) { throw 'Exported source info lists no files.' }
+    $taskSourceInfoOrigin = 'git-export'
+}
 if ($ForGitHubPrerelease -and ($taskSourceDirty -or $CiUrl -notmatch '^https://github\.com/uyujkk/Integrated_Mod_Manager/actions/runs/\d+$')) {
     throw 'A GitHub prerelease package requires committed clean source and its verified CI URL.'
 }
@@ -109,8 +141,6 @@ $taskMinor = ($taskCoreVersion -split '\.')[0..1] -join '.'
     "# $taskMinor 开发预览文档`n`n当前版本以 [$Version 说明](releases/v$Version.md) 为准；基础手册和历史发布说明保留用于查阅。`n`n[用户手册](guides/用户手册.zh-CN.md) · [内置终末地启动](guides/Endfield-Bridge.md) · [浏览下载与旧库整理](guides/Browse-Download-Task-Pack.zh-CN.md) · [组合预设](guides/Combination-Presets.zh-CN.md)`n",
     [Text.UTF8Encoding]::new($false))
 
-$taskSourceFiles = @(Invoke-Git ls-files --cached --others --exclude-standard | Sort-Object -Unique)
-if ($LASTEXITCODE -ne 0 -or $taskSourceFiles.Count -eq 0) { throw 'Could not inventory prerelease source.' }
 $taskSourceHashes = foreach ($relative in $taskSourceFiles) {
     $file = Resolve-TaskPath $relative
     if (!(Test-Path -LiteralPath $file -PathType Leaf)) { throw ('Missing source: ' + $relative) }
@@ -121,7 +151,7 @@ $taskSourceManifest = Join-Path $taskOutput 'source-files.sha256'
 $taskInfo = [ordered]@{
     Version=$Version;FileVersion=$taskFileVersion;Platform='win-x64';Channel=$(if ($ForGitHubPrerelease) {'github-prerelease'} else {'local-development-preview'})
     License='AGPL-3.0-only (package as a whole); MIT for files outside the Endfield launch component; see LICENSING.md'
-    BaseTag=$BaseTag;BaseCommit=$taskBaseCommit;SourceCommit=$taskSourceCommit;SourceBranch=$taskSourceBranch;SourceHasUncommittedChanges=$taskSourceDirty
+    BaseTag=$BaseTag;BaseCommit=$taskBaseCommit;SourceCommit=$taskSourceCommit;SourceBranch=$taskSourceBranch;SourceHasUncommittedChanges=$taskSourceDirty;SourceInfoOrigin=$taskSourceInfoOrigin
     SourceFingerprint=(Get-FileHash -LiteralPath $taskSourceManifest -Algorithm SHA256).Hash
     RuntimeSha256=(Get-FileHash -LiteralPath (Join-Path $taskApp 'WinUI3\ModFolderCopier.WinUI.dll') -Algorithm SHA256).Hash
     BuiltAt=[DateTimeOffset]::Now.ToString('O');Tests=@($taskResults);AppSelfUpdateEnabled=$false
