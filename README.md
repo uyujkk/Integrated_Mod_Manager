@@ -1,4 +1,5 @@
 > **v4.2.0 stable release.** See the [release notes](docs/releases/v4.2.0.md) for new features, upgrade guidance, and known issues.
+> **v4.3.0-preview.1 prerelease** adds the integrated Endfield launch; its package is AGPL-3.0-only as a whole. See the [preview notes](docs/releases/v4.3.0-preview.1.md).
 
 <div align="center">
   <img src="./WinUI3/Assets/AppIcon.png" width="96" alt="Integrated Mod Manager icon">

@@ -4,7 +4,7 @@
 
 This directory contains the usage, release, development, and research documentation for Integrated Mod Manager. The repository root is reserved for GitHub-recognized files, build entry points, and source-code entry points.
 
-当前正式版 / Current stable: **[v4.2.0](https://github.com/uyujkk/Integrated_Mod_Manager/releases/tag/v4.2.0)**。最新公开版本请以 [GitHub Releases](https://github.com/uyujkk/Integrated_Mod_Manager/releases/latest) 为准。历史发布报告与实验记录保留原版本事实。Historical reports retain their original context; screenshot/documentation updates do not replace the published package.
+当前正式版 / Current stable: **[v4.2.0](https://github.com/uyujkk/Integrated_Mod_Manager/releases/tag/v4.2.0)**。最新公开版本请以 [GitHub Releases](https://github.com/uyujkk/Integrated_Mod_Manager/releases/latest) 为准。当前开发预览 / Current preview: **[v4.3.0-preview.1](https://github.com/uyujkk/Integrated_Mod_Manager/releases/tag/v4.3.0-preview.1)**（[说明 / Notes](./releases/v4.3.0-preview.1.md)）。历史发布报告与实验记录保留原版本事实。Historical reports retain their original context; screenshot/documentation updates do not replace the published package.
 
 ## 使用指南 / Guides
 
@@ -27,6 +27,7 @@ This directory contains the usage, release, development, and research documentat
 
 ## 发布记录 / Releases
 
+- [v4.3.0-preview.1 内置终末地启动与 Mod 库修复 / Integrated Endfield Launch (Preview)](./releases/v4.3.0-preview.1.md)
 - [v4.2.0 浏览、下载与本地整理 / Browsing, Downloads and Library Tools](./releases/v4.2.0.md)
 - [v4.1.1 可选启动桥接 / Optional Launch Bridge](./releases/v4.1.1.md)
 - [v4.1.0 组合包与体验优化 / Portable Bundles and Usability](./releases/v4.1.0.md)
@@ -42,6 +43,7 @@ This directory contains the usage, release, development, and research documentat
 
 ## 开发文档 / Development
 
+- [v4.3.0-preview.1 预发布验证 / Prerelease Verification](./verification/v4.3.0-preview.1.md)
 - [v4.2.0 正式版验证 / Stable Release Verification](./verification/v4.2.0.md)
 - [v4.1.1 发布验证 / Release Verification](./verification/v4.1.1.md)
 - [可选桥接器本地验证 / Optional Bridge Integration Verification](./verification/endfield-bridge-integration-20261015.md)

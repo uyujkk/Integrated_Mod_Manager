@@ -1,4 +1,5 @@
 > **v4.2.0 正式版。** 新增功能、升级方式与已知问题见 [4.2 发布说明](docs/releases/v4.2.0.md)。历史版本与说明继续保留。
+> **v4.3.0-preview.1 预发布版**新增内置终末地启动，发布包整体按 AGPL-3.0-only 分发，见 [预览说明](docs/releases/v4.3.0-preview.1.md)。
 
 <div align="center">
   <img src="./WinUI3/Assets/AppIcon.png" width="96" alt="集成化 Mod 管理器图标">

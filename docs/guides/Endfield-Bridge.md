@@ -1,7 +1,7 @@
 # 内置终末地启动 / Integrated Endfield launch
 
-**适用于尚未发布的下一版本。管理器 4.1.1–4.2.0 使用需要单独下载的 EndfieldBridge，说明见本文末尾。**
-**For the next, unreleased version. Manager 4.1.1–4.2.0 used a separately downloaded EndfieldBridge; see the end of this page.**
+**适用于 4.3.0-preview.1 及之后的版本。管理器 4.1.1–4.2.0 使用需要单独下载的 EndfieldBridge，说明见本文末尾。**
+**For 4.3.0-preview.1 and later. Manager 4.1.1–4.2.0 used a separately downloaded EndfieldBridge; see the end of this page.**
 
 ## 中文
 

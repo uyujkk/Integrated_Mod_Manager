@@ -6,7 +6,10 @@
 
 This document records version changes in Integrated Mod Manager. Unpublished versions are marked separately.
 
-## 未发布 / Unreleased
+## v4.3.0-preview.1 — 2026-10-21（预发布 / Prerelease）
+
+开发预览版，关闭软件自身自动更新；发布包整体按 AGPL-3.0-only 分发。详见 [v4.3.0-preview.1](v4.3.0-preview.1.md)。Development preview with application self-update off; the package as a whole is AGPL-3.0-only.
+
 
 - 同一安装目录只运行一个实例；再次启动会恢复并前置已有窗口（含托盘隐藏状态），不同安装目录仍可并存。
 - 所有异步界面操作的意外异常会记录调用栈并提示，不再直接导致程序退出；记录后台任务中未观察到的异常；`app-errors.log` 超过 1 MB 自动轮转。
