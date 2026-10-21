@@ -18,6 +18,11 @@ UpdaterTests/TestResults/
 DataStoreTests/bin/
 DataStoreTests/obj/
 DataStoreTests/TestResults/
+IntegratedModManager.EndfieldLaunch/bin/
+IntegratedModManager.EndfieldLaunch/obj/
+EndfieldLaunchTests/bin/
+EndfieldLaunchTests/obj/
+EndfieldLaunchTests/TestResults/
 DeveloperTools/bin/
 DeveloperTools/obj/
 RepositoryPerformance/bin/

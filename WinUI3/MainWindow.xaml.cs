@@ -1259,62 +1259,83 @@ public sealed partial class MainWindow : Window
 
     private async void OnCreateConfigurationProfileClicked(object sender, RoutedEventArgs e)
     {
-        if (_applyingCombinationProfile || _restoringPersistentRuntime) return;
-        WorkspaceRepository? repository = GetSelectedRepository();
-        if (repository is null)
+        try
         {
-            await ShowMessageAsync(L("请先选择仓库。", "Select a repository first."), L("无法新建方案", "Cannot Create Profile"));
-            return;
-        }
+            if (_applyingCombinationProfile || _restoringPersistentRuntime) return;
+            WorkspaceRepository? repository = GetSelectedRepository();
+            if (repository is null)
+            {
+                await ShowMessageAsync(L("请先选择仓库。", "Select a repository first."), L("无法新建方案", "Cannot Create Profile"));
+                return;
+            }
 
-        string? name = await PromptForTextAsync(
-            L("输入组合名称。若勾选保存参数，请先在游戏里按 F10 并等待文件保存完成。", "Name this combination. If including state, press F10 in game and wait for the file to be saved first."),
-            L("保存 Mod 组合", "Save Mod Combination"),
-            L("常用方案", "My Profile"));
-        name = name?.Trim();
-        if (string.IsNullOrWhiteSpace(name))
+            string? name = await PromptForTextAsync(
+                L("输入组合名称。若勾选保存参数，请先在游戏里按 F10 并等待文件保存完成。", "Name this combination. If including state, press F10 in game and wait for the file to be saved first."),
+                L("保存 Mod 组合", "Save Mod Combination"),
+                L("常用方案", "My Profile"));
+            name = name?.Trim();
+            if (string.IsNullOrWhiteSpace(name))
+            {
+                return;
+            }
+
+            await SaveCombinationProfileAsync(repository, name, null);
+        }
+        catch (Exception ex)
         {
-            return;
+            ReportUiActionFailure("OnCreateConfigurationProfileClicked", ex);
         }
-
-        await SaveCombinationProfileAsync(repository, name, null);
     }
 
     private async void OnUpdateConfigurationProfileClicked(object sender, RoutedEventArgs e)
     {
-        ModConfigurationProfile? profile = GetSelectedConfigurationProfile();
-        if (profile is null || _applyingCombinationProfile || _restoringPersistentRuntime)
+        try
         {
-            return;
-        }
+            ModConfigurationProfile? profile = GetSelectedConfigurationProfile();
+            if (profile is null || _applyingCombinationProfile || _restoringPersistentRuntime)
+            {
+                return;
+            }
 
-        WorkspaceRepository? repository = GetSelectedRepository();
-        if (repository is null) return;
-        if (!await ShowConfirmAsync(L($"用当前启用组合覆盖“{profile.Name}”？同时保存参数时，请先按 F10 保存游戏状态。",
-            $"Replace '{profile.Name}' with the enabled combination? Save state with F10 first if including parameters."),
-            L("更新组合预设", "Update Combination Preset"))) return;
-        await SaveCombinationProfileAsync(repository, profile.Name, profile);
+            WorkspaceRepository? repository = GetSelectedRepository();
+            if (repository is null) return;
+            if (!await ShowConfirmAsync(L($"用当前启用组合覆盖“{profile.Name}”？同时保存参数时，请先按 F10 保存游戏状态。",
+                $"Replace '{profile.Name}' with the enabled combination? Save state with F10 first if including parameters."),
+                L("更新组合预设", "Update Combination Preset"))) return;
+            await SaveCombinationProfileAsync(repository, profile.Name, profile);
+        }
+        catch (Exception ex)
+        {
+            ReportUiActionFailure("OnUpdateConfigurationProfileClicked", ex);
+        }
     }
 
     private async void OnDeleteConfigurationProfileClicked(object sender, RoutedEventArgs e)
     {
-        ModConfigurationProfile? profile = GetSelectedConfigurationProfile();
-        if (profile is null)
+        try
         {
-            return;
-        }
+            ModConfigurationProfile? profile = GetSelectedConfigurationProfile();
+            if (profile is null)
+            {
+                return;
+            }
 
-        if (!await ShowConfirmAsync(
-            L($"确定删除配置方案“{profile.Name}”吗？这不会删除任何 Mod。", $"Delete the profile \"{profile.Name}\"? This will not delete any mods."),
-            L("删除配置方案", "Delete Configuration Profile")))
+            if (!await ShowConfirmAsync(
+                L($"确定删除配置方案“{profile.Name}”吗？这不会删除任何 Mod。", $"Delete the profile \"{profile.Name}\"? This will not delete any mods."),
+                L("删除配置方案", "Delete Configuration Profile")))
+            {
+                return;
+            }
+
+            _configurationProfiles.Remove(profile);
+            _selectedConfigurationProfileId = null;
+            SaveShellConfig();
+            RefreshConfigurationProfiles();
+        }
+        catch (Exception ex)
         {
-            return;
+            ReportUiActionFailure("OnDeleteConfigurationProfileClicked", ex);
         }
-
-        _configurationProfiles.Remove(profile);
-        _selectedConfigurationProfileId = null;
-        SaveShellConfig();
-        RefreshConfigurationProfiles();
     }
 
     private void OnConfigurationProfileSelectionChanged(object sender, SelectionChangedEventArgs e)
@@ -1361,7 +1382,109 @@ public sealed partial class MainWindow : Window
 
     private async void OnApplyConfigurationProfileClicked(object sender, RoutedEventArgs e)
     {
-        await RestoreCombinationProfileAsync();
+        try
+        {
+            await RestoreCombinationProfileAsync();
+        }
+        catch (Exception ex)
+        {
+            ReportUiActionFailure("OnApplyConfigurationProfileClicked", ex);
+        }
+    }
+
+    /// <summary>
+    /// Lists links in the loader folder whose source is gone (deleted, renamed or moved
+    /// outside the manager) and offers to remove just those links. Returns false only
+    /// when the user cancels the operation.
+    /// </summary>
+    private async Task<bool> OfferBrokenLinkCleanupAsync(string loaderRoot)
+    {
+        IReadOnlyList<BrokenDirectoryLink> broken;
+        try
+        {
+            broken = await Task.Run(() => DirectoryLinkDeployment.FindBrokenLinks(loaderRoot));
+        }
+        catch (Exception ex) when (ex is IOException or UnauthorizedAccessException or ArgumentException)
+        {
+            LogApplicationIssue("Find broken deployment links", ex);
+            return true;
+        }
+
+        if (broken.Count == 0)
+        {
+            return true;
+        }
+
+        string list = string.Join("\n", broken.Take(20).Select(link =>
+            $"{Path.GetFileName(link.LinkPath)}  →  {link.Target ?? L("（无法读取目标）", "(target unreadable)")}"));
+        if (broken.Count > 20)
+        {
+            list += L($"\n……另有 {broken.Count - 20} 个", $"\n…and {broken.Count - 20} more");
+        }
+
+        DialogViewport viewport = DialogViewportPolicy.Selection(RootGrid.ActualWidth, RootGrid.ActualHeight);
+        var dialog = new ContentDialog
+        {
+            XamlRoot = RootGrid.XamlRoot,
+            RequestedTheme = RootGrid.ActualTheme,
+            Title = L("发现失效的 Mod 联接", "Broken Mod links found"),
+            Content = new ScrollViewer
+            {
+                MaxHeight = viewport.ContentHeight,
+                HorizontalScrollBarVisibility = ScrollBarVisibility.Disabled,
+                Content = new TextBlock
+                {
+                    TextWrapping = TextWrapping.Wrap,
+                    IsTextSelectionEnabled = true,
+                    Text = L(
+                        $"加载目录中有 {broken.Count} 个联接指向已不存在的源目录（源 Mod 可能已被删除、改名或移动）：\n\n{list}\n\n清理只会移除这些联接本身，不会删除任何文件，也不会自动关联名称相近的文件夹。",
+                        $"{broken.Count} link(s) in the loader folder point to source folders that no longer exist (the source Mod may have been deleted, renamed or moved):\n\n{list}\n\nCleaning up removes only these links. No files are deleted, and similarly named folders are never linked automatically.")
+                }
+            },
+            PrimaryButtonText = L("清理失效联接", "Remove broken links"),
+            SecondaryButtonText = L("暂不清理，继续", "Continue without cleanup"),
+            CloseButtonText = L("取消", "Cancel"),
+            DefaultButton = ContentDialogButton.Primary
+        };
+        ContentDialogResult result = await dialog.ShowAsync();
+        if (result == ContentDialogResult.None)
+        {
+            return false;
+        }
+
+        if (result == ContentDialogResult.Secondary)
+        {
+            return true;
+        }
+
+        var failures = new List<string>();
+        int removed = 0;
+        foreach (BrokenDirectoryLink link in broken)
+        {
+            try
+            {
+                // Re-checked: a source restored meanwhile keeps its link.
+                if (DirectoryLinkDeployment.RemoveBrokenLink(link.LinkPath))
+                {
+                    removed++;
+                }
+            }
+            catch (Exception ex) when (ex is IOException or UnauthorizedAccessException or InvalidOperationException)
+            {
+                failures.Add($"{Path.GetFileName(link.LinkPath)}: {ex.Message}");
+                LogApplicationIssue("Remove broken deployment link", ex);
+            }
+        }
+
+        StatusTextBlock.Text = L($"已移除 {removed} 个失效联接。", $"Removed {removed} broken link(s).");
+        if (failures.Count > 0)
+        {
+            await ShowMessageAsync(
+                L("以下失效联接无法移除，已保留：\n", "These broken links could not be removed and were kept:\n") + string.Join("\n", failures),
+                L("部分联接未清理", "Some links were kept"));
+        }
+
+        return true;
     }
 
     private List<string> DetectModFileConflicts(string sourcePath, string targetRoot, string targetPathToIgnore)
@@ -1390,6 +1513,13 @@ public sealed partial class MainWindow : Window
             }
 
             string inspectionRoot = installedModPath;
+            if (DirectoryLinkDeployment.IsBrokenLink(installedModPath))
+            {
+                // Its source was deleted or renamed: nothing to compare, and it must not
+                // stop every other installation. Cleanup is offered before deployment.
+                continue;
+            }
+
             if (DirectoryLinkDeployment.IsDirectoryLink(installedModPath))
             {
                 inspectionRoot = DirectoryLinkDeployment.TryGetTarget(installedModPath)
@@ -1435,14 +1565,11 @@ public sealed partial class MainWindow : Window
             && !fileName.Equals("desktop.ini", StringComparison.OrdinalIgnoreCase);
     }
 
-    private async Task<bool> ConfirmInstallConflictsAsync(IReadOnlyList<string> conflicts)
+    private async Task<bool> ConfirmInstallConflictsAsync(
+        IReadOnlyList<string> fileConflicts,
+        IReadOnlyList<(string? Candidate, ModIniConflictSummary Summary)> iniConflicts)
     {
-        string preview = string.Join(Environment.NewLine, conflicts.Take(12));
-        if (conflicts.Count > 12)
-        {
-            preview += Environment.NewLine + L($"……另有 {conflicts.Count - 12} 项", $"...and {conflicts.Count - 12} more");
-        }
-
+        string text = BuildInstallConflictText(fileConflicts, iniConflicts);
         var dialog = new ContentDialog
         {
             Title = L("检测到潜在 Mod 冲突", "Potential Mod Conflicts Detected"),
@@ -1451,10 +1578,9 @@ public sealed partial class MainWindow : Window
                 MaxHeight = 420,
                 Content = new TextBlock
                 {
-                    Text = L(
-                        $"以下 Mod 包含相同的相对文件路径，可能覆盖同一游戏资源。是否仍要继续？\n\n{preview}",
-                        $"These mods contain matching relative file paths and may override the same game resources. Continue anyway?\n\n{preview}"),
-                    TextWrapping = TextWrapping.Wrap
+                    Text = text,
+                    TextWrapping = TextWrapping.Wrap,
+                    IsTextSelectionEnabled = true
                 }
             },
             PrimaryButtonText = L("仍然继续", "Continue Anyway"),
@@ -1835,34 +1961,41 @@ public sealed partial class MainWindow : Window
 
     private async void OnRollbackLastInstallClicked(object sender, RoutedEventArgs e)
     {
-        if (string.IsNullOrWhiteSpace(_lastInstallTransactionPath) || !Directory.Exists(_lastInstallTransactionPath))
-        {
-            RefreshConfigurationProfiles();
-            return;
-        }
-
-        if (!await ShowConfirmAsync(
-            L("撤销最近一次 Mod 复制、移除或方案切换，并恢复操作前文件？", "Undo the most recent mod copy, removal, or profile change and restore the previous files?"),
-            L("撤销 Mod 操作", "Undo Mod Change")))
-        {
-            return;
-        }
-
-        SetBusyState(true);
         try
         {
-            await RollbackInstallTransactionAsync(_lastInstallTransactionPath, clearLastTransaction: true);
-            await RefreshListsAsync();
-            ShowAppNotification("已恢复上次 Mod 操作前的状态。", "Restored the state before the last mod operation.");
+            if (string.IsNullOrWhiteSpace(_lastInstallTransactionPath) || !Directory.Exists(_lastInstallTransactionPath))
+            {
+                RefreshConfigurationProfiles();
+                return;
+            }
+
+            if (!await ShowConfirmAsync(
+                L("撤销最近一次 Mod 复制、移除或方案切换，并恢复操作前文件？", "Undo the most recent mod copy, removal, or profile change and restore the previous files?"),
+                L("撤销 Mod 操作", "Undo Mod Change")))
+            {
+                return;
+            }
+
+            SetBusyState(true);
+            try
+            {
+                await RollbackInstallTransactionAsync(_lastInstallTransactionPath, clearLastTransaction: true);
+                await RefreshListsAsync();
+                ShowAppNotification("已恢复上次 Mod 操作前的状态。", "Restored the state before the last mod operation.");
+            }
+            catch (Exception ex)
+            {
+                await ShowMessageAsync(L("回滚失败：", "Rollback failed: ") + ex.Message, L("无法回滚", "Cannot Roll Back"));
+            }
+            finally
+            {
+                SetBusyState(false);
+                RefreshConfigurationProfiles();
+            }
         }
         catch (Exception ex)
         {
-            await ShowMessageAsync(L("回滚失败：", "Rollback failed: ") + ex.Message, L("无法回滚", "Cannot Roll Back"));
-        }
-        finally
-        {
-            SetBusyState(false);
-            RefreshConfigurationProfiles();
+            ReportUiActionFailure("OnRollbackLastInstallClicked", ex);
         }
     }
 
@@ -1994,17 +2127,24 @@ public sealed partial class MainWindow : Window
         };
         actionButton.Click += async (_, _) =>
         {
-            if (DownloadProgressPolicy.IsActive(task.State))
+            try
             {
-                if (task.Session?.CanCancel == false) return;
-                task.Cancellation.Cancel();
-                UpdateDownloadTask(task, DownloadTaskState.Canceling, task.Progress, "正在取消...", "Canceling...", forceRefresh: true);
-                return;
-            }
+                if (DownloadProgressPolicy.IsActive(task.State))
+                {
+                    if (task.Session?.CanCancel == false) return;
+                    task.Cancellation.Cancel();
+                    UpdateDownloadTask(task, DownloadTaskState.Canceling, task.Progress, "正在取消...", "Canceling...", forceRefresh: true);
+                    return;
+                }
 
-            if (task.State is DownloadTaskState.Failed or DownloadTaskState.Canceled && task.RetryRequest is not null)
-                await RetryOnlineDownloadAsync(task);
-            else OpenDirectory(task.DestinationPath, L("下载目录", "Download folder"));
+                if (task.State is DownloadTaskState.Failed or DownloadTaskState.Canceled && task.RetryRequest is not null)
+                    await RetryOnlineDownloadAsync(task);
+                else OpenDirectory(task.DestinationPath, L("下载目录", "Download folder"));
+            }
+            catch (Exception ex)
+            {
+                ReportUiActionFailure("actionButton.Click", ex);
+            }
         };
         Grid.SetColumn(actionButton, 1);
         grid.Children.Add(actionButton);
@@ -2547,16 +2687,30 @@ public sealed partial class MainWindow : Window
 
     private async void OnPreviewImageTapped(object sender, TappedRoutedEventArgs e)
     {
-        await ShowImageViewerAsync(PreviewImage.Source, L("Mod 预览图", "Mod Preview"));
+        try
+        {
+            await ShowImageViewerAsync(PreviewImage.Source, L("Mod 预览图", "Mod Preview"));
+        }
+        catch (Exception ex)
+        {
+            ReportUiActionFailure("OnPreviewImageTapped", ex);
+        }
     }
 
     private async void OnOnlineDetailHeroImageTapped(object sender, TappedRoutedEventArgs e)
     {
-        await ShowImageViewerAsync(
-            OnlineDetailHeroImage.Source,
-            L("在线 Mod 图片", "Online Mod Images"),
-            _onlineDetailImageUrls,
-            _onlineDetailImageIndex);
+        try
+        {
+            await ShowImageViewerAsync(
+                OnlineDetailHeroImage.Source,
+                L("在线 Mod 图片", "Online Mod Images"),
+                _onlineDetailImageUrls,
+                _onlineDetailImageIndex);
+        }
+        catch (Exception ex)
+        {
+            ReportUiActionFailure("OnOnlineDetailHeroImageTapped", ex);
+        }
     }
 
     private async Task ShowImageViewerAsync(
@@ -2708,27 +2862,34 @@ public sealed partial class MainWindow : Window
             image.Source = cachedImage ?? source;
         }
 
-        previousButton.Click += async (_, _) => await DisplayImageAsync(currentIndex - 1);
-        nextButton.Click += async (_, _) => await DisplayImageAsync(currentIndex + 1);
+        previousButton.Click += async (_, _) => await RunUiActionAsync("DisplayImageAsync", () => DisplayImageAsync(currentIndex - 1));
+        nextButton.Click += async (_, _) => await RunUiActionAsync("DisplayImageAsync", () => DisplayImageAsync(currentIndex + 1));
         previousButton.Tapped += (_, args) => args.Handled = true;
         nextButton.Tapped += (_, args) => args.Handled = true;
         overlay.Tapped += (_, _) => CloseViewer();
         overlay.KeyDown += async (_, args) =>
         {
-            if (args.Key == VirtualKey.Left && currentIndex > 0)
+            try
             {
-                args.Handled = true;
-                await DisplayImageAsync(currentIndex - 1);
+                if (args.Key == VirtualKey.Left && currentIndex > 0)
+                {
+                    args.Handled = true;
+                    await DisplayImageAsync(currentIndex - 1);
+                }
+                else if (args.Key == VirtualKey.Right && currentIndex < navigationImages.Count - 1)
+                {
+                    args.Handled = true;
+                    await DisplayImageAsync(currentIndex + 1);
+                }
+                else if (args.Key == VirtualKey.Escape)
+                {
+                    args.Handled = true;
+                    CloseViewer();
+                }
             }
-            else if (args.Key == VirtualKey.Right && currentIndex < navigationImages.Count - 1)
+            catch (Exception ex)
             {
-                args.Handled = true;
-                await DisplayImageAsync(currentIndex + 1);
-            }
-            else if (args.Key == VirtualKey.Escape)
-            {
-                args.Handled = true;
-                CloseViewer();
+                ReportUiActionFailure("overlay.KeyDown", ex);
             }
         };
 
@@ -2756,22 +2917,30 @@ public sealed partial class MainWindow : Window
 
     private async void ShowAppNotification(string zh, string en, InfoBarSeverity severity = InfoBarSeverity.Success)
     {
-        int notificationVersion = ++_notificationVersion;
-        AppInfoBar.Severity = severity;
-        AppInfoBar.Title = severity switch
+        try
         {
-            InfoBarSeverity.Error => L("操作未完成", "Action not completed"),
-            InfoBarSeverity.Warning => L("访问已停止", "Stopped"),
-            InfoBarSeverity.Informational => L("提示", "Notice"),
-            _ => L("操作完成", "Completed")
-        };
-        AppInfoBar.Message = L(zh, en);
-        AppInfoBar.IsOpen = true;
+            int notificationVersion = ++_notificationVersion;
+            AppInfoBar.Severity = severity;
+            AppInfoBar.Title = severity switch
+            {
+                InfoBarSeverity.Error => L("操作未完成", "Action not completed"),
+                InfoBarSeverity.Warning => L("访问已停止", "Stopped"),
+                InfoBarSeverity.Informational => L("提示", "Notice"),
+                _ => L("操作完成", "Completed")
+            };
+            AppInfoBar.Message = L(zh, en);
+            AppInfoBar.IsOpen = true;
 
-        await Task.Delay(TimeSpan.FromSeconds(3.5));
-        if (notificationVersion == _notificationVersion)
+            await Task.Delay(TimeSpan.FromSeconds(3.5));
+            if (notificationVersion == _notificationVersion && !_onlineWindowClosed)
+            {
+                AppInfoBar.IsOpen = false;
+            }
+        }
+        catch (Exception ex)
         {
-            AppInfoBar.IsOpen = false;
+            // Not routed through ReportUiActionFailure: that would notify again.
+            LogApplicationIssue("Show notification", ex);
         }
     }
 
@@ -2983,7 +3152,7 @@ public sealed partial class MainWindow : Window
             : $"{characterOption.DisplayNameZh} / {characterOption.DisplayNameEn}";
         ToolTipService.SetToolTip(button, string.IsNullOrWhiteSpace(character) ? L("显示全部角色", "Show all characters") : tooltip);
         AutomationProperties.SetName(button, string.IsNullOrWhiteSpace(character) ? L("全部角色", "All characters") : label);
-        button.Click += async (_, _) => await SelectOnlineCharacterAsync(character);
+        button.Click += async (_, _) => await RunUiActionAsync("SelectOnlineCharacterAsync", () => SelectOnlineCharacterAsync(character));
         return WrapCharacterButtonWithFavorite(button, character);
     }
 
@@ -3740,13 +3909,20 @@ public sealed partial class MainWindow : Window
 
     private async void OnRefreshOnlineModsClicked(object sender, RoutedEventArgs e)
     {
-        WorkspaceRepository? repository = GetSelectedRepository();
-        if (repository is not null)
+        try
         {
-            _ = EnsureOnlineCharacterCatalogAsync(repository, forceReload: true);
-        }
+            WorkspaceRepository? repository = GetSelectedRepository();
+            if (repository is not null)
+            {
+                _ = EnsureOnlineCharacterCatalogAsync(repository, forceReload: true);
+            }
 
-        await LoadOnlineModsAsync(forceReload: true);
+            await LoadOnlineModsAsync(forceReload: true);
+        }
+        catch (Exception ex)
+        {
+            ReportUiActionFailure("OnRefreshOnlineModsClicked", ex);
+        }
     }
 
     private async Task LoadOnlineModsAsync(bool forceReload)
@@ -4795,26 +4971,40 @@ public sealed partial class MainWindow : Window
 
     private async void OnOnlinePrevPageClicked(object sender, RoutedEventArgs e)
     {
-        if (_onlineCurrentPage <= 1 || _isLoadingOnlineMods)
+        try
         {
-            return;
-        }
+            if (_onlineCurrentPage <= 1 || _isLoadingOnlineMods)
+            {
+                return;
+            }
 
-        ResetOnlineBrowsePosition();
-        _onlineCurrentPage--;
-        await LoadOnlineModsAsync(forceReload: false);
+            ResetOnlineBrowsePosition();
+            _onlineCurrentPage--;
+            await LoadOnlineModsAsync(forceReload: false);
+        }
+        catch (Exception ex)
+        {
+            ReportUiActionFailure("OnOnlinePrevPageClicked", ex);
+        }
     }
 
     private async void OnOnlineNextPageClicked(object sender, RoutedEventArgs e)
     {
-        if (_onlineCurrentPage >= _onlineTotalPages || _isLoadingOnlineMods)
+        try
         {
-            return;
-        }
+            if (_onlineCurrentPage >= _onlineTotalPages || _isLoadingOnlineMods)
+            {
+                return;
+            }
 
-        ResetOnlineBrowsePosition();
-        _onlineCurrentPage++;
-        await LoadOnlineModsAsync(forceReload: false);
+            ResetOnlineBrowsePosition();
+            _onlineCurrentPage++;
+            await LoadOnlineModsAsync(forceReload: false);
+        }
+        catch (Exception ex)
+        {
+            ReportUiActionFailure("OnOnlineNextPageClicked", ex);
+        }
     }
 
     private void OnOnlineSearchTextChanged(object sender, TextChangedEventArgs e)
@@ -4829,13 +5019,20 @@ public sealed partial class MainWindow : Window
 
     private async void OnOnlineCharacterSelectionChanged(object sender, SelectionChangedEventArgs e)
     {
-        if (_isApplyingOnlineCharacterSelection || _restoringBrowseControls)
+        try
         {
-            return;
-        }
+            if (_isApplyingOnlineCharacterSelection || _restoringBrowseControls)
+            {
+                return;
+            }
 
-        string character = (OnlineCharacterComboBox.SelectedItem as ComboBoxItem)?.Tag as string ?? string.Empty;
-        await SelectOnlineCharacterAsync(character);
+            string character = (OnlineCharacterComboBox.SelectedItem as ComboBoxItem)?.Tag as string ?? string.Empty;
+            await SelectOnlineCharacterAsync(character);
+        }
+        catch (Exception ex)
+        {
+            ReportUiActionFailure("OnOnlineCharacterSelectionChanged", ex);
+        }
     }
 
     private async Task SelectOnlineCharacterAsync(string character)
@@ -7011,39 +7208,46 @@ public sealed partial class MainWindow : Window
 
     private async void ShowOnlineDetailHeroImage(string? imageUrl, int imageIndex = 0)
     {
-        TraceOnlineUiState("Hero requested");
-        _onlineDetailImageIndex = Math.Clamp(
-            imageIndex,
-            0,
-            Math.Max(0, _onlineDetailImageUrls.Count - 1));
-        int requestVersion = ++_onlineHeroImageRequestVersion;
-        if (Uri.TryCreate(imageUrl, UriKind.Absolute, out _))
+        try
         {
-            OnlineDetailHeroImage.Source = null;
-            OnlineDetailHeroImage.Visibility = Visibility.Visible;
-            OnlineDetailHeroPlaceholderTextBlock.Visibility = Visibility.Visible;
-            OnlineDetailHeroPlaceholderTextBlock.Text = L("正在加载高清预览...", "Loading high-resolution preview...");
-            BitmapImage? bitmap = await LoadOnlineBitmapAsync(imageUrl!);
-            if (requestVersion != _onlineHeroImageRequestVersion)
+            TraceOnlineUiState("Hero requested");
+            _onlineDetailImageIndex = Math.Clamp(
+                imageIndex,
+                0,
+                Math.Max(0, _onlineDetailImageUrls.Count - 1));
+            int requestVersion = ++_onlineHeroImageRequestVersion;
+            if (Uri.TryCreate(imageUrl, UriKind.Absolute, out _))
             {
-                return;
-            }
-
-            if (bitmap is not null)
-            {
-                TraceOnlineUiState("Hero assigning decoded bitmap");
-                OnlineDetailHeroImage.Source = bitmap;
+                OnlineDetailHeroImage.Source = null;
                 OnlineDetailHeroImage.Visibility = Visibility.Visible;
-                OnlineDetailHeroPlaceholderTextBlock.Visibility = Visibility.Collapsed;
-                OnlineDetailHeroPlaceholderTextBlock.Text = string.Empty;
-                return;
-            }
-        }
+                OnlineDetailHeroPlaceholderTextBlock.Visibility = Visibility.Visible;
+                OnlineDetailHeroPlaceholderTextBlock.Text = L("正在加载高清预览...", "Loading high-resolution preview...");
+                BitmapImage? bitmap = await LoadOnlineBitmapAsync(imageUrl!);
+                if (requestVersion != _onlineHeroImageRequestVersion)
+                {
+                    return;
+                }
 
-        OnlineDetailHeroImage.Source = null;
-        OnlineDetailHeroImage.Visibility = Visibility.Collapsed;
-        OnlineDetailHeroPlaceholderTextBlock.Visibility = Visibility.Visible;
-        OnlineDetailHeroPlaceholderTextBlock.Text = L("预览图加载失败。", "Failed to load the preview image.");
+                if (bitmap is not null)
+                {
+                    TraceOnlineUiState("Hero assigning decoded bitmap");
+                    OnlineDetailHeroImage.Source = bitmap;
+                    OnlineDetailHeroImage.Visibility = Visibility.Visible;
+                    OnlineDetailHeroPlaceholderTextBlock.Visibility = Visibility.Collapsed;
+                    OnlineDetailHeroPlaceholderTextBlock.Text = string.Empty;
+                    return;
+                }
+            }
+
+            OnlineDetailHeroImage.Source = null;
+            OnlineDetailHeroImage.Visibility = Visibility.Collapsed;
+            OnlineDetailHeroPlaceholderTextBlock.Visibility = Visibility.Visible;
+            OnlineDetailHeroPlaceholderTextBlock.Text = L("预览图加载失败。", "Failed to load the preview image.");
+        }
+        catch (Exception ex)
+        {
+            ReportUiActionFailure("ShowOnlineDetailHeroImage", ex);
+        }
     }
 
     private async Task<string> TranslateTextForDisplayAsync(string text, string targetLanguage)
@@ -7247,7 +7451,7 @@ public sealed partial class MainWindow : Window
             Style = (Style)Application.Current.Resources["SecondaryButtonStyle"],
             MinHeight = 36
         };
-        openPageButton.Click += async (_, _) => await OpenExternalUrlAsync(mod.ProfileUrl, L("打开页面失败", "Open page failed"));
+        openPageButton.Click += async (_, _) => await RunUiActionAsync("OpenExternalUrlAsync", () => OpenExternalUrlAsync(mod.ProfileUrl, L("打开页面失败", "Open page failed")));
         actionsPanel.Children.Add(openPageButton);
 
         Button downloadButton = new()
@@ -7257,7 +7461,7 @@ public sealed partial class MainWindow : Window
             MinHeight = 36,
             IsEnabled = !string.IsNullOrWhiteSpace(mod.DownloadUrl) && !IsOnlineDownloadActionBlocked(mod)
         };
-        downloadButton.Click += async (_, _) => await RunOnlineCardDownloadAsync(mod, downloadButton);
+        downloadButton.Click += async (_, _) => await RunUiActionAsync("RunOnlineCardDownloadAsync", () => RunOnlineCardDownloadAsync(mod, downloadButton));
         actionsPanel.Children.Add(downloadButton);
 
         contentPanel.Children.Add(actionsPanel);
@@ -7280,12 +7484,19 @@ public sealed partial class MainWindow : Window
         };
         border.Tapped += async (_, args) =>
         {
-            if (IsSourceInsideButton(args.OriginalSource as DependencyObject))
+            try
             {
-                return;
-            }
+                if (IsSourceInsideButton(args.OriginalSource as DependencyObject))
+                {
+                    return;
+                }
 
-            await ShowOnlineModDetailsAsync(mod);
+                await ShowOnlineModDetailsAsync(mod);
+            }
+            catch (Exception ex)
+            {
+                ReportUiActionFailure("border.Tapped", ex);
+            }
         };
         border.PointerEntered += (_, _) => AnimateOnlineModCardHover(border, true);
         border.PointerExited += (_, _) => AnimateOnlineModCardHover(border, false);
@@ -7388,7 +7599,7 @@ public sealed partial class MainWindow : Window
             MinHeight = 36,
             HorizontalAlignment = HorizontalAlignment.Stretch
         };
-        detailsButton.Click += async (_, _) => await ShowOnlineModDetailsAsync(mod);
+        detailsButton.Click += async (_, _) => await RunUiActionAsync("ShowOnlineModDetailsAsync", () => ShowOnlineModDetailsAsync(mod));
         actionsPanel.Children.Add(detailsButton);
 
         Grid quickActions = new()
@@ -7412,7 +7623,7 @@ public sealed partial class MainWindow : Window
         };
         ToolTipService.SetToolTip(openPageButton, L("打开原页面", "Open original page"));
         AutomationProperties.SetName(openPageButton, L("打开原页面", "Open original page"));
-        openPageButton.Click += async (_, _) => await OpenExternalUrlAsync(mod.ProfileUrl, L("打开页面失败", "Open page failed"));
+        openPageButton.Click += async (_, _) => await RunUiActionAsync("OpenExternalUrlAsync", () => OpenExternalUrlAsync(mod.ProfileUrl, L("打开页面失败", "Open page failed")));
         quickActions.Children.Add(openPageButton);
 
         Button downloadButton = new()
@@ -7433,7 +7644,7 @@ public sealed partial class MainWindow : Window
             : L("重新下载并解压", "Download and extract again");
         ToolTipService.SetToolTip(downloadButton, downloadActionText);
         AutomationProperties.SetName(downloadButton, downloadActionText);
-        downloadButton.Click += async (_, _) => await RunOnlineCardDownloadAsync(mod, downloadButton);
+        downloadButton.Click += async (_, _) => await RunUiActionAsync("RunOnlineCardDownloadAsync", () => RunOnlineCardDownloadAsync(mod, downloadButton));
         quickActions.Children.Add(downloadButton);
         actionsPanel.Children.Add(quickActions);
         TrackOnlineCardState(mod, downloadButton, installedHost, cardStatus, cardStatus.Text);
@@ -7464,9 +7675,16 @@ public sealed partial class MainWindow : Window
         };
         border.Tapped += async (_, args) =>
         {
-            if (!IsSourceInsideButton(args.OriginalSource as DependencyObject))
+            try
             {
-                await ShowOnlineModDetailsAsync(mod);
+                if (!IsSourceInsideButton(args.OriginalSource as DependencyObject))
+                {
+                    await ShowOnlineModDetailsAsync(mod);
+                }
+            }
+            catch (Exception ex)
+            {
+                ReportUiActionFailure("border.Tapped", ex);
             }
         };
         border.PointerEntered += (_, _) => AnimateOnlineModCardHover(border, true);
@@ -7595,7 +7813,7 @@ public sealed partial class MainWindow : Window
             HorizontalAlignment = HorizontalAlignment.Stretch,
             Style = (Style)Application.Current.Resources["PrimaryButtonStyle"]
         };
-        detailsButton.Click += async (_, _) => await ShowOnlineModDetailsAsync(mod);
+        detailsButton.Click += async (_, _) => await RunUiActionAsync("ShowOnlineModDetailsAsync", () => ShowOnlineModDetailsAsync(mod));
         actions.Children.Add(detailsButton);
 
         Button openPageButton = new()
@@ -7608,7 +7826,7 @@ public sealed partial class MainWindow : Window
         };
         Grid.SetColumn(openPageButton, 1);
         ToolTipService.SetToolTip(openPageButton, L("打开原页面", "Open original page"));
-        openPageButton.Click += async (_, _) => await OpenExternalUrlAsync(mod.ProfileUrl, L("打开页面失败", "Open page failed"));
+        openPageButton.Click += async (_, _) => await RunUiActionAsync("OpenExternalUrlAsync", () => OpenExternalUrlAsync(mod.ProfileUrl, L("打开页面失败", "Open page failed")));
         actions.Children.Add(openPageButton);
 
         Button downloadButton = new()
@@ -7626,7 +7844,7 @@ public sealed partial class MainWindow : Window
             installedOrigin is null
                 ? L("下载并解压", "Download and extract")
                 : L("重新下载并解压", "Download and extract again"));
-        downloadButton.Click += async (_, _) => await RunOnlineCardDownloadAsync(mod, downloadButton);
+        downloadButton.Click += async (_, _) => await RunUiActionAsync("RunOnlineCardDownloadAsync", () => RunOnlineCardDownloadAsync(mod, downloadButton));
         actions.Children.Add(downloadButton);
 
         Grid.SetRow(actions, 2);
@@ -7942,7 +8160,7 @@ public sealed partial class MainWindow : Window
             MinHeight = 36,
             IsEnabled = !string.IsNullOrWhiteSpace(result.ProfileUrl)
         };
-        openPageButton.Click += async (_, _) => await OpenExternalUrlAsync(result.ProfileUrl, L("打开页面失败", "Open page failed"));
+        openPageButton.Click += async (_, _) => await RunUiActionAsync("OpenExternalUrlAsync", () => OpenExternalUrlAsync(result.ProfileUrl, L("打开页面失败", "Open page failed")));
         actions.Children.Add(openPageButton);
 
         Button openFolderButton = new()
@@ -7972,7 +8190,7 @@ public sealed partial class MainWindow : Window
             Style = (Style)Application.Current.Resources["SecondaryButtonStyle"],
             MinHeight = 36
         };
-        removeTrackingButton.Click += async (_, _) => await RemoveTrackedModRecordAsync(result);
+        removeTrackingButton.Click += async (_, _) => await RunUiActionAsync("RemoveTrackedModRecordAsync", () => RemoveTrackedModRecordAsync(result));
         actions.Children.Add(removeTrackingButton);
 
         content.Children.Add(actions);
@@ -8329,7 +8547,13 @@ public sealed partial class MainWindow : Window
             downloadTask.DestinationPath = extractFolder;
             UpdateDownloadTask(downloadTask, DownloadTaskState.Extracting, 92, "正在解压并写入 Mod 信息...", "Extracting and writing mod metadata...", forceRefresh: true);
             downloadTask.Cancellation.Token.ThrowIfCancellationRequested();
-            await Task.Run(() => ExtractArchiveToDirectory(resolvedArchivePath, extractFolder));
+            await Task.Run(() =>
+            {
+                ExtractArchiveToDirectory(resolvedArchivePath, extractFolder);
+                // The extraction folder is already this Mod's own folder; an archive that
+                // brings its own top-level folder would otherwise be nested twice.
+                ArchiveImportLayout.HoistSingleTopFolder(extractFolder);
+            });
             downloadTask.Cancellation.Token.ThrowIfCancellationRequested();
             PreparedOnlineInstallMetadata prepared = await session.PrepareAndCommitAsync(
                 token => PrepareOnlineInstallMetadataAsync(extractFolder, effectiveMod, details, token),
@@ -9080,60 +9304,67 @@ public sealed partial class MainWindow : Window
 
     private async void OnRepositoryPresetClicked(object sender, RoutedEventArgs e)
     {
-        if (sender is not Button { Tag: string presetId })
+        try
         {
-            return;
-        }
+            if (sender is not Button { Tag: string presetId })
+            {
+                return;
+            }
 
-        RepositoryPresetInfo? preset = BuiltInRepositoryPresets.FirstOrDefault(item =>
-            string.Equals(item.Id, presetId, StringComparison.OrdinalIgnoreCase));
-        if (preset is null)
-        {
-            return;
-        }
+            RepositoryPresetInfo? preset = BuiltInRepositoryPresets.FirstOrDefault(item =>
+                string.Equals(item.Id, presetId, StringComparison.OrdinalIgnoreCase));
+            if (preset is null)
+            {
+                return;
+            }
 
-        WorkspaceRepository? existing = FindRepositoryForPreset(preset);
-        if (existing is not null)
-        {
-            SwitchRepository(existing.Id, openManager: false);
+            WorkspaceRepository? existing = FindRepositoryForPreset(preset);
+            if (existing is not null)
+            {
+                SwitchRepository(existing.Id, openManager: false);
+                ShowAppNotification(
+                    $"已切换到现有仓库：{existing.Name}",
+                    $"Switched to the existing repository: {existing.Name}");
+                return;
+            }
+
+            SaveSelectedRepositoryFromInputs();
+            WorkspaceRepository draftRepository = new()
+            {
+                Name = _currentLanguage == AppLanguage.ZhCn ? preset.DisplayNameZh : preset.DisplayNameEn,
+                OnlineSourceSite = DefaultOnlineSourceSite,
+                OnlineGameName = preset.DisplayNameEn,
+                OnlineCategoryId = preset.CategoryId,
+                WikiUrl = preset.WikiUrl,
+                Notes = L("内置游戏仓库预设，可继续填写本地路径和启动器。", "Built-in game repository preset. Configure local paths and a launcher as needed.")
+            };
+
+            RepositoryEditorResult? result = await PromptForRepositoryAsync(
+                L("预设已经填写在线分类和 Wiki。请补充本地 Mod 存储、目标文件夹及启动器路径。", "The online category and Wiki are prefilled. Add the local mod storage, target folder, and launcher paths."),
+                L($"创建{preset.DisplayNameZh}仓库", $"Create {preset.DisplayNameEn} Repository"),
+                draftRepository);
+            if (result is null || string.IsNullOrWhiteSpace(result.Name))
+            {
+                return;
+            }
+
+            WorkspaceRepository repository = CreateRepositoryFromEditorResult(result);
+            _repositories.Add(repository);
+            _selectedRepositoryId = repository.Id;
+            ResetOnlineRepositoryContext();
+            ApplySelectedRepositoryToInputs();
+            SaveConfig();
+            SaveShellConfig();
+            RefreshDashboard();
+            RefreshRepositoryActionButtons();
             ShowAppNotification(
-                $"已切换到现有仓库：{existing.Name}",
-                $"Switched to the existing repository: {existing.Name}");
-            return;
+                $"已创建仓库：{repository.Name}",
+                $"Created repository: {repository.Name}");
         }
-
-        SaveSelectedRepositoryFromInputs();
-        WorkspaceRepository draftRepository = new()
+        catch (Exception ex)
         {
-            Name = _currentLanguage == AppLanguage.ZhCn ? preset.DisplayNameZh : preset.DisplayNameEn,
-            OnlineSourceSite = DefaultOnlineSourceSite,
-            OnlineGameName = preset.DisplayNameEn,
-            OnlineCategoryId = preset.CategoryId,
-            WikiUrl = preset.WikiUrl,
-            Notes = L("内置游戏仓库预设，可继续填写本地路径和启动器。", "Built-in game repository preset. Configure local paths and a launcher as needed.")
-        };
-
-        RepositoryEditorResult? result = await PromptForRepositoryAsync(
-            L("预设已经填写在线分类和 Wiki。请补充本地 Mod 存储、目标文件夹及启动器路径。", "The online category and Wiki are prefilled. Add the local mod storage, target folder, and launcher paths."),
-            L($"创建{preset.DisplayNameZh}仓库", $"Create {preset.DisplayNameEn} Repository"),
-            draftRepository);
-        if (result is null || string.IsNullOrWhiteSpace(result.Name))
-        {
-            return;
+            ReportUiActionFailure("OnRepositoryPresetClicked", ex);
         }
-
-        WorkspaceRepository repository = CreateRepositoryFromEditorResult(result);
-        _repositories.Add(repository);
-        _selectedRepositoryId = repository.Id;
-        ResetOnlineRepositoryContext();
-        ApplySelectedRepositoryToInputs();
-        SaveConfig();
-        SaveShellConfig();
-        RefreshDashboard();
-        RefreshRepositoryActionButtons();
-        ShowAppNotification(
-            $"已创建仓库：{repository.Name}",
-            $"Created repository: {repository.Name}");
     }
 
     private static WorkspaceRepository CreateRepositoryFromEditorResult(RepositoryEditorResult result)
@@ -9227,419 +9458,468 @@ public sealed partial class MainWindow : Window
 
     private async void OnAddRepositoryClicked(object sender, RoutedEventArgs e)
     {
-        string? repositoryName = await PromptForTextAsync(
-            L("输入新仓库名称，后面可以继续补充路径和用途。", "Enter a repository name. You can expand its settings later."),
-            L("新建仓库", "Create Repository"),
-            L("例如：原神正式 / ZZZ Test", "For example: GI Main / ZZZ Test"));
-
-        if (string.IsNullOrWhiteSpace(repositoryName))
+        try
         {
-            return;
+            string? repositoryName = await PromptForTextAsync(
+                L("输入新仓库名称，后面可以继续补充路径和用途。", "Enter a repository name. You can expand its settings later."),
+                L("新建仓库", "Create Repository"),
+                L("例如：原神正式 / ZZZ Test", "For example: GI Main / ZZZ Test"));
+
+            if (string.IsNullOrWhiteSpace(repositoryName))
+            {
+                return;
+            }
+
+            SaveSelectedRepositoryFromInputs();
+
+            var repository = new WorkspaceRepository
+            {
+                Id = Guid.NewGuid().ToString("N"),
+                Name = repositoryName.Trim(),
+                OnlineSourceSite = DefaultOnlineSourceSite,
+                OnlineGameName = DefaultOnlineGameName,
+                OnlineCategoryId = DefaultOnlineCategoryId
+            };
+
+            _repositories.Add(repository);
+            _selectedRepositoryId = repository.Id;
+            _onlineCurrentPage = 1;
+            _onlineTotalCount = 0;
+            _onlineTotalPages = 1;
+            _onlineCharacterFilter = string.Empty;
+            _onlineKnownCharacters.Clear();
+            _lastLoadedOnlineConfigKey = null;
+            _onlineMods.Clear();
+            _currentPrimarySection = PrimarySection.Repository;
+            ApplySelectedRepositoryToInputs();
+            SaveConfig();
+            ApplyShellState(refreshRepository: false);
+            RefreshDashboard();
+            StatusTextBlock.Text = L($"已创建仓库：{repository.Name}", $"Created repository: {repository.Name}");
         }
-
-        SaveSelectedRepositoryFromInputs();
-
-        var repository = new WorkspaceRepository
+        catch (Exception ex)
         {
-            Id = Guid.NewGuid().ToString("N"),
-            Name = repositoryName.Trim(),
-            OnlineSourceSite = DefaultOnlineSourceSite,
-            OnlineGameName = DefaultOnlineGameName,
-            OnlineCategoryId = DefaultOnlineCategoryId
-        };
-
-        _repositories.Add(repository);
-        _selectedRepositoryId = repository.Id;
-        _onlineCurrentPage = 1;
-        _onlineTotalCount = 0;
-        _onlineTotalPages = 1;
-        _onlineCharacterFilter = string.Empty;
-        _onlineKnownCharacters.Clear();
-        _lastLoadedOnlineConfigKey = null;
-        _onlineMods.Clear();
-        _currentPrimarySection = PrimarySection.Repository;
-        ApplySelectedRepositoryToInputs();
-        SaveConfig();
-        ApplyShellState(refreshRepository: false);
-        RefreshDashboard();
-        StatusTextBlock.Text = L($"已创建仓库：{repository.Name}", $"Created repository: {repository.Name}");
+            ReportUiActionFailure("OnAddRepositoryClicked", ex);
+        }
     }
 
     private async void OnRenameRepositoryClicked(object sender, RoutedEventArgs e)
     {
-        WorkspaceRepository? repository = GetSelectedRepository();
-        if (repository is null || _selectedRepositoryId is null)
+        try
         {
-            return;
+            WorkspaceRepository? repository = GetSelectedRepository();
+            if (repository is null || _selectedRepositoryId is null)
+            {
+                return;
+            }
+
+            string? repositoryName = await PromptForTextAsync(
+                L("输入新的仓库名称。", "Enter a new repository name."),
+                L("重命名仓库", "Rename Repository"),
+                repository.Name);
+
+            if (string.IsNullOrWhiteSpace(repositoryName))
+            {
+                return;
+            }
+
+            repository.Name = repositoryName.Trim();
+            SaveShellConfig();
+            RefreshSecondaryNavigation();
+            RefreshDashboard();
+            RefreshRepositoryActionButtons();
+            StatusTextBlock.Text = L($"已重命名仓库：{repository.Name}", $"Renamed repository: {repository.Name}");
         }
-
-        string? repositoryName = await PromptForTextAsync(
-            L("输入新的仓库名称。", "Enter a new repository name."),
-            L("重命名仓库", "Rename Repository"),
-            repository.Name);
-
-        if (string.IsNullOrWhiteSpace(repositoryName))
+        catch (Exception ex)
         {
-            return;
+            ReportUiActionFailure("OnRenameRepositoryClicked", ex);
         }
-
-        repository.Name = repositoryName.Trim();
-        SaveShellConfig();
-        RefreshSecondaryNavigation();
-        RefreshDashboard();
-        RefreshRepositoryActionButtons();
-        StatusTextBlock.Text = L($"已重命名仓库：{repository.Name}", $"Renamed repository: {repository.Name}");
     }
 
     private async void OnAddRepositoryDetailsClicked(object sender, RoutedEventArgs e)
     {
-        SaveSelectedRepositoryFromInputs();
-
-        WorkspaceRepository draftRepository = new()
+        try
         {
-            Name = string.Empty,
-            SourcePath = SourceTextBox.Text ?? string.Empty,
-            TargetPath = TargetTextBox.Text ?? string.Empty,
-            LauncherPath = LauncherTextBox.Text ?? string.Empty
-        };
+            SaveSelectedRepositoryFromInputs();
 
-        RepositoryEditorResult? result = await PromptForRepositoryAsync(
-            L("创建一个新的自定义仓库，并一次性补充它的主要路径信息。", "Create a new custom repository and fill in its primary paths in one step."),
-            L("新建仓库", "Create Repository"),
-            draftRepository);
+            WorkspaceRepository draftRepository = new()
+            {
+                Name = string.Empty,
+                SourcePath = SourceTextBox.Text ?? string.Empty,
+                TargetPath = TargetTextBox.Text ?? string.Empty,
+                LauncherPath = LauncherTextBox.Text ?? string.Empty
+            };
 
-        if (result is null || string.IsNullOrWhiteSpace(result.Name))
-        {
-            return;
+            RepositoryEditorResult? result = await PromptForRepositoryAsync(
+                L("创建一个新的自定义仓库，并一次性补充它的主要路径信息。", "Create a new custom repository and fill in its primary paths in one step."),
+                L("新建仓库", "Create Repository"),
+                draftRepository);
+
+            if (result is null || string.IsNullOrWhiteSpace(result.Name))
+            {
+                return;
+            }
+
+            WorkspaceRepository repository = CreateRepositoryFromEditorResult(result);
+
+            _repositories.Add(repository);
+            _selectedRepositoryId = repository.Id;
+            _currentPrimarySection = PrimarySection.Repository;
+            _onlineCurrentPage = 1;
+            _onlineTotalCount = 0;
+            _onlineTotalPages = 1;
+            _onlineCharacterFilter = string.Empty;
+            _onlineKnownCharacters.Clear();
+            _lastLoadedOnlineConfigKey = null;
+            _onlineMods.Clear();
+            ApplySelectedRepositoryToInputs();
+            SaveConfig();
+            ApplyShellState(refreshRepository: false);
+            RefreshDashboard();
+            StatusTextBlock.Text = L($"已创建仓库：{repository.Name}", $"Created repository: {repository.Name}");
         }
-
-        WorkspaceRepository repository = CreateRepositoryFromEditorResult(result);
-
-        _repositories.Add(repository);
-        _selectedRepositoryId = repository.Id;
-        _currentPrimarySection = PrimarySection.Repository;
-        _onlineCurrentPage = 1;
-        _onlineTotalCount = 0;
-        _onlineTotalPages = 1;
-        _onlineCharacterFilter = string.Empty;
-        _onlineKnownCharacters.Clear();
-        _lastLoadedOnlineConfigKey = null;
-        _onlineMods.Clear();
-        ApplySelectedRepositoryToInputs();
-        SaveConfig();
-        ApplyShellState(refreshRepository: false);
-        RefreshDashboard();
-        StatusTextBlock.Text = L($"已创建仓库：{repository.Name}", $"Created repository: {repository.Name}");
+        catch (Exception ex)
+        {
+            ReportUiActionFailure("OnAddRepositoryDetailsClicked", ex);
+        }
     }
 
     private async void OnEditRepositoryDetailsClicked(object sender, RoutedEventArgs e)
     {
-        WorkspaceRepository? repository = GetSelectedRepository();
-        if (repository is null || _selectedRepositoryId is null)
+        try
         {
-            return;
+            WorkspaceRepository? repository = GetSelectedRepository();
+            if (repository is null || _selectedRepositoryId is null)
+            {
+                return;
+            }
+
+            SaveSelectedRepositoryFromInputs();
+
+            RepositoryEditorResult? result = await PromptForRepositoryAsync(
+                L("编辑当前仓库的名称、路径和预留的在线来源信息。", "Edit the current repository name, paths, and reserved online-source fields."),
+                L("编辑仓库", "Edit Repository"),
+                repository);
+
+            if (result is null || string.IsNullOrWhiteSpace(result.Name))
+            {
+                return;
+            }
+
+            repository.Name = result.Name.Trim();
+            repository.SourcePath = result.SourcePath.Trim();
+            repository.TargetPath = result.TargetPath.Trim();
+            repository.UseDirectoryLinks = result.UseDirectoryLinks;
+            repository.LauncherPath = result.LauncherPath.Trim();
+            repository.OnlineSourceSite = result.OnlineSourceSite.Trim();
+            repository.OnlineGameName = result.OnlineGameName.Trim();
+            repository.OnlineCategoryId = result.OnlineCategoryId.Trim();
+            repository.WikiUrl = result.WikiUrl.Trim();
+            repository.Notes = result.Notes.Trim();
+            ResetOnlineRepositoryContext();
+
+            ApplySelectedRepositoryToInputs();
+            SaveShellConfig();
+            RefreshSecondaryNavigation();
+            RefreshDashboard();
+            RefreshRepositoryActionButtons();
+            StatusTextBlock.Text = L($"已更新仓库：{repository.Name}", $"Updated repository: {repository.Name}");
         }
-
-        SaveSelectedRepositoryFromInputs();
-
-        RepositoryEditorResult? result = await PromptForRepositoryAsync(
-            L("编辑当前仓库的名称、路径和预留的在线来源信息。", "Edit the current repository name, paths, and reserved online-source fields."),
-            L("编辑仓库", "Edit Repository"),
-            repository);
-
-        if (result is null || string.IsNullOrWhiteSpace(result.Name))
+        catch (Exception ex)
         {
-            return;
+            ReportUiActionFailure("OnEditRepositoryDetailsClicked", ex);
         }
-
-        repository.Name = result.Name.Trim();
-        repository.SourcePath = result.SourcePath.Trim();
-        repository.TargetPath = result.TargetPath.Trim();
-        repository.UseDirectoryLinks = result.UseDirectoryLinks;
-        repository.LauncherPath = result.LauncherPath.Trim();
-        repository.OnlineSourceSite = result.OnlineSourceSite.Trim();
-        repository.OnlineGameName = result.OnlineGameName.Trim();
-        repository.OnlineCategoryId = result.OnlineCategoryId.Trim();
-        repository.WikiUrl = result.WikiUrl.Trim();
-        repository.Notes = result.Notes.Trim();
-        ResetOnlineRepositoryContext();
-
-        ApplySelectedRepositoryToInputs();
-        SaveShellConfig();
-        RefreshSecondaryNavigation();
-        RefreshDashboard();
-        RefreshRepositoryActionButtons();
-        StatusTextBlock.Text = L($"已更新仓库：{repository.Name}", $"Updated repository: {repository.Name}");
     }
 
     private async void OnEditOnlineRepositoryClicked(object sender, RoutedEventArgs e)
     {
-        WorkspaceRepository? repository = GetSelectedRepository();
-        if (repository is null || _selectedRepositoryId is null)
+        try
         {
-            await ShowMessageAsync(
-                L("请先在左侧选择一个仓库，再编辑它的在线分类配置。", "Select a repository on the left before editing its online category settings."),
-                L("未选择仓库", "No repository selected"));
-            return;
-        }
+            WorkspaceRepository? repository = GetSelectedRepository();
+            if (repository is null || _selectedRepositoryId is null)
+            {
+                await ShowMessageAsync(
+                    L("请先在左侧选择一个仓库，再编辑它的在线分类配置。", "Select a repository on the left before editing its online category settings."),
+                    L("未选择仓库", "No repository selected"));
+                return;
+            }
 
-        OnlineRepositoryConfigResult? result = await PromptForOnlineRepositoryConfigAsync(repository);
-        if (result is null)
+            OnlineRepositoryConfigResult? result = await PromptForOnlineRepositoryConfigAsync(repository);
+            if (result is null)
+            {
+                return;
+            }
+
+            repository.OnlineSourceSite = result.OnlineSourceSite.Trim();
+            repository.OnlineGameName = result.OnlineGameName.Trim();
+            repository.OnlineCategoryId = result.OnlineCategoryId.Trim();
+            repository.WikiUrl = result.WikiUrl.Trim();
+            repository.Notes = result.Notes.Trim();
+            ResetOnlineRepositoryContext();
+
+            SaveShellConfig();
+            RefreshSettingsPane();
+            RefreshOnlinePaneV2();
+            ResetOnlineDetailPaneToPlaceholder();
+            StatusTextBlock.Text = L($"已更新在线分类配置：{repository.Name}", $"Updated online category settings: {repository.Name}");
+        }
+        catch (Exception ex)
         {
-            return;
+            ReportUiActionFailure("OnEditOnlineRepositoryClicked", ex);
         }
-
-        repository.OnlineSourceSite = result.OnlineSourceSite.Trim();
-        repository.OnlineGameName = result.OnlineGameName.Trim();
-        repository.OnlineCategoryId = result.OnlineCategoryId.Trim();
-        repository.WikiUrl = result.WikiUrl.Trim();
-        repository.Notes = result.Notes.Trim();
-        ResetOnlineRepositoryContext();
-
-        SaveShellConfig();
-        RefreshSettingsPane();
-        RefreshOnlinePaneV2();
-        ResetOnlineDetailPaneToPlaceholder();
-        StatusTextBlock.Text = L($"已更新在线分类配置：{repository.Name}", $"Updated online category settings: {repository.Name}");
     }
 
     private async void OnEditCharacterMappingsClicked(object sender, RoutedEventArgs e)
     {
-        WorkspaceRepository? repository = GetSelectedRepository();
-        if (repository is null)
+        try
         {
-            await ShowMessageAsync(
-                L("请先选择一个仓库。", "Select a repository first."),
-                L("未选择仓库", "No Repository Selected"));
-            return;
-        }
-
-        EnsureOnlineCharacterOptionsForRepository(repository);
-        if (!_onlineCharacterOptions.Any(character => character.IsWikiCharacter))
-        {
-            _ = EnsureOnlineCharacterCatalogAsync(repository, forceReload: false);
-            for (int attempt = 0; attempt < 12 && !_onlineCharacterOptions.Any(character => character.IsWikiCharacter); attempt++)
-            {
-                await Task.Delay(250);
-            }
-        }
-
-        List<OnlineCharacterOption> wikiCharacters = _onlineCharacterOptions
-            .Where(character => character.IsWikiCharacter)
-            .OrderBy(character => character.WikiOrder)
-            .ToList();
-        if (wikiCharacters.Count == 0)
-        {
-            await ShowMessageAsync(
-                L("暂时没有读取到 Wiki 角色目录。请检查当前仓库的 Wiki 地址和网络连接，然后刷新在线列表。", "The Wiki character catalog is not available yet. Check this repository's Wiki URL and network connection, then refresh the online list."),
-                L("角色目录不可用", "Character Catalog Unavailable"));
-            return;
-        }
-
-        List<OnlineCharacterOption> categoryCandidates = _onlineCharacterOptions
-            .Where(character => !string.IsNullOrWhiteSpace(character.CategoryId))
-            .GroupBy(character => character.CategoryId, StringComparer.OrdinalIgnoreCase)
-            .Select(group => group.First())
-            .OrderBy(character => character.DisplayNameEn, StringComparer.CurrentCultureIgnoreCase)
-            .ToList();
-
-        ComboBox wikiCharacterBox = new()
-        {
-            HorizontalAlignment = HorizontalAlignment.Stretch,
-            PlaceholderText = L("选择 Wiki 角色", "Select a Wiki character")
-        };
-        foreach (OnlineCharacterOption character in wikiCharacters)
-        {
-            wikiCharacterBox.Items.Add(new ComboBoxItem
-            {
-                Content = $"{character.DisplayNameZh} / {character.DisplayNameEn}",
-                Tag = character
-            });
-        }
-
-        ComboBox gameBananaCategoryBox = new()
-        {
-            HorizontalAlignment = HorizontalAlignment.Stretch,
-            PlaceholderText = categoryCandidates.Count == 0
-                ? L("尚未发现分类，可直接填写 ID", "No categories discovered; enter an ID below")
-                : L("选择已发现的 GameBanana 分类", "Select a discovered GameBanana category")
-        };
-        foreach (OnlineCharacterOption candidate in categoryCandidates)
-        {
-            gameBananaCategoryBox.Items.Add(new ComboBoxItem
-            {
-                Content = $"{candidate.DisplayNameEn} · {candidate.CategoryId}",
-                Tag = candidate
-            });
-        }
-
-        TextBox categoryIdBox = new()
-        {
-            HorizontalAlignment = HorizontalAlignment.Stretch,
-            PlaceholderText = L("GameBanana 角色分类 ID", "GameBanana character category ID")
-        };
-        TextBlock mappingStatus = new()
-        {
-            Style = (Style)Application.Current.Resources["CaptionTextStyle"],
-            TextWrapping = TextWrapping.Wrap
-        };
-
-        void SyncSelectedWikiCharacter()
-        {
-            if (wikiCharacterBox.SelectedItem is not ComboBoxItem { Tag: OnlineCharacterOption character })
-            {
-                categoryIdBox.Text = string.Empty;
-                mappingStatus.Text = L("先选择需要修正的 Wiki 角色。", "Select the Wiki character to correct first.");
-                return;
-            }
-
-            string mappingKey = GetCharacterMappingKey(character);
-            bool hasManualMapping = repository.CharacterCategoryMappings.TryGetValue(mappingKey, out string? mappedCategoryId)
-                && !string.IsNullOrWhiteSpace(mappedCategoryId);
-            categoryIdBox.Text = hasManualMapping ? mappedCategoryId! : character.CategoryId;
-            gameBananaCategoryBox.SelectedItem = gameBananaCategoryBox.Items
-                .OfType<ComboBoxItem>()
-                .FirstOrDefault(item => item.Tag is OnlineCharacterOption candidate
-                    && string.Equals(candidate.CategoryId, categoryIdBox.Text, StringComparison.OrdinalIgnoreCase));
-            mappingStatus.Text = hasManualMapping
-                ? L("当前使用手动映射，保存后始终优先采用。", "A manual mapping is active and always takes priority.")
-                : string.IsNullOrWhiteSpace(character.CategoryId)
-                    ? L("当前尚未自动匹配到分类。", "No category has been matched automatically.")
-                    : L("当前显示自动匹配结果；保存后会固定为手动映射。", "This is an automatic match. Saving will pin it as a manual mapping.");
-        }
-
-        wikiCharacterBox.SelectionChanged += (_, _) => SyncSelectedWikiCharacter();
-        gameBananaCategoryBox.SelectionChanged += (_, _) =>
-        {
-            if (gameBananaCategoryBox.SelectedItem is ComboBoxItem { Tag: OnlineCharacterOption candidate })
-            {
-                categoryIdBox.Text = candidate.CategoryId;
-            }
-        };
-        wikiCharacterBox.SelectedIndex = 0;
-
-        StackPanel panel = new() { Spacing = 10, MinWidth = 520, MaxWidth = 620 };
-        panel.Children.Add(new TextBlock
-        {
-            Text = L(
-                "当 Wiki 名称与 GameBanana 分类名称不一致时，可在这里固定绑定。手动映射仅作用于当前仓库。",
-                "When Wiki and GameBanana names differ, pin the correct category here. Manual mappings only affect the current repository."),
-            TextWrapping = TextWrapping.Wrap
-        });
-        panel.Children.Add(CreateLabeledEditor(L("Wiki 角色", "Wiki character"), wikiCharacterBox));
-        panel.Children.Add(CreateLabeledEditor(L("已发现分类", "Discovered category"), gameBananaCategoryBox));
-        panel.Children.Add(CreateLabeledEditor(L("分类 ID", "Category ID"), categoryIdBox));
-        panel.Children.Add(mappingStatus);
-
-        ContentDialog dialog = new()
-        {
-            Title = L("角色分类映射", "Character Category Mapping"),
-            Content = panel,
-            PrimaryButtonText = L("保存映射", "Save Mapping"),
-            SecondaryButtonText = L("清除映射", "Clear Mapping"),
-            CloseButtonText = L("取消", "Cancel"),
-            DefaultButton = ContentDialogButton.Primary,
-            XamlRoot = RootGrid.XamlRoot
-        };
-
-        ContentDialogResult result = await dialog.ShowAsync();
-        if (wikiCharacterBox.SelectedItem is not ComboBoxItem { Tag: OnlineCharacterOption selectedCharacter })
-        {
-            return;
-        }
-
-        string selectedMappingKey = GetCharacterMappingKey(selectedCharacter);
-        if (result == ContentDialogResult.Primary)
-        {
-            string categoryId = categoryIdBox.Text.Trim();
-            if (!int.TryParse(categoryId, NumberStyles.None, CultureInfo.InvariantCulture, out int parsedCategoryId)
-                || parsedCategoryId <= 0)
+            WorkspaceRepository? repository = GetSelectedRepository();
+            if (repository is null)
             {
                 await ShowMessageAsync(
-                    L("请输入有效的数字分类 ID。", "Enter a valid numeric category ID."),
-                    L("分类 ID 无效", "Invalid Category ID"));
+                    L("请先选择一个仓库。", "Select a repository first."),
+                    L("未选择仓库", "No Repository Selected"));
                 return;
             }
 
-            repository.CharacterCategoryMappings[selectedMappingKey] = categoryId;
-        }
-        else if (result == ContentDialogResult.Secondary)
-        {
-            repository.CharacterCategoryMappings.Remove(selectedMappingKey);
-        }
-        else
-        {
-            return;
-        }
+            EnsureOnlineCharacterOptionsForRepository(repository);
+            if (!_onlineCharacterOptions.Any(character => character.IsWikiCharacter))
+            {
+                _ = EnsureOnlineCharacterCatalogAsync(repository, forceReload: false);
+                for (int attempt = 0; attempt < 12 && !_onlineCharacterOptions.Any(character => character.IsWikiCharacter); attempt++)
+                {
+                    await Task.Delay(250);
+                }
+            }
 
-        SaveShellConfig();
-        ResetOnlineRepositoryContext();
-        EnsureOnlineCharacterOptionsForRepository(repository);
-        _ = EnsureOnlineCharacterCatalogAsync(repository, forceReload: false);
-        RefreshSettingsPane();
-        RefreshOnlinePaneV2();
-        ShowAppNotification("角色分类映射已更新。", "Character category mapping updated.");
+            List<OnlineCharacterOption> wikiCharacters = _onlineCharacterOptions
+                .Where(character => character.IsWikiCharacter)
+                .OrderBy(character => character.WikiOrder)
+                .ToList();
+            if (wikiCharacters.Count == 0)
+            {
+                await ShowMessageAsync(
+                    L("暂时没有读取到 Wiki 角色目录。请检查当前仓库的 Wiki 地址和网络连接，然后刷新在线列表。", "The Wiki character catalog is not available yet. Check this repository's Wiki URL and network connection, then refresh the online list."),
+                    L("角色目录不可用", "Character Catalog Unavailable"));
+                return;
+            }
+
+            List<OnlineCharacterOption> categoryCandidates = _onlineCharacterOptions
+                .Where(character => !string.IsNullOrWhiteSpace(character.CategoryId))
+                .GroupBy(character => character.CategoryId, StringComparer.OrdinalIgnoreCase)
+                .Select(group => group.First())
+                .OrderBy(character => character.DisplayNameEn, StringComparer.CurrentCultureIgnoreCase)
+                .ToList();
+
+            ComboBox wikiCharacterBox = new()
+            {
+                HorizontalAlignment = HorizontalAlignment.Stretch,
+                PlaceholderText = L("选择 Wiki 角色", "Select a Wiki character")
+            };
+            foreach (OnlineCharacterOption character in wikiCharacters)
+            {
+                wikiCharacterBox.Items.Add(new ComboBoxItem
+                {
+                    Content = $"{character.DisplayNameZh} / {character.DisplayNameEn}",
+                    Tag = character
+                });
+            }
+
+            ComboBox gameBananaCategoryBox = new()
+            {
+                HorizontalAlignment = HorizontalAlignment.Stretch,
+                PlaceholderText = categoryCandidates.Count == 0
+                    ? L("尚未发现分类，可直接填写 ID", "No categories discovered; enter an ID below")
+                    : L("选择已发现的 GameBanana 分类", "Select a discovered GameBanana category")
+            };
+            foreach (OnlineCharacterOption candidate in categoryCandidates)
+            {
+                gameBananaCategoryBox.Items.Add(new ComboBoxItem
+                {
+                    Content = $"{candidate.DisplayNameEn} · {candidate.CategoryId}",
+                    Tag = candidate
+                });
+            }
+
+            TextBox categoryIdBox = new()
+            {
+                HorizontalAlignment = HorizontalAlignment.Stretch,
+                PlaceholderText = L("GameBanana 角色分类 ID", "GameBanana character category ID")
+            };
+            TextBlock mappingStatus = new()
+            {
+                Style = (Style)Application.Current.Resources["CaptionTextStyle"],
+                TextWrapping = TextWrapping.Wrap
+            };
+
+            void SyncSelectedWikiCharacter()
+            {
+                if (wikiCharacterBox.SelectedItem is not ComboBoxItem { Tag: OnlineCharacterOption character })
+                {
+                    categoryIdBox.Text = string.Empty;
+                    mappingStatus.Text = L("先选择需要修正的 Wiki 角色。", "Select the Wiki character to correct first.");
+                    return;
+                }
+
+                string mappingKey = GetCharacterMappingKey(character);
+                bool hasManualMapping = repository.CharacterCategoryMappings.TryGetValue(mappingKey, out string? mappedCategoryId)
+                    && !string.IsNullOrWhiteSpace(mappedCategoryId);
+                categoryIdBox.Text = hasManualMapping ? mappedCategoryId! : character.CategoryId;
+                gameBananaCategoryBox.SelectedItem = gameBananaCategoryBox.Items
+                    .OfType<ComboBoxItem>()
+                    .FirstOrDefault(item => item.Tag is OnlineCharacterOption candidate
+                        && string.Equals(candidate.CategoryId, categoryIdBox.Text, StringComparison.OrdinalIgnoreCase));
+                mappingStatus.Text = hasManualMapping
+                    ? L("当前使用手动映射，保存后始终优先采用。", "A manual mapping is active and always takes priority.")
+                    : string.IsNullOrWhiteSpace(character.CategoryId)
+                        ? L("当前尚未自动匹配到分类。", "No category has been matched automatically.")
+                        : L("当前显示自动匹配结果；保存后会固定为手动映射。", "This is an automatic match. Saving will pin it as a manual mapping.");
+            }
+
+            wikiCharacterBox.SelectionChanged += (_, _) => SyncSelectedWikiCharacter();
+            gameBananaCategoryBox.SelectionChanged += (_, _) =>
+            {
+                if (gameBananaCategoryBox.SelectedItem is ComboBoxItem { Tag: OnlineCharacterOption candidate })
+                {
+                    categoryIdBox.Text = candidate.CategoryId;
+                }
+            };
+            wikiCharacterBox.SelectedIndex = 0;
+
+            StackPanel panel = new() { Spacing = 10, MinWidth = 520, MaxWidth = 620 };
+            panel.Children.Add(new TextBlock
+            {
+                Text = L(
+                    "当 Wiki 名称与 GameBanana 分类名称不一致时，可在这里固定绑定。手动映射仅作用于当前仓库。",
+                    "When Wiki and GameBanana names differ, pin the correct category here. Manual mappings only affect the current repository."),
+                TextWrapping = TextWrapping.Wrap
+            });
+            panel.Children.Add(CreateLabeledEditor(L("Wiki 角色", "Wiki character"), wikiCharacterBox));
+            panel.Children.Add(CreateLabeledEditor(L("已发现分类", "Discovered category"), gameBananaCategoryBox));
+            panel.Children.Add(CreateLabeledEditor(L("分类 ID", "Category ID"), categoryIdBox));
+            panel.Children.Add(mappingStatus);
+
+            ContentDialog dialog = new()
+            {
+                Title = L("角色分类映射", "Character Category Mapping"),
+                Content = panel,
+                PrimaryButtonText = L("保存映射", "Save Mapping"),
+                SecondaryButtonText = L("清除映射", "Clear Mapping"),
+                CloseButtonText = L("取消", "Cancel"),
+                DefaultButton = ContentDialogButton.Primary,
+                XamlRoot = RootGrid.XamlRoot
+            };
+
+            ContentDialogResult result = await dialog.ShowAsync();
+            if (wikiCharacterBox.SelectedItem is not ComboBoxItem { Tag: OnlineCharacterOption selectedCharacter })
+            {
+                return;
+            }
+
+            string selectedMappingKey = GetCharacterMappingKey(selectedCharacter);
+            if (result == ContentDialogResult.Primary)
+            {
+                string categoryId = categoryIdBox.Text.Trim();
+                if (!int.TryParse(categoryId, NumberStyles.None, CultureInfo.InvariantCulture, out int parsedCategoryId)
+                    || parsedCategoryId <= 0)
+                {
+                    await ShowMessageAsync(
+                        L("请输入有效的数字分类 ID。", "Enter a valid numeric category ID."),
+                        L("分类 ID 无效", "Invalid Category ID"));
+                    return;
+                }
+
+                repository.CharacterCategoryMappings[selectedMappingKey] = categoryId;
+            }
+            else if (result == ContentDialogResult.Secondary)
+            {
+                repository.CharacterCategoryMappings.Remove(selectedMappingKey);
+            }
+            else
+            {
+                return;
+            }
+
+            SaveShellConfig();
+            ResetOnlineRepositoryContext();
+            EnsureOnlineCharacterOptionsForRepository(repository);
+            _ = EnsureOnlineCharacterCatalogAsync(repository, forceReload: false);
+            RefreshSettingsPane();
+            RefreshOnlinePaneV2();
+            ShowAppNotification("角色分类映射已更新。", "Character category mapping updated.");
+        }
+        catch (Exception ex)
+        {
+            ReportUiActionFailure("OnEditCharacterMappingsClicked", ex);
+        }
     }
 
     private async void OnDeleteRepositoryClicked(object sender, RoutedEventArgs e)
     {
-        WorkspaceRepository? repository = GetSelectedRepository();
-        if (repository is null || _selectedRepositoryId is null)
+        try
         {
-            return;
-        }
+            WorkspaceRepository? repository = GetSelectedRepository();
+            if (repository is null || _selectedRepositoryId is null)
+            {
+                return;
+            }
 
-        if (_repositories.Count <= 1)
-        {
-            await ShowMessageAsync(
-                L("至少要保留一个仓库。", "At least one repository must remain."),
-                L("无法删除", "Cannot delete"));
-            return;
-        }
+            if (_repositories.Count <= 1)
+            {
+                await ShowMessageAsync(
+                    L("至少要保留一个仓库。", "At least one repository must remain."),
+                    L("无法删除", "Cannot delete"));
+                return;
+            }
 
-        bool confirmed = await ShowConfirmAsync(
-            L($"确定要删除这个仓库吗？\n\n{repository.Name}\n\n仓库配置会被移除，但不会删除磁盘上的 Mod 文件夹。",
-              $"Delete this repository?\n\n{repository.Name}\n\nThe repository configuration will be removed, but no files on disk will be deleted."),
-            L("首次确认", "First confirmation"));
-        if (!confirmed)
-        {
-            return;
-        }
+            bool confirmed = await ShowConfirmAsync(
+                L($"确定要删除这个仓库吗？\n\n{repository.Name}\n\n仓库配置会被移除，但不会删除磁盘上的 Mod 文件夹。",
+                  $"Delete this repository?\n\n{repository.Name}\n\nThe repository configuration will be removed, but no files on disk will be deleted."),
+                L("首次确认", "First confirmation"));
+            if (!confirmed)
+            {
+                return;
+            }
 
-        bool confirmedAgain = await ShowConfirmAsync(
-            L($"请再次确认删除仓库：{repository.Name}\n\n此操作无法撤销。",
-              $"Please confirm again to delete repository: {repository.Name}\n\nThis action cannot be undone."),
-            L("第二次确认", "Second confirmation"));
-        if (!confirmedAgain)
-        {
-            return;
-        }
+            bool confirmedAgain = await ShowConfirmAsync(
+                L($"请再次确认删除仓库：{repository.Name}\n\n此操作无法撤销。",
+                  $"Please confirm again to delete repository: {repository.Name}\n\nThis action cannot be undone."),
+                L("第二次确认", "Second confirmation"));
+            if (!confirmedAgain)
+            {
+                return;
+            }
 
-        int currentIndex = _repositories.FindIndex(item => item.Id == repository.Id);
-        _repositories.RemoveAll(item => item.Id == repository.Id);
+            int currentIndex = _repositories.FindIndex(item => item.Id == repository.Id);
+            _repositories.RemoveAll(item => item.Id == repository.Id);
 
-        if (_repositories.Count > 0)
-        {
-            int nextIndex = Math.Clamp(currentIndex, 0, _repositories.Count - 1);
-            _selectedRepositoryId = _repositories[nextIndex].Id;
-        }
-        else
-        {
-            _selectedRepositoryId = null;
-        }
+            if (_repositories.Count > 0)
+            {
+                int nextIndex = Math.Clamp(currentIndex, 0, _repositories.Count - 1);
+                _selectedRepositoryId = _repositories[nextIndex].Id;
+            }
+            else
+            {
+                _selectedRepositoryId = null;
+            }
 
-        if (_currentPrimarySection == PrimarySection.Dashboard)
-        {
-            _selectedRepositoryId = null;
-        }
-        else
-        {
-            ApplySelectedRepositoryToInputs();
-        }
+            if (_currentPrimarySection == PrimarySection.Dashboard)
+            {
+                _selectedRepositoryId = null;
+            }
+            else
+            {
+                ApplySelectedRepositoryToInputs();
+            }
 
-        SaveShellConfig();
-        ApplyShellState(refreshRepository: _currentPrimarySection == PrimarySection.Repository);
-        StatusTextBlock.Text = L($"已删除仓库：{repository.Name}", $"Deleted repository: {repository.Name}");
+            SaveShellConfig();
+            ApplyShellState(refreshRepository: _currentPrimarySection == PrimarySection.Repository);
+            StatusTextBlock.Text = L($"已删除仓库：{repository.Name}", $"Deleted repository: {repository.Name}");
+        }
+        catch (Exception ex)
+        {
+            ReportUiActionFailure("OnDeleteRepositoryClicked", ex);
+        }
     }
 
     private void ApplyLanguage()
@@ -10074,33 +10354,54 @@ public sealed partial class MainWindow : Window
 
     private async void OnPickSourceClicked(object sender, RoutedEventArgs e)
     {
-        string? picked = await PickFolderAsync();
-        if (!string.IsNullOrEmpty(picked))
+        try
         {
-            SourceTextBox.Text = picked;
-            SaveConfig();
-            await RefreshListsAsync();
+            string? picked = await PickFolderAsync();
+            if (!string.IsNullOrEmpty(picked))
+            {
+                SourceTextBox.Text = picked;
+                SaveConfig();
+                await RefreshListsAsync();
+            }
+        }
+        catch (Exception ex)
+        {
+            ReportUiActionFailure("OnPickSourceClicked", ex);
         }
     }
 
     private async void OnPickTargetClicked(object sender, RoutedEventArgs e)
     {
-        string? picked = await PickFolderAsync();
-        if (!string.IsNullOrEmpty(picked))
+        try
         {
-            TargetTextBox.Text = picked;
-            SaveConfig();
-            await RefreshListsAsync();
+            string? picked = await PickFolderAsync();
+            if (!string.IsNullOrEmpty(picked))
+            {
+                TargetTextBox.Text = picked;
+                SaveConfig();
+                await RefreshListsAsync();
+            }
+        }
+        catch (Exception ex)
+        {
+            ReportUiActionFailure("OnPickTargetClicked", ex);
         }
     }
 
     private async void OnPickLauncherClicked(object sender, RoutedEventArgs e)
     {
-        string? picked = await PickFileAsync([".exe", ".bat", ".cmd"]);
-        if (!string.IsNullOrEmpty(picked))
+        try
         {
-            LauncherTextBox.Text = picked;
-            SaveConfig();
+            string? picked = await PickFileAsync([".exe", ".bat", ".cmd"]);
+            if (!string.IsNullOrEmpty(picked))
+            {
+                LauncherTextBox.Text = picked;
+                SaveConfig();
+            }
+        }
+        catch (Exception ex)
+        {
+            ReportUiActionFailure("OnPickLauncherClicked", ex);
         }
     }
 
@@ -10110,9 +10411,9 @@ public sealed partial class MainWindow : Window
 
     private void OnOpenLauncherClicked(object sender, RoutedEventArgs e) => OpenFileLocation(LauncherTextBox.Text, L("启动器", "launcher"));
 
-    private async void OnRunLauncherClicked(object sender, RoutedEventArgs e) => await RunRepositoryLauncherAsync();
+    private async void OnRunLauncherClicked(object sender, RoutedEventArgs e) => await RunUiActionAsync("OnRunLauncherClicked", RunRepositoryLauncherAsync);
 
-    private async void OnRefreshClicked(object sender, RoutedEventArgs e) => await RefreshListsAsync();
+    private async void OnRefreshClicked(object sender, RoutedEventArgs e) => await RunUiActionAsync("OnRefreshClicked", RefreshListsAsync);
 
     private async void OnImportZipClicked(object sender, RoutedEventArgs e)
     {
@@ -10140,7 +10441,7 @@ public sealed partial class MainWindow : Window
             StorageFile? file = await picker.PickSingleFileAsync();
             if (file is not null)
             {
-                await ImportArchiveToSelectedFirstLevelFolderAsync(file.Path, item);
+                await ImportArchiveToSecondLevelFolderAsync(file.Path, item);
             }
         }
         catch (Exception ex)
@@ -10154,16 +10455,23 @@ public sealed partial class MainWindow : Window
 
     private async void OnToggleCopyClicked(object sender, RoutedEventArgs e)
     {
-        var item = GetSelectedSecondLevelItem();
-        if (item is null)
+        try
         {
-            await ShowMessageAsync(
-                L("请先选择一个第二层 Mod。", "Select a second-level mod first."),
-                L("未选择 Mod", "No mod selected"));
-            return;
-        }
+            var item = GetSelectedSecondLevelItem();
+            if (item is null)
+            {
+                await ShowMessageAsync(
+                    L("请先选择一个第二层 Mod。", "Select a second-level mod first."),
+                    L("未选择 Mod", "No mod selected"));
+                return;
+            }
 
-        await ToggleDirectoryCopyAsync(item);
+            await ToggleDirectoryCopyAsync(item);
+        }
+        catch (Exception ex)
+        {
+            ReportUiActionFailure("OnToggleCopyClicked", ex);
+        }
     }
 
     private void OnFirstLevelSelectionChanged(object sender, SelectionChangedEventArgs e)
@@ -10206,142 +10514,170 @@ public sealed partial class MainWindow : Window
 
     private async void OnCreateFirstLevelClicked(object sender, RoutedEventArgs e)
     {
-        string sourceDir = (SourceTextBox.Text ?? string.Empty).Trim();
-        if (string.IsNullOrWhiteSpace(sourceDir) || !Directory.Exists(sourceDir))
-        {
-            await ShowMessageAsync(
-                L("请先设置有效的 Mod 仓库文件夹。", "Set a valid mod storage folder first."),
-                L("路径无效", "Invalid path"));
-            return;
-        }
-
-        string? name = await PromptForTextAsync(
-            L("请输入新的第一层文件夹名称。", "Enter the new first-level folder name."),
-            L("新建第一层文件夹", "Create first-level folder"),
-            string.Empty);
-        if (string.IsNullOrWhiteSpace(name))
-        {
-            return;
-        }
-
         try
         {
-            string targetPath = Path.Combine(sourceDir, name.Trim());
-            if (Directory.Exists(targetPath))
+            string sourceDir = (SourceTextBox.Text ?? string.Empty).Trim();
+            if (string.IsNullOrWhiteSpace(sourceDir) || !Directory.Exists(sourceDir))
             {
                 await ShowMessageAsync(
-                    L("同名第一层文件夹已存在。", "A first-level folder with the same name already exists."),
-                    L("创建失败", "Create failed"));
+                    L("请先设置有效的 Mod 仓库文件夹。", "Set a valid mod storage folder first."),
+                    L("路径无效", "Invalid path"));
                 return;
             }
 
-            Directory.CreateDirectory(targetPath);
-            await RefreshListsAsync();
-            SelectFirstLevelByPath(targetPath);
-            StatusTextBlock.Text = L($"已创建第一层文件夹：{name.Trim()}", $"Created first-level folder: {name.Trim()}");
+            string? name = await PromptForTextAsync(
+                L("请输入新的第一层文件夹名称。", "Enter the new first-level folder name."),
+                L("新建第一层文件夹", "Create first-level folder"),
+                string.Empty);
+            if (string.IsNullOrWhiteSpace(name))
+            {
+                return;
+            }
+
+            try
+            {
+                string targetPath = Path.Combine(sourceDir, name.Trim());
+                if (Directory.Exists(targetPath))
+                {
+                    await ShowMessageAsync(
+                        L("同名第一层文件夹已存在。", "A first-level folder with the same name already exists."),
+                        L("创建失败", "Create failed"));
+                    return;
+                }
+
+                Directory.CreateDirectory(targetPath);
+                await RefreshListsAsync();
+                SelectFirstLevelByPath(targetPath);
+                StatusTextBlock.Text = L($"已创建第一层文件夹：{name.Trim()}", $"Created first-level folder: {name.Trim()}");
+            }
+            catch (Exception ex)
+            {
+                await ShowMessageAsync(
+                    L("创建第一层文件夹失败：", "Failed to create the first-level folder: ") + ex.Message,
+                    L("创建失败", "Create failed"));
+            }
         }
         catch (Exception ex)
         {
-            await ShowMessageAsync(
-                L("创建第一层文件夹失败：", "Failed to create the first-level folder: ") + ex.Message,
-                L("创建失败", "Create failed"));
+            ReportUiActionFailure("OnCreateFirstLevelClicked", ex);
         }
     }
 
     private async void OnRenameFirstLevelClicked(object sender, RoutedEventArgs e)
     {
-        FirstLevelFolderItem? item = FirstLevelListView.SelectedItem as FirstLevelFolderItem;
-        if (item is null)
-        {
-            await ShowMessageAsync(
-                L("请先选择一个第一层文件夹。", "Select a first-level folder first."),
-                L("未选择文件夹", "No folder selected"));
-            return;
-        }
-
-        string? name = await PromptForTextAsync(
-            L("请输入新的第一层文件夹名称。", "Enter the new first-level folder name."),
-            L("重命名第一层文件夹", "Rename first-level folder"),
-            item.Name);
-        if (string.IsNullOrWhiteSpace(name))
-        {
-            return;
-        }
-
-        string trimmed = name.Trim();
-        if (string.Equals(trimmed, item.Name, StringComparison.CurrentCulture))
-        {
-            return;
-        }
-
         try
         {
-            string? parentDir = Path.GetDirectoryName(item.Path);
-            if (string.IsNullOrWhiteSpace(parentDir))
-            {
-                throw new InvalidOperationException(L("无法确定父目录。", "Could not determine the parent directory."));
-            }
-
-            string newPath = Path.Combine(parentDir, trimmed);
-            if (Directory.Exists(newPath))
+            FirstLevelFolderItem? item = FirstLevelListView.SelectedItem as FirstLevelFolderItem;
+            if (item is null)
             {
                 await ShowMessageAsync(
-                    L("目标名称已存在，请换一个名称。", "The target name already exists. Choose a different name."),
-                    L("重命名失败", "Rename failed"));
+                    L("请先选择一个第一层文件夹。", "Select a first-level folder first."),
+                    L("未选择文件夹", "No folder selected"));
                 return;
             }
 
-            var tagLibrary = SelectedLocalLibrary();
-            string oldRoleRelative = WorkspaceIdentity.Relative(GetSelectedRepository()!.SourcePath, item.Path);
-            Directory.Move(item.Path, newPath);
-            tagLibrary?.RenameCharacter(oldRoleRelative, WorkspaceIdentity.Relative(GetSelectedRepository()!.SourcePath, newPath));
-            SaveShellConfig();
-            await RefreshListsAsync();
-            SelectFirstLevelByPath(newPath);
-            StatusTextBlock.Text = L($"已重命名第一层文件夹为：{trimmed}", $"Renamed first-level folder to: {trimmed}");
+            string? name = await PromptForTextAsync(
+                L("请输入新的第一层文件夹名称。", "Enter the new first-level folder name."),
+                L("重命名第一层文件夹", "Rename first-level folder"),
+                item.Name);
+            if (string.IsNullOrWhiteSpace(name))
+            {
+                return;
+            }
+
+            string trimmed = name.Trim();
+            if (string.Equals(trimmed, item.Name, StringComparison.CurrentCulture))
+            {
+                return;
+            }
+
+            try
+            {
+                string? parentDir = Path.GetDirectoryName(item.Path);
+                if (string.IsNullOrWhiteSpace(parentDir))
+                {
+                    throw new InvalidOperationException(L("无法确定父目录。", "Could not determine the parent directory."));
+                }
+
+                string newPath = Path.Combine(parentDir, trimmed);
+                if (Directory.Exists(newPath))
+                {
+                    await ShowMessageAsync(
+                        L("目标名称已存在，请换一个名称。", "The target name already exists. Choose a different name."),
+                        L("重命名失败", "Rename failed"));
+                    return;
+                }
+
+                var tagLibrary = SelectedLocalLibrary();
+                string oldRoleRelative = WorkspaceIdentity.Relative(GetSelectedRepository()!.SourcePath, item.Path);
+                Directory.Move(item.Path, newPath);
+                tagLibrary?.RenameCharacter(oldRoleRelative, WorkspaceIdentity.Relative(GetSelectedRepository()!.SourcePath, newPath));
+                SaveShellConfig();
+                await RefreshListsAsync();
+                SelectFirstLevelByPath(newPath);
+                StatusTextBlock.Text = L($"已重命名第一层文件夹为：{trimmed}", $"Renamed first-level folder to: {trimmed}");
+            }
+            catch (Exception ex)
+            {
+                await ShowMessageAsync(
+                    L("重命名第一层文件夹失败：", "Failed to rename the first-level folder: ") + ex.Message,
+                    L("重命名失败", "Rename failed"));
+            }
         }
         catch (Exception ex)
         {
-            await ShowMessageAsync(
-                L("重命名第一层文件夹失败：", "Failed to rename the first-level folder: ") + ex.Message,
-                L("重命名失败", "Rename failed"));
+            ReportUiActionFailure("OnRenameFirstLevelClicked", ex);
         }
     }
 
     private async void OnSecondLevelSelectionChanged(object sender, SelectionChangedEventArgs e)
     {
-        if (_syncingRepositorySelection) return;
-        _repositorySelectedMod = SecondLevelListView.SelectedItem as SecondLevelFolderItem;
         try
         {
-            SecondLevelFolderItem? item = GetSelectedSecondLevelItem();
-            ApplySecondLevelSelectionState(item);
-            if (item is not null
-                && await TryImportShortcutBindingsFromModFilesAsync(item.Path) > 0
-                && string.Equals(_currentSecondLevelPath, item.Path, StringComparison.CurrentCultureIgnoreCase))
+            if (_syncingRepositorySelection) return;
+            _repositorySelectedMod = SecondLevelListView.SelectedItem as SecondLevelFolderItem;
+            try
             {
-                LoadBindingsForCurrentMod(item);
+                SecondLevelFolderItem? item = GetSelectedSecondLevelItem();
+                ApplySecondLevelSelectionState(item);
+                if (item is not null
+                    && await TryImportShortcutBindingsFromModFilesAsync(item.Path) > 0
+                    && string.Equals(_currentSecondLevelPath, item.Path, StringComparison.CurrentCultureIgnoreCase))
+                {
+                    LoadBindingsForCurrentMod(item);
+                    StatusTextBlock.Text = L(
+                        "已从 Mod 的 INI 配置自动读取快捷键，可在右侧继续修正。",
+                        "Shortcuts were detected from the Mod INI files and can be adjusted on the right.");
+                }
+            }
+            catch (Exception ex)
+            {
+                LogApplicationIssue("Mod selection", ex);
+                ClearPreview();
                 StatusTextBlock.Text = L(
-                    "已从 Mod 的 INI 配置自动读取快捷键，可在右侧继续修正。",
-                    "Shortcuts were detected from the Mod INI files and can be adjusted on the right.");
+                    $"无法读取所选 Mod：{ex.Message}",
+                    $"Could not read the selected mod: {ex.Message}");
             }
         }
         catch (Exception ex)
         {
-            LogApplicationIssue("Mod selection", ex);
-            ClearPreview();
-            StatusTextBlock.Text = L(
-                $"无法读取所选 Mod：{ex.Message}",
-                $"Could not read the selected mod: {ex.Message}");
+            ReportUiActionFailure("OnSecondLevelSelectionChanged", ex);
         }
     }
 
     private async void OnSecondLevelDoubleTapped(object sender, DoubleTappedRoutedEventArgs e)
     {
-        var item = GetSelectedSecondLevelItem();
-        if (item is not null)
+        try
         {
-            await ToggleDirectoryCopyAsync(item);
+            var item = GetSelectedSecondLevelItem();
+            if (item is not null)
+            {
+                await ToggleDirectoryCopyAsync(item);
+            }
+        }
+        catch (Exception ex)
+        {
+            ReportUiActionFailure("OnSecondLevelDoubleTapped", ex);
         }
     }
 
@@ -10360,7 +10696,7 @@ public sealed partial class MainWindow : Window
             Text = isInstalled ? L("从目标文件夹移除", "Remove from target") : L("部署到目标文件夹", "Deploy to target"),
             Icon = new FontIcon { Glyph = isInstalled ? "\uE74D" : "\uE8B0" }
         };
-        toggleItem.Click += async (_, _) => await ToggleDirectoryCopyAsync(item);
+        toggleItem.Click += async (_, _) => await RunUiActionAsync("ToggleDirectoryCopyAsync", () => ToggleDirectoryCopyAsync(item));
         menu.Items.Add(toggleItem);
 
         var openItem = new MenuFlyoutItem
@@ -10373,7 +10709,7 @@ public sealed partial class MainWindow : Window
         menu.Items.Add(new MenuFlyoutSeparator());
 
         var tagsItem = new MenuFlyoutItem { Text = L("编辑标签…", "Edit tags…") };
-        tagsItem.Click += async (_, _) => await EditLocalTagsAsync(item);
+        tagsItem.Click += async (_, _) => await RunUiActionAsync("EditLocalTagsAsync", () => EditLocalTagsAsync(item));
         menu.Items.Add(tagsItem);
         var deleteItem = new MenuFlyoutItem
         {
@@ -10388,58 +10724,101 @@ public sealed partial class MainWindow : Window
 
     private async void OnDeleteSecondLevelClicked(object sender, RoutedEventArgs e)
     {
-        SecondLevelFolderItem? item = GetSelectedSecondLevelItem();
-        if (item is null)
-        {
-            await ShowMessageAsync(
-                L("请先选择一个第二层 Mod。", "Select a second-level mod first."),
-                L("未选择 Mod", "No mod selected"));
-            return;
-        }
-
-        bool confirmed = await ShowConfirmAsync(
-            L($"确定要删除这个第二层 Mod 吗？\n\n{item.Name}\n\n此操作会删除原始文件夹，无法撤销。",
-              $"Are you sure you want to delete this second-level mod?\n\n{item.Name}\n\nThis will delete the original folder and cannot be undone."),
-            L("确认删除", "Confirm delete"));
-        if (!confirmed)
-        {
-            return;
-        }
-
         try
         {
-            string selectedFirstLevelPath = (FirstLevelListView.SelectedItem as FirstLevelFolderItem)?.Path ?? string.Empty;
-            _trackedModOrigins.Remove(item.Path);
-            _modLinks.Remove(item.Path);
-            DeleteDirectoryTreeSafely(item.Path);
-            SaveConfig();
-            await RefreshListsAsync();
-            SelectFirstLevelByPath(selectedFirstLevelPath);
-            StatusTextBlock.Text = L($"已删除第二层 Mod：{item.Name}", $"Deleted second-level mod: {item.Name}");
+            SecondLevelFolderItem? item = GetSelectedSecondLevelItem();
+            if (item is null)
+            {
+                await ShowMessageAsync(
+                    L("请先选择一个第二层 Mod。", "Select a second-level mod first."),
+                    L("未选择 Mod", "No mod selected"));
+                return;
+            }
+
+            string loaderRoot = (GetSelectedRepository()?.TargetPath ?? TargetTextBox.Text ?? string.Empty).Trim();
+            IReadOnlyList<string> deployedLinks = [];
+            try
+            {
+                if (!string.IsNullOrWhiteSpace(loaderRoot))
+                {
+                    deployedLinks = await Task.Run(() => DirectoryLinkDeployment.FindLinksTargeting(item.Path, loaderRoot));
+                }
+            }
+            catch (Exception ex) when (ex is IOException or UnauthorizedAccessException or ArgumentException)
+            {
+                LogApplicationIssue("Find deployed links before delete", ex);
+            }
+
+            string linkNote = deployedLinks.Count == 0
+                ? string.Empty
+                : L($"\n\n加载目录中指向它的 {deployedLinks.Count} 个联接也会一并移除（只移除联接本身）：\n{string.Join("\n", deployedLinks)}",
+                    $"\n\n{deployedLinks.Count} link(s) in the loader folder that point to it will also be removed (only the links themselves):\n{string.Join("\n", deployedLinks)}");
+            bool confirmed = await ShowConfirmAsync(
+                L($"确定要删除这个第二层 Mod 吗？\n\n{item.Name}\n\n此操作会删除原始文件夹，无法撤销。",
+                  $"Are you sure you want to delete this second-level mod?\n\n{item.Name}\n\nThis will delete the original folder and cannot be undone.") + linkNote,
+                L("确认删除", "Confirm delete"));
+            if (!confirmed)
+            {
+                return;
+            }
+
+            try
+            {
+                string selectedFirstLevelPath = (FirstLevelListView.SelectedItem as FirstLevelFolderItem)?.Path ?? string.Empty;
+                // Remove the deployment links first: deleting only the source would leave
+                // links that break conflict checks for every later installation.
+                foreach (string link in deployedLinks)
+                {
+                    if (string.Equals(DirectoryLinkDeployment.TryGetStoredTarget(link), Path.GetFullPath(item.Path).TrimEnd(Path.DirectorySeparatorChar),
+                            StringComparison.OrdinalIgnoreCase))
+                    {
+                        DirectoryLinkDeployment.RemoveLink(link);
+                    }
+                }
+
+                _trackedModOrigins.Remove(item.Path);
+                _modLinks.Remove(item.Path);
+                DeleteDirectoryTreeSafely(item.Path);
+                SaveConfig();
+                await RefreshListsAsync();
+                SelectFirstLevelByPath(selectedFirstLevelPath);
+                StatusTextBlock.Text = L($"已删除第二层 Mod：{item.Name}", $"Deleted second-level mod: {item.Name}");
+            }
+            catch (Exception ex)
+            {
+                await ShowMessageAsync(
+                    L("删除第二层 Mod 失败：", "Failed to delete the second-level mod: ") + ex.Message,
+                    L("删除失败", "Delete failed"));
+            }
         }
         catch (Exception ex)
         {
-            await ShowMessageAsync(
-                L("删除第二层 Mod 失败：", "Failed to delete the second-level mod: ") + ex.Message,
-                L("删除失败", "Delete failed"));
+            ReportUiActionFailure("OnDeleteSecondLevelClicked", ex);
         }
     }
 
     private async void OnAddShortcutRowClicked(object sender, RoutedEventArgs e)
     {
-        if (string.IsNullOrEmpty(_currentSecondLevelPath))
+        try
         {
-            await ShowMessageAsync(
-                L("请先选择一个第二层 Mod。", "Select a second-level mod first."),
-                L("未选择 Mod", "No mod selected"));
-            return;
-        }
+            if (string.IsNullOrEmpty(_currentSecondLevelPath))
+            {
+                await ShowMessageAsync(
+                    L("请先选择一个第二层 Mod。", "Select a second-level mod first."),
+                    L("未选择 Mod", "No mod selected"));
+                return;
+            }
 
-        _visibleShortcutRows++;
-        EnsureShortcutRowCapacity(_visibleShortcutRows);
-        UpdateShortcutRowVisibility();
-        _shortcutKeyBoxes[_visibleShortcutRows - 1].Focus(FocusState.Programmatic);
-        SaveCurrentModBindings();
+            _visibleShortcutRows++;
+            EnsureShortcutRowCapacity(_visibleShortcutRows);
+            UpdateShortcutRowVisibility();
+            _shortcutKeyBoxes[_visibleShortcutRows - 1].Focus(FocusState.Programmatic);
+            SaveCurrentModBindings();
+        }
+        catch (Exception ex)
+        {
+            ReportUiActionFailure("OnAddShortcutRowClicked", ex);
+        }
     }
 
     private void OnShortcutTextChanged(object sender, TextChangedEventArgs e)
@@ -10497,30 +10876,37 @@ public sealed partial class MainWindow : Window
 
     private async void OnOpenModLinkClicked(object sender, RoutedEventArgs e)
     {
-        string currentLink = (ModLinkTextBox.Text ?? string.Empty).Trim();
-        if (string.IsNullOrWhiteSpace(currentLink))
-        {
-            await ShowMessageAsync(
-                L("请先为当前 Mod 填写一个可访问的网址。", "Enter a valid web link for the current mod first."),
-                L("未设置链接", "Link not set"));
-            return;
-        }
-
         try
         {
-            string normalized = NormalizeLink(currentLink);
-            Process.Start(new ProcessStartInfo
+            string currentLink = (ModLinkTextBox.Text ?? string.Empty).Trim();
+            if (string.IsNullOrWhiteSpace(currentLink))
             {
-                FileName = normalized,
-                UseShellExecute = true
-            });
-            StatusTextBlock.Text = L("已在默认浏览器中打开 Mod 链接。", "Opened the mod link in the default browser.");
+                await ShowMessageAsync(
+                    L("请先为当前 Mod 填写一个可访问的网址。", "Enter a valid web link for the current mod first."),
+                    L("未设置链接", "Link not set"));
+                return;
+            }
+
+            try
+            {
+                string normalized = NormalizeLink(currentLink);
+                Process.Start(new ProcessStartInfo
+                {
+                    FileName = normalized,
+                    UseShellExecute = true
+                });
+                StatusTextBlock.Text = L("已在默认浏览器中打开 Mod 链接。", "Opened the mod link in the default browser.");
+            }
+            catch (Exception ex)
+            {
+                await ShowMessageAsync(
+                    L("打开链接失败：", "Failed to open link: ") + ex.Message,
+                    L("打开失败", "Open failed"));
+            }
         }
         catch (Exception ex)
         {
-            await ShowMessageAsync(
-                L("打开链接失败：", "Failed to open link: ") + ex.Message,
-                L("打开失败", "Open failed"));
+            ReportUiActionFailure("OnOpenModLinkClicked", ex);
         }
     }
 
@@ -10611,12 +10997,26 @@ public sealed partial class MainWindow : Window
 
     private async void OnCheckModUpdatesClicked(object sender, RoutedEventArgs e)
     {
-        await CheckTrackedModUpdatesAsync(showDialogs: true);
+        try
+        {
+            await CheckTrackedModUpdatesAsync(showDialogs: true);
+        }
+        catch (Exception ex)
+        {
+            ReportUiActionFailure("OnCheckModUpdatesClicked", ex);
+        }
     }
 
     private async void OnCloseOnlineDetailsClicked(object sender, RoutedEventArgs e)
     {
-        await CloseOnlineDetailPaneAsync();
+        try
+        {
+            await CloseOnlineDetailPaneAsync();
+        }
+        catch (Exception ex)
+        {
+            ReportUiActionFailure("OnCloseOnlineDetailsClicked", ex);
+        }
     }
 
     private async Task CloseOnlineDetailPaneAsync()
@@ -10665,79 +11065,100 @@ public sealed partial class MainWindow : Window
 
     private async void OnOpenOnlineDetailPageClicked(object sender, RoutedEventArgs e)
     {
-        if (_activeOnlineDetailMod is null)
+        try
         {
-            return;
-        }
+            if (_activeOnlineDetailMod is null)
+            {
+                return;
+            }
 
-        await OpenExternalUrlAsync(_activeOnlineDetailMod.ProfileUrl, L("打开页面失败", "Open page failed"));
+            await OpenExternalUrlAsync(_activeOnlineDetailMod.ProfileUrl, L("打开页面失败", "Open page failed"));
+        }
+        catch (Exception ex)
+        {
+            ReportUiActionFailure("OnOpenOnlineDetailPageClicked", ex);
+        }
     }
 
     private async void OnDownloadOnlineDetailClicked(object sender, RoutedEventArgs e)
     {
-        if (_activeOnlineDetailMod is null)
+        try
         {
-            return;
-        }
+            if (_activeOnlineDetailMod is null)
+            {
+                return;
+            }
 
-        await DownloadAndExtractOnlineModAsync(_activeOnlineDetailMod);
+            await DownloadAndExtractOnlineModAsync(_activeOnlineDetailMod);
+        }
+        catch (Exception ex)
+        {
+            ReportUiActionFailure("OnDownloadOnlineDetailClicked", ex);
+        }
     }
 
     private async void OnSelectOnlineDetailDownloadClicked(object sender, RoutedEventArgs e)
     {
-        if (_activeOnlineDetailMod is null)
-        {
-            return;
-        }
-
-        OnlineModCard sourceMod = _activeOnlineDetailMod;
-        WorkspaceRepository? downloadRepository = GetSelectedRepository();
-        OnlineDownloadContext downloadContext = CaptureOnlineDownloadContext(downloadRepository);
-        bool useEndfieldMetadata = IsEndfieldRepository(downloadRepository);
-        IReadOnlyCollection<string> characterAliases = GetCharacterFolderAliases(sourceMod);
-        string detailContext = GetOnlineDetailContextKey();
-        using OnlineDownloadActionAdapter.Lease? action = _onlineDownloadActions.TryBegin(
-            downloadContext, GetOnlineDownloadIdentity(sourceMod));
-        if (action is null) return;
         try
         {
-            RefreshOnlineDetailActionState();
-            OnlineModCard effectiveMod = await RefreshOnlineModDownloadInfoAsync(sourceMod, useEndfieldMetadata, action.Token);
-            action.Token.ThrowIfCancellationRequested();
-            if (!ReferenceEquals(_activeOnlineDetailMod, sourceMod)
-                || !string.Equals(detailContext, GetOnlineDetailContextKey(), StringComparison.Ordinal)) return;
-
-            _activeOnlineDetailMod = effectiveMod;
-            UpdateOnlineDetailDownloadControls(effectiveMod);
-            IReadOnlyList<OnlineDownloadCandidate> candidates =
-                OnlineDownloadSelectionPolicy.OrderForManualSelection(effectiveMod.DownloadFiles);
-            if (candidates.Count == 0)
+            if (_activeOnlineDetailMod is null)
             {
-                await ShowMessageAsync(
-                    L("当前条目没有返回可手动选择的文件；你仍可尝试使用默认下载按钮。", "This item did not return selectable files. You can still try the default download button."),
-                    L("没有文件列表", "No file list"));
                 return;
             }
 
-            OnlineDownloadCandidate? selectedFile = await ShowOnlineDownloadFilePickerAsync(effectiveMod, candidates);
-            action.Token.ThrowIfCancellationRequested();
-            if (selectedFile is null || !ReferenceEquals(_activeOnlineDetailMod, effectiveMod)
-                || !string.Equals(detailContext, GetOnlineDetailContextKey(), StringComparison.Ordinal)) return;
-            await DownloadAndExtractOnlineModCoreAsync(effectiveMod, selectedFile, false,
-                downloadContext, useEndfieldMetadata, characterAliases, action);
+            OnlineModCard sourceMod = _activeOnlineDetailMod;
+            WorkspaceRepository? downloadRepository = GetSelectedRepository();
+            OnlineDownloadContext downloadContext = CaptureOnlineDownloadContext(downloadRepository);
+            bool useEndfieldMetadata = IsEndfieldRepository(downloadRepository);
+            IReadOnlyCollection<string> characterAliases = GetCharacterFolderAliases(sourceMod);
+            string detailContext = GetOnlineDetailContextKey();
+            using OnlineDownloadActionAdapter.Lease? action = _onlineDownloadActions.TryBegin(
+                downloadContext, GetOnlineDownloadIdentity(sourceMod));
+            if (action is null) return;
+            try
+            {
+                RefreshOnlineDetailActionState();
+                OnlineModCard effectiveMod = await RefreshOnlineModDownloadInfoAsync(sourceMod, useEndfieldMetadata, action.Token);
+                action.Token.ThrowIfCancellationRequested();
+                if (!ReferenceEquals(_activeOnlineDetailMod, sourceMod)
+                    || !string.Equals(detailContext, GetOnlineDetailContextKey(), StringComparison.Ordinal)) return;
+
+                _activeOnlineDetailMod = effectiveMod;
+                UpdateOnlineDetailDownloadControls(effectiveMod);
+                IReadOnlyList<OnlineDownloadCandidate> candidates =
+                    OnlineDownloadSelectionPolicy.OrderForManualSelection(effectiveMod.DownloadFiles);
+                if (candidates.Count == 0)
+                {
+                    await ShowMessageAsync(
+                        L("当前条目没有返回可手动选择的文件；你仍可尝试使用默认下载按钮。", "This item did not return selectable files. You can still try the default download button."),
+                        L("没有文件列表", "No file list"));
+                    return;
+                }
+
+                OnlineDownloadCandidate? selectedFile = await ShowOnlineDownloadFilePickerAsync(effectiveMod, candidates);
+                action.Token.ThrowIfCancellationRequested();
+                if (selectedFile is null || !ReferenceEquals(_activeOnlineDetailMod, effectiveMod)
+                    || !string.Equals(detailContext, GetOnlineDetailContextKey(), StringComparison.Ordinal)) return;
+                await DownloadAndExtractOnlineModCoreAsync(effectiveMod, selectedFile, false,
+                    downloadContext, useEndfieldMetadata, characterAliases, action);
+            }
+            catch (OperationCanceledException) when (action.Token.IsCancellationRequested) { }
+            catch (Exception ex)
+            {
+                LogApplicationIssue("Select online download file", ex);
+                await ReportOnlineActionErrorAsync(L("选择下载文件失败：", "Failed to select download file: ") + ex.Message,
+                    L("在线下载失败", "Online download failed"));
+            }
+            finally
+            {
+                action.Dispose();
+                RefreshOnlineDetailActionState();
+                if (!_onlineWindowClosed) RefreshOnlinePaneV2();
+            }
         }
-        catch (OperationCanceledException) when (action.Token.IsCancellationRequested) { }
         catch (Exception ex)
         {
-            LogApplicationIssue("Select online download file", ex);
-            await ReportOnlineActionErrorAsync(L("选择下载文件失败：", "Failed to select download file: ") + ex.Message,
-                L("在线下载失败", "Online download failed"));
-        }
-        finally
-        {
-            action.Dispose();
-            RefreshOnlineDetailActionState();
-            if (!_onlineWindowClosed) RefreshOnlinePaneV2();
+            ReportUiActionFailure("OnSelectOnlineDetailDownloadClicked", ex);
         }
     }
 
@@ -10888,17 +11309,31 @@ public sealed partial class MainWindow : Window
 
     private async void OnExternalResourceClicked(object sender, RoutedEventArgs e)
     {
-        if (sender is not Button { Tag: string url } || string.IsNullOrWhiteSpace(url))
+        try
         {
-            return;
-        }
+            if (sender is not Button { Tag: string url } || string.IsNullOrWhiteSpace(url))
+            {
+                return;
+            }
 
-        await OpenExternalUrlAsync(url, L("打开项目地址失败", "Failed to open project address"));
+            await OpenExternalUrlAsync(url, L("打开项目地址失败", "Failed to open project address"));
+        }
+        catch (Exception ex)
+        {
+            ReportUiActionFailure("OnExternalResourceClicked", ex);
+        }
     }
 
     private async void OnCheckUpdatesClicked(object sender, RoutedEventArgs e)
     {
-        await CheckForUpdatesAsync(showDialogs: true);
+        try
+        {
+            await CheckForUpdatesAsync(showDialogs: true);
+        }
+        catch (Exception ex)
+        {
+            ReportUiActionFailure("OnCheckUpdatesClicked", ex);
+        }
 #if false
 
         if (_isCheckingUpdates)
@@ -10971,66 +11406,80 @@ public sealed partial class MainWindow : Window
 
     private async void OnInstallUpdateClicked(object sender, RoutedEventArgs e)
     {
-        if (!AppSelfUpdateEnabled)
+        try
         {
-            await OpenExternalUrlAsync(ApplicationReleasePolicy.ReleasePageUrl, L("打开公开发布页失败", "Failed to open the public release page"));
-            return;
-        }
-        DetectLocalUpdatePackage();
-        if (_localUpdatePackageVersion is not null && !string.IsNullOrWhiteSpace(_localUpdatePackagePath))
-        {
-            await PromptAndStartLocalUpdateAsync();
-            return;
-        }
+            if (!AppSelfUpdateEnabled)
+            {
+                await OpenExternalUrlAsync(ApplicationReleasePolicy.ReleasePageUrl, L("打开公开发布页失败", "Failed to open the public release page"));
+                return;
+            }
+            DetectLocalUpdatePackage();
+            if (_localUpdatePackageVersion is not null && !string.IsNullOrWhiteSpace(_localUpdatePackagePath))
+            {
+                await PromptAndStartLocalUpdateAsync();
+                return;
+            }
 
-        if (string.IsNullOrWhiteSpace(_latestReleaseUrl))
-        {
-            await CheckForUpdatesAsync(showDialogs: true);
-            return;
-        }
+            if (string.IsNullOrWhiteSpace(_latestReleaseUrl))
+            {
+                await CheckForUpdatesAsync(showDialogs: true);
+                return;
+            }
 
-        if (!string.IsNullOrWhiteSpace(_latestReleasePackageUrl) && IsReleaseNewer(_latestReleaseTag ?? string.Empty))
-        {
-            await DownloadAndInstallApplicationUpdateAsync(new LatestReleaseInfo(
-                _latestReleaseTag ?? string.Empty,
-                _latestReleaseTitle ?? string.Empty,
-                _latestReleaseBody ?? string.Empty,
-                _latestReleasePublishedAt ?? string.Empty,
-                _latestReleaseUrl,
-                _latestReleasePackageUrl,
-                _latestReleaseSha256Url));
-            return;
-        }
+            if (!string.IsNullOrWhiteSpace(_latestReleasePackageUrl) && IsReleaseNewer(_latestReleaseTag ?? string.Empty))
+            {
+                await DownloadAndInstallApplicationUpdateAsync(new LatestReleaseInfo(
+                    _latestReleaseTag ?? string.Empty,
+                    _latestReleaseTitle ?? string.Empty,
+                    _latestReleaseBody ?? string.Empty,
+                    _latestReleasePublishedAt ?? string.Empty,
+                    _latestReleaseUrl,
+                    _latestReleasePackageUrl,
+                    _latestReleaseSha256Url));
+                return;
+            }
 
-        await OpenExternalUrlAsync(_latestReleaseUrl, L("打开更新页面失败", "Failed to open the update page"));
+            await OpenExternalUrlAsync(_latestReleaseUrl, L("打开更新页面失败", "Failed to open the update page"));
+        }
+        catch (Exception ex)
+        {
+            ReportUiActionFailure("OnInstallUpdateClicked", ex);
+        }
     }
 
     private async void OnRootGridLoaded(object sender, RoutedEventArgs e)
     {
-        TraceStartupStage("RootGrid loaded");
-        RootGrid.Loaded -= OnRootGridLoaded;
-        InitializeAccessibilityFeatures();
-        TraceStartupStage("Accessibility initialized");
-        ApplyTheme(_isDarkTheme);
-        RestoreWindowPlacement();
-        UpdateOnlineWorkspaceWidthConstraint();
-        DispatcherQueue.TryEnqueue(UpdateOnlineWorkspaceWidthConstraint);
-        TrimOnlineImageCache();
-        DetectLocalUpdatePackage();
-        await RefreshInstallBackupListAsync();
-
-        await OfferEndfieldBridgeAfterUpgradeAsync();
-        if (_restoredInterruptedDownloads > 0)
-            ShowAppNotification($"已恢复 {_restoredInterruptedDownloads} 个中断任务，请到更新页检查后手动重试。", $"Restored {_restoredInterruptedDownloads} interrupted tasks. Review them in Updates and retry manually.");
-        await NotifyInterruptedImportsAsync();
-
-        if (_localUpdatePackageVersion is not null && !_hasPromptedForLocalUpdate)
+        try
         {
-            await PromptAndStartLocalUpdateAsync();
+            TraceStartupStage("RootGrid loaded");
+            RootGrid.Loaded -= OnRootGridLoaded;
+            InitializeAccessibilityFeatures();
+            TraceStartupStage("Accessibility initialized");
+            ApplyTheme(_isDarkTheme);
+            RestoreWindowPlacement();
+            UpdateOnlineWorkspaceWidthConstraint();
+            DispatcherQueue.TryEnqueue(UpdateOnlineWorkspaceWidthConstraint);
+            TrimOnlineImageCache();
+            DetectLocalUpdatePackage();
+            await RefreshInstallBackupListAsync();
+
+            await OfferEndfieldBridgeAfterUpgradeAsync();
+            if (_restoredInterruptedDownloads > 0)
+                ShowAppNotification($"已恢复 {_restoredInterruptedDownloads} 个中断任务，请到更新页检查后手动重试。", $"Restored {_restoredInterruptedDownloads} interrupted tasks. Review them in Updates and retry manually.");
+            await NotifyInterruptedImportsAsync();
+
+            if (_localUpdatePackageVersion is not null && !_hasPromptedForLocalUpdate)
+            {
+                await PromptAndStartLocalUpdateAsync();
+            }
+            else
+            {
+                await CheckForUpdatesIfDueAsync();
+            }
         }
-        else
+        catch (Exception ex)
         {
-            await CheckForUpdatesIfDueAsync();
+            ReportUiActionFailure("OnRootGridLoaded", ex);
         }
     }
 
@@ -11072,7 +11521,6 @@ public sealed partial class MainWindow : Window
         _onlineWindowClosed = true;
         ++_onlineDetailAnimationVersion;
         PersistDownloadTasks();
-        _bridgeDownloadCancellation?.Cancel();
         _bundleOperationCancellation?.Cancel();
         _existingModImportCancellation?.Cancel();
         _onlineWindowClosed = true;
@@ -11173,6 +11621,15 @@ public sealed partial class MainWindow : Window
     private async Task StartLocalUpdateAsync(string packagePath)
     {
         if (!AppSelfUpdateEnabled) { return; }
+        if (IntegratedModManager.EndfieldLaunch.LaunchCommand.IsLaunchRunning())
+        {
+            // The window-less launch process runs this executable until the game exits.
+            await ShowMessageAsync(
+                L("终末地启动会话仍在运行，更新需要替换正在使用的程序文件。请先退出游戏再更新。", "An Endfield launch session is still running and the update must replace files it uses. Exit the game, then update."),
+                L("暂不能更新", "Update unavailable"));
+            return;
+        }
+
         try
         {
             string installRoot = GetInstallRootPath();
@@ -11332,39 +11789,46 @@ public sealed partial class MainWindow : Window
 
     private async void OnPreviewDrop(object sender, DragEventArgs e)
     {
-        if (sender is Border border)
+        try
         {
-            SetDropTargetHighlight(border, false);
-        }
+            if (sender is Border border)
+            {
+                SetDropTargetHighlight(border, false);
+            }
 
-        var item = GetSelectedSecondLevelItem();
-        if (item is null)
+            var item = GetSelectedSecondLevelItem();
+            if (item is null)
+            {
+                await ShowMessageAsync(
+                    L("请先选择一个第二层 Mod，再把图片拖到预览区。", "Select a second-level mod before dropping an image."),
+                    L("未选择 Mod", "No mod selected"));
+                return;
+            }
+
+            if (!e.DataView.Contains(StandardDataFormats.StorageItems))
+            {
+                await ShowMessageAsync(
+                    L("只支持从资源管理器拖入图片文件。", "Only image files dragged from File Explorer are supported."),
+                    L("不支持的拖放内容", "Unsupported drop content"));
+                return;
+            }
+
+            IReadOnlyList<IStorageItem> droppedItems = await e.DataView.GetStorageItemsAsync();
+            StorageFile? imageFile = droppedItems.OfType<StorageFile>().FirstOrDefault(file => IsImageFile(file.Path));
+            if (imageFile is null)
+            {
+                await ShowMessageAsync(
+                    L("没有检测到可用的图片文件。", "No supported image file was detected."),
+                    L("未找到图片", "No image found"));
+                return;
+            }
+
+            await ImportPreviewImageAsync(imageFile.Path, item);
+        }
+        catch (Exception ex)
         {
-            await ShowMessageAsync(
-                L("请先选择一个第二层 Mod，再把图片拖到预览区。", "Select a second-level mod before dropping an image."),
-                L("未选择 Mod", "No mod selected"));
-            return;
+            ReportUiActionFailure("OnPreviewDrop", ex);
         }
-
-        if (!e.DataView.Contains(StandardDataFormats.StorageItems))
-        {
-            await ShowMessageAsync(
-                L("只支持从资源管理器拖入图片文件。", "Only image files dragged from File Explorer are supported."),
-                L("不支持的拖放内容", "Unsupported drop content"));
-            return;
-        }
-
-        IReadOnlyList<IStorageItem> droppedItems = await e.DataView.GetStorageItemsAsync();
-        StorageFile? imageFile = droppedItems.OfType<StorageFile>().FirstOrDefault(file => IsImageFile(file.Path));
-        if (imageFile is null)
-        {
-            await ShowMessageAsync(
-                L("没有检测到可用的图片文件。", "No supported image file was detected."),
-                L("未找到图片", "No image found"));
-            return;
-        }
-
-        await ImportPreviewImageAsync(imageFile.Path, item);
     }
 
     private void OnSecondLevelDragOver(object sender, DragEventArgs e)
@@ -11392,114 +11856,128 @@ public sealed partial class MainWindow : Window
 
     private async void OnSecondLevelDrop(object sender, DragEventArgs e)
     {
-        if (sender is Border border)
+        try
         {
-            SetDropTargetHighlight(border, false);
-        }
+            if (sender is Border border)
+            {
+                SetDropTargetHighlight(border, false);
+            }
 
-        FirstLevelFolderItem? item = FirstLevelListView.SelectedItem as FirstLevelFolderItem;
-        if (item is null)
+            FirstLevelFolderItem? item = FirstLevelListView.SelectedItem as FirstLevelFolderItem;
+            if (item is null)
+            {
+                await ShowMessageAsync(
+                    L("请先选择一个第一层分类，再把压缩包拖到这里。", "Select a first-level category before dropping an archive here."),
+                    L("未选择分类", "No category selected"));
+                return;
+            }
+
+            if (!e.DataView.Contains(StandardDataFormats.StorageItems))
+            {
+                await ShowMessageAsync(
+                    L("这里只支持从资源管理器拖入压缩包文件。", "Only archive files dragged from File Explorer are supported here."),
+                    L("不支持的拖放内容", "Unsupported drop content"));
+                return;
+            }
+
+            IReadOnlyList<IStorageItem> droppedItems = await e.DataView.GetStorageItemsAsync();
+            StorageFile? archiveFile = droppedItems
+                .OfType<StorageFile>()
+                .FirstOrDefault(file => IsSupportedArchiveFile(file.Path));
+
+            if (archiveFile is null)
+            {
+                await ShowMessageAsync(
+                    L("没有检测到受支持的压缩包文件。", "No supported archive file was detected."),
+                    L("未找到压缩包", "No archive found"));
+                return;
+            }
+
+            await ImportArchiveToSecondLevelFolderAsync(archiveFile.Path, item);
+        }
+        catch (Exception ex)
         {
-            await ShowMessageAsync(
-                L("请先选择一个第一层分类，再把压缩包拖到这里。", "Select a first-level category before dropping an archive here."),
-                L("未选择分类", "No category selected"));
-            return;
+            ReportUiActionFailure("OnSecondLevelDrop", ex);
         }
-
-        if (!e.DataView.Contains(StandardDataFormats.StorageItems))
-        {
-            await ShowMessageAsync(
-                L("这里只支持从资源管理器拖入压缩包文件。", "Only archive files dragged from File Explorer are supported here."),
-                L("不支持的拖放内容", "Unsupported drop content"));
-            return;
-        }
-
-        IReadOnlyList<IStorageItem> droppedItems = await e.DataView.GetStorageItemsAsync();
-        StorageFile? archiveFile = droppedItems
-            .OfType<StorageFile>()
-            .FirstOrDefault(file => IsSupportedArchiveFile(file.Path));
-
-        if (archiveFile is null)
-        {
-            await ShowMessageAsync(
-                L("没有检测到受支持的压缩包文件。", "No supported archive file was detected."),
-                L("未找到压缩包", "No archive found"));
-            return;
-        }
-
-        await ImportArchiveToSecondLevelFolderAsync(archiveFile.Path, item);
     }
 
     private async void OnRootKeyDown(object sender, KeyRoutedEventArgs e)
     {
-        if (_applyingCombinationProfile || _restoringPersistentRuntime) return;
-        bool controlDown = InputKeyboardSource.GetKeyStateForCurrentThread(VirtualKey.Control).HasFlag(CoreVirtualKeyStates.Down);
-        bool altDown = InputKeyboardSource.GetKeyStateForCurrentThread(VirtualKey.Menu).HasFlag(CoreVirtualKeyStates.Down);
-
-        if (e.Key == VirtualKey.Tab
-            || IsModifierDown(VirtualKey.LeftWindows) || IsModifierDown(VirtualKey.RightWindows)
-            || (altDown && e.Key is VirtualKey.Escape or VirtualKey.F4)) return;
-
-        if (controlDown && e.Key == VirtualKey.F)
+        try
         {
-            (_currentPrimarySection == PrimarySection.Online ? OnlineSearchTextBox : FirstLevelSearchTextBox).Focus(FocusState.Keyboard);
-            e.Handled = true;
-            return;
-        }
+            if (_applyingCombinationProfile || _restoringPersistentRuntime) return;
+            bool controlDown = InputKeyboardSource.GetKeyStateForCurrentThread(VirtualKey.Control).HasFlag(CoreVirtualKeyStates.Down);
+            bool altDown = InputKeyboardSource.GetKeyStateForCurrentThread(VirtualKey.Menu).HasFlag(CoreVirtualKeyStates.Down);
 
-        if (controlDown && e.Key == VirtualKey.U)
-        {
-            NavigateToPrimarySection(PrimarySection.Updates);
-            e.Handled = true;
-            return;
-        }
+            if (e.Key == VirtualKey.Tab
+                || IsModifierDown(VirtualKey.LeftWindows) || IsModifierDown(VirtualKey.RightWindows)
+                || (altDown && e.Key is VirtualKey.Escape or VirtualKey.F4)) return;
 
-        if (altDown && e.Key is >= VirtualKey.Number1 and <= VirtualKey.Number5)
-        {
-            NavigateToPrimarySection((PrimarySection)((int)e.Key - (int)VirtualKey.Number1));
-            e.Handled = true;
-            return;
-        }
-
-        if (e.Key == VirtualKey.Escape && OnlineDetailsSplitView.IsPaneOpen)
-        {
-            await CloseOnlineDetailPaneAsync();
-            e.Handled = true;
-            return;
-        }
-
-        if (FocusManager.GetFocusedElement(this.Content.XamlRoot) is TextBox)
-        {
-            return;
-        }
-
-        if (e.Key == VirtualKey.F5)
-        {
-            if (_currentPrimarySection == PrimarySection.Online)
+            if (controlDown && e.Key == VirtualKey.F)
             {
-                await LoadOnlineModsAsync(forceReload: true);
-            }
-            else
-            {
-                await RefreshListsAsync();
-            }
-            e.Handled = true;
-            return;
-        }
-
-        if (e.Key == VirtualKey.Enter)
-        {
-            var item = GetSelectedSecondLevelItem();
-            if (item is not null)
-            {
-                await ToggleDirectoryCopyAsync(item);
+                (_currentPrimarySection == PrimarySection.Online ? OnlineSearchTextBox : FirstLevelSearchTextBox).Focus(FocusState.Keyboard);
                 e.Handled = true;
                 return;
             }
-        }
 
-        // Mod shortcut rows describe controls used inside the game, not manager
-        // navigation/deployment commands. Never run them on Alt+Tab or other keys.
+            if (controlDown && e.Key == VirtualKey.U)
+            {
+                NavigateToPrimarySection(PrimarySection.Updates);
+                e.Handled = true;
+                return;
+            }
+
+            if (altDown && e.Key is >= VirtualKey.Number1 and <= VirtualKey.Number5)
+            {
+                NavigateToPrimarySection((PrimarySection)((int)e.Key - (int)VirtualKey.Number1));
+                e.Handled = true;
+                return;
+            }
+
+            if (e.Key == VirtualKey.Escape && OnlineDetailsSplitView.IsPaneOpen)
+            {
+                await CloseOnlineDetailPaneAsync();
+                e.Handled = true;
+                return;
+            }
+
+            if (FocusManager.GetFocusedElement(this.Content.XamlRoot) is TextBox)
+            {
+                return;
+            }
+
+            if (e.Key == VirtualKey.F5)
+            {
+                if (_currentPrimarySection == PrimarySection.Online)
+                {
+                    await LoadOnlineModsAsync(forceReload: true);
+                }
+                else
+                {
+                    await RefreshListsAsync();
+                }
+                e.Handled = true;
+                return;
+            }
+
+            if (e.Key == VirtualKey.Enter)
+            {
+                var item = GetSelectedSecondLevelItem();
+                if (item is not null)
+                {
+                    await ToggleDirectoryCopyAsync(item);
+                    e.Handled = true;
+                    return;
+                }
+            }
+
+            // Mod shortcut rows describe controls used inside the game, not manager
+            // navigation/deployment commands. Never run them on Alt+Tab or other keys.
+        }
+        catch (Exception ex)
+        {
+            ReportUiActionFailure("OnRootKeyDown", ex);
+        }
     }
 
     private void OnRootGridPointerPressed(object sender, PointerRoutedEventArgs e)
@@ -12404,6 +12882,11 @@ public sealed partial class MainWindow : Window
         }
         repository.TargetPath = targetDir;
 
+        if (!await OfferBrokenLinkCleanupAsync(targetDir))
+        {
+            return;
+        }
+
         bool targetExists = Directory.Exists(targetPath);
         IReadOnlyList<string> siblingLinksToReplace = Array.Empty<string>();
         try
@@ -12418,7 +12901,10 @@ public sealed partial class MainWindow : Window
             {
                 string[] ignoredTargets = [targetPath, .. siblingLinksToReplace];
                 List<string> conflicts = await Task.Run(() => DetectModFileConflicts(item.Path, targetDir, ignoredTargets));
-                if (conflicts.Count > 0 && !await ConfirmInstallConflictsAsync(conflicts))
+                (string? Candidate, ModIniConflictSummary Summary)[] iniConflicts = (await Task.Run(() =>
+                        DetectModIniConflictsSafely(item.Path, targetDir, ignoredTargets)))
+                    .Select(summary => ((string?)null, summary)).ToArray();
+                if ((conflicts.Count > 0 || iniConflicts.Length > 0) && !await ConfirmInstallConflictsAsync(conflicts, iniConflicts))
                 {
                     return;
                 }
@@ -12524,8 +13010,10 @@ public sealed partial class MainWindow : Window
         {
             string importedPath = await Task.Run(() => ImportArchiveContents(archivePath, item.Path));
 
-            StatusTextBlock.Text = L($"已将 {Path.GetFileName(archivePath)} 解压到 {item.Name}。", $"Extracted {Path.GetFileName(archivePath)} to {item.Name}.");
-            ShowAppNotification($"压缩包已解压到 {item.Name}。", $"The archive was extracted to {item.Name}.");
+            string importedName = Path.GetFileName(importedPath);
+            StatusTextBlock.Text = L($"已将 {Path.GetFileName(archivePath)} 安装为 {item.Name}\\{importedName}：{importedPath}",
+                $"Installed {Path.GetFileName(archivePath)} as {item.Name}\\{importedName}: {importedPath}");
+            ShowAppNotification($"压缩包已安装到 {item.Name}\\{importedName}。", $"The archive was installed to {item.Name}\\{importedName}.");
             await RefreshListsAsync();
             SelectFirstLevelByPath(item.Path);
             SelectSecondLevelByPath(importedPath);
@@ -13205,23 +13693,30 @@ public sealed partial class MainWindow : Window
 
     private async void UpdatePreviewForDirectory(string directoryPath, List<string> files)
     {
-        int requestVersion = ++_previewImageRequestVersion;
         try
         {
-            List<string> liveFiles = Directory.Exists(directoryPath)
-                ? GetFiles(directoryPath)
-                : files.Where(File.Exists).ToList();
-            await SetPreviewImageAsync(FindPreviewImage(liveFiles), requestVersion);
+            int requestVersion = ++_previewImageRequestVersion;
+            try
+            {
+                List<string> liveFiles = Directory.Exists(directoryPath)
+                    ? GetFiles(directoryPath)
+                    : files.Where(File.Exists).ToList();
+                await SetPreviewImageAsync(FindPreviewImage(liveFiles), requestVersion);
+            }
+            catch (Exception ex)
+            {
+                LogApplicationIssue("Mod preview selection", ex);
+                if (requestVersion == _previewImageRequestVersion)
+                {
+                    PreviewImage.Source = null;
+                    PreviewHintTextBlock.Text = L("图片无法读取或格式不受支持。", "The image could not be loaded or is not supported.");
+                    PreviewHintTextBlock.Visibility = Visibility.Visible;
+                }
+            }
         }
         catch (Exception ex)
         {
-            LogApplicationIssue("Mod preview selection", ex);
-            if (requestVersion == _previewImageRequestVersion)
-            {
-                PreviewImage.Source = null;
-                PreviewHintTextBlock.Text = L("图片无法读取或格式不受支持。", "The image could not be loaded or is not supported.");
-                PreviewHintTextBlock.Visibility = Visibility.Visible;
-            }
+            ReportUiActionFailure("UpdatePreviewForDirectory", ex);
         }
     }
 
@@ -13344,49 +13839,11 @@ public sealed partial class MainWindow : Window
         }
     }
 
-    private async Task ImportArchiveToSelectedFirstLevelFolderAsync(string archivePath, FirstLevelFolderItem item)
-    {
-        SetBusyState(true);
-        string stagingDirectory = Path.Combine(Path.GetTempPath(), "ModFolderCopier_Import_" + Guid.NewGuid().ToString("N"));
-        try
-        {
-            await Task.Run(() =>
-            {
-                Directory.CreateDirectory(stagingDirectory);
-                ExtractArchiveToDirectory(archivePath, stagingDirectory);
-                if (Directory.Exists(item.Path))
-                {
-                    InspectDirectoryTreeSafely(item.Path);
-                }
-                CopyDirectoryTree(stagingDirectory, item.Path);
-            });
-
-            StatusTextBlock.Text = L($"已将 {Path.GetFileName(archivePath)} 导入到 {item.Name}。", $"Imported {Path.GetFileName(archivePath)} into {item.Name}.");
-            ShowAppNotification($"压缩包已导入到 {item.Name}。", $"The archive was imported into {item.Name}.");
-            await RefreshListsAsync();
-            SelectFirstLevelByPath(item.Path);
-            await DetectShortcutsForChildModsAsync(item.Path);
-        }
-        catch (Exception ex)
-        {
-            await ShowMessageAsync(
-                L("导入压缩文件失败：", "Archive import failed: ") + ex.Message,
-                L("导入失败", "Import failed"));
-        }
-        finally
-        {
-            try
-            {
-                DeleteDirectoryTreeSafely(stagingDirectory);
-            }
-            catch (Exception ex)
-            {
-                LogApplicationIssue("Archive staging cleanup", ex);
-            }
-            SetBusyState(false);
-        }
-    }
-
+    /// <summary>
+    /// Extracts an archive and installs it as exactly one new Mod folder in the character
+    /// folder: archives without a top-level folder get one, archives with a single
+    /// top-level folder are not nested again, and an existing folder is never merged.
+    /// </summary>
     private string ImportArchiveContents(string archivePath, string firstLevelDirectory)
     {
         string tempDirectory = Path.Combine(Path.GetTempPath(), "ModFolderCopier_Import_" + Guid.NewGuid().ToString("N"));
@@ -13395,34 +13852,18 @@ public sealed partial class MainWindow : Window
         try
         {
             ExtractArchiveToDirectory(archivePath, tempDirectory);
-
-            string[] rootDirectories = Directory.GetDirectories(tempDirectory);
-            string[] rootFiles = Directory.GetFiles(tempDirectory);
-
-            if (rootFiles.Length == 0 && rootDirectories.Length == 1)
-            {
-                string sourceDirectory = rootDirectories[0];
-                string destinationPath = Path.Combine(firstLevelDirectory, Path.GetFileName(sourceDirectory));
-                EnsureImportDestinationDoesNotExist(destinationPath);
-                Directory.Move(sourceDirectory, destinationPath);
-                return destinationPath;
-            }
-
-            string importedDirectory = Path.Combine(firstLevelDirectory, BuildImportedFolderName(archivePath));
-            EnsureImportDestinationDoesNotExist(importedDirectory);
-            Directory.CreateDirectory(importedDirectory);
-
-            foreach (string directory in rootDirectories)
-            {
-                Directory.Move(directory, Path.Combine(importedDirectory, Path.GetFileName(directory)));
-            }
-
-            foreach (string file in rootFiles)
-            {
-                File.Move(file, Path.Combine(importedDirectory, Path.GetFileName(file)));
-            }
-
-            return importedDirectory;
+            ArchiveImportPlan plan = ArchiveImportLayout.Plan(tempDirectory, archivePath, SupportedArchiveExtensions);
+            return ArchiveImportLayout.Install(plan, firstLevelDirectory);
+        }
+        catch (ArchiveImportConflictException ex)
+        {
+            throw new InvalidOperationException(L(
+                $"角色目录中已有同名文件夹，未合并或覆盖：\n{ex.Destination}\n请先重命名或删除原有文件夹，再导入。",
+                $"A folder with the same name already exists and was not merged or overwritten:\n{ex.Destination}\nRename or remove it first, then import again."), ex);
+        }
+        catch (InvalidDataException ex) when (ex.Message == "The archive is empty.")
+        {
+            throw new InvalidOperationException(L("压缩包是空的，没有可导入的内容。", "The archive is empty; there is nothing to import."), ex);
         }
         finally
         {
@@ -13431,41 +13872,6 @@ public sealed partial class MainWindow : Window
                 DeleteDirectoryTreeSafely(tempDirectory);
             }
         }
-    }
-
-    private static void EnsureImportDestinationDoesNotExist(string destinationPath)
-    {
-        if (Directory.Exists(destinationPath) || File.Exists(destinationPath))
-        {
-            throw new InvalidOperationException($"\"{Path.GetFileName(destinationPath)}\" already exists.");
-        }
-    }
-
-    private static string BuildImportedFolderName(string archivePath)
-    {
-        string fileName = Path.GetFileName(archivePath);
-
-        foreach (string extension in SupportedArchiveExtensions.OrderByDescending(item => item.Length))
-        {
-            if (fileName.EndsWith(extension, StringComparison.OrdinalIgnoreCase))
-            {
-                fileName = fileName[..^extension.Length];
-                break;
-            }
-        }
-
-        if (fileName.EndsWith(".tar", StringComparison.OrdinalIgnoreCase))
-        {
-            fileName = fileName[..^4];
-        }
-
-        foreach (char invalidChar in Path.GetInvalidFileNameChars())
-        {
-            fileName = fileName.Replace(invalidChar, '_');
-        }
-
-        fileName = fileName.Trim();
-        return string.IsNullOrWhiteSpace(fileName) ? "ImportedMod" : fileName;
     }
 
     private void ExtractArchiveToDirectory(string archivePath, string destinationDirectory)
@@ -14114,7 +14520,19 @@ public sealed class WorkspaceRepository
 
     public string LauncherPath { get; set; } = string.Empty;
 
+    /// <summary>Use the integrated Endfield launch instead of running LauncherPath directly.</summary>
     public bool UseEndfieldBridge { get; set; }
+
+    public bool EndfieldRiskAccepted { get; set; }
+
+    public string EndfieldGamePath { get; set; } = string.Empty;
+
+    /// <summary>Optional explicit official Games.exe; empty means discover and verify it.</summary>
+    public string EndfieldParentPath { get; set; } = string.Empty;
+
+    public string EndfieldGameArguments { get; set; } = "-force-d3d11";
+
+    public bool EndfieldUseMods { get; set; }
 
     public string PersistentUserIniPath { get; set; } = string.Empty;
 

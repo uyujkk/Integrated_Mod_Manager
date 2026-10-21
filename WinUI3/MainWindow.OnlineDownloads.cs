@@ -10,19 +10,26 @@ public sealed partial class MainWindow
 
     private async void OnOnlineDownloadOptionsClicked(object sender, RoutedEventArgs e)
     {
-        var concurrency = new ComboBox { Header = L("同时执行的下载任务", "Concurrent download tasks"), HorizontalAlignment = HorizontalAlignment.Stretch };
-        foreach (int value in Enumerable.Range(1, 4)) concurrency.Items.Add(value);
-        concurrency.SelectedItem = _onlinePreferences.ConcurrentDownloads;
-        var remember = new CheckBox { Content = L("按仓库和角色记住确认过的下载目录", "Remember confirmed download folders per repository and character"), IsChecked = _onlinePreferences.RememberDownloadFolders };
-        var body = new StackPanel { Spacing = 12, MinWidth = 300 };
-        body.Children.Add(concurrency); body.Children.Add(remember);
-        body.Children.Add(new TextBlock { Text = L("记住的目录必须仍位于原仓库内；目录失效时会重新询问。关闭此选项可恢复每次确认。", "Remembered folders must still be inside the original repository. Invalid folders prompt again. Turn this off to confirm every time."), TextWrapping = TextWrapping.Wrap, MaxWidth = 440 });
-        var dialog = new ContentDialog { Title = L("下载选项", "Download options"), Content = body, PrimaryButtonText = L("保存", "Save"), CloseButtonText = L("取消", "Cancel"), XamlRoot = RootGrid.XamlRoot, RequestedTheme = RootGrid.ActualTheme };
-        if (await dialog.ShowAsync() != ContentDialogResult.Primary) return;
-        _onlinePreferences.ConcurrentDownloads = (int)concurrency.SelectedItem;
-        _onlinePreferences.RememberDownloadFolders = remember.IsChecked == true;
-        _onlineDownloadScheduler.Limit = _onlinePreferences.ConcurrentDownloads;
-        SaveShellConfig();
+        try
+        {
+            var concurrency = new ComboBox { Header = L("同时执行的下载任务", "Concurrent download tasks"), HorizontalAlignment = HorizontalAlignment.Stretch };
+            foreach (int value in Enumerable.Range(1, 4)) concurrency.Items.Add(value);
+            concurrency.SelectedItem = _onlinePreferences.ConcurrentDownloads;
+            var remember = new CheckBox { Content = L("按仓库和角色记住确认过的下载目录", "Remember confirmed download folders per repository and character"), IsChecked = _onlinePreferences.RememberDownloadFolders };
+            var body = new StackPanel { Spacing = 12, MinWidth = 300 };
+            body.Children.Add(concurrency); body.Children.Add(remember);
+            body.Children.Add(new TextBlock { Text = L("记住的目录必须仍位于原仓库内；目录失效时会重新询问。关闭此选项可恢复每次确认。", "Remembered folders must still be inside the original repository. Invalid folders prompt again. Turn this off to confirm every time."), TextWrapping = TextWrapping.Wrap, MaxWidth = 440 });
+            var dialog = new ContentDialog { Title = L("下载选项", "Download options"), Content = body, PrimaryButtonText = L("保存", "Save"), CloseButtonText = L("取消", "Cancel"), XamlRoot = RootGrid.XamlRoot, RequestedTheme = RootGrid.ActualTheme };
+            if (await dialog.ShowAsync() != ContentDialogResult.Primary) return;
+            _onlinePreferences.ConcurrentDownloads = (int)concurrency.SelectedItem;
+            _onlinePreferences.RememberDownloadFolders = remember.IsChecked == true;
+            _onlineDownloadScheduler.Limit = _onlinePreferences.ConcurrentDownloads;
+            SaveShellConfig();
+        }
+        catch (Exception ex)
+        {
+            ReportUiActionFailure("OnOnlineDownloadOptionsClicked", ex);
+        }
     }
 
     private static string DownloadFolderKey(OnlineDownloadContext context, OnlineModCard mod)

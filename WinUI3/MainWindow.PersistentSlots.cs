@@ -154,193 +154,221 @@ public sealed partial class MainWindow
 
     private async void OnBrowsePersistentUserIniClicked(object sender, RoutedEventArgs e)
     {
-        if (_restoringPersistentRuntime || _applyingCombinationProfile) return;
-        string? path = await PickFileAsync([".ini"]);
-        if (path is null) return;
-        if (!string.Equals(Path.GetFileName(path), "d3dx_user.ini", StringComparison.OrdinalIgnoreCase))
+        try
         {
-            await ShowMessageAsync(L("请选择 d3dx_user.ini。", "Select d3dx_user.ini."),
-                L("文件不匹配", "Wrong File"));
-            return;
-        }
+            if (_restoringPersistentRuntime || _applyingCombinationProfile) return;
+            string? path = await PickFileAsync([".ini"]);
+            if (path is null) return;
+            if (!string.Equals(Path.GetFileName(path), "d3dx_user.ini", StringComparison.OrdinalIgnoreCase))
+            {
+                await ShowMessageAsync(L("请选择 d3dx_user.ini。", "Select d3dx_user.ini."),
+                    L("文件不匹配", "Wrong File"));
+                return;
+            }
 
-        PersistentUserIniTextBox.Text = path;
-        WorkspaceRepository? repository = GetSelectedRepository();
-        if (repository is not null)
-        {
-            repository.PersistentUserIniPath = path;
-            SaveShellConfig();
+            PersistentUserIniTextBox.Text = path;
+            WorkspaceRepository? repository = GetSelectedRepository();
+            if (repository is not null)
+            {
+                repository.PersistentUserIniPath = path;
+                SaveShellConfig();
+            }
+            RefreshConfigurationProfiles();
         }
-        RefreshConfigurationProfiles();
+        catch (Exception ex)
+        {
+            ReportUiActionFailure("OnBrowsePersistentUserIniClicked", ex);
+        }
     }
 
     private async void OnCapturePersistentSlotClicked(object sender, RoutedEventArgs e)
     {
-        if (_restoringPersistentRuntime || _applyingCombinationProfile) return;
-        WorkspaceRepository? repository = GetSelectedRepository();
-        string? modPath = _currentSecondLevelPath;
-        string? relative = TryGetCurrentModRelativePath(repository, modPath);
-        if (repository is null || modPath is null || relative is null) return;
-
-        string userIni = PersistentUserIniTextBox.Text.Trim();
-        if (!string.Equals(Path.GetFileName(userIni), "d3dx_user.ini", StringComparison.OrdinalIgnoreCase))
-        {
-            await ShowMessageAsync(L("请选择加载器的 d3dx_user.ini。", "Select the loader's d3dx_user.ini."),
-                L("无法捕获", "Cannot Capture"));
-            return;
-        }
-
-        string deployedName = Path.GetFileName(Path.TrimEndingDirectorySeparator(modPath));
-        bool deployed;
         try
         {
-            deployed = !string.IsNullOrWhiteSpace(repository.TargetPath)
-                && Directory.Exists(Path.Combine(repository.TargetPath, deployedName));
-        }
-        catch (Exception ex) when (ex is ArgumentException or NotSupportedException or PathTooLongException)
-        {
-            deployed = false;
-        }
-        if (!deployed)
-        {
-            await ShowMessageAsync(L("当前 Mod 尚未以同名目录部署到目标文件夹。", "This Mod is not deployed under the same folder name."),
-                L("无法捕获", "Cannot Capture"));
-            return;
-        }
+            if (_restoringPersistentRuntime || _applyingCombinationProfile) return;
+            WorkspaceRepository? repository = GetSelectedRepository();
+            string? modPath = _currentSecondLevelPath;
+            string? relative = TryGetCurrentModRelativePath(repository, modPath);
+            if (repository is null || modPath is null || relative is null) return;
 
-        IReadOnlyList<ModPersistentValue> values;
-        try
-        {
-            values = await Task.Run(() => ModPersistentPresetEngine.Capture(modPath, deployedName, userIni));
-        }
-        catch (Exception ex) when (ex is IOException or UnauthorizedAccessException or InvalidDataException or DecoderFallbackException or ArgumentException)
-        {
-            await ShowMessageAsync(ex.Message, L("捕获失败", "Capture Failed"));
-            return;
-        }
+            string userIni = PersistentUserIniTextBox.Text.Trim();
+            if (!string.Equals(Path.GetFileName(userIni), "d3dx_user.ini", StringComparison.OrdinalIgnoreCase))
+            {
+                await ShowMessageAsync(L("请选择加载器的 d3dx_user.ini。", "Select the loader's d3dx_user.ini."),
+                    L("无法捕获", "Cannot Capture"));
+                return;
+            }
 
-        if (values.Count == 0)
-        {
-            await ShowMessageAsync(L("未找到与此 Mod 声明精确匹配的数值型持久变量。请在游戏里按 F10 后确认文件已更新。",
-                "No numeric persistent values matched this Mod. Press F10 in game and confirm the file was updated."),
-                L("没有可保存状态", "No Supported State"));
-            return;
+            string deployedName = Path.GetFileName(Path.TrimEndingDirectorySeparator(modPath));
+            bool deployed;
+            try
+            {
+                deployed = !string.IsNullOrWhiteSpace(repository.TargetPath)
+                    && Directory.Exists(Path.Combine(repository.TargetPath, deployedName));
+            }
+            catch (Exception ex) when (ex is ArgumentException or NotSupportedException or PathTooLongException)
+            {
+                deployed = false;
+            }
+            if (!deployed)
+            {
+                await ShowMessageAsync(L("当前 Mod 尚未以同名目录部署到目标文件夹。", "This Mod is not deployed under the same folder name."),
+                    L("无法捕获", "Cannot Capture"));
+                return;
+            }
+
+            IReadOnlyList<ModPersistentValue> values;
+            try
+            {
+                values = await Task.Run(() => ModPersistentPresetEngine.Capture(modPath, deployedName, userIni));
+            }
+            catch (Exception ex) when (ex is IOException or UnauthorizedAccessException or InvalidDataException or DecoderFallbackException or ArgumentException)
+            {
+                await ShowMessageAsync(ex.Message, L("捕获失败", "Capture Failed"));
+                return;
+            }
+
+            if (values.Count == 0)
+            {
+                await ShowMessageAsync(L("未找到与此 Mod 声明精确匹配的数值型持久变量。请在游戏里按 F10 后确认文件已更新。",
+                    "No numeric persistent values matched this Mod. Press F10 in game and confirm the file was updated."),
+                    L("没有可保存状态", "No Supported State"));
+                return;
+            }
+
+            string? name = await PromptForTextAsync(
+                L($"找到 {values.Count} 个变量。输入此状态槽位的名称。", $"Found {values.Count} variables. Name this slot."),
+                L("保存内部状态", "Save Internal State"),
+                L("状态 1", "State 1"));
+            name = name?.Trim();
+            if (string.IsNullOrWhiteSpace(name)) return;
+
+            var slot = new ModPersistentSlot
+            {
+                RepositoryId = repository.Id,
+                ModRelativePath = relative,
+                Name = name,
+                Values = [.. values]
+            };
+            _modPersistentSlots.Add(slot);
+            _selectedModPersistentSlotId = slot.Id;
+            repository.PersistentUserIniPath = userIni;
+            SaveShellConfig();
+            RefreshPersistentSlotControls();
+            ShowAppNotification($"已保存 {values.Count} 个变量到“{name}”。这是离线快照，尚未验证游戏内效果。",
+                $"Saved {values.Count} variables to '{name}'. This is an offline snapshot; in-game behavior is not verified.");
         }
-
-        string? name = await PromptForTextAsync(
-            L($"找到 {values.Count} 个变量。输入此状态槽位的名称。", $"Found {values.Count} variables. Name this slot."),
-            L("保存内部状态", "Save Internal State"),
-            L("状态 1", "State 1"));
-        name = name?.Trim();
-        if (string.IsNullOrWhiteSpace(name)) return;
-
-        var slot = new ModPersistentSlot
+        catch (Exception ex)
         {
-            RepositoryId = repository.Id,
-            ModRelativePath = relative,
-            Name = name,
-            Values = [.. values]
-        };
-        _modPersistentSlots.Add(slot);
-        _selectedModPersistentSlotId = slot.Id;
-        repository.PersistentUserIniPath = userIni;
-        SaveShellConfig();
-        RefreshPersistentSlotControls();
-        ShowAppNotification($"已保存 {values.Count} 个变量到“{name}”。这是离线快照，尚未验证游戏内效果。",
-            $"Saved {values.Count} variables to '{name}'. This is an offline snapshot; in-game behavior is not verified.");
+            ReportUiActionFailure("OnCapturePersistentSlotClicked", ex);
+        }
     }
 
     private async void OnRestorePersistentRuntimeClicked(object sender, RoutedEventArgs e)
     {
-        if (_restoringPersistentRuntime || _applyingCombinationProfile) return;
-        WorkspaceRepository? repository = GetSelectedRepository();
-        string? modPath = _currentSecondLevelPath;
-        string? relative = TryGetCurrentModRelativePath(repository, modPath);
-        ModPersistentSlot? slot = GetSelectedPersistentSlot();
-        if (repository is null || modPath is null || relative is null || slot is null
-            || slot.RepositoryId != repository.Id
-            || !string.Equals(slot.ModRelativePath, relative, StringComparison.OrdinalIgnoreCase)) return;
-
-        string userIni = PersistentUserIniTextBox.Text.Trim();
-        string deployedName = Path.GetFileName(Path.TrimEndingDirectorySeparator(modPath));
-        _restoringPersistentRuntime = true;
-        RefreshConfigurationProfiles();
-        PersistentSlotComboBox.IsEnabled = false;
-        PersistentUserIniTextBox.IsEnabled = false;
-        BrowsePersistentUserIniButton.IsEnabled = false;
-        CapturePersistentSlotButton.IsEnabled = false;
-        DeletePersistentSlotButton.IsEnabled = false;
-        RestorePersistentRuntimeButton.IsEnabled = false;
-        string? resultText = null;
         try
         {
-            if (string.IsNullOrWhiteSpace(repository.TargetPath)
-                || !Directory.Exists(Path.Combine(repository.TargetPath, deployedName)))
-                throw new InvalidDataException(L("请先以同名目录部署当前 Mod，再恢复加载器状态。", "Deploy this Mod under its matching folder name before restoring."));
-            ModPersistentRuntimeRestorePlan plan = await Task.Run(() =>
-                ModPersistentPresetEngine.PlanRuntimeRestore(modPath, deployedName, userIni, slot.Values));
-            var closedCheck = new CheckBox
-            {
-                Content = L("我已完全退出游戏及 XXMI/EFMI 加载器", "I have fully closed the game and XXMI/EFMI loader")
-            };
-            var content = new StackPanel { Spacing = 12 };
-            content.Children.Add(new TextBlock
-            {
-                Text = L($"槽位：{slot.Name}\n文件：{plan.Edit.Path}\n修改 {plan.ChangedCount} 项，补入 {plan.AddedCount} 项，已一致 {plan.UnchangedCount} 项。\n\n仅处理此 Mod 的完整运行键；其他 Mod 的数据不变。写入前保留 .bak 备份，之后逐项重新读取核对。不会修改 Mod INI，也不会向运行中的游戏推送状态。",
-                    $"Slot: {slot.Name}\nFile: {plan.Edit.Path}\nChange {plan.ChangedCount}, add {plan.AddedCount}, already equal {plan.UnchangedCount}.\n\nOnly this Mod's full runtime keys will be restored. Other Mod data stays unchanged. A .bak is kept before writing, then values are read back and checked. Mod INIs and the running game are not modified."),
-                TextWrapping = TextWrapping.Wrap
-            });
-            content.Children.Add(closedCheck);
-            var dialog = new ContentDialog
-            {
-                XamlRoot = RootGrid.XamlRoot,
-                Title = L("恢复到加载器（实验）", "Restore Loader State (Experimental)"),
-                Content = content,
-                PrimaryButtonText = L("备份并恢复", "Back Up and Restore"),
-                CloseButtonText = L("取消", "Cancel"),
-                IsPrimaryButtonEnabled = false,
-                DefaultButton = ContentDialogButton.Close
-            };
-            closedCheck.Checked += (_, _) => dialog.IsPrimaryButtonEnabled = true;
-            closedCheck.Unchecked += (_, _) => dialog.IsPrimaryButtonEnabled = false;
-            if (await dialog.ShowAsync() != ContentDialogResult.Primary) return;
-            string? backup = await Task.Run(() => ModPersistentPresetEngine.ApplyRuntimeRestore(plan));
-            repository.PersistentUserIniPath = userIni;
-            SaveShellConfig();
-            resultText = L($"“{slot.Name}”已逐项核对：修改 {plan.ChangedCount}，补入 {plan.AddedCount}，已一致 {plan.UnchangedCount}。\n"
-                + (backup is null ? "无需写入，没有创建新备份。" : $"备份：{backup}") + "\n请重新启动加载器和游戏验证效果。",
-                $"'{slot.Name}' verified: changed {plan.ChangedCount}, added {plan.AddedCount}, already equal {plan.UnchangedCount}.\n"
-                + (backup is null ? "No write was needed; no new backup created." : $"Backup: {backup}") + "\nRestart the loader and game to verify the result.");
-            ShowAppNotification($"已恢复“{slot.Name}”的 {plan.Values.Count} 个加载器变量，并重新读取核对。请重启游戏验证效果。",
-                $"Restored and verified {plan.Values.Count} loader variables for '{slot.Name}'. Restart the game to verify.");
-        }
-        catch (Exception ex) when (ex is IOException or UnauthorizedAccessException or InvalidDataException
-            or DecoderFallbackException or ArgumentException or NotSupportedException)
-        {
-            await ShowMessageAsync(ex.Message, L("恢复失败，请检查备份", "Restore Failed; Check Backups"));
-        }
-        finally
-        {
-            _restoringPersistentRuntime = false;
-            PersistentSlotComboBox.IsEnabled = true;
-            PersistentUserIniTextBox.IsEnabled = true;
-            RefreshPersistentSlotControls();
+            if (_restoringPersistentRuntime || _applyingCombinationProfile) return;
+            WorkspaceRepository? repository = GetSelectedRepository();
+            string? modPath = _currentSecondLevelPath;
+            string? relative = TryGetCurrentModRelativePath(repository, modPath);
+            ModPersistentSlot? slot = GetSelectedPersistentSlot();
+            if (repository is null || modPath is null || relative is null || slot is null
+                || slot.RepositoryId != repository.Id
+                || !string.Equals(slot.ModRelativePath, relative, StringComparison.OrdinalIgnoreCase)) return;
+
+            string userIni = PersistentUserIniTextBox.Text.Trim();
+            string deployedName = Path.GetFileName(Path.TrimEndingDirectorySeparator(modPath));
+            _restoringPersistentRuntime = true;
             RefreshConfigurationProfiles();
-            if (resultText is not null) PersistentSlotStatusTextBlock.Text = resultText;
+            PersistentSlotComboBox.IsEnabled = false;
+            PersistentUserIniTextBox.IsEnabled = false;
+            BrowsePersistentUserIniButton.IsEnabled = false;
+            CapturePersistentSlotButton.IsEnabled = false;
+            DeletePersistentSlotButton.IsEnabled = false;
+            RestorePersistentRuntimeButton.IsEnabled = false;
+            string? resultText = null;
+            try
+            {
+                if (string.IsNullOrWhiteSpace(repository.TargetPath)
+                    || !Directory.Exists(Path.Combine(repository.TargetPath, deployedName)))
+                    throw new InvalidDataException(L("请先以同名目录部署当前 Mod，再恢复加载器状态。", "Deploy this Mod under its matching folder name before restoring."));
+                ModPersistentRuntimeRestorePlan plan = await Task.Run(() =>
+                    ModPersistentPresetEngine.PlanRuntimeRestore(modPath, deployedName, userIni, slot.Values));
+                var closedCheck = new CheckBox
+                {
+                    Content = L("我已完全退出游戏及 XXMI/EFMI 加载器", "I have fully closed the game and XXMI/EFMI loader")
+                };
+                var content = new StackPanel { Spacing = 12 };
+                content.Children.Add(new TextBlock
+                {
+                    Text = L($"槽位：{slot.Name}\n文件：{plan.Edit.Path}\n修改 {plan.ChangedCount} 项，补入 {plan.AddedCount} 项，已一致 {plan.UnchangedCount} 项。\n\n仅处理此 Mod 的完整运行键；其他 Mod 的数据不变。写入前保留 .bak 备份，之后逐项重新读取核对。不会修改 Mod INI，也不会向运行中的游戏推送状态。",
+                        $"Slot: {slot.Name}\nFile: {plan.Edit.Path}\nChange {plan.ChangedCount}, add {plan.AddedCount}, already equal {plan.UnchangedCount}.\n\nOnly this Mod's full runtime keys will be restored. Other Mod data stays unchanged. A .bak is kept before writing, then values are read back and checked. Mod INIs and the running game are not modified."),
+                    TextWrapping = TextWrapping.Wrap
+                });
+                content.Children.Add(closedCheck);
+                var dialog = new ContentDialog
+                {
+                    XamlRoot = RootGrid.XamlRoot,
+                    Title = L("恢复到加载器（实验）", "Restore Loader State (Experimental)"),
+                    Content = content,
+                    PrimaryButtonText = L("备份并恢复", "Back Up and Restore"),
+                    CloseButtonText = L("取消", "Cancel"),
+                    IsPrimaryButtonEnabled = false,
+                    DefaultButton = ContentDialogButton.Close
+                };
+                closedCheck.Checked += (_, _) => dialog.IsPrimaryButtonEnabled = true;
+                closedCheck.Unchecked += (_, _) => dialog.IsPrimaryButtonEnabled = false;
+                if (await dialog.ShowAsync() != ContentDialogResult.Primary) return;
+                string? backup = await Task.Run(() => ModPersistentPresetEngine.ApplyRuntimeRestore(plan));
+                repository.PersistentUserIniPath = userIni;
+                SaveShellConfig();
+                resultText = L($"“{slot.Name}”已逐项核对：修改 {plan.ChangedCount}，补入 {plan.AddedCount}，已一致 {plan.UnchangedCount}。\n"
+                    + (backup is null ? "无需写入，没有创建新备份。" : $"备份：{backup}") + "\n请重新启动加载器和游戏验证效果。",
+                    $"'{slot.Name}' verified: changed {plan.ChangedCount}, added {plan.AddedCount}, already equal {plan.UnchangedCount}.\n"
+                    + (backup is null ? "No write was needed; no new backup created." : $"Backup: {backup}") + "\nRestart the loader and game to verify the result.");
+                ShowAppNotification($"已恢复“{slot.Name}”的 {plan.Values.Count} 个加载器变量，并重新读取核对。请重启游戏验证效果。",
+                    $"Restored and verified {plan.Values.Count} loader variables for '{slot.Name}'. Restart the game to verify.");
+            }
+            catch (Exception ex) when (ex is IOException or UnauthorizedAccessException or InvalidDataException
+                or DecoderFallbackException or ArgumentException or NotSupportedException)
+            {
+                await ShowMessageAsync(ex.Message, L("恢复失败，请检查备份", "Restore Failed; Check Backups"));
+            }
+            finally
+            {
+                _restoringPersistentRuntime = false;
+                PersistentSlotComboBox.IsEnabled = true;
+                PersistentUserIniTextBox.IsEnabled = true;
+                RefreshPersistentSlotControls();
+                RefreshConfigurationProfiles();
+                if (resultText is not null) PersistentSlotStatusTextBlock.Text = resultText;
+            }
+        }
+        catch (Exception ex)
+        {
+            ReportUiActionFailure("OnRestorePersistentRuntimeClicked", ex);
         }
     }
 
     private async void OnDeletePersistentSlotClicked(object sender, RoutedEventArgs e)
     {
-        if (_restoringPersistentRuntime) return;
-        ModPersistentSlot? slot = GetSelectedPersistentSlot();
-        if (slot is null || !await ShowConfirmAsync(
-            L($"删除状态槽位“{slot.Name}”？Mod INI 不会被修改。", $"Delete slot '{slot.Name}'? Mod INIs will not change."),
-            L("删除状态槽位", "Delete State Slot"))) return;
+        try
+        {
+            if (_restoringPersistentRuntime) return;
+            ModPersistentSlot? slot = GetSelectedPersistentSlot();
+            if (slot is null || !await ShowConfirmAsync(
+                L($"删除状态槽位“{slot.Name}”？Mod INI 不会被修改。", $"Delete slot '{slot.Name}'? Mod INIs will not change."),
+                L("删除状态槽位", "Delete State Slot"))) return;
 
-        _modPersistentSlots.Remove(slot);
-        _selectedModPersistentSlotId = null;
-        SaveShellConfig();
-        RefreshPersistentSlotControls();
+            _modPersistentSlots.Remove(slot);
+            _selectedModPersistentSlotId = null;
+            SaveShellConfig();
+            RefreshPersistentSlotControls();
+        }
+        catch (Exception ex)
+        {
+            ReportUiActionFailure("OnDeletePersistentSlotClicked", ex);
+        }
     }
 }

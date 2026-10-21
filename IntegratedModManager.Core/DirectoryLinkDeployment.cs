@@ -8,6 +8,9 @@ namespace IntegratedModManager.Core;
 /// Creates and removes Windows directory junctions without traversing their targets.
 /// A junction makes the loader and the repository observe the same physical files.
 /// </summary>
+/// <summary>A deployed link whose target is missing. <see cref="Target"/> is null when unreadable.</summary>
+public sealed record BrokenDirectoryLink(string LinkPath, string? Target);
+
 public static class DirectoryLinkDeployment
 {
     private const uint GenericWrite = 0x40000000;
@@ -122,6 +125,116 @@ public static class DirectoryLinkDeployment
         }
 
         Directory.Delete(fullPath, recursive: false);
+    }
+
+    /// <summary>
+    /// The path a link points to as stored in the link itself, even when that path no
+    /// longer exists. Returns <see langword="null"/> for anything that is not a link.
+    /// </summary>
+    public static string? TryGetStoredTarget(string path)
+    {
+        if (!IsDirectoryLink(path))
+        {
+            return null;
+        }
+
+        try
+        {
+            string? target = new DirectoryInfo(path).LinkTarget;
+            if (string.IsNullOrWhiteSpace(target))
+            {
+                return null;
+            }
+
+            const string NtPrefix = @"\??\";
+            if (target.StartsWith(NtPrefix, StringComparison.Ordinal))
+            {
+                target = target[NtPrefix.Length..];
+            }
+
+            return Path.GetFullPath(Path.Combine(Path.GetDirectoryName(Path.GetFullPath(path))!, target))
+                .TrimEnd(Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar);
+        }
+        catch (Exception ex) when (ex is IOException or UnauthorizedAccessException or ArgumentException or NotSupportedException)
+        {
+            return null;
+        }
+    }
+
+    /// <summary>A link whose target directory is gone, so its contents cannot be inspected.</summary>
+    public static bool IsBrokenLink(string path)
+    {
+        if (!IsDirectoryLink(path))
+        {
+            return false;
+        }
+
+        string? target = TryGetStoredTarget(path);
+        return target is null || !Directory.Exists(target);
+    }
+
+    /// <summary>First-level links in <paramref name="loaderRoot"/> whose target no longer exists.</summary>
+    public static IReadOnlyList<BrokenDirectoryLink> FindBrokenLinks(string loaderRoot)
+    {
+        ArgumentException.ThrowIfNullOrWhiteSpace(loaderRoot);
+        if (!Directory.Exists(loaderRoot))
+        {
+            return [];
+        }
+
+        var broken = new List<BrokenDirectoryLink>();
+        foreach (string entry in Directory.EnumerateDirectories(loaderRoot))
+        {
+            if (IsBrokenLink(entry))
+            {
+                broken.Add(new BrokenDirectoryLink(Path.GetFullPath(entry), TryGetStoredTarget(entry)));
+            }
+        }
+
+        broken.Sort((left, right) => StringComparer.OrdinalIgnoreCase.Compare(left.LinkPath, right.LinkPath));
+        return broken;
+    }
+
+    /// <summary>
+    /// First-level links in <paramref name="loaderRoot"/> that point exactly at
+    /// <paramref name="sourcePath"/>, whatever their names. Similar names never match.
+    /// </summary>
+    public static IReadOnlyList<string> FindLinksTargeting(string sourcePath, string loaderRoot)
+    {
+        ArgumentException.ThrowIfNullOrWhiteSpace(sourcePath);
+        ArgumentException.ThrowIfNullOrWhiteSpace(loaderRoot);
+        if (!Directory.Exists(loaderRoot))
+        {
+            return [];
+        }
+
+        string source = Path.GetFullPath(sourcePath).TrimEnd(Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar);
+        var links = new List<string>();
+        foreach (string entry in Directory.EnumerateDirectories(loaderRoot))
+        {
+            if (string.Equals(TryGetStoredTarget(entry), source, StringComparison.OrdinalIgnoreCase))
+            {
+                links.Add(Path.GetFullPath(entry));
+            }
+        }
+
+        links.Sort(StringComparer.OrdinalIgnoreCase);
+        return links;
+    }
+
+    /// <summary>
+    /// Removes a link only if it is still broken, so a target restored in the meantime
+    /// keeps its deployment. Only the link is deleted; nothing is followed.
+    /// </summary>
+    public static bool RemoveBrokenLink(string path)
+    {
+        if (!IsBrokenLink(path))
+        {
+            return false;
+        }
+
+        RemoveLink(path);
+        return true;
     }
 
     /// <summary>

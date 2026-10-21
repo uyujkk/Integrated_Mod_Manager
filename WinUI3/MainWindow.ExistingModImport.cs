@@ -17,9 +17,9 @@ public sealed partial class MainWindow
         var import = new MenuFlyoutItem();
         var undo = new MenuFlyoutItem();
         var recover = new MenuFlyoutItem();
-        import.Click += async (_, _) => await ShowExistingModImportAsync();
-        undo.Click += async (_, _) => await UndoExistingModImportAsync();
-        recover.Click += async (_, _) => await RecoverExistingModImportAsync();
+        import.Click += async (_, _) => await RunUiActionAsync("ShowExistingModImportAsync", () => ShowExistingModImportAsync());
+        undo.Click += async (_, _) => await RunUiActionAsync("UndoExistingModImportAsync", () => UndoExistingModImportAsync());
+        recover.Click += async (_, _) => await RunUiActionAsync("RecoverExistingModImportAsync", () => RecoverExistingModImportAsync());
         menu.Items.Add(import); menu.Items.Add(recover); menu.Items.Add(undo);
         var button = new Button { Content = new FontIcon { Glyph = "\uE8B5", FontSize = 16 }, MinHeight = 34, Flyout = menu };
         ToolTipService.SetToolTip(button, L("整理导入现有 Mod", "Organize existing mods"));

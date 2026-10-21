@@ -33,7 +33,7 @@ public sealed partial class MainWindow
         row.ColumnDefinitions.Add(new ColumnDefinition { Width = GridLength.Auto });
         row.Children.Add(_repositoryModSearch!);
         _localTagsButton = new Button { Content = L("标签", "Tags"), MinHeight = 36 };
-        _localTagsButton.Click += async (_, _) => await EditLocalTagsAsync();
+        _localTagsButton.Click += async (_, _) => await RunUiActionAsync("EditLocalTagsAsync", () => EditLocalTagsAsync());
         AutomationProperties.SetName(_localTagsButton, L("批量编辑本地 Mod 标签", "Edit local Mod tags in bulk"));
         Grid.SetColumn(_localTagsButton, 1); row.Children.Add(_localTagsButton);
         _localFiltersButton = new Button { Content = L("筛选", "Filters"), MinHeight = 36 };
@@ -122,23 +122,30 @@ public sealed partial class MainWindow
         }
         tags.IsEnabled = tags.Items.Count > 0; menu.Items.Add(tags);
         var save = new MenuFlyoutItem { Text = L("保存当前筛选…", "Save current filter…") };
-        save.Click += async (_, _) => await SaveLocalFilterAsync(); menu.Items.Add(save);
+        save.Click += async (_, _) => await RunUiActionAsync("SaveLocalFilterAsync", () => SaveLocalFilterAsync()); menu.Items.Add(save);
         foreach (var filter in library.Filters)
         {
             var entry = new MenuFlyoutSubItem { Text = filter.Name };
             var apply = new MenuFlyoutItem { Text = L("应用", "Apply") };
             apply.Click += async (_, _) =>
             {
-                var repo = GetSelectedRepository();
-                if (repo is null) return;
-                string role = Path.Combine(repo.SourcePath, filter.Character.Replace('/', Path.DirectorySeparatorChar));
-                if (!Directory.Exists(role) || !IsPathInsideDirectory(role, repo.SourcePath))
-                { await ShowMessageAsync(L("原角色目录已不存在，请重新保存筛选。", "The original character folder is unavailable. Save the filter again."), L("筛选无法应用", "Cannot apply filter")); return; }
-                FirstLevelSearchTextBox.Text = "";
-                SelectFirstLevelByPath(role);
-                _localTagFilter = filter.Tag;
-                _repositoryModSearch!.Text = filter.Search;
-                RefreshRepositoryModView();
+                try
+                {
+                    var repo = GetSelectedRepository();
+                    if (repo is null) return;
+                    string role = Path.Combine(repo.SourcePath, filter.Character.Replace('/', Path.DirectorySeparatorChar));
+                    if (!Directory.Exists(role) || !IsPathInsideDirectory(role, repo.SourcePath))
+                    { await ShowMessageAsync(L("原角色目录已不存在，请重新保存筛选。", "The original character folder is unavailable. Save the filter again."), L("筛选无法应用", "Cannot apply filter")); return; }
+                    FirstLevelSearchTextBox.Text = "";
+                    SelectFirstLevelByPath(role);
+                    _localTagFilter = filter.Tag;
+                    _repositoryModSearch!.Text = filter.Search;
+                    RefreshRepositoryModView();
+                }
+                catch (Exception ex)
+                {
+                    ReportUiActionFailure("apply.Click", ex);
+                }
             };
             entry.Items.Add(apply);
             var remove = new MenuFlyoutItem { Text = L("删除此筛选", "Delete this filter") };

@@ -141,6 +141,10 @@ try {
         'ModFolderCopier.exe',
         'LocalUpdateAgent.exe',
         'WinUI3\ModFolderCopier.WinUI.exe',
+        'WinUI3\licenses\AGPL-3.0.txt',
+        'WinUI3\licenses\MIT.txt',
+        'WinUI3\licenses\EndfieldLaunch-NOTICE.md',
+        'WinUI3\licenses\LICENSING.md',
         '.managed-files.txt')) {
         if ($entryNames -notcontains $requiredEntry) {
             throw "Release package is missing: $requiredEntry"

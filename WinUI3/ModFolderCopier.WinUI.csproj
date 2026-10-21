@@ -17,6 +17,8 @@
     <EnablePreviewMsixTooling>false</EnablePreviewMsixTooling>
     <LangVersion>latest</LangVersion>
     <ApplicationIcon>Assets\AppIcon.ico</ApplicationIcon>
+    <!-- Program.cs owns Main so a second launch can be redirected to the running instance. -->
+    <DefineConstants>$(DefineConstants);DISABLE_XAML_GENERATED_MAIN</DefineConstants>
   </PropertyGroup>
 
   <PropertyGroup Condition="'$(AppxMSBuildToolsPath)' == '' and Exists('$(MSBuildProgramFiles32)\Microsoft Visual Studio\2022\BuildTools\MSBuild\Microsoft\VisualStudio\v17.0\AppxPackage\Microsoft.Build.Packaging.Pri.Tasks.dll')">
@@ -31,9 +33,19 @@
   <ItemGroup>
     <ProjectReference Include="..\IntegratedModManager.Core\IntegratedModManager.Core.csproj" />
     <ProjectReference Include="..\IntegratedModManager.Data\IntegratedModManager.Data.csproj" />
+    <!-- AGPL-3.0-only component: builds that include it are distributed under AGPL-3.0-only as a whole. -->
+    <ProjectReference Include="..\IntegratedModManager.EndfieldLaunch\IntegratedModManager.EndfieldLaunch.csproj" />
   </ItemGroup>
 
   <ItemGroup>
     <Compile Remove="AppDataStore.cs" />
+  </ItemGroup>
+
+  <!-- License texts shipped with every build: the release package as a whole is AGPL-3.0-only. -->
+  <ItemGroup>
+    <None Include="..\LICENSE" Link="licenses\MIT.txt" CopyToOutputDirectory="PreserveNewest" />
+    <None Include="..\IntegratedModManager.EndfieldLaunch\LICENSE" Link="licenses\AGPL-3.0.txt" CopyToOutputDirectory="PreserveNewest" />
+    <None Include="..\IntegratedModManager.EndfieldLaunch\NOTICE.md" Link="licenses\EndfieldLaunch-NOTICE.md" CopyToOutputDirectory="PreserveNewest" />
+    <None Include="..\LICENSING.md" Link="licenses\LICENSING.md" CopyToOutputDirectory="PreserveNewest" />
   </ItemGroup>
 </Project>

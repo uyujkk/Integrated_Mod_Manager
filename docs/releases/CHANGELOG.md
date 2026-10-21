@@ -6,6 +6,23 @@
 
 This document records version changes in Integrated Mod Manager. Unpublished versions are marked separately.
 
+## 未发布 / Unreleased
+
+- 同一安装目录只运行一个实例；再次启动会恢复并前置已有窗口（含托盘隐藏状态），不同安装目录仍可并存。
+- 所有异步界面操作的意外异常会记录调用栈并提示，不再直接导致程序退出；记录后台任务中未观察到的异常；`app-errors.log` 超过 1 MB 自动轮转。
+- 安装前冲突检测新增 INI 层检查：提示与已启用 Mod 覆盖相同 `TextureOverride`/`ShaderOverride` 哈希（考虑 `match_first_index`）或绑定相同快捷键的情况；跳过 `DISABLED` 文件与目录，尊重 `match_priority`/`allow_duplicate_hash`。仅作提示，不阻止部署。
+- 终末地启动内置到管理器：不再单独下载 EndfieldBridge，也不再经过 cmd 和桥接窗口，“运行启动器”只弹一次 UAC。改用 .NET 8 运行时；官方 `Games.exe` 签名在持有文件句柄期间只校验一次，并缓存上次通过校验的文件。新增原生“终末地启动设置”页：可检测配置，读取、适配、恢复 EFMI，打开启动日志；自动迁移旧桥接器的设置与 EFMI 恢复点。
+- 许可证：启动组件以 AGPL-3.0-only 授权，包含它的发布包整体按 AGPL-3.0-only 分发；其他源码文件仍为 MIT，v4.2.0 及之前的版本不变。见 [LICENSING.md](../../LICENSING.md)。
+- 删除 Mod 时一并移除加载目录中指向它的联接（只移除联接本身）。源目录被删除、改名或移动后留下的失效联接不再导致安装时提示“无法检查所选 Mod 的目录或链接”：冲突检查会跳过它们，部署前列出并可一键清理，不会按相似名称自动关联（#10）。
+- 导入压缩包时，每个压缩包都安装为一个独立的 Mod 文件夹：根目录直接放文件的压缩包会自动建立文件夹，已有单个顶层文件夹的不再多套一层；同名文件夹不合并、不覆盖；在临时名称下组装后一次改名，取消或失败不留半成品。修复“导入压缩包”按钮把文件直接解压进角色目录，以及仓库不在系统盘时拖放导入失败的问题。在线下载同样不再多套一层（#11）。
+- The Endfield launch is built into the manager: no separate EndfieldBridge download, no cmd shim or bridge window, and one UAC prompt for Run Launcher. Uses the .NET 8 runtime; the official `Games.exe` signature is verified once while its handle is held, and the last verified file is cached. A native Endfield launch settings page offers checks, EFMI import / setup / restore and the launch log, and migrates settings and the EFMI restore point from the old bridge.
+- Licensing: the launch component is AGPL-3.0-only and release packages that include it are distributed as a whole under AGPL-3.0-only. Other source files remain MIT, and v4.2.0 and earlier are unchanged. See [LICENSING.md](../../LICENSING.md).
+- One instance per install directory; a second launch restores and focuses the running window (including from the tray). Separate install directories can still run side by side.
+- Unexpected exceptions in async UI actions are logged with a stack trace and reported instead of closing the app; unobserved background task exceptions are recorded; `app-errors.log` rotates at 1 MB.
+- The pre-install conflict check now also compares INI files: shared `TextureOverride`/`ShaderOverride` hashes (aware of `match_first_index`) and shared shortcuts with enabled Mods. `DISABLED` files and folders are skipped and `match_priority`/`allow_duplicate_hash` are honoured. Advisory only; deployment is never blocked.
+- Deleting a Mod also removes the loader links that point to it (only the links). Links left behind after a source was deleted, renamed or moved no longer cause "Could not inspect the selected mod directory or links" on install: conflict checks skip them, and deployment lists them with a one-click cleanup. Similar names are never linked automatically (#10).
+- Every imported archive becomes exactly one Mod folder: archives with files at the root get a folder, archives with a single top-level folder are no longer nested again, existing folders are never merged or overwritten, and the folder is assembled under a staging name and renamed in one step, so cancellations and failures leave nothing half-written. Fixes Import Archive extracting files straight into the character folder and drag-and-drop imports failing when the repository is not on the system drive. Online downloads are no longer nested twice either (#11).
+
 ## v4.2.0 — 2026-10-18
 
 - 下载不再重置浏览位置，按仓库保存和恢复浏览进度。

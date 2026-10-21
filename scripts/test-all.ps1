@@ -130,7 +130,8 @@ $dotnetCommand = Get-Command dotnet.exe -ErrorAction Stop
 $testProjects = @(
     @{ Name = "core"; Assembly = "IntegratedModManager.Core"; Path = Join-Path $root "Tests\IntegratedModManager.Core.Tests.csproj"; Line = 0.90; Branch = 0.85 },
     @{ Name = "datastore"; Assembly = "IntegratedModManager.Data"; Path = Join-Path $root "DataStoreTests\IntegratedModManager.DataStore.Tests.csproj"; Line = 0.70; Branch = 0.60 },
-    @{ Name = "updater"; Assembly = "IntegratedModManager.UpdateAgent.Core"; Path = Join-Path $root "UpdaterTests\IntegratedModManager.UpdateAgent.Tests.csproj"; Line = 0.60; Branch = 0.55 }
+    @{ Name = "updater"; Assembly = "IntegratedModManager.UpdateAgent.Core"; Path = Join-Path $root "UpdaterTests\IntegratedModManager.UpdateAgent.Tests.csproj"; Line = 0.60; Branch = 0.55 },
+    @{ Name = "endfield-launch"; Assembly = "IntegratedModManager.EndfieldLaunch"; Path = Join-Path $root "EndfieldLaunchTests\IntegratedModManager.EndfieldLaunch.Tests.csproj"; Line = 0.75; Branch = 0.65 }
 )
 
 & (Join-Path $PSScriptRoot "test-coverage-gate.ps1")

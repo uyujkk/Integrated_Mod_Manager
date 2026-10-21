@@ -6,8 +6,12 @@ public partial class App : Application
 {
     private Window? _window;
 
+    // Read from the AppInstance.Activated callback, which runs off the UI thread.
+    internal static App? Instance { get; private set; }
+
     public App()
     {
+        Instance = this;
         UiCrashDiagnostics.RecordAction("Application starting");
         UnhandledException += (_, args) =>
         {
@@ -21,6 +25,13 @@ public partial class App : Application
                 System.IO.File.AppendAllText(path, $"{DateTimeOffset.Now:O} Unhandled UI exception: {args.Message}\n{args.Exception}\n");
             }
             catch { /* Diagnostics must not replace the original failure. */ }
+        };
+        // Fire-and-forget tasks ("_ = SomethingAsync()") lose their exceptions silently;
+        // record them so failures that never reach a handler still leave evidence.
+        TaskScheduler.UnobservedTaskException += (_, args) =>
+        {
+            MainWindow.LogApplicationIssueWithStack("Unobserved task exception", args.Exception);
+            args.SetObserved();
         };
         InitializeComponent();
         if (UiCrashDiagnostics.Enabled)
@@ -36,6 +47,15 @@ public partial class App : Application
     {
         _window = new MainWindow();
         _window.Activate();
+    }
+
+    // A second launch from the same install directory was redirected here.
+    internal void OnExternalActivation()
+    {
+        if (_window is MainWindow mainWindow)
+        {
+            mainWindow.DispatcherQueue.TryEnqueue(mainWindow.RestoreFromExternalActivation);
+        }
     }
 }
 

@@ -220,6 +220,6 @@ GitHub Actions runs the same three-suite verification flow on pushes to `main`, 
 
 ## License and Notices
 
-This project is available under the [MIT License](./LICENSE), copyright `uyujkk`. Third-party components retain their own licenses; bundled 7-Zip files include their license text.
+Source files are available under the [MIT License](./LICENSE), copyright `uyujkk`, except the integrated Endfield launch component in [`IntegratedModManager.EndfieldLaunch/`](./IntegratedModManager.EndfieldLaunch/), which is **AGPL-3.0-only** (derived from EndfieldBridge, endfield-nolauncher and Better-Endfield; see its [NOTICE](./IntegratedModManager.EndfieldLaunch/NOTICE.md)). Because the application includes that component, **release packages from the next version on are distributed as a whole under AGPL-3.0-only**; v4.2.0 and earlier remain MIT. See [LICENSING.md](./LICENSING.md). Third-party components retain their own licenses; bundled 7-Zip files include their license text.
 
 The tool does not include game files or mod content. Rights related to games, characters, images, mods, and third-party services belong to their respective owners.
