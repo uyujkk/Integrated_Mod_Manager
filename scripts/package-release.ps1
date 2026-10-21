@@ -131,7 +131,7 @@ Add-Type -AssemblyName System.IO.Compression.FileSystem
 # Framework (Windows PowerShell 5.1) stores '\', which the ZIP format does not allow.
 $writer = [IO.Compression.ZipFile]::Open($packagePath, [IO.Compression.ZipArchiveMode]::Create)
 try {
-    foreach ($file in Get-ChildItem -LiteralPath $staging -Recurse -File | Sort-Object FullName) {
+    foreach ($file in Get-ChildItem -LiteralPath $staging -Recurse -File -Force | Sort-Object FullName) {
         $entryName = $file.FullName.Substring($stagingPrefix.Length).Replace('\', '/')
         [void][IO.Compression.ZipFileExtensions]::CreateEntryFromFile(
             $writer, $file.FullName, $entryName, [IO.Compression.CompressionLevel]::Optimal)
