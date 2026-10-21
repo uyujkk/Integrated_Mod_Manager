@@ -271,6 +271,102 @@ public sealed class DirectoryLinkDeploymentTests
         DirectoryLinkDeployment.RemoveLink(deployedPath);
     }
 
+    [Fact]
+    public void BrokenLinksAreFoundAndOnlyThoseLinksAreRemoved()
+    {
+        if (!OperatingSystem.IsWindows())
+        {
+            return;
+        }
+
+        using var directory = new TemporaryDirectory();
+        string deleted = Path.Combine(directory.Path, "仓库", "角色 A", "旧 Mod");
+        string kept = Path.Combine(directory.Path, "仓库", "角色 A", "旧 Mod v2");
+        string loader = Path.Combine(directory.Path, "EFMI", "Mods");
+        Directory.CreateDirectory(deleted);
+        Directory.CreateDirectory(kept);
+        Directory.CreateDirectory(Path.Combine(loader, "Copied"));
+        File.WriteAllText(Path.Combine(kept, "mod.ini"), "kept");
+        string staleLink = Path.Combine(loader, "旧 Mod");
+        string goodLink = Path.Combine(loader, "旧 Mod v2");
+        DirectoryLinkDeployment.CreateJunction(staleLink, deleted);
+        DirectoryLinkDeployment.CreateJunction(goodLink, kept);
+        Directory.Delete(deleted);
+
+        BrokenDirectoryLink broken = Assert.Single(DirectoryLinkDeployment.FindBrokenLinks(loader));
+        Assert.Equal(Path.GetFullPath(staleLink), broken.LinkPath, ignoreCase: true);
+        Assert.Equal(Path.GetFullPath(deleted), broken.Target, ignoreCase: true);
+        Assert.True(DirectoryLinkDeployment.IsBrokenLink(staleLink));
+        Assert.False(DirectoryLinkDeployment.IsBrokenLink(goodLink));
+        Assert.False(DirectoryLinkDeployment.IsBrokenLink(Path.Combine(loader, "Copied")));
+        Assert.Equal(Path.GetFullPath(kept), DirectoryLinkDeployment.TryGetStoredTarget(goodLink), ignoreCase: true);
+
+        Assert.False(DirectoryLinkDeployment.RemoveBrokenLink(goodLink));
+        Assert.True(DirectoryLinkDeployment.RemoveBrokenLink(staleLink));
+
+        Assert.False(Directory.Exists(staleLink));
+        Assert.True(DirectoryLinkDeployment.IsDirectoryLink(goodLink));
+        Assert.Equal("kept", File.ReadAllText(Path.Combine(kept, "mod.ini")));
+        Assert.True(Directory.Exists(Path.Combine(loader, "Copied")));
+        Assert.Empty(DirectoryLinkDeployment.FindBrokenLinks(loader));
+        DirectoryLinkDeployment.RemoveLink(goodLink);
+    }
+
+    [Fact]
+    public void BrokenLinkCleanupKeepsALinkWhoseSourceCameBack()
+    {
+        if (!OperatingSystem.IsWindows())
+        {
+            return;
+        }
+
+        using var directory = new TemporaryDirectory();
+        string source = Path.Combine(directory.Path, "repository", "ModA");
+        string link = Path.Combine(directory.Path, "loader", "ModA");
+        Directory.CreateDirectory(source);
+        Directory.CreateDirectory(Path.GetDirectoryName(link)!);
+        DirectoryLinkDeployment.CreateJunction(link, source);
+        Directory.Delete(source);
+        Assert.True(DirectoryLinkDeployment.IsBrokenLink(link));
+
+        Directory.CreateDirectory(source);
+
+        Assert.False(DirectoryLinkDeployment.RemoveBrokenLink(link));
+        Assert.True(DirectoryLinkDeployment.IsDirectoryLink(link));
+        DirectoryLinkDeployment.RemoveLink(link);
+    }
+
+    [Fact]
+    public void LinksTargetingASourceAreMatchedByTargetNeverBySimilarName()
+    {
+        if (!OperatingSystem.IsWindows())
+        {
+            return;
+        }
+
+        using var directory = new TemporaryDirectory();
+        string source = Path.Combine(directory.Path, "repository", "Char", "Skin");
+        string similar = Path.Combine(directory.Path, "repository", "Char", "Skin v2");
+        string loader = Path.Combine(directory.Path, "loader");
+        Directory.CreateDirectory(source);
+        Directory.CreateDirectory(similar);
+        Directory.CreateDirectory(Path.Combine(loader, "Skin copy"));
+        string renamed = Path.Combine(loader, "Renamed deployment");
+        string sameName = Path.Combine(loader, "Skin");
+        string other = Path.Combine(loader, "Skin v2");
+        DirectoryLinkDeployment.CreateJunction(renamed, source);
+        DirectoryLinkDeployment.CreateJunction(sameName, source);
+        DirectoryLinkDeployment.CreateJunction(other, similar);
+
+        IReadOnlyList<string> links = DirectoryLinkDeployment.FindLinksTargeting(source + Path.DirectorySeparatorChar, loader);
+
+        Assert.Equal(new[] { Path.GetFullPath(renamed), Path.GetFullPath(sameName) }, links);
+        Assert.Empty(DirectoryLinkDeployment.FindLinksTargeting(source, Path.Combine(directory.Path, "missing")));
+        Assert.Empty(DirectoryLinkDeployment.FindBrokenLinks(Path.Combine(directory.Path, "missing")));
+        foreach (string link in new[] { renamed, sameName, other }) DirectoryLinkDeployment.RemoveLink(link);
+        Assert.True(Directory.Exists(source));
+    }
+
     private sealed class TemporaryDirectory : IDisposable
     {
         public TemporaryDirectory()

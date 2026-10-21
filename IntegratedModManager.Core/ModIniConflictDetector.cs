@@ -249,8 +249,11 @@ public static class ModIniConflictDetector
         {
             string name = Path.GetFileName(directory);
             string fullPath = Path.GetFullPath(directory).TrimEnd(Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar);
+            // A link left behind by a deleted or renamed source has nothing to compare;
+            // it must not abort the scan for every other installed Mod.
             if (IsDisabledName(name) || ignored.Contains(fullPath)
-                || string.Equals(fullPath, candidateFullPath, StringComparison.OrdinalIgnoreCase))
+                || string.Equals(fullPath, candidateFullPath, StringComparison.OrdinalIgnoreCase)
+                || DirectoryLinkDeployment.IsBrokenLink(directory))
             {
                 continue;
             }

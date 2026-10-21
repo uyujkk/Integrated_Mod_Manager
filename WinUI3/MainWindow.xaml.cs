@@ -1392,6 +1392,101 @@ public sealed partial class MainWindow : Window
         }
     }
 
+    /// <summary>
+    /// Lists links in the loader folder whose source is gone (deleted, renamed or moved
+    /// outside the manager) and offers to remove just those links. Returns false only
+    /// when the user cancels the operation.
+    /// </summary>
+    private async Task<bool> OfferBrokenLinkCleanupAsync(string loaderRoot)
+    {
+        IReadOnlyList<BrokenDirectoryLink> broken;
+        try
+        {
+            broken = await Task.Run(() => DirectoryLinkDeployment.FindBrokenLinks(loaderRoot));
+        }
+        catch (Exception ex) when (ex is IOException or UnauthorizedAccessException or ArgumentException)
+        {
+            LogApplicationIssue("Find broken deployment links", ex);
+            return true;
+        }
+
+        if (broken.Count == 0)
+        {
+            return true;
+        }
+
+        string list = string.Join("\n", broken.Take(20).Select(link =>
+            $"{Path.GetFileName(link.LinkPath)}  →  {link.Target ?? L("（无法读取目标）", "(target unreadable)")}"));
+        if (broken.Count > 20)
+        {
+            list += L($"\n……另有 {broken.Count - 20} 个", $"\n…and {broken.Count - 20} more");
+        }
+
+        DialogViewport viewport = DialogViewportPolicy.Selection(RootGrid.ActualWidth, RootGrid.ActualHeight);
+        var dialog = new ContentDialog
+        {
+            XamlRoot = RootGrid.XamlRoot,
+            RequestedTheme = RootGrid.ActualTheme,
+            Title = L("发现失效的 Mod 联接", "Broken Mod links found"),
+            Content = new ScrollViewer
+            {
+                MaxHeight = viewport.ContentHeight,
+                HorizontalScrollBarVisibility = ScrollBarVisibility.Disabled,
+                Content = new TextBlock
+                {
+                    TextWrapping = TextWrapping.Wrap,
+                    IsTextSelectionEnabled = true,
+                    Text = L(
+                        $"加载目录中有 {broken.Count} 个联接指向已不存在的源目录（源 Mod 可能已被删除、改名或移动）：\n\n{list}\n\n清理只会移除这些联接本身，不会删除任何文件，也不会自动关联名称相近的文件夹。",
+                        $"{broken.Count} link(s) in the loader folder point to source folders that no longer exist (the source Mod may have been deleted, renamed or moved):\n\n{list}\n\nCleaning up removes only these links. No files are deleted, and similarly named folders are never linked automatically.")
+                }
+            },
+            PrimaryButtonText = L("清理失效联接", "Remove broken links"),
+            SecondaryButtonText = L("暂不清理，继续", "Continue without cleanup"),
+            CloseButtonText = L("取消", "Cancel"),
+            DefaultButton = ContentDialogButton.Primary
+        };
+        ContentDialogResult result = await dialog.ShowAsync();
+        if (result == ContentDialogResult.None)
+        {
+            return false;
+        }
+
+        if (result == ContentDialogResult.Secondary)
+        {
+            return true;
+        }
+
+        var failures = new List<string>();
+        int removed = 0;
+        foreach (BrokenDirectoryLink link in broken)
+        {
+            try
+            {
+                // Re-checked: a source restored meanwhile keeps its link.
+                if (DirectoryLinkDeployment.RemoveBrokenLink(link.LinkPath))
+                {
+                    removed++;
+                }
+            }
+            catch (Exception ex) when (ex is IOException or UnauthorizedAccessException or InvalidOperationException)
+            {
+                failures.Add($"{Path.GetFileName(link.LinkPath)}: {ex.Message}");
+                LogApplicationIssue("Remove broken deployment link", ex);
+            }
+        }
+
+        StatusTextBlock.Text = L($"已移除 {removed} 个失效联接。", $"Removed {removed} broken link(s).");
+        if (failures.Count > 0)
+        {
+            await ShowMessageAsync(
+                L("以下失效联接无法移除，已保留：\n", "These broken links could not be removed and were kept:\n") + string.Join("\n", failures),
+                L("部分联接未清理", "Some links were kept"));
+        }
+
+        return true;
+    }
+
     private List<string> DetectModFileConflicts(string sourcePath, string targetRoot, string targetPathToIgnore)
     {
         return DetectModFileConflicts(sourcePath, targetRoot, [targetPathToIgnore]);
@@ -1418,6 +1513,13 @@ public sealed partial class MainWindow : Window
             }
 
             string inspectionRoot = installedModPath;
+            if (DirectoryLinkDeployment.IsBrokenLink(installedModPath))
+            {
+                // Its source was deleted or renamed: nothing to compare, and it must not
+                // stop every other installation. Cleanup is offered before deployment.
+                continue;
+            }
+
             if (DirectoryLinkDeployment.IsDirectoryLink(installedModPath))
             {
                 inspectionRoot = DirectoryLinkDeployment.TryGetTarget(installedModPath)
@@ -8445,7 +8547,13 @@ public sealed partial class MainWindow : Window
             downloadTask.DestinationPath = extractFolder;
             UpdateDownloadTask(downloadTask, DownloadTaskState.Extracting, 92, "正在解压并写入 Mod 信息...", "Extracting and writing mod metadata...", forceRefresh: true);
             downloadTask.Cancellation.Token.ThrowIfCancellationRequested();
-            await Task.Run(() => ExtractArchiveToDirectory(resolvedArchivePath, extractFolder));
+            await Task.Run(() =>
+            {
+                ExtractArchiveToDirectory(resolvedArchivePath, extractFolder);
+                // The extraction folder is already this Mod's own folder; an archive that
+                // brings its own top-level folder would otherwise be nested twice.
+                ArchiveImportLayout.HoistSingleTopFolder(extractFolder);
+            });
             downloadTask.Cancellation.Token.ThrowIfCancellationRequested();
             PreparedOnlineInstallMetadata prepared = await session.PrepareAndCommitAsync(
                 token => PrepareOnlineInstallMetadataAsync(extractFolder, effectiveMod, details, token),
@@ -10333,7 +10441,7 @@ public sealed partial class MainWindow : Window
             StorageFile? file = await picker.PickSingleFileAsync();
             if (file is not null)
             {
-                await ImportArchiveToSelectedFirstLevelFolderAsync(file.Path, item);
+                await ImportArchiveToSecondLevelFolderAsync(file.Path, item);
             }
         }
         catch (Exception ex)
@@ -10627,9 +10735,27 @@ public sealed partial class MainWindow : Window
                 return;
             }
 
+            string loaderRoot = (GetSelectedRepository()?.TargetPath ?? TargetTextBox.Text ?? string.Empty).Trim();
+            IReadOnlyList<string> deployedLinks = [];
+            try
+            {
+                if (!string.IsNullOrWhiteSpace(loaderRoot))
+                {
+                    deployedLinks = await Task.Run(() => DirectoryLinkDeployment.FindLinksTargeting(item.Path, loaderRoot));
+                }
+            }
+            catch (Exception ex) when (ex is IOException or UnauthorizedAccessException or ArgumentException)
+            {
+                LogApplicationIssue("Find deployed links before delete", ex);
+            }
+
+            string linkNote = deployedLinks.Count == 0
+                ? string.Empty
+                : L($"\n\n加载目录中指向它的 {deployedLinks.Count} 个联接也会一并移除（只移除联接本身）：\n{string.Join("\n", deployedLinks)}",
+                    $"\n\n{deployedLinks.Count} link(s) in the loader folder that point to it will also be removed (only the links themselves):\n{string.Join("\n", deployedLinks)}");
             bool confirmed = await ShowConfirmAsync(
                 L($"确定要删除这个第二层 Mod 吗？\n\n{item.Name}\n\n此操作会删除原始文件夹，无法撤销。",
-                  $"Are you sure you want to delete this second-level mod?\n\n{item.Name}\n\nThis will delete the original folder and cannot be undone."),
+                  $"Are you sure you want to delete this second-level mod?\n\n{item.Name}\n\nThis will delete the original folder and cannot be undone.") + linkNote,
                 L("确认删除", "Confirm delete"));
             if (!confirmed)
             {
@@ -10639,6 +10765,17 @@ public sealed partial class MainWindow : Window
             try
             {
                 string selectedFirstLevelPath = (FirstLevelListView.SelectedItem as FirstLevelFolderItem)?.Path ?? string.Empty;
+                // Remove the deployment links first: deleting only the source would leave
+                // links that break conflict checks for every later installation.
+                foreach (string link in deployedLinks)
+                {
+                    if (string.Equals(DirectoryLinkDeployment.TryGetStoredTarget(link), Path.GetFullPath(item.Path).TrimEnd(Path.DirectorySeparatorChar),
+                            StringComparison.OrdinalIgnoreCase))
+                    {
+                        DirectoryLinkDeployment.RemoveLink(link);
+                    }
+                }
+
                 _trackedModOrigins.Remove(item.Path);
                 _modLinks.Remove(item.Path);
                 DeleteDirectoryTreeSafely(item.Path);
@@ -12745,6 +12882,11 @@ public sealed partial class MainWindow : Window
         }
         repository.TargetPath = targetDir;
 
+        if (!await OfferBrokenLinkCleanupAsync(targetDir))
+        {
+            return;
+        }
+
         bool targetExists = Directory.Exists(targetPath);
         IReadOnlyList<string> siblingLinksToReplace = Array.Empty<string>();
         try
@@ -12868,8 +13010,10 @@ public sealed partial class MainWindow : Window
         {
             string importedPath = await Task.Run(() => ImportArchiveContents(archivePath, item.Path));
 
-            StatusTextBlock.Text = L($"已将 {Path.GetFileName(archivePath)} 解压到 {item.Name}。", $"Extracted {Path.GetFileName(archivePath)} to {item.Name}.");
-            ShowAppNotification($"压缩包已解压到 {item.Name}。", $"The archive was extracted to {item.Name}.");
+            string importedName = Path.GetFileName(importedPath);
+            StatusTextBlock.Text = L($"已将 {Path.GetFileName(archivePath)} 安装为 {item.Name}\\{importedName}：{importedPath}",
+                $"Installed {Path.GetFileName(archivePath)} as {item.Name}\\{importedName}: {importedPath}");
+            ShowAppNotification($"压缩包已安装到 {item.Name}\\{importedName}。", $"The archive was installed to {item.Name}\\{importedName}.");
             await RefreshListsAsync();
             SelectFirstLevelByPath(item.Path);
             SelectSecondLevelByPath(importedPath);
@@ -13695,49 +13839,11 @@ public sealed partial class MainWindow : Window
         }
     }
 
-    private async Task ImportArchiveToSelectedFirstLevelFolderAsync(string archivePath, FirstLevelFolderItem item)
-    {
-        SetBusyState(true);
-        string stagingDirectory = Path.Combine(Path.GetTempPath(), "ModFolderCopier_Import_" + Guid.NewGuid().ToString("N"));
-        try
-        {
-            await Task.Run(() =>
-            {
-                Directory.CreateDirectory(stagingDirectory);
-                ExtractArchiveToDirectory(archivePath, stagingDirectory);
-                if (Directory.Exists(item.Path))
-                {
-                    InspectDirectoryTreeSafely(item.Path);
-                }
-                CopyDirectoryTree(stagingDirectory, item.Path);
-            });
-
-            StatusTextBlock.Text = L($"已将 {Path.GetFileName(archivePath)} 导入到 {item.Name}。", $"Imported {Path.GetFileName(archivePath)} into {item.Name}.");
-            ShowAppNotification($"压缩包已导入到 {item.Name}。", $"The archive was imported into {item.Name}.");
-            await RefreshListsAsync();
-            SelectFirstLevelByPath(item.Path);
-            await DetectShortcutsForChildModsAsync(item.Path);
-        }
-        catch (Exception ex)
-        {
-            await ShowMessageAsync(
-                L("导入压缩文件失败：", "Archive import failed: ") + ex.Message,
-                L("导入失败", "Import failed"));
-        }
-        finally
-        {
-            try
-            {
-                DeleteDirectoryTreeSafely(stagingDirectory);
-            }
-            catch (Exception ex)
-            {
-                LogApplicationIssue("Archive staging cleanup", ex);
-            }
-            SetBusyState(false);
-        }
-    }
-
+    /// <summary>
+    /// Extracts an archive and installs it as exactly one new Mod folder in the character
+    /// folder: archives without a top-level folder get one, archives with a single
+    /// top-level folder are not nested again, and an existing folder is never merged.
+    /// </summary>
     private string ImportArchiveContents(string archivePath, string firstLevelDirectory)
     {
         string tempDirectory = Path.Combine(Path.GetTempPath(), "ModFolderCopier_Import_" + Guid.NewGuid().ToString("N"));
@@ -13746,34 +13852,18 @@ public sealed partial class MainWindow : Window
         try
         {
             ExtractArchiveToDirectory(archivePath, tempDirectory);
-
-            string[] rootDirectories = Directory.GetDirectories(tempDirectory);
-            string[] rootFiles = Directory.GetFiles(tempDirectory);
-
-            if (rootFiles.Length == 0 && rootDirectories.Length == 1)
-            {
-                string sourceDirectory = rootDirectories[0];
-                string destinationPath = Path.Combine(firstLevelDirectory, Path.GetFileName(sourceDirectory));
-                EnsureImportDestinationDoesNotExist(destinationPath);
-                Directory.Move(sourceDirectory, destinationPath);
-                return destinationPath;
-            }
-
-            string importedDirectory = Path.Combine(firstLevelDirectory, BuildImportedFolderName(archivePath));
-            EnsureImportDestinationDoesNotExist(importedDirectory);
-            Directory.CreateDirectory(importedDirectory);
-
-            foreach (string directory in rootDirectories)
-            {
-                Directory.Move(directory, Path.Combine(importedDirectory, Path.GetFileName(directory)));
-            }
-
-            foreach (string file in rootFiles)
-            {
-                File.Move(file, Path.Combine(importedDirectory, Path.GetFileName(file)));
-            }
-
-            return importedDirectory;
+            ArchiveImportPlan plan = ArchiveImportLayout.Plan(tempDirectory, archivePath, SupportedArchiveExtensions);
+            return ArchiveImportLayout.Install(plan, firstLevelDirectory);
+        }
+        catch (ArchiveImportConflictException ex)
+        {
+            throw new InvalidOperationException(L(
+                $"角色目录中已有同名文件夹，未合并或覆盖：\n{ex.Destination}\n请先重命名或删除原有文件夹，再导入。",
+                $"A folder with the same name already exists and was not merged or overwritten:\n{ex.Destination}\nRename or remove it first, then import again."), ex);
+        }
+        catch (InvalidDataException ex) when (ex.Message == "The archive is empty.")
+        {
+            throw new InvalidOperationException(L("压缩包是空的，没有可导入的内容。", "The archive is empty; there is nothing to import."), ex);
         }
         finally
         {
@@ -13782,41 +13872,6 @@ public sealed partial class MainWindow : Window
                 DeleteDirectoryTreeSafely(tempDirectory);
             }
         }
-    }
-
-    private static void EnsureImportDestinationDoesNotExist(string destinationPath)
-    {
-        if (Directory.Exists(destinationPath) || File.Exists(destinationPath))
-        {
-            throw new InvalidOperationException($"\"{Path.GetFileName(destinationPath)}\" already exists.");
-        }
-    }
-
-    private static string BuildImportedFolderName(string archivePath)
-    {
-        string fileName = Path.GetFileName(archivePath);
-
-        foreach (string extension in SupportedArchiveExtensions.OrderByDescending(item => item.Length))
-        {
-            if (fileName.EndsWith(extension, StringComparison.OrdinalIgnoreCase))
-            {
-                fileName = fileName[..^extension.Length];
-                break;
-            }
-        }
-
-        if (fileName.EndsWith(".tar", StringComparison.OrdinalIgnoreCase))
-        {
-            fileName = fileName[..^4];
-        }
-
-        foreach (char invalidChar in Path.GetInvalidFileNameChars())
-        {
-            fileName = fileName.Replace(invalidChar, '_');
-        }
-
-        fileName = fileName.Trim();
-        return string.IsNullOrWhiteSpace(fileName) ? "ImportedMod" : fileName;
     }
 
     private void ExtractArchiveToDirectory(string archivePath, string destinationDirectory)
