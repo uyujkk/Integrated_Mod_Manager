@@ -115,10 +115,16 @@ public sealed partial class MainWindow
 
             if (_enableConflictDetection)
             {
+                string[] deploymentTargets = deployment.RemoveTargets
+                    .Concat(deployment.InstallSources.Select(item => Path.Combine(repository.TargetPath, Path.GetFileName(item)))).ToArray();
                 List<string> conflicts = await Task.Run(() => deployment.InstallSources.SelectMany(source => DetectModFileConflicts(
-                    source, repository.TargetPath, deployment.RemoveTargets.Concat(deployment.InstallSources.Select(item => Path.Combine(repository.TargetPath, Path.GetFileName(item))))))
+                    source, repository.TargetPath, deploymentTargets))
                     .Distinct(StringComparer.OrdinalIgnoreCase).Take(100).ToList());
-                if (conflicts.Count > 0 && !await ConfirmInstallConflictsAsync(conflicts)) return;
+                List<(string? Candidate, ModIniConflictSummary Summary)> iniConflicts = await Task.Run(() => deployment.InstallSources
+                    .SelectMany(source => DetectModIniConflictsSafely(source, repository.TargetPath, deploymentTargets)
+                        .Select(summary => ((string?)Path.GetFileName(source), summary)))
+                    .ToList());
+                if ((conflicts.Count > 0 || iniConflicts.Count > 0) && !await ConfirmInstallConflictsAsync(conflicts, iniConflicts)) return;
             }
             // No confirmation dialog is a lock. Revalidate AFTER all confirmations.
             CombinationRestorePreview fresh = await Task.Run(() => CombinationRestorePreviewService.Prepare(request));

@@ -1463,14 +1463,11 @@ public sealed partial class MainWindow : Window
             && !fileName.Equals("desktop.ini", StringComparison.OrdinalIgnoreCase);
     }
 
-    private async Task<bool> ConfirmInstallConflictsAsync(IReadOnlyList<string> conflicts)
+    private async Task<bool> ConfirmInstallConflictsAsync(
+        IReadOnlyList<string> fileConflicts,
+        IReadOnlyList<(string? Candidate, ModIniConflictSummary Summary)> iniConflicts)
     {
-        string preview = string.Join(Environment.NewLine, conflicts.Take(12));
-        if (conflicts.Count > 12)
-        {
-            preview += Environment.NewLine + L($"……另有 {conflicts.Count - 12} 项", $"...and {conflicts.Count - 12} more");
-        }
-
+        string text = BuildInstallConflictText(fileConflicts, iniConflicts);
         var dialog = new ContentDialog
         {
             Title = L("检测到潜在 Mod 冲突", "Potential Mod Conflicts Detected"),
@@ -1479,10 +1476,9 @@ public sealed partial class MainWindow : Window
                 MaxHeight = 420,
                 Content = new TextBlock
                 {
-                    Text = L(
-                        $"以下 Mod 包含相同的相对文件路径，可能覆盖同一游戏资源。是否仍要继续？\n\n{preview}",
-                        $"These mods contain matching relative file paths and may override the same game resources. Continue anyway?\n\n{preview}"),
-                    TextWrapping = TextWrapping.Wrap
+                    Text = text,
+                    TextWrapping = TextWrapping.Wrap,
+                    IsTextSelectionEnabled = true
                 }
             },
             PrimaryButtonText = L("仍然继续", "Continue Anyway"),
@@ -12755,7 +12751,10 @@ public sealed partial class MainWindow : Window
             {
                 string[] ignoredTargets = [targetPath, .. siblingLinksToReplace];
                 List<string> conflicts = await Task.Run(() => DetectModFileConflicts(item.Path, targetDir, ignoredTargets));
-                if (conflicts.Count > 0 && !await ConfirmInstallConflictsAsync(conflicts))
+                (string? Candidate, ModIniConflictSummary Summary)[] iniConflicts = (await Task.Run(() =>
+                        DetectModIniConflictsSafely(item.Path, targetDir, ignoredTargets)))
+                    .Select(summary => ((string?)null, summary)).ToArray();
+                if ((conflicts.Count > 0 || iniConflicts.Length > 0) && !await ConfirmInstallConflictsAsync(conflicts, iniConflicts))
                 {
                     return;
                 }

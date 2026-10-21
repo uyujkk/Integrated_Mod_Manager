@@ -6,6 +6,15 @@
 
 This document records version changes in Integrated Mod Manager. Unpublished versions are marked separately.
 
+## 未发布 / Unreleased
+
+- 同一安装目录只运行一个实例；再次启动会恢复并前置已有窗口（含托盘隐藏状态），不同安装目录仍可并存。
+- 所有异步界面操作的意外异常会记录调用栈并提示，不再直接导致程序退出；记录后台任务中未观察到的异常；`app-errors.log` 超过 1 MB 自动轮转。
+- 安装前冲突检测新增 INI 层检查：提示与已启用 Mod 覆盖相同 `TextureOverride`/`ShaderOverride` 哈希（考虑 `match_first_index`）或绑定相同快捷键的情况；跳过 `DISABLED` 文件与目录，尊重 `match_priority`/`allow_duplicate_hash`。仅作提示，不阻止部署。
+- One instance per install directory; a second launch restores and focuses the running window (including from the tray). Separate install directories can still run side by side.
+- Unexpected exceptions in async UI actions are logged with a stack trace and reported instead of closing the app; unobserved background task exceptions are recorded; `app-errors.log` rotates at 1 MB.
+- The pre-install conflict check now also compares INI files: shared `TextureOverride`/`ShaderOverride` hashes (aware of `match_first_index`) and shared shortcuts with enabled Mods. `DISABLED` files and folders are skipped and `match_priority`/`allow_duplicate_hash` are honoured. Advisory only; deployment is never blocked.
+
 ## v4.2.0 — 2026-10-18
 
 - 下载不再重置浏览位置，按仓库保存和恢复浏览进度。
