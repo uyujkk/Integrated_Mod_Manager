@@ -42,9 +42,9 @@ internal sealed class ShortcutInputService : IDisposable
     }
 
     public async Task<string> SendAsync(ShortcutTarget target, ShortcutKeyPlan plan, int holdMilliseconds,
-        ShortcutInputMode mode = ShortcutInputMode.ScanCode)
+        ShortcutInputMode mode = ShortcutInputMode.ScanCode, bool english = false)
     {
-        if (busy || Environment.TickCount64 - lastSend < 300) throw new InvalidOperationException("Busy / 操作过快，请稍候。");
+        if (busy || Environment.TickCount64 - lastSend < 300) throw new InvalidOperationException(T(english, "操作过快，请稍候。", "Busy; please wait a moment."));
         if (lifetime.IsCancellationRequested) throw new OperationCanceledException();
         busy = true;
         var pressed = new List<ushort>();
@@ -59,29 +59,29 @@ internal sealed class ShortcutInputService : IDisposable
         var timing = Stopwatch.StartNew();
         try
         {
-            if (!Matches(target)) throw new InvalidOperationException("Target window closed or changed / 目标窗口已关闭或变化，请重新选择。");
+            if (!Matches(target)) throw new InvalidOperationException(T(english, "目标窗口已关闭或变化，请重新选择。", "The target window closed or changed; select it again."));
             ShortcutSecurity own = ShortcutProcessSecurity.Read((uint)Environment.ProcessId);
             ShortcutSecurity destination = ShortcutProcessSecurity.Read(target.ProcessId);
             security = $"sender={own.Summary}; target={destination.Summary}";
             switch (ShortcutPrivilegePolicy.Evaluate(own.Integrity, own.UiAccess, destination.Integrity, destination.Error))
             {
                 case ShortcutPrivilegeVerdict.TargetHigher:
-                    throw new ShortcutPrivilegeException("目标窗口权限高于管理器，Windows 会静默丢弃输入。请点击“以管理员身份重启管理器”。 / Target has higher integrity and Windows would silently drop input; restart the manager as administrator.");
+                    throw new ShortcutPrivilegeException(T(english, "目标窗口权限高于管理器，Windows 会静默丢弃输入。请点击“以管理员身份重启管理器”。", "The target has higher integrity and Windows would silently drop input. Click \"Restart manager as administrator\"."));
                 case ShortcutPrivilegeVerdict.TargetUnreadable:
-                    throw new ShortcutPrivilegeException("目标以管理员权限运行（终末地需要管理员权限），普通权限的管理器发送的按键会被 Windows 静默丢弃。请点击“以管理员身份重启管理器”。 / The target runs as administrator; input from a non-elevated manager is silently dropped. Restart the manager as administrator.");
+                    throw new ShortcutPrivilegeException(T(english, "目标以管理员权限运行（终末地需要管理员权限），普通权限的管理器发送的按键会被 Windows 静默丢弃。请点击“以管理员身份重启管理器”。", "The target runs as administrator (Endfield requires it); input from a non-elevated manager is silently dropped. Click \"Restart manager as administrator\"."));
             }
             if (IsIconic(target.Handle)) ShowWindow(target.Handle, 9);
             if (GetForegroundWindow() != target.Handle) SetForegroundWindow(target.Handle);
             await Task.Delay(80, lifetime.Token);
             if (!Matches(target) || GetForegroundWindow() != target.Handle)
-                throw new InvalidOperationException("Cannot focus target / 无法激活目标窗口，请先切换到游戏。");
+                throw new InvalidOperationException(T(english, "无法激活目标窗口，请先切换到游戏。", "Cannot focus the target window; switch to the game first."));
             // Never release or alter keys held by the user. Extra modifiers change a chord's meaning.
             ushort[] modifiers = [0x10, 0x11, 0x12, 0x5B, 0x5C, 0xA0, 0xA1, 0xA2, 0xA3, 0xA4, 0xA5];
             if (modifiers.Concat(plan.Keys).Concat(plan.ForbiddenKeys).Any(k => (GetAsyncKeyState(k) & 0x8000) != 0))
-                throw new InvalidOperationException("Release keyboard keys first / 请先松开键盘上的按键。");
+                throw new InvalidOperationException(T(english, "请先松开键盘上的按键。", "Release the keyboard keys first."));
             if (mode == ShortcutInputMode.ScanCode && plan.Keys.Any(k => k is >= 0x60 and <= 0x69 or 0x6E)
                 && (GetKeyState(0x90) & 1) == 0)
-                throw new InvalidOperationException("扫描码小键盘数字需要 Num Lock 开启，请点击“切换 Num Lock”或改用虚拟键模式。 / Turn Num Lock on for scan-code numpad digits, or use virtual keys.");
+                throw new InvalidOperationException(T(english, "扫描码小键盘数字需要 Num Lock 开启，请点击“切换 Num Lock”或改用虚拟键模式。", "Scan-code numpad digits need Num Lock on. Click \"Toggle Num Lock\" or use virtual keys."));
             uint thread = GetWindowThreadProcessId(target.Handle, out _);
             nint layout = GetKeyboardLayout(thread);
             down = plan.Keys.Select(k => KeyInput(k, false, mode, layout)).ToArray();
@@ -90,18 +90,18 @@ internal sealed class ShortcutInputService : IDisposable
             lastError = downSent == down.Length ? 0 : Marshal.GetLastWin32Error();
             pressed.AddRange(plan.Keys.Take((int)downSent));
             if (downSent != down.Length)
-                throw new InvalidOperationException($"Windows 拒绝输入（{downSent}/{down.Length}, error={lastError}）；请检查权限。 / Windows rejected input; check permissions.");
+                throw new InvalidOperationException(T(english, $"Windows 拒绝输入（{downSent}/{down.Length}, error={lastError}）；请检查权限。", $"Windows rejected input ({downSent}/{down.Length}, error={lastError}); check permissions."));
             long until = Environment.TickCount64 + Math.Clamp(holdMilliseconds, 60, 2000);
             while (Environment.TickCount64 < until)
             {
                 await Task.Delay(20, lifetime.Token);
                 if (!Matches(target) || GetForegroundWindow() != target.Handle)
-                    throw new InvalidOperationException("Focus changed; keys released / 焦点发生变化，已释放按键。");
+                    throw new InvalidOperationException(T(english, "焦点发生变化，已释放按键。", "Focus changed; keys released."));
                 keyStateObserved = keyStateObserved == true || plan.Keys.All(k => (GetAsyncKeyState(k) & 0x8000) != 0);
             }
             report = keyStateObserved == true
-                ? "Windows 已接收，已观察到按下状态；游戏响应待确认。 / Windows accepted input and key-down state was observed; game response is unverified."
-                : "Windows 已接收，但未观察到完整按下状态；请查看输入诊断。 / Windows accepted events, but full key-down state was not observed; see diagnostics.";
+                ? T(english, "Windows 已接收，已观察到按下状态；游戏响应待确认。", "Windows accepted the input and the key-down state was observed; the game response is unverified.")
+                : T(english, "Windows 已接收，但未观察到完整按下状态；请查看输入诊断。", "Windows accepted the events, but the full key-down state was not observed; see diagnostics.");
         }
         catch (Exception ex) { failure = ex.Message; throw; }
         finally
@@ -115,7 +115,7 @@ internal sealed class ShortcutInputService : IDisposable
                 {
                     failure = "Windows rejected key-release input.";
                     MainWindow.LogApplicationIssueWithStack("Shortcut key release", new InvalidOperationException("Windows rejected key-release input."));
-                    report = "按键释放被 Windows 拒绝，请立即松开并检查键盘状态。 / Windows rejected key release; check keyboard state.";
+                    report = T(english, "按键释放被 Windows 拒绝，请立即松开并检查键盘状态。", "Windows rejected the key release; check the keyboard state.");
                 }
             }
             WriteInputDiagnostic(new { Utc = DateTimeOffset.UtcNow, TargetPid = target.ProcessId,
@@ -129,6 +129,8 @@ internal sealed class ShortcutInputService : IDisposable
         }
         return report;
     }
+
+    private static string T(bool english, string zh, string en) => BetaLocalization.Resolve(english, zh, en);
 
     private static bool Matches(ShortcutTarget target)
     {

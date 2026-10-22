@@ -61,6 +61,39 @@ public sealed partial class MainWindow
         catch (Exception ex) { ReportUiActionFailure(nameof(OnShortcutsNavClicked), ex); }
     }
 
+    private bool IsEnglishUi => _currentLanguage == AppLanguage.EnUs;
+    private string? _shortcutRestoreModPath;
+
+    /// <summary>The pane and overlay are built once with localized text; a language switch rebuilds both, keeping the selection.</summary>
+    private void RebuildShortcutPaneForLanguage()
+    {
+        if (_shortcutModPicker is null) return;
+        _shortcutRestoreModPath = (_shortcutModPicker.SelectedItem as ShortcutModOption)?.Path;
+        var target = _shortcutTargetPicker?.SelectedItem as ShortcutTarget;
+        double tap = _shortcutTapDuration?.Value ?? 200, hold = _shortcutHoldDuration?.Value ?? 300;
+        bool overlayVisible = _shortcutOverlayVisible;
+        ++_shortcutScanRevision;
+        _characterFollowTimer?.Dispose();
+        _characterFollowTimer = null;
+        ShortcutOverlayWindow? oldOverlay = _shortcutOverlay;
+        _shortcutOverlay = null; _shortcutOverlayVisible = false;
+        _overlayButtonList = null; _overlayScroll = null; _overlayBindings = []; _overlayOpacitySlider = null;
+        oldOverlay?.Close();
+        ShortcutPaneContent.Children.Clear();
+        _shortcutModPicker = null;
+        BuildShortcutPane();
+        if (double.IsFinite(tap)) _shortcutTapDuration!.Value = tap;
+        if (double.IsFinite(hold)) _shortcutHoldDuration!.Value = hold;
+        // Input stays disarmed after the rebuild; the user re-enables it deliberately.
+        if (target is not null && _shortcutTargetPicker!.ItemsSource is IReadOnlyList<ShortcutTarget> targets)
+            _shortcutTargetPicker.SelectedItem = targets.FirstOrDefault(t => t.Handle == target.Handle && t.StartTicks == target.StartTicks);
+        _ = RefreshShortcutPaneSafelyAsync();
+        if (overlayVisible) OpenShortcutOverlay();
+    }
+
+    // ToggleSwitch otherwise shows On/Off in the Windows display language, not the app language.
+    private ToggleSwitch LocalizedToggle(string header) => new() { Header = header, OnContent = L("开", "On"), OffContent = L("关", "Off") };
+
     private Button ShortcutButton(string label, Action action)
     {
         var button = new Button { Content = label };
@@ -150,7 +183,7 @@ public sealed partial class MainWindow
         _shortcutHotkeyStatus = new TextBlock { TextWrapping = TextWrapping.Wrap };
         pane.Children.Add(_shortcutHotkeyStatus);
         UpdateShortcutHotkeyStatus();
-        _shortcutEnabledToggle = new ToggleSwitch { Header = L("允许向所选窗口发送按键", "Enable input to selected window") };
+        _shortcutEnabledToggle = LocalizedToggle(L("允许向所选窗口发送按键", "Enable input to selected window"));
         _shortcutEnabledToggle.Toggled += (_, _) =>
         {
             _shortcutInputEnabled = _shortcutEnabledToggle.IsOn && _shortcutTargetPicker.SelectedItem is ShortcutTarget;
@@ -190,6 +223,7 @@ public sealed partial class MainWindow
         pane.Children.Add(BuildOverlayTextColorButton());
         var hideUnsupported = new ToggleSwitch
         {
+            OnContent = L("开", "On"), OffContent = L("关", "Off"),
             Header = L("隐藏无法发送的绑定（鼠标、手柄等）", "Hide bindings that cannot be sent (mouse, controller, ...)"),
             IsOn = _shortcutHideUnsupported
         };
@@ -219,7 +253,8 @@ public sealed partial class MainWindow
     {
         if (_shortcutModPicker is null) return;
         string repository = GetSelectedRepository()?.SourcePath ?? string.Empty;
-        string? previous = (_shortcutModPicker.SelectedItem as ShortcutModOption)?.Path ?? _currentSecondLevelPath;
+        string? previous = (_shortcutModPicker.SelectedItem as ShortcutModOption)?.Path ?? _shortcutRestoreModPath ?? _currentSecondLevelPath;
+        _shortcutRestoreModPath = null;
         int revision = ++_shortcutScanRevision;
         _shortcutInputEnabled = false;
         _shortcutEnabledToggle!.IsOn = false;
@@ -368,7 +403,7 @@ public sealed partial class MainWindow
             Width = 18, Height = 18, CornerRadius = new CornerRadius(3), Background = _overlayTextBrush,
             BorderBrush = new SolidColorBrush(Color.FromArgb(120, 128, 128, 128)), BorderThickness = new Thickness(1)
         });
-        label.Children.Add(new TextBlock { Text = L("浮窗字体颜色", "Overlay text colour"), VerticalAlignment = VerticalAlignment.Center });
+        label.Children.Add(new TextBlock { Text = L("浮窗字体颜色", "Overlay text color"), VerticalAlignment = VerticalAlignment.Center });
         return new Button { Content = label, Flyout = flyout };
     }
 
@@ -421,7 +456,7 @@ public sealed partial class MainWindow
         if (!supported)
             content.Children.Add(new TextBlock
             {
-                Text = L("无法发送：", "Cannot send: ") + UnsupportedReasonText(reason) + $"（key = {shortcut.RawKey}）",
+                Text = L("无法发送：", "Cannot send: ") + UnsupportedReasonText(reason) + L($"（key = {shortcut.RawKey}）", $" (key = {shortcut.RawKey})"),
                 FontSize = 11, TextWrapping = TextWrapping.Wrap,
                 Foreground = new SolidColorBrush(Color.FromArgb(255, 230, 150, 60))
             });
@@ -445,7 +480,7 @@ public sealed partial class MainWindow
             int hold = shortcut.Behavior.Equals("hold", StringComparison.OrdinalIgnoreCase)
                 ? (int)(double.IsFinite(_shortcutHoldDuration!.Value) ? _shortcutHoldDuration.Value : 300)
                 : (int)(double.IsFinite(_shortcutTapDuration!.Value) ? _shortcutTapDuration.Value : 200);
-            string report = await _shortcutInput.SendAsync(target, plan!, hold, _shortcutInputMode);
+            string report = await _shortcutInput.SendAsync(target, plan!, hold, _shortcutInputMode, IsEnglishUi);
             if (!_onlineWindowClosed) _shortcutStatus!.Text = shortcut.Shortcut + " · " + report;
         }
         catch (Exception ex)
@@ -462,9 +497,12 @@ public sealed partial class MainWindow
         {
             if (_shortcutOverlay is null)
             {
-                _shortcutOverlay = new ShortcutOverlayWindow(BuildShortcutOverlayContent(), _overlayTextBrush);
+                var overlay = new ShortcutOverlayWindow(BuildShortcutOverlayContent(), _overlayTextBrush, L("Mod 快捷键", "Mod shortcuts"));
+                _shortcutOverlay = overlay;
                 _shortcutOverlay.Closed += (_, _) =>
                 {
+                    // A language rebuild may already have opened a replacement overlay.
+                    if (!ReferenceEquals(_shortcutOverlay, overlay)) return;
                     _shortcutOverlay = null; _shortcutOverlayVisible = false;
                     _overlayButtonList = null; _overlayScroll = null; _overlayBindings = []; _overlayOpacitySlider = null;
                 };
@@ -545,7 +583,7 @@ public sealed partial class MainWindow
         {
             if (!_shortcutInputEnabled || _shortcutTargetPicker?.SelectedItem is not ShortcutTarget target)
                 throw new InvalidOperationException(L("请先选择目标窗口并开启按键发送。", "Select a target window and enable input first."));
-            _shortcutStatus!.Text = await _shortcutInput.SendAsync(target, new ShortcutKeyPlan(new ushort[] { 0x90 }, Array.Empty<ushort>()), 150, ShortcutInputMode.VirtualKey);
+            _shortcutStatus!.Text = await _shortcutInput.SendAsync(target, new ShortcutKeyPlan(new ushort[] { 0x90 }, Array.Empty<ushort>()), 150, ShortcutInputMode.VirtualKey, IsEnglishUi);
         }
         catch (Exception ex) { if (!_onlineWindowClosed) _shortcutStatus!.Text = ex.Message; }
         finally { _shortcutSendInProgress = false; if (!_onlineWindowClosed) RefreshShortcutOverlay(); }

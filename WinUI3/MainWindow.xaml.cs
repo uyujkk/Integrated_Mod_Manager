@@ -37,7 +37,7 @@ namespace ModFolderCopier.WinUI;
 
 public sealed partial class MainWindow : Window
 {
-    private const string AppVersion = "v4.3.1-hotkeys-test.4";
+    private const string AppVersion = "v4.3.1-hotkeys-test.5";
     private static bool AppSelfUpdateEnabled => ApplicationReleasePolicy.ApplicationSelfUpdateEnabled;
     private const string GitHubRepositoryUrl = "https://github.com/uyujkk/Integrated_Mod_Manager";
     private const string GitHubLatestReleaseApiUrl = "https://api.github.com/repos/uyujkk/Integrated_Mod_Manager/releases/latest";
@@ -11007,6 +11007,7 @@ public sealed partial class MainWindow : Window
         _currentLanguage = _currentLanguage == AppLanguage.ZhCn ? AppLanguage.EnUs : AppLanguage.ZhCn;
         ApplyLanguage();
         RefreshVisibleShortcutDescriptionsForLanguage();
+        RebuildShortcutPaneForLanguage();
         RefreshSettingsPane();
         RefreshUpdatesPane();
         SaveConfig();

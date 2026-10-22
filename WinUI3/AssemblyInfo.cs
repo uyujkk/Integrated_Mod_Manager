@@ -5,4 +5,4 @@ using System.Reflection;
 [assembly: AssemblyCopyright("Copyright (c) 2026 uyujkk")]
 [assembly: AssemblyVersion("4.3.1.0")]
 [assembly: AssemblyFileVersion("4.3.1.0")]
-[assembly: AssemblyInformationalVersion("4.3.1-hotkeys-test.4")]
+[assembly: AssemblyInformationalVersion("4.3.1-hotkeys-test.5")]

@@ -297,6 +297,8 @@ public static class ModShortcutScanner
             "XBUTTON2" => "Mouse X2",
             "RETURN" => "Enter",
             "BACK" => "Backspace",
+            "CONTROL" or "CTRL" => "Ctrl",
+            "SHIFT" => "Shift",
             "MENU" => "Alt",
             "APPS" => "Apps",
             "ESCAPE" => "Esc",

@@ -44,7 +44,7 @@ public sealed partial class MainWindow
         buttons.Children.Add(ShortcutButton(L("框选识别区域", "Select HUD region"), () => _ = SelectCharacterRegionAsync()));
         buttons.Children.Add(ShortcutButton(L("保存当前角色参考图", "Save character reference"), () => _ = SaveCharacterReferenceAsync()));
         pane.Children.Add(buttons);
-        _characterFollowToggle = new ToggleSwitch { Header = L("自动切换角色快捷键", "Automatically follow character shortcuts") };
+        _characterFollowToggle = LocalizedToggle(L("自动切换角色快捷键", "Automatically follow character shortcuts"));
         _characterFollowToggle.Toggled += (_, _) =>
         {
             _characterMatcher.Reset();
@@ -96,7 +96,7 @@ public sealed partial class MainWindow
 
     private void SaveCharacterFollowProfile()
     {
-        if (_characterProfilePath is null) throw new InvalidOperationException("Select a repository first.");
+        if (_characterProfilePath is null) throw new InvalidOperationException(L("请先选择仓库。", "Select a repository first."));
         Directory.CreateDirectory(Path.GetDirectoryName(_characterProfilePath)!);
         string temporary = _characterProfilePath + ".tmp";
         _characterProfile.PreferredMods = new(_characterPreferredMods, StringComparer.OrdinalIgnoreCase);
@@ -110,7 +110,7 @@ public sealed partial class MainWindow
         _shortcutOverlay?.AppWindow.Hide();
         if (!ShortcutInputService.FocusTarget(target)) throw new InvalidOperationException(L("无法切换到游戏窗口。", "Could not focus the game window."));
         await Task.Delay(300);
-        return await Task.Run(() => CharacterScreenCapture.Capture(target));
+        return await Task.Run(() => CharacterScreenCapture.Capture(target, IsEnglishUi));
     }
 
     private async Task SelectCharacterRegionAsync()
@@ -205,7 +205,7 @@ public sealed partial class MainWindow
             if (_shortcutOverlayVisible && _shortcutOverlay is not null
                 && CharacterScreenCapture.OverlapsRegion(WinRT.Interop.WindowNative.GetWindowHandle(_shortcutOverlay), target, region))
             { _characterMatcher.Reset(); _characterFollowStatus!.Text = L("浮窗遮挡识别区域，请移动浮窗。", "Move the overlay away from the recognition region."); return; }
-            CharacterFrame frame = await Task.Run(() => CharacterScreenCapture.Capture(target));
+            CharacterFrame frame = await Task.Run(() => CharacterScreenCapture.Capture(target, IsEnglishUi));
             if (_onlineWindowClosed || _characterFollowToggle?.IsOn != true) return;
             if (_shortcutTargetPicker?.SelectedItem is not ShortcutTarget current
                 || current.Handle != target.Handle || current.StartTicks != target.StartTicks)

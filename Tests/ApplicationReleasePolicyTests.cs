@@ -17,7 +17,7 @@ public sealed class ApplicationReleasePolicyTests
     [Fact]
     public void TestBuildUsesDistinctVersionAndRetainsPublicReferenceLink()
     {
-        Assert.Equal("v4.3.1-hotkeys-test.4", ApplicationReleasePolicy.VersionLabel);
+        Assert.Equal("v4.3.1-hotkeys-test.5", ApplicationReleasePolicy.VersionLabel);
         Assert.Equal(new Version(4, 3, 1, 0), Version.Parse(ApplicationReleasePolicy.FileVersion));
         Assert.Equal("https://github.com/uyujkk/Integrated_Mod_Manager/releases/latest", ApplicationReleasePolicy.ReleasePageUrl);
     }
