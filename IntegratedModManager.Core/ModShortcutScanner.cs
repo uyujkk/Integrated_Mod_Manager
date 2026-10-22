@@ -7,7 +7,12 @@ public sealed record DetectedModShortcut(
     string Section,
     string Behavior,
     string Target,
-    string SourceFile);
+    string SourceFile)
+{
+    // Keep the original expression: display normalization drops no_* constraints.
+    public string RawKey { get; init; } = Shortcut;
+    public string Condition { get; init; } = string.Empty;
+}
 
 public static class ModShortcutScanner
 {
@@ -30,7 +35,8 @@ public static class ModShortcutScanner
     public static IReadOnlyList<DetectedModShortcut> ScanDirectory(
         string modDirectory,
         int maximumResults = DefaultMaximumResults,
-        int maximumFiles = DefaultMaximumFiles)
+        int maximumFiles = DefaultMaximumFiles,
+        bool activeOnly = false)
     {
         if (string.IsNullOrWhiteSpace(modDirectory)
             || !Directory.Exists(modDirectory)
@@ -56,6 +62,9 @@ public static class ModShortcutScanner
             foreach (string iniPath in Directory.EnumerateFiles(modDirectory, "*.ini", options)
                 .OrderBy(path => path, StringComparer.OrdinalIgnoreCase))
             {
+                if (activeOnly && Path.GetRelativePath(modDirectory, iniPath)
+                    .Split(Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar)
+                    .Any(part => part.StartsWith("DISABLED", StringComparison.OrdinalIgnoreCase))) continue;
                 if (filesRead++ >= maximumFiles || results.Count >= maximumResults)
                 {
                     break;
@@ -134,7 +143,11 @@ public static class ModShortcutScanner
                 string shortcut = NormalizeKeyExpression(rawKey);
                 if (!string.IsNullOrWhiteSpace(shortcut))
                 {
-                    results.Add(new DetectedModShortcut(shortcut, section, behavior, target, sourceFile));
+                    results.Add(new DetectedModShortcut(shortcut, section, behavior, target, sourceFile)
+                    {
+                        RawKey = rawKey,
+                        Condition = ReadSetting(body, "condition")
+                    });
                 }
             }
 
@@ -282,6 +295,8 @@ public static class ModShortcutScanner
             "XBUTTON1" => "Mouse X1",
             "XBUTTON2" => "Mouse X2",
             "RETURN" => "Enter",
+            "MENU" => "Alt",
+            "APPS" => "Apps",
             "ESCAPE" => "Esc",
             "PRIOR" => "PageUp",
             "NEXT" => "PageDown",

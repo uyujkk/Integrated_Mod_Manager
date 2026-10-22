@@ -37,7 +37,7 @@ namespace ModFolderCopier.WinUI;
 
 public sealed partial class MainWindow : Window
 {
-    private const string AppVersion = "v4.3.1";
+    private const string AppVersion = "v4.3.1-hotkeys-test.1";
     private static bool AppSelfUpdateEnabled => ApplicationReleasePolicy.ApplicationSelfUpdateEnabled;
     private const string GitHubRepositoryUrl = "https://github.com/uyujkk/Integrated_Mod_Manager";
     private const string GitHubLatestReleaseApiUrl = "https://api.github.com/repos/uyujkk/Integrated_Mod_Manager/releases/latest";
@@ -152,7 +152,8 @@ public sealed partial class MainWindow : Window
         Repository,
         Online,
         Updates,
-        Settings
+        Settings,
+        Shortcuts
     }
 
     private enum AppLanguage
@@ -343,6 +344,7 @@ public sealed partial class MainWindow : Window
         LoadConfig();
         LoadShellConfig();
         InitializeTraySupport();
+        InitializeShortcutPanelHotkey();
         try
         {
             InitializeRefinedWorkspace();
@@ -2219,6 +2221,7 @@ public sealed partial class MainWindow : Window
                 "online" => PrimarySection.Online,
                 "updates" => PrimarySection.Updates,
                 "settings" => PrimarySection.Settings,
+                "shortcuts" => PrimarySection.Shortcuts,
                 _ => PrimarySection.Dashboard
             };
             _onlinePreferences = config?.OnlinePreferences ?? new();
@@ -2240,6 +2243,9 @@ public sealed partial class MainWindow : Window
             };
             _lastUpdateCheckUtc = TryParseDateTimeOffset(config?.LastUpdateCheckUtc);
             _modUpdateCheckInterval = ParseUpdateCheckInterval(config?.ModUpdateCheckInterval);
+            _shortcutPanelHotkeyModifiers = config?.ShortcutPanelHotkeyModifiers is 3 or 5 or 6 ? config.ShortcutPanelHotkeyModifiers : 3;
+            _shortcutPanelHotkeyKey = config?.ShortcutPanelHotkeyKey is >= 0x41 and <= 0x5A or >= 0x70 and <= 0x7B ? config.ShortcutPanelHotkeyKey : 0x4B;
+            _shortcutPanelHotkeyEnabled = config?.ShortcutPanelHotkeyEnabled ?? true;
             _lastModUpdateCheckUtc = TryParseDateTimeOffset(config?.LastModUpdateCheckUtc);
             _latestReleaseTag = config?.LatestReleaseTag;
             _latestReleaseTitle = config?.LatestReleaseTitle;
@@ -2373,6 +2379,9 @@ public sealed partial class MainWindow : Window
                 UpdateCheckInterval = _updateCheckInterval.ToString(),
                 LastUpdateCheckUtc = _lastUpdateCheckUtc?.ToString("O"),
                 ModUpdateCheckInterval = _modUpdateCheckInterval.ToString(),
+                ShortcutPanelHotkeyModifiers = _shortcutPanelHotkeyModifiers,
+                ShortcutPanelHotkeyKey = _shortcutPanelHotkeyKey,
+                ShortcutPanelHotkeyEnabled = _shortcutPanelHotkeyEnabled,
                 LastModUpdateCheckUtc = _lastModUpdateCheckUtc?.ToString("O"),
                 LatestReleaseTag = _latestReleaseTag,
                 LatestReleaseTitle = _latestReleaseTitle,
@@ -2573,6 +2582,12 @@ public sealed partial class MainWindow : Window
         OnlineScrollViewer.Visibility = _currentPrimarySection == PrimarySection.Online ? Visibility.Visible : Visibility.Collapsed;
         UpdatesScrollViewer.Visibility = _currentPrimarySection == PrimarySection.Updates ? Visibility.Visible : Visibility.Collapsed;
         SettingsScrollViewer.Visibility = _currentPrimarySection == PrimarySection.Settings ? Visibility.Visible : Visibility.Collapsed;
+        ShortcutsScrollViewer.Visibility = _currentPrimarySection == PrimarySection.Shortcuts ? Visibility.Visible : Visibility.Collapsed;
+        if (_currentPrimarySection == PrimarySection.Shortcuts)
+        {
+            BuildShortcutPane();
+            _ = RefreshShortcutPaneSafelyAsync();
+        }
 
         RefreshPrimaryNavigationVisuals();
         RefreshSecondaryNavigation();
@@ -2608,6 +2623,7 @@ public sealed partial class MainWindow : Window
             PrimarySection.Repository => _workspacePageHost is not null ? _workspacePageHost : WorkspaceScrollViewer,
             PrimarySection.Online => OnlineScrollViewer,
             PrimarySection.Updates => UpdatesScrollViewer,
+            PrimarySection.Shortcuts => ShortcutsScrollViewer,
             _ => SettingsScrollViewer
         };
     }
@@ -3212,7 +3228,7 @@ public sealed partial class MainWindow : Window
         PrimaryNavColumn.Width = new GridLength(expanded ? 220 : 84);
         SecondaryNavColumn.Width = new GridLength(0);
         SecondaryNavBorder.Visibility = Visibility.Collapsed;
-        foreach (Button button in new[] { DashboardNavButton, RepositoryNavButton, OnlineNavButton, UpdatesNavButton, SettingsNavButton })
+        foreach (Button button in new[] { DashboardNavButton, RepositoryNavButton, OnlineNavButton, UpdatesNavButton, ShortcutsNavButton, SettingsNavButton })
         {
             button.Width = expanded ? 202 : 66;
             button.Height = expanded ? 46 : 60;
@@ -3322,6 +3338,9 @@ public sealed partial class MainWindow : Window
         RepositoryNavButton.Content = CreatePrimaryNavContent("\uE8B7", L("仓库", "Repositories"));
         OnlineNavButton.Content = CreatePrimaryNavContent("\uE774", L("在线", "Online"));
         UpdatesNavButton.Content = CreatePrimaryNavContent("\uE895", L("更新", "Updates"));
+        ShortcutsNavButton.Content = CreatePrimaryNavContent("\uE765", L("快捷键", "Shortcuts"));
+        ToolTipService.SetToolTip(ShortcutsNavButton, L("Mod 快捷键", "Mod shortcuts"));
+        AutomationProperties.SetName(ShortcutsNavButton, L("Mod 快捷键", "Mod shortcuts"));
         SettingsNavButton.Content = CreatePrimaryNavContent("\uE713", L("设置", "Settings"));
 
         ToolTipService.SetToolTip(DashboardNavButton, L("仪表板", "Dashboard"));
@@ -3369,6 +3388,7 @@ public sealed partial class MainWindow : Window
         ApplyPrimaryButtonVisual(RepositoryNavButton, _currentPrimarySection == PrimarySection.Repository);
         ApplyPrimaryButtonVisual(OnlineNavButton, _currentPrimarySection == PrimarySection.Online);
         ApplyPrimaryButtonVisual(UpdatesNavButton, _currentPrimarySection == PrimarySection.Updates);
+        ApplyPrimaryButtonVisual(ShortcutsNavButton, _currentPrimarySection == PrimarySection.Shortcuts);
         ApplyPrimaryButtonVisual(SettingsNavButton, _currentPrimarySection == PrimarySection.Settings);
     }
 
@@ -11535,6 +11555,7 @@ public sealed partial class MainWindow : Window
 
     private void OnWindowClosed(object sender, WindowEventArgs args)
     {
+        CloseShortcutPanel();
         CaptureOnlineBrowseSession();
         _browseSaveTimer?.Stop();
         ++_browseRestoreRevision;
@@ -12056,6 +12077,7 @@ public sealed partial class MainWindow : Window
             PrimarySection.Dashboard => DashboardNavButton,
             PrimarySection.Repository => RepositoryNavButton,
             PrimarySection.Updates => UpdatesNavButton,
+            PrimarySection.Shortcuts => ShortcutsNavButton,
             PrimarySection.Settings => SettingsNavButton,
             _ => OnlineNavButton
         };
@@ -14831,6 +14853,9 @@ public sealed class OnlineCategoryPageCacheEntry
 
 public sealed class BetaShellConfig
 {
+    public uint ShortcutPanelHotkeyModifiers { get; set; } = 3;
+    public uint ShortcutPanelHotkeyKey { get; set; } = 0x4B;
+    public bool ShortcutPanelHotkeyEnabled { get; set; } = true;
     public Dictionary<string, LocalLibraryState>? LocalLibraries { get; set; }
     public OnlineWorkspacePreferences? OnlinePreferences { get; set; }
     public int EndfieldBridgeOfferRevision { get; set; }

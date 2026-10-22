@@ -7,17 +7,17 @@ public sealed class ApplicationReleasePolicyTests
     [Theory]
     [InlineData(false)]
     [InlineData(true)]
-    public void StableAppUpdatesHonorSavedConfiguration(bool requested)
+    public void IsolatedHotkeyTestBuildDisablesAppUpdates(bool requested)
     {
-        Assert.False(ApplicationReleasePolicy.IsPrerelease);
-        Assert.True(ApplicationReleasePolicy.ApplicationSelfUpdateEnabled);
-        Assert.Equal(requested, ApplicationReleasePolicy.CanCheckApplicationUpdates(requested));
+        Assert.True(ApplicationReleasePolicy.IsPrerelease);
+        Assert.False(ApplicationReleasePolicy.ApplicationSelfUpdateEnabled);
+        Assert.False(ApplicationReleasePolicy.CanCheckApplicationUpdates(requested));
     }
 
     [Fact]
-    public void StableUsesConsistentVersionAndRetainsPublicReferenceLink()
+    public void TestBuildUsesDistinctVersionAndRetainsPublicReferenceLink()
     {
-        Assert.Equal("v4.3.1", ApplicationReleasePolicy.VersionLabel);
+        Assert.Equal("v4.3.1-hotkeys-test.1", ApplicationReleasePolicy.VersionLabel);
         Assert.Equal(new Version(4, 3, 1, 0), Version.Parse(ApplicationReleasePolicy.FileVersion));
         Assert.Equal("https://github.com/uyujkk/Integrated_Mod_Manager/releases/latest", ApplicationReleasePolicy.ReleasePageUrl);
     }

@@ -111,6 +111,7 @@
                     <Button x:Name="RepositoryNavButton" Click="OnRepositoryNavClicked" Style="{StaticResource NavigationIconButtonStyle}" />
                     <Button x:Name="OnlineNavButton" Click="OnOnlineNavClicked" Style="{StaticResource NavigationIconButtonStyle}" />
                     <Button x:Name="UpdatesNavButton" Click="OnUpdatesNavClicked" Style="{StaticResource NavigationIconButtonStyle}" />
+                    <Button x:Name="ShortcutsNavButton" Click="OnShortcutsNavClicked" Style="{StaticResource NavigationIconButtonStyle}" />
                 </StackPanel>
                     <Button x:Name="SettingsNavButton" Grid.Row="2" Click="OnSettingsNavClicked" Style="{StaticResource NavigationIconButtonStyle}" />
                 </Grid>
@@ -1176,6 +1177,9 @@
                     </SplitView>
                 </Grid>
 
+                <ScrollViewer x:Name="ShortcutsScrollViewer" VerticalScrollBarVisibility="Auto" Visibility="Collapsed">
+                    <StackPanel x:Name="ShortcutPaneContent" Margin="16" Spacing="14" />
+                </ScrollViewer>
                 <ScrollViewer x:Name="UpdatesScrollViewer" VerticalScrollBarVisibility="Auto" Visibility="Collapsed">
                     <StackPanel Margin="6" Spacing="16">
                         <Border Style="{StaticResource PageHeaderBorderStyle}">
