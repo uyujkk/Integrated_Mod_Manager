@@ -28,6 +28,7 @@ public static class Program
 
         XamlCheckProcessRequirements();
         WinRT.ComWrappersSupport.InitializeComWrappers();
+        WaitForRestartedInstance(args);
 
         if (TryRedirectToRunningInstance())
         {
@@ -45,6 +46,23 @@ public static class Program
 
     // Restore metadata lives with the other recovery data the updater and packager preserve.
     internal static string EndfieldLaunchDataDirectory => Path.Combine(AppContext.BaseDirectory, "backups", "endfield-launch");
+
+    internal const string RestartAfterArgument = "--restart-after";
+
+    // A restart (for example, elevating for the shortcut panel) must not be redirected
+    // back to the instance that is still shutting down and saving its config.
+    private static void WaitForRestartedInstance(string[] args)
+    {
+        int index = Array.IndexOf(args, RestartAfterArgument);
+        if (index < 0 || index + 1 >= args.Length || !int.TryParse(args[index + 1], out int pid)) return;
+        try
+        {
+            using var previous = System.Diagnostics.Process.GetProcessById(pid);
+            if (!previous.WaitForExit(30_000)) WriteStartupNote("Restart wait timed out", new TimeoutException($"Process {pid} still running."));
+        }
+        catch (ArgumentException) { /* Already exited. */ }
+        catch (Exception ex) { WriteStartupNote("Restart wait failed", ex); }
+    }
 
     private static bool TryRedirectToRunningInstance()
     {

@@ -1,3 +1,5 @@
+using System.ComponentModel;
+using System.Diagnostics;
 using IntegratedModManager.Core;
 using Microsoft.UI.Xaml;
 using Microsoft.UI.Xaml.Controls;
@@ -31,6 +33,8 @@ public sealed partial class MainWindow
     private bool _shortcutOverlayVisible;
     private bool _shortcutHotkeyRegistered;
     private TextBlock? _shortcutHotkeyStatus;
+    private TextBlock? _shortcutPrivilegeNotice;
+    private Button? _shortcutElevateButton;
     private TextBlock? _overlayModText, _overlayTargetText, _overlayEnabledText, _overlayStatusText;
     private StackPanel? _overlayButtonList;
     private ScrollViewer? _overlayScroll;
@@ -87,6 +91,7 @@ public sealed partial class MainWindow
             // A newly selected target always requires deliberate re-arming.
             _shortcutInputEnabled = false;
             if (_shortcutEnabledToggle is not null) _shortcutEnabledToggle.IsOn = false;
+            UpdateShortcutPrivilegeNotice();
             RefreshShortcutOverlay();
         };
         pane.Children.Add(_shortcutTargetPicker);
@@ -95,6 +100,11 @@ public sealed partial class MainWindow
         tools.Children.Add(ShortcutButton(L("重新读取 INI", "Reload INI"), () => _ = LoadShortcutSelectionAsync()));
         tools.Children.Add(ShortcutButton(L("独立置顶面板", "Floating panel"), OpenShortcutOverlay));
         pane.Children.Add(tools);
+        _shortcutPrivilegeNotice = new TextBlock { TextWrapping = TextWrapping.Wrap };
+        pane.Children.Add(_shortcutPrivilegeNotice);
+        _shortcutElevateButton = ShortcutButton(L("以管理员身份重启管理器", "Restart manager as administrator"), RestartManagerElevated);
+        pane.Children.Add(_shortcutElevateButton);
+        UpdateShortcutPrivilegeNotice();
         var hotkeySettings = new StackPanel { Orientation = Orientation.Horizontal, Spacing = 8 };
         var modifiers = new ComboBox { Header = L("显示／隐藏浮窗", "Show/hide overlay") };
         foreach (var item in new[] { ("Ctrl+Alt", 3u), ("Ctrl+Shift", 6u), ("Alt+Shift", 5u) })
@@ -422,6 +432,52 @@ public sealed partial class MainWindow
             OpenShortcutOverlay();
         }
         catch (Exception ex) { LogApplicationIssue("Toggle shortcut overlay", ex); }
+    }
+
+    private void UpdateShortcutPrivilegeNotice()
+    {
+        if (_shortcutPrivilegeNotice is null || _shortcutElevateButton is null) return;
+        ShortcutSecurity own = ShortcutProcessSecurity.Current;
+        bool elevated = own.UiAccess || ShortcutPrivilegePolicy.IsElevated(own.Integrity);
+        _shortcutElevateButton.Visibility = elevated ? Visibility.Collapsed : Visibility.Visible;
+        if (elevated)
+        {
+            _shortcutPrivilegeNotice.Text = L("管理器以管理员权限运行，可以向管理员权限的游戏发送按键。",
+                "The manager is elevated and can send input to an elevated game.");
+            return;
+        }
+        if (_shortcutTargetPicker?.SelectedItem is not ShortcutTarget target)
+        {
+            _shortcutPrivilegeNotice.Text = L("终末地以管理员权限运行；普通权限的管理器发送的按键会被 Windows 静默丢弃，需要以管理员身份重启管理器。",
+                "Endfield runs as administrator; input from a non-elevated manager is silently dropped, so restart the manager as administrator.");
+            return;
+        }
+        ShortcutSecurity destination = ShortcutProcessSecurity.Read(target.ProcessId);
+        _shortcutPrivilegeNotice.Text = ShortcutPrivilegePolicy.Evaluate(own.Integrity, own.UiAccess, destination.Integrity, destination.Error) == ShortcutPrivilegeVerdict.Allowed
+            ? L("所选窗口与管理器权限相同，可以发送。", "The selected window runs at the manager's permission level.")
+            : L("所选窗口以管理员权限运行，当前管理器无法向它发送按键。请以管理员身份重启管理器。",
+                "The selected window runs as administrator; this manager cannot send input to it. Restart the manager as administrator.");
+    }
+
+    private void RestartManagerElevated()
+    {
+        try
+        {
+            // The new process waits for this one to exit before taking the single-instance key.
+            Process.Start(new ProcessStartInfo(LaunchExecutablePath, $"{Program.RestartAfterArgument} {Environment.ProcessId}")
+            {
+                UseShellExecute = true,
+                Verb = "runas",
+                WorkingDirectory = AppContext.BaseDirectory
+            })?.Dispose();
+        }
+        catch (Win32Exception ex) when (ex.NativeErrorCode == 1223)
+        {
+            _shortcutStatus!.Text = L("已取消管理员授权，管理器保持当前权限。", "Administrator approval was declined; the manager keeps its current permissions.");
+            return;
+        }
+        catch (Exception ex) { ReportUiActionFailure(nameof(RestartManagerElevated), ex); return; }
+        Close();
     }
 
     private void UpdateShortcutHotkeyStatus()

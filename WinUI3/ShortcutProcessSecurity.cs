@@ -9,6 +9,10 @@ internal sealed record ShortcutSecurity(int? Integrity, bool UiAccess, int Error
 
 internal static class ShortcutProcessSecurity
 {
+    private static readonly Lazy<ShortcutSecurity> current = new(() => Read((uint)Environment.ProcessId));
+
+    public static ShortcutSecurity Current => current.Value;
+
     public static ShortcutSecurity Read(uint pid)
     {
         nint process = OpenProcess(0x1000, false, pid), token = 0;

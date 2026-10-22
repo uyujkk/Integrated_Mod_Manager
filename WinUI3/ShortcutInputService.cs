@@ -6,6 +6,8 @@ using IntegratedModManager.Core;
 
 namespace ModFolderCopier.WinUI;
 
+internal sealed class ShortcutPrivilegeException(string message) : InvalidOperationException(message);
+
 internal sealed record ShortcutTarget(nint Handle, uint ProcessId, long StartTicks, string Label)
 {
     public override string ToString() => Label;
@@ -61,8 +63,13 @@ internal sealed class ShortcutInputService : IDisposable
             ShortcutSecurity own = ShortcutProcessSecurity.Read((uint)Environment.ProcessId);
             ShortcutSecurity destination = ShortcutProcessSecurity.Read(target.ProcessId);
             security = $"sender={own.Summary}; target={destination.Summary}";
-            if (!own.UiAccess && own.Integrity is int senderLevel && destination.Integrity is int targetLevel && targetLevel > senderLevel)
-                throw new InvalidOperationException("目标窗口权限高于管理器，Windows 会阻止输入。请以相同权限重新打开管理器。 / Target has higher integrity; restart the manager at the same permission level.");
+            switch (ShortcutPrivilegePolicy.Evaluate(own.Integrity, own.UiAccess, destination.Integrity, destination.Error))
+            {
+                case ShortcutPrivilegeVerdict.TargetHigher:
+                    throw new ShortcutPrivilegeException("目标窗口权限高于管理器，Windows 会静默丢弃输入。请点击“以管理员身份重启管理器”。 / Target has higher integrity and Windows would silently drop input; restart the manager as administrator.");
+                case ShortcutPrivilegeVerdict.TargetUnreadable:
+                    throw new ShortcutPrivilegeException("目标以管理员权限运行（终末地需要管理员权限），普通权限的管理器发送的按键会被 Windows 静默丢弃。请点击“以管理员身份重启管理器”。 / The target runs as administrator; input from a non-elevated manager is silently dropped. Restart the manager as administrator.");
+            }
             if (IsIconic(target.Handle)) ShowWindow(target.Handle, 9);
             if (GetForegroundWindow() != target.Handle) SetForegroundWindow(target.Handle);
             await Task.Delay(80, lifetime.Token);
