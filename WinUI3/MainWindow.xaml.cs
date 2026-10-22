@@ -37,7 +37,7 @@ namespace ModFolderCopier.WinUI;
 
 public sealed partial class MainWindow : Window
 {
-    private const string AppVersion = "v4.3.1-hotkeys-test.7";
+    private const string AppVersion = "v4.3.1-hotkeys-test.8";
     private static bool AppSelfUpdateEnabled => ApplicationReleasePolicy.ApplicationSelfUpdateEnabled;
     private const string GitHubRepositoryUrl = "https://github.com/uyujkk/Integrated_Mod_Manager";
     private const string GitHubLatestReleaseApiUrl = "https://api.github.com/repos/uyujkk/Integrated_Mod_Manager/releases/latest";
@@ -52,6 +52,8 @@ public sealed partial class MainWindow : Window
     private const int OnlineRawPageLimit = 80;
     private static readonly TimeSpan OnlineModListRequestTimeout = TimeSpan.FromSeconds(5);
     private static readonly TimeSpan OnlinePreviewImageRequestTimeout = TimeSpan.FromSeconds(15);
+    // How long a page may wait for its download counts before it is shown without them.
+    private static readonly TimeSpan OnlineDownloadCountInlineBudget = TimeSpan.FromSeconds(2);
     private const long MaxOnlinePreviewImageBytes = 20L * 1024 * 1024;
     private const int ArchiveToolTimeoutMinutes = 10;
     private const int InitialShortcutRows = 1;
@@ -4085,7 +4087,29 @@ public sealed partial class MainWindow : Window
                     loadedAfterTimeout = true;
                 }
             }
-            if (!loadedFromCache)
+            // Download counts arrive before the page is shown (one batch request, ~300 ms), so the list
+            // renders once, already sorted, instead of refreshing as counts trickle in.
+            int countsFilled = 0;
+            if (!loadedDuringRateLimit && !loadedAfterTimeout && pageResult.Mods.Any(mod => mod.Downloads <= 0))
+            {
+                using CancellationTokenSource countBudget = CancellationTokenSource.CreateLinkedTokenSource(requestCancellation.Token);
+                countBudget.CancelAfter(OnlineDownloadCountInlineBudget);
+                try
+                {
+                    countsFilled = await FillOnlineDownloadCountsAsync(pageResult.Mods, countBudget.Token);
+                }
+                catch (OnlineRateLimitException ex)
+                {
+                    RegisterOnlineRateLimit(ex.RetryAfter);
+                }
+                catch (Exception ex) when (ex is HttpRequestException or JsonException or InvalidDataException or IOException
+                    || (ex is OperationCanceledException && !requestCancellation.IsCancellationRequested))
+                {
+                    // Show the page now; the background pass retries the counts once.
+                }
+            }
+
+            if (!loadedFromCache || countsFilled > 0)
             {
                 await WriteOnlineCategoryPageCacheAsync(cacheCategoryKey, pageResult);
             }
@@ -4129,7 +4153,7 @@ public sealed partial class MainWindow : Window
             _lastLoadedOnlineConfigKey = configKey;
             _blockedOnlineAutoLoadConfigKey = null;
 
-            if (pageResult.Mods.Any(mod => mod.Downloads <= 0))
+            if (!loadedDuringRateLimit && pageResult.Mods.Any(mod => mod.Downloads <= 0))
             {
                 _ = EnrichMissingGameBananaDownloadsAsync(
                     pageResult,
@@ -4267,7 +4291,11 @@ public sealed partial class MainWindow : Window
             using var timeout = new CancellationTokenSource(OnlineModListRequestTimeout);
             OnlineCategoryPageResult next = await FetchGameBananaCategoryPageAsync(
                 categoryId, nextPage, useEndfieldMetadata: useEndfieldMetadata, cancellationToken: timeout.Token, authorId: authorId);
-            if (next.Mods.Count > 0) await WriteOnlineCategoryPageCacheAsync(cacheCategoryKey, next);
+            if (next.Mods.Count == 0) return;
+            // Cache the page complete with download counts, so opening it needs no request at all.
+            try { await FillOnlineDownloadCountsAsync(next.Mods, timeout.Token); }
+            catch (Exception ex) when (ex is HttpRequestException or JsonException or InvalidDataException or OperationCanceledException) { }
+            await WriteOnlineCategoryPageCacheAsync(cacheCategoryKey, next);
         }
         catch (OnlineRateLimitException ex)
         {
@@ -4721,76 +4749,83 @@ public sealed partial class MainWindow : Window
         }
     }
 
-    private async Task<int> FetchGameBananaDownloadCountAsync(int itemId)
+    /// <summary>One request per 40 Mods (the list API has no download counts at all).</summary>
+    private async Task<Dictionary<int, int>> FetchGameBananaDownloadCountsAsync(IReadOnlyList<int> itemIds, CancellationToken cancellationToken)
     {
-        string fields = Uri.EscapeDataString("downloads");
-        string requestUrl = $"https://api.gamebanana.com/Core/Item/Data?itemtype=Mod&itemid={itemId}&fields={fields}&return_keys=true&format=json_min";
-        using HttpResponseMessage response = await _httpClient.GetAsync(requestUrl);
-        response.EnsureSuccessStatusCode();
-        string json = await response.Content.ReadAsStringAsync();
-        using JsonDocument document = JsonDocument.Parse(json);
-        JsonElement data = document.RootElement;
-        if (data.ValueKind == JsonValueKind.Object
-            && data.TryGetProperty("value", out JsonElement wrappedValue))
+        var counts = new Dictionary<int, int>();
+        foreach (int[] batch in itemIds.Distinct().Chunk(GameBananaDownloadCounts.MaxBatch))
         {
-            data = wrappedValue;
+            using HttpResponseMessage response = await _httpClient.GetAsync(GameBananaDownloadCounts.BatchUrl(batch), cancellationToken);
+            if (response.StatusCode == HttpStatusCode.TooManyRequests) throw new OnlineRateLimitException(response.Headers.RetryAfter?.Delta);
+            response.EnsureSuccessStatusCode();
+            foreach (var pair in GameBananaDownloadCounts.Parse(await response.Content.ReadAsStringAsync(cancellationToken), batch))
+                counts[pair.Key] = pair.Value;
         }
-
-        return Math.Max(0, TryGetInt32Property(data, "downloads"));
+        return counts;
     }
 
+    /// <summary>
+    /// Fills download counts from the 12-hour metric cache, then one batch request. Returns how many
+    /// Mods changed; anything still unknown stays at 0 for a later attempt.
+    /// </summary>
+    private async Task<int> FillOnlineDownloadCountsAsync(IReadOnlyList<OnlineModCard> mods, CancellationToken cancellationToken)
+    {
+        int filled = 0;
+        var unknown = new List<OnlineModCard>();
+        foreach (OnlineModCard mod in mods.Where(mod => mod.Downloads <= 0))
+        {
+            if (await TryReadGameBananaDownloadMetricCacheAsync(mod.ItemId) is int cached) filled += ApplyDownloadCount(mod, cached);
+            else unknown.Add(mod);
+        }
+        if (unknown.Count == 0) return filled;
+        Dictionary<int, int> fetched = await FetchGameBananaDownloadCountsAsync(unknown.Select(mod => mod.ItemId).ToArray(), cancellationToken);
+        foreach (OnlineModCard mod in unknown)
+        {
+            if (!fetched.TryGetValue(mod.ItemId, out int downloads)) continue;
+            filled += ApplyDownloadCount(mod, downloads);
+            await WriteGameBananaDownloadMetricCacheAsync(mod.ItemId, downloads);
+        }
+        return filled;
+
+        static int ApplyDownloadCount(OnlineModCard mod, int downloads)
+        {
+            if (mod.Downloads == downloads) return 0;
+            mod.Downloads = Math.Max(0, downloads);
+            mod.HotnessScore = CalculateOnlineHotness(mod.Likes, mod.Views, mod.Downloads);
+            return 1;
+        }
+    }
+
+    /// <summary>
+    /// Fallback when the inline batch did not finish: one more batch later, written into the cards
+    /// already on screen. It never rebuilds or re-sorts the list under the user.
+    /// </summary>
     private async Task EnrichMissingGameBananaDownloadsAsync(
         OnlineCategoryPageResult pageResult,
         string cacheCategoryKey,
         string configKey,
         int enrichmentVersion)
     {
-        int updatedSinceRefresh = 0;
-        foreach (OnlineModCard mod in pageResult.Mods.Where(mod => mod.Downloads <= 0))
+        try
         {
-            if (enrichmentVersion != _onlineDownloadEnrichmentVersion
-                || !string.Equals(configKey, _lastLoadedOnlineConfigKey, StringComparison.Ordinal))
-            {
-                return;
-            }
-
-            int? downloadCount = await TryReadGameBananaDownloadMetricCacheAsync(mod.ItemId);
-            if (!downloadCount.HasValue)
-            {
-                try
-                {
-                    downloadCount = await FetchGameBananaDownloadCountAsync(mod.ItemId);
-                    await WriteGameBananaDownloadMetricCacheAsync(mod.ItemId, downloadCount.Value);
-                    await Task.Delay(150);
-                }
-                catch (HttpRequestException ex) when (ex.StatusCode == HttpStatusCode.TooManyRequests)
-                {
-                    break;
-                }
-                catch
-                {
-                    continue;
-                }
-            }
-
-            mod.Downloads = Math.Max(0, downloadCount.Value);
-            mod.HotnessScore = CalculateOnlineHotness(mod.Likes, mod.Views, mod.Downloads);
-            updatedSinceRefresh++;
-            if (updatedSinceRefresh >= 8)
-            {
-                updatedSinceRefresh = 0;
-                RefreshOnlinePaneV2();
-            }
+            await Task.Delay(1500);
+            bool Current() => enrichmentVersion == _onlineDownloadEnrichmentVersion
+                && string.Equals(configKey, _lastLoadedOnlineConfigKey, StringComparison.Ordinal);
+            if (!Current() || TryGetOnlineRateLimitDelay(out _)) return;
+            using var timeout = new CancellationTokenSource(OnlineModListRequestTimeout);
+            int filled = await FillOnlineDownloadCountsAsync(pageResult.Mods, timeout.Token);
+            if (filled == 0 || !Current()) return;
+            RefreshOnlineCardMetrics();
+            await WriteOnlineCategoryPageCacheAsync(cacheCategoryKey, pageResult);
         }
-
-        if (enrichmentVersion != _onlineDownloadEnrichmentVersion
-            || !string.Equals(configKey, _lastLoadedOnlineConfigKey, StringComparison.Ordinal))
+        catch (OnlineRateLimitException ex)
         {
-            return;
+            RegisterOnlineRateLimit(ex.RetryAfter);
         }
-
-        await WriteOnlineCategoryPageCacheAsync(cacheCategoryKey, pageResult);
-        RefreshOnlinePaneV2();
+        catch (Exception ex) when (ex is HttpRequestException or OperationCanceledException or JsonException or InvalidDataException or IOException)
+        {
+            // Counts are decorative; the page itself already loaded.
+        }
     }
 
     private string ResolveOnlineCharacterName(string? categoryName, string title, bool useEndfieldMetadata)
@@ -7614,11 +7649,18 @@ public sealed partial class MainWindow : Window
         var installedHost = new ContentControl { Height = 24, HorizontalContentAlignment = HorizontalAlignment.Left };
         contentPanel.Children.Add(installedHost);
         var metricsPanel = new StackPanel { Orientation = Orientation.Horizontal, Spacing = 8 };
-        metricsPanel.Children.Add(CreateOnlineMetricBadge($"{L("热度", "Heat")} {mod.HotnessScore:F1}", true));
+        Border heatMetric = CreateOnlineMetricBadge($"{L("热度", "Heat")} {mod.HotnessScore:F1}", true);
+        Border downloadMetric = CreateOnlineMetricBadge($"↓ {mod.Downloads}", false);
+        metricsPanel.Children.Add(heatMetric);
         metricsPanel.Children.Add(CreateOnlineMetricBadge($"♥ {mod.Likes}", false));
-        metricsPanel.Children.Add(CreateOnlineMetricBadge($"↓ {mod.Downloads}", false));
+        metricsPanel.Children.Add(downloadMetric);
         metricsPanel.Children.Add(CreateOnlineMetricBadge($"◉ {mod.Views}", false));
         contentPanel.Children.Add(metricsPanel);
+        TrackOnlineCardMetrics(metricsPanel, () =>
+        {
+            ((TextBlock)heatMetric.Child).Text = $"{L("热度", "Heat")} {mod.HotnessScore:F1}";
+            ((TextBlock)downloadMetric.Child).Text = $"↓ {mod.Downloads}";
+        });
         var cardStatus = new TextBlock
         {
             Text = $"{L("更新", "Updated")} {mod.UpdatedAt:yyyy-MM-dd}  ·  ID {mod.ItemId}",
@@ -7839,6 +7881,12 @@ public sealed partial class MainWindow : Window
         Grid.SetColumn(downloads, 2);
         metrics.Children.Add(downloads);
         content.Children.Add(metrics);
+        TrackOnlineCardMetrics(metrics, () =>
+        {
+            // Both indicators are icon/label + value StackPanels; the value is the last TextBlock.
+            ((TextBlock)((StackPanel)heatBadge.Child).Children[^1]).Text = mod.HotnessScore.ToString("F1", CultureInfo.CurrentCulture);
+            ((TextBlock)((StackPanel)downloads.Child).Children[^1]).Text = FormatCompactMetric(mod.Downloads);
+        });
         Grid.SetRow(content, 1);
         root.Children.Add(content);
 

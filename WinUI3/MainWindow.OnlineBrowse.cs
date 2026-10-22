@@ -134,4 +134,19 @@ public sealed partial class MainWindow
         if (_onlineWindowClosed) return;
         foreach (Action<bool> refresh in _onlineCardRefreshers.ToArray()) refresh(refreshInstalled);
     }
+
+    // Late download counts update these cards in place instead of rebuilding and re-sorting the list.
+    private readonly HashSet<Action> _onlineCardMetricRefreshers = [];
+
+    private void TrackOnlineCardMetrics(FrameworkElement host, Action update)
+    {
+        host.Loaded += (_, _) => { _onlineCardMetricRefreshers.Add(update); update(); };
+        host.Unloaded += (_, _) => _onlineCardMetricRefreshers.Remove(update);
+    }
+
+    private void RefreshOnlineCardMetrics()
+    {
+        if (_onlineWindowClosed) return;
+        foreach (Action update in _onlineCardMetricRefreshers.ToArray()) update();
+    }
 }
