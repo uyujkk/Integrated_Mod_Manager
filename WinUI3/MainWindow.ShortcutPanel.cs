@@ -35,6 +35,12 @@ public sealed partial class MainWindow
     private TextBlock? _shortcutHotkeyStatus;
     private TextBlock? _shortcutPrivilegeNotice;
     private Button? _shortcutElevateButton;
+    private int _shortcutOverlayOpacity = 100;
+    private bool _shortcutHideUnsupported;
+    private Slider? _shortcutOpacitySlider, _overlayOpacitySlider;
+    private bool _shortcutOpacitySyncing;
+    // One shared brush: changing its colour recolours every overlay text at once.
+    private readonly SolidColorBrush _overlayTextBrush = new(Color.FromArgb(255, 255, 255, 255));
     private TextBlock? _overlayModText, _overlayTargetText, _overlayEnabledText, _overlayStatusText;
     private StackPanel? _overlayButtonList;
     private ScrollViewer? _overlayScroll;
@@ -177,14 +183,32 @@ public sealed partial class MainWindow
             HorizontalAlignment = HorizontalAlignment.Left, SpinButtonPlacementMode = NumberBoxSpinButtonPlacementMode.Compact
         };
         pane.Children.Add(_shortcutHoldDuration);
+        _shortcutOpacitySlider = CreateOverlayOpacitySlider(L("浮窗不透明度（%）", "Overlay opacity (%)"));
+        _shortcutOpacitySlider.Width = 260;
+        _shortcutOpacitySlider.HorizontalAlignment = HorizontalAlignment.Left;
+        pane.Children.Add(_shortcutOpacitySlider);
+        pane.Children.Add(BuildOverlayTextColorButton());
+        var hideUnsupported = new ToggleSwitch
+        {
+            Header = L("隐藏无法发送的绑定（鼠标、手柄等）", "Hide bindings that cannot be sent (mouse, controller, ...)"),
+            IsOn = _shortcutHideUnsupported
+        };
+        hideUnsupported.Toggled += (_, _) =>
+        {
+            _shortcutHideUnsupported = hideUnsupported.IsOn;
+            SaveShellConfig();
+            RenderShortcutButtons();
+        };
+        pane.Children.Add(hideUnsupported);
         BuildCharacterFollowControls(pane);
         pane.Children.Add(new TextBlock
         {
-            Text = L("浮窗支持窗口化／无边框全屏；独占全屏可能遮住浮窗。不支持的绑定会禁用；相同按键可能同时触发多个 Mod。",
-                "The overlay supports windowed/borderless mode; exclusive fullscreen may cover it. Unsupported bindings are disabled. A shared key can trigger multiple Mods."),
+            Text = L("浮窗支持窗口化／无边框全屏；独占全屏可能遮住浮窗。无法发送的绑定会显示原因；相同按键可能同时触发多个 Mod。",
+                "The overlay supports windowed/borderless mode; exclusive fullscreen may cover it. Bindings that cannot be sent show the reason. A shared key can trigger multiple Mods."),
             TextWrapping = TextWrapping.Wrap, Opacity = .7
         });
-        _shortcutStatus = new TextBlock { TextWrapping = TextWrapping.Wrap };
+        // Fixed height: status changes must not move the shortcut list below it.
+        _shortcutStatus = FixedStatusText(lines: 3, fontSize: 14);
         pane.Children.Add(_shortcutStatus);
         _shortcutButtons = new StackPanel { Spacing = 8 };
         pane.Children.Add(_shortcutButtons);
@@ -261,25 +285,146 @@ public sealed partial class MainWindow
         _shortcutTargetPicker.SelectedItem = targets.FirstOrDefault(t => t.Handle == previous?.Handle && t.StartTicks == previous.StartTicks);
     }
 
+    private DetectedModShortcut[] VisibleShortcuts() => _shortcutHideUnsupported
+        ? _shortcutDetected.Where(s => ShortcutKeyPlan.TryCreate(s.RawKey, out _)).ToArray()
+        : _shortcutDetected.ToArray();
+
     private void RenderShortcutButtons()
     {
         if (_shortcutButtons is null) return;
         _shortcutButtons.Children.Clear();
-        foreach (var shortcut in _shortcutDetected) _shortcutButtons.Children.Add(CreateShortcutAction(shortcut));
+        DetectedModShortcut[] visible = VisibleShortcuts();
+        int hidden = _shortcutDetected.Count - visible.Length;
+        if (hidden > 0)
+            _shortcutButtons.Children.Add(new TextBlock
+            {
+                Text = L($"已隐藏 {hidden} 个无法发送的绑定。", $"{hidden} bindings that cannot be sent are hidden."),
+                Opacity = .65, TextWrapping = TextWrapping.Wrap
+            });
+        foreach (var shortcut in visible) _shortcutButtons.Children.Add(CreateShortcutAction(shortcut));
         RefreshShortcutOverlay();
+    }
+
+    private string UnsupportedReasonText(ShortcutUnsupportedReason reason) => reason switch
+    {
+        ShortcutUnsupportedReason.Mouse => L("鼠标按键：这是 Mod 菜单的点击／拖动操作，需要在游戏内用鼠标直接操作", "Mouse button: a Mod-menu click or drag; use the mouse in game"),
+        ShortcutUnsupportedReason.Controller => L("手柄按键：键盘输入无法模拟手柄，请用手柄或同一节里的键盘绑定", "Controller button: keyboard input cannot emulate a controller; use a controller or the section's keyboard binding"),
+        ShortcutUnsupportedReason.UnknownKey => L("含无法识别的按键名", "Contains an unrecognized key name"),
+        ShortcutUnsupportedReason.Contradictory => L("按键条件互相矛盾（同一个键既要求按下又要求不按）", "Contradictory key constraints"),
+        ShortcutUnsupportedReason.TooManyKeys => L("需要同时按住的键过多", "Too many keys held at once"),
+        ShortcutUnsupportedReason.SystemShortcut => L("会触发系统操作（如 Alt+F4、Win 键），已禁止发送", "Would trigger a system action (such as Alt+F4 or Win); blocked"),
+        _ => L("没有可按下的键", "No key to press")
+    };
+
+    private TextBlock FixedStatusText(int lines, double fontSize)
+    {
+        var text = new TextBlock
+        {
+            FontSize = fontSize, TextWrapping = TextWrapping.Wrap, MaxLines = lines,
+            TextTrimming = TextTrimming.CharacterEllipsis, Height = Math.Ceiling(fontSize * 1.34 * lines)
+        };
+        // The full message stays available when trimmed.
+        text.RegisterPropertyChangedCallback(TextBlock.TextProperty, (_, _) => ToolTipService.SetToolTip(text, string.IsNullOrEmpty(text.Text) ? null : text.Text));
+        return text;
+    }
+
+    internal static Color ParseOverlayTextColor(string? value) =>
+        value is { Length: 7 } && value[0] == '#' && uint.TryParse(value[1..], System.Globalization.NumberStyles.HexNumber, null, out uint rgb)
+            ? Color.FromArgb(255, (byte)(rgb >> 16), (byte)(rgb >> 8), (byte)rgb)
+            : Color.FromArgb(255, 255, 255, 255);
+
+    private string OverlayTextColorValue => $"#{_overlayTextBrush.Color.R:X2}{_overlayTextBrush.Color.G:X2}{_overlayTextBrush.Color.B:X2}";
+
+    private Button BuildOverlayTextColorButton()
+    {
+        var picker = new ColorPicker
+        {
+            Color = _overlayTextBrush.Color, IsAlphaEnabled = false, IsMoreButtonVisible = false,
+            IsColorChannelTextInputVisible = false, IsHexInputVisible = true
+        };
+        picker.ColorChanged += (_, e) => _overlayTextBrush.Color = e.NewColor;
+        var presets = new StackPanel { Orientation = Orientation.Horizontal, Spacing = 6 };
+        foreach (string hex in new[] { "#FFFFFF", "#FFE8A3", "#B8F5C0", "#A8D8FF", "#FFC0DA", "#202020" })
+        {
+            Color color = ParseOverlayTextColor(hex);
+            var swatch = new Button
+            {
+                Width = 30, Height = 30, Padding = new Thickness(0), Background = new SolidColorBrush(color),
+                BorderBrush = new SolidColorBrush(Color.FromArgb(120, 128, 128, 128)), BorderThickness = new Thickness(1)
+            };
+            ToolTipService.SetToolTip(swatch, hex);
+            swatch.Click += (_, _) => picker.Color = color;
+            presets.Children.Add(swatch);
+        }
+        var flyoutContent = new StackPanel { Spacing = 10 };
+        flyoutContent.Children.Add(new TextBlock { Text = L("常用颜色", "Presets") });
+        flyoutContent.Children.Add(presets);
+        flyoutContent.Children.Add(picker);
+        var flyout = new Flyout { Content = flyoutContent };
+        flyout.Closed += (_, _) => SaveShellConfig();
+        var label = new StackPanel { Orientation = Orientation.Horizontal, Spacing = 8 };
+        label.Children.Add(new Border
+        {
+            Width = 18, Height = 18, CornerRadius = new CornerRadius(3), Background = _overlayTextBrush,
+            BorderBrush = new SolidColorBrush(Color.FromArgb(120, 128, 128, 128)), BorderThickness = new Thickness(1)
+        });
+        label.Children.Add(new TextBlock { Text = L("浮窗字体颜色", "Overlay text colour"), VerticalAlignment = VerticalAlignment.Center });
+        return new Button { Content = label, Flyout = flyout };
+    }
+
+    private Slider CreateOverlayOpacitySlider(string header)
+    {
+        var slider = new Slider
+        {
+            Header = string.IsNullOrEmpty(header) ? null : header, Minimum = ShortcutOverlayWindow.MinimumOpacity, Maximum = 100, StepFrequency = 5,
+            SmallChange = 5, Value = _shortcutOverlayOpacity
+        };
+        // WinUI raises ValueChanged while the template loads (observed resetting to the minimum);
+        // only react to changes after the slider is live, and restore the saved value first.
+        bool live = false;
+        slider.Loaded += (_, _) =>
+        {
+            if (live) return;
+            slider.Value = _shortcutOverlayOpacity;
+            live = true;
+        };
+        slider.ValueChanged += (_, e) =>
+        {
+            if (!live || _shortcutOpacitySyncing || (int)Math.Round(e.NewValue) == _shortcutOverlayOpacity) return;
+            _shortcutOverlayOpacity = (int)Math.Round(e.NewValue);
+            _shortcutOpacitySyncing = true;
+            try
+            {
+                foreach (Slider other in new[] { _shortcutOpacitySlider, _overlayOpacitySlider }.OfType<Slider>())
+                    if (other != slider) other.Value = _shortcutOverlayOpacity;
+            }
+            finally { _shortcutOpacitySyncing = false; }
+            _shortcutOverlay?.SetBackgroundOpacity(_shortcutOverlayOpacity);
+            SaveShellConfig();
+        };
+        return slider;
     }
 
     private Button CreateShortcutAction(DetectedModShortcut shortcut, bool floating = false)
     {
-        bool supported = ShortcutKeyPlan.TryCreate(shortcut.RawKey, out _);
+        ShortcutUnsupportedReason reason = ShortcutKeyPlan.Explain(shortcut.RawKey);
+        bool supported = reason == ShortcutUnsupportedReason.None;
         var content = new StackPanel { Spacing = 3 };
-        content.Children.Add(new TextBlock { Text = shortcut.Shortcut, FontSize = 18, FontWeight = Microsoft.UI.Text.FontWeights.SemiBold, TextWrapping = TextWrapping.Wrap });
-        content.Children.Add(new TextBlock { Text = DescribeDetectedShortcut(shortcut), TextWrapping = TextWrapping.Wrap });
+        var title = new TextBlock { Text = shortcut.Shortcut, FontSize = 18, FontWeight = Microsoft.UI.Text.FontWeights.SemiBold, TextWrapping = TextWrapping.Wrap };
+        var description = new TextBlock { Text = DescribeDetectedShortcut(shortcut), TextWrapping = TextWrapping.Wrap };
         string source = $"{shortcut.SourceFile} · [{shortcut.Section}]";
         if (shortcut.Condition.Length > 0) source += " · " + L("条件：", "Condition: ") + shortcut.Condition;
         if (shortcut.Behavior.Equals("hold", StringComparison.OrdinalIgnoreCase)) source += " · " + L("按设定时长长按", "Hold for configured duration");
-        if (!supported) source += " · " + L("暂不支持发送此绑定", "Sending this binding is unsupported");
-        content.Children.Add(new TextBlock { Text = source, FontSize = 11, Opacity = .65, TextWrapping = TextWrapping.Wrap });
+        var sourceText = new TextBlock { Text = source, FontSize = 11, Opacity = .65, TextWrapping = TextWrapping.Wrap };
+        if (floating) title.Foreground = description.Foreground = sourceText.Foreground = _overlayTextBrush;
+        content.Children.Add(title); content.Children.Add(description); content.Children.Add(sourceText);
+        if (!supported)
+            content.Children.Add(new TextBlock
+            {
+                Text = L("无法发送：", "Cannot send: ") + UnsupportedReasonText(reason) + $"（key = {shortcut.RawKey}）",
+                FontSize = 11, TextWrapping = TextWrapping.Wrap,
+                Foreground = new SolidColorBrush(Color.FromArgb(255, 230, 150, 60))
+            });
         var button = new Button { Content = content, IsEnabled = supported, HorizontalAlignment = HorizontalAlignment.Stretch, HorizontalContentAlignment = HorizontalAlignment.Left, Padding = new Thickness(14, 10, 14, 10) };
         if (floating) button.AllowFocusOnInteraction = false;
         button.Click += async (_, _) => await SendShortcutFromPanelAsync(shortcut);
@@ -317,12 +462,13 @@ public sealed partial class MainWindow
         {
             if (_shortcutOverlay is null)
             {
-                _shortcutOverlay = new ShortcutOverlayWindow(BuildShortcutOverlayContent());
+                _shortcutOverlay = new ShortcutOverlayWindow(BuildShortcutOverlayContent(), _overlayTextBrush);
                 _shortcutOverlay.Closed += (_, _) =>
                 {
                     _shortcutOverlay = null; _shortcutOverlayVisible = false;
-                    _overlayButtonList = null; _overlayScroll = null; _overlayBindings = [];
+                    _overlayButtonList = null; _overlayScroll = null; _overlayBindings = []; _overlayOpacitySlider = null;
                 };
+                _shortcutOverlay.SetBackgroundOpacity(_shortcutOverlayOpacity);
             }
             _shortcutOverlay.ShowPanel();
             _shortcutOverlayVisible = true;
@@ -332,18 +478,33 @@ public sealed partial class MainWindow
 
     private UIElement BuildShortcutOverlayContent()
     {
-        var root = new Grid { Padding = new Thickness(14), RowSpacing = 10,
-            Background = new SolidColorBrush(Color.FromArgb(255, 28, 31, 38)), RequestedTheme = ElementTheme.Dark };
+        // The overlay window draws the (translucent) background; this content stays transparent.
+        var root = new Grid { Padding = new Thickness(14, 4, 14, 14), RowSpacing = 10, RequestedTheme = ElementTheme.Dark };
         root.RowDefinitions.Add(new RowDefinition { Height = GridLength.Auto });
         root.RowDefinitions.Add(new RowDefinition { Height = new GridLength(1, GridUnitType.Star) });
         var panel = new StackPanel { Spacing = 6 };
-        _overlayModText = new TextBlock { FontSize = 17, TextWrapping = TextWrapping.Wrap };
-        _overlayTargetText = new TextBlock { FontSize = 11, TextWrapping = TextWrapping.Wrap };
-        _overlayEnabledText = new TextBlock { TextWrapping = TextWrapping.Wrap };
-        _overlayStatusText = new TextBlock { TextWrapping = TextWrapping.Wrap, FontSize = 11, MaxHeight = 72 };
+        // Every header row has a fixed height so status changes never shift the list (row 1).
+        _overlayModText = FixedStatusText(lines: 1, fontSize: 17);
+        _overlayTargetText = FixedStatusText(lines: 1, fontSize: 11);
+        _overlayEnabledText = FixedStatusText(lines: 1, fontSize: 14);
+        _overlayStatusText = FixedStatusText(lines: 2, fontSize: 11);
+        foreach (TextBlock text in new[] { _overlayModText, _overlayTargetText, _overlayEnabledText, _overlayStatusText })
+            text.Foreground = _overlayTextBrush;
         panel.Children.Add(_overlayModText); panel.Children.Add(_overlayTargetText); panel.Children.Add(_overlayEnabledText);
-        panel.Children.Add(ShortcutButton(L("暂停发送", "Pause input"), () => { _shortcutInputEnabled = false; _shortcutEnabledToggle!.IsOn = false; RefreshShortcutOverlay(); }));
-        panel.Children.Add(ShortcutButton(L("隐藏面板", "Hide panel"), () => { _shortcutOverlay?.AppWindow.Hide(); _shortcutOverlayVisible = false; }));
+        // One compact row keeps the header short so the list keeps most of the panel.
+        var actions = new Grid { ColumnSpacing = 8 };
+        foreach (var width in new[] { GridLength.Auto, GridLength.Auto, GridLength.Auto, new GridLength(1, GridUnitType.Star) })
+            actions.ColumnDefinitions.Add(new ColumnDefinition { Width = width });
+        var pause = ShortcutButton(L("暂停", "Pause"), () => { _shortcutInputEnabled = false; _shortcutEnabledToggle!.IsOn = false; RefreshShortcutOverlay(); });
+        var hide = ShortcutButton(L("隐藏", "Hide"), () => { _shortcutOverlay?.AppWindow.Hide(); _shortcutOverlayVisible = false; });
+        pause.Foreground = hide.Foreground = _overlayTextBrush;
+        var opacityLabel = new TextBlock { Text = L("不透明", "Opacity"), VerticalAlignment = VerticalAlignment.Center, FontSize = 12, Foreground = _overlayTextBrush };
+        _overlayOpacitySlider = CreateOverlayOpacitySlider(string.Empty);
+        _overlayOpacitySlider.VerticalAlignment = VerticalAlignment.Center;
+        ToolTipService.SetToolTip(_overlayOpacitySlider, L("浮窗不透明度", "Overlay opacity"));
+        Grid.SetColumn(hide, 1); Grid.SetColumn(opacityLabel, 2); Grid.SetColumn(_overlayOpacitySlider, 3);
+        actions.Children.Add(pause); actions.Children.Add(hide); actions.Children.Add(opacityLabel); actions.Children.Add(_overlayOpacitySlider);
+        panel.Children.Add(actions);
         panel.Children.Add(_overlayStatusText);
         _overlayButtonList = new StackPanel { Spacing = 8 };
         _overlayScroll = new ScrollViewer { Content = _overlayButtonList, VerticalScrollBarVisibility = ScrollBarVisibility.Auto,
@@ -368,8 +529,9 @@ public sealed partial class MainWindow
         _overlayEnabledText!.Text = _shortcutInputEnabled ? L("按键发送已开启", "Input enabled") : L("已暂停，请在主窗口开启发送", "Paused; enable input in main window");
         _overlayStatusText!.Text = _shortcutStatus?.Text ?? string.Empty;
         // Status, pause and target changes must not replace the scroll container or buttons.
-        if (_overlayBindings.SequenceEqual(_shortcutDetected)) return;
-        _overlayBindings = _shortcutDetected.ToArray();
+        DetectedModShortcut[] visible = VisibleShortcuts();
+        if (_overlayBindings.SequenceEqual(visible)) return;
+        _overlayBindings = visible;
         _overlayButtonList.Children.Clear();
         foreach (var shortcut in _overlayBindings) _overlayButtonList.Children.Add(CreateShortcutAction(shortcut, floating: true));
         _overlayScroll?.ChangeView(null, 0, null, true);

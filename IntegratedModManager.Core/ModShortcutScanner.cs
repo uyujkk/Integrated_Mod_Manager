@@ -262,7 +262,8 @@ public static class ModShortcutScanner
         {
             string token = rawToken.Trim().Trim(',');
             string lower = token.ToLowerInvariant();
-            if (lower is "no_modifiers" or "no_ctrl" or "no_control" or "no_shift" or "no_alt" or "no_win")
+            // Exclusions (no_ctrl, no_vk_return, ...) stay in RawKey; the label shows only pressed keys.
+            if (lower.StartsWith("no_", StringComparison.Ordinal))
             {
                 continue;
             }
@@ -295,6 +296,7 @@ public static class ModShortcutScanner
             "XBUTTON1" => "Mouse X1",
             "XBUTTON2" => "Mouse X2",
             "RETURN" => "Enter",
+            "BACK" => "Backspace",
             "MENU" => "Alt",
             "APPS" => "Apps",
             "ESCAPE" => "Esc",

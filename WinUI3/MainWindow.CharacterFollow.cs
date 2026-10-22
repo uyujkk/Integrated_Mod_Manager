@@ -59,7 +59,9 @@ public sealed partial class MainWindow
                 : L("自动跟随已暂停。", "Automatic following paused.");
         };
         pane.Children.Add(_characterFollowToggle);
-        _characterFollowStatus = new TextBlock { TextWrapping = TextWrapping.Wrap, Text = L("未配置；参考图只保存在本机。", "Not configured; references remain local.") };
+        // Updated every recognition tick; a fixed height keeps the shortcut list below it still.
+        _characterFollowStatus = FixedStatusText(lines: 2, fontSize: 14);
+        _characterFollowStatus.Text = L("未配置；参考图只保存在本机。", "Not configured; references remain local.");
         pane.Children.Add(_characterFollowStatus);
         _characterFollowTimer = new System.Threading.Timer(_ =>
             DispatcherQueue.TryEnqueue(() => _ = ObserveCharacterAsync()), null, 700, 700);

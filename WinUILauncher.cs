@@ -10,7 +10,7 @@ using System.Windows.Forms;
 [assembly: AssemblyCopyright("Copyright (c) 2026 uyujkk")]
 [assembly: AssemblyVersion("4.3.1.0")]
 [assembly: AssemblyFileVersion("4.3.1.0")]
-[assembly: AssemblyInformationalVersion("4.3.1-hotkeys-test.3")]
+[assembly: AssemblyInformationalVersion("4.3.1-hotkeys-test.4")]
 
 internal static class WinUILauncher
 {

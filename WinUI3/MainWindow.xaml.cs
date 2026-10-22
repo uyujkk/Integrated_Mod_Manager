@@ -37,7 +37,7 @@ namespace ModFolderCopier.WinUI;
 
 public sealed partial class MainWindow : Window
 {
-    private const string AppVersion = "v4.3.1-hotkeys-test.3";
+    private const string AppVersion = "v4.3.1-hotkeys-test.4";
     private static bool AppSelfUpdateEnabled => ApplicationReleasePolicy.ApplicationSelfUpdateEnabled;
     private const string GitHubRepositoryUrl = "https://github.com/uyujkk/Integrated_Mod_Manager";
     private const string GitHubLatestReleaseApiUrl = "https://api.github.com/repos/uyujkk/Integrated_Mod_Manager/releases/latest";
@@ -2248,6 +2248,9 @@ public sealed partial class MainWindow : Window
             _shortcutPanelHotkeyEnabled = config?.ShortcutPanelHotkeyEnabled ?? true;
             _shortcutInputMode = Enum.TryParse(config?.ShortcutInputMode, out ShortcutInputMode inputMode) ? inputMode : ShortcutInputMode.ScanCode;
             if (!Enum.IsDefined(_shortcutInputMode)) _shortcutInputMode = ShortcutInputMode.ScanCode;
+            _shortcutOverlayOpacity = Math.Clamp(config?.ShortcutOverlayOpacity ?? 100, ShortcutOverlayWindow.MinimumOpacity, 100);
+            _shortcutHideUnsupported = config?.ShortcutHideUnsupported ?? false;
+            _overlayTextBrush.Color = ParseOverlayTextColor(config?.ShortcutOverlayTextColor);
             _lastModUpdateCheckUtc = TryParseDateTimeOffset(config?.LastModUpdateCheckUtc);
             _latestReleaseTag = config?.LatestReleaseTag;
             _latestReleaseTitle = config?.LatestReleaseTitle;
@@ -2385,6 +2388,9 @@ public sealed partial class MainWindow : Window
                 ShortcutPanelHotkeyKey = _shortcutPanelHotkeyKey,
                 ShortcutPanelHotkeyEnabled = _shortcutPanelHotkeyEnabled,
                 ShortcutInputMode = _shortcutInputMode.ToString(),
+                ShortcutOverlayOpacity = _shortcutOverlayOpacity,
+                ShortcutHideUnsupported = _shortcutHideUnsupported,
+                ShortcutOverlayTextColor = OverlayTextColorValue,
                 LastModUpdateCheckUtc = _lastModUpdateCheckUtc?.ToString("O"),
                 LatestReleaseTag = _latestReleaseTag,
                 LatestReleaseTitle = _latestReleaseTitle,
@@ -14860,6 +14866,9 @@ public sealed class BetaShellConfig
     public uint ShortcutPanelHotkeyKey { get; set; } = 0x4B;
     public bool ShortcutPanelHotkeyEnabled { get; set; } = true;
     public string? ShortcutInputMode { get; set; }
+    public int? ShortcutOverlayOpacity { get; set; }
+    public bool? ShortcutHideUnsupported { get; set; }
+    public string? ShortcutOverlayTextColor { get; set; }
     public Dictionary<string, LocalLibraryState>? LocalLibraries { get; set; }
     public OnlineWorkspacePreferences? OnlinePreferences { get; set; }
     public int EndfieldBridgeOfferRevision { get; set; }
