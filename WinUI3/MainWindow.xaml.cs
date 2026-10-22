@@ -37,7 +37,7 @@ namespace ModFolderCopier.WinUI;
 
 public sealed partial class MainWindow : Window
 {
-    private const string AppVersion = "v4.3.0";
+    private const string AppVersion = "v4.3.1-test.1";
     private static bool AppSelfUpdateEnabled => ApplicationReleasePolicy.ApplicationSelfUpdateEnabled;
     private const string GitHubRepositoryUrl = "https://github.com/uyujkk/Integrated_Mod_Manager";
     private const string GitHubLatestReleaseApiUrl = "https://api.github.com/repos/uyujkk/Integrated_Mod_Manager/releases/latest";
@@ -550,7 +550,7 @@ public sealed partial class MainWindow : Window
         UpdateCheckIntervalHintTextBlock.Text = L("这里只影响软件版本检查，不影响 Mod 更新检查。Mod 更新频率请到左侧“更新”模块设置。", "This only affects app-version checks, not mod update checks. Configure mod update frequency in the Updates section.");
         if (!AppSelfUpdateEnabled)
         {
-            SettingsProjectHintTextBlock.Text = L("4.2 开发预览版已关闭软件自动更新；公开发布页供查阅，当前本地整合包请按随包说明使用。Mod 更新不受影响。", "App updates are disabled in this 4.2 development preview. Public releases are available for reference; follow the included guide for this local package. Mod updates are unaffected.");
+            SettingsProjectHintTextBlock.Text = L("本地测试版已关闭软件自身更新，请按随包说明独立使用；Mod 更新不受影响。", "App self-updates are disabled in this local test build. Follow the included guide; Mod updates are unaffected.");
             UpdateCheckIntervalHintTextBlock.Text = L("测试版已禁用软件更新检查及自动安装，不会替换稳定版。", "App update checks and automatic installation are disabled in this beta. It does not replace the stable app.");
             UpdateCheckIntervalComboBox.IsEnabled = false;
         }
@@ -957,17 +957,7 @@ public sealed partial class MainWindow : Window
         _isApplyingUpdateCheckIntervalSelection = true;
         try
         {
-            UpdateCheckIntervalComboBox.Items.Clear();
-            UpdateCheckIntervalComboBox.Items.Add(new ComboBoxItem { Content = L("仅手动检查", "Manual only"), Tag = UpdateCheckInterval.Manual });
-            UpdateCheckIntervalComboBox.Items.Add(new ComboBoxItem { Content = L("每天启动时检查", "Check daily on startup"), Tag = UpdateCheckInterval.Daily });
-            UpdateCheckIntervalComboBox.Items.Add(new ComboBoxItem { Content = L("每 3 天启动时检查", "Check every 3 days on startup"), Tag = UpdateCheckInterval.EveryThreeDays });
-            UpdateCheckIntervalComboBox.Items.Add(new ComboBoxItem { Content = L("每周启动时检查", "Check weekly on startup"), Tag = UpdateCheckInterval.Weekly });
-
-            ComboBoxItem? selectedItem = UpdateCheckIntervalComboBox.Items
-                .OfType<ComboBoxItem>()
-                .FirstOrDefault(item => item.Tag is UpdateCheckInterval interval && interval == _updateCheckInterval);
-
-            UpdateCheckIntervalComboBox.SelectedItem = selectedItem ?? UpdateCheckIntervalComboBox.Items.OfType<ComboBoxItem>().FirstOrDefault();
+            PopulateStableIntervalOptions(UpdateCheckIntervalComboBox, _updateCheckInterval);
         }
         finally
         {
@@ -982,8 +972,8 @@ public sealed partial class MainWindow : Window
             LatestReleaseTitleTextBlock.Text = L($"独立测试版：{AppVersion}", $"Standalone beta: {AppVersion}");
             LatestReleaseMetaTextBlock.Text = L("手动下载 · 与稳定版分开解压使用", "Manual download · extract separately from the stable app");
             UpdateNotesTextBlock.Text = L(
-                "4.2 开发预览整合包：浏览保位、作者跨页浏览与收藏、下载队列和重试、旧库复制导入及图片缓存修正。\n曾出现一次详情页原生闪退，根因尚未确认，请查看随包已知问题。\n软件自动更新已禁用，Mod 在线下载和更新功能仍可使用。",
-                "4.2 integration preview: stable browsing position, paginated author browsing and saved items, download queues and retry, existing-library copy import, and image-cache fixes.\nA native details-page crash remains unresolved; see the included known issues.\nApp self-updates are disabled; online mod downloads and updates remain available.");
+                "Mod 更新修复测试版：修复检查频率切换崩溃，新增更新弹窗、下载并替换和旧版备份。\n本地测试包未发布；软件自身更新已关闭，Mod 更新仍可使用。",
+                "Mod update test build: fixes interval selection crashes and adds update prompts, download and replace, and old-version backups.\nThis local test package is unpublished; app self-updates are disabled and Mod updates remain available.");
             return;
         }
         string latestTag = string.IsNullOrWhiteSpace(_latestReleaseTag) ? L("尚未检查", "Not checked yet") : _latestReleaseTag!;
@@ -1013,17 +1003,7 @@ public sealed partial class MainWindow : Window
         _isApplyingModUpdateIntervalSelection = true;
         try
         {
-            ModUpdateIntervalComboBox.Items.Clear();
-            ModUpdateIntervalComboBox.Items.Add(new ComboBoxItem { Content = L("仅手动检查", "Manual only"), Tag = UpdateCheckInterval.Manual });
-            ModUpdateIntervalComboBox.Items.Add(new ComboBoxItem { Content = L("每天启动时检查", "Check daily on startup"), Tag = UpdateCheckInterval.Daily });
-            ModUpdateIntervalComboBox.Items.Add(new ComboBoxItem { Content = L("每 3 天启动时检查", "Check every 3 days on startup"), Tag = UpdateCheckInterval.EveryThreeDays });
-            ModUpdateIntervalComboBox.Items.Add(new ComboBoxItem { Content = L("每周启动时检查", "Check weekly on startup"), Tag = UpdateCheckInterval.Weekly });
-
-            ComboBoxItem? selectedItem = ModUpdateIntervalComboBox.Items
-                .OfType<ComboBoxItem>()
-                .FirstOrDefault(item => item.Tag is UpdateCheckInterval interval && interval == _modUpdateCheckInterval);
-
-            ModUpdateIntervalComboBox.SelectedItem = selectedItem ?? ModUpdateIntervalComboBox.Items.OfType<ComboBoxItem>().FirstOrDefault();
+            PopulateStableIntervalOptions(ModUpdateIntervalComboBox, _modUpdateCheckInterval);
         }
         finally
         {
@@ -2131,7 +2111,7 @@ public sealed partial class MainWindow : Window
             {
                 if (DownloadProgressPolicy.IsActive(task.State))
                 {
-                    if (task.Session?.CanCancel == false) return;
+                    if (task.Session?.CanCancel == false || task.ReplacementCommitting) return;
                     task.Cancellation.Cancel();
                     UpdateDownloadTask(task, DownloadTaskState.Canceling, task.Progress, "正在取消...", "Canceling...", forceRefresh: true);
                     return;
@@ -2169,7 +2149,7 @@ public sealed partial class MainWindow : Window
         bool retry = task.State is DownloadTaskState.Failed or DownloadTaskState.Canceled && task.RetryRequest is not null;
         view.ActionButton.Content = active ? L("取消", "Cancel") : retry ? L("重试", "Retry") : L("打开目录", "Open Folder");
         view.ActionButton.IsEnabled = active
-            ? task.State is not DownloadTaskState.Canceling && task.Session?.CanCancel != false
+            ? task.State is not DownloadTaskState.Canceling && task.Session?.CanCancel != false && !task.ReplacementCommitting
             : retry ? !task.RetryInProgress && !_onlineDownloadActions.IsPreparing : Directory.Exists(task.DestinationPath);
         ClearDownloadTasksButton.IsEnabled = _downloadTasks.Any(item => DownloadProgressPolicy.IsTerminal(item.State));
     }
@@ -8153,6 +8133,23 @@ public sealed partial class MainWindow : Window
         });
 
         StackPanel actions = new() { Orientation = Orientation.Horizontal, Spacing = 10 };
+        if (result.HasUpdate)
+        {
+            var replaceButton = new Button
+            {
+                Content = L("下载并替换", "Download and replace"),
+                Style = (Style)Application.Current.Resources["SecondaryButtonStyle"], MinHeight = 36,
+                IsEnabled = !_modUpdatesInProgress.Contains(result.Path) && Directory.Exists(result.Path)
+            };
+            replaceButton.Click += async (_, _) => await RunUiActionAsync("Download and replace Mod", () => DownloadAndReplaceTrackedModAsync(result));
+            actions.Children.Add(replaceButton);
+        }
+        if (!string.IsNullOrWhiteSpace(result.BackupPath))
+        {
+            var backupButton = new Button { Content = L("打开旧版备份", "Open old backup"), MinHeight = 36 };
+            backupButton.Click += (_, _) => OpenDirectory(result.BackupPath, L("旧版备份", "Old backup"));
+            actions.Children.Add(backupButton);
+        }
         Button openPageButton = new()
         {
             Content = L("打开页面", "Open Page"),
@@ -8188,7 +8185,8 @@ public sealed partial class MainWindow : Window
         {
             Content = L("删除记录", "Remove Tracking"),
             Style = (Style)Application.Current.Resources["SecondaryButtonStyle"],
-            MinHeight = 36
+            MinHeight = 36,
+            IsEnabled = !_modUpdatesInProgress.Contains(result.Path)
         };
         removeTrackingButton.Click += async (_, _) => await RunUiActionAsync("RemoveTrackedModRecordAsync", () => RemoveTrackedModRecordAsync(result));
         actions.Children.Add(removeTrackingButton);
@@ -8240,7 +8238,7 @@ public sealed partial class MainWindow : Window
             RefreshUpdatesPane();
 
             _trackedModUpdateResults.Clear();
-            foreach (TrackedModOrigin origin in _trackedModOrigins.Values.OrderBy(item => item.Title, StringComparer.CurrentCultureIgnoreCase))
+            foreach (TrackedModOrigin origin in _trackedModOrigins.Values.OrderBy(item => item.Title, StringComparer.CurrentCultureIgnoreCase).ToArray())
             {
                 TrackedModUpdateResult result = await FetchTrackedModUpdateResultAsync(origin);
                 _trackedModUpdateResults.Add(result);
@@ -8267,21 +8265,28 @@ public sealed partial class MainWindow : Window
             SaveShellConfig();
 
             int updateCount = _trackedModUpdateResults.Count(item => item.HasUpdate);
+            int failedCount = _trackedModUpdateResults.Count(item => item.CheckFailed);
             SetModUpdateStatus(
+                failedCount > 0 ? $"检查完成，发现 {updateCount} 个更新，{failedCount} 个检查失败，请重试。" :
                 updateCount > 0
                     ? $"检查完成，发现 {updateCount} 个 Mod 有更新。"
                     : "检查完成，当前所有已追踪 Mod 都是最新状态。",
-                updateCount > 0
+                failedCount > 0 ? $"Check complete: {updateCount} updates, {failedCount} checks failed. Please retry." : updateCount > 0
                     ? $"Check complete. {updateCount} tracked mods have updates."
                     : "Check complete. All tracked mods are up to date.");
 
             RefreshUpdatesPane();
 
-            if (showDialogs)
+            if (updateCount > 0)
+            {
+                await NotifyModUpdatesAvailableAsync();
+            }
+            else if (showDialogs)
             {
                 await ShowMessageAsync(
                     updateCount > 0
                         ? L($"已检查 {_trackedModUpdateResults.Count} 个 Mod，发现 {updateCount} 个有更新。", $"Checked {_trackedModUpdateResults.Count} mods and found {updateCount} updates.")
+                        : failedCount > 0 ? L($"{failedCount} 个 Mod 检查失败，请重试。", $"{failedCount} Mod checks failed. Please retry.")
                         : L($"已检查 {_trackedModUpdateResults.Count} 个 Mod，没有发现新更新。", $"Checked {_trackedModUpdateResults.Count} mods and found no new updates."),
                     L("更新检查完成", "Update check complete"));
             }
@@ -8314,6 +8319,16 @@ public sealed partial class MainWindow : Window
         catch
         {
         }
+
+        if (latest is null)
+            return new TrackedModUpdateResult
+            {
+                Path = origin.Path, ItemId = origin.ItemId, Title = origin.Title,
+                ProfileUrl = origin.ProfileUrl, PreviewUrl = origin.PreviewUrl,
+                LastKnownUpdatedAt = origin.LastKnownUpdatedAt, CheckFailed = true,
+                StatusTextZh = "检查失败，未能取得最新版本，请重试。",
+                StatusTextEn = "Check failed; latest version unavailable. Please retry."
+            };
 
         DateTimeOffset? latestUpdatedAt = latest?.UpdatedAt;
         DateTimeOffset? recordedUpdatedAt = origin.LastKnownUpdatedAt;
@@ -10978,9 +10993,12 @@ public sealed partial class MainWindow : Window
             return;
         }
 
-        _updateCheckInterval = interval;
-        SaveShellConfig();
-        RefreshSettingsPane();
+        try
+        {
+            _updateCheckInterval = interval;
+            SaveShellConfig();
+        }
+        catch (Exception ex) { ReportUiActionFailure(nameof(OnUpdateCheckIntervalSelectionChanged), ex); }
     }
 
     private void OnModUpdateIntervalSelectionChanged(object sender, SelectionChangedEventArgs e)
@@ -10990,9 +11008,12 @@ public sealed partial class MainWindow : Window
             return;
         }
 
-        _modUpdateCheckInterval = interval;
-        SaveShellConfig();
-        RefreshUpdatesPane();
+        try
+        {
+            _modUpdateCheckInterval = interval;
+            SaveShellConfig();
+        }
+        catch (Exception ex) { ReportUiActionFailure(nameof(OnModUpdateIntervalSelectionChanged), ex); }
     }
 
     private async void OnCheckModUpdatesClicked(object sender, RoutedEventArgs e)
@@ -14715,6 +14736,8 @@ public sealed class TrackedModOrigin
 
 public sealed class TrackedModUpdateResult
 {
+    public bool CheckFailed { get; set; }
+    public string? BackupPath { get; set; }
     public string Path { get; set; } = string.Empty;
 
     public int ItemId { get; set; }
@@ -14931,6 +14954,7 @@ public sealed class ModInstallBackupEntry
 
 public sealed class DownloadTaskItem
 {
+    public bool ReplacementCommitting { get; set; }
     public bool RestoredFromJournal { get; set; }
     public bool Interrupted { get; set; }
     public OnlineDownloadRetryRequest? RetryRequest { get; set; }

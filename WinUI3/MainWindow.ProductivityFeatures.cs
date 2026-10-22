@@ -471,7 +471,7 @@ public sealed partial class MainWindow
         if (!AppSelfUpdateEnabled)
         {
             _checkAppUpdatesOnStartup = false;
-            StartupUpdateDescriptionTextBlock.Text = L("4.2 开发预览版不检查或自动安装软件更新，请按随包说明使用独立整合包。", "This 4.2 development preview does not check for or automatically install app updates. Use the standalone package as described in the included guide.");
+            StartupUpdateDescriptionTextBlock.Text = L("本地测试版不检查或自动安装软件自身更新；Mod 更新仍可使用。", "This local test build does not check for or install app self-updates; Mod updates remain available.");
         }
         _isApplyingStartupUpdateSetting = true;
         StartupUpdateToggleSwitch.IsOn = _checkAppUpdatesOnStartup;

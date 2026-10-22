@@ -50,9 +50,9 @@ public sealed partial class MainWindow
         try
         {
             if (!_downloadJournalAvailable) throw new IOException(L("下载记录无法读取，已保留原文件。请先检查诊断报告和记录文件。", "The download record could not be read and was preserved. Check diagnostics and the record before starting new downloads."));
-            _downloadJournal.Save(_downloadTasks.Select(task => new DownloadTaskRecord<OnlineDownloadRetryRequest>(
+            _downloadJournal.Save(_downloadTasks.Select(task => ModUpdateRecoveryPolicy.ForSnapshot(new DownloadTaskRecord<OnlineDownloadRetryRequest>(
                 task.Id, task.Title, task.SourceIdentity, task.DestinationPath, task.State, task.Progress,
-                task.StatusZh, task.StatusEn, task.RetryRequest, task.ArchivePath, task.Interrupted)));
+                task.StatusZh, task.StatusEn, task.RetryRequest, task.ArchivePath, task.Interrupted))));
         }
         catch (Exception ex)
         {
