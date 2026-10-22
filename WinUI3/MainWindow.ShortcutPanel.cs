@@ -3,6 +3,7 @@ using System.Diagnostics;
 using IntegratedModManager.Core;
 using Microsoft.UI.Xaml;
 using Microsoft.UI.Xaml.Controls;
+using Microsoft.UI.Xaml.Controls.Primitives;
 using Microsoft.UI.Xaml.Media;
 using Windows.UI;
 
@@ -41,7 +42,10 @@ public sealed partial class MainWindow
     private bool _shortcutOpacitySyncing;
     // One shared brush: changing its colour recolours every overlay text at once.
     private readonly SolidColorBrush _overlayTextBrush = new(Color.FromArgb(255, 255, 255, 255));
-    private TextBlock? _overlayModText, _overlayTargetText, _overlayEnabledText, _overlayStatusText;
+    private TextBlock? _overlayTargetText, _overlayStatusText;
+    private ComboBox? _overlayModPicker;
+    private ToggleButton? _overlayInputToggle;
+    private bool _overlaySyncing;
     private StackPanel? _overlayButtonList;
     private ScrollViewer? _overlayScroll;
     private DetectedModShortcut[] _overlayBindings = [];
@@ -522,27 +526,44 @@ public sealed partial class MainWindow
         root.RowDefinitions.Add(new RowDefinition { Height = new GridLength(1, GridUnitType.Star) });
         var panel = new StackPanel { Spacing = 6 };
         // Every header row has a fixed height so status changes never shift the list (row 1).
-        _overlayModText = FixedStatusText(lines: 1, fontSize: 17);
+        // Only in-game-safe actions live here: switching Mod, arming input and a read-only preset save.
+        // Restoring presets or slots needs the game closed and stays in the main window.
+        _overlayModPicker = new ComboBox { HorizontalAlignment = HorizontalAlignment.Stretch, Foreground = _overlayTextBrush,
+            PlaceholderText = L("请选择 Mod", "Select a Mod") };
+        ToolTipService.SetToolTip(_overlayModPicker, L("切换要显示快捷键的 Mod", "Switch the Mod whose shortcuts are shown"));
+        _overlayModPicker.SelectionChanged += (_, _) =>
+        {
+            if (_overlaySyncing || _shortcutModPicker is null || _overlayModPicker.SelectedItem is not ShortcutModOption chosen) return;
+            if (!ReferenceEquals(_shortcutModPicker.SelectedItem, chosen)) _shortcutModPicker.SelectedItem = chosen;
+        };
         _overlayTargetText = FixedStatusText(lines: 1, fontSize: 11);
-        _overlayEnabledText = FixedStatusText(lines: 1, fontSize: 14);
         _overlayStatusText = FixedStatusText(lines: 2, fontSize: 11);
-        foreach (TextBlock text in new[] { _overlayModText, _overlayTargetText, _overlayEnabledText, _overlayStatusText })
-            text.Foreground = _overlayTextBrush;
-        panel.Children.Add(_overlayModText); panel.Children.Add(_overlayTargetText); panel.Children.Add(_overlayEnabledText);
-        // One compact row keeps the header short so the list keeps most of the panel.
-        var actions = new Grid { ColumnSpacing = 8 };
-        foreach (var width in new[] { GridLength.Auto, GridLength.Auto, GridLength.Auto, new GridLength(1, GridUnitType.Star) })
-            actions.ColumnDefinitions.Add(new ColumnDefinition { Width = width });
-        var pause = ShortcutButton(L("暂停", "Pause"), () => { _shortcutInputEnabled = false; _shortcutEnabledToggle!.IsOn = false; RefreshShortcutOverlay(); });
+        _overlayTargetText.Foreground = _overlayStatusText.Foreground = _overlayTextBrush;
+        panel.Children.Add(_overlayModPicker); panel.Children.Add(_overlayTargetText);
+        var actions = new Grid { ColumnSpacing = 6 };
+        for (int i = 0; i < 3; i++) actions.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(1, GridUnitType.Star) });
+        _overlayInputToggle = new ToggleButton { HorizontalAlignment = HorizontalAlignment.Stretch, Foreground = _overlayTextBrush };
+        ToolTipService.SetToolTip(_overlayInputToggle, L("开启或暂停向所选游戏窗口发送按键", "Arm or pause input to the selected game window"));
+        _overlayInputToggle.Click += (_, _) => SetShortcutInputFromOverlay(_overlayInputToggle.IsChecked == true);
+        var savePreset = ShortcutButton(L("保存预设", "Save preset"), () => _ = QuickSaveCombinationFromOverlayAsync());
+        ToolTipService.SetToolTip(savePreset, L("把当前启用的 Mod 组合和加载器参数保存为组合预设（只读取，不改动游戏）。恢复预设需先退出游戏，在主窗口操作。",
+            "Save the enabled Mod combination and loader parameters as a preset (read-only; the game is not changed). Restoring needs the game closed and is done in the main window."));
         var hide = ShortcutButton(L("隐藏", "Hide"), () => { _shortcutOverlay?.AppWindow.Hide(); _shortcutOverlayVisible = false; });
-        pause.Foreground = hide.Foreground = _overlayTextBrush;
+        savePreset.Foreground = hide.Foreground = _overlayTextBrush;
+        savePreset.HorizontalAlignment = hide.HorizontalAlignment = HorizontalAlignment.Stretch;
+        Grid.SetColumn(savePreset, 1); Grid.SetColumn(hide, 2);
+        actions.Children.Add(_overlayInputToggle); actions.Children.Add(savePreset); actions.Children.Add(hide);
+        panel.Children.Add(actions);
+        var opacityRow = new Grid { ColumnSpacing = 8 };
+        opacityRow.ColumnDefinitions.Add(new ColumnDefinition { Width = GridLength.Auto });
+        opacityRow.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(1, GridUnitType.Star) });
         var opacityLabel = new TextBlock { Text = L("不透明", "Opacity"), VerticalAlignment = VerticalAlignment.Center, FontSize = 12, Foreground = _overlayTextBrush };
         _overlayOpacitySlider = CreateOverlayOpacitySlider(string.Empty);
         _overlayOpacitySlider.VerticalAlignment = VerticalAlignment.Center;
-        ToolTipService.SetToolTip(_overlayOpacitySlider, L("浮窗不透明度", "Overlay opacity"));
-        Grid.SetColumn(hide, 1); Grid.SetColumn(opacityLabel, 2); Grid.SetColumn(_overlayOpacitySlider, 3);
-        actions.Children.Add(pause); actions.Children.Add(hide); actions.Children.Add(opacityLabel); actions.Children.Add(_overlayOpacitySlider);
-        panel.Children.Add(actions);
+        ToolTipService.SetToolTip(_overlayOpacitySlider, L("浮窗背景不透明度", "Overlay background opacity"));
+        Grid.SetColumn(_overlayOpacitySlider, 1);
+        opacityRow.Children.Add(opacityLabel); opacityRow.Children.Add(_overlayOpacitySlider);
+        panel.Children.Add(opacityRow);
         panel.Children.Add(_overlayStatusText);
         _overlayButtonList = new StackPanel { Spacing = 8 };
         _overlayScroll = new ScrollViewer { Content = _overlayButtonList, VerticalScrollBarVisibility = ScrollBarVisibility.Auto,
@@ -554,6 +575,54 @@ public sealed partial class MainWindow
         return root;
     }
 
+    private void SetShortcutInputFromOverlay(bool enable)
+    {
+        if (_shortcutEnabledToggle is null) return;
+        // Arming still needs a deliberately chosen target; the overlay cannot pick one.
+        if (enable && _shortcutTargetPicker?.SelectedItem is not ShortcutTarget)
+            _shortcutStatus!.Text = L("请先在主窗口选择目标游戏窗口，再开启发送。", "Select the target game window in the main window before arming input.");
+        else
+            _shortcutEnabledToggle.IsOn = enable;
+        RefreshShortcutOverlay();
+    }
+
+    /// <summary>In-game preset save: read-only capture, no dialogs (the main window may be hidden behind the game).</summary>
+    private async Task QuickSaveCombinationFromOverlayAsync()
+    {
+        if (_applyingCombinationProfile || _restoringPersistentRuntime) return;
+        if (GetSelectedRepository() is not { } repository)
+        {
+            _shortcutStatus!.Text = L("请先在主窗口选择仓库。", "Select a repository in the main window first.");
+            RefreshShortcutOverlay();
+            return;
+        }
+        string? userIni = repository.PersistentUserIniPath is { Length: > 0 } configured ? configured : TryGetDefaultPersistentIniPath(repository);
+        bool includeState = userIni is not null && File.Exists(userIni);
+        string name = L($"游戏内 {DateTime.Now:MM-dd HH:mm}", $"In-game {DateTime.Now:MM-dd HH:mm}");
+        _shortcutStatus!.Text = L("正在保存组合预设…", "Saving combination preset…");
+        RefreshShortcutOverlay();
+        SetCombinationBusy(true);
+        try
+        {
+            (int Mods, int Parameters)? saved = await CaptureCombinationProfileAsync(repository, name, null, includeState, userIni ?? string.Empty,
+                () => Task.FromResult(false));
+            _shortcutStatus.Text = saved is (int mods, int parameters)
+                ? L($"已保存预设“{name}”：{mods} 个 Mod，{parameters} 个参数。刚调整的 Mod 状态需先按 F10 写入再保存；恢复请退出游戏后在主窗口操作。",
+                    $"Saved preset '{name}': {mods} Mods, {parameters} parameters. Press F10 first to write fresh Mod state; restore from the main window after closing the game.")
+                : L("当前没有已启用的 Mod，未保存预设。", "No enabled Mods; the preset was not saved.");
+        }
+        catch (Exception ex)
+        {
+            LogApplicationIssue("Overlay combination capture", ex);
+            _shortcutStatus.Text = L("未保存预设：", "Preset not saved: ") + ex.Message;
+        }
+        finally
+        {
+            SetCombinationBusy(false);
+            if (!_onlineWindowClosed) RefreshShortcutOverlay();
+        }
+    }
+
     private void RefreshShortcutOverlay()
     {
         if (_shortcutOverlay is not null) UpdateShortcutOverlayControls();
@@ -562,9 +631,18 @@ public sealed partial class MainWindow
     private void UpdateShortcutOverlayControls()
     {
         if (_overlayButtonList is null) return;
-        _overlayModText!.Text = (_shortcutModPicker?.SelectedItem as ShortcutModOption)?.Label ?? L("请选择 Mod", "Select a Mod");
-        _overlayTargetText!.Text = (_shortcutTargetPicker?.SelectedItem as ShortcutTarget)?.Label ?? L("未选择目标窗口", "No target window");
-        _overlayEnabledText!.Text = _shortcutInputEnabled ? L("按键发送已开启", "Input enabled") : L("已暂停，请在主窗口开启发送", "Paused; enable input in main window");
+        _overlaySyncing = true;
+        try
+        {
+            // Mirror the main window; the overlay picker only forwards user choices back to it.
+            if (!ReferenceEquals(_overlayModPicker!.ItemsSource, _shortcutModPicker?.ItemsSource))
+                _overlayModPicker.ItemsSource = _shortcutModPicker?.ItemsSource;
+            _overlayModPicker.SelectedItem = _shortcutModPicker?.SelectedItem;
+            _overlayInputToggle!.IsChecked = _shortcutInputEnabled;
+            _overlayInputToggle.Content = _shortcutInputEnabled ? L("发送：开", "Input: on") : L("发送：关", "Input: off");
+        }
+        finally { _overlaySyncing = false; }
+        _overlayTargetText!.Text = (_shortcutTargetPicker?.SelectedItem as ShortcutTarget)?.Label ?? L("未选择目标窗口（在主窗口选择）", "No target window (select it in the main window)");
         _overlayStatusText!.Text = _shortcutStatus?.Text ?? string.Empty;
         // Status, pause and target changes must not replace the scroll container or buttons.
         DetectedModShortcut[] visible = VisibleShortcuts();

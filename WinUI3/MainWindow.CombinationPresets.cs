@@ -44,41 +44,13 @@ public sealed partial class MainWindow
         SetCombinationBusy(true);
         try
         {
-            List<string> paths = await Task.Run(CaptureCurrentConfigurationProfile);
-            if (paths.Count == 0 && !await ShowConfirmAsync(L(
-                "当前没有识别到已启用的仓库 Mod。保存空组合？恢复空组合会移除当前仓库中能识别的已部署 Mod。",
-                "No enabled repository Mods were recognized. Save an empty set? Restoring it removes recognized deployments from this repository."),
-                L("空组合", "Empty Combination"))) return;
-
-            IReadOnlyList<ModPersistentSourceState> captured = includeState
-                ? await Task.Run(() => ModPersistentPresetEngine.CaptureCombination(paths.Select(relative =>
-                    (Path.Combine(repository.SourcePath, relative), Path.GetFileName(relative))).ToArray(), userIni))
-                : [];
-            // Validate copy deployments too: their INIs may have changed independently.
-            if (captured.Any(state => state.Values.Count > 0) && !repository.UseDirectoryLinks)
-                await Task.Run(() => ModPersistentPresetEngine.PlanCombinationRuntimeRestore(captured.Select(state => state with
-                {
-                    ModDirectory = Path.Combine(repository.TargetPath, state.DeployedRelativePath)
-                }).ToArray(), userIni));
-            var stillEnabled = await Task.Run(() => ModCombinationDeploymentPolicy.Capture(repository.SourcePath, repository.TargetPath));
-            if (!stillEnabled.ToHashSet(StringComparer.OrdinalIgnoreCase).SetEquals(paths))
-                throw new IOException(L("部署目录在捕获期间发生变化，未保存组合。", "Deployment changed during capture; the combination was not saved."));
-
-            ModConfigurationProfile profile = existing ?? new ModConfigurationProfile { RepositoryId = repository.Id, Name = name };
-            profile.ModRelativePaths = paths;
-            profile.IncludesPersistentState = includeState;
-            profile.PersistentStates = captured.Select(state => new ModConfigurationPersistentState
-            {
-                ModRelativePath = Path.GetRelativePath(repository.SourcePath, state.ModDirectory),
-                Values = [.. state.Values]
-            }).ToList();
-            profile.UpdatedAtUtc = DateTimeOffset.UtcNow;
-            if (existing is null) _configurationProfiles.Add(profile);
-            _selectedConfigurationProfileId = profile.Id;
-            if (includeState) repository.PersistentUserIniPath = userIni;
-            SaveShellConfig();
-            int count = profile.PersistentStates.Sum(state => state.Values.Count);
-            ShowAppNotification($"已保存“{name}”：{paths.Count} 个 Mod，{count} 个参数。", $"Saved '{name}': {paths.Count} Mods, {count} parameters.");
+            (int mods, int count)? saved = await CaptureCombinationProfileAsync(repository, name, existing, includeState, userIni,
+                () => ShowConfirmAsync(L(
+                    "当前没有识别到已启用的仓库 Mod。保存空组合？恢复空组合会移除当前仓库中能识别的已部署 Mod。",
+                    "No enabled repository Mods were recognized. Save an empty set? Restoring it removes recognized deployments from this repository."),
+                    L("空组合", "Empty Combination")));
+            if (saved is (int mods, int count))
+                ShowAppNotification($"已保存“{name}”：{mods} 个 Mod，{count} 个参数。", $"Saved '{name}': {mods} Mods, {count} parameters.");
         }
         catch (Exception ex)
         {
@@ -87,6 +59,48 @@ public sealed partial class MainWindow
                 + ex.Message, L("保存组合失败", "Combination Save Failed"));
         }
         finally { SetCombinationBusy(false); }
+    }
+
+    /// <summary>
+    /// Read-only capture of the enabled combination (and loader state) into a preset. Shared by the main
+    /// window and the in-game overlay, which cannot show dialogs; returns null when an empty set is declined.
+    /// </summary>
+    private async Task<(int Mods, int Parameters)?> CaptureCombinationProfileAsync(WorkspaceRepository repository, string name,
+        ModConfigurationProfile? existing, bool includeState, string userIni, Func<Task<bool>> confirmEmpty)
+    {
+        List<string> paths = await Task.Run(CaptureCurrentConfigurationProfile);
+        if (paths.Count == 0 && !await confirmEmpty()) return null;
+
+        IReadOnlyList<ModPersistentSourceState> captured = includeState
+            ? await Task.Run(() => ModPersistentPresetEngine.CaptureCombination(paths.Select(relative =>
+                (Path.Combine(repository.SourcePath, relative), Path.GetFileName(relative))).ToArray(), userIni))
+            : [];
+        // Validate copy deployments too: their INIs may have changed independently. A deployment that is a
+        // link back to its own source Mod has no separate INIs (it may predate switching the repository to copies).
+        ModPersistentSourceState[] copies = captured
+            .Where(state => !ModDeploymentLinks.IsLinkTo(Path.Combine(repository.TargetPath, state.DeployedRelativePath), state.ModDirectory))
+            .Select(state => state with { ModDirectory = Path.Combine(repository.TargetPath, state.DeployedRelativePath) })
+            .ToArray();
+        if (copies.Any(state => state.Values.Count > 0) && !repository.UseDirectoryLinks)
+            await Task.Run(() => ModPersistentPresetEngine.PlanCombinationRuntimeRestore(copies, userIni));
+        var stillEnabled = await Task.Run(() => ModCombinationDeploymentPolicy.Capture(repository.SourcePath, repository.TargetPath));
+        if (!stillEnabled.ToHashSet(StringComparer.OrdinalIgnoreCase).SetEquals(paths))
+            throw new IOException(L("部署目录在捕获期间发生变化，未保存组合。", "Deployment changed during capture; the combination was not saved."));
+
+        ModConfigurationProfile profile = existing ?? new ModConfigurationProfile { RepositoryId = repository.Id, Name = name };
+        profile.ModRelativePaths = paths;
+        profile.IncludesPersistentState = includeState;
+        profile.PersistentStates = captured.Select(state => new ModConfigurationPersistentState
+        {
+            ModRelativePath = Path.GetRelativePath(repository.SourcePath, state.ModDirectory),
+            Values = [.. state.Values]
+        }).ToList();
+        profile.UpdatedAtUtc = DateTimeOffset.UtcNow;
+        if (existing is null) _configurationProfiles.Add(profile);
+        _selectedConfigurationProfileId = profile.Id;
+        if (includeState) repository.PersistentUserIniPath = userIni;
+        SaveShellConfig();
+        return (paths.Count, profile.PersistentStates.Sum(state => state.Values.Count));
     }
 
     private async Task RestoreCombinationProfileAsync()

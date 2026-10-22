@@ -3,7 +3,7 @@ namespace IntegratedModManager.Core;
 /// <summary>Isolated hotkey-panel test build; never replaces the installed stable application.</summary>
 public static class ApplicationReleasePolicy
 {
-    public const string VersionLabel = "v4.3.1-hotkeys-test.5";
+    public const string VersionLabel = "v4.3.1-hotkeys-test.6";
     public const string FileVersion = "4.3.1.0";
     public const string ReleasePageUrl = "https://github.com/uyujkk/Integrated_Mod_Manager/releases/latest";
     public static bool IsPrerelease => true;

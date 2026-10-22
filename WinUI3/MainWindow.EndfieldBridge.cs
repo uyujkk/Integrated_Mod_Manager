@@ -131,22 +131,48 @@ public sealed partial class MainWindow
             var parentBox = PathBox(repository.EndfieldParentPath, L("留空自动查找并校验官方 Games.exe", "Leave empty to find and verify the official Games.exe"));
             var loaderBox = PathBox(EndfieldBridgeIntegration.ResolveLoader(repository.LauncherPath, DefaultLoaderPaths()), L("XXMI Launcher.exe", "XXMI Launcher.exe"));
             var argumentsBox = PathBox(repository.EndfieldGameArguments, "-force-d3d11");
+            // Switch captions stay short (ToggleSwitch content cannot wrap); the explanation wraps below it.
             var modsSwitch = new ToggleSwitch
             {
                 Header = L("通过 XXMI / EFMI 加载 Mod", "Load Mods through XXMI / EFMI"),
-                OnContent = L("开启 · 需先适配 EFMI", "On · EFMI setup required"),
-                OffContent = L("关闭 · 直接启动游戏", "Off · Start the game directly"),
+                OnContent = L("开启", "On"), OffContent = L("关闭", "Off"),
                 IsOn = repository.EndfieldUseMods
             };
+            var modsHint = HintText();
             var integrated = new ToggleSwitch
             {
                 Header = L("启动方式", "Launch method"),
-                OnContent = L("内置终末地启动：官方父进程直启，无需额外下载", "Integrated Endfield launch: official parent, no extra download"),
-                OffContent = L("原有加载器：直接运行下方的 XXMI 或其他启动器", "Existing loader: run the XXMI or other launcher below directly"),
+                OnContent = L("内置终末地启动", "Integrated Endfield launch"),
+                OffContent = L("原有加载器", "Existing loader"),
                 IsOn = repository.UseEndfieldBridge
             };
+            var launchHint = HintText();
             var output = new TextBlock { TextWrapping = TextWrapping.Wrap, IsTextSelectionEnabled = true, FontFamily = new Microsoft.UI.Xaml.Media.FontFamily("Consolas"), FontSize = 12 };
-            var outputBorder = new Border { Style = (Style)Application.Current.Resources["InsetBorderStyle"], Padding = new Thickness(12, 10, 12, 10), Child = output, Visibility = Visibility.Collapsed };
+            // Results sit below the scrolling settings, so showing them never pushes the form around.
+            var outputViewer = new ScrollViewer
+            {
+                Content = output, MaxHeight = 140,
+                HorizontalScrollBarVisibility = ScrollBarVisibility.Disabled, HorizontalScrollMode = ScrollMode.Disabled
+            };
+            var outputClose = new Button
+            {
+                Content = new FontIcon { Glyph = "", FontSize = 12 }, Padding = new Thickness(8, 4, 8, 4),
+                Style = (Style)Application.Current.Resources["SecondaryButtonStyle"], VerticalAlignment = VerticalAlignment.Top
+            };
+            ToolTipService.SetToolTip(outputClose, L("关闭结果", "Close result"));
+            var outputGrid = new Grid { ColumnSpacing = 8, RowSpacing = 6 };
+            outputGrid.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(1, GridUnitType.Star) });
+            outputGrid.ColumnDefinitions.Add(new ColumnDefinition { Width = GridLength.Auto });
+            outputGrid.RowDefinitions.Add(new RowDefinition { Height = GridLength.Auto });
+            outputGrid.RowDefinitions.Add(new RowDefinition { Height = GridLength.Auto });
+            outputGrid.Children.Add(new TextBlock { Text = L("运行结果", "Result"), FontWeight = Microsoft.UI.Text.FontWeights.SemiBold, VerticalAlignment = VerticalAlignment.Center });
+            Grid.SetColumn(outputClose, 1);
+            outputGrid.Children.Add(outputClose);
+            Grid.SetRow(outputViewer, 1);
+            Grid.SetColumnSpan(outputViewer, 2);
+            outputGrid.Children.Add(outputViewer);
+            var outputBorder = new Border { Style = (Style)Application.Current.Resources["InsetBorderStyle"], Padding = new Thickness(12, 8, 8, 10), Child = outputGrid, Visibility = Visibility.Collapsed };
+            outputClose.Click += (_, _) => outputBorder.Visibility = Visibility.Collapsed;
             var consent = new CheckBox
             {
                 Content = new TextBlock { Text = L("我已了解额外的账号风险，选择为此仓库使用内置启动。", "I understand the additional account risk and choose the integrated launch for this repository."), TextWrapping = TextWrapping.Wrap },
@@ -169,8 +195,10 @@ public sealed partial class MainWindow
             {
                 var button = new Button
                 {
-                    Content = text, Style = (Style)Application.Current.Resources["SecondaryButtonStyle"],
-                    HorizontalAlignment = HorizontalAlignment.Stretch
+                    // Wrapping label: long English labels must not be clipped in narrow columns.
+                    Content = new TextBlock { Text = text, TextWrapping = TextWrapping.Wrap, TextAlignment = TextAlignment.Center },
+                    Style = (Style)Application.Current.Resources["SecondaryButtonStyle"],
+                    HorizontalAlignment = HorizontalAlignment.Stretch, VerticalAlignment = VerticalAlignment.Stretch
                 };
                 button.Click += async (_, _) =>
                 {
@@ -217,7 +245,12 @@ public sealed partial class MainWindow
                 Title = L("账号风险", "Account risk"), Message = BridgeRiskText
             });
 
-            body.Children.Add(integrated);
+            // The risk confirmation gates Save, so it sits right under the switch it belongs to.
+            var launch = new StackPanel { Spacing = 6 };
+            launch.Children.Add(integrated);
+            launch.Children.Add(launchHint);
+            launch.Children.Add(consent);
+            body.Children.Add(launch);
 
             var paths = new Grid { ColumnSpacing = 10, RowSpacing = 10 };
             paths.ColumnDefinitions.Add(new ColumnDefinition { Width = GridLength.Auto });
@@ -231,6 +264,7 @@ public sealed partial class MainWindow
             settings.Children.Add(SectionTitle(L("游戏与加载器", "Game and loader")));
             settings.Children.Add(paths);
             settings.Children.Add(modsSwitch);
+            settings.Children.Add(modsHint);
             body.Children.Add(new Border { Style = (Style)Application.Current.Resources["InsetBorderStyle"], Padding = new Thickness(14, 12, 14, 14), Child = settings });
 
             var actions = new StackPanel { Spacing = 8 };
@@ -310,28 +344,22 @@ public sealed partial class MainWindow
                 HorizontalAlignment = HorizontalAlignment.Stretch,
                 HorizontalContentAlignment = HorizontalAlignment.Stretch
             });
-            body.Children.Add(consent);
-
-            // Keep operation results visible when Save validates fields far below the viewport.
-            var content = new Grid { MaxHeight = viewport.ContentHeight + 60, RowSpacing = 10 };
-            content.RowDefinitions.Add(new RowDefinition { Height = GridLength.Auto });
+            // A fixed height (not MaxHeight) bounds the inner ScrollViewer: otherwise the dialog clips the
+            // lower sections without a scrollbar. Results get their own row under the settings.
+            var content = new Grid { Height = viewport.ContentHeight, RowSpacing = 10 };
             content.RowDefinitions.Add(new RowDefinition { Height = new GridLength(1, GridUnitType.Star) });
-            var resultViewer = new ScrollViewer
-            {
-                Content = outputBorder, MaxHeight = 160,
-                HorizontalScrollBarVisibility = ScrollBarVisibility.Disabled,
-                HorizontalScrollMode = ScrollMode.Disabled
-            };
-            content.Children.Add(resultViewer);
+            content.RowDefinitions.Add(new RowDefinition { Height = GridLength.Auto });
             var settingsViewer = new ScrollViewer
             {
                 Content = body,
+                VerticalScrollBarVisibility = ScrollBarVisibility.Auto,
                 HorizontalScrollBarVisibility = ScrollBarVisibility.Disabled,
                 HorizontalScrollMode = ScrollMode.Disabled,
-                Padding = new Thickness(0, 0, 12, 0)
+                Padding = new Thickness(0, 0, 14, 0)
             };
-            Grid.SetRow(settingsViewer, 1);
             content.Children.Add(settingsViewer);
+            Grid.SetRow(outputBorder, 1);
+            content.Children.Add(outputBorder);
             var dialog = new ContentDialog
             {
                 Title = L("终末地启动设置", "Endfield launch settings"),
@@ -348,9 +376,17 @@ public sealed partial class MainWindow
                 bool useIntegrated = integrated.IsOn;
                 consent.Visibility = useIntegrated ? Visibility.Visible : Visibility.Collapsed;
                 dialog.IsPrimaryButtonEnabled = !useIntegrated || consent.IsChecked == true;
+                launchHint.Text = useIntegrated
+                    ? L("由官方签名的 Games.exe 作为父进程直接启动游戏，无需额外下载。需勾选下方风险确认才能保存。",
+                        "Starts the game under the officially signed Games.exe; no extra download. Confirm the risk below to save.")
+                    : L("直接运行下方的 XXMI 或其他启动器，不使用内置启动。", "Runs the XXMI or other launcher below directly, without the integrated launch.");
+                modsHint.Text = modsSwitch.IsOn
+                    ? L("通过 XXMI / EFMI 加载 Mod；首次使用需在下方“备份并适配 EFMI”。", "Loads Mods through XXMI / EFMI; set up EFMI below before first use.")
+                    : L("直接启动游戏，不加载 Mod。", "Starts the game directly without Mods.");
             }
 
             integrated.Toggled += (_, _) => RefreshState();
+            modsSwitch.Toggled += (_, _) => RefreshState();
             consent.Checked += (_, _) => RefreshState();
             consent.Unchecked += (_, _) => RefreshState();
             RefreshState();
@@ -408,10 +444,13 @@ public sealed partial class MainWindow
 
         TextBlock SectionTitle(string text) => new() { Text = text, FontWeight = Microsoft.UI.Text.FontWeights.SemiBold };
 
+        TextBlock HintText() => new() { TextWrapping = TextWrapping.Wrap, Opacity = .75, FontSize = 12 };
+
         void AddPathRow(Grid grid, int row, string label, TextBox box, string? extension)
         {
             grid.RowDefinitions.Add(new RowDefinition { Height = GridLength.Auto });
-            var caption = new TextBlock { Text = label, VerticalAlignment = VerticalAlignment.Center };
+            // Wrap long labels instead of letting an auto-width column squeeze the path field.
+            var caption = new TextBlock { Text = label, VerticalAlignment = VerticalAlignment.Center, TextWrapping = TextWrapping.Wrap, MaxWidth = 150 };
             // Same inset field as the main window's path boxes; the app's TextBox style is borderless.
             box.BorderThickness = new Thickness(0);
             box.Padding = new Thickness(12, 8, 12, 8);
