@@ -37,7 +37,7 @@ namespace ModFolderCopier.WinUI;
 
 public sealed partial class MainWindow : Window
 {
-    private const string AppVersion = "v4.3.1-hotkeys-test.8";
+    private const string AppVersion = "v4.3.1-hotkeys-test.9";
     private static bool AppSelfUpdateEnabled => ApplicationReleasePolicy.ApplicationSelfUpdateEnabled;
     private const string GitHubRepositoryUrl = "https://github.com/uyujkk/Integrated_Mod_Manager";
     private const string GitHubLatestReleaseApiUrl = "https://api.github.com/repos/uyujkk/Integrated_Mod_Manager/releases/latest";
@@ -12329,6 +12329,50 @@ public sealed partial class MainWindow : Window
         return aliases;
     }
 
+    /// <summary>A folder the user may choose to have created (issue #6); created only after confirmation.</summary>
+    private sealed record NewCharacterFolderChoice(string Path);
+
+    private (string? Chinese, string? English) GetCharacterFolderNames(OnlineModCard mod)
+    {
+        string normalized = NormalizeCharacterLookup(mod.CharacterName);
+        OnlineCharacterOption? option = _onlineCharacterOptions.FirstOrDefault(item =>
+            (!string.IsNullOrWhiteSpace(mod.CategoryId) && string.Equals(item.CategoryId, mod.CategoryId, StringComparison.OrdinalIgnoreCase))
+            || string.Equals(NormalizeCharacterLookup(item.Key), normalized, StringComparison.OrdinalIgnoreCase));
+        EndfieldCharacterInfo? endfield = FindEndfieldCharacter(mod.CharacterName)
+            ?? EndfieldCharacters.FirstOrDefault(character => !string.IsNullOrWhiteSpace(mod.CategoryId)
+                && string.Equals(character.GameBananaCategoryId, mod.CategoryId, StringComparison.OrdinalIgnoreCase));
+        string? chinese = endfield?.ChineseName ?? option?.DisplayNameZh;
+        string? english = endfield?.EnglishName ?? option?.DisplayNameEn;
+        // A bare site category name still names the folder in its own script.
+        if (!IsGenericOnlineCharacterName(mod.CharacterName))
+        {
+            if (mod.CharacterName.Any(character => character is >= '一' and <= '鿿')) chinese ??= mod.CharacterName;
+            else english ??= mod.CharacterName;
+        }
+        return (chinese, english);
+    }
+
+    private CharacterFolderPlan PlanCharacterFolder(OnlineModCard mod, string repositoryPath, IReadOnlyCollection<string> aliases)
+    {
+        (string? chinese, string? english) = GetCharacterFolderNames(mod);
+        return CharacterFolderPlanner.Plan(repositoryPath,
+            Directory.GetDirectories(repositoryPath),
+            Directory.GetFiles(repositoryPath).Select(Path.GetFileName).OfType<string>().ToArray(),
+            aliases, mod.CharacterName, chinese, english, _currentLanguage == AppLanguage.ZhCn);
+    }
+
+    private string CharacterFolderReasonText(CharacterFolderPlan plan, string character) => plan.Reason switch
+    {
+        CharacterFolderReason.Ambiguous => L($"有多个文件夹都可能属于“{character}”，请手动选择。", $"Several folders may belong to “{character}”; choose one."),
+        CharacterFolderReason.UnknownCharacter => L("无法确定这个 Mod 属于哪个角色，请手动选择位置。", "The Mod's character is unknown; choose a destination."),
+        CharacterFolderReason.MultipleCharacters => L($"“{character}”包含多个角色，请手动选择位置。", $"“{character}” covers several characters; choose a destination."),
+        CharacterFolderReason.MixedNamingLanguage => L("仓库中同时有中文和英文命名的文件夹，无法确定新文件夹用哪种语言，请手动选择。", "The repository mixes Chinese and English folder names, so a new folder name cannot be chosen automatically."),
+        CharacterFolderReason.NoNameInLanguage => L($"没有“{character}”在仓库命名语言中的名称，请手动选择。", $"No name for “{character}” in the repository's naming language; choose a destination."),
+        CharacterFolderReason.InvalidName => L($"“{character}”不能直接用作文件夹名，请手动选择。", $"“{character}” cannot be used as a folder name; choose a destination."),
+        CharacterFolderReason.NameConflict => L("仓库中已有同名文件，不能新建角色文件夹，请手动选择。", "A file with that name already exists; choose a destination."),
+        _ => string.Empty
+    };
+
     private async Task<string?> PickDownloadFolderAsync(OnlineModCard mod, OnlineDownloadContext context,
         IReadOnlyCollection<string> characterAliases)
     {
@@ -12338,9 +12382,8 @@ public sealed partial class MainWindow : Window
             string[] childFolders = Directory.GetDirectories(repository.SourcePath)
                 .OrderBy(path => path, StringComparer.CurrentCultureIgnoreCase)
                 .ToArray();
-            string? suggestedFolder = OnlineDownloadSelectionPolicy.SelectCharacterFolder(
-                childFolders,
-                characterAliases);
+            CharacterFolderPlan plan = PlanCharacterFolder(mod, repository.SourcePath, characterAliases);
+            string? suggestedFolder = plan.Action == CharacterFolderAction.UseExisting ? plan.Path : null;
 
             DialogViewport viewport = DialogViewportPolicy.Selection(RootGrid.ActualWidth, RootGrid.ActualHeight);
             ComboBox folderComboBox = new()
@@ -12355,6 +12398,16 @@ public sealed partial class MainWindow : Window
             });
 
             int suggestedIndex = 0;
+            if (plan.Action == CharacterFolderAction.Create)
+            {
+                folderComboBox.Items.Add(new ComboBoxItem
+                {
+                    Content = L($"新建角色文件夹：{Path.GetFileName(plan.Path)}（推荐）", $"New character folder: {Path.GetFileName(plan.Path)} (Recommended)"),
+                    Tag = new NewCharacterFolderChoice(plan.Path!)
+                });
+                suggestedIndex = 1;
+            }
+
             foreach (string childFolder in childFolders)
             {
                 bool isSuggested = !string.IsNullOrWhiteSpace(suggestedFolder)
@@ -12375,13 +12428,16 @@ public sealed partial class MainWindow : Window
             folderComboBox.SelectedIndex = suggestedIndex;
 
             string characterDisplayName = GetOnlineCharacterDisplayName(mod.CharacterName);
-            string destinationHint = suggestedFolder is null
-                ? L(
-                    $"未在当前仓库中找到与“{characterDisplayName}”明确匹配的角色文件夹，请确认下载位置。",
-                    $"No folder in this repository could be matched confidently to “{characterDisplayName}”. Please confirm the destination.")
-                : L(
+            string destinationHint = plan.Action switch
+            {
+                CharacterFolderAction.UseExisting => L(
                     $"已识别角色“{characterDisplayName}”，并预选角色文件夹：{Path.GetFileName(suggestedFolder)}。",
-                    $"Recognized “{characterDisplayName}” and preselected: {Path.GetFileName(suggestedFolder)}.");
+                    $"Recognized “{characterDisplayName}” and preselected: {Path.GetFileName(suggestedFolder)}."),
+                CharacterFolderAction.Create => L(
+                    $"仓库中还没有“{characterDisplayName}”的文件夹。确认后才会新建：\n{plan.Path}",
+                    $"This repository has no folder for “{characterDisplayName}”. It is created only after you confirm:\n{plan.Path}"),
+                _ => CharacterFolderReasonText(plan, characterDisplayName)
+            };
 
             ContentDialog dialog = new()
             {
@@ -12419,7 +12475,21 @@ public sealed partial class MainWindow : Window
             ContentDialogResult result = await dialog.ShowAsync();
             if (result == ContentDialogResult.Primary)
             {
-                return (folderComboBox.SelectedItem as ComboBoxItem)?.Tag as string ?? repository.SourcePath;
+                object? tag = (folderComboBox.SelectedItem as ComboBoxItem)?.Tag;
+                if (tag is NewCharacterFolderChoice choice)
+                {
+                    try
+                    {
+                        return CharacterFolderPlanner.CreatePlannedFolder(repository.SourcePath, choice.Path);
+                    }
+                    catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
+                    {
+                        await ShowMessageAsync(L("无法新建角色文件夹，未开始下载：", "Could not create the character folder; the download did not start: ") + ex.Message,
+                            L("下载位置", "Download location"));
+                        return null;
+                    }
+                }
+                return tag as string ?? repository.SourcePath;
             }
 
             if (result == ContentDialogResult.None)

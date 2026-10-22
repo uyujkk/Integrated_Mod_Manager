@@ -343,6 +343,65 @@ public sealed class LocalUpdateAgentTests
         Assert.False(File.Exists(Path.Combine(install, "WinUI3", "cache", "page.json")));
     }
 
+    [Fact]
+    public void ReadManagedFileSet_TreatsForwardSlashManifestsLikePayloadPaths()
+    {
+        // A "/" manifest used to make every subfolder file look obsolete, deleting it after the copy.
+        using var directory = new TemporaryDirectory();
+        File.WriteAllLines(Path.Combine(directory.Path, ".managed-files.txt"), ["WinUI3/app.dll", "WinUI3/zh-CN/strings.mui", "IntegratedModManager.exe"]);
+        string payload = Path.Combine(directory.Path, "payload");
+        Directory.CreateDirectory(Path.Combine(payload, "WinUI3", "zh-CN"));
+        File.WriteAllText(Path.Combine(payload, "WinUI3", "app.dll"), "new");
+        File.WriteAllText(Path.Combine(payload, "WinUI3", "zh-CN", "strings.mui"), "new");
+        File.WriteAllText(Path.Combine(payload, "IntegratedModManager.exe"), "new");
+
+        HashSet<string> previous = LocalUpdateAgent.ReadManagedFileSet(directory.Path);
+
+        Assert.Contains(Path.Combine("WinUI3", "app.dll"), previous);
+        Assert.Empty(previous.Except(LocalUpdateAgent.BuildPayloadManagedFileSet(payload), StringComparer.OrdinalIgnoreCase));
+    }
+
+    [Fact]
+    public void LongPath_PrefixesOnlyLongPathsAndRoundTrips()
+    {
+        string shortPath = @"C:\Games\IMM\WinUI3\app.dll";
+        string longLocal = @"C:\" + string.Join(@"\", Enumerable.Repeat("深层 目录 segment", 20)) + @"\app.dll";
+        string longUnc = @"\\server\share\" + string.Join(@"\", Enumerable.Repeat("segment", 40)) + @"\app.dll";
+
+        Assert.Equal(shortPath, LocalUpdateAgent.LongPath(shortPath));
+        Assert.Equal(@"\\?\" + longLocal, LocalUpdateAgent.LongPath(longLocal));
+        Assert.Equal(@"\\?\UNC\server\share\", LocalUpdateAgent.LongPath(longUnc)[..21]);
+        Assert.Equal(@"\\?\" + longLocal, LocalUpdateAgent.LongPath(@"\\?\" + longLocal));
+        Assert.Equal(longLocal, LocalUpdateAgent.NormalPath(LocalUpdateAgent.LongPath(longLocal)));
+        Assert.Equal(longUnc, LocalUpdateAgent.NormalPath(LocalUpdateAgent.LongPath(longUnc)));
+    }
+
+    [Fact]
+    public void BackupCopyAndRollBack_WorkBeyondMaxPath()
+    {
+        // Issue #16: deep install folders failed while backing up; keep relative paths normal throughout.
+        using var directory = new TemporaryDirectory();
+        string deep = Path.Combine(directory.Path, string.Join(Path.DirectorySeparatorChar, Enumerable.Repeat("深层 安装目录 with spaces", 8)));
+        string install = Path.Combine(deep, "install");
+        string payload = Path.Combine(deep, "payload");
+        string backup = Path.Combine(install, "backups", "updates", "20261022-000000-v4.3.1", "files");
+        string relative = Path.Combine("WinUI3", "Microsoft.Windows.ApplicationModel.WindowsAppRuntime.Projection.dll");
+        Directory.CreateDirectory(Path.Combine(install, "WinUI3"));
+        Directory.CreateDirectory(Path.Combine(payload, "WinUI3"));
+        File.WriteAllText(Path.Combine(install, relative), "old");
+        File.WriteAllText(Path.Combine(payload, relative), "new");
+        Assert.True(Path.Combine(backup, relative).Length > 300);
+        var created = new List<string>();
+
+        LocalUpdateAgent.BackupFilesThatWillBeReplaced(payload, install, backup, []);
+        LocalUpdateAgent.CopyPayload(payload, install, created);
+        Assert.Equal("new", File.ReadAllText(Path.Combine(install, relative)));
+        Assert.Empty(created);
+
+        LocalUpdateAgent.RollBackFiles(backup, install, created);
+        Assert.Equal("old", File.ReadAllText(Path.Combine(install, relative)));
+    }
+
     private static void CreateArchive(string path, Action<ZipArchive> build)
     {
         using FileStream stream = File.Create(path);

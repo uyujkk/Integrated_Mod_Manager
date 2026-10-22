@@ -144,5 +144,74 @@ public sealed class ModUpdateReplacementTests : IDisposable
         finally { DirectoryLinkDeployment.RemoveLink(link); }
     }
 
+    [Fact]
+    public void PreviewMissingFromTheUpdateIsCarriedOver()
+    {
+        // Issue #14: the update archive has no images, the old folder had a downloaded preview.
+        File.WriteAllBytes(Path.Combine(Mod, "preview.jpg"), [1, 2, 3]);
+        var result = ModUpdateReplacement.Replace(ModUpdateReplacement.Capture(Repo, Mod), Payload, Backups, "{}");
+        Assert.Equal(new byte[] { 1, 2, 3 }, File.ReadAllBytes(Path.Combine(Mod, "preview.jpg")));
+        Assert.Equal(["preview.jpg"], result.PreservedImages);
+        Assert.True(File.Exists(Path.Combine(result.BackupPath, "preview.jpg")));
+        Assert.False(File.Exists(Path.Combine(Mod, "old.ini")));
+    }
+
+    [Fact]
+    public void ConflictingPreviewKeepsTheUpdateAndSavesTheOldBeside()
+    {
+        File.WriteAllBytes(Path.Combine(Mod, "preview.png"), [9, 9]);
+        File.WriteAllBytes(Path.Combine(Payload, "preview.png"), [1]);
+        var result = ModUpdateReplacement.Replace(ModUpdateReplacement.Capture(Repo, Mod), Payload, Backups, "{}");
+        Assert.Equal(new byte[] { 1 }, File.ReadAllBytes(Path.Combine(Mod, "preview.png")));
+        Assert.Equal(new byte[] { 9, 9 }, File.ReadAllBytes(Path.Combine(Mod, "preview.before-update.png")));
+        Assert.Equal(["preview.before-update.png"], result.PreservedImages);
+    }
+
+    [Fact]
+    public void IdenticalPreviewIsNotDuplicatedAndOtherImagesAreKept()
+    {
+        File.WriteAllBytes(Path.Combine(Mod, "preview.png"), [4]);
+        File.WriteAllBytes(Path.Combine(Payload, "preview.png"), [4]);
+        File.WriteAllBytes(Path.Combine(Mod, "My Custom Shot.WEBP"), [5]);
+        var result = ModUpdateReplacement.Replace(ModUpdateReplacement.Capture(Repo, Mod), Payload, Backups, "{}");
+        Assert.False(File.Exists(Path.Combine(Mod, "preview.before-update.png")));
+        Assert.Equal(["My Custom Shot.WEBP"], result.PreservedImages);
+    }
+
+    [Fact]
+    public void ImagesInSubfoldersAndNonImagesAreNotCarriedOver()
+    {
+        Directory.CreateDirectory(Path.Combine(Mod, "textures"));
+        File.WriteAllBytes(Path.Combine(Mod, "textures", "old.png"), [7]);
+        File.WriteAllText(Path.Combine(Mod, "readme.txt"), "old notes");
+        var result = ModUpdateReplacement.Replace(ModUpdateReplacement.Capture(Repo, Mod), Payload, Backups, "{}");
+        Assert.Empty(result.PreservedImages);
+        Assert.False(Directory.Exists(Path.Combine(Mod, "textures")));
+        Assert.False(File.Exists(Path.Combine(Mod, "readme.txt")));
+    }
+
+    [Fact]
+    public void RepeatedConflictsGetDistinctNames()
+    {
+        File.WriteAllBytes(Path.Combine(Mod, "cover.jpg"), [1]);
+        File.WriteAllBytes(Path.Combine(Payload, "cover.jpg"), [2]);
+        File.WriteAllBytes(Path.Combine(Payload, "cover.before-update.jpg"), [3]);
+        var result = ModUpdateReplacement.Replace(ModUpdateReplacement.Capture(Repo, Mod), Payload, Backups, "{}");
+        Assert.Equal(["cover.before-update (2).jpg"], result.PreservedImages);
+        Assert.Equal(new byte[] { 3 }, File.ReadAllBytes(Path.Combine(Mod, "cover.before-update.jpg")));
+        Assert.Equal(new byte[] { 1 }, File.ReadAllBytes(Path.Combine(Mod, "cover.before-update (2).jpg")));
+    }
+
+    [Fact]
+    public void FailedReplacementLeavesTheOriginalPreviewUntouched()
+    {
+        File.WriteAllBytes(Path.Combine(Mod, "preview.jpg"), [1, 2]);
+        var snapshot = ModUpdateReplacement.Capture(Repo, Mod);
+        File.WriteAllText(Path.Combine(Mod, "old.ini"), "changed after confirmation");
+        Assert.Throws<IOException>(() => ModUpdateReplacement.Replace(snapshot, Payload, Backups, "{}"));
+        Assert.Equal(new byte[] { 1, 2 }, File.ReadAllBytes(Path.Combine(Mod, "preview.jpg")));
+        Assert.Empty(Directory.GetDirectories(Path.GetDirectoryName(Mod)!, ".imm-update-stage-*"));
+    }
+
     public void Dispose() { if(Directory.Exists(root)) Directory.Delete(root, true); }
 }

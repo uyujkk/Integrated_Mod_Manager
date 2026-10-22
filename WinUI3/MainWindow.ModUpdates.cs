@@ -142,7 +142,10 @@ public sealed partial class MainWindow
             result.StatusTextZh = "更新已替换；复制部署请重新部署。";
             result.StatusTextEn = "Update replaced; redeploy copy installations.";
             result.BackupPath = replaced.BackupPath;
-            SetModUpdateStatus($"已更新 {origin.Title}，旧版已备份；复制部署请重新部署。", $"Updated {origin.Title}; old version backed up. Redeploy copy installations.");
+            int keptImages = replaced.PreservedImages.Count;
+            SetModUpdateStatus(
+                $"已更新 {origin.Title}，旧版已备份" + (keptImages > 0 ? $"，保留了 {keptImages} 张原预览图" : string.Empty) + "；复制部署请重新部署。",
+                $"Updated {origin.Title}; old version backed up" + (keptImages > 0 ? $", {keptImages} preview image(s) kept" : string.Empty) + ". Redeploy copy installations.");
             UpdateDownloadTask(task, DownloadTaskState.Completed, 100, $"已替换，旧版备份：{replaced.BackupPath}", $"Replaced; old version backed up: {replaced.BackupPath}", forceRefresh: true);
             if (!SaveConfig()) throw new IOException(L("更新文件已替换，但跟踪记录未能保存。", "Updated files were replaced, but tracking could not be saved."));
             SaveShellConfig(throwOnError: true);

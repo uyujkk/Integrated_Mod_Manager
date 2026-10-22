@@ -47,10 +47,16 @@ public static class OnlineDownloadSelectionPolicy
     public static string? SelectCharacterFolder(
         IEnumerable<string>? childFolders,
         IEnumerable<string?>? characterAliases)
+        => MatchCharacterFolder(childFolders, characterAliases).Path;
+
+    /// <summary>Like <see cref="SelectCharacterFolder"/>, but tells a tied best match apart from no match.</summary>
+    public static (string? Path, bool Ambiguous) MatchCharacterFolder(
+        IEnumerable<string>? childFolders,
+        IEnumerable<string?>? characterAliases)
     {
         if (childFolders is null || characterAliases is null)
         {
-            return null;
+            return (null, false);
         }
 
         string[] aliases = characterAliases
@@ -61,7 +67,7 @@ public static class OnlineDownloadSelectionPolicy
             .ToArray();
         if (aliases.Length == 0)
         {
-            return null;
+            return (null, false);
         }
 
         List<CharacterFolderMatch> matches = childFolders
@@ -75,16 +81,16 @@ public static class OnlineDownloadSelectionPolicy
             .ToList();
         if (matches.Count == 0)
         {
-            return null;
+            return (null, false);
         }
 
         // A tied best score is not safe enough for automatic routing. Let the user choose instead.
         if (matches.Count > 1 && matches[0].Score == matches[1].Score)
         {
-            return null;
+            return (null, true);
         }
 
-        return matches[0].Path;
+        return (matches[0].Path, false);
     }
 
     private static OnlineDownloadCandidate? SelectNewest(IEnumerable<OnlineDownloadCandidate> candidates)

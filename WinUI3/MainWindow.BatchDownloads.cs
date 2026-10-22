@@ -102,15 +102,37 @@ public sealed partial class MainWindow
             panel.Children.Add(include); panel.Children.Add(file);
             var folder = new ComboBox { Header = L("下载并解压到", "Download and extract into"), HorizontalAlignment = HorizontalAlignment.Stretch };
             foreach (string path in folders) folder.Items.Add(new ComboBoxItem { Content = path == context.RepositoryPath ? L("仓库根目录", "Repository root") : Path.GetFileName(path), Tag = path });
-            string? preferred = OnlineDownloadSelectionPolicy.SelectCharacterFolder(folders.Skip(1), data.Aliases);
+            // Issue #6: reuse a matching character folder, or offer to create one; nothing is created until approval.
+            CharacterFolderPlan? folderPlan = data.Error is null ? PlanCharacterFolder(data.Mod, context.RepositoryPath, data.Aliases) : null;
+            string? preferred = folderPlan?.Action == CharacterFolderAction.UseExisting ? folderPlan.Path : null;
+            ComboBoxItem? createItem = null;
+            if (folderPlan?.Action == CharacterFolderAction.Create)
+            {
+                createItem = new ComboBoxItem { Content = L($"新建：{Path.GetFileName(folderPlan.Path)}", $"New: {Path.GetFileName(folderPlan.Path)}"), Tag = new NewCharacterFolderChoice(folderPlan.Path!) };
+                folder.Items.Insert(1, createItem);
+            }
             string folderKey = DownloadFolderKey(context, data.Mod);
+            bool usesRemembered = false;
             if (_onlinePreferences.RememberDownloadFolders && _onlinePreferences.DownloadFolders.TryGetValue(folderKey, out var remembered) && IsUsableRememberedFolder(remembered, context))
             {
                 preferred = remembered;
+                usesRemembered = true;
                 if (!folders.Contains(remembered, StringComparer.OrdinalIgnoreCase)) folder.Items.Add(new ComboBoxItem { Content = remembered, Tag = remembered });
             }
-            folder.SelectedItem = folder.Items.OfType<ComboBoxItem>().FirstOrDefault(item => string.Equals(item.Tag as string, preferred, StringComparison.OrdinalIgnoreCase)) ?? folder.Items[0];
+            folder.SelectedItem = folder.Items.OfType<ComboBoxItem>().FirstOrDefault(item => string.Equals(item.Tag as string, preferred, StringComparison.OrdinalIgnoreCase))
+                ?? (usesRemembered ? null : createItem) ?? folder.Items[0];
             panel.Children.Add(folder);
+            if (folderPlan is { Action: not CharacterFolderAction.UseExisting })
+            {
+                string character = GetOnlineCharacterDisplayName(data.Mod.CharacterName);
+                panel.Children.Add(new TextBlock
+                {
+                    Text = folderPlan.Action == CharacterFolderAction.Create
+                        ? L($"确认后新建：{folderPlan.Path}", $"Created after approval: {folderPlan.Path}")
+                        : CharacterFolderReasonText(folderPlan, character),
+                    TextWrapping = TextWrapping.Wrap, FontSize = 12, Opacity = .75
+                });
+            }
             var status = new TextBlock { TextWrapping = TextWrapping.Wrap }; panel.Children.Add(status);
             AutomationProperties.SetName(file, L("下载文件：", "Download file: ") + data.Mod.Title);
             AutomationProperties.SetName(folder, L("下载目录：", "Download destination: ") + data.Mod.Title);
@@ -121,12 +143,26 @@ public sealed partial class MainWindow
         allowDuplicates.Click += (_, _) => Validate();
         Validate();
         if (await dialog.ShowAsync() != ContentDialogResult.Primary || _onlineWindowClosed || contextKey != GetOnlineDetailContextKey()) return;
-        var approved = plans.Where(plan => plan.Include.IsChecked == true && plan.Include.IsEnabled).Select(plan => (
+        var chosen = plans.Where(plan => plan.Include.IsChecked == true && plan.Include.IsEnabled).Select(plan => (
             plan.Data, File: (OnlineDownloadCandidate)((ComboBoxItem)plan.File.SelectedItem).Tag,
-            Folder: (string)((ComboBoxItem)plan.Folder.SelectedItem).Tag)).ToArray();
-        if (approved.Any(plan => !IsUsableRememberedFolder(plan.Folder, context)))
+            Choice: ((ComboBoxItem)plan.Folder.SelectedItem).Tag)).ToArray();
+        if (chosen.Any(plan => plan.Choice is string folder && !IsUsableRememberedFolder(folder, context)))
         { await ShowMessageAsync(L("清单中有目录已失效，请重新准备批量下载。", "A destination is no longer available. Prepare the batch again."), L("目录已改变", "Destination changed")); return; }
-        if (allowDuplicates.IsChecked != true && approved.Any(plan => GetOnlineDuplicateKind(plan.Data.Mod, plan.File, context) != OnlineDuplicateKind.None)) return;
+        if (allowDuplicates.IsChecked != true && chosen.Any(plan => GetOnlineDuplicateKind(plan.Data.Mod, plan.File, context) != OnlineDuplicateKind.None)) return;
+        // Only approved rows create folders; Mods of the same character share one creation.
+        var created = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
+        try
+        {
+            foreach (var choice in chosen.Select(plan => plan.Choice).OfType<NewCharacterFolderChoice>().DistinctBy(choice => choice.Path, StringComparer.OrdinalIgnoreCase))
+                created[choice.Path] = CharacterFolderPlanner.CreatePlannedFolder(context.RepositoryPath, choice.Path);
+        }
+        catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
+        {
+            await ShowMessageAsync(L("无法新建角色文件夹，未加入任何下载：", "Could not create a character folder; nothing was queued: ") + ex.Message, L("目录已改变", "Destination changed"));
+            return;
+        }
+        var approved = chosen.Select(plan => (plan.Data, plan.File,
+            Folder: plan.Choice is NewCharacterFolderChoice choice ? created[choice.Path] : (string)plan.Choice)).ToArray();
         UiCrashDiagnostics.RecordAction("Batch download confirmed");
         var tasks = new List<Task>();
         foreach (var plan in approved)

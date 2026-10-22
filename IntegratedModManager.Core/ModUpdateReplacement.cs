@@ -5,7 +5,8 @@ using System.Text.Json;
 namespace IntegratedModManager.Core;
 
 public sealed record ModUpdateSnapshot(string Repository, string ModPath, string Fingerprint);
-public sealed record ModUpdateReplacementResult(string ModPath, string BackupPath);
+/// <param name="PreservedImages">Top-level preview images carried over from the old folder (file names in the new folder).</param>
+public sealed record ModUpdateReplacementResult(string ModPath, string BackupPath, IReadOnlyList<string> PreservedImages);
 
 /// <summary>Stage a complete replacement, retain the original, and refuse stale or linked inputs.</summary>
 public static class ModUpdateReplacement
@@ -60,6 +61,8 @@ public static class ModUpdateReplacement
             if (Fingerprint(stage) != Fingerprint(payload)) throw new IOException("The replacement changed during staging.");
             if (Capture(snapshot.Repository, snapshot.ModPath).Fingerprint != snapshot.Fingerprint)
                 throw new IOException("The original Mod changed after the update was confirmed. Check your edits and retry.");
+            // Previews (downloaded or user-chosen) live beside the Mod files; most update archives carry none.
+            IReadOnlyList<string> preserved = CarryOverPreviewImages(snapshot.ModPath, stage, cancellationToken);
             Directory.CreateDirectory(backup);
             File.WriteAllText(Path.Combine(backup, "update.json"), JsonSerializer.Serialize(new
             {
@@ -76,7 +79,7 @@ public static class ModUpdateReplacement
                 Directory.Move(originalBackup, snapshot.ModPath);
                 throw;
             }
-            return new(snapshot.ModPath, originalBackup);
+            return new(snapshot.ModPath, originalBackup, preserved);
         }
         finally
         {
@@ -88,6 +91,52 @@ public static class ModUpdateReplacement
                 catch (UnauthorizedAccessException) { }
             }
         }
+    }
+
+    private static readonly HashSet<string> PreviewImageExtensions = new(StringComparer.OrdinalIgnoreCase)
+        { ".png", ".jpg", ".jpeg", ".bmp", ".gif", ".webp" };
+
+    /// <summary>
+    /// Copies the old folder's top-level images into the staged update. An image the update lacks is
+    /// copied as is; a same-named image with different content keeps the update's file and the old one
+    /// is saved as "name.before-update.ext". Subfolders (textures) are never touched.
+    /// </summary>
+    private static IReadOnlyList<string> CarryOverPreviewImages(string original, string stage, CancellationToken cancellationToken)
+    {
+        var preserved = new List<string>();
+        foreach (string source in Directory.EnumerateFiles(original).OrderBy(path => path, StringComparer.OrdinalIgnoreCase))
+        {
+            cancellationToken.ThrowIfCancellationRequested();
+            if (!PreviewImageExtensions.Contains(Path.GetExtension(source))) continue;
+            string name = Path.GetFileName(source);
+            string target = Path.Combine(stage, name);
+            if (!File.Exists(target) && !Directory.Exists(target))
+            {
+                File.Copy(source, target);
+                preserved.Add(name);
+                continue;
+            }
+            if (File.Exists(target) && SameContent(source, target)) continue;
+            string kept = UniqueName(stage, Path.GetFileNameWithoutExtension(name) + ".before-update", Path.GetExtension(name));
+            File.Copy(source, Path.Combine(stage, kept));
+            preserved.Add(kept);
+        }
+        return preserved;
+    }
+
+    private static string UniqueName(string directory, string stem, string extension)
+    {
+        string candidate = stem + extension;
+        for (int index = 2; File.Exists(Path.Combine(directory, candidate)) || Directory.Exists(Path.Combine(directory, candidate)); index++)
+            candidate = $"{stem} ({index}){extension}";
+        return candidate;
+    }
+
+    private static bool SameContent(string first, string second)
+    {
+        if (new FileInfo(first).Length != new FileInfo(second).Length) return false;
+        using FileStream a = File.OpenRead(first), b = File.OpenRead(second);
+        return SHA256.HashData(a).AsSpan().SequenceEqual(SHA256.HashData(b));
     }
 
     private static string FullPath(string path)

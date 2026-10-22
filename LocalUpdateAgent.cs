@@ -13,7 +13,12 @@ using System.Windows.Forms;
 [assembly: AssemblyCopyright("Copyright (c) 2026 uyujkk")]
 [assembly: AssemblyVersion("4.3.1.0")]
 [assembly: AssemblyFileVersion("4.3.1.0")]
-[assembly: AssemblyInformationalVersion("4.3.1-hotkeys-test.8")]
+[assembly: AssemblyInformationalVersion("4.3.1-hotkeys-test.9")]
+#if !UPDATE_AGENT_TESTS
+// csc.exe emits no target framework, so .NET Framework applied legacy path handling (set before Main
+// runs) and rejected both long paths and \\?\ prefixes (issue #16). 4.6.2 defaults accept \\?\ paths.
+[assembly: System.Runtime.Versioning.TargetFramework(".NETFramework,Version=v4.6.2", FrameworkDisplayName = ".NET Framework 4.6.2")]
+#endif
 #if UPDATE_AGENT_TESTS
 [assembly: System.Runtime.CompilerServices.InternalsVisibleTo("IntegratedModManager.UpdateAgent.Tests")]
 #endif
@@ -78,16 +83,16 @@ internal static class LocalUpdateAgent
                 DateTime.Now.ToString("yyyyMMdd-HHmmss") + "-v" + NormalizeVersionLabel(expectedVersion));
             backupFilesRoot = Path.Combine(updateBackupRoot, "files");
 
-            if (!File.Exists(packagePath))
+            if (!File.Exists(LongPath(packagePath)))
             {
                 throw new FileNotFoundException("The update package was not found.", packagePath);
             }
 
             WaitForApplicationExit(processIdText);
-            Directory.CreateDirectory(extractionRoot);
+            Directory.CreateDirectory(LongPath(extractionRoot));
 
             string payloadExtractionRoot = Path.Combine(extractionRoot, "payload");
-            Directory.CreateDirectory(payloadExtractionRoot);
+            Directory.CreateDirectory(LongPath(payloadExtractionRoot));
             ExtractZipSafely(packagePath, payloadExtractionRoot);
 
             string payloadRoot = FindPayloadRoot(payloadExtractionRoot);
@@ -98,7 +103,7 @@ internal static class LocalUpdateAgent
                 .Except(newManagedFiles, StringComparer.OrdinalIgnoreCase)
                 .Where(path => !IsPreserved(path))
                 .ToList();
-            Directory.CreateDirectory(backupFilesRoot);
+            Directory.CreateDirectory(LongPath(backupFilesRoot));
             BackupFilesThatWillBeReplaced(payloadRoot, installRoot, backupFilesRoot, obsoleteManagedFiles);
             CopyPayload(payloadRoot, installRoot, createdFiles);
             DeleteObsoleteManagedFiles(installRoot, obsoleteManagedFiles);
@@ -118,7 +123,7 @@ internal static class LocalUpdateAgent
             }
 
             File.WriteAllText(
-                Path.Combine(installRoot, "update-success.log"),
+                LongPath(Path.Combine(installRoot, "update-success.log")),
                 DateTime.Now.ToString("yyyy-MM-dd HH:mm:ss") + Environment.NewLine + Path.GetFileName(packagePath));
             PruneUpdateBackups(updateBackupsRoot, updateBackupRoot, 3);
 
@@ -130,7 +135,7 @@ internal static class LocalUpdateAgent
             {
                 RollBackFiles(backupFilesRoot, installRoot, createdFiles);
                 File.WriteAllText(
-                    Path.Combine(installRoot, "update-rollback.log"),
+                    LongPath(Path.Combine(installRoot, "update-rollback.log")),
                     DateTime.Now.ToString("yyyy-MM-dd HH:mm:ss") + Environment.NewLine + ex);
                 TryRestartExistingApplication(launcherPath, installRoot);
                 File.WriteAllText(Path.Combine(Path.GetTempPath(), "IntegratedModManagerUpdate-error.log"), ex.ToString());
@@ -152,7 +157,7 @@ internal static class LocalUpdateAgent
         {
             try
             {
-                if (Directory.Exists(extractionRoot))
+                if (Directory.Exists(LongPath(extractionRoot)))
                 {
                     DeleteDirectoryTreeSafely(extractionRoot);
                 }
@@ -163,6 +168,45 @@ internal static class LocalUpdateAgent
         }
     }
 #endif
+
+    // Issue #16: .NET Framework passes paths straight to Win32, which rejects >= 248/260 characters
+    // unless Windows long paths are enabled system-wide. Paths stay normal inside the agent; only the
+    // file-system calls get the \\?\ form, so no Windows setting is needed.
+    private const int LongPathThreshold = 240;
+    private const string ExtendedPrefix = @"\\?\";
+
+    internal static string LongPath(string path)
+    {
+        if (string.IsNullOrEmpty(path) || path.Length < LongPathThreshold || path.StartsWith(ExtendedPrefix, StringComparison.Ordinal))
+        {
+            return path;
+        }
+
+        string full = Path.GetFullPath(path);
+        return full.StartsWith(@"\\", StringComparison.Ordinal)
+            ? ExtendedPrefix + "UNC" + full.Substring(1)
+            : ExtendedPrefix + full;
+    }
+
+    internal static string NormalPath(string path)
+    {
+        if (path.StartsWith(ExtendedPrefix + "UNC" + Path.DirectorySeparatorChar, StringComparison.OrdinalIgnoreCase))
+        {
+            return @"\" + path.Substring(ExtendedPrefix.Length + 3);
+        }
+
+        return path.StartsWith(ExtendedPrefix, StringComparison.Ordinal) ? path.Substring(ExtendedPrefix.Length) : path;
+    }
+
+    private static string[] GetFilesRecursive(string root)
+    {
+        return Directory.GetFiles(LongPath(root), "*", SearchOption.AllDirectories).Select(NormalPath).ToArray();
+    }
+
+    private static void CreateDirectoryFor(string file)
+    {
+        Directory.CreateDirectory(LongPath(Path.GetDirectoryName(file)));
+    }
 
     internal static string NormalizeVersionLabel(string version)
     {
@@ -181,9 +225,9 @@ internal static class LocalUpdateAgent
         string expectedVersion,
         IEnumerable<string> createdFiles)
     {
-        Directory.CreateDirectory(updateBackupRoot);
+        Directory.CreateDirectory(LongPath(updateBackupRoot));
         File.WriteAllLines(
-            Path.Combine(updateBackupRoot, "backup-manifest.txt"),
+            LongPath(Path.Combine(updateBackupRoot, "backup-manifest.txt")),
             new[]
             {
                 "created_at=" + DateTimeOffset.Now.ToString("O"),
@@ -191,7 +235,7 @@ internal static class LocalUpdateAgent
                 "target_version=" + expectedVersion
             });
         File.WriteAllLines(
-            Path.Combine(updateBackupRoot, "created-files.txt"),
+            LongPath(Path.Combine(updateBackupRoot, "created-files.txt")),
             createdFiles.Select(path => GetRelativePath(installRoot, path)));
     }
 
@@ -231,7 +275,7 @@ internal static class LocalUpdateAgent
     {
         try
         {
-            if (File.Exists(launcherPath))
+            if (File.Exists(LongPath(launcherPath)))
             {
                 Process.Start(new ProcessStartInfo
                 {
@@ -250,14 +294,16 @@ internal static class LocalUpdateAgent
     {
         try
         {
-            if (!Directory.Exists(backupsRoot))
+            if (!Directory.Exists(LongPath(backupsRoot)))
             {
                 return;
             }
 
-            foreach (string staleDirectory in Directory.GetDirectories(backupsRoot)
+            // Compare normal-form names: a prefixed listing must never look unlike the current backup.
+            foreach (string staleDirectory in Directory.GetDirectories(LongPath(backupsRoot))
+                         .Select(NormalPath)
                          .Where(path => !string.Equals(path, currentBackupRoot, StringComparison.OrdinalIgnoreCase))
-                         .OrderByDescending(Directory.GetLastWriteTimeUtc)
+                         .OrderByDescending(path => Directory.GetLastWriteTimeUtc(LongPath(path)))
                          .Skip(Math.Max(0, keepCount - 1)))
             {
                 DeleteDirectoryTreeSafely(staleDirectory);
@@ -308,7 +354,7 @@ internal static class LocalUpdateAgent
     internal static void ExtractZipSafely(string packagePath, string destinationRoot)
     {
         string normalizedRoot = Path.GetFullPath(destinationRoot).TrimEnd(Path.DirectorySeparatorChar) + Path.DirectorySeparatorChar;
-        using (FileStream stream = File.OpenRead(packagePath))
+        using (FileStream stream = File.OpenRead(LongPath(packagePath)))
         using (var archive = new ZipArchive(stream, ZipArchiveMode.Read))
         {
             foreach (ZipArchiveEntry entry in archive.Entries)
@@ -327,18 +373,18 @@ internal static class LocalUpdateAgent
 
                 if (string.IsNullOrEmpty(entry.Name))
                 {
-                    Directory.CreateDirectory(destinationPath);
+                    Directory.CreateDirectory(LongPath(destinationPath));
                     continue;
                 }
 
                 string destinationDirectory = Path.GetDirectoryName(destinationPath);
                 if (!string.IsNullOrEmpty(destinationDirectory))
                 {
-                    Directory.CreateDirectory(destinationDirectory);
+                    Directory.CreateDirectory(LongPath(destinationDirectory));
                 }
 
                 using (Stream input = entry.Open())
-                using (FileStream output = new FileStream(destinationPath, FileMode.Create, FileAccess.Write, FileShare.None))
+                using (FileStream output = new FileStream(LongPath(destinationPath), FileMode.Create, FileAccess.Write, FileShare.None))
                 {
                     input.CopyTo(output);
                 }
@@ -361,7 +407,8 @@ internal static class LocalUpdateAgent
             return extractionRoot;
         }
 
-        string[] candidates = Directory.GetDirectories(extractionRoot, "*", SearchOption.AllDirectories)
+        string[] candidates = Directory.GetDirectories(LongPath(extractionRoot), "*", SearchOption.AllDirectories)
+            .Select(NormalPath)
             .Where(IsPayloadRoot)
             .OrderBy(path => path.Count(character => character == Path.DirectorySeparatorChar))
             .ToArray();
@@ -376,19 +423,19 @@ internal static class LocalUpdateAgent
 
     private static bool IsPayloadRoot(string path)
     {
-        bool hasLauncher = File.Exists(Path.Combine(path, "IntegratedModManager.exe")) ||
-                           File.Exists(Path.Combine(path, "ModFolderCopier.exe"));
-        return hasLauncher && File.Exists(Path.Combine(path, "WinUI3", "ModFolderCopier.WinUI.exe"));
+        bool hasLauncher = File.Exists(LongPath(Path.Combine(path, "IntegratedModManager.exe"))) ||
+                           File.Exists(LongPath(Path.Combine(path, "ModFolderCopier.exe")));
+        return hasLauncher && File.Exists(LongPath(Path.Combine(path, "WinUI3", "ModFolderCopier.WinUI.exe")));
     }
 
     private static void ValidatePayload(string payloadRoot, string expectedVersionText)
     {
-        string launcherPath = File.Exists(Path.Combine(payloadRoot, "IntegratedModManager.exe"))
+        string launcherPath = File.Exists(LongPath(Path.Combine(payloadRoot, "IntegratedModManager.exe")))
             ? Path.Combine(payloadRoot, "IntegratedModManager.exe")
             : Path.Combine(payloadRoot, "ModFolderCopier.exe");
-        var launcherInfo = new FileInfo(launcherPath);
+        var launcherInfo = new FileInfo(LongPath(launcherPath));
         string runtimePath = Path.Combine(payloadRoot, "WinUI3", "ModFolderCopier.WinUI.exe");
-        var runtimeInfo = new FileInfo(runtimePath);
+        var runtimeInfo = new FileInfo(LongPath(runtimePath));
         if (launcherInfo.Length == 0 || runtimeInfo.Length == 0)
         {
             throw new InvalidDataException("The update package contains an empty executable.");
@@ -420,7 +467,7 @@ internal static class LocalUpdateAgent
         }
         BackupFileIfPresent(installRoot, backupRoot, ManagedFilesManifestName);
 
-        foreach (string sourceFile in Directory.GetFiles(payloadRoot, "*", SearchOption.AllDirectories))
+        foreach (string sourceFile in GetFilesRecursive(payloadRoot))
         {
             string relativePath = GetRelativePath(payloadRoot, sourceFile);
             if (IsPreserved(relativePath))
@@ -440,19 +487,19 @@ internal static class LocalUpdateAgent
     private static void BackupFileIfPresent(string installRoot, string backupRoot, string relativePath)
     {
         string installedFile = GetPathInsideRoot(installRoot, relativePath);
-        if (!File.Exists(installedFile))
+        if (!File.Exists(LongPath(installedFile)))
         {
             return;
         }
 
         string backupFile = GetPathInsideRoot(backupRoot, relativePath);
-        Directory.CreateDirectory(Path.GetDirectoryName(backupFile));
-        File.Copy(installedFile, backupFile, true);
+        CreateDirectoryFor(backupFile);
+        File.Copy(LongPath(installedFile), LongPath(backupFile), true);
     }
 
     internal static void CopyPayload(string payloadRoot, string installRoot, List<string> createdFiles)
     {
-        foreach (string sourceFile in Directory.GetFiles(payloadRoot, "*", SearchOption.AllDirectories))
+        foreach (string sourceFile in GetFilesRecursive(payloadRoot))
         {
             string relativePath = GetRelativePath(payloadRoot, sourceFile);
             if (IsPreserved(relativePath)
@@ -462,20 +509,20 @@ internal static class LocalUpdateAgent
             }
 
             string destinationFile = GetPathInsideRoot(installRoot, relativePath);
-            Directory.CreateDirectory(Path.GetDirectoryName(destinationFile));
-            if (!File.Exists(destinationFile))
+            CreateDirectoryFor(destinationFile);
+            if (!File.Exists(LongPath(destinationFile)))
             {
                 createdFiles.Add(destinationFile);
             }
 
-            File.Copy(sourceFile, destinationFile, true);
+            File.Copy(LongPath(sourceFile), LongPath(destinationFile), true);
         }
     }
 
     internal static HashSet<string> BuildPayloadManagedFileSet(string payloadRoot)
     {
         var result = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
-        foreach (string sourceFile in Directory.GetFiles(payloadRoot, "*", SearchOption.AllDirectories))
+        foreach (string sourceFile in GetFilesRecursive(payloadRoot))
         {
             string relativePath = GetRelativePath(payloadRoot, sourceFile);
             if (!IsPreserved(relativePath)
@@ -492,14 +539,16 @@ internal static class LocalUpdateAgent
     {
         var result = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
         string manifestPath = Path.Combine(installRoot, ManagedFilesManifestName);
-        if (!File.Exists(manifestPath))
+        if (!File.Exists(LongPath(manifestPath)))
         {
             return result;
         }
 
-        foreach (string rawLine in File.ReadAllLines(manifestPath))
+        foreach (string rawLine in File.ReadAllLines(LongPath(manifestPath)))
         {
-            string relativePath = rawLine.Trim();
+            // Manifests written with "/" must compare equal to payload paths; otherwise every file in a
+            // subfolder looks obsolete and is deleted after the copy.
+            string relativePath = rawLine.Trim().Replace('/', Path.DirectorySeparatorChar);
             if (string.IsNullOrWhiteSpace(relativePath))
             {
                 continue;
@@ -513,11 +562,11 @@ internal static class LocalUpdateAgent
     internal static void WriteManagedFileSet(string installRoot, IEnumerable<string> managedFiles, List<string> createdFiles)
     {
         string manifestPath = Path.Combine(installRoot, ManagedFilesManifestName);
-        if (!File.Exists(manifestPath))
+        if (!File.Exists(LongPath(manifestPath)))
         {
             createdFiles.Add(manifestPath);
         }
-        File.WriteAllLines(manifestPath, managedFiles.OrderBy(path => path, StringComparer.OrdinalIgnoreCase));
+        File.WriteAllLines(LongPath(manifestPath), managedFiles.OrderBy(path => path, StringComparer.OrdinalIgnoreCase));
     }
 
     internal static void DeleteObsoleteManagedFiles(string installRoot, IEnumerable<string> obsoleteManagedFiles)
@@ -525,9 +574,9 @@ internal static class LocalUpdateAgent
         foreach (string relativePath in obsoleteManagedFiles)
         {
             string installedFile = GetPathInsideRoot(installRoot, relativePath);
-            if (File.Exists(installedFile))
+            if (File.Exists(LongPath(installedFile)))
             {
-                File.Delete(installedFile);
+                File.Delete(LongPath(installedFile));
             }
         }
     }
@@ -537,14 +586,14 @@ internal static class LocalUpdateAgent
         foreach (string preservedPath in PreservedRelativePaths)
         {
             string backupFile = GetPathInsideRoot(backupRoot, preservedPath);
-            if (!File.Exists(backupFile))
+            if (!File.Exists(LongPath(backupFile)))
             {
                 continue;
             }
 
             string destinationFile = GetPathInsideRoot(installRoot, preservedPath);
-            Directory.CreateDirectory(Path.GetDirectoryName(destinationFile));
-            File.Copy(backupFile, destinationFile, true);
+            CreateDirectoryFor(destinationFile);
+            File.Copy(LongPath(backupFile), LongPath(destinationFile), true);
         }
     }
 
@@ -552,23 +601,23 @@ internal static class LocalUpdateAgent
     {
         foreach (string createdFile in createdFiles)
         {
-            if (File.Exists(createdFile))
+            if (File.Exists(LongPath(createdFile)))
             {
-                File.Delete(createdFile);
+                File.Delete(LongPath(createdFile));
             }
         }
 
-        if (!Directory.Exists(backupRoot))
+        if (string.IsNullOrEmpty(backupRoot) || !Directory.Exists(LongPath(backupRoot)))
         {
             return;
         }
 
-        foreach (string backupFile in Directory.GetFiles(backupRoot, "*", SearchOption.AllDirectories))
+        foreach (string backupFile in GetFilesRecursive(backupRoot))
         {
             string relativePath = GetRelativePath(backupRoot, backupFile);
             string destinationFile = GetPathInsideRoot(installRoot, relativePath);
-            Directory.CreateDirectory(Path.GetDirectoryName(destinationFile));
-            File.Copy(backupFile, destinationFile, true);
+            CreateDirectoryFor(destinationFile);
+            File.Copy(LongPath(backupFile), LongPath(destinationFile), true);
         }
     }
 
@@ -608,6 +657,7 @@ internal static class LocalUpdateAgent
 
     private static void DeleteDirectoryTreeSafely(string path)
     {
+        path = LongPath(path);
         if (!Directory.Exists(path))
         {
             return;
@@ -620,6 +670,7 @@ internal static class LocalUpdateAgent
             return;
         }
 
+        // Entries of a prefixed directory are prefixed too, so recursion stays long-path safe.
         foreach (FileSystemInfo entry in new DirectoryInfo(path).GetFileSystemInfos())
         {
             FileAttributes attributes = entry.Attributes;
@@ -627,7 +678,7 @@ internal static class LocalUpdateAgent
             {
                 if ((attributes & FileAttributes.ReparsePoint) != 0)
                 {
-                    Directory.Delete(entry.FullName, false);
+                    Directory.Delete(LongPath(entry.FullName), false);
                 }
                 else
                 {
@@ -636,7 +687,7 @@ internal static class LocalUpdateAgent
             }
             else
             {
-                File.Delete(entry.FullName);
+                File.Delete(LongPath(entry.FullName));
             }
         }
 
