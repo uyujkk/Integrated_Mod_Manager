@@ -26,7 +26,8 @@ internal sealed class ShortcutOverlayWindow : Window
             presenter.IsMinimizable = false;
         }
         // Keep pointer interaction without taking keyboard focus from the game.
-        SetWindowLongPtr(handle, -20, GetWindowLongPtr(handle, -20) | (nint)0x08000080);
+        // Expose the independent panel in window switching, while retaining no-activation clicks.
+        SetWindowLongPtr(handle, -20, (GetWindowLongPtr(handle, -20) & ~(nint)0x80) | (nint)0x08040000);
         callback = OnMessage;
         if (!SetWindowSubclass(handle, callback, 79, 0)) throw new InvalidOperationException("Overlay window setup failed.");
         Closed += (_, _) => RemoveWindowSubclass(handle, callback, 79);

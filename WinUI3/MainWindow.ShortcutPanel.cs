@@ -15,6 +15,9 @@ public sealed partial class MainWindow
     private TextBlock? _shortcutStatus;
     private ToggleSwitch? _shortcutEnabledToggle;
     private NumberBox? _shortcutHoldDuration;
+    private NumberBox? _shortcutTapDuration;
+    private ComboBox? _shortcutInputModePicker;
+    private ShortcutInputMode _shortcutInputMode = ShortcutInputMode.ScanCode;
     private ShortcutOverlayWindow? _shortcutOverlay;
     private IReadOnlyList<DetectedModShortcut> _shortcutDetected = [];
     private int _shortcutScanRevision;
@@ -28,6 +31,10 @@ public sealed partial class MainWindow
     private bool _shortcutOverlayVisible;
     private bool _shortcutHotkeyRegistered;
     private TextBlock? _shortcutHotkeyStatus;
+    private TextBlock? _overlayModText, _overlayTargetText, _overlayEnabledText, _overlayStatusText;
+    private StackPanel? _overlayButtonList;
+    private ScrollViewer? _overlayScroll;
+    private DetectedModShortcut[] _overlayBindings = [];
 
     private sealed record ShortcutModOption(string Path, string Label)
     {
@@ -135,6 +142,24 @@ public sealed partial class MainWindow
             RefreshShortcutOverlay();
         };
         pane.Children.Add(_shortcutEnabledToggle);
+        _shortcutInputModePicker = new ComboBox { Header = L("输入方式", "Input method"), HorizontalAlignment = HorizontalAlignment.Left };
+        _shortcutInputModePicker.Items.Add(new ComboBoxItem { Content = L("扫描码（模拟物理按键）", "Scan codes (physical-key simulation)"), Tag = ShortcutInputMode.ScanCode });
+        _shortcutInputModePicker.Items.Add(new ComboBoxItem { Content = L("虚拟键（旧版兼容模式）", "Virtual keys (legacy compatibility)"), Tag = ShortcutInputMode.VirtualKey });
+        _shortcutInputModePicker.SelectedIndex = _shortcutInputMode == ShortcutInputMode.VirtualKey ? 1 : 0;
+        _shortcutInputModePicker.SelectionChanged += (_, _) =>
+        {
+            if (_shortcutInputModePicker.SelectedItem is ComboBoxItem { Tag: ShortcutInputMode mode })
+            { _shortcutInputMode = mode; SaveShellConfig(); }
+        };
+        pane.Children.Add(_shortcutInputModePicker);
+        _shortcutTapDuration = new NumberBox
+        {
+            Header = L("单次按压时间（毫秒）", "Tap duration (ms)"), Minimum = 100, Maximum = 2000, Value = 200,
+            SmallChange = 100, Width = 260, HorizontalAlignment = HorizontalAlignment.Left,
+            SpinButtonPlacementMode = NumberBoxSpinButtonPlacementMode.Compact
+        };
+        pane.Children.Add(_shortcutTapDuration);
+        pane.Children.Add(ShortcutButton(L("切换 Num Lock（小键盘数字锁）", "Toggle Num Lock"), async () => await SendNumLockAsync()));
         _shortcutHoldDuration = new NumberBox
         {
             Header = L("长按类按键持续时间（毫秒）", "Hold-type duration (ms)"),
@@ -234,7 +259,7 @@ public sealed partial class MainWindow
         RefreshShortcutOverlay();
     }
 
-    private Button CreateShortcutAction(DetectedModShortcut shortcut)
+    private Button CreateShortcutAction(DetectedModShortcut shortcut, bool floating = false)
     {
         bool supported = ShortcutKeyPlan.TryCreate(shortcut.RawKey, out _);
         var content = new StackPanel { Spacing = 3 };
@@ -246,6 +271,7 @@ public sealed partial class MainWindow
         if (!supported) source += " · " + L("暂不支持发送此绑定", "Sending this binding is unsupported");
         content.Children.Add(new TextBlock { Text = source, FontSize = 11, Opacity = .65, TextWrapping = TextWrapping.Wrap });
         var button = new Button { Content = content, IsEnabled = supported, HorizontalAlignment = HorizontalAlignment.Stretch, HorizontalContentAlignment = HorizontalAlignment.Left, Padding = new Thickness(14, 10, 14, 10) };
+        if (floating) button.AllowFocusOnInteraction = false;
         button.Click += async (_, _) => await SendShortcutFromPanelAsync(shortcut);
         return button;
     }
@@ -262,9 +288,10 @@ public sealed partial class MainWindow
                 throw new InvalidOperationException(L("Mod 目录已变化，请重新读取。", "The Mod folder changed; reload it first."));
             if (!ShortcutKeyPlan.TryCreate(shortcut.RawKey, out var plan)) return;
             int hold = shortcut.Behavior.Equals("hold", StringComparison.OrdinalIgnoreCase)
-                ? (int)(double.IsFinite(_shortcutHoldDuration!.Value) ? _shortcutHoldDuration.Value : 300) : 80;
-            await _shortcutInput.SendAsync(target, plan!, hold);
-            if (!_onlineWindowClosed) _shortcutStatus!.Text = L($"已发送 {shortcut.Shortcut}；效果由游戏决定。", $"Sent {shortcut.Shortcut}; the game determines its effect.");
+                ? (int)(double.IsFinite(_shortcutHoldDuration!.Value) ? _shortcutHoldDuration.Value : 300)
+                : (int)(double.IsFinite(_shortcutTapDuration!.Value) ? _shortcutTapDuration.Value : 200);
+            string report = await _shortcutInput.SendAsync(target, plan!, hold, _shortcutInputMode);
+            if (!_onlineWindowClosed) _shortcutStatus!.Text = shortcut.Shortcut + " · " + report;
         }
         catch (Exception ex)
         {
@@ -281,7 +308,11 @@ public sealed partial class MainWindow
             if (_shortcutOverlay is null)
             {
                 _shortcutOverlay = new ShortcutOverlayWindow(BuildShortcutOverlayContent());
-                _shortcutOverlay.Closed += (_, _) => { _shortcutOverlay = null; _shortcutOverlayVisible = false; };
+                _shortcutOverlay.Closed += (_, _) =>
+                {
+                    _shortcutOverlay = null; _shortcutOverlayVisible = false;
+                    _overlayButtonList = null; _overlayScroll = null; _overlayBindings = [];
+                };
             }
             _shortcutOverlay.ShowPanel();
             _shortcutOverlayVisible = true;
@@ -291,21 +322,61 @@ public sealed partial class MainWindow
 
     private UIElement BuildShortcutOverlayContent()
     {
-        var panel = new StackPanel { Spacing = 8, Padding = new Thickness(14) };
-        panel.Children.Add(new TextBlock { Text = (_shortcutModPicker?.SelectedItem as ShortcutModOption)?.Label ?? L("请选择 Mod", "Select a Mod"), FontSize = 17, TextWrapping = TextWrapping.Wrap });
-        panel.Children.Add(new TextBlock { Text = (_shortcutTargetPicker?.SelectedItem as ShortcutTarget)?.Label ?? L("未选择目标窗口", "No target window"), FontSize = 11, TextWrapping = TextWrapping.Wrap });
-        panel.Children.Add(new TextBlock { Text = _shortcutInputEnabled ? L("按键发送已开启", "Input enabled") : L("已暂停，请在主窗口开启发送", "Paused; enable input in main window"), TextWrapping = TextWrapping.Wrap });
+        var root = new Grid { Padding = new Thickness(14), RowSpacing = 10,
+            Background = new SolidColorBrush(Color.FromArgb(255, 28, 31, 38)), RequestedTheme = ElementTheme.Dark };
+        root.RowDefinitions.Add(new RowDefinition { Height = GridLength.Auto });
+        root.RowDefinitions.Add(new RowDefinition { Height = new GridLength(1, GridUnitType.Star) });
+        var panel = new StackPanel { Spacing = 6 };
+        _overlayModText = new TextBlock { FontSize = 17, TextWrapping = TextWrapping.Wrap };
+        _overlayTargetText = new TextBlock { FontSize = 11, TextWrapping = TextWrapping.Wrap };
+        _overlayEnabledText = new TextBlock { TextWrapping = TextWrapping.Wrap };
+        _overlayStatusText = new TextBlock { TextWrapping = TextWrapping.Wrap, FontSize = 11, MaxHeight = 72 };
+        panel.Children.Add(_overlayModText); panel.Children.Add(_overlayTargetText); panel.Children.Add(_overlayEnabledText);
         panel.Children.Add(ShortcutButton(L("暂停发送", "Pause input"), () => { _shortcutInputEnabled = false; _shortcutEnabledToggle!.IsOn = false; RefreshShortcutOverlay(); }));
         panel.Children.Add(ShortcutButton(L("隐藏面板", "Hide panel"), () => { _shortcutOverlay?.AppWindow.Hide(); _shortcutOverlayVisible = false; }));
-        panel.Children.Add(new TextBlock { Text = _shortcutStatus?.Text ?? string.Empty, TextWrapping = TextWrapping.Wrap, FontSize = 11 });
-        foreach (var shortcut in _shortcutDetected) panel.Children.Add(CreateShortcutAction(shortcut));
-        return new ScrollViewer { Content = panel, VerticalScrollBarVisibility = ScrollBarVisibility.Auto,
-            Background = new SolidColorBrush(Color.FromArgb(255, 28, 31, 38)), RequestedTheme = ElementTheme.Dark };
+        panel.Children.Add(_overlayStatusText);
+        _overlayButtonList = new StackPanel { Spacing = 8 };
+        _overlayScroll = new ScrollViewer { Content = _overlayButtonList, VerticalScrollBarVisibility = ScrollBarVisibility.Auto,
+            HorizontalScrollBarVisibility = ScrollBarVisibility.Disabled };
+        Grid.SetRow(_overlayScroll, 1);
+        root.Children.Add(panel); root.Children.Add(_overlayScroll);
+        _overlayBindings = [];
+        UpdateShortcutOverlayControls();
+        return root;
     }
 
     private void RefreshShortcutOverlay()
     {
-        if (_shortcutOverlay is not null) _shortcutOverlay.Content = BuildShortcutOverlayContent();
+        if (_shortcutOverlay is not null) UpdateShortcutOverlayControls();
+    }
+
+    private void UpdateShortcutOverlayControls()
+    {
+        if (_overlayButtonList is null) return;
+        _overlayModText!.Text = (_shortcutModPicker?.SelectedItem as ShortcutModOption)?.Label ?? L("请选择 Mod", "Select a Mod");
+        _overlayTargetText!.Text = (_shortcutTargetPicker?.SelectedItem as ShortcutTarget)?.Label ?? L("未选择目标窗口", "No target window");
+        _overlayEnabledText!.Text = _shortcutInputEnabled ? L("按键发送已开启", "Input enabled") : L("已暂停，请在主窗口开启发送", "Paused; enable input in main window");
+        _overlayStatusText!.Text = _shortcutStatus?.Text ?? string.Empty;
+        // Status, pause and target changes must not replace the scroll container or buttons.
+        if (_overlayBindings.SequenceEqual(_shortcutDetected)) return;
+        _overlayBindings = _shortcutDetected.ToArray();
+        _overlayButtonList.Children.Clear();
+        foreach (var shortcut in _overlayBindings) _overlayButtonList.Children.Add(CreateShortcutAction(shortcut, floating: true));
+        _overlayScroll?.ChangeView(null, 0, null, true);
+    }
+
+    private async Task SendNumLockAsync()
+    {
+        if (_shortcutSendInProgress) return;
+        _shortcutSendInProgress = true;
+        try
+        {
+            if (!_shortcutInputEnabled || _shortcutTargetPicker?.SelectedItem is not ShortcutTarget target)
+                throw new InvalidOperationException(L("请先选择目标窗口并开启按键发送。", "Select a target window and enable input first."));
+            _shortcutStatus!.Text = await _shortcutInput.SendAsync(target, new ShortcutKeyPlan(new ushort[] { 0x90 }, Array.Empty<ushort>()), 150, ShortcutInputMode.VirtualKey);
+        }
+        catch (Exception ex) { if (!_onlineWindowClosed) _shortcutStatus!.Text = ex.Message; }
+        finally { _shortcutSendInProgress = false; if (!_onlineWindowClosed) RefreshShortcutOverlay(); }
     }
 
     private void CloseShortcutPanel()

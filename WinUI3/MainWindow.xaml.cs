@@ -37,7 +37,7 @@ namespace ModFolderCopier.WinUI;
 
 public sealed partial class MainWindow : Window
 {
-    private const string AppVersion = "v4.3.1-hotkeys-test.1";
+    private const string AppVersion = "v4.3.1-hotkeys-test.2";
     private static bool AppSelfUpdateEnabled => ApplicationReleasePolicy.ApplicationSelfUpdateEnabled;
     private const string GitHubRepositoryUrl = "https://github.com/uyujkk/Integrated_Mod_Manager";
     private const string GitHubLatestReleaseApiUrl = "https://api.github.com/repos/uyujkk/Integrated_Mod_Manager/releases/latest";
@@ -2246,6 +2246,8 @@ public sealed partial class MainWindow : Window
             _shortcutPanelHotkeyModifiers = config?.ShortcutPanelHotkeyModifiers is 3 or 5 or 6 ? config.ShortcutPanelHotkeyModifiers : 3;
             _shortcutPanelHotkeyKey = config?.ShortcutPanelHotkeyKey is >= 0x41 and <= 0x5A or >= 0x70 and <= 0x7B ? config.ShortcutPanelHotkeyKey : 0x4B;
             _shortcutPanelHotkeyEnabled = config?.ShortcutPanelHotkeyEnabled ?? true;
+            _shortcutInputMode = Enum.TryParse(config?.ShortcutInputMode, out ShortcutInputMode inputMode) ? inputMode : ShortcutInputMode.ScanCode;
+            if (!Enum.IsDefined(_shortcutInputMode)) _shortcutInputMode = ShortcutInputMode.ScanCode;
             _lastModUpdateCheckUtc = TryParseDateTimeOffset(config?.LastModUpdateCheckUtc);
             _latestReleaseTag = config?.LatestReleaseTag;
             _latestReleaseTitle = config?.LatestReleaseTitle;
@@ -2382,6 +2384,7 @@ public sealed partial class MainWindow : Window
                 ShortcutPanelHotkeyModifiers = _shortcutPanelHotkeyModifiers,
                 ShortcutPanelHotkeyKey = _shortcutPanelHotkeyKey,
                 ShortcutPanelHotkeyEnabled = _shortcutPanelHotkeyEnabled,
+                ShortcutInputMode = _shortcutInputMode.ToString(),
                 LastModUpdateCheckUtc = _lastModUpdateCheckUtc?.ToString("O"),
                 LatestReleaseTag = _latestReleaseTag,
                 LatestReleaseTitle = _latestReleaseTitle,
@@ -14856,6 +14859,7 @@ public sealed class BetaShellConfig
     public uint ShortcutPanelHotkeyModifiers { get; set; } = 3;
     public uint ShortcutPanelHotkeyKey { get; set; } = 0x4B;
     public bool ShortcutPanelHotkeyEnabled { get; set; } = true;
+    public string? ShortcutInputMode { get; set; }
     public Dictionary<string, LocalLibraryState>? LocalLibraries { get; set; }
     public OnlineWorkspacePreferences? OnlinePreferences { get; set; }
     public int EndfieldBridgeOfferRevision { get; set; }

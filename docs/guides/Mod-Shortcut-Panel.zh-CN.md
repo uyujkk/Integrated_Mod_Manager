@@ -1,5 +1,13 @@
 # Mod 快捷键面板（独立测试版）
 
+test.2 修复浮窗滚动回顶部，默认增加扫描码输入，保留虚拟键模式供对照。单次按压默认 200 毫秒，可调至 100–2000 毫秒；小键盘数字在扫描码模式下需要开启 Num Lock，可用模块中的按钮切换。
+
+若游戏无响应：先确认目标是游戏本体、开启发送，再分别测试扫描码／虚拟键模式；可将单次按压调到 500 毫秒排查短按漏读。若明确提示权限不足，请以与游戏相同的权限打开管理器。权限无法读取会标为未知，不会推断已绕过限制。
+
+每次点击会在当前程序 `WinUI3/diagnostics/shortcut-input.jsonl` 保存本地诊断：输入模式、虚拟键／扫描码、Windows 接收数量、按下状态、前台窗口和权限检查。日志不自动上传。“Windows 已接收、按下状态已观察到”仍不代表游戏执行了 Mod 动作。
+
+Windows 经典屏幕键盘与普通程序的权限和输入方式并不相同；不能因经典屏幕键盘可用就认定普通程序必然可用。参考：[SendInput 权限限制](https://learn.microsoft.com/en-us/windows/win32/api/winuser/nf-winuser-sendinput)、[扫描码输入](https://learn.microsoft.com/en-us/windows/win32/api/winuser/ns-winuser-keybdinput)、[辅助功能 UIAccess](https://learn.microsoft.com/en-us/windows/win32/winauto/uiauto-securityoverview)。
+
 在左侧“快捷键”模块选择当前仓库内的 Mod，再选择游戏窗口。读取 INI 后会显示按键、动作说明、来源节和条件。开启“允许向所选窗口发送按键”，点击按钮即可输入；Num5 会发送数字小键盘 5，与数字行 5 不同。无需实体小键盘。
 
 “独立置顶面板”提供类似屏幕键盘的点击操作。默认全局快捷键 **Ctrl + Alt + K** 显示或隐藏浮窗，可在模块内更换或禁用，设置保存在当前程序配置中。注册冲突会提示并保留原设置。浮窗可拖动、调整大小、暂停发送；隐藏后通过全局快捷键恢复。
