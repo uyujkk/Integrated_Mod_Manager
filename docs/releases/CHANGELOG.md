@@ -6,6 +6,12 @@
 
 This document records version changes in Integrated Mod Manager. Unpublished versions are marked separately.
 
+## v4.4.0 — 2026-10-22（正式版 / Stable）
+
+新增 Mod 快捷键面板与置顶浮窗：读取 INI 按键绑定，点击发送到游戏，支持跟随出场角色和浮窗内保存预设。修复更新后预览图丢失（#14）和更新器超长路径（#16），下载时可按需创建角色文件夹（#6），加快在线浏览并整理 Mod 更新页。中文与英文分开见 [v4.4.0](v4.4.0.md)。
+
+Add the Mod shortcut panel and always-on-top overlay: read INI key bindings, click to send them to the game, follow the active character and save presets from the overlay. Keep preview images after updates (#14), support long paths in the updater (#16), create character folders on download (#6), speed up online browsing and tidy the Mod updates page. Separate Chinese and English notes: [v4.4.0](v4.4.0.md).
+
 ## v4.3.1 — 2026-10-21（正式版 / Stable）
 
 修复 Mod 更新频率切换后崩溃；新增更新弹窗、下载并替换和旧版备份，保护并发修改并阻止中断替换重放。完整包含 4.3 功能，中文与英文分开见 [v4.3.1](v4.3.1.md)。

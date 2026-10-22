@@ -1,4 +1,4 @@
-> **v4.3.1 正式版。** 新增功能、升级方式与已知问题见 [4.3 发布说明](docs/releases/v4.3.1.md)。历史版本与说明继续保留。
+> **v4.4.0 正式版。** 新增 Mod 快捷键面板与置顶浮窗。新增功能、升级方式与已知问题见 [4.4 发布说明](docs/releases/v4.4.0.md)。历史版本与说明继续保留。
 
 <div align="center">
   <img src="./WinUI3/Assets/AppIcon.png" width="96" alt="集成化 Mod 管理器图标">
@@ -25,13 +25,23 @@
 
 ## 项目简介
 
-**当前正式版：[v4.3.1](https://github.com/uyujkk/Integrated_Mod_Manager/releases/tag/v4.3.1)。**新增内置终末地启动、INI 冲突提示、失效联接和压缩包导入修复、单实例与界面异常保护；保留浏览下载、旧库整理、组合预设和组合包功能。使用前请阅读[桥接器与账号风险说明](./docs/guides/Endfield-Bridge.md)及[组合预设指南](./docs/guides/Combination-Presets.zh-CN.md)。
+**当前正式版：[v4.4.0](https://github.com/uyujkk/Integrated_Mod_Manager/releases/tag/v4.4.0)。**新增 Mod 快捷键面板与置顶浮窗，点一下即可把 Mod INI 里的按键发送给游戏；Mod 更新后保留预览图，更新器支持超长路径，下载时可按需创建角色文件夹。内置终末地启动、浏览下载、旧库整理、组合预设和组合包功能继续保留。使用前请阅读[快捷键面板说明](./docs/guides/Mod-Shortcut-Panel.zh-CN.md)、[内置启动与账号风险说明](./docs/guides/Endfield-Bridge.md)及[组合预设指南](./docs/guides/Combination-Presets.zh-CN.md)。
 
 集成化 Mod 管理器以独立“仓库”管理不同游戏或不同 Mod 环境。它可以在本地仓库和游戏实际读取的目标目录之间复制或移除完整 Mod 文件夹，并集中管理预览图、来源链接、快捷键说明、在线下载、更新记录、配置方案和安装备份。
 
-主程序、启动器和更新器统一为 **4.3.1**（`4.3.1.0`）。工具维护者为 `uyujkk`，既有 Bandizip 备用解压功能由 [CaramelizedCUDA](https://github.com/CaramelizedCUDA) 贡献；此前的 [4.0-beta](https://github.com/uyujkk/Integrated_Mod_Manager/releases/tag/v4.0-beta) 继续独立保留。
+主程序、启动器和更新器统一为 **4.4.0**（`4.4.0.0`）。工具维护者为 `uyujkk`，既有 Bandizip 备用解压功能由 [CaramelizedCUDA](https://github.com/CaramelizedCUDA) 贡献；此前的 [4.0-beta](https://github.com/uyujkk/Integrated_Mod_Manager/releases/tag/v4.0-beta) 继续独立保留。
 
 ## 界面预览
+
+**Mod 快捷键面板（4.4）**：选择 Mod 后列出其 INI 中的按键绑定，点击即可发送到游戏；鼠标、手柄等无法发送的绑定会说明原因。
+
+![快捷键模块：列出 Mod INI 中的按键绑定，并说明鼠标和手柄绑定无法发送的原因](./docs/assets/screenshots/shortcut-panel-v4.4.png)
+
+**置顶浮窗**：在游戏画面上方直接点按，不用切换窗口。浮窗不抢焦点，背景不透明度和字体颜色可调，可切换已启用的 Mod，并把当前组合保存为预设。
+
+![半透明置顶浮窗：Mod 选择、发送开关、保存预设和按键按钮](./docs/assets/screenshots/shortcut-overlay-v4.4.png)
+
+[查看快捷键面板使用方法](./docs/guides/Mod-Shortcut-Panel.zh-CN.md)
 
 以下截图展示 4.1.0 界面。4.1.1 在仓库启动器设置中增加了独立桥接器入口；打开管理器不会自动启动游戏。
 
@@ -52,7 +62,22 @@
 
 </details>
 
-## 4.2 更新
+## 4.4 更新
+
+- **Mod 快捷键面板**：读取 Mod INI 中的 `[Key…]` 绑定，按 3DMigoto 规则解析，点击即可发送到所选游戏窗口，不需要实体小键盘。
+- **置顶浮窗（Ctrl + Alt + K）**：不抢焦点，背景不透明度和字体颜色可调；在游戏中即可切换已启用的 Mod、开关发送和保存预设。
+- **跟随出场角色**：为每个角色保存 HUD 参考图后，面板自动切换到对应 Mod；参考图只保存在本地。
+- 终末地以管理员权限运行，管理器会识别按键会被丢弃的情况，并可一键以管理员身份重启。
+- Mod 更新后保留预览图（#14）；更新器支持超过 260 个字符的路径（#16）；下载时可在确认后新建缺少的角色文件夹（#6）。
+- 在线翻页和下载量加载更快，Mod 更新页更紧凑，终末地启动设置布局修复。
+
+[4.4 发布说明与已知问题](./docs/releases/v4.4.0.md) · [验证范围](./docs/verification/v4.4.0.md)
+
+## 4.3 更新
+
+- 内置终末地启动，支持 EFMI 适配、备份与恢复，不再单独下载 EndfieldBridge。
+- INI 冲突提示、失效联接清理（#10）和压缩包导入修复（#11）。
+- Mod 更新弹窗和带备份的
 
 - 下载进度在原卡片更新，按仓库恢复作者、页码、搜索与浏览位置。
 - 管理收藏和最近作者，勾选稍后下载条目后逐项核对并批量下载。
@@ -60,7 +85,7 @@
 - 完善下载队列、旧库导入中断恢复及本地诊断。
 - 正式版更新检查遵循用户保存的开关；详情页原生闪退根因仍未确认。
 
-[4.3 发布说明与已知问题](./docs/releases/v4.3.1.md) · [验证范围](./docs/verification/v4.3.1.md)
+[4.2 发布说明](./docs/releases/v4.2.0.md) · [验证范围](./docs/verification/v4.2.0.md)
 
 ## 4.1.1 更新
 
@@ -90,6 +115,7 @@
 | --- | --- |
 | 多仓库管理 | 为不同游戏、角色或 XXMI 配置保存独立路径与在线分类 |
 | 本地 Mod 切换 | 使用两层目录浏览、搜索、复制、移除、创建、重命名和删除 Mod |
+| Mod 快捷键面板 | 点击 Mod INI 中的按键绑定即可发送到游戏；可在主窗口或置顶浮窗中使用，并能跟随出场角色 |
 | 可选目录联接 | 让加载器与仓库使用同一份 Mod 目录；同角色切换时安全断开旧联接 |
 | 压缩包导入 | 支持 ZIP、7Z、RAR、ZIPX、CAB、TAR 及常见压缩流格式 |
 | 预览与说明 | 为每个 Mod 保存预览图、来源链接、快捷键和功能描述 |
@@ -177,6 +203,7 @@ Mod 存储文件夹
 | --- | --- | --- |
 | 快速使用 | [快速使用手册](./docs/guides/快速使用手册.md) | [Quick Start](./docs/guides/Quick-Start.en.md) |
 | 完整用户手册 | [详细中文手册](./docs/guides/用户手册.zh-CN.md) | [Complete User Guide](./docs/guides/User-Guide.en.md) |
+| 快捷键面板与置顶浮窗 | [快捷键面板与置顶浮窗](./docs/guides/Mod-Shortcut-Panel.zh-CN.md) | [Shortcut Panel and Overlay](./docs/guides/Mod-Shortcut-Panel.en.md) |
 | 组合与状态预设 | [组合与状态预设](./docs/guides/Combination-Presets.zh-CN.md) | [Combination and State Presets](./docs/guides/Combination-Presets.en.md) |
 | 升级到 4.0 | [升级指南](./docs/guides/Upgrade-v4.0.zh-CN.md) | [Upgrade Guide](./docs/guides/Upgrade-v4.0.en.md) |
 | 更新历史 | [双语更新日志](./docs/releases/CHANGELOG.md) | [Bilingual Changelog](./docs/releases/CHANGELOG.md) |
@@ -208,7 +235,7 @@ cmd /c build_winui.bat
 powershell -NoProfile -ExecutionPolicy Bypass -File .\scripts\test-all.ps1
 ```
 
-GitHub Actions 会在推送到 `main`、Pull Request 和手动触发时执行统一四组验证。测试依赖集中管理，未删除安全用例。当前结果及验证边界见[测试说明](./docs/development/TESTING.md)与[4.3.0 验证记录](./docs/verification/v4.3.1.md)。
+GitHub Actions 会在推送到 `main`、Pull Request 和手动触发时执行统一四组验证。测试依赖集中管理，未删除安全用例。当前结果及验证边界见[测试说明](./docs/development/TESTING.md)与[4.4.0 验证记录](./docs/verification/v4.4.0.md)。
 
 ## 数据与安全
 

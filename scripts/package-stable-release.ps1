@@ -1,8 +1,8 @@
 [CmdletBinding()]
 param(
-    [string]$Version = '4.3.1',
-    [string]$BaseTag = 'v4.2.0',
-    [string]$VerificationDirectory = 'artifacts\verification\v4.3.1',
+    [string]$Version = '4.4.0',
+    [string]$BaseTag = 'v4.3.1',
+    [string]$VerificationDirectory = 'artifacts\verification\v4.4.0',
     [switch]$ForGitHubRelease,
     [string]$CiUrl = '',
     # Only for machines without git: JSON exported by git elsewhere from this same
@@ -138,7 +138,7 @@ Copy-Item -LiteralPath (Join-Path $taskRoot 'docs\development\Combination-Bundle
 Copy-Item -LiteralPath (Join-Path $taskRoot '开始使用.md') -Destination (Join-Path $taskApp 'README.md')
 $taskMinor = ($taskCoreVersion -split '\.')[0..1] -join '.'
 [IO.File]::WriteAllText((Join-Path $taskApp 'docs\README.md'),
-    "# $taskMinor 正式版文档`n`n当前版本以 [$Version 说明](releases/v$Version.md) 为准；基础手册和历史发布说明保留用于查阅。`n`n[用户手册](guides/用户手册.zh-CN.md) · [内置终末地启动](guides/Endfield-Bridge.md) · [浏览下载与旧库整理](guides/Browse-Download-Task-Pack.zh-CN.md) · [组合预设](guides/Combination-Presets.zh-CN.md)`n",
+    "# $taskMinor 正式版文档`n`n当前版本以 [$Version 说明](releases/v$Version.md) 为准；基础手册和历史发布说明保留用于查阅。`n`n[用户手册](guides/用户手册.zh-CN.md) · [快捷键面板](guides/Mod-Shortcut-Panel.zh-CN.md) · [内置终末地启动](guides/Endfield-Bridge.md) · [浏览下载与旧库整理](guides/Browse-Download-Task-Pack.zh-CN.md) · [组合预设](guides/Combination-Presets.zh-CN.md)`n",
     [Text.UTF8Encoding]::new($false))
 
 $taskSourceHashes = foreach ($relative in $taskSourceFiles) {

@@ -1,5 +1,20 @@
 # Homepage screenshots / 主页截图
 
+## 4.4 shortcut panel / 快捷键面板
+
+Captured on 2026-10-22 from an isolated copy of the v4.4.0 Release build (native window, dark theme, English UI).
+
+| File | Surface |
+| --- | --- |
+| `shortcut-panel-v4.4.png` | Shortcuts page bindings list for a synthetic Mod, including one mouse and one controller binding with their "Cannot send" reasons |
+| `shortcut-overlay-v4.4.png` | Always-on-top overlay at 55% background opacity over the manager's own window |
+
+The repository held three synthetic Mods whose `mod.ini` files contain only demonstration `[Key…]` sections; folder names such as `Demo-Operator-A` are placeholders. No game, loader, real Mod, online content or local path is shown, no target window was selected and no input was sent. The overlay was captured from the screen with only the manager's window behind it. Images are unedited.
+
+2026-10-22 使用独立的 4.4.0 Release 构建截图，仓库中只有 3 个模拟 Mod，INI 仅含演示用按键节。未连接游戏或加载器，未选择目标窗口，也未发送按键；画面不含真实 Mod、在线内容或本地路径。浮窗截图时背后只有管理器自身窗口。截图未修改。
+
+## 4.1 screenshots
+
 Captured on 2026-10-07 from an isolated copy of the unmodified v4.1.0 application. These are native-window screenshots, not UI concepts or rendered mockups. The main English README and Chinese README share the same English-language images.
 
 | File | Surface |

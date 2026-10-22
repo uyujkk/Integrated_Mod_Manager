@@ -1,4 +1,4 @@
-> **v4.3.1 stable release.** See the [release notes](docs/releases/v4.3.1.md) for new features, upgrade guidance, and known issues.
+> **v4.4.0 stable release.** Adds the Mod shortcut panel and overlay. See the [release notes](docs/releases/v4.4.0.md) for new features, upgrade guidance, and known issues.
 
 <div align="center">
   <img src="./WinUI3/Assets/AppIcon.png" width="96" alt="Integrated Mod Manager icon">
@@ -25,13 +25,23 @@
 
 ## Overview
 
-**Current stable version: [v4.3.1](https://github.com/uyujkk/Integrated_Mod_Manager/releases/tag/v4.3.1).** Adds integrated Endfield launch, INI conflict warnings, broken-link and archive-import fixes, single-instance handling and UI exception reporting. Existing browsing, downloading, library tools and combination presets remain supported. See the [bridge and risk guide](./docs/guides/Endfield-Bridge.md) and [preset guide](./docs/guides/Combination-Presets.en.md).
+**Current stable version: [v4.4.0](https://github.com/uyujkk/Integrated_Mod_Manager/releases/tag/v4.4.0).** Adds a Mod shortcut panel and always-on-top overlay that send a Mod's INI key bindings to the game with a click, keeps preview images after Mod updates, supports long paths in the updater, and creates character folders on download. Integrated Endfield launch, browsing, downloading, library tools and combination presets remain supported. See the [shortcut panel guide](./docs/guides/Mod-Shortcut-Panel.en.md), the [launch and risk guide](./docs/guides/Endfield-Bridge.md) and the [preset guide](./docs/guides/Combination-Presets.en.md).
 
 Integrated Mod Manager organizes different games or mod environments into independent repositories. It copies or removes complete mod folders between a local library and the target directory read by the game, while keeping preview images, source links, shortcut notes, online downloads, update records, profiles, and installation backups in one application.
 
-The application, launcher, and updater use version **4.3.1** (`4.3.1.0`). The tool is maintained by `uyujkk`. The Bandizip extraction fallback was contributed by [CaramelizedCUDA](https://github.com/CaramelizedCUDA). The earlier [4.0-beta](https://github.com/uyujkk/Integrated_Mod_Manager/releases/tag/v4.0-beta) remains archived separately.
+The application, launcher, and updater use version **4.4.0** (`4.4.0.0`). The tool is maintained by `uyujkk`. The Bandizip extraction fallback was contributed by [CaramelizedCUDA](https://github.com/CaramelizedCUDA). The earlier [4.0-beta](https://github.com/uyujkk/Integrated_Mod_Manager/releases/tag/v4.0-beta) remains archived separately.
 
 ## Interface Preview
+
+**Mod shortcut panel (4.4)** — pick a Mod and the page lists the key bindings from its INI files. Click one to send the key to the game; bindings that can't be sent (mouse, controller) show the reason.
+
+![Shortcuts page listing a Mod's INI key bindings, with unsupported mouse and controller bindings explained](./docs/assets/screenshots/shortcut-panel-v4.4.png)
+
+**Always-on-top overlay** — use the shortcuts over the game without switching windows. The overlay never takes focus; its background opacity and text colour are adjustable, and it can switch between enabled Mods and save the current combination as a preset.
+
+![Translucent overlay over the main window, with a Mod picker, input toggle, Save preset and key buttons](./docs/assets/screenshots/shortcut-overlay-v4.4.png)
+
+[How the shortcut panel works](./docs/guides/Mod-Shortcut-Panel.en.md)
 
 The screenshots below show the 4.1.0 interface. Version 4.1.1 adds an optional standalone EndfieldBridge entry under the repository launcher settings; opening the manager does not auto-launch the game.
 
@@ -52,6 +62,25 @@ When the full overview cannot fit, Settings switches to sections. Language, them
 
 </details>
 
+## What's New in 4.4
+
+- **Mod shortcut panel:** reads `[Key…]` bindings from Mod INI files and sends them to the selected game window with a click, following 3DMigoto key rules. No numeric keypad needed.
+- **Always-on-top overlay (Ctrl + Alt + K):** focus-free, adjustable background opacity and text colour; switch enabled Mods, toggle input and save presets without leaving the game.
+- **Follow the active character:** save a HUD reference per character and the panel switches to that character's Mod. References stay local.
+- Endfield runs as administrator, so the manager detects when input would be dropped and offers to restart itself as administrator.
+- Preview images are kept after Mod updates (#14); the updater handles paths over 260 characters (#16); downloads can create a missing character folder after confirmation (#6).
+- Faster online paging and download counts, a tidier Mod updates page, and a fixed Endfield launch settings layout.
+
+[4.4 release notes and known issues](./docs/releases/v4.4.0.md) · [Verification scope](./docs/verification/v4.4.0.md)
+
+## What's New in 4.3
+
+- Integrated Endfield launch with EFMI setup, backup and restore; no separate EndfieldBridge download.
+- INI conflict warnings, broken-link cleanup (#10) and archive-import fixes (#11).
+- Mod update notifications and backed-up Download and replace (4.3.1).
+
+[4.3.1 release notes](./docs/releases/v4.3.1.md)
+
 ## What's New in 4.2
 
 - Download progress updates in place; browsing sessions are saved per repository.
@@ -60,7 +89,7 @@ When the full overview cannot fit, Settings switches to sections. Language, them
 - Recover interrupted download/import tasks and export local diagnostics.
 - Stable application update checks honor your saved preference. The native detail-page crash remains an unresolved known issue.
 
-[Release notes and known issues](./docs/releases/v4.3.1.md) · [Verification scope](./docs/verification/v4.3.1.md)
+[4.2 release notes](./docs/releases/v4.2.0.md) · [Verification scope](./docs/verification/v4.2.0.md)
 
 ## What's New in 4.1.1
 
@@ -90,6 +119,7 @@ Before capturing state, have the loader save it (usually F10). Close the game an
 | --- | --- |
 | Multiple repositories | Keep separate paths and online categories for different games or XXMI setups |
 | Local mod switching | Browse, search, copy, remove, create, rename, and delete two-level mod folders |
+| Mod shortcut panel | Click a Mod's INI key bindings to send them to the game, from the main window or an always-on-top overlay that can follow the active character |
 | Optional directory junctions | Let the loader and library share one mod directory, safely replacing the previous link for the same character |
 | Archive import | Import ZIP, 7Z, RAR, ZIPX, CAB, TAR, and common compressed stream formats |
 | Previews and notes | Store an image, source link, shortcut keys, and action descriptions for each mod |
@@ -177,6 +207,7 @@ See the [Changelog](./docs/releases/CHANGELOG.md) for the complete bilingual his
 | --- | --- | --- |
 | Quick use | [快速使用手册](./docs/guides/快速使用手册.md) | [Quick Start](./docs/guides/Quick-Start.en.md) |
 | Complete guide | [详细中文手册](./docs/guides/用户手册.zh-CN.md) | [Complete User Guide](./docs/guides/User-Guide.en.md) |
+| Shortcut panel and overlay | [快捷键面板与置顶浮窗](./docs/guides/Mod-Shortcut-Panel.zh-CN.md) | [Shortcut Panel and Overlay](./docs/guides/Mod-Shortcut-Panel.en.md) |
 | Combination and state presets | [组合与状态预设](./docs/guides/Combination-Presets.zh-CN.md) | [Combination and State Presets](./docs/guides/Combination-Presets.en.md) |
 | Upgrade to 4.0 | [升级指南](./docs/guides/Upgrade-v4.0.zh-CN.md) | [Upgrade Guide](./docs/guides/Upgrade-v4.0.en.md) |
 | Release history | [Bilingual Changelog](./docs/releases/CHANGELOG.md) | [Bilingual Changelog](./docs/releases/CHANGELOG.md) |
@@ -208,7 +239,7 @@ Run the complete test, coverage, WinUI x64 build, and package verification flow:
 powershell -NoProfile -ExecutionPolicy Bypass -File .\scripts\test-all.ps1
 ```
 
-GitHub Actions runs the same four-suite verification flow on pushes to `main`, pull requests, and manual dispatches. Test dependencies are centralized without removing safety cases. See the [Testing Guide](./docs/development/TESTING.md) and [4.3.0 verification record](./docs/verification/v4.3.1.md) for current results and testing boundaries.
+GitHub Actions runs the same four-suite verification flow on pushes to `main`, pull requests, and manual dispatches. Test dependencies are centralized without removing safety cases. See the [Testing Guide](./docs/development/TESTING.md) and [4.4.0 verification record](./docs/verification/v4.4.0.md) for current results and testing boundaries.
 
 ## Data and Security
 

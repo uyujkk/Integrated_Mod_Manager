@@ -11,9 +11,9 @@ using System.Windows.Forms;
 [assembly: AssemblyTitle("Integrated Mod Manager Local Update Agent")]
 [assembly: AssemblyProduct("Integrated Mod Manager")]
 [assembly: AssemblyCopyright("Copyright (c) 2026 uyujkk")]
-[assembly: AssemblyVersion("4.3.1.0")]
-[assembly: AssemblyFileVersion("4.3.1.0")]
-[assembly: AssemblyInformationalVersion("4.3.1-hotkeys-test.9")]
+[assembly: AssemblyVersion("4.4.0.0")]
+[assembly: AssemblyFileVersion("4.4.0.0")]
+[assembly: AssemblyInformationalVersion("4.4.0")]
 #if !UPDATE_AGENT_TESTS
 // csc.exe emits no target framework, so .NET Framework applied legacy path handling (set before Main
 // runs) and rejected both long paths and \\?\ prefixes (issue #16). 4.6.2 defaults accept \\?\ paths.

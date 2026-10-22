@@ -4,11 +4,12 @@
 
 This directory contains the usage, release, development, and research documentation for Integrated Mod Manager. The repository root is reserved for GitHub-recognized files, build entry points, and source-code entry points.
 
-当前正式版 / Current stable: **[v4.3.1](https://github.com/uyujkk/Integrated_Mod_Manager/releases/tag/v4.3.1)**。最新公开版本请以 [GitHub Releases](https://github.com/uyujkk/Integrated_Mod_Manager/releases/latest) 为准。历史发布报告与实验记录保留原版本事实。Historical reports retain their original context; screenshot/documentation updates do not replace the published package.
+当前正式版 / Current stable: **[v4.4.0](https://github.com/uyujkk/Integrated_Mod_Manager/releases/tag/v4.4.0)**。最新公开版本请以 [GitHub Releases](https://github.com/uyujkk/Integrated_Mod_Manager/releases/latest) 为准。历史发布报告与实验记录保留原版本事实。Historical reports retain their original context; screenshot/documentation updates do not replace the published package.
 
 ## 使用指南 / Guides
 
-- [4.3 新功能、升级与已知问题 / Features, Upgrade and Known Issues](./releases/v4.3.1.md)
+- [4.4 新功能、升级与已知问题 / Features, Upgrade and Known Issues](./releases/v4.4.0.md)
+- [Mod 快捷键面板与置顶浮窗](./guides/Mod-Shortcut-Panel.zh-CN.md) / [Mod Shortcut Panel and Overlay](./guides/Mod-Shortcut-Panel.en.md)
 - [浏览、下载与旧库整理 / Browsing, Downloads and Library Import](./guides/Browse-Download-Task-Pack.zh-CN.md)
 - [内置终末地启动：使用与风险 / Integrated Endfield Launch](./guides/Endfield-Bridge.md)
 - [升级到 4.1.1](./guides/Upgrade-v4.1.1.zh-CN.md)
@@ -27,8 +28,11 @@ This directory contains the usage, release, development, and research documentat
 
 ## 发布记录 / Releases
 
+- [v4.4.0 快捷键面板与问题修复 / Shortcut Panel and Fixes](./releases/v4.4.0.md)
+- [v4.3.1 Mod 更新修复 / Mod Update Fixes](./releases/v4.3.1.md)
+- [v4.3.0 内置终末地启动（已撤出更新通道）/ Integrated Endfield Launch (Withdrawn)](./releases/v4.3.0.md)
 - [v4.3.0-preview.1 内置终末地启动与 Mod 库修复 / Integrated Endfield Launch (Preview)](./releases/v4.3.0-preview.1.md)
-- [v4.2.0 浏览、下载与本地整理 / Browsing, Downloads and Library Tools](./releases/v4.3.1.md)
+- [v4.2.0 浏览、下载与本地整理 / Browsing, Downloads and Library Tools](./releases/v4.2.0.md)
 - [v4.1.1 可选启动桥接 / Optional Launch Bridge](./releases/v4.1.1.md)
 - [v4.1.0 组合包与体验优化 / Portable Bundles and Usability](./releases/v4.1.0.md)
 - [v4.0.0 正式版更新说明 / Stable Release Notes](./releases/v4.0.0.md)
@@ -43,6 +47,9 @@ This directory contains the usage, release, development, and research documentat
 
 ## 开发文档 / Development
 
+- [v4.4.0 正式版验证 / Stable Release Verification](./verification/v4.4.0.md)
+- [v4.3.1 正式版验证 / Stable Release Verification](./verification/v4.3.1.md)
+- [快捷键面板测试记录 test.3–test.9 / Shortcut Panel Test Records](./verification/hotkey-panel-test.9.md)
 - [v4.3.0-preview.1 预发布验证 / Prerelease Verification](./verification/v4.3.0-preview.1.md)
 - [v4.2.0 正式版验证 / Stable Release Verification](./verification/v4.2.0.md)
 - [v4.1.1 发布验证 / Release Verification](./verification/v4.1.1.md)
@@ -87,6 +94,3 @@ This directory contains the usage, release, development, and research documentat
 - [English Project Home](../README.md)
 - [GitHub Releases](https://github.com/uyujkk/Integrated_Mod_Manager/releases)
 - [GitHub Wiki](https://github.com/uyujkk/Integrated_Mod_Manager/wiki)
-
-- [v4.3.1 正式版说明 / Stable Release Notes](./releases/v4.3.1.md)
-- [v4.3.1 正式版验证 / Stable Release Verification](./verification/v4.3.1.md)

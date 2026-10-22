@@ -559,6 +559,12 @@ public sealed partial class MainWindow
         var hide = ShortcutButton(L("隐藏", "Hide"), () => { _shortcutOverlay?.AppWindow.Hide(); _shortcutOverlayVisible = false; });
         savePreset.Foreground = hide.Foreground = _overlayTextBrush;
         savePreset.HorizontalAlignment = hide.HorizontalAlignment = HorizontalAlignment.Stretch;
+        // Three equal columns at the default 420 DIP width: default padding cut "Input: off" / "Save preset".
+        foreach (Control action in new Control[] { _overlayInputToggle, savePreset, hide })
+        {
+            action.Padding = new Thickness(4, 5, 4, 6);
+            action.FontSize = 13;
+        }
         Grid.SetColumn(savePreset, 1); Grid.SetColumn(hide, 2);
         actions.Children.Add(_overlayInputToggle); actions.Children.Add(savePreset); actions.Children.Add(hide);
         panel.Children.Add(actions);
