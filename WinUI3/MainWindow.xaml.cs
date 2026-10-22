@@ -37,7 +37,7 @@ namespace ModFolderCopier.WinUI;
 
 public sealed partial class MainWindow : Window
 {
-    private const string AppVersion = "v4.3.1-hotkeys-test.6";
+    private const string AppVersion = "v4.3.1-hotkeys-test.7";
     private static bool AppSelfUpdateEnabled => ApplicationReleasePolicy.ApplicationSelfUpdateEnabled;
     private const string GitHubRepositoryUrl = "https://github.com/uyujkk/Integrated_Mod_Manager";
     private const string GitHubLatestReleaseApiUrl = "https://api.github.com/repos/uyujkk/Integrated_Mod_Manager/releases/latest";
@@ -1033,7 +1033,8 @@ public sealed partial class MainWindow : Window
         ConflictDetectionToggleSwitch.OffContent = L("关闭", "Off");
         ConflictDetectionToggleSwitch.IsOn = _enableConflictDetection;
         RollbackLastInstallButton.Content = L("撤销上次 Mod 操作", "Undo Last Mod Change");
-        DownloadTaskCenterTitleTextBlock.Text = L("下载任务", "Downloads");
+        // "Downloads" maps to the download-count label in the shared table; use a distinct key.
+        DownloadTaskCenterTitleTextBlock.Text = L("下载任务", "Download tasks");
         DownloadTaskCenterHintTextBlock.Text = L("显示在线 Mod 的下载与解压进度。", "Shows online mod download and extraction progress.");
         ClearDownloadTasksButton.Content = L("清除已完成", "Clear Finished");
         RefreshBackupManagerText();
@@ -1095,9 +1096,9 @@ public sealed partial class MainWindow : Window
                         LastKnownUpdatedAt = origin.LastKnownUpdatedAt,
                         LatestUpdatedAt = origin.LastKnownUpdatedAt,
                         HasUpdate = false,
-                        StatusTextZh = "尚未检查",
-                        StatusTextEn = "Not checked yet"
-                    }));
+                        StatusTextZh = string.Empty,
+                        StatusTextEn = string.Empty
+                    }, isChecked: false));
                 }
             }
 
@@ -1132,11 +1133,9 @@ public sealed partial class MainWindow : Window
         TrackedModsListPanel.RowDefinitions.Clear();
         int childCount = TrackedModsListPanel.Children.Count;
         int rowCount = Math.Max(1, (int)Math.Ceiling(childCount / (double)columnCount));
-        double expandedListHeight = _useWideTrackedModsLayout ? 510 : 460;
-        TrackedModsScrollViewer.MaxHeight = expandedListHeight;
-        TrackedModsScrollViewer.Height = childCount >= 3
-            ? expandedListHeight
-            : double.NaN;
+        // The list grows with the page scroll instead of a nested fixed-height scroller.
+        TrackedModsScrollViewer.MaxHeight = double.PositiveInfinity;
+        TrackedModsScrollViewer.Height = double.NaN;
         for (int row = 0; row < rowCount; row++)
         {
             TrackedModsListPanel.RowDefinitions.Add(new RowDefinition { Height = GridLength.Auto });
@@ -4041,6 +4040,7 @@ public sealed partial class MainWindow : Window
                                 _onlineCharacterFilter,
                                 _onlineCurrentPage,
                                 useEndfieldMetadata,
+                                cacheCategoryKey,
                                 linkedCancellation.Token)
                             : await FetchGameBananaCategoryPageAsync(
                                 categoryId,
@@ -4136,6 +4136,13 @@ public sealed partial class MainWindow : Window
                     cacheCategoryKey,
                     configKey,
                     downloadEnrichmentVersion);
+            }
+
+            // A character scan already cached every page; otherwise warm the next page (also after a
+            // cache hit, so paging forward stays instant). Never while throttled or after a timeout.
+            if (!needsCharacterFallback && !loadedDuringRateLimit && !loadedAfterTimeout && _onlineCurrentPage < _onlineTotalPages)
+            {
+                _ = PrefetchNextOnlinePageAsync(categoryId, _onlineCurrentPage + 1, useEndfieldMetadata, authorId, cacheCategoryKey, configKey);
             }
 
             OnlineCharacterOption? selectedCharacter = _onlineCharacterOptions.FirstOrDefault(character =>
@@ -4246,6 +4253,32 @@ public sealed partial class MainWindow : Window
         }
     }
 
+    /// <summary>Best-effort single request so "Next page" opens from cache. Never shows errors.</summary>
+    private async Task PrefetchNextOnlinePageAsync(
+        string categoryId, int nextPage, bool useEndfieldMetadata, int authorId, string cacheCategoryKey, string configKey)
+    {
+        try
+        {
+            // Let the visible page's images and download counts go first.
+            await Task.Delay(800);
+            if (!string.Equals(configKey, _lastLoadedOnlineConfigKey, StringComparison.Ordinal)
+                || TryGetOnlineRateLimitDelay(out _)
+                || await TryReadOnlineCategoryPageCacheAsync(cacheCategoryKey, nextPage) is not null) return;
+            using var timeout = new CancellationTokenSource(OnlineModListRequestTimeout);
+            OnlineCategoryPageResult next = await FetchGameBananaCategoryPageAsync(
+                categoryId, nextPage, useEndfieldMetadata: useEndfieldMetadata, cancellationToken: timeout.Token, authorId: authorId);
+            if (next.Mods.Count > 0) await WriteOnlineCategoryPageCacheAsync(cacheCategoryKey, next);
+        }
+        catch (OnlineRateLimitException ex)
+        {
+            RegisterOnlineRateLimit(ex.RetryAfter);
+        }
+        catch (Exception ex) when (ex is HttpRequestException or OperationCanceledException or JsonException or IOException)
+        {
+            // Prefetch is optional; the normal page load reports real failures.
+        }
+    }
+
     private async Task<List<OnlineModCard>> FetchAllGameBananaSkinModsAsync(string gameId)
     {
         List<OnlineModCard> allMods = [];
@@ -4284,36 +4317,35 @@ public sealed partial class MainWindow : Window
         string characterName,
         int page,
         bool useEndfieldMetadata,
+        string cacheCategoryKey,
         CancellationToken cancellationToken = default)
     {
         const int scanPageSize = 50;
-        List<OnlineModCard> matches = [];
-        int sourcePage = 1;
-        int sourceTotalPages = 1;
-        do
+        // A whole-category scan used to run page by page (about 14 x 350 ms for Endfield, at the
+        // 5-second limit) and was repeated for every display page. Scan concurrently, then cache
+        // every display page so paging stays local.
+        IReadOnlyList<OnlineModCard> all = await OnlinePageScanner.ScanAsync(async (sourcePage, token) =>
         {
-            cancellationToken.ThrowIfCancellationRequested();
             OnlineCategoryPageResult sourceResult = await FetchGameBananaCategoryPageAsync(
-                categoryId,
-                sourcePage,
-                scanPageSize,
-                useEndfieldMetadata: useEndfieldMetadata,
-                cancellationToken: cancellationToken);
-            sourceTotalPages = Math.Min(sourceResult.TotalPages, OnlineRawPageLimit);
-            matches.AddRange(sourceResult.Mods.Where(mod =>
-                DoesOnlineModMatchCharacter(characterName, mod.CharacterName)));
-            sourcePage++;
-        }
-        while (sourcePage <= sourceTotalPages);
+                categoryId, sourcePage, scanPageSize, useEndfieldMetadata: useEndfieldMetadata, cancellationToken: token);
+            return new OnlineScanPage<OnlineModCard>(sourceResult.Mods, sourceResult.TotalPages);
+        }, OnlineRawPageLimit, maxConcurrency: 3, cancellationToken);
 
-        List<OnlineModCard> pageMods = matches
+        List<OnlineModCard> matches = all
+            .Where(mod => DoesOnlineModMatchCharacter(characterName, mod.CharacterName))
             .GroupBy(mod => mod.ItemId)
             .Select(group => group.First())
-            .Skip((page - 1) * OnlineDisplayPageSize)
-            .Take(OnlineDisplayPageSize)
             .ToList();
-
-        return new OnlineCategoryPageResult(pageMods, matches.Select(mod => mod.ItemId).Distinct().Count(), page, OnlineDisplayPageSize);
+        int displayPages = Math.Max(1, (int)Math.Ceiling(matches.Count / (double)OnlineDisplayPageSize));
+        OnlineCategoryPageResult PageOf(int number) => new(
+            matches.Skip((number - 1) * OnlineDisplayPageSize).Take(OnlineDisplayPageSize).ToList(),
+            matches.Count, number, OnlineDisplayPageSize);
+        // The caller caches the requested page; store the others now.
+        for (int other = 1; other <= displayPages; other++)
+        {
+            if (other != page && matches.Count > 0) await WriteOnlineCategoryPageCacheAsync(cacheCategoryKey, PageOf(other));
+        }
+        return PageOf(page);
     }
 
     private bool DoesOnlineModMatchCharacter(string characterKey, string modCharacterName)
@@ -8092,7 +8124,7 @@ public sealed partial class MainWindow : Window
         };
     }
 
-    private UIElement CreateTrackedModUpdateCard(TrackedModUpdateResult result)
+    private UIElement CreateTrackedModUpdateCard(TrackedModUpdateResult result, bool isChecked = true)
     {
         Border border = new()
         {
@@ -8134,50 +8166,68 @@ public sealed partial class MainWindow : Window
         grid.Children.Add(previewHost);
 
         StackPanel content = new() { Spacing = 6 };
-        content.Children.Add(new TextBlock
+        // Title and status badge share a row; the badge never squeezes the title off the card.
+        Grid heading = new() { ColumnSpacing = 10 };
+        heading.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(1, GridUnitType.Star) });
+        heading.ColumnDefinitions.Add(new ColumnDefinition { Width = GridLength.Auto });
+        heading.Children.Add(new TextBlock
         {
             Text = result.Title,
             FontSize = 18,
             FontWeight = Microsoft.UI.Text.FontWeights.SemiBold,
             TextWrapping = TextWrapping.Wrap
         });
-        content.Children.Add(new TextBlock
+        Brush statusBrush = !isChecked || result.CheckFailed ? (Brush)Application.Current.Resources["TextFillColorSecondaryBrush"] : result.HasUpdate ? MissingBrush : CopiedBrush;
+        Border badge = new()
+        {
+            CornerRadius = new CornerRadius(6), Padding = new Thickness(8, 3, 8, 3), VerticalAlignment = VerticalAlignment.Top,
+            BorderBrush = statusBrush, BorderThickness = new Thickness(1),
+            Child = new TextBlock
+            {
+                Text = !isChecked ? L("未检查", "Not checked") : result.CheckFailed ? L("检查失败", "Check failed")
+                    : result.HasUpdate ? L("有更新", "Update") : L("已是最新", "Up to date"),
+                Foreground = statusBrush, FontSize = 12, FontWeight = Microsoft.UI.Text.FontWeights.SemiBold
+            }
+        };
+        Grid.SetColumn(badge, 1);
+        heading.Children.Add(badge);
+        content.Children.Add(heading);
+        var pathText = new TextBlock
         {
             Text = $"{L("本地路径", "Local path")}: {TrimPreviewPath(result.Path)}",
             Style = (Style)Application.Current.Resources["CaptionTextStyle"],
-            TextWrapping = TextWrapping.Wrap
-        });
+            TextTrimming = TextTrimming.CharacterEllipsis, MaxLines = 1
+        };
+        ToolTipService.SetToolTip(pathText, result.Path);
+        content.Children.Add(pathText);
         content.Children.Add(new TextBlock
         {
             Text = $"{L("记录时间", "Recorded")}: {FormatDateForDisplay(result.LastKnownUpdatedAt)}    {L("最新时间", "Latest")}: {FormatDateForDisplay(result.LatestUpdatedAt)}",
             Style = (Style)Application.Current.Resources["MutedTextStyle"],
             TextWrapping = TextWrapping.Wrap
         });
-        content.Children.Add(new TextBlock
+        // The badge already says "not checked"; only real results get a status line.
+        if (!string.IsNullOrWhiteSpace(result.StatusTextZh)) content.Children.Add(new TextBlock
         {
             Text = L(result.StatusTextZh, result.StatusTextEn),
-            Foreground = result.HasUpdate ? MissingBrush : CopiedBrush,
+            Foreground = statusBrush,
             FontWeight = Microsoft.UI.Text.FontWeights.Medium,
             TextWrapping = TextWrapping.Wrap
         });
 
-        StackPanel actions = new() { Orientation = Orientation.Horizontal, Spacing = 10 };
+        // At most three controls per row, so narrow or two-column layouts never clip buttons;
+        // folder, backup and removal live in the "More" menu.
+        StackPanel actions = new() { Orientation = Orientation.Horizontal, Spacing = 8 };
         if (result.HasUpdate)
         {
             var replaceButton = new Button
             {
                 Content = L("下载并替换", "Download and replace"),
-                Style = (Style)Application.Current.Resources["SecondaryButtonStyle"], MinHeight = 36,
+                Style = (Style)Application.Current.Resources["PrimaryButtonStyle"], MinHeight = 36,
                 IsEnabled = !_modUpdatesInProgress.Contains(result.Path) && Directory.Exists(result.Path)
             };
             replaceButton.Click += async (_, _) => await RunUiActionAsync("Download and replace Mod", () => DownloadAndReplaceTrackedModAsync(result));
             actions.Children.Add(replaceButton);
-        }
-        if (!string.IsNullOrWhiteSpace(result.BackupPath))
-        {
-            var backupButton = new Button { Content = L("打开旧版备份", "Open old backup"), MinHeight = 36 };
-            backupButton.Click += (_, _) => OpenDirectory(result.BackupPath, L("旧版备份", "Old backup"));
-            actions.Children.Add(backupButton);
         }
         Button openPageButton = new()
         {
@@ -8189,14 +8239,13 @@ public sealed partial class MainWindow : Window
         openPageButton.Click += async (_, _) => await RunUiActionAsync("OpenExternalUrlAsync", () => OpenExternalUrlAsync(result.ProfileUrl, L("打开页面失败", "Open page failed")));
         actions.Children.Add(openPageButton);
 
-        Button openFolderButton = new()
+        var more = new MenuFlyout { Placement = Microsoft.UI.Xaml.Controls.Primitives.FlyoutPlacementMode.BottomEdgeAlignedLeft };
+        var openFolderItem = new MenuFlyoutItem
         {
-            Content = L("打开本地目录", "Open Folder"),
-            Style = (Style)Application.Current.Resources["SecondaryButtonStyle"],
-            MinHeight = 36,
+            Text = L("打开本地目录", "Open Folder"), Icon = new FontIcon { Glyph = "" },
             IsEnabled = Directory.Exists(result.Path)
         };
-        openFolderButton.Click += (_, _) =>
+        openFolderItem.Click += (_, _) =>
         {
             if (Directory.Exists(result.Path))
             {
@@ -8208,17 +8257,26 @@ public sealed partial class MainWindow : Window
                 });
             }
         };
-        actions.Children.Add(openFolderButton);
-
-        Button removeTrackingButton = new()
+        more.Items.Add(openFolderItem);
+        if (!string.IsNullOrWhiteSpace(result.BackupPath))
         {
-            Content = L("删除记录", "Remove Tracking"),
-            Style = (Style)Application.Current.Resources["SecondaryButtonStyle"],
-            MinHeight = 36,
+            var backupItem = new MenuFlyoutItem { Text = L("打开旧版备份", "Open old backup"), Icon = new FontIcon { Glyph = "" } };
+            backupItem.Click += (_, _) => OpenDirectory(result.BackupPath, L("旧版备份", "Old backup"));
+            more.Items.Add(backupItem);
+        }
+        more.Items.Add(new MenuFlyoutSeparator());
+        var removeTrackingItem = new MenuFlyoutItem
+        {
+            Text = L("删除记录", "Remove Tracking"), Icon = new FontIcon { Glyph = "" },
             IsEnabled = !_modUpdatesInProgress.Contains(result.Path)
         };
-        removeTrackingButton.Click += async (_, _) => await RunUiActionAsync("RemoveTrackedModRecordAsync", () => RemoveTrackedModRecordAsync(result));
-        actions.Children.Add(removeTrackingButton);
+        removeTrackingItem.Click += async (_, _) => await RunUiActionAsync("RemoveTrackedModRecordAsync", () => RemoveTrackedModRecordAsync(result));
+        more.Items.Add(removeTrackingItem);
+        actions.Children.Add(new DropDownButton
+        {
+            // No Button style here: it would replace the template and drop the chevron.
+            Content = L("更多", "More"), Flyout = more, MinHeight = 36
+        });
 
         content.Children.Add(actions);
         Grid.SetColumn(content, 1);
@@ -8304,6 +8362,8 @@ public sealed partial class MainWindow : Window
                     ? $"Check complete. {updateCount} tracked mods have updates."
                     : "Check complete. All tracked mods are up to date.");
 
+            // The check is over; do not keep showing "Checking..." behind the result dialog.
+            _isCheckingModUpdates = false;
             RefreshUpdatesPane();
 
             if (updateCount > 0)

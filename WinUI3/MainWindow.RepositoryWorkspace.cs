@@ -449,7 +449,10 @@ public sealed partial class MainWindow
         if (oldCard is not null) UpdatesSupportPanel.Children.Remove(oldCard);
         var shortcut = RepositoryButton("\uE8F1", (_, _) => OnOpenCombinationPresetsClicked(this, new RoutedEventArgs()));
         shortcut.Content = RepositoryIconLabel("\uE8F1", L("打开组合预设工作区", "Open Combination Workspace"));
-        UpdatesSupportPanel.Children.Insert(1, RepositoryCard(shortcut));
+        // Restoring a preset is a recovery action: keep it beside "Undo last change" instead of a lone card.
+        shortcut.HorizontalAlignment = HorizontalAlignment.Stretch;
+        Grid.SetColumn(shortcut, 1);
+        UpdatesRecoveryActionsGrid.Children.Add(shortcut);
         _workspaceContentGrid!.Children.Add(_combinationWorkspace);
     }
 

@@ -46,6 +46,11 @@ public sealed partial class MainWindow
     private ComboBox? _overlayModPicker;
     private ToggleButton? _overlayInputToggle;
     private bool _overlaySyncing;
+    // Repository-relative paths of Mods enabled in the loader folder; null when it cannot be determined.
+    private HashSet<string>? _shortcutDeployedMods;
+    private ShortcutModOption[] _overlayModOptions = [];
+    private object? _overlayModOptionsSource;
+    private int _shortcutDeployedRevision;
     private StackPanel? _overlayButtonList;
     private ScrollViewer? _overlayScroll;
     private DetectedModShortcut[] _overlayBindings = [];
@@ -280,6 +285,7 @@ public sealed partial class MainWindow
         });
         if (_onlineWindowClosed || revision != _shortcutScanRevision) return;
         _shortcutModPicker.ItemsSource = options;
+        _ = RefreshShortcutDeployedModsAsync();
         LoadCharacterFollowProfile(repository);
         _shortcutModPicker.SelectedItem = options.FirstOrDefault(p => string.Equals(p.Path, previous, StringComparison.OrdinalIgnoreCase)) ?? options.FirstOrDefault();
         if (options.Length == 0) _shortcutStatus.Text = L("当前仓库没有可读取的 Mod，请先在仓库模块选择仓库。", "No Mods found. Select a repository in Repositories first.");
@@ -514,6 +520,8 @@ public sealed partial class MainWindow
             }
             _shortcutOverlay.ShowPanel();
             _shortcutOverlayVisible = true;
+            // Mods may have been enabled or disabled since the list was read.
+            _ = RefreshShortcutDeployedModsAsync();
         }
         catch (Exception ex) { ReportUiActionFailure(nameof(OpenShortcutOverlay), ex); }
     }
@@ -571,9 +579,36 @@ public sealed partial class MainWindow
         Grid.SetRow(_overlayScroll, 1);
         root.Children.Add(panel); root.Children.Add(_overlayScroll);
         _overlayBindings = [];
+        _overlayModOptionsSource = null;
         UpdateShortcutOverlayControls();
         return root;
     }
+
+    private async Task RefreshShortcutDeployedModsAsync()
+    {
+        int revision = ++_shortcutDeployedRevision;
+        WorkspaceRepository? repository = GetSelectedRepository();
+        HashSet<string>? deployed = null;
+        if (repository is { SourcePath.Length: > 0, TargetPath.Length: > 0 })
+        {
+            try
+            {
+                deployed = (await Task.Run(() => ModCombinationDeploymentPolicy.Capture(repository.SourcePath, repository.TargetPath)))
+                    .ToHashSet(StringComparer.OrdinalIgnoreCase);
+            }
+            catch (Exception ex) when (ex is IOException or UnauthorizedAccessException or InvalidDataException or ArgumentException)
+            {
+                LogApplicationIssue("Shortcut deployed Mods", ex); // Fall back to listing every Mod.
+            }
+        }
+        if (_onlineWindowClosed || revision != _shortcutDeployedRevision) return;
+        _shortcutDeployedMods = deployed;
+        _overlayModOptionsSource = null;
+        RefreshShortcutOverlay();
+    }
+
+    private bool IsShortcutModDeployed(ShortcutModOption option) =>
+        _shortcutDeployedMods?.Contains(option.Label) != false;
 
     private void SetShortcutInputFromOverlay(bool enable)
     {
@@ -634,10 +669,19 @@ public sealed partial class MainWindow
         _overlaySyncing = true;
         try
         {
-            // Mirror the main window; the overlay picker only forwards user choices back to it.
-            if (!ReferenceEquals(_overlayModPicker!.ItemsSource, _shortcutModPicker?.ItemsSource))
-                _overlayModPicker.ItemsSource = _shortcutModPicker?.ItemsSource;
-            _overlayModPicker.SelectedItem = _shortcutModPicker?.SelectedItem;
+            // In game only enabled Mods matter, so the overlay lists those; it forwards choices to the main picker.
+            object? source = _shortcutModPicker?.ItemsSource;
+            if (!ReferenceEquals(_overlayModOptionsSource, source))
+            {
+                _overlayModOptionsSource = source;
+                _overlayModOptions = (source as ShortcutModOption[] ?? []).Where(IsShortcutModDeployed).ToArray();
+                _overlayModPicker!.ItemsSource = _overlayModOptions;
+            }
+            var current = _shortcutModPicker?.SelectedItem as ShortcutModOption;
+            _overlayModPicker!.SelectedItem = current is not null && _overlayModOptions.Contains(current) ? current : null;
+            _overlayModPicker.PlaceholderText = _overlayModOptions.Length == 0
+                ? L("没有已启用的 Mod", "No enabled Mods")
+                : current is null ? L("请选择 Mod", "Select a Mod") : L("当前 Mod 未启用 · 选择已启用的 Mod", "Current Mod not enabled · pick an enabled one");
             _overlayInputToggle!.IsChecked = _shortcutInputEnabled;
             _overlayInputToggle.Content = _shortcutInputEnabled ? L("发送：开", "Input: on") : L("发送：关", "Input: off");
         }

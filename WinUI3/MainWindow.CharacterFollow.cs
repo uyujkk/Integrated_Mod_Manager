@@ -218,6 +218,9 @@ public sealed partial class MainWindow
             if (role is null || role.Equals(SelectedShortcutRole(), StringComparison.OrdinalIgnoreCase)) return;
             var candidates = _shortcutModPicker!.ItemsSource as ShortcutModOption[] ?? [];
             var matching = candidates.Where(p => p.Label.Split(Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar)[0].Equals(role, StringComparison.OrdinalIgnoreCase)).ToArray();
+            // Only an enabled Mod can react in game; prefer those when the role has any.
+            var enabled = matching.Where(IsShortcutModDeployed).ToArray();
+            if (enabled.Length > 0) matching = enabled;
             var selected = matching.FirstOrDefault(p => _characterPreferredMods.TryGetValue(role, out string? preferred) && p.Path == preferred)
                 ?? (matching.Length == 1 ? matching[0] : null);
             if (selected is null && matching.Length > 1)

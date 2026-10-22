@@ -1236,6 +1236,7 @@
                                             <StackPanel Spacing="4" VerticalAlignment="Center">
                                                 <TextBlock x:Name="TrackedModSettingsTitleTextBlock" FontWeight="SemiBold" />
                                                 <TextBlock x:Name="TrackedModSettingsHintTextBlock" Style="{StaticResource CaptionTextStyle}" TextWrapping="Wrap" />
+                                                <TextBlock x:Name="ModUpdateIntervalHintTextBlock" Style="{StaticResource CaptionTextStyle}" TextWrapping="Wrap" />
                                                 <TextBlock x:Name="ModUpdateStatusTextBlock" Style="{StaticResource CaptionTextStyle}" TextWrapping="Wrap" />
                                             </StackPanel>
                                             <StackPanel Grid.Column="1" Spacing="5" VerticalAlignment="Center">
@@ -1243,18 +1244,19 @@
                                                 <ComboBox
                                                     x:Name="ModUpdateIntervalComboBox"
                                                     MinHeight="42"
+                                                    HorizontalAlignment="Stretch"
                                                     SelectionChanged="OnModUpdateIntervalSelectionChanged" />
                                             </StackPanel>
                                         </Grid>
                                     </Border>
 
-                                    <TextBlock x:Name="ModUpdateIntervalHintTextBlock" Style="{StaticResource CaptionTextStyle}" TextWrapping="Wrap" />
+                                    <!-- The page scrolls; a nested fixed-height scroller made long lists awkward to read. -->
                                     <ScrollViewer
                                         x:Name="TrackedModsScrollViewer"
                                         HorizontalScrollBarVisibility="Disabled"
                                         HorizontalScrollMode="Disabled"
-                                        VerticalScrollBarVisibility="Auto"
-                                        VerticalScrollMode="Enabled">
+                                        VerticalScrollBarVisibility="Disabled"
+                                        VerticalScrollMode="Disabled">
                                         <Grid x:Name="TrackedModsListPanel" ColumnSpacing="10" RowSpacing="10" Margin="0,0,8,0">
                                             <Grid.ColumnDefinitions>
                                                 <ColumnDefinition x:Name="TrackedModsPrimaryColumn" Width="*" />
@@ -1288,13 +1290,14 @@
                                     <StackPanel x:Name="UpdatesSafetyPanel" Spacing="12">
                                         <TextBlock x:Name="InstallSafetyTitleTextBlock" Style="{StaticResource SectionTitleTextStyle}" />
                                         <TextBlock x:Name="InstallSafetyHintTextBlock" Style="{StaticResource MutedTextStyle}" TextWrapping="Wrap" />
-                                        <Grid ColumnSpacing="14">
+                                        <ToggleSwitch x:Name="ConflictDetectionToggleSwitch" Toggled="OnConflictDetectionToggled" />
+                                        <!-- Recovery actions share one equal-width row (the preset shortcut is added in code). -->
+                                        <Grid x:Name="UpdatesRecoveryActionsGrid" ColumnSpacing="8">
                                             <Grid.ColumnDefinitions>
                                                 <ColumnDefinition Width="*" />
-                                                <ColumnDefinition Width="Auto" />
+                                                <ColumnDefinition Width="*" />
                                             </Grid.ColumnDefinitions>
-                                            <ToggleSwitch x:Name="ConflictDetectionToggleSwitch" Toggled="OnConflictDetectionToggled" VerticalAlignment="Center" />
-                                            <Button x:Name="RollbackLastInstallButton" Grid.Column="1" Click="OnRollbackLastInstallClicked" Style="{StaticResource SecondaryButtonStyle}" />
+                                            <Button x:Name="RollbackLastInstallButton" Click="OnRollbackLastInstallClicked" HorizontalAlignment="Stretch" Style="{StaticResource SecondaryButtonStyle}" />
                                         </Grid>
                                         <TextBlock x:Name="InstallRollbackStatusTextBlock" Style="{StaticResource CaptionTextStyle}" TextWrapping="Wrap" />
                                     </StackPanel>
@@ -1336,30 +1339,31 @@
 
                                 <Border x:Name="UpdatesBackupCard" Style="{StaticResource CardBorderStyle}">
                                     <StackPanel x:Name="UpdatesBackupPanel" Spacing="12">
-                                        <Grid ColumnSpacing="12">
+                                        <StackPanel Spacing="5">
+                                            <TextBlock x:Name="BackupManagerTitleTextBlock" Style="{StaticResource SectionTitleTextStyle}" />
+                                            <TextBlock x:Name="BackupManagerHintTextBlock" Style="{StaticResource MutedTextStyle}" TextWrapping="Wrap" />
+                                        </StackPanel>
+                                        <!-- Controls get their own row so the description keeps the full card width. -->
+                                        <Grid ColumnSpacing="8">
                                             <Grid.ColumnDefinitions>
+                                                <ColumnDefinition Width="Auto" />
+                                                <ColumnDefinition Width="Auto" />
                                                 <ColumnDefinition Width="*" />
                                                 <ColumnDefinition Width="Auto" />
-                                                <ColumnDefinition Width="Auto" />
                                             </Grid.ColumnDefinitions>
-                                            <StackPanel Spacing="5">
-                                                <TextBlock x:Name="BackupManagerTitleTextBlock" Style="{StaticResource SectionTitleTextStyle}" />
-                                                <TextBlock x:Name="BackupManagerHintTextBlock" Style="{StaticResource MutedTextStyle}" TextWrapping="Wrap" />
-                                            </StackPanel>
-                                            <StackPanel Grid.Column="1" Orientation="Horizontal" Spacing="8" VerticalAlignment="Center">
-                                                <TextBlock x:Name="BackupLimitLabelTextBlock" VerticalAlignment="Center" />
-                                                <NumberBox
-                                                    x:Name="BackupLimitNumberBox"
-                                                    Width="96"
-                                                    Minimum="0.5"
-                                                    Maximum="100"
-                                                    SmallChange="0.5"
-                                                    SpinButtonPlacementMode="Compact"
-                                                    ValueChanged="OnBackupLimitValueChanged" />
-                                            </StackPanel>
+                                            <TextBlock x:Name="BackupLimitLabelTextBlock" VerticalAlignment="Center" />
+                                            <NumberBox
+                                                x:Name="BackupLimitNumberBox"
+                                                Grid.Column="1"
+                                                Width="110"
+                                                Minimum="0.5"
+                                                Maximum="100"
+                                                SmallChange="0.5"
+                                                SpinButtonPlacementMode="Compact"
+                                                ValueChanged="OnBackupLimitValueChanged" />
                                             <Button
                                                 x:Name="RefreshBackupsButton"
-                                                Grid.Column="2"
+                                                Grid.Column="3"
                                                 Click="OnRefreshBackupsClicked"
                                                 Style="{StaticResource SecondaryButtonStyle}" />
                                         </Grid>
