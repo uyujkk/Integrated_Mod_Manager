@@ -6,7 +6,13 @@
 
 This document records version changes in Integrated Mod Manager. Unpublished versions are marked separately.
 
-## v4.3.0 — 2026-10-21（正式版 / Stable）
+## v4.3.1 — 2026-10-21（正式版 / Stable）
+
+修复 Mod 更新频率切换后崩溃；新增更新弹窗、下载并替换和旧版备份，保护并发修改并阻止中断替换重放。完整包含 4.3 功能，中文与英文分开见 [v4.3.1](v4.3.1.md)。
+
+Fix Mod update interval crashes; add update notifications and backed-up download-and-replace, protect later edits and prevent unsafe replay. Includes the 4.3 changes. Separate Chinese and English notes: [v4.3.1](v4.3.1.md).
+
+## v4.3.0 — 2026-10-21（已撤出正式更新通道 / Withdrawn from stable updates）
 
 内置终末地启动、INI 冲突提示、联接和压缩包导入修复，以及单实例与界面异常保护；恢复正式版软件更新检查。发布包整体按 AGPL-3.0-only 分发。完整双语更新及已知问题见 [v4.3.0](v4.3.0.md)。
 

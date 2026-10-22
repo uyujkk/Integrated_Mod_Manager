@@ -1,8 +1,8 @@
 [CmdletBinding()]
 param(
-    [string]$Version = '4.3.0',
+    [string]$Version = '4.3.1',
     [string]$BaseTag = 'v4.2.0',
-    [string]$VerificationDirectory = 'artifacts\verification\v4.3.0',
+    [string]$VerificationDirectory = 'artifacts\verification\v4.3.1',
     [switch]$ForGitHubRelease,
     [string]$CiUrl = '',
     # Only for machines without git: JSON exported by git elsewhere from this same
@@ -15,7 +15,7 @@ param(
 # tested runtime plus 7-Zip, user documentation, license files and PACKAGE-INFO.json.
 
 $ErrorActionPreference = 'Stop'
-if ($Version -notmatch '^(?<core>\d+\.\d+\.\d+)$') { throw 'Version must look like 4.3.0.' }
+if ($Version -notmatch '^(?<core>\d+\.\d+\.\d+)$') { throw 'Version must look like 4.3.1.' }
 $taskCoreVersion = $Matches.core
 $taskFileVersion = $taskCoreVersion + '.0'
 $taskRoot = [IO.Path]::GetFullPath((Join-Path $PSScriptRoot '..'))

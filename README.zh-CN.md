@@ -1,4 +1,4 @@
-> **v4.3.0 正式版。** 新增功能、升级方式与已知问题见 [4.3 发布说明](docs/releases/v4.3.0.md)。历史版本与说明继续保留。
+> **v4.3.1 正式版。** 新增功能、升级方式与已知问题见 [4.3 发布说明](docs/releases/v4.3.1.md)。历史版本与说明继续保留。
 
 <div align="center">
   <img src="./WinUI3/Assets/AppIcon.png" width="96" alt="集成化 Mod 管理器图标">
@@ -25,11 +25,11 @@
 
 ## 项目简介
 
-**当前正式版：[v4.3.0](https://github.com/uyujkk/Integrated_Mod_Manager/releases/tag/v4.3.0)。**新增内置终末地启动、INI 冲突提示、失效联接和压缩包导入修复、单实例与界面异常保护；保留浏览下载、旧库整理、组合预设和组合包功能。使用前请阅读[桥接器与账号风险说明](./docs/guides/Endfield-Bridge.md)及[组合预设指南](./docs/guides/Combination-Presets.zh-CN.md)。
+**当前正式版：[v4.3.1](https://github.com/uyujkk/Integrated_Mod_Manager/releases/tag/v4.3.1)。**新增内置终末地启动、INI 冲突提示、失效联接和压缩包导入修复、单实例与界面异常保护；保留浏览下载、旧库整理、组合预设和组合包功能。使用前请阅读[桥接器与账号风险说明](./docs/guides/Endfield-Bridge.md)及[组合预设指南](./docs/guides/Combination-Presets.zh-CN.md)。
 
 集成化 Mod 管理器以独立“仓库”管理不同游戏或不同 Mod 环境。它可以在本地仓库和游戏实际读取的目标目录之间复制或移除完整 Mod 文件夹，并集中管理预览图、来源链接、快捷键说明、在线下载、更新记录、配置方案和安装备份。
 
-主程序、启动器和更新器统一为 **4.3.0**（`4.3.0.0`）。工具维护者为 `uyujkk`，既有 Bandizip 备用解压功能由 [CaramelizedCUDA](https://github.com/CaramelizedCUDA) 贡献；此前的 [4.0-beta](https://github.com/uyujkk/Integrated_Mod_Manager/releases/tag/v4.0-beta) 继续独立保留。
+主程序、启动器和更新器统一为 **4.3.1**（`4.3.1.0`）。工具维护者为 `uyujkk`，既有 Bandizip 备用解压功能由 [CaramelizedCUDA](https://github.com/CaramelizedCUDA) 贡献；此前的 [4.0-beta](https://github.com/uyujkk/Integrated_Mod_Manager/releases/tag/v4.0-beta) 继续独立保留。
 
 ## 界面预览
 
@@ -60,7 +60,7 @@
 - 完善下载队列、旧库导入中断恢复及本地诊断。
 - 正式版更新检查遵循用户保存的开关；详情页原生闪退根因仍未确认。
 
-[4.3 发布说明与已知问题](./docs/releases/v4.3.0.md) · [验证范围](./docs/verification/v4.3.0.md)
+[4.3 发布说明与已知问题](./docs/releases/v4.3.1.md) · [验证范围](./docs/verification/v4.3.1.md)
 
 ## 4.1.1 更新
 
@@ -208,7 +208,7 @@ cmd /c build_winui.bat
 powershell -NoProfile -ExecutionPolicy Bypass -File .\scripts\test-all.ps1
 ```
 
-GitHub Actions 会在推送到 `main`、Pull Request 和手动触发时执行统一四组验证。测试依赖集中管理，未删除安全用例。当前结果及验证边界见[测试说明](./docs/development/TESTING.md)与[4.3.0 验证记录](./docs/verification/v4.3.0.md)。
+GitHub Actions 会在推送到 `main`、Pull Request 和手动触发时执行统一四组验证。测试依赖集中管理，未删除安全用例。当前结果及验证边界见[测试说明](./docs/development/TESTING.md)与[4.3.0 验证记录](./docs/verification/v4.3.1.md)。
 
 ## 数据与安全
 

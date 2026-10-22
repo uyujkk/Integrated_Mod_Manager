@@ -1,4 +1,4 @@
-> **v4.3.0 stable release.** See the [release notes](docs/releases/v4.3.0.md) for new features, upgrade guidance, and known issues.
+> **v4.3.1 stable release.** See the [release notes](docs/releases/v4.3.1.md) for new features, upgrade guidance, and known issues.
 
 <div align="center">
   <img src="./WinUI3/Assets/AppIcon.png" width="96" alt="Integrated Mod Manager icon">
@@ -25,11 +25,11 @@
 
 ## Overview
 
-**Current stable version: [v4.3.0](https://github.com/uyujkk/Integrated_Mod_Manager/releases/tag/v4.3.0).** Adds integrated Endfield launch, INI conflict warnings, broken-link and archive-import fixes, single-instance handling and UI exception reporting. Existing browsing, downloading, library tools and combination presets remain supported. See the [bridge and risk guide](./docs/guides/Endfield-Bridge.md) and [preset guide](./docs/guides/Combination-Presets.en.md).
+**Current stable version: [v4.3.1](https://github.com/uyujkk/Integrated_Mod_Manager/releases/tag/v4.3.1).** Adds integrated Endfield launch, INI conflict warnings, broken-link and archive-import fixes, single-instance handling and UI exception reporting. Existing browsing, downloading, library tools and combination presets remain supported. See the [bridge and risk guide](./docs/guides/Endfield-Bridge.md) and [preset guide](./docs/guides/Combination-Presets.en.md).
 
 Integrated Mod Manager organizes different games or mod environments into independent repositories. It copies or removes complete mod folders between a local library and the target directory read by the game, while keeping preview images, source links, shortcut notes, online downloads, update records, profiles, and installation backups in one application.
 
-The application, launcher, and updater use version **4.3.0** (`4.3.0.0`). The tool is maintained by `uyujkk`. The Bandizip extraction fallback was contributed by [CaramelizedCUDA](https://github.com/CaramelizedCUDA). The earlier [4.0-beta](https://github.com/uyujkk/Integrated_Mod_Manager/releases/tag/v4.0-beta) remains archived separately.
+The application, launcher, and updater use version **4.3.1** (`4.3.1.0`). The tool is maintained by `uyujkk`. The Bandizip extraction fallback was contributed by [CaramelizedCUDA](https://github.com/CaramelizedCUDA). The earlier [4.0-beta](https://github.com/uyujkk/Integrated_Mod_Manager/releases/tag/v4.0-beta) remains archived separately.
 
 ## Interface Preview
 
@@ -60,7 +60,7 @@ When the full overview cannot fit, Settings switches to sections. Language, them
 - Recover interrupted download/import tasks and export local diagnostics.
 - Stable application update checks honor your saved preference. The native detail-page crash remains an unresolved known issue.
 
-[Release notes and known issues](./docs/releases/v4.3.0.md) · [Verification scope](./docs/verification/v4.3.0.md)
+[Release notes and known issues](./docs/releases/v4.3.1.md) · [Verification scope](./docs/verification/v4.3.1.md)
 
 ## What's New in 4.1.1
 
@@ -208,7 +208,7 @@ Run the complete test, coverage, WinUI x64 build, and package verification flow:
 powershell -NoProfile -ExecutionPolicy Bypass -File .\scripts\test-all.ps1
 ```
 
-GitHub Actions runs the same four-suite verification flow on pushes to `main`, pull requests, and manual dispatches. Test dependencies are centralized without removing safety cases. See the [Testing Guide](./docs/development/TESTING.md) and [4.3.0 verification record](./docs/verification/v4.3.0.md) for current results and testing boundaries.
+GitHub Actions runs the same four-suite verification flow on pushes to `main`, pull requests, and manual dispatches. Test dependencies are centralized without removing safety cases. See the [Testing Guide](./docs/development/TESTING.md) and [4.3.0 verification record](./docs/verification/v4.3.1.md) for current results and testing boundaries.
 
 ## Data and Security
 
