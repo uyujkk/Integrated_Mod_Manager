@@ -625,12 +625,16 @@ public sealed partial class MainWindow
         return Path.Combine(_onlineCharacterCachePath, $"{key}.json");
     }
 
+    // A cached catalog older than this is shown at once and refreshed in the background, so newly
+    // released characters (and their avatars) appear within a day. Refreshing the online page reloads now.
+    private static readonly TimeSpan OnlineCharacterCatalogFreshFor = TimeSpan.FromDays(1);
+
     private async Task<OnlineCharacterCatalogCacheSnapshot?> TryReadOnlineCharacterCatalogCacheAsync(string catalogKey)
     {
         CachedValue<OnlineCharacterCatalogCacheEntry>? sqliteEntry = _appDataStore.TryReadCache<OnlineCharacterCatalogCacheEntry>(
             "character-catalog",
             catalogKey,
-            TimeSpan.FromDays(30),
+            OnlineCharacterCatalogFreshFor,
             allowExpired: true);
         if (sqliteEntry?.Value.Characters is { Count: > 0 } storedCharacters)
         {
@@ -657,7 +661,7 @@ public sealed partial class MainWindow
                 ? new OnlineCharacterCatalogCacheSnapshot(
                     characters,
                     checkedAt,
-                    DateTimeOffset.UtcNow - checkedAt <= TimeSpan.FromDays(30))
+                    DateTimeOffset.UtcNow - checkedAt <= OnlineCharacterCatalogFreshFor)
                 : null;
         }
         catch

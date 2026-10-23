@@ -80,7 +80,7 @@ Mod Storage Folder
   - an `.imm_avatar.*` or `avatar.*` image in the category folder;
   - the character chosen with right-click **Avatar > Bind to character**;
   - the character whose Chinese name, English name or alias equals the folder name (case, width and spaces are ignored).
-- Endfield repositories use the built-in operator list. Other games use the character list the Online page has loaded; until then only the initial is shown. The app never downloads a character list just for avatars.
+- Avatars use the same character catalog as the Online page: the official operator list for Endfield (with the built-in list filling gaps), the wiki plus GameBanana character categories for other games. A catalog older than a day is refreshed once in the background, so newly released characters get avatars.
 - Right-click **Avatar > Choose image** copies the image into the category folder as `.imm_avatar.*`. The previous avatar is kept as `.imm_avatar.previous.*`, and **Restore previous avatar** swaps it back.
 
 ### 4.3 Second-level mods and copy toggling

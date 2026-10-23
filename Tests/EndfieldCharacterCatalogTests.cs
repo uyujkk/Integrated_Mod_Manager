@@ -9,8 +9,8 @@ public sealed class EndfieldCharacterCatalogTests
     {
         IReadOnlyList<EndfieldCharacterInfo> characters = EndfieldCharacterCatalog.BuiltIn;
 
-        Assert.Equal(31, characters.Count);
-        Assert.Equal(("Liino", "梨诺", ""), (characters[0].EnglishName, characters[0].ChineseName, characters[0].GameBananaCategoryId));
+        Assert.Equal(35, characters.Count);
+        Assert.Equal(("Si", "祀", "50297"), (characters[0].EnglishName, characters[0].ChineseName, characters[0].GameBananaCategoryId));
         Assert.Equal("Antal", characters[^1].EnglishName);
         EndfieldCharacterInfo fangyi = Assert.Single(characters, character => character.EnglishName == "Zhuang Fangyi");
         Assert.Equal(["Zhuang Fangyi", "庄方宜", "Fangyi", "ZFY", "庄方怡"], fangyi.AllNames);

@@ -254,4 +254,31 @@ public static class OnlineCharacterCatalogMatcher
             return StringComparer.CurrentCultureIgnoreCase.Compare(left.DisplayNameEn, right.DisplayNameEn);
         });
     }
+
+    // The catalog plus the fallback characters it lacks (for example the built-in list when the online
+    // catalog is missing an entry). A fallback character matches a catalog one when any of their
+    // key, names or aliases are equal after normalization.
+    public static List<OnlineCharacterOption> WithFallback(
+        IReadOnlyList<OnlineCharacterOption> catalog, IReadOnlyList<OnlineCharacterOption> fallback)
+    {
+        static IEnumerable<string> Names(OnlineCharacterOption character) => new[]
+            {
+                character.Key, character.DisplayNameZh, character.DisplayNameEn
+            }
+            .Concat(character.Aliases)
+            .Select(NormalizeLookup)
+            .Where(name => name.Length > 0);
+
+        var known = new HashSet<string>(catalog.SelectMany(Names), StringComparer.Ordinal);
+        var result = new List<OnlineCharacterOption>(catalog);
+        foreach (OnlineCharacterOption character in fallback)
+        {
+            if (!Names(character).Any(known.Contains))
+            {
+                result.Add(character);
+            }
+        }
+
+        return result;
+    }
 }
