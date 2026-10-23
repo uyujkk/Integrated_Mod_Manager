@@ -2422,9 +2422,10 @@ public sealed partial class MainWindow : Window
             string json = JsonSerializer.Serialize(config, new JsonSerializerOptions { WriteIndented = true });
             WriteConfigurationTextWithBackup(_shellConfigPath, json);
         }
-        catch
+        catch (Exception ex)
         {
             if (throwOnError) throw;
+            LogApplicationIssue("Save repository configuration", ex);
             StatusTextBlock.Text = L("保存仓库配置失败。", "Failed to save repository config.");
         }
     }
@@ -12386,8 +12387,9 @@ public sealed partial class MainWindow : Window
                 }
             }
         }
-        catch
+        catch (Exception ex)
         {
+            LogApplicationIssue("Load configuration", ex);
             StatusTextBlock.Text = L("配置读取失败，已忽略旧配置。", "Failed to load config. Older config values were ignored.");
         }
 
@@ -12464,8 +12466,9 @@ public sealed partial class MainWindow : Window
             SaveShellConfig();
             return true;
         }
-        catch
+        catch (Exception ex)
         {
+            LogApplicationIssue("Save configuration", ex);
             StatusTextBlock.Text = L("配置保存失败，但不影响当前使用。", "Failed to save config, but the app can continue.");
             return false;
         }
