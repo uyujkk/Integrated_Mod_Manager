@@ -15,7 +15,7 @@ public static class ModCombinationDeploymentPolicy
         var known = EnumerateMods(sourceRoot);
         ValidateTargetRoot(targetRoot);
         var enabled = new List<string>();
-        foreach (var group in known.GroupBy(Path.GetFileName, StringComparer.OrdinalIgnoreCase))
+        foreach (var group in known.GroupBy(ModDeploymentLayout.DeployedName, StringComparer.OrdinalIgnoreCase))
         {
             string target = Path.Combine(targetRoot, group.Key!);
             if (!Directory.Exists(target)) continue;
@@ -46,14 +46,14 @@ public static class ModCombinationDeploymentPolicy
             if (desired.Contains(path, StringComparer.OrdinalIgnoreCase)) throw new InvalidDataException("The combination contains a duplicate Mod.");
             desired.Add(path);
         }
-        if (desired.GroupBy(Path.GetFileName, StringComparer.OrdinalIgnoreCase).Any(group => group.Count() > 1))
+        if (desired.GroupBy(ModDeploymentLayout.DeployedName, StringComparer.OrdinalIgnoreCase).Any(group => group.Count() > 1))
             throw new InvalidDataException("Two saved Mods use the same target folder name. Rename or separate them first.");
 
         string[] enabled = Capture(sourceRoot, targetRoot).Select(relative => Path.GetFullPath(Path.Combine(sourceRoot, relative))).ToArray();
         var install = new List<string>();
         foreach (string source in desired)
         {
-            string target = Path.Combine(targetRoot, Path.GetFileName(source));
+            string target = ModDeploymentLayout.DeployedPath(targetRoot, source);
             if (File.Exists(target)) throw new IOException("A file occupies a required Mod folder: " + target);
             if (Directory.Exists(target) && DirectoryLinkDeployment.IsDirectoryLink(target)
                 && !known.Any(candidate => LinkMatches(candidate, target)))
@@ -65,8 +65,8 @@ public static class ModCombinationDeploymentPolicy
         }
         var desiredSet = desired.ToHashSet(StringComparer.OrdinalIgnoreCase);
         string[] remove = enabled.Where(source => !desiredSet.Contains(source) || install.Any(item =>
-                Path.GetFileName(item).Equals(Path.GetFileName(source), StringComparison.OrdinalIgnoreCase)))
-            .Select(source => Path.Combine(targetRoot, Path.GetFileName(source)))
+                ModDeploymentLayout.SameDeployedName(item, source)))
+            .Select(source => ModDeploymentLayout.DeployedPath(targetRoot, source))
             .Distinct(StringComparer.OrdinalIgnoreCase).ToArray();
         return new ModCombinationDeploymentPlan(desired, install, remove);
     }

@@ -28,7 +28,7 @@ Namespaces follow folders: files in `Archives` belong to `IntegratedModManager.C
 | --- | --- |
 | `Archives` | `ArchiveExtractor`（ZIP、7-Zip、Bandizip、Windows tar）、清单校验、`ArchiveErrors` 错误分类、导入布局。Extraction, listing validation, error kinds, import layout. |
 | `Configuration` | `config.ini` 的解析与生成（`LegacyConfigFile`）、配置文件的原子写入、备份与损坏恢复（`ConfigurationFileStore`）。config.ini parsing/formatting, atomic writes, backups and recovery. |
-| `Deployment` | 安装事务与回滚（`ModInstallTransactions`）、文件冲突检测、目录联接、组合部署、INI 冲突检测、旧库整理导入、角色文件夹规划。Install transactions and rollback, file conflicts, junctions, combination deployment, INI conflicts, library import, character folders. |
+| `Deployment` | 部署布局与按角色单选/多选（`ModDeploymentLayout`、`CharacterSelectionPolicy`）、安装事务与回滚（`ModInstallTransactions`）、文件冲突检测、目录联接、组合部署、INI 冲突检测、旧库整理导入、角色文件夹规划。Install transactions and rollback, file conflicts, junctions, combination deployment, INI conflicts, library import, character folders. |
 | `Presets` | 组合预设、恢复预览、可迁移组合包。Combination presets, restore preview, portable bundles. |
 | `Online` | GameBanana 元数据与下载数、JSON 读取（`GameBananaJson`）、分类列表解析、角色目录匹配与合并（`OnlineCharacterCatalogMatcher`）、下载传输与会话、浏览与预览策略。GameBanana metadata, JSON readers, listing parsing, character catalog matching, download transport and sessions, browse policies. |
 | `Endfield` | 终末地桥接、干员目录解析，以及内置干员表（`endfield-characters.json`，嵌入程序集，新增干员只改这个文件）。Endfield bridge integration, operator catalog parsing and the built-in operator list in the embedded `endfield-characters.json`. |
@@ -46,7 +46,7 @@ Namespaces follow folders: files in `Archives` belong to `IntegratedModManager.C
 | 分组 / Group | 文件 / Files |
 | --- | --- |
 | 外壳与通用 / Shell | `Shell`, `Localization`（`T`/`L`，配合 `UiText.cs` 与 `Strings/*.json`）, `Settings`, `Configuration`, `Dialogs`, `Tray`, `SingleInstance`, `UiActionGuard`, `UiDiagnostics`, `BuiltInData` |
-| 仓库与本地库 / Repositories | `Dashboard`, `Repositories`, `LocalLibrary`, `RepositoryWorkspace`, `RefinedWorkspace`, `RepositoryPerformance`, `LocalTags`, `ExistingModImport`, `CharacterAvatars` |
+| 仓库与本地库 / Repositories | `Dashboard`, `Repositories`, `LocalLibrary`, `RepositoryWorkspace`, `RefinedWorkspace`, `RepositoryPerformance`, `LocalTags`, `ExistingModImport`, `CharacterAvatars`, `CharacterSelection` |
 | 安装与部署 / Install | `Archives`, `InstallTransactions`, `IniConflicts`, `ConfigurationProfiles`, `CombinationPresets`, `CombinationBundles`, `PersistentSlots` |
 | 在线浏览 / Online | `OnlineFeed`, `OnlineCharacters`, `OnlineCards`, `OnlineDetails`, `OnlineImageCache`, `OnlineImages`, `OnlineBrowse`, `OnlineState`, `OnlineLibrary`, `BrowseSessions`, `AuthorWorkspace` |
 | 下载与更新 / Downloads | `OnlineDownloadFlow`, `OnlineDownloads`, `OnlineInstall`, `DownloadTasks`, `DownloadRecovery`, `BatchDownloads`, `Updates`, `ModUpdates` |

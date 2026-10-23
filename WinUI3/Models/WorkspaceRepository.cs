@@ -42,6 +42,13 @@ public sealed class WorkspaceRepository
 
     public Dictionary<string, string> CharacterCategoryMappings { get; set; } = new(StringComparer.OrdinalIgnoreCase);
 
+    // By default each character folder has one Mod enabled as a link at a time; enabling
+    // another replaces it. These settings let character folders keep several enabled.
+    public bool AllowMultipleModsPerCharacter { get; set; }
+
+    // Character folder name -> allows several Mods, where it differs from the default.
+    public Dictionary<string, bool> CharacterSelectionOverrides { get; set; } = new(StringComparer.OrdinalIgnoreCase);
+
     // Character folder name -> catalog character key, for folders whose name does not match a character.
     public Dictionary<string, string> CharacterAvatarBindings { get; set; } = new(StringComparer.OrdinalIgnoreCase);
 }

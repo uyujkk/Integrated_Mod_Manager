@@ -90,6 +90,11 @@ Mod Storage Folder
 - Double-click or use the deployment action at the bottom of Details to toggle deployment. Lists scroll inside panels rather than moving the whole page.
 - If the target has no folder with the same name, the whole mod folder is copied.
 - If the same folder already exists, toggling again removes it from the target.
+- With directory-link deployment, each character keeps one enabled Mod by default: enabling another replaces the links of its sibling Mods.
+  - Right-click a character and check **Allow several enabled Mods** to keep several enabled for that character.
+  - The repository editor can make several Mods the default; individual characters can then be unchecked.
+  - Copy mode never removes sibling copies automatically.
+  - Restoring a combination preset asks first when it enables several Mods of a single-selection character.
 - The delete button removes the source mod after a confirmation prompt. This is separate from removing a copied target folder.
 - Copy, remove, and profile operations create transactional backups and automatically roll back on failure.
 

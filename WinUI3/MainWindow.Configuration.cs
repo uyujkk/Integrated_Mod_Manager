@@ -186,6 +186,7 @@ public sealed partial class MainWindow
         {
             repository.CharacterCategoryMappings ??= [];
             repository.CharacterAvatarBindings ??= [];
+            repository.CharacterSelectionOverrides ??= [];
             RepositoryPresetInfo? preset = BuiltInRepositoryPresets.FirstOrDefault(candidate =>
                 IsRepositoryForPreset(repository, candidate));
             if (preset is null)
