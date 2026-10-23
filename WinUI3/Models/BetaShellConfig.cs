@@ -14,7 +14,6 @@ public sealed class BetaShellConfig
     public bool? OverlaySlotSwitchEnabled { get; set; }
     public Dictionary<string, LocalLibraryState>? LocalLibraries { get; set; }
     public OnlineWorkspacePreferences? OnlinePreferences { get; set; }
-    public int EndfieldBridgeOfferRevision { get; set; }
 
     public string RepositoryWorkspaceView { get; set; } = "list";
     public string? CurrentPrimarySection { get; set; }

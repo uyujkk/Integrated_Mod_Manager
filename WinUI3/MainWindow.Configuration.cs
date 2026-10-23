@@ -107,7 +107,6 @@ public sealed partial class MainWindow
             _latestReleasePackageUrl = config?.LatestReleasePackageUrl;
             _latestReleaseSha256Url = config?.LatestReleaseSha256Url;
             _checkAppUpdatesOnStartup = ApplicationReleasePolicy.CanCheckApplicationUpdates(config?.CheckAppUpdatesOnStartup ?? false);
-            _endfieldBridgeOfferRevision = config?.EndfieldBridgeOfferRevision ?? 0;
             _installBackupLimitGb = Math.Clamp(config?.InstallBackupLimitGb ?? DefaultInstallBackupLimitGb, 0.5, 100);
             _reduceMotion = config?.ReduceMotion ?? false;
             _minimizeToTray = config?.MinimizeToTray ?? false;
@@ -252,7 +251,6 @@ public sealed partial class MainWindow
                 LatestReleasePackageUrl = _latestReleasePackageUrl,
                 LatestReleaseSha256Url = _latestReleaseSha256Url,
                 CheckAppUpdatesOnStartup = _checkAppUpdatesOnStartup,
-                EndfieldBridgeOfferRevision = _endfieldBridgeOfferRevision,
                 InstallBackupLimitGb = _installBackupLimitGb,
                 ReduceMotion = _reduceMotion,
                 MinimizeToTray = _minimizeToTray,

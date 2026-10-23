@@ -1,4 +1,4 @@
-> **v4.4.0 stable release.** Adds the Mod shortcut panel and overlay. See the [release notes](docs/releases/v4.4.0.md) for new features, upgrade guidance, and known issues.
+> **v4.5.0 stable release.** Adds character folder avatars, several Mods per character, single-Mod state slot variants and experimental F10 hot apply. See the [release notes](docs/releases/v4.5.0.md) for new features, upgrade guidance, and known issues.
 
 <div align="center">
   <img src="./WinUI3/Assets/AppIcon.png" width="96" alt="Integrated Mod Manager icon">

@@ -11,7 +11,7 @@ namespace ModFolderCopier.WinUI;
 public sealed partial class MainWindow
 {
     private const string WhatsNewFeatureSet = "4.5";
-    private const string StateSlotTestingGuide = "State-Slots-Hot-Apply-Testing.zh-CN.md";
+    private const string WhatsNewReleaseNotes = "v4.5.0.md";
     private string? _whatsNewSeenVersion;
 
     private async Task ShowWhatsNewOnceAsync()
@@ -42,7 +42,7 @@ public sealed partial class MainWindow
                 HorizontalScrollBarVisibility = ScrollBarVisibility.Disabled,
                 Content = new TextBlock { Text = T("WhatsNew.Body"), TextWrapping = TextWrapping.Wrap, IsTextSelectionEnabled = true }
             },
-            PrimaryButtonText = T("WhatsNew.OpenGuide"),
+            PrimaryButtonText = T("WhatsNew.OpenDetails"),
             CloseButtonText = T("WhatsNew.Close"),
             DefaultButton = ContentDialogButton.Close,
             RequestedTheme = RootGrid.ActualTheme,
@@ -52,30 +52,31 @@ public sealed partial class MainWindow
         SaveShellConfig();
         if (await dialog.ShowAsync() == ContentDialogResult.Primary)
         {
-            OpenStateSlotTestingGuide();
+            OpenWhatsNewDetails();
         }
     }
 
     private bool IsContentDialogOpen() => RootGrid.XamlRoot is not null
         && VisualTreeHelper.GetOpenPopupsForXamlRoot(RootGrid.XamlRoot).Any(popup => popup.Child is ContentDialog);
 
-    // The release package ships docs\guides beside the launcher; a source checkout has it at the root.
-    private void OpenStateSlotTestingGuide()
+    // The detailed feature introduction: the release notes the package ships in docs\releases beside
+    // the launcher (a source checkout has them at the root), or the copy on GitHub.
+    private void OpenWhatsNewDetails()
     {
         string[] candidates =
         [
-            Path.Combine(AppContext.BaseDirectory, "..", "docs", "guides", StateSlotTestingGuide),
-            Path.Combine(AppContext.BaseDirectory, "docs", "guides", StateSlotTestingGuide)
+            Path.Combine(AppContext.BaseDirectory, "..", "docs", "releases", WhatsNewReleaseNotes),
+            Path.Combine(AppContext.BaseDirectory, "docs", "releases", WhatsNewReleaseNotes)
         ];
-        string? guide = candidates.Select(Path.GetFullPath).FirstOrDefault(File.Exists);
-        string target = guide ?? $"{GitHubRepositoryUrl}/blob/main/docs/guides/{StateSlotTestingGuide}";
+        string? notes = candidates.Select(Path.GetFullPath).FirstOrDefault(File.Exists);
+        string target = notes ?? $"{GitHubRepositoryUrl}/blob/main/docs/releases/{WhatsNewReleaseNotes}";
         try
         {
             Process.Start(new ProcessStartInfo(target) { UseShellExecute = true })?.Dispose();
         }
         catch (Exception exception)
         {
-            LogApplicationIssue("Open state slot testing guide", exception);
+            LogApplicationIssue("Open release notes", exception);
             StatusTextBlock.Text = target;
         }
     }

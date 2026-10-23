@@ -13,7 +13,6 @@ namespace ModFolderCopier.WinUI;
 public sealed partial class MainWindow
 {
     private const string EndfieldLaunchSourceUrl = "https://github.com/uyujkk/Integrated_Mod_Manager";
-    private int _endfieldBridgeOfferRevision;
     private bool _bridgeOperationInProgress;
     private bool _endfieldLaunchInProgress;
 
@@ -49,22 +48,13 @@ public sealed partial class MainWindow
         ToolTipService.SetToolTip(BridgeOptionsButton, T("EndfieldBridge.AppliesOnlyToThisEndfieldRepository"));
     }
 
-    private async Task OfferEndfieldBridgeAfterUpgradeAsync()
-    {
-        // Isolated demo fixtures must never offer to configure or launch a real game.
-        WorkspaceRepository? repository = _repositories.FirstOrDefault(item => CanUseEndfieldBridge(item)
-            && item.Id != "state-slots-offline-demo");
-        if (!EndfieldBridgeIntegration.ShouldOffer(repository is not null, _endfieldBridgeOfferRevision)) return;
-        await ShowEndfieldBridgeOptionsAsync(repository!, isUpgradeOffer: true);
-    }
-
     private async void OnBridgeOptionsClicked(object sender, RoutedEventArgs e)
     {
         try
         {
             SaveSelectedRepositoryFromInputs();
             if (GetSelectedRepository() is { } repository && CanUseEndfieldBridge(repository))
-                await ShowEndfieldBridgeOptionsAsync(repository, isUpgradeOffer: false);
+                await ShowEndfieldBridgeOptionsAsync(repository);
         }
         catch (Exception ex)
         {
@@ -113,7 +103,7 @@ public sealed partial class MainWindow
         SessionId = sessionId ?? string.Empty
     };
 
-    private async Task ShowEndfieldBridgeOptionsAsync(WorkspaceRepository repository, bool isUpgradeOffer)
+    private async Task ShowEndfieldBridgeOptionsAsync(WorkspaceRepository repository)
     {
         if (_bridgeOperationInProgress) return;
         _bridgeOperationInProgress = true;
@@ -231,10 +221,11 @@ public sealed partial class MainWindow
             var body = new StackPanel { Spacing = 14, Width = Math.Max(320, Math.Min(760, viewport.MaxWidth - 72)) };
             body.Children.Add(new TextBlock
             {
-                Text = isUpgradeOffer
-                    ? L($"仓库：{repository.Name}\n终末地启动已内置到管理器，不再需要单独下载 EndfieldBridge。" + (migrated ? "已导入旧桥接器的设置；如果之前适配过 EFMI，请点击“备份并适配 EFMI”切换到内置命令，原始恢复点会保留。" : string.Empty),
-                        $"Repository: {repository.Name}\nThe Endfield launch is now built into the manager; EndfieldBridge no longer needs a separate download." + (migrated ? " Settings from the old bridge were imported. If EFMI was set up before, use Back up and set up EFMI to switch to the integrated command; the original restore point is kept." : string.Empty))
-                    : T("EndfieldBridge.Repository", repository.Name),
+                // Settings imported from a standalone EndfieldBridge (4.1.1–4.2.0) need EFMI set up again.
+                Text = T("EndfieldBridge.Repository", repository.Name) + (migrated
+                    ? L("\n已导入旧桥接器的设置；如果之前适配过 EFMI，请点击“备份并适配 EFMI”切换到内置命令，原始恢复点会保留。",
+                        "\nSettings from the old bridge were imported. If EFMI was set up before, use Back up and set up EFMI to switch to the integrated command; the original restore point is kept.")
+                    : string.Empty),
                 TextWrapping = TextWrapping.Wrap,
                 Style = (Style)Application.Current.Resources["CaptionTextStyle"]
             });
@@ -403,7 +394,6 @@ public sealed partial class MainWindow
             };
 
             ContentDialogResult result = await dialog.ShowAsync();
-            _endfieldBridgeOfferRevision = EndfieldBridgeIntegration.OfferRevision;
             if (result == ContentDialogResult.Primary)
             {
                 repository.UseEndfieldBridge = integrated.IsOn;
@@ -527,7 +517,7 @@ public sealed partial class MainWindow
         if (ImportLegacyBridgeSettings(repository, service)) SaveShellConfig();
         if (!repository.EndfieldRiskAccepted || !EndfieldGame.IsValidGame(repository.EndfieldGamePath))
         {
-            await ShowEndfieldBridgeOptionsAsync(repository, isUpgradeOffer: false);
+            await ShowEndfieldBridgeOptionsAsync(repository);
             return;
         }
 

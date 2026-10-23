@@ -1,8 +1,8 @@
-[CmdletBinding()]
+﻿[CmdletBinding()]
 param(
-    [string]$Version = '4.4.0',
-    [string]$BaseTag = 'v4.3.1',
-    [string]$VerificationDirectory = 'artifacts\verification\v4.4.0',
+    [string]$Version = '4.5.0',
+    [string]$BaseTag = 'v4.4.0',
+    [string]$VerificationDirectory = 'artifacts\verification\v4.5.0',
     [switch]$ForGitHubRelease,
     [string]$CiUrl = '',
     # Only for machines without git: JSON exported by git elsewhere from this same
@@ -170,7 +170,7 @@ $taskStatus = @"
 - 本地完整测试：$taskTotal 项通过，0 失败，0 跳过；Core、数据存储、更新器和终末地启动组件的覆盖率均达到项目门槛。
 - Release/x64 主程序、启动器和更新器已构建，文件版本统一为 $taskFileVersion，产品版本为 $Version。
 - 打包时检查必需运行文件、许可证文件、用户状态排除、文件清单及 ZIP SHA-256。
-- 尚未在真实游戏和 XXMI / EFMI 上走完整启动链；失效联接清理和压缩包导入的界面流程未在真实 Mod 库上实机点击验证。该包是正式发布，真实环境验证范围仍以本记录为准。
+- 尚未在真实游戏和 XXMI / EFMI 上走完整启动链；本版本其余验证边界见发布说明和验证记录（docs/releases、docs/verification）。该包是正式发布，真实环境验证范围以这些记录为准。
 - 本正式版启用软件更新检查，遵循已保存的自动检查与手动检查偏好。
 - 许可证：包含终末地启动组件（AGPL-3.0-only），整个发布包按 AGPL-3.0-only 分发；见 LICENSING.md。
 $taskValidationScope

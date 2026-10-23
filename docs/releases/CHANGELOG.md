@@ -6,6 +6,12 @@
 
 This document records version changes in Integrated Mod Manager. Unpublished versions are marked separately.
 
+## v4.5.0 — 2026-10-23（正式版 / Stable）
+
+新增角色文件夹头像（新角色一天内自动加入）、每个角色同时启用多个 Mod、单 Mod 状态槽位变体（写入 Mod 默认值、导入 JASM 变体、整份 `d3dx_user.ini` 快照）、实验性的 F10 热应用与浮窗槽位切换、自动识别游戏窗口，以及最大化后按比例还原。不再在启动时弹出旧的终末地启动升级引导。中文与英文分开见 [v4.5.0](v4.5.0.md)。
+
+Add character folder avatars (new characters within a day), several Mods per character, single-Mod state slot variants (Mod default writes, JASM variant import, whole `d3dx_user.ini` snapshots), experimental F10 hot apply with overlay slot switching, automatic game window selection, and proportional restore from maximized. The old Endfield launch upgrade prompt no longer appears at startup. Separate Chinese and English notes: [v4.5.0](v4.5.0.md).
+
 ## v4.4.0 — 2026-10-22（正式版 / Stable）
 
 新增 Mod 快捷键面板与置顶浮窗：读取 INI 按键绑定，点击发送到游戏，支持跟随出场角色和浮窗内保存预设。修复更新后预览图丢失（#14）和更新器超长路径（#16），下载时可按需创建角色文件夹（#6），加快在线浏览并整理 Mod 更新页。中文与英文分开见 [v4.4.0](v4.4.0.md)。
