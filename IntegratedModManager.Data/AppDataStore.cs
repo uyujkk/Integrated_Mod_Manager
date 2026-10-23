@@ -2,7 +2,7 @@ using System.Globalization;
 using System.Text.Json;
 using Microsoft.Data.Sqlite;
 
-namespace ModFolderCopier.WinUI;
+namespace IntegratedModManager.Data;
 
 public sealed class AppDataStore
 {

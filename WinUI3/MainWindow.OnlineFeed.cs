@@ -5,6 +5,7 @@ using System.Text;
 using System.Text.Json;
 using System.Text.RegularExpressions;
 using IntegratedModManager.Core;
+using IntegratedModManager.Data;
 using Microsoft.UI.Xaml;
 using Microsoft.UI.Xaml.Controls;
 using Windows.System;

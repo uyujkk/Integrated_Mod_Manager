@@ -3,7 +3,7 @@ using System.Text;
 using System.Text.Json;
 using IntegratedModManager.Core;
 
-namespace ModFolderCopier.WinUI;
+namespace IntegratedModManager.Data;
 
 /// <summary>New raw cache namespace; old UI-derived cache entries remain untouched.</summary>
 public sealed class OnlineMetadataCacheAdapter(AppDataStore store, string directory,

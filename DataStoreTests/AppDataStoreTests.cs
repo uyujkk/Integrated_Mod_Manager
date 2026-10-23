@@ -1,6 +1,6 @@
 using Microsoft.Data.Sqlite;
 using IntegratedModManager.Core;
-using ModFolderCopier.WinUI;
+using IntegratedModManager.Data;
 using Xunit;
 
 namespace IntegratedModManager.DataStore.Tests;
