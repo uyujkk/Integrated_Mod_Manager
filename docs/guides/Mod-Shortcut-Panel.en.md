@@ -25,7 +25,14 @@ Version 4.4 adds a Shortcuts page. It reads the `[Key…]` bindings in a Mod's I
   - **Switch Mod**: lists only enabled Mods (deployed to the loader's Mods folder).
   - **Sending on/off**: pause or resume sending.
   - **Save preset**: saves the enabled Mods and the values in `d3dx_user.ini` as a combination preset. It only reads and never changes the game. Press F10 in the game first so recent changes are written.
-- Restoring presets, repository settings, online downloads and other actions that need the game closed or several confirmations stay in the main window.
+  - **Hot switching state slots (experimental, off by default)**:
+    - Turn on "Switch state slots in the overlay" on the Shortcuts page, and the overlay lists the current Mod's state slots; ● marks the current one.
+    - Clicking a slot writes its values into `d3dx_user.ini` and sends **F10** to the chosen game window.
+    - For a few seconds around F10 the manager keeps `d3dx_user.ini` read-only, so the loader's reload cannot overwrite it with the old in-memory values.
+    - It needs the game window chosen and sending on. The file is backed up before writing, and the result appears in the overlay status line.
+- When restoring a state slot or a whole `d3dx_user.ini` snapshot in the main window, you can also check "The game is running: send F10 … after writing" instead of closing the game.
+- Hot apply relies on the loader re-reading `d3dx_user.ini` on F10 (the 3DMigoto/XXMI default). If F10 does not arrive, the loader overwrites the written values when the game exits; the status line says so.
+- Restoring combination presets, repository settings, online downloads and other actions that need the game closed or several confirmations stay in the main window.
 
 The overlay supports windowed and borderless full-screen modes; whether it shows over exclusive full screen depends on the game.
 

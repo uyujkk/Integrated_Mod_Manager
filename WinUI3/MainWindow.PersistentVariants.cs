@@ -313,14 +313,18 @@ public sealed partial class MainWindow
             RequestedTheme = RootGrid.ActualTheme,
             XamlRoot = RootGrid.XamlRoot
         };
+        CheckBox hotReload = CreateHotReloadOption(closed, dialog);
+        panel.Children.Add(hotReload);
         closed.Checked += (_, _) => dialog.IsPrimaryButtonEnabled = true;
-        closed.Unchecked += (_, _) => dialog.IsPrimaryButtonEnabled = false;
+        closed.Unchecked += (_, _) => dialog.IsPrimaryButtonEnabled = hotReload.IsChecked == true;
         if (await dialog.ShowAsync() != ContentDialogResult.Primary || choices.SelectedItem is not ComboBoxItem { Tag: UserIniSnapshot chosen }) return;
 
         try
         {
             string backup = await Task.Run(() => UserIniSnapshots.Restore(chosen, userIni, DateTimeOffset.Now));
             PersistentSlotStatusTextBlock.Text = T("PersistentVariants.SnapshotRestored", chosen.Name, backup);
+            if (hotReload.IsChecked == true)
+                PersistentSlotStatusTextBlock.Text += "\n" + await HotReloadLoaderAsync(userIni);
         }
         catch (Exception ex) when (ex is IOException or UnauthorizedAccessException or InvalidDataException)
         {

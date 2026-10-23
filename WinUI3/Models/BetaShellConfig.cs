@@ -11,6 +11,7 @@ public sealed class BetaShellConfig
     public int? ShortcutOverlayOpacity { get; set; }
     public bool? ShortcutHideUnsupported { get; set; }
     public string? ShortcutOverlayTextColor { get; set; }
+    public bool? OverlaySlotSwitchEnabled { get; set; }
     public Dictionary<string, LocalLibraryState>? LocalLibraries { get; set; }
     public OnlineWorkspacePreferences? OnlinePreferences { get; set; }
     public int EndfieldBridgeOfferRevision { get; set; }

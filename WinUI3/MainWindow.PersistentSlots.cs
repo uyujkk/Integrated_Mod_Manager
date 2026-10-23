@@ -317,8 +317,10 @@ public sealed partial class MainWindow
                     IsPrimaryButtonEnabled = false,
                     DefaultButton = ContentDialogButton.Close
                 };
+                CheckBox hotReload = CreateHotReloadOption(closedCheck, dialog);
+                content.Children.Add(hotReload);
                 closedCheck.Checked += (_, _) => dialog.IsPrimaryButtonEnabled = true;
-                closedCheck.Unchecked += (_, _) => dialog.IsPrimaryButtonEnabled = false;
+                closedCheck.Unchecked += (_, _) => dialog.IsPrimaryButtonEnabled = hotReload.IsChecked == true;
                 if (await dialog.ShowAsync() != ContentDialogResult.Primary) return;
                 string? backup = await Task.Run(() => ModPersistentPresetEngine.ApplyRuntimeRestore(plan));
                 slot.ActivatedAtUtc = DateTimeOffset.UtcNow;
@@ -330,6 +332,8 @@ public sealed partial class MainWindow
                     + (backup is null ? "No write was needed; no new backup created." : $"Backup: {backup}") + "\nRestart the loader and game to verify the result.");
                 ShowAppNotification($"已恢复“{slot.Name}”的 {plan.Values.Count} 个加载器变量，并重新读取核对。请重启游戏验证效果。",
                     $"Restored and verified {plan.Values.Count} loader variables for '{slot.Name}'. Restart the game to verify.");
+                if (hotReload.IsChecked == true)
+                    resultText += "\n" + await HotReloadLoaderAsync(userIni);
             }
             catch (Exception ex) when (ex is IOException or UnauthorizedAccessException or InvalidDataException
                 or DecoderFallbackException or ArgumentException or NotSupportedException)

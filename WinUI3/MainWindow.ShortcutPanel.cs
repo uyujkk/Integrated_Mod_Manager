@@ -243,6 +243,7 @@ public sealed partial class MainWindow
             RenderShortcutButtons();
         };
         pane.Children.Add(hideUnsupported);
+        AddOverlaySlotSwitchSetting(pane);
         BuildCharacterFollowControls(pane);
         pane.Children.Add(new TextBlock
         {
@@ -534,7 +535,8 @@ public sealed partial class MainWindow
         var panel = new StackPanel { Spacing = 6 };
         // Every header row has a fixed height so status changes never shift the list (row 1).
         // Only in-game-safe actions live here: switching Mod, arming input and a read-only preset save.
-        // Restoring presets or slots needs the game closed and stays in the main window.
+        // Restoring presets needs the game closed and stays in the main window. State slots can be
+        // switched here only when the user turns on hot switching (MainWindow.HotReload.cs).
         _overlayModPicker = new ComboBox { HorizontalAlignment = HorizontalAlignment.Stretch, Foreground = _overlayTextBrush,
             PlaceholderText = T("ShortcutPanel.SelectAMod") };
         ToolTipService.SetToolTip(_overlayModPicker, T("ShortcutPanel.SwitchTheModWhoseShortcutsAre"));
@@ -576,6 +578,7 @@ public sealed partial class MainWindow
         Grid.SetColumn(_overlayOpacitySlider, 1);
         opacityRow.Children.Add(opacityLabel); opacityRow.Children.Add(_overlayOpacitySlider);
         panel.Children.Add(opacityRow);
+        AddOverlaySlotSection(panel);
         panel.Children.Add(_overlayStatusText);
         _overlayButtonList = new StackPanel { Spacing = 8 };
         _overlayScroll = new ScrollViewer { Content = _overlayButtonList, VerticalScrollBarVisibility = ScrollBarVisibility.Auto,
@@ -692,6 +695,7 @@ public sealed partial class MainWindow
         _overlayTargetText!.Text = (_shortcutTargetPicker?.SelectedItem as ShortcutTarget)?.Label ?? T("ShortcutPanel.NoTargetWindowSelectItIn");
         _overlayStatusText!.Text = _shortcutStatus?.Text ?? string.Empty;
         // Status, pause and target changes must not replace the scroll container or buttons.
+        UpdateOverlaySlotSection();
         DetectedModShortcut[] visible = VisibleShortcuts();
         if (_overlayBindings.SequenceEqual(visible)) return;
         _overlayBindings = visible;

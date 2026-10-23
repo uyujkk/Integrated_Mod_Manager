@@ -29,7 +29,7 @@ Namespaces follow folders: files in `Archives` belong to `IntegratedModManager.C
 | `Archives` | `ArchiveExtractor`（ZIP、7-Zip、Bandizip、Windows tar）、清单校验、`ArchiveErrors` 错误分类、导入布局。Extraction, listing validation, error kinds, import layout. |
 | `Configuration` | `config.ini` 的解析与生成（`LegacyConfigFile`）、配置文件的原子写入、备份与损坏恢复（`ConfigurationFileStore`）。config.ini parsing/formatting, atomic writes, backups and recovery. |
 | `Deployment` | 部署布局与按角色单选/多选（`ModDeploymentLayout`、`CharacterSelectionPolicy`）、安装事务与回滚（`ModInstallTransactions`）、文件冲突检测、目录联接、组合部署、INI 冲突检测、旧库整理导入、角色文件夹规划。Install transactions and rollback, file conflicts, junctions, combination deployment, INI conflicts, library import, character folders. |
-| `Presets` | 组合预设、恢复预览、可迁移组合包、持久参数引擎（含写入 Mod 默认值）、JASM 变体导入、整份 `d3dx_user.ini` 快照。Combination presets, restore preview, portable bundles, persistent state engine (including Mod default writes), JASM variant import, whole user.ini snapshots. |
+| `Presets` | 组合预设、恢复预览、可迁移组合包、持久参数引擎（含写入 Mod 默认值）、JASM 变体导入、整份 `d3dx_user.ini` 快照、加载器热重载（`LoaderHotReload`）。Combination presets, restore preview, portable bundles, persistent state engine (including Mod default writes), JASM variant import, whole user.ini snapshots. |
 | `Online` | GameBanana 元数据与下载数、JSON 读取（`GameBananaJson`）、分类列表解析、角色目录匹配与合并（`OnlineCharacterCatalogMatcher`）、下载传输与会话、浏览与预览策略。GameBanana metadata, JSON readers, listing parsing, character catalog matching, download transport and sessions, browse policies. |
 | `Endfield` | 终末地桥接、干员目录解析，以及内置干员表（`endfield-characters.json`，嵌入程序集，新增干员只改这个文件）。Endfield bridge integration, operator catalog parsing and the built-in operator list in the embedded `endfield-characters.json`. |
 | `Shortcuts` | Mod 快捷键扫描、描述与按键输入。Mod shortcut scanning, descriptions and key input. |
@@ -50,7 +50,7 @@ Namespaces follow folders: files in `Archives` belong to `IntegratedModManager.C
 | 安装与部署 / Install | `Archives`, `InstallTransactions`, `IniConflicts`, `ConfigurationProfiles`, `CombinationPresets`, `CombinationBundles`, `PersistentSlots`, `PersistentVariants` |
 | 在线浏览 / Online | `OnlineFeed`, `OnlineCharacters`, `OnlineCards`, `OnlineDetails`, `OnlineImageCache`, `OnlineImages`, `OnlineBrowse`, `OnlineState`, `OnlineLibrary`, `BrowseSessions`, `AuthorWorkspace` |
 | 下载与更新 / Downloads | `OnlineDownloadFlow`, `OnlineDownloads`, `OnlineInstall`, `DownloadTasks`, `DownloadRecovery`, `BatchDownloads`, `Updates`, `ModUpdates` |
-| 快捷键与终末地 / Shortcuts, Endfield | `ShortcutBindings`, `ShortcutPanel`, `CharacterFollow`, `EndfieldBridge`, `ProductivityFeatures` |
+| 快捷键与终末地 / Shortcuts, Endfield | `ShortcutBindings`, `ShortcutPanel`, `HotReload`, `CharacterFollow`, `EndfieldBridge`, `ProductivityFeatures` |
 
 窗口使用的记录与视图模型放在 [`WinUI3/Models`](../../WinUI3/Models/)，每个类型一个文件。
 Records and view models used by the window live in `WinUI3/Models`, one type per file.
