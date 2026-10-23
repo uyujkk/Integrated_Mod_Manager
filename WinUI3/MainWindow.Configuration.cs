@@ -1,5 +1,6 @@
 using System.Text.Json;
 using IntegratedModManager.Core.Configuration;
+using IntegratedModManager.Core.Layout;
 using IntegratedModManager.Core.Repository;
 using IntegratedModManager.Core.Shortcuts;
 using IntegratedModManager.Core.Updates;
@@ -143,6 +144,7 @@ public sealed partial class MainWindow
             _savedWindowY = config?.WindowY;
             _savedWindowWidth = config?.WindowWidth;
             _savedWindowHeight = config?.WindowHeight;
+            _savedWindowMaximized = config?.WindowMaximized ?? false;
         }
         catch
         {
@@ -265,6 +267,7 @@ public sealed partial class MainWindow
                 WindowY = _savedWindowY,
                 WindowWidth = _savedWindowWidth,
                 WindowHeight = _savedWindowHeight,
+                WindowMaximized = _savedWindowMaximized,
                 Repositories = [.. _repositories]
             };
 
@@ -279,33 +282,72 @@ public sealed partial class MainWindow
         }
     }
 
+    // Normal bounds come from WindowPlacementPolicy: saved bounds that fill the screen (for example
+    // saved while maximized by earlier versions) or no bounds become a share of the work area.
     private void RestoreWindowPlacement()
     {
-        if (_savedWindowWidth is not int width || _savedWindowHeight is not int height)
+        WindowRect? saved = _savedWindowWidth is int width && _savedWindowHeight is int height
+            ? new WindowRect(_savedWindowX ?? AppWindow.Position.X, _savedWindowY ?? AppWindow.Position.Y, width, height)
+            : null;
+        RectInt32 workArea = DisplayArea.GetFromPoint(
+            new PointInt32(saved?.X ?? AppWindow.Position.X, saved?.Y ?? AppWindow.Position.Y), DisplayAreaFallback.Primary).WorkArea;
+        WindowRect normal = WindowPlacementPolicy.Normal(saved, new WindowRect(workArea.X, workArea.Y, workArea.Width, workArea.Height));
+        AppWindow.MoveAndResize(new RectInt32(normal.X, normal.Y, normal.Width, normal.Height));
+        if (_savedWindowMaximized && AppWindow.Presenter is OverlappedPresenter presenter)
+        {
+            presenter.Maximize();
+        }
+        _lastPresenterState = (AppWindow.Presenter as OverlappedPresenter)?.State;
+        AppWindow.Changed -= OnWindowPlacementChanged;
+        AppWindow.Changed += OnWindowPlacementChanged;
+    }
+
+    // Keep the last normal bounds: a maximized or minimized window only records its state.
+    private void SaveWindowPlacement()
+    {
+        OverlappedPresenterState? state = (AppWindow.Presenter as OverlappedPresenter)?.State;
+        if (state == OverlappedPresenterState.Minimized)
         {
             return;
         }
 
-        width = Math.Max(1100, width);
-        height = Math.Max(700, height);
-        int x = _savedWindowX ?? AppWindow.Position.X;
-        int y = _savedWindowY ?? AppWindow.Position.Y;
+        _savedWindowMaximized = state == OverlappedPresenterState.Maximized;
+        if (_savedWindowMaximized)
+        {
+            return;
+        }
 
-        DisplayArea display = DisplayArea.GetFromPoint(new PointInt32(x, y), DisplayAreaFallback.Primary);
-        RectInt32 workArea = display.WorkArea;
-        width = Math.Min(width, workArea.Width);
-        height = Math.Min(height, workArea.Height);
-        x = Math.Clamp(x, workArea.X, workArea.X + Math.Max(0, workArea.Width - width));
-        y = Math.Clamp(y, workArea.Y, workArea.Y + Math.Max(0, workArea.Height - height));
-        AppWindow.MoveAndResize(new RectInt32(x, y, width, height));
-    }
-
-    private void SaveWindowPlacement()
-    {
         _savedWindowX = AppWindow.Position.X;
         _savedWindowY = AppWindow.Position.Y;
         _savedWindowWidth = AppWindow.Size.Width;
         _savedWindowHeight = AppWindow.Size.Height;
+    }
+
+    // Leaving maximized for a normal window that still fills the screen shrinks it to the share of
+    // the work area, so restoring visibly changes the window.
+    private void OnWindowPlacementChanged(AppWindow sender, AppWindowChangedEventArgs args)
+    {
+        try
+        {
+            if (!args.DidPresenterChange && !args.DidSizeChange) return;
+            OverlappedPresenterState? state = (sender.Presenter as OverlappedPresenter)?.State;
+            OverlappedPresenterState? previous = _lastPresenterState;
+            _lastPresenterState = state;
+            if (previous != OverlappedPresenterState.Maximized || state != OverlappedPresenterState.Restored) return;
+
+            RectInt32 workArea = DisplayArea.GetFromWindowId(sender.Id, DisplayAreaFallback.Primary).WorkArea;
+            var work = new WindowRect(workArea.X, workArea.Y, workArea.Width, workArea.Height);
+            var window = new WindowRect(sender.Position.X, sender.Position.Y, sender.Size.Width, sender.Size.Height);
+            if (WindowPlacementPolicy.FillsWorkArea(window, work))
+            {
+                WindowRect normal = WindowPlacementPolicy.Proportional(work);
+                sender.MoveAndResize(new RectInt32(normal.X, normal.Y, normal.Width, normal.Height));
+            }
+        }
+        catch (Exception ex)
+        {
+            LogApplicationIssue("Window placement", ex);
+        }
     }
 
     private void LoadConfig()

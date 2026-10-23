@@ -70,6 +70,7 @@ public sealed class BetaShellConfig
     public int? WindowY { get; set; }
 
     public int? WindowWidth { get; set; }
+    public bool? WindowMaximized { get; set; }
 
     public int? WindowHeight { get; set; }
 
