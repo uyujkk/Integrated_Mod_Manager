@@ -1,4 +1,4 @@
-namespace IntegratedModManager.Core;
+namespace IntegratedModManager.Core.Shortcuts;
 
 public enum ShortcutPrivilegeVerdict { Allowed, TargetHigher, TargetUnreadable }
 

@@ -1,4 +1,4 @@
-using IntegratedModManager.Core;
+using IntegratedModManager.Core.Repository;
 using System.Text.Json;
 using System.Text.Json.Serialization;
 

@@ -1,7 +1,8 @@
 using System.Text;
 using System.Text.Json;
+using IntegratedModManager.Core.Infrastructure;
 
-namespace IntegratedModManager.Core;
+namespace IntegratedModManager.Core.Deployment;
 
 public enum InstallTransactionErrorKind
 {

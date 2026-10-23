@@ -1,7 +1,8 @@
 using System.Diagnostics;
 using System.Globalization;
 using System.Text.RegularExpressions;
-using IntegratedModManager.Core;
+using IntegratedModManager.Core.Configuration;
+using IntegratedModManager.Core.Updates;
 using Microsoft.UI.Xaml;
 using Microsoft.UI.Xaml.Controls;
 using Microsoft.UI.Xaml.Media;

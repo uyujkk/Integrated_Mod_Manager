@@ -1,7 +1,7 @@
 using System.Globalization;
 using System.Text;
 using System.Text.Json;
-using IntegratedModManager.Core;
+using IntegratedModManager.Core.Online;
 
 namespace IntegratedModManager.Data;
 

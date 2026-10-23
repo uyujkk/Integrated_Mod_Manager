@@ -1,5 +1,5 @@
 using System.Numerics;
-using IntegratedModManager.Core;
+using IntegratedModManager.Core.Online;
 using Microsoft.UI;
 using Microsoft.UI.Input;
 using Microsoft.UI.Windowing;

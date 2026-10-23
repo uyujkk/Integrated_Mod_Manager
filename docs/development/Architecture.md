@@ -21,8 +21,8 @@ This page maps each project and folder to its responsibility. [`IntegratedModMan
 
 ## Core 目录 / Core folders
 
-所有文件仍使用命名空间 `IntegratedModManager.Core`；目录只用于按领域归类。
-Every file keeps the `IntegratedModManager.Core` namespace; folders only group files by domain.
+命名空间与目录一致：`Archives` 目录下的文件属于 `IntegratedModManager.Core.Archives`，其余目录同理。新文件按所在目录选命名空间。
+Namespaces follow folders: files in `Archives` belong to `IntegratedModManager.Core.Archives`, and so on. A new file takes the namespace of its folder.
 
 | 目录 / Folder | 内容 / Contents |
 | --- | --- |

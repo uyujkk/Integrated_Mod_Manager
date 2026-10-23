@@ -1,4 +1,4 @@
-namespace IntegratedModManager.Core;
+namespace IntegratedModManager.Core.Endfield;
 
 /// <summary>
 /// Repository-level decisions for the integrated Endfield launch. The launch itself lives in

@@ -1,5 +1,5 @@
 using System.Security.Cryptography;
-using IntegratedModManager.Core;
+using IntegratedModManager.Core.Updates;
 
 namespace IntegratedModManager.Core.Tests;
 

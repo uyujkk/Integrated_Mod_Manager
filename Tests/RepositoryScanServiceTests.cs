@@ -1,5 +1,5 @@
 using System.Diagnostics;
-using IntegratedModManager.Core;
+using IntegratedModManager.Core.Repository;
 using Xunit.Abstractions;
 
 namespace IntegratedModManager.Core.Tests;

@@ -2,7 +2,7 @@ using System.Security.Cryptography;
 using System.Text;
 using System.Text.Json;
 
-namespace IntegratedModManager.Core;
+namespace IntegratedModManager.Core.Updates;
 
 public sealed record ModUpdateSnapshot(string Repository, string ModPath, string Fingerprint);
 /// <param name="PreservedImages">Top-level preview images carried over from the old folder (file names in the new folder).</param>

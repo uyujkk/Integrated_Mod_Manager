@@ -1,5 +1,5 @@
 using System.Runtime.InteropServices;
-using IntegratedModManager.Core;
+using IntegratedModManager.Core.Infrastructure;
 using IntegratedModManager.EndfieldLaunch;
 using Microsoft.UI.Dispatching;
 using Microsoft.UI.Xaml;

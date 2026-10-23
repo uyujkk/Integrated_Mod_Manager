@@ -1,4 +1,4 @@
-using IntegratedModManager.Core;
+using IntegratedModManager.Core.Online;
 using Microsoft.UI.Xaml;
 using Microsoft.UI.Xaml.Controls;
 using Windows.System;

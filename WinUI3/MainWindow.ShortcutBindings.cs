@@ -1,5 +1,6 @@
 using System.Diagnostics;
-using IntegratedModManager.Core;
+using IntegratedModManager.Core.Configuration;
+using IntegratedModManager.Core.Shortcuts;
 using Microsoft.UI;
 using Microsoft.UI.Input;
 using Microsoft.UI.Xaml;

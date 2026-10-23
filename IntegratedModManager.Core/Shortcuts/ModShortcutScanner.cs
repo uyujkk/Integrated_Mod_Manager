@@ -1,6 +1,6 @@
 using System.Text.RegularExpressions;
 
-namespace IntegratedModManager.Core;
+namespace IntegratedModManager.Core.Shortcuts;
 
 public sealed record DetectedModShortcut(
     string Shortcut,

@@ -1,4 +1,4 @@
-using IntegratedModManager.Core;
+using IntegratedModManager.Core.Online;
 using ModFolderCopier.WinUI;
 
 namespace IntegratedModManager.Core.Tests;

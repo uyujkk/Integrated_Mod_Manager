@@ -1,4 +1,6 @@
-namespace IntegratedModManager.Core;
+using IntegratedModManager.Core.Infrastructure;
+
+namespace IntegratedModManager.Core.Archives;
 
 /// <summary>
 /// Validates the technical listing produced by <c>7z l -slt</c> before extraction.

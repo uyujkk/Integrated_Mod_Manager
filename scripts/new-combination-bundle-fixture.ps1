@@ -17,7 +17,7 @@ if (!$taskAssembly.StartsWith($taskBoundary, [StringComparison]::OrdinalIgnoreCa
 # The existing generator rejects existing/linked/out-of-repository output paths.
 $taskFixture = & (Join-Path $PSScriptRoot 'new-combination-preview-fixture.ps1') -ModCount $ModCount -OutputDirectory $OutputDirectory
 $taskFixtureRoot = [IO.Path]::GetDirectoryName($taskFixture.Source)
-$taskPaths = [IntegratedModManager.Core.ModCombinationDeploymentPolicy]::Capture($taskFixture.Source, $taskFixture.Target)
+$taskPaths = [IntegratedModManager.Core.Deployment.ModCombinationDeploymentPolicy]::Capture($taskFixture.Source, $taskFixture.Target)
 # Optional bounded, incompressible synthetic data makes native cancellation
 # observable without copying game assets or changing an existing fixture.
 if ($PayloadMegabytesPerMod -gt 0) {
@@ -36,20 +36,20 @@ if ($PayloadMegabytesPerMod -gt 0) {
 $taskIdentities = [ValueTuple[string,string][]]@($taskPaths | ForEach-Object {
     [ValueTuple[string,string]]::new((Join-Path $taskFixture.Source $_), [IO.Path]::GetFileName($_))
 })
-$taskStates = [IntegratedModManager.Core.ModPersistentPresetEngine]::CaptureCombination($taskIdentities, $taskFixture.State)
-$taskMods = [IntegratedModManager.Core.CombinationPresetState[]]@($taskStates | ForEach-Object {
-    [IntegratedModManager.Core.CombinationPresetState]::new([IO.Path]::GetRelativePath($taskFixture.Source, $_.ModDirectory), $_.Values)
+$taskStates = [IntegratedModManager.Core.Presets.ModPersistentPresetEngine]::CaptureCombination($taskIdentities, $taskFixture.State)
+$taskMods = [IntegratedModManager.Core.Presets.CombinationPresetState[]]@($taskStates | ForEach-Object {
+    [IntegratedModManager.Core.Presets.CombinationPresetState]::new([IO.Path]::GetRelativePath($taskFixture.Source, $_.ModDirectory), $_.Values)
 })
 $taskZip = Join-Path $taskFixtureRoot 'Demo-Combination.imm-preset.zip'
-[IntegratedModManager.Core.CombinationBundleService]::Export($taskFixture.Source, $taskZip, 'Synthetic bundle demo', 'Synthetic Game', $true,
+[IntegratedModManager.Core.Presets.CombinationBundleService]::Export($taskFixture.Source, $taskZip, 'Synthetic bundle demo', 'Synthetic Game', $true,
     $taskMods, [Threading.CancellationToken]::None, $null, $null)
 $taskDestination = Join-Path $taskFixtureRoot 'ImportRepository'
 $taskImportTarget = Join-Path $taskFixtureRoot 'ImportLoader\Mods'
 New-Item -ItemType Directory -Path $taskDestination, $taskImportTarget | Out-Null
 $taskImportIni = Join-Path $taskFixtureRoot 'ImportLoader\d3dx_user.ini'
 [IO.File]::WriteAllText($taskImportIni, "[Constants]`n`$\Mods\External-keep\mod.ini\unrelated = 99 ; keep untouched`n")
-$taskStaging = [IntegratedModManager.Core.CombinationBundleService]::CreateStagingParent($taskDestination)
-$taskImport = [IntegratedModManager.Core.CombinationBundleService]::PrepareImport($taskZip, $taskDestination, $taskStaging,
+$taskStaging = [IntegratedModManager.Core.Presets.CombinationBundleService]::CreateStagingParent($taskDestination)
+$taskImport = [IntegratedModManager.Core.Presets.CombinationBundleService]::PrepareImport($taskZip, $taskDestination, $taskStaging,
     [Threading.CancellationToken]::None, $null, $null)
 try {
     if (!$taskImport.CanInstall -or $taskImport.Preview.Count -ne $ModCount) { throw 'Synthetic bundle failed its own readback validation.' }

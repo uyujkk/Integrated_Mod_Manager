@@ -1,5 +1,5 @@
 using System.Diagnostics;
-using IntegratedModManager.Core;
+using IntegratedModManager.Core.Layout;
 using Microsoft.UI;
 using Microsoft.UI.Xaml;
 using Microsoft.UI.Xaml.Automation;

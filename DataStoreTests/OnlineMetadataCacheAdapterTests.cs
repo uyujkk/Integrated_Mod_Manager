@@ -1,5 +1,5 @@
 using System.Text.Json;
-using IntegratedModManager.Core;
+using IntegratedModManager.Core.Online;
 using IntegratedModManager.Data;
 using Xunit;
 

@@ -1,5 +1,6 @@
 using System.Text.Json;
-using IntegratedModManager.Core;
+using IntegratedModManager.Core.Infrastructure;
+using IntegratedModManager.Core.Online;
 
 namespace IntegratedModManager.Core.Tests;
 

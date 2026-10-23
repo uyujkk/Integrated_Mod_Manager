@@ -1,4 +1,6 @@
-namespace IntegratedModManager.Core;
+using IntegratedModManager.Core.Infrastructure;
+
+namespace IntegratedModManager.Core.Archives;
 
 public enum ArchiveLayoutKind
 {

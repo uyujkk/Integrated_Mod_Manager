@@ -1,7 +1,7 @@
 using System.Security.Cryptography;
 using System.Text;
 
-namespace IntegratedModManager.Core;
+namespace IntegratedModManager.Core.Infrastructure;
 
 /// <summary>
 /// Configuration, caches, backups and download journals live beside the executable.

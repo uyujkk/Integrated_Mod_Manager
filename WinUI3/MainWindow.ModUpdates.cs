@@ -1,5 +1,8 @@
 using System.Text.Json;
-using IntegratedModManager.Core;
+using IntegratedModManager.Core.Archives;
+using IntegratedModManager.Core.Configuration;
+using IntegratedModManager.Core.Online;
+using IntegratedModManager.Core.Updates;
 using Microsoft.UI.Xaml;
 using Microsoft.UI.Xaml.Controls;
 

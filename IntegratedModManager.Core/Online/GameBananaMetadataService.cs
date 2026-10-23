@@ -1,6 +1,6 @@
 using System.Text;
 
-namespace IntegratedModManager.Core;
+namespace IntegratedModManager.Core.Online;
 
 public sealed record OnlineMetadataCacheEntry(GameBananaDetails Value, DateTimeOffset CachedAtUtc);
 

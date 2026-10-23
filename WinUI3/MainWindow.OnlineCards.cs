@@ -1,6 +1,7 @@
 using System.Globalization;
 using System.Numerics;
-using IntegratedModManager.Core;
+using IntegratedModManager.Core.Configuration;
+using IntegratedModManager.Core.Layout;
 using Microsoft.UI;
 using Microsoft.UI.Xaml;
 using Microsoft.UI.Xaml.Automation;

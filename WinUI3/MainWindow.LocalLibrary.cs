@@ -1,4 +1,5 @@
-using IntegratedModManager.Core;
+using IntegratedModManager.Core.Deployment;
+using IntegratedModManager.Core.Repository;
 using Microsoft.UI;
 using Microsoft.UI.Xaml;
 using Microsoft.UI.Xaml.Controls;

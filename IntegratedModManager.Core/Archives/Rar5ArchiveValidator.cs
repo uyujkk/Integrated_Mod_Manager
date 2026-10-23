@@ -1,4 +1,4 @@
-namespace IntegratedModManager.Core;
+namespace IntegratedModManager.Core.Archives;
 
 /// <summary>
 /// Supplements tar's listing with RAR5 redirection checks. Some libarchive

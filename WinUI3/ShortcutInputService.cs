@@ -2,7 +2,7 @@ using System.Diagnostics;
 using System.Runtime.InteropServices;
 using System.Text;
 using System.Text.Json;
-using IntegratedModManager.Core;
+using IntegratedModManager.Core.Shortcuts;
 
 namespace ModFolderCopier.WinUI;
 

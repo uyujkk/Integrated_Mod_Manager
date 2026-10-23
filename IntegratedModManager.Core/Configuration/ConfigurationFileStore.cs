@@ -1,7 +1,7 @@
 using System.Text;
 using System.Text.Json;
 
-namespace IntegratedModManager.Core;
+namespace IntegratedModManager.Core.Configuration;
 
 /// <param name="Text">The configuration text that passed validation.</param>
 /// <param name="RestoredFromBackup">True when the file was invalid and the latest valid backup replaced it.</param>

@@ -1,4 +1,4 @@
-namespace IntegratedModManager.Core;
+namespace IntegratedModManager.Core.Deployment;
 
 public static class ModDeploymentLinks
 {

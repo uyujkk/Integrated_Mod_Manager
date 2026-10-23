@@ -2,7 +2,7 @@ using System.Runtime.InteropServices.WindowsRuntime;
 using System.Security.Cryptography;
 using System.Text;
 using System.Text.Json;
-using IntegratedModManager.Core;
+using IntegratedModManager.Core.Online;
 using Microsoft.UI.Xaml;
 using Microsoft.UI.Xaml.Controls;
 using Microsoft.UI.Xaml.Media;

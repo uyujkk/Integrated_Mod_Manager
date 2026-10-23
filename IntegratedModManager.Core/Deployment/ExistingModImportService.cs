@@ -1,7 +1,8 @@
 using System.Security.Cryptography;
 using System.Text.Json;
+using IntegratedModManager.Core.Infrastructure;
 
-namespace IntegratedModManager.Core;
+namespace IntegratedModManager.Core.Deployment;
 
 public sealed record ImportFileSnapshot(string RelativePath, long Length, string Sha256);
 public sealed record ImportDirectorySnapshot(string[] Directories, ImportFileSnapshot[] Files);

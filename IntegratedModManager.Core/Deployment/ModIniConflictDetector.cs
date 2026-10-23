@@ -1,6 +1,7 @@
 using System.Text.RegularExpressions;
+using IntegratedModManager.Core.Shortcuts;
 
-namespace IntegratedModManager.Core;
+namespace IntegratedModManager.Core.Deployment;
 
 public enum ModIniConflictKind
 {

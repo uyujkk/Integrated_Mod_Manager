@@ -4,7 +4,7 @@ using System.Text.Json;
 using System.Text.Json.Serialization;
 using System.Text.RegularExpressions;
 
-namespace IntegratedModManager.Core;
+namespace IntegratedModManager.Core.Online;
 
 public sealed record GameBananaDetails
 {

@@ -1,6 +1,6 @@
 using System.Collections.ObjectModel;
 using System.Collections.Specialized;
-using IntegratedModManager.Core;
+using IntegratedModManager.Core.Repository;
 using Microsoft.UI.Xaml;
 using Microsoft.UI.Xaml.Automation;
 using Microsoft.UI.Xaml.Controls;

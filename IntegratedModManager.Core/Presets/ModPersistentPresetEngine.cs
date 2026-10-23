@@ -1,8 +1,9 @@
 using System.Globalization;
 using System.Text;
 using System.Text.RegularExpressions;
+using IntegratedModManager.Core.Infrastructure;
 
-namespace IntegratedModManager.Core;
+namespace IntegratedModManager.Core.Presets;
 
 // Deliberately independent of third-party implementations. This handles only scalar
 // global persist state; Mod INIs are read-only declaration/namespace references.

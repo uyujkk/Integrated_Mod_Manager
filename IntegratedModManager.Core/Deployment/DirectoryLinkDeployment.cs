@@ -1,8 +1,9 @@
 using System.ComponentModel;
 using System.Runtime.InteropServices;
 using Microsoft.Win32.SafeHandles;
+using IntegratedModManager.Core.Infrastructure;
 
-namespace IntegratedModManager.Core;
+namespace IntegratedModManager.Core.Deployment;
 
 /// <summary>
 /// Creates and removes Windows directory junctions without traversing their targets.

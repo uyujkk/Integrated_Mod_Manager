@@ -833,7 +833,7 @@ public sealed partial class MainWindow
         {
             _settingsRootPanel.Width = Math.Max(420, Math.Min(3200, available - 12));
         }
-        int mode = IntegratedModManager.Core.SettingsLayoutPolicy.Mode(available, SettingsScrollViewer.ActualHeight);
+        int mode = IntegratedModManager.Core.Layout.SettingsLayoutPolicy.Mode(available, SettingsScrollViewer.ActualHeight);
         bool shortViewport = SettingsScrollViewer.ActualHeight < 650;
         TextBlock[] settingDescriptions = [LanguageSettingDescriptionTextBlock, ThemeSettingDescriptionTextBlock,
             MotionSettingDescriptionTextBlock, DensitySettingDescriptionTextBlock, TraySettingDescriptionTextBlock];
@@ -928,7 +928,7 @@ public sealed partial class MainWindow
         {
             double header = _settingsHeaderCard?.ActualHeight > 0 ? _settingsHeaderCard.ActualHeight : 88;
             double navigation = mode == 1 ? Math.Max(130, _settingsNavigationCard?.ActualHeight ?? 0) : 0;
-            _settingsSectionScrollViewer.MaxHeight = IntegratedModManager.Core.SettingsLayoutPolicy.FocusHeight(
+            _settingsSectionScrollViewer.MaxHeight = IntegratedModManager.Core.Layout.SettingsLayoutPolicy.FocusHeight(
                 SettingsScrollViewer.ActualHeight, header, navigation);
             _settingsSectionScrollViewer.VerticalScrollMode = mode == 3 ? ScrollMode.Disabled : ScrollMode.Auto;
             _settingsSectionScrollViewer.VerticalScrollBarVisibility = mode == 3

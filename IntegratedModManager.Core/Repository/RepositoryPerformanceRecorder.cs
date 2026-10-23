@@ -1,6 +1,6 @@
 using System.Diagnostics;
 
-namespace IntegratedModManager.Core;
+namespace IntegratedModManager.Core.Repository;
 
 public enum RepositoryPerformanceOperation { Scan, Projection, Refresh, Populate, Filter, CoverLayout }
 public sealed record RepositoryPerformanceSample(

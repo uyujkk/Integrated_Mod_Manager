@@ -1,4 +1,4 @@
-namespace IntegratedModManager.Core;
+namespace IntegratedModManager.Core.Infrastructure;
 
 /// <summary>
 /// Attaches a typed error kind (and optional detail text) to an exception through

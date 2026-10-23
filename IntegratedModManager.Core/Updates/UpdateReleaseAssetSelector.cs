@@ -1,4 +1,4 @@
-namespace IntegratedModManager.Core;
+namespace IntegratedModManager.Core.Updates;
 
 public static class UpdateReleaseAssetSelector
 {

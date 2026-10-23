@@ -1,5 +1,10 @@
 using System.Text;
-using IntegratedModManager.Core;
+using IntegratedModManager.Core.Archives;
+using IntegratedModManager.Core.Configuration;
+using IntegratedModManager.Core.Deployment;
+using IntegratedModManager.Core.Infrastructure;
+using IntegratedModManager.Core.Layout;
+using IntegratedModManager.Core.Online;
 using Microsoft.UI.Xaml;
 using Microsoft.UI.Xaml.Controls;
 using Windows.Graphics.Imaging;

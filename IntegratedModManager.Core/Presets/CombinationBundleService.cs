@@ -3,7 +3,7 @@ using System.Security.Cryptography;
 using System.Text.Json;
 using System.Text.Json.Serialization;
 
-namespace IntegratedModManager.Core;
+namespace IntegratedModManager.Core.Presets;
 
 public sealed record CombinationBundleFile([property: JsonRequired] string Path,
     [property: JsonRequired] long Length, [property: JsonRequired] string Sha256);

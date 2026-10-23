@@ -1,6 +1,6 @@
 using System.Text.Json;
 
-namespace IntegratedModManager.Core;
+namespace IntegratedModManager.Core.Infrastructure;
 
 /// <summary>Bounded local recovery records. Publish only flushed complete JSON; retain the previous version.</summary>
 public static class RecoveryJsonFile

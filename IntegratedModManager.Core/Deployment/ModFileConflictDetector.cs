@@ -1,4 +1,6 @@
-namespace IntegratedModManager.Core;
+using IntegratedModManager.Core.Infrastructure;
+
+namespace IntegratedModManager.Core.Deployment;
 
 /// <summary>
 /// Finds installed Mods in the loader folder that ship a file at the same relative path as

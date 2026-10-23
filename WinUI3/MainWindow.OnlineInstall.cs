@@ -1,4 +1,6 @@
-using IntegratedModManager.Core;
+using IntegratedModManager.Core.Configuration;
+using IntegratedModManager.Core.Online;
+using IntegratedModManager.Core.Shortcuts;
 
 namespace ModFolderCopier.WinUI;
 

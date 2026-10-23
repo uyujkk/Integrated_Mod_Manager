@@ -1,7 +1,7 @@
 using System.Net;
 using System.Text.RegularExpressions;
 
-namespace IntegratedModManager.Core;
+namespace IntegratedModManager.Core.Endfield;
 
 public sealed record EndfieldOperatorCatalogEntry(
     string Slug,

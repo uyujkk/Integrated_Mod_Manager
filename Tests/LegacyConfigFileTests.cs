@@ -1,5 +1,5 @@
 using System.Globalization;
-using IntegratedModManager.Core;
+using IntegratedModManager.Core.Configuration;
 
 namespace IntegratedModManager.Core.Tests;
 

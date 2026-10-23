@@ -1,6 +1,7 @@
 using System.ComponentModel;
 using System.Diagnostics;
-using IntegratedModManager.Core;
+using IntegratedModManager.Core.Endfield;
+using IntegratedModManager.Core.Layout;
 using IntegratedModManager.EndfieldLaunch;
 using Microsoft.UI.Xaml;
 using Microsoft.UI.Xaml.Controls;

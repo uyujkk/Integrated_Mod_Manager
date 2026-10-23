@@ -1,6 +1,7 @@
 using System.ComponentModel;
 using System.Diagnostics;
-using IntegratedModManager.Core;
+using IntegratedModManager.Core.Deployment;
+using IntegratedModManager.Core.Shortcuts;
 using Microsoft.UI.Xaml;
 using Microsoft.UI.Xaml.Controls;
 using Microsoft.UI.Xaml.Controls.Primitives;

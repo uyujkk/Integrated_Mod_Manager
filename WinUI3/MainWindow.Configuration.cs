@@ -1,5 +1,8 @@
 using System.Text.Json;
-using IntegratedModManager.Core;
+using IntegratedModManager.Core.Configuration;
+using IntegratedModManager.Core.Repository;
+using IntegratedModManager.Core.Shortcuts;
+using IntegratedModManager.Core.Updates;
 using Microsoft.UI.Windowing;
 using Windows.Graphics;
 

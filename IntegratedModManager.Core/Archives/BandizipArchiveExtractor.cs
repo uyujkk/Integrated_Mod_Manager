@@ -1,7 +1,8 @@
 using System.Diagnostics;
 using System.Text;
+using IntegratedModManager.Core.Infrastructure;
 
-namespace IntegratedModManager.Core;
+namespace IntegratedModManager.Core.Archives;
 
 /// <summary>
 /// Uses Bandizip's console tool after Windows tar has checked paths and links.

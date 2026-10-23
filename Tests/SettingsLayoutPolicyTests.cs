@@ -1,4 +1,4 @@
-using IntegratedModManager.Core;
+using IntegratedModManager.Core.Layout;
 
 namespace IntegratedModManager.Core.Tests;
 
