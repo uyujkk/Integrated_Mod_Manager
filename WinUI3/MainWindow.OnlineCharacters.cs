@@ -5,6 +5,7 @@ using System.Text.Json;
 using System.Text.RegularExpressions;
 using IntegratedModManager.Core.Deployment;
 using IntegratedModManager.Core.Endfield;
+using IntegratedModManager.Core.Online;
 using IntegratedModManager.Data;
 using Microsoft.UI.Xaml;
 using Microsoft.UI.Xaml.Automation;
@@ -134,7 +135,7 @@ public sealed partial class MainWindow
                     .Select(item => new
                     {
                         Character = item,
-                        Score = CalculateCharacterMatchScore(item, modCharacter)
+                        Score = OnlineCharacterCatalogMatcher.MatchScore(item, modCharacter)
                     })
                     .OrderByDescending(match => match.Score)
                     .Take(2)
@@ -195,7 +196,7 @@ public sealed partial class MainWindow
 
         if (changed)
         {
-            SortOnlineCharacterOptionsNewestFirst(_onlineCharacterOptions);
+            OnlineCharacterCatalogMatcher.SortByWikiOrderThenNewest(_onlineCharacterOptions);
             _onlineCharacterStripSignature = null;
             if (!string.IsNullOrWhiteSpace(_onlineCharacterCatalogKey))
             {
@@ -207,25 +208,6 @@ public sealed partial class MainWindow
         }
     }
 
-    private static void SortOnlineCharacterOptionsNewestFirst(List<OnlineCharacterOption> characters)
-    {
-        characters.Sort((left, right) =>
-        {
-            int wikiOrderComparison = left.WikiOrder.CompareTo(right.WikiOrder);
-            if (wikiOrderComparison != 0)
-            {
-                return wikiOrderComparison;
-            }
-
-            int dateComparison = right.LatestModUpdatedAt.CompareTo(left.LatestModUpdatedAt);
-            if (dateComparison != 0)
-            {
-                return dateComparison;
-            }
-
-            return StringComparer.CurrentCultureIgnoreCase.Compare(left.DisplayNameEn, right.DisplayNameEn);
-        });
-    }
 
     private string GetOnlineCharacterCatalogKey(WorkspaceRepository? repository)
     {
@@ -524,7 +506,7 @@ public sealed partial class MainWindow
             DisplayNameEn = modCharacterName,
             Aliases = [modCharacterName]
         };
-        return CalculateCharacterMatchScore(character, candidate) >= 0.82;
+        return OnlineCharacterCatalogMatcher.MatchScore(character, candidate) >= 0.82;
     }
 
     private string ResolveOnlineCharacterName(string? categoryName, string title, bool useEndfieldMetadata)
@@ -548,7 +530,7 @@ public sealed partial class MainWindow
         if (useEndfieldMetadata)
         {
             EndfieldCharacterInfo? titleCharacter = EndfieldCharacters.FirstOrDefault(character =>
-                character.AllNames.Any(alias => ContainsCharacterAlias(title, alias)));
+                character.AllNames.Any(alias => OnlineCharacterCatalogMatcher.ContainsAlias(title, alias)));
             if (titleCharacter is not null)
             {
                 return titleCharacter.EnglishName;
@@ -565,35 +547,15 @@ public sealed partial class MainWindow
             return null;
         }
 
-        string normalized = NormalizeCharacterLookup(name);
+        string normalized = OnlineCharacterCatalogMatcher.NormalizeLookup(name);
         return EndfieldCharacters.FirstOrDefault(character =>
             character.AllNames.Any(alias => string.Equals(
-                NormalizeCharacterLookup(alias),
+                OnlineCharacterCatalogMatcher.NormalizeLookup(alias),
                 normalized,
                 StringComparison.OrdinalIgnoreCase)));
     }
 
-    private static string NormalizeCharacterLookup(string value)
-    {
-        return Regex.Replace(value ?? string.Empty, @"[^\p{L}\p{N}]", string.Empty)
-            .ToLowerInvariant();
-    }
 
-    private static bool ContainsCharacterAlias(string? text, string alias)
-    {
-        if (string.IsNullOrWhiteSpace(text) || string.IsNullOrWhiteSpace(alias))
-        {
-            return false;
-        }
-
-        if (alias.Any(character => character > 127))
-        {
-            return text.Contains(alias, StringComparison.OrdinalIgnoreCase);
-        }
-
-        string pattern = $@"(?<![\p{{L}}\p{{N}}]){Regex.Escape(alias).Replace("\\ ", @"\s*")}(?![\p{{L}}\p{{N}}])";
-        return Regex.IsMatch(text, pattern, RegexOptions.IgnoreCase | RegexOptions.CultureInvariant);
-    }
 
     private static bool IsGenericOnlineCharacterName(string? categoryName)
     {
@@ -837,7 +799,7 @@ public sealed partial class MainWindow
         foreach (JsonElement item in characterItems.EnumerateArray())
         {
             string title = TryGetStringProperty(item, "title")?.Trim() ?? string.Empty;
-            if (string.IsNullOrWhiteSpace(title) || !knownTitles.Add(NormalizeCharacterLookup(title)))
+            if (string.IsNullOrWhiteSpace(title) || !knownTitles.Add(OnlineCharacterCatalogMatcher.NormalizeLookup(title)))
             {
                 continue;
             }
@@ -861,7 +823,7 @@ public sealed partial class MainWindow
                 DisplayNameEn = record.Title,
                 AvatarUrl = record.AvatarUrl,
                 WikiUrl = record.WikiUrl,
-                Aliases = ParseWikiCharacterAliases(record.Title, record.AliasName),
+                Aliases = OnlineCharacterCatalogMatcher.ParseWikiAliases(record.Title, record.AliasName),
                 IsWikiCharacter = true,
                 WikiOrder = index
             });
@@ -1021,16 +983,6 @@ public sealed partial class MainWindow
         });
     }
 
-    private static List<string> ParseWikiCharacterAliases(string title, string aliasName)
-    {
-        return new[] { title, aliasName }
-            .Where(value => !string.IsNullOrWhiteSpace(value))
-            .SelectMany(value => Regex.Split(value, @"[,，、;/；|（）()]+"))
-            .Select(value => value.Trim())
-            .Where(value => !string.IsNullOrWhiteSpace(value))
-            .Distinct(StringComparer.OrdinalIgnoreCase)
-            .ToList();
-    }
 
     private async Task ApplyOfficialHoYoWikiEnglishNamesAsync(
         WorkspaceRepository repository,
@@ -1067,7 +1019,7 @@ public sealed partial class MainWindow
                     continue;
                 }
 
-                string normalizedChineseName = NormalizeCharacterLookup(chineseCharacter.Name);
+                string normalizedChineseName = OnlineCharacterCatalogMatcher.NormalizeLookup(chineseCharacter.Name);
                 if (!string.IsNullOrWhiteSpace(normalizedChineseName))
                 {
                     englishByChineseName[normalizedChineseName] = englishName;
@@ -1078,7 +1030,7 @@ public sealed partial class MainWindow
             {
                 string? officialEnglishName = new[] { character.DisplayNameZh, character.Key }
                     .Concat(character.Aliases)
-                    .Select(NormalizeCharacterLookup)
+                    .Select(OnlineCharacterCatalogMatcher.NormalizeLookup)
                     .Where(name => !string.IsNullOrWhiteSpace(name))
                     .Select(name => englishByChineseName.TryGetValue(name, out string? englishName)
                         ? englishName
@@ -1185,8 +1137,8 @@ public sealed partial class MainWindow
         List<OnlineCharacterOption> unresolvedCharacters = characters
             .Where(character => string.IsNullOrWhiteSpace(character.DisplayNameEn)
                 || string.Equals(
-                    NormalizeCharacterLookup(character.DisplayNameEn),
-                    NormalizeCharacterLookup(character.DisplayNameZh),
+                    OnlineCharacterCatalogMatcher.NormalizeLookup(character.DisplayNameEn),
+                    OnlineCharacterCatalogMatcher.NormalizeLookup(character.DisplayNameZh),
                     StringComparison.Ordinal))
             .ToList();
         if (unresolvedCharacters.Count == 0)
@@ -1251,186 +1203,10 @@ public sealed partial class MainWindow
         return translatedNames;
     }
 
-    private static List<OnlineCharacterOption> MergeWikiAndGameBananaCharacters(
-        List<OnlineCharacterOption> wikiCharacters,
-        List<OnlineCharacterOption> gameBananaCharacters,
-        IReadOnlyDictionary<string, string> manualMappings)
-    {
-        if (wikiCharacters.Count == 0)
-        {
-            return gameBananaCharacters;
-        }
 
-        var usedKeys = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
-        foreach (OnlineCharacterOption wikiCharacter in wikiCharacters)
-        {
-            string mappingKey = GetCharacterMappingKey(wikiCharacter);
-            if (manualMappings.TryGetValue(mappingKey, out string? manualCategoryId)
-                && !string.IsNullOrWhiteSpace(manualCategoryId))
-            {
-                OnlineCharacterOption? manualMatch = gameBananaCharacters.FirstOrDefault(candidate =>
-                    string.Equals(candidate.CategoryId, manualCategoryId, StringComparison.OrdinalIgnoreCase));
-                ApplyCharacterCategoryMatch(wikiCharacter, manualMatch, manualCategoryId);
-                if (manualMatch is not null)
-                {
-                    usedKeys.Add(manualMatch.Key);
-                }
-                continue;
-            }
 
-            OnlineCharacterOption? bestMatch = null;
-            double bestScore = 0;
-            double secondBestScore = 0;
-            foreach (OnlineCharacterOption candidate in gameBananaCharacters)
-            {
-                if (usedKeys.Contains(candidate.Key))
-                {
-                    continue;
-                }
 
-                double score = CalculateCharacterMatchScore(wikiCharacter, candidate);
-                if (score > bestScore)
-                {
-                    secondBestScore = bestScore;
-                    bestScore = score;
-                    bestMatch = candidate;
-                }
-                else if (score > secondBestScore)
-                {
-                    secondBestScore = score;
-                }
-            }
 
-            bool isConfidentMatch = bestScore >= 0.74
-                && (bestScore >= 0.94 || bestScore - secondBestScore >= 0.08);
-            if (bestMatch is null || !isConfidentMatch)
-            {
-                continue;
-            }
-
-            usedKeys.Add(bestMatch.Key);
-            ApplyCharacterCategoryMatch(wikiCharacter, bestMatch, bestMatch.CategoryId);
-        }
-
-        int fallbackOrder = wikiCharacters.Count;
-        foreach (OnlineCharacterOption character in gameBananaCharacters)
-        {
-            if (usedKeys.Add(character.Key))
-            {
-                character.WikiOrder = fallbackOrder++;
-                wikiCharacters.Add(character);
-            }
-        }
-
-        return wikiCharacters;
-    }
-
-    private static void ApplyCharacterCategoryMatch(
-        OnlineCharacterOption wikiCharacter,
-        OnlineCharacterOption? gameBananaCharacter,
-        string categoryId)
-    {
-        wikiCharacter.CategoryId = categoryId.Trim();
-        if (gameBananaCharacter is null)
-        {
-            return;
-        }
-
-        foreach (string alias in new[]
-                 {
-                     gameBananaCharacter.Key,
-                     gameBananaCharacter.DisplayNameZh,
-                     gameBananaCharacter.DisplayNameEn
-                 }.Concat(gameBananaCharacter.Aliases))
-        {
-            if (!string.IsNullOrWhiteSpace(alias)
-                && !wikiCharacter.Aliases.Contains(alias, StringComparer.OrdinalIgnoreCase))
-            {
-                wikiCharacter.Aliases.Add(alias);
-            }
-        }
-
-        wikiCharacter.LatestModUpdatedAt = gameBananaCharacter.LatestModUpdatedAt;
-    }
-
-    private static string GetCharacterMappingKey(OnlineCharacterOption character)
-    {
-        return !string.IsNullOrWhiteSpace(character.WikiUrl)
-            ? character.WikiUrl.Trim().ToLowerInvariant()
-            : NormalizeCharacterLookup(character.DisplayNameZh);
-    }
-
-    private static double CalculateCharacterMatchScore(
-        OnlineCharacterOption wikiCharacter,
-        OnlineCharacterOption gameBananaCharacter)
-    {
-        IEnumerable<string> wikiNames = new[]
-            {
-                wikiCharacter.DisplayNameZh,
-                wikiCharacter.DisplayNameEn,
-                wikiCharacter.Key
-            }
-            .Concat(wikiCharacter.Aliases);
-        IEnumerable<string> gameBananaNames = new[]
-            {
-                gameBananaCharacter.DisplayNameZh,
-                gameBananaCharacter.DisplayNameEn,
-                gameBananaCharacter.Key
-            }
-            .Concat(gameBananaCharacter.Aliases);
-
-        double bestScore = 0;
-        foreach (string wikiName in wikiNames.Where(name => !string.IsNullOrWhiteSpace(name)).Distinct(StringComparer.OrdinalIgnoreCase))
-        {
-            foreach (string gameBananaName in gameBananaNames.Where(name => !string.IsNullOrWhiteSpace(name)).Distinct(StringComparer.OrdinalIgnoreCase))
-            {
-                bestScore = Math.Max(bestScore, CalculateCharacterNameSimilarity(wikiName, gameBananaName));
-            }
-        }
-
-        return bestScore;
-    }
-
-    private static double CalculateCharacterNameSimilarity(string left, string right)
-    {
-        string normalizedLeft = NormalizeCharacterLookup(left);
-        string normalizedRight = NormalizeCharacterLookup(right);
-        if (string.IsNullOrWhiteSpace(normalizedLeft) || string.IsNullOrWhiteSpace(normalizedRight))
-        {
-            return 0;
-        }
-
-        if (string.Equals(normalizedLeft, normalizedRight, StringComparison.Ordinal))
-        {
-            return 1;
-        }
-
-        if (normalizedLeft.Contains(normalizedRight, StringComparison.Ordinal)
-            || normalizedRight.Contains(normalizedLeft, StringComparison.Ordinal))
-        {
-            double containmentRatio = (double)Math.Min(normalizedLeft.Length, normalizedRight.Length)
-                / Math.Max(normalizedLeft.Length, normalizedRight.Length);
-            return 0.78 + containmentRatio * 0.2;
-        }
-
-        int[] previous = Enumerable.Range(0, normalizedRight.Length + 1).ToArray();
-        int[] current = new int[normalizedRight.Length + 1];
-        for (int leftIndex = 1; leftIndex <= normalizedLeft.Length; leftIndex++)
-        {
-            current[0] = leftIndex;
-            for (int rightIndex = 1; rightIndex <= normalizedRight.Length; rightIndex++)
-            {
-                int substitutionCost = normalizedLeft[leftIndex - 1] == normalizedRight[rightIndex - 1] ? 0 : 1;
-                current[rightIndex] = Math.Min(
-                    Math.Min(current[rightIndex - 1] + 1, previous[rightIndex] + 1),
-                    previous[rightIndex - 1] + substitutionCost);
-            }
-
-            (previous, current) = (current, previous);
-        }
-
-        return 1d - (double)previous[normalizedRight.Length] / Math.Max(normalizedLeft.Length, normalizedRight.Length);
-    }
 
     private async Task EnsureOnlineCharacterCatalogAsync(WorkspaceRepository repository, bool forceReload)
     {
@@ -1451,7 +1227,7 @@ public sealed partial class MainWindow
                         || IsEndfieldRepository(repository);
                     if (!requiresWikiCatalog || cachedCatalog.Characters.Any(character => character.IsWikiCharacter))
                     {
-                        ApplyManualCharacterMappings(repository, cachedCatalog.Characters);
+                        OnlineCharacterCatalogMatcher.ApplyManualMappings(repository.CharacterCategoryMappings, cachedCatalog.Characters);
                         ApplyOnlineCharacterCatalog(catalogKey, cachedCatalog.Characters);
                         if (cachedCatalog.IsFresh)
                         {
@@ -1470,7 +1246,7 @@ public sealed partial class MainWindow
 
             if (wikiCharacters.Count > 0)
             {
-                ApplyManualCharacterMappings(repository, wikiCharacters);
+                OnlineCharacterCatalogMatcher.ApplyManualMappings(repository.CharacterCategoryMappings, wikiCharacters);
                 ApplyOnlineCharacterCatalog(catalogKey, wikiCharacters);
                 await ApplyOfficialHoYoWikiEnglishNamesAsync(repository, wikiCharacters);
                 await TranslateWikiCharacterOptionsAsync(wikiCharacters);
@@ -1486,11 +1262,11 @@ public sealed partial class MainWindow
                     // Wiki names remain usable if the optional category mapping request fails.
                 }
 
-                List<OnlineCharacterOption> mergedCharacters = MergeWikiAndGameBananaCharacters(
+                List<OnlineCharacterOption> mergedCharacters = OnlineCharacterCatalogMatcher.Merge(
                     wikiCharacters,
                     gameBananaCharacters,
                     repository.CharacterCategoryMappings);
-                ApplyManualCharacterMappings(repository, mergedCharacters);
+                OnlineCharacterCatalogMatcher.ApplyManualMappings(repository.CharacterCategoryMappings, mergedCharacters);
                 await WriteOnlineCharacterCatalogCacheAsync(catalogKey, mergedCharacters);
                 ApplyOnlineCharacterCatalog(catalogKey, mergedCharacters);
             }
@@ -1505,19 +1281,6 @@ public sealed partial class MainWindow
         }
     }
 
-    private static void ApplyManualCharacterMappings(
-        WorkspaceRepository repository,
-        IEnumerable<OnlineCharacterOption> characters)
-    {
-        foreach (OnlineCharacterOption character in characters.Where(character => character.IsWikiCharacter))
-        {
-            if (repository.CharacterCategoryMappings.TryGetValue(GetCharacterMappingKey(character), out string? categoryId)
-                && !string.IsNullOrWhiteSpace(categoryId))
-            {
-                character.CategoryId = categoryId.Trim();
-            }
-        }
-    }
 
     private void ApplyOnlineCharacterCatalog(string catalogKey, List<OnlineCharacterOption> characters)
     {
@@ -1526,7 +1289,7 @@ public sealed partial class MainWindow
             return;
         }
 
-        SortOnlineCharacterOptionsNewestFirst(characters);
+        OnlineCharacterCatalogMatcher.SortByWikiOrderThenNewest(characters);
         _onlineCharacterOptions.Clear();
         _onlineCharacterOptions.AddRange(characters);
         // Mod pages and the monthly Wiki catalog run independently; merge any page already on screen.
@@ -1561,13 +1324,13 @@ public sealed partial class MainWindow
 
         AddAlias(mod.CharacterName);
 
-        string normalizedCharacterName = NormalizeCharacterLookup(mod.CharacterName);
+        string normalizedCharacterName = OnlineCharacterCatalogMatcher.NormalizeLookup(mod.CharacterName);
         OnlineCharacterOption? option = _onlineCharacterOptions.FirstOrDefault(item =>
             (!string.IsNullOrWhiteSpace(mod.CategoryId)
                 && string.Equals(item.CategoryId, mod.CategoryId, StringComparison.OrdinalIgnoreCase))
-            || string.Equals(NormalizeCharacterLookup(item.Key), normalizedCharacterName, StringComparison.OrdinalIgnoreCase)
+            || string.Equals(OnlineCharacterCatalogMatcher.NormalizeLookup(item.Key), normalizedCharacterName, StringComparison.OrdinalIgnoreCase)
             || item.Aliases.Any(alias => string.Equals(
-                NormalizeCharacterLookup(alias),
+                OnlineCharacterCatalogMatcher.NormalizeLookup(alias),
                 normalizedCharacterName,
                 StringComparison.OrdinalIgnoreCase)));
         if (option is not null)
@@ -1601,10 +1364,10 @@ public sealed partial class MainWindow
 
     private (string? Chinese, string? English) GetCharacterFolderNames(OnlineModCard mod)
     {
-        string normalized = NormalizeCharacterLookup(mod.CharacterName);
+        string normalized = OnlineCharacterCatalogMatcher.NormalizeLookup(mod.CharacterName);
         OnlineCharacterOption? option = _onlineCharacterOptions.FirstOrDefault(item =>
             (!string.IsNullOrWhiteSpace(mod.CategoryId) && string.Equals(item.CategoryId, mod.CategoryId, StringComparison.OrdinalIgnoreCase))
-            || string.Equals(NormalizeCharacterLookup(item.Key), normalized, StringComparison.OrdinalIgnoreCase));
+            || string.Equals(OnlineCharacterCatalogMatcher.NormalizeLookup(item.Key), normalized, StringComparison.OrdinalIgnoreCase));
         EndfieldCharacterInfo? endfield = FindEndfieldCharacter(mod.CharacterName)
             ?? EndfieldCharacters.FirstOrDefault(character => !string.IsNullOrWhiteSpace(mod.CategoryId)
                 && string.Equals(character.GameBananaCategoryId, mod.CategoryId, StringComparison.OrdinalIgnoreCase));
