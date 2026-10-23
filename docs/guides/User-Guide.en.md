@@ -194,6 +194,20 @@ Adjust appearance in game and have the loader save it first (usually F10; check 
 
 Individual Mod state slots are in Details. They hold different states of the same Mod, not settings transferred to unrelated Mods. Unknown deployments, missing sources, duplicate names, namespace conflicts, invalid values, or concurrent changes prevent restoration.
 
+The **More…** menu of State Slots adds:
+
+- **Update selected slot with current values**: reads `d3dx_user.ini` again and replaces the selected slot. The slot saved, updated or restored last is marked "current" in the list.
+- **Rename selected slot**.
+- **Write selected slot as Mod defaults**:
+  - Writes the slot's values into `global persist $variable = default` in the Mod's own INI files, so they survive clearing or deleting `d3dx_user.ini`.
+  - Each file is backed up beside it as `.imm-persist-*.bak` first. The result is read back, and a failure restores the originals.
+  - In copy mode the deployed copy changes too.
+  - Updating the Mod replaces these edits; the old files stay in the update backup.
+- **Import JASM variants**: reads JASM's `.JASM_Variants.json` from the Mod folder (or a chosen file) and adds one slot per variant; JASM's active variant becomes "current". Keys that do not match this Mod's declarations are skipped and counted.
+- **Save / Restore whole d3dx_user.ini snapshot** and **Open snapshot folder**:
+  - A snapshot keeps the whole file, per repository, in `WinUI3/snapshots/user-ini/`, as a manual restore point.
+  - Restoring returns every Mod's values to the snapshot. The current file is first backed up as `.imm-snapshot-*.bak`, and the game must be fully closed.
+
 ### 6.2 Conflict detection
 
 Before installation or profile application, the app checks target paths and file conflicts. Review conflicts before proceeding so unrelated mods do not overwrite the same files.

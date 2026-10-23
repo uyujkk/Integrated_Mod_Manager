@@ -6,7 +6,8 @@ using IntegratedModManager.Core.Infrastructure;
 namespace IntegratedModManager.Core.Presets;
 
 // Deliberately independent of third-party implementations. This handles only scalar
-// global persist state; Mod INIs are read-only declaration/namespace references.
+// global persist state. Mod INIs are read-only declaration/namespace references, except for
+// the opt-in default write in ModPersistentPresetEngine.ModIni.cs.
 public sealed record ModPersistentValue(string RelativeIniPath, string Variable, string RuntimeKey, string Value);
 
 public sealed record ModPersistentFileEdit(string Path, byte[] OriginalBytes, byte[] UpdatedBytes);
@@ -27,7 +28,7 @@ public sealed record ModPersistentRuntimeRestorePlan(
     public IReadOnlyList<ModPersistentValueChange> Changes { get; init; } = [];
 }
 
-public static class ModPersistentPresetEngine
+public static partial class ModPersistentPresetEngine
 {
     private const int MaxIniFiles = 256;
     private const long MaxIniBytes = 2 * 1024 * 1024;

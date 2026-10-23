@@ -62,11 +62,14 @@ public sealed partial class MainWindow
         try
         {
             PersistentSlotComboBox.Items.Clear();
+            ModPersistentSlot? current = CurrentPersistentSlot(slots);
             foreach (ModPersistentSlot slot in slots)
             {
                 PersistentSlotComboBox.Items.Add(new ComboBoxItem
                 {
-                    Content = $"{slot.Name} · {slot.Values.Count}",
+                    Content = ReferenceEquals(slot, current)
+                        ? T("PersistentVariants.SlotLabelCurrent", slot.Name, slot.Values.Count)
+                        : $"{slot.Name} · {slot.Values.Count}",
                     Tag = slot.Id
                 });
             }
@@ -85,6 +88,7 @@ public sealed partial class MainWindow
         CapturePersistentSlotButton.IsEnabled = relative is not null && !_restoringPersistentRuntime && !_applyingCombinationProfile;
         DeletePersistentSlotButton.IsEnabled = relative is not null && _selectedModPersistentSlotId is not null && !_restoringPersistentRuntime && !_applyingCombinationProfile;
         RestorePersistentRuntimeButton.IsEnabled = DeletePersistentSlotButton.IsEnabled && !_restoringPersistentRuntime;
+        RefreshPersistentSlotMoreMenu(repository, relative);
         RefreshPersistentSlotValuePreview();
         PersistentSlotStatusTextBlock.Text = relative is null
             ? T("PersistentSlots.SelectAModToManageIts")
@@ -244,7 +248,8 @@ public sealed partial class MainWindow
                 RepositoryId = repository.Id,
                 ModRelativePath = relative,
                 Name = name,
-                Values = [.. values]
+                Values = [.. values],
+                ActivatedAtUtc = DateTimeOffset.UtcNow
             };
             _modPersistentSlots.Add(slot);
             _selectedModPersistentSlotId = slot.Id;
@@ -316,6 +321,7 @@ public sealed partial class MainWindow
                 closedCheck.Unchecked += (_, _) => dialog.IsPrimaryButtonEnabled = false;
                 if (await dialog.ShowAsync() != ContentDialogResult.Primary) return;
                 string? backup = await Task.Run(() => ModPersistentPresetEngine.ApplyRuntimeRestore(plan));
+                slot.ActivatedAtUtc = DateTimeOffset.UtcNow;
                 repository.PersistentUserIniPath = userIni;
                 SaveShellConfig();
                 resultText = L($"“{slot.Name}”已逐项核对：修改 {plan.ChangedCount}，补入 {plan.AddedCount}，已一致 {plan.UnchangedCount}。\n"

@@ -121,6 +121,8 @@ public sealed class LocalUpdateAgentTests
     [InlineData("WinUI3/cache/app-index.db", true)]
     [InlineData("WinUI3/cache/images/preview.jpg", true)]
     [InlineData("backups/updates/backup.zip", true)]
+    [InlineData("WinUI3/snapshots/user-ini/repo/20261023-120000-a.ini", true)]
+    [InlineData("snapshots/a.ini", false)]
     [InlineData("cache/app-index.db", false)]
     [InlineData("WinUI3/cache-old/app-index.db", false)]
     [InlineData("config.ini.bak", false)]

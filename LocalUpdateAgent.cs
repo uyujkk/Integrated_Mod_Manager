@@ -41,7 +41,8 @@ internal static class LocalUpdateAgent
         "backups" + Path.DirectorySeparatorChar,
         Path.Combine("WinUI3", "backups") + Path.DirectorySeparatorChar,
         Path.Combine("WinUI3", "cache") + Path.DirectorySeparatorChar,
-        Path.Combine("WinUI3", "diagnostics") + Path.DirectorySeparatorChar
+        Path.Combine("WinUI3", "diagnostics") + Path.DirectorySeparatorChar,
+        Path.Combine("WinUI3", "snapshots") + Path.DirectorySeparatorChar
     };
 
 #if !UPDATE_AGENT_TESTS

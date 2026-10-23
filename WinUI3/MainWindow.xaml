@@ -710,6 +710,7 @@
                             <Button x:Name="DeletePersistentSlotButton" Grid.Column="1" Click="OnDeletePersistentSlotClicked" HorizontalAlignment="Stretch" Style="{StaticResource SecondaryButtonStyle}" />
                         </Grid>
                         <Button x:Name="RestorePersistentRuntimeButton" Click="OnRestorePersistentRuntimeClicked" HorizontalAlignment="Stretch" Style="{StaticResource PrimaryButtonStyle}" />
+                        <DropDownButton x:Name="PersistentSlotMoreButton" HorizontalAlignment="Stretch" HorizontalContentAlignment="Center" />
                         <Button x:Name="OpenCombinationPresetsButton" Click="OnOpenCombinationPresetsClicked" HorizontalAlignment="Stretch" Style="{StaticResource SecondaryButtonStyle}" />
                         <TextBlock x:Name="PersistentSlotStatusTextBlock" Style="{StaticResource CaptionTextStyle}" TextWrapping="Wrap" />
                     </StackPanel>
