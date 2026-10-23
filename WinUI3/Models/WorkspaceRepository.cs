@@ -41,4 +41,7 @@ public sealed class WorkspaceRepository
     public string Notes { get; set; } = string.Empty;
 
     public Dictionary<string, string> CharacterCategoryMappings { get; set; } = new(StringComparer.OrdinalIgnoreCase);
+
+    // Character folder name -> catalog character key, for folders whose name does not match a character.
+    public Dictionary<string, string> CharacterAvatarBindings { get; set; } = new(StringComparer.OrdinalIgnoreCase);
 }

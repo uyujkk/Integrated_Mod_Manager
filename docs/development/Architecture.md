@@ -30,11 +30,11 @@ Namespaces follow folders: files in `Archives` belong to `IntegratedModManager.C
 | `Configuration` | `config.ini` 的解析与生成（`LegacyConfigFile`）、配置文件的原子写入、备份与损坏恢复（`ConfigurationFileStore`）。config.ini parsing/formatting, atomic writes, backups and recovery. |
 | `Deployment` | 安装事务与回滚（`ModInstallTransactions`）、文件冲突检测、目录联接、组合部署、INI 冲突检测、旧库整理导入、角色文件夹规划。Install transactions and rollback, file conflicts, junctions, combination deployment, INI conflicts, library import, character folders. |
 | `Presets` | 组合预设、恢复预览、可迁移组合包。Combination presets, restore preview, portable bundles. |
-| `Online` | GameBanana 元数据与下载数、下载传输与会话、浏览与预览策略。GameBanana metadata, download transport and sessions, browse policies. |
+| `Online` | GameBanana 元数据与下载数、JSON 读取（`GameBananaJson`）、分类列表解析、角色目录匹配与合并（`OnlineCharacterCatalogMatcher`）、下载传输与会话、浏览与预览策略。GameBanana metadata, JSON readers, listing parsing, character catalog matching, download transport and sessions, browse policies. |
 | `Endfield` | 终末地桥接、干员目录解析，以及内置干员表（`endfield-characters.json`，嵌入程序集，新增干员只改这个文件）。Endfield bridge integration, operator catalog parsing and the built-in operator list in the embedded `endfield-characters.json`. |
 | `Shortcuts` | Mod 快捷键扫描、描述与按键输入。Mod shortcut scanning, descriptions and key input. |
 | `Updates` | 版本信息、更新包校验、Mod 更新替换与恢复。Release policy, update packages, Mod update replacement. |
-| `Repository` | 仓库扫描、性能记录、工作区策略、批量集合。Repository scanning, performance, workspace policies. |
+| `Repository` | 仓库扫描、性能记录、工作区策略、批量集合、角色文件夹头像（`CharacterFolderAvatars`）。Repository scanning, performance, workspace policies, character folder avatars. |
 | `Layout` | 与控件无关的窗口和弹窗布局策略。Control-free window and dialog layout policies. |
 | `Infrastructure` | 路径安全、不跟随链接的目录遍历/复制/删除（`SafeDirectoryTree`）、错误分类标记（`ErrorTags`）、恢复用 JSON、日志轮换。Path safety, link-safe tree inspect/copy/delete, error tags, recovery JSON, log rotation. |
 
@@ -46,7 +46,7 @@ Namespaces follow folders: files in `Archives` belong to `IntegratedModManager.C
 | 分组 / Group | 文件 / Files |
 | --- | --- |
 | 外壳与通用 / Shell | `Shell`, `Localization`（`T`/`L`，配合 `UiText.cs` 与 `Strings/*.json`）, `Settings`, `Configuration`, `Dialogs`, `Tray`, `SingleInstance`, `UiActionGuard`, `UiDiagnostics`, `BuiltInData` |
-| 仓库与本地库 / Repositories | `Dashboard`, `Repositories`, `LocalLibrary`, `RepositoryWorkspace`, `RefinedWorkspace`, `RepositoryPerformance`, `LocalTags`, `ExistingModImport` |
+| 仓库与本地库 / Repositories | `Dashboard`, `Repositories`, `LocalLibrary`, `RepositoryWorkspace`, `RefinedWorkspace`, `RepositoryPerformance`, `LocalTags`, `ExistingModImport`, `CharacterAvatars` |
 | 安装与部署 / Install | `Archives`, `InstallTransactions`, `IniConflicts`, `ConfigurationProfiles`, `CombinationPresets`, `CombinationBundles`, `PersistentSlots` |
 | 在线浏览 / Online | `OnlineFeed`, `OnlineCharacters`, `OnlineCards`, `OnlineDetails`, `OnlineImageCache`, `OnlineImages`, `OnlineBrowse`, `OnlineState`, `OnlineLibrary`, `BrowseSessions`, `AuthorWorkspace` |
 | 下载与更新 / Downloads | `OnlineDownloadFlow`, `OnlineDownloads`, `OnlineInstall`, `DownloadTasks`, `DownloadRecovery`, `BatchDownloads`, `Updates`, `ModUpdates` |

@@ -76,6 +76,12 @@ Mod Storage Folder
 - Use the plus button to create a category.
 - Use the edit button to rename the selected category.
 - Each item shows its second-level mod count.
+- Each category shows a character avatar, taken from, in order:
+  - an `.imm_avatar.*` or `avatar.*` image in the category folder;
+  - the character chosen with right-click **Avatar > Bind to character**;
+  - the character whose Chinese name, English name or alias equals the folder name (case, width and spaces are ignored).
+- Endfield repositories use the built-in operator list. Other games use the character list the Online page has loaded; until then only the initial is shown. The app never downloads a character list just for avatars.
+- Right-click **Avatar > Choose image** copies the image into the category folder as `.imm_avatar.*`. The previous avatar is kept as `.imm_avatar.previous.*`, and **Restore previous avatar** swaps it back.
 
 ### 4.3 Second-level mods and copy toggling
 

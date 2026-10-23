@@ -185,6 +185,7 @@ public sealed partial class MainWindow
         foreach (WorkspaceRepository repository in _repositories)
         {
             repository.CharacterCategoryMappings ??= [];
+            repository.CharacterAvatarBindings ??= [];
             RepositoryPresetInfo? preset = BuiltInRepositoryPresets.FirstOrDefault(candidate =>
                 IsRepositoryForPreset(repository, candidate));
             if (preset is null)

@@ -206,6 +206,7 @@ public sealed partial class MainWindow
         };
         renameItem.Click += OnRenameFirstLevelClicked;
         menu.Items.Add(renameItem);
+        AddCharacterAvatarMenuItems(menu, item);
         menu.ShowAt(element);
         e.Handled = true;
     }
@@ -697,6 +698,7 @@ public sealed partial class MainWindow
             _allFirstLevelItems.AddRange(loaded.Items);
             timing?.SetCounts(loaded.SecondCount);
             ApplyFirstLevelFilter();
+            _ = RefreshCharacterFolderAvatarsAsync();
             FirstCountTextBlock.Text = _allFirstLevelItems.Count.ToString();
             SecondCountTextBlock.Text = loaded.SecondCount.ToString();
             StatusTextBlock.Text = loaded.Warnings == 0
