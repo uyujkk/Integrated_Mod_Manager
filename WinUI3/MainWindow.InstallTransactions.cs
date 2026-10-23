@@ -300,57 +300,7 @@ public sealed partial class MainWindow
     }
 
     private static (List<string> Directories, List<string> Files) InspectDirectoryTreeSafely(string rootPath)
-    {
-        string fullRoot = Path.GetFullPath(rootPath);
-        if (!Directory.Exists(fullRoot))
-        {
-            throw new DirectoryNotFoundException($"Directory not found: {fullRoot}");
-        }
-
-        if ((File.GetAttributes(fullRoot) & IOFileAttributes.ReparsePoint) != 0)
-        {
-            throw new InvalidDataException("Directory junctions and symbolic links are not supported: " + fullRoot);
-        }
-
-        var directories = new List<string>();
-        var files = new List<string>();
-        var pending = new Stack<string>();
-        pending.Push(fullRoot);
-        var options = new EnumerationOptions
-        {
-            RecurseSubdirectories = false,
-            ReturnSpecialDirectories = false,
-            IgnoreInaccessible = false,
-            AttributesToSkip = 0
-        };
-
-        while (pending.Count > 0)
-        {
-            string current = pending.Pop();
-            foreach (FileSystemInfo entry in new DirectoryInfo(current).EnumerateFileSystemInfos("*", options))
-            {
-                IOFileAttributes attributes = entry.Attributes;
-                if ((attributes & IOFileAttributes.ReparsePoint) != 0)
-                {
-                    throw new InvalidDataException("Directory junctions and symbolic links are not supported: " + entry.FullName);
-                }
-
-                if ((attributes & IOFileAttributes.Directory) != 0)
-                {
-                    directories.Add(entry.FullName);
-                    pending.Push(entry.FullName);
-                }
-                else
-                {
-                    files.Add(entry.FullName);
-                }
-            }
-        }
-
-        directories.Sort(StringComparer.OrdinalIgnoreCase);
-        files.Sort(StringComparer.OrdinalIgnoreCase);
-        return (directories, files);
-    }
+        => SafeDirectoryTree.Inspect(rootPath);
 
     private static string GetSafePathInsideDirectory(string rootPath, string relativePath)
     {

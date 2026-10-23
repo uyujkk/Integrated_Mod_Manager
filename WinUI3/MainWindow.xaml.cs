@@ -31,26 +31,9 @@ public sealed partial class MainWindow : Window
     private const int ArchiveToolTimeoutMinutes = 10;
     private const int InitialShortcutRows = 1;
     private const int ShortcutScanSafetyLimit = 256;
-    private static readonly string[] SupportedArchiveExtensions =
-    [
-        ".tar.gz",
-        ".tar.bz2",
-        ".tar.xz",
-        ".tar.zst",
-        ".zip",
-        ".zipx",
-        ".7z",
-        ".rar",
-        ".tar",
-        ".gz",
-        ".tgz",
-        ".bz2",
-        ".xz",
-        ".zst",
-        ".cab"
-    ];
-    private static readonly string[] ExternalArchiveExtensions = [".7z", ".rar", ".zipx", ".cab"];
-    private static readonly string[] TarArchiveExtensions = [".tar", ".gz", ".tgz", ".bz2", ".xz", ".zst", ".tar.gz", ".tar.bz2", ".tar.xz", ".tar.zst"];
+    private static readonly IReadOnlyList<string> SupportedArchiveExtensions = ArchiveExtractor.SupportedExtensions;
+    private static readonly ArchiveExtractor ArchiveExtraction = new(
+        FindSevenZipExecutable, FindBandizipExecutable, TimeSpan.FromMinutes(ArchiveToolTimeoutMinutes));
     private static readonly Regex LocalUpdatePackageRegex = new(
         @"^Integrated_Mod_Manager-v(?<version>\d+\.\d+\.\d+)\.zip$",
         RegexOptions.IgnoreCase | RegexOptions.Compiled);

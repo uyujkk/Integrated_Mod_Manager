@@ -1,8 +1,4 @@
-using System.Diagnostics;
-using System.IO.Compression;
-using System.Globalization;
 using IntegratedModManager.Core;
-using Windows.System;
 
 namespace ModFolderCopier.WinUI;
 
@@ -15,10 +11,7 @@ public sealed partial class MainWindow
 
     private static string? GetSupportedArchiveExtension(string path)
     {
-        string fileName = Path.GetFileName(path);
-        return SupportedArchiveExtensions
-            .OrderByDescending(extension => extension.Length)
-            .FirstOrDefault(extension => fileName.EndsWith(extension, StringComparison.OrdinalIgnoreCase));
+        return ArchiveExtractor.GetSupportedExtension(path);
     }
 
     /// <summary>
@@ -58,111 +51,71 @@ public sealed partial class MainWindow
 
     private void ExtractArchiveToDirectory(string archivePath, string destinationDirectory)
     {
-        string extension = GetSupportedArchiveExtension(archivePath) ?? Path.GetExtension(archivePath).ToLowerInvariant();
-        DispatcherQueue.TryEnqueue(() => UpdateProgress(10, L("正在准备解压...", "Preparing extraction...")));
-
-        if (extension == ".zip")
+        try
         {
-            using ZipArchive archive = ZipFile.OpenRead(archivePath);
-            List<ZipArchiveEntry> entries = archive.Entries
-                .Where(entry => !string.IsNullOrEmpty(entry.FullName) && !entry.FullName.EndsWith("/", StringComparison.Ordinal))
-                .ToList();
-
-            if (entries.Count == 0)
+            ArchiveExtraction.Extract(archivePath, destinationDirectory, progress =>
             {
-                throw new InvalidOperationException(L("这个压缩包里没有可解压的文件。", "This archive does not contain extractable files."));
-            }
-
-            for (int index = 0; index < entries.Count; index++)
-            {
-                ZipArchiveEntry entry = entries[index];
-                if (IsZipLinkEntry(entry))
+                string message = progress.Stage switch
                 {
-                    throw new InvalidDataException(L("压缩包包含不受支持的符号链接。", "The archive contains an unsupported symbolic link."));
-                }
-
-                string destinationPath = GetSafePathInsideDirectory(
-                    destinationDirectory,
-                    entry.FullName.Replace('/', Path.DirectorySeparatorChar));
-                string? destinationFolder = Path.GetDirectoryName(destinationPath);
-                if (!string.IsNullOrEmpty(destinationFolder))
-                {
-                    Directory.CreateDirectory(destinationFolder);
-                }
-
-                entry.ExtractToFile(destinationPath, true);
-                int percent = Math.Min(95, 10 + ((index + 1) * 85 / entries.Count));
-                DispatcherQueue.TryEnqueue(() => UpdateProgress(percent, L("正在解压文件...", "Extracting files...")));
-            }
-
-            DispatcherQueue.TryEnqueue(() => UpdateProgress(100, L("解压完成", "Extraction complete")));
-            return;
+                    ArchiveExtractionStage.Preparing => L("正在准备解压...", "Preparing extraction..."),
+                    ArchiveExtractionStage.Extracting => L("正在解压文件...", "Extracting files..."),
+                    _ => L("解压完成", "Extraction complete")
+                };
+                DispatcherQueue.TryEnqueue(() => UpdateProgress(progress.Percent, message));
+            });
         }
-
-        if (ExternalArchiveExtensions.Contains(extension, StringComparer.OrdinalIgnoreCase))
+        catch (Exception ex) when (LocalizeArchiveError(ex) is Exception localized)
         {
-            // Resolve once so inspection and extraction use the same installed tool.
-            string? sevenZipPath = FindSevenZipExecutable();
-            if (sevenZipPath is not null)
-            {
-                ValidateSevenZipArchiveEntries(sevenZipPath, archivePath, destinationDirectory);
-                RunSevenZipExtraction(sevenZipPath, archivePath, destinationDirectory);
-            }
-            else
-            {
-                string? bandizipPath = FindBandizipExecutable();
-                if (bandizipPath is null)
-                {
-                    throw new InvalidOperationException(L(
-                        "解压此格式需要 7-Zip 或 Bandizip。请安装其中一个，或把 7z.exe 和 7z.dll 放到程序目录的 Tools 文件夹中。Bandizip 需要附带的 bz.exe。",
-                        "This format requires 7-Zip or Bandizip. Install either tool, or place 7z.exe and 7z.dll in the app's Tools folder. Bandizip requires its bundled bz.exe."));
-                }
-
-                try
-                {
-                    BandizipArchiveExtractor.Extract(bandizipPath, archivePath, destinationDirectory, RunArchiveProcessWithTimeout);
-                }
-                catch (TimeoutException ex) when (ex.Data[BandizipArchiveExtractor.StagingCleanupFailureKey] is Exception cleanupFailure)
-                {
-                    throw new TimeoutException(ex.Message + L(
-                        " 临时压缩包清理也失败了：", " Temporary archive cleanup also failed: ") + cleanupFailure.Message, ex);
-                }
-                catch (Exception ex) when (ex is InvalidDataException or InvalidOperationException or System.ComponentModel.Win32Exception)
-                {
-                    string cleanupDetails = ex.Data[BandizipArchiveExtractor.StagingCleanupFailureKey] is Exception cleanupFailure
-                        ? L(" 临时压缩包清理也失败了：", " Temporary archive cleanup also failed: ") + cleanupFailure.Message
-                        : string.Empty;
-                    throw new InvalidOperationException(L(
-                        "Bandizip 解压失败。压缩包必须先通过 Windows tar 的路径和链接检查；不支持检查的格式请尝试安装 7-Zip。详情：",
-                        "Bandizip extraction failed. The archive must pass Windows tar path and link checks first; try installing 7-Zip if inspection is unsupported. Details: ") + ex.Message + cleanupDetails, ex);
-                }
-            }
-            InspectDirectoryTreeSafely(destinationDirectory);
-            DispatcherQueue.TryEnqueue(() => UpdateProgress(100, L("解压完成", "Extraction complete")));
-            return;
+            throw localized;
         }
-
-        if (TarArchiveExtensions.Contains(extension, StringComparer.OrdinalIgnoreCase))
-        {
-            ValidateTarArchiveEntries(archivePath, destinationDirectory);
-            RunTarExtraction(archivePath, destinationDirectory);
-            InspectDirectoryTreeSafely(destinationDirectory);
-            DispatcherQueue.TryEnqueue(() => UpdateProgress(100, L("解压完成", "Extraction complete")));
-            return;
-        }
-
-        ValidateTarArchiveEntries(archivePath, destinationDirectory);
-        RunTarExtraction(archivePath, destinationDirectory);
-        InspectDirectoryTreeSafely(destinationDirectory);
-        DispatcherQueue.TryEnqueue(() => UpdateProgress(100, L("解压完成", "Extraction complete")));
     }
 
-    private static bool IsZipLinkEntry(ZipArchiveEntry entry)
+    /// <summary>Maps a tagged Core archive failure to the user's language; null keeps the original.</summary>
+    private Exception? LocalizeArchiveError(Exception ex)
     {
-        const int UnixFileTypeMask = 0xF000;
-        const int UnixSymbolicLink = 0xA000;
-        int unixMode = (entry.ExternalAttributes >> 16) & UnixFileTypeMask;
-        return unixMode == UnixSymbolicLink;
+        string? detail = ArchiveErrors.DetailOf(ex);
+        return ArchiveErrors.KindOf(ex) switch
+        {
+            ArchiveErrorKind.NoExtractableFiles => new InvalidOperationException(
+                L("这个压缩包里没有可解压的文件。", "This archive does not contain extractable files."), ex),
+            ArchiveErrorKind.ZipSymbolicLink => new InvalidDataException(
+                L("压缩包包含不受支持的符号链接。", "The archive contains an unsupported symbolic link."), ex),
+            ArchiveErrorKind.TarLinkEntry => new InvalidDataException(
+                L("压缩包包含不受支持的链接。", "The archive contains an unsupported link."), ex),
+            ArchiveErrorKind.LinkEntry => new InvalidDataException(
+                L("压缩包包含真实的符号链接、硬链接或复制链接，已停止解压。", "The archive contains an actual symbolic, hard, or copy link. Extraction was stopped."), ex),
+            ArchiveErrorKind.Encrypted => new InvalidDataException(
+                L("压缩包设置了密码，暂不支持导入。请先解压后再导入文件夹。", "The archive is password-protected, which is not supported. Extract it yourself first, then import the folder."), ex),
+            ArchiveErrorKind.ToolUnavailable => new InvalidOperationException(L(
+                "解压此格式需要 7-Zip 或 Bandizip。请安装其中一个，或把 7z.exe 和 7z.dll 放到程序目录的 Tools 文件夹中。Bandizip 需要附带的 bz.exe。",
+                "This format requires 7-Zip or Bandizip. Install either tool, or place 7z.exe and 7z.dll in the app's Tools folder. Bandizip requires its bundled bz.exe."), ex),
+            ArchiveErrorKind.SevenZipListingFailed => new InvalidDataException(L(
+                "7-Zip 无法读取压缩包，它可能已损坏或设置了密码（不支持带密码的压缩包）。详情：",
+                "7-Zip could not read the archive. It may be damaged or password-protected (password-protected archives are not supported). Details: ") + detail, ex),
+            ArchiveErrorKind.SevenZipExtractionFailed => new InvalidOperationException(detail
+                ?? L("7-Zip 无法解压当前文件。请检查压缩包是否完整。", "7-Zip could not extract this file. Check whether the archive is valid."), ex),
+            ArchiveErrorKind.TarExtractionFailed => new InvalidOperationException(detail
+                ?? L("当前系统无法解压该格式，建议尝试 ZIP 或 7Z。", "This system could not extract the selected format. Try ZIP or 7Z instead."), ex),
+            ArchiveErrorKind.BandizipFailed => new InvalidOperationException(L(
+                "Bandizip 解压失败。压缩包必须先通过 Windows tar 的路径和链接检查；不支持检查的格式请尝试安装 7-Zip。详情：",
+                "Bandizip extraction failed. The archive must pass Windows tar path and link checks first; try installing 7-Zip if inspection is unsupported. Details: ")
+                + detail + StagingCleanupDetails(ex.InnerException), ex),
+            ArchiveErrorKind.ToolTimeout => new TimeoutException(L(
+                $"{detail} 运行超过 {ArchiveToolTimeoutMinutes} 分钟，任务已停止。请检查压缩包后重试。",
+                $"{detail} exceeded the {ArchiveToolTimeoutMinutes}-minute time limit and the task was stopped. Check the archive before retrying.")
+                + (ex.InnerException?.InnerException is Exception childFailure
+                    ? L(" 未能确认所有子进程已退出。详情：", " Termination of all child processes could not be confirmed. Details: ") + childFailure.Message
+                    : string.Empty)
+                + StagingCleanupDetails(ex), ex),
+            _ => null
+        };
+    }
+
+    private string StagingCleanupDetails(Exception? ex)
+    {
+        return ex?.Data[BandizipArchiveExtractor.StagingCleanupFailureKey] is Exception cleanupFailure
+            ? L(" 临时压缩包清理也失败了：", " Temporary archive cleanup also failed: ") + cleanupFailure.Message
+            : string.Empty;
     }
 
     private static string? FindSevenZipExecutable()
@@ -216,147 +169,5 @@ public sealed partial class MainWindow
         directories.AddRange((Environment.GetEnvironmentVariable("PATH") ?? string.Empty)
             .Split(Path.PathSeparator).Select(directory => directory.Trim().Trim('"')));
         return BandizipArchiveExtractor.FindExecutable(directories);
-    }
-
-    private void RunSevenZipExtraction(string sevenZipPath, string archivePath, string destinationDirectory)
-    {
-        ProcessStartInfo startInfo = CreateSevenZipStartInfo(sevenZipPath, "x", "-y", "-aoa", "-o" + destinationDirectory, archivePath);
-        (int exitCode, _, string error) = RunArchiveProcessWithTimeout(startInfo);
-        if (exitCode != 0)
-        {
-            throw new InvalidOperationException(string.IsNullOrWhiteSpace(error)
-                ? L("7-Zip 无法解压当前文件。请检查压缩包是否完整。", "7-Zip could not extract this file. Check whether the archive is valid.")
-                : error.Trim());
-        }
-    }
-
-    private void RunTarExtraction(string archivePath, string destinationDirectory)
-    {
-        var startInfo = new ProcessStartInfo
-        {
-            FileName = "tar.exe",
-            Arguments = $"-xf \"{archivePath}\" -C \"{destinationDirectory}\"",
-            UseShellExecute = false,
-            RedirectStandardInput = true,
-            RedirectStandardError = true,
-            RedirectStandardOutput = true,
-            CreateNoWindow = true
-        };
-
-        (int exitCode, _, string error) = RunArchiveProcessWithTimeout(startInfo);
-        if (exitCode != 0)
-        {
-            throw new InvalidOperationException(string.IsNullOrWhiteSpace(error)
-                ? L("当前系统无法解压该格式，建议尝试 ZIP 或 7Z。", "This system could not extract the selected format. Try ZIP or 7Z instead.")
-                : error.Trim());
-        }
-    }
-
-    private void ValidateSevenZipArchiveEntries(string sevenZipPath, string archivePath, string destinationDirectory)
-    {
-        ProcessStartInfo startInfo = CreateSevenZipStartInfo(sevenZipPath, "l", "-slt", archivePath);
-        (int exitCode, string output, string error) = RunArchiveProcessWithTimeout(startInfo);
-        if (exitCode != 0)
-        {
-            // With encrypted headers 7-Zip cannot even list the archive and only reports
-            // that the closed password prompt was interrupted.
-            throw new InvalidDataException(L(
-                "7-Zip 无法读取压缩包，它可能已损坏或设置了密码（不支持带密码的压缩包）。详情：",
-                "7-Zip could not read the archive. It may be damaged or password-protected (password-protected archives are not supported). Details: ")
-                + (string.IsNullOrWhiteSpace(error) ? exitCode.ToString(CultureInfo.InvariantCulture) : error.Trim()));
-        }
-
-        try
-        {
-            SevenZipListingValidator.Validate(output, destinationDirectory);
-        }
-        catch (InvalidDataException ex) when (ArchiveErrors.Is(ex, ArchiveErrorKind.Encrypted))
-        {
-            throw new InvalidDataException(
-                L("压缩包设置了密码，暂不支持导入。请先解压后再导入文件夹。", "The archive is password-protected, which is not supported. Extract it yourself first, then import the folder."),
-                ex);
-        }
-        catch (InvalidDataException ex) when (ArchiveErrors.Is(ex, ArchiveErrorKind.LinkEntry))
-        {
-            throw new InvalidDataException(
-                L("压缩包包含真实的符号链接、硬链接或复制链接，已停止解压。", "The archive contains an actual symbolic, hard, or copy link. Extraction was stopped."),
-                ex);
-        }
-    }
-
-    private void ValidateTarArchiveEntries(string archivePath, string destinationDirectory)
-    {
-        var listInfo = new ProcessStartInfo
-        {
-            FileName = "tar.exe",
-            Arguments = $"-tf \"{archivePath}\"",
-            UseShellExecute = false,
-            RedirectStandardInput = true,
-            RedirectStandardError = true,
-            RedirectStandardOutput = true,
-            CreateNoWindow = true
-        };
-        (int exitCode, string output, string error) = RunArchiveProcessWithTimeout(listInfo);
-        if (exitCode != 0)
-        {
-            throw new InvalidDataException(string.IsNullOrWhiteSpace(error) ? "Unable to inspect the archive." : error.Trim());
-        }
-        foreach (string entryPath in output.Split(['\r', '\n'], StringSplitOptions.RemoveEmptyEntries))
-        {
-            GetSafePathInsideDirectory(destinationDirectory, entryPath.Trim());
-        }
-
-        listInfo.Arguments = $"-tvf \"{archivePath}\"";
-        (exitCode, output, error) = RunArchiveProcessWithTimeout(listInfo);
-        if (exitCode != 0)
-        {
-            throw new InvalidDataException(string.IsNullOrWhiteSpace(error) ? "Unable to inspect archive links." : error.Trim());
-        }
-        foreach (string rawLine in output.Split(['\r', '\n'], StringSplitOptions.RemoveEmptyEntries))
-        {
-            string line = rawLine.TrimStart();
-            if (line.Length > 0 && (line[0] == 'l' || line[0] == 'h'))
-            {
-                throw new InvalidDataException(L("压缩包包含不受支持的链接。", "The archive contains an unsupported link."));
-            }
-        }
-    }
-
-    private (int ExitCode, string Output, string Error) RunArchiveProcessWithTimeout(ProcessStartInfo startInfo)
-    {
-        try
-        {
-            return ArchiveProcessRunner.Run(startInfo, TimeSpan.FromMinutes(ArchiveToolTimeoutMinutes));
-        }
-        catch (TimeoutException ex)
-        {
-            string tool = Path.GetFileName(startInfo.FileName);
-            string cleanupDetails = ex.InnerException is null ? string.Empty : L(
-                " 未能确认所有子进程已退出。详情：", " Termination of all child processes could not be confirmed. Details: ") + ex.InnerException.Message;
-            throw new TimeoutException(L(
-                $"{tool} 运行超过 {ArchiveToolTimeoutMinutes} 分钟，任务已停止。请检查压缩包后重试。",
-                $"{tool} exceeded the {ArchiveToolTimeoutMinutes}-minute time limit and the task was stopped. Check the archive before retrying.") + cleanupDetails, ex);
-        }
-    }
-
-    private static ProcessStartInfo CreateSevenZipStartInfo(string sevenZipPath, params string[] arguments)
-    {
-        // stdin is redirected so ArchiveProcessRunner closes it: an encrypted archive
-        // fails instead of waiting for a hidden password prompt until the timeout.
-        var startInfo = new ProcessStartInfo
-        {
-            FileName = sevenZipPath,
-            UseShellExecute = false,
-            RedirectStandardInput = true,
-            RedirectStandardError = true,
-            RedirectStandardOutput = true,
-            CreateNoWindow = true
-        };
-        foreach (string argument in arguments)
-        {
-            startInfo.ArgumentList.Add(argument);
-        }
-
-        return startInfo;
     }
 }
