@@ -2,6 +2,7 @@ using System.Diagnostics;
 using System.Globalization;
 using System.Text.RegularExpressions;
 using IntegratedModManager.Core.Configuration;
+using IntegratedModManager.Core.Online;
 using IntegratedModManager.Core.Updates;
 using Microsoft.UI.Xaml;
 using Microsoft.UI.Xaml.Controls;

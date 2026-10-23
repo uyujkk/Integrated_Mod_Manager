@@ -1,3 +1,4 @@
+using IntegratedModManager.Core.Online;
 using IntegratedModManager.Core.Repository;
 using Microsoft.UI.Xaml;
 using Microsoft.UI.Xaml.Automation;

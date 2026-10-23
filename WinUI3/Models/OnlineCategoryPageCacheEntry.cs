@@ -1,3 +1,5 @@
+using IntegratedModManager.Core.Online;
+
 namespace ModFolderCopier.WinUI;
 
 public sealed class OnlineCategoryPageCacheEntry

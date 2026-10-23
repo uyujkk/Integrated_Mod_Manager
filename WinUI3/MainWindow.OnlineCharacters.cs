@@ -780,7 +780,7 @@ public sealed partial class MainWindow
         JsonElement characterItems = default;
         foreach (JsonElement channel in channels.EnumerateArray())
         {
-            if (TryGetInt32Property(channel, "id") == descriptor.ChannelId
+            if (GameBananaJson.Int32(channel, "id") == descriptor.ChannelId
                 && channel.TryGetProperty("list", out JsonElement items)
                 && items.ValueKind == JsonValueKind.Array)
             {
@@ -798,17 +798,17 @@ public sealed partial class MainWindow
         var knownTitles = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
         foreach (JsonElement item in characterItems.EnumerateArray())
         {
-            string title = TryGetStringProperty(item, "title")?.Trim() ?? string.Empty;
+            string title = GameBananaJson.Text(item, "title")?.Trim() ?? string.Empty;
             if (string.IsNullOrWhiteSpace(title) || !knownTitles.Add(OnlineCharacterCatalogMatcher.NormalizeLookup(title)))
             {
                 continue;
             }
 
-            int contentId = TryGetInt32Property(item, "content_id");
+            int contentId = GameBananaJson.Int32(item, "content_id");
             records.Add(new WikiCharacterRecord(
                 title,
-                TryGetStringProperty(item, "alias_name")?.Trim() ?? string.Empty,
-                TryGetStringProperty(item, "icon")?.Trim() ?? string.Empty,
+                GameBananaJson.Text(item, "alias_name")?.Trim() ?? string.Empty,
+                GameBananaJson.Text(item, "icon")?.Trim() ?? string.Empty,
                 contentId > 0 ? string.Format(CultureInfo.InvariantCulture, descriptor.ContentUrlTemplate, contentId) : repository.WikiUrl));
         }
 
@@ -912,7 +912,7 @@ public sealed partial class MainWindow
 
         bool hasNestedCategories = document.RootElement
             .EnumerateArray()
-            .Any(category => TryGetInt32Property(category, "_nCategoryCount") > 0);
+            .Any(category => GameBananaJson.Int32(category, "_nCategoryCount") > 0);
         var characters = new List<OnlineCharacterOption>();
 
         if (!hasNestedCategories)
@@ -926,8 +926,8 @@ public sealed partial class MainWindow
         {
             foreach (JsonElement category in document.RootElement.EnumerateArray())
             {
-                int nestedCount = TryGetInt32Property(category, "_nCategoryCount");
-                int nestedCategoryId = TryGetInt32Property(category, "_idRow");
+                int nestedCount = GameBananaJson.Int32(category, "_nCategoryCount");
+                int nestedCategoryId = GameBananaJson.Int32(category, "_idRow");
                 if (nestedCount <= 0 || nestedCategoryId <= 0)
                 {
                     continue;
@@ -961,12 +961,12 @@ public sealed partial class MainWindow
         List<OnlineCharacterOption> characters,
         JsonElement category)
     {
-        string name = TryGetStringProperty(category, "_sName")?.Trim() ?? string.Empty;
-        string categoryUrl = TryGetStringProperty(category, "_sUrl")?.Trim() ?? string.Empty;
-        int numericCategoryId = TryGetInt32Property(category, "_idRow");
+        string name = GameBananaJson.Text(category, "_sName")?.Trim() ?? string.Empty;
+        string categoryUrl = GameBananaJson.Text(category, "_sUrl")?.Trim() ?? string.Empty;
+        int numericCategoryId = GameBananaJson.Int32(category, "_idRow");
         string resolvedCategoryId = numericCategoryId > 0
             ? numericCategoryId.ToString(CultureInfo.InvariantCulture)
-            : ExtractTrailingNumericId(categoryUrl);
+            : GameBananaJson.TrailingNumericId(categoryUrl);
         if (string.IsNullOrWhiteSpace(name) || string.IsNullOrWhiteSpace(resolvedCategoryId))
         {
             return;
@@ -978,7 +978,7 @@ public sealed partial class MainWindow
             DisplayNameZh = name,
             DisplayNameEn = name,
             CategoryId = resolvedCategoryId,
-            AvatarUrl = TryGetStringProperty(category, "_sIconUrl")?.Trim() ?? string.Empty,
+            AvatarUrl = GameBananaJson.Text(category, "_sIconUrl")?.Trim() ?? string.Empty,
             Aliases = [name]
         });
     }
@@ -1098,8 +1098,8 @@ public sealed partial class MainWindow
             foreach (JsonElement item in list.EnumerateArray())
             {
                 returnedCount++;
-                string entryPageId = TryGetStringProperty(item, "entry_page_id")?.Trim() ?? string.Empty;
-                string name = TryGetStringProperty(item, "name")?.Trim() ?? string.Empty;
+                string entryPageId = GameBananaJson.Text(item, "entry_page_id")?.Trim() ?? string.Empty;
+                string name = GameBananaJson.Text(item, "name")?.Trim() ?? string.Empty;
                 if (!string.IsNullOrWhiteSpace(entryPageId)
                     && !string.IsNullOrWhiteSpace(name)
                     && knownEntryIds.Add(entryPageId))

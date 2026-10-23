@@ -146,18 +146,10 @@ public static class GameBananaMetadataParser
     public static bool IsWebUrl(string? value) => Uri.TryCreate(value, UriKind.Absolute, out Uri? uri)
         && uri.Scheme is "http" or "https";
     private static string? WebUrl(string? value) => IsWebUrl(value) ? value : null;
-    private static string? Text(JsonElement data, string key) => data.ValueKind == JsonValueKind.Object
-        && data.TryGetProperty(key, out JsonElement field) && field.ValueKind is JsonValueKind.String or JsonValueKind.Number or JsonValueKind.True or JsonValueKind.False
-        ? field.ToString() : null;
-    private static int Count(JsonElement data, string key) => (int)Math.Clamp(Number(data, key), 0, int.MaxValue);
-    private static long Number(JsonElement data, string key)
-    {
-        string? text = Text(data, key)?.Replace(",", string.Empty).Trim();
-        if (long.TryParse(text, NumberStyles.Integer, CultureInfo.InvariantCulture, out long integer)) return integer;
-        if (!double.TryParse(text, NumberStyles.Float, CultureInfo.InvariantCulture, out double number) || !double.IsFinite(number)) return 0;
-        return number >= long.MaxValue ? long.MaxValue : number <= long.MinValue ? long.MinValue : (long)Math.Round(number, MidpointRounding.AwayFromZero);
-    }
-    private static bool Boolean(JsonElement data, string key) => bool.TryParse(Text(data, key), out bool result) && result;
+    private static string? Text(JsonElement data, string key) => GameBananaJson.Text(data, key);
+    private static int Count(JsonElement data, string key) => (int)Math.Clamp(GameBananaJson.Int64(data, key), 0, int.MaxValue);
+    private static long Number(JsonElement data, string key) => GameBananaJson.Int64(data, key);
+    private static bool Boolean(JsonElement data, string key) => GameBananaJson.Boolean(data, key);
 
     public static string PlainText(string value)
     {
