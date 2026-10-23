@@ -1,4 +1,6 @@
-namespace IntegratedModManager.Core;
+using IntegratedModManager.Core.Infrastructure;
+
+namespace IntegratedModManager.Core.Online;
 
 /// <summary>Immutable routing captured before the first asynchronous download step.</summary>
 public sealed record OnlineDownloadContext(string RepositoryId, string RepositoryPath, string RepositoryName);

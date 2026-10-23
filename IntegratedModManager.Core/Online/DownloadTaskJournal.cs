@@ -1,6 +1,7 @@
 using System.Text.Json;
+using IntegratedModManager.Core.Infrastructure;
 
-namespace IntegratedModManager.Core;
+namespace IntegratedModManager.Core.Online;
 
 public sealed record DownloadTaskRecord<TRequest>(string Id, string Title, string SourceIdentity,
     string DestinationPath, DownloadTaskState State, double Progress, string StatusZh, string StatusEn,

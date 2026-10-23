@@ -1,4 +1,4 @@
-using IntegratedModManager.Core;
+using IntegratedModManager.Core.Repository;
 using Microsoft.UI.Xaml;
 using Microsoft.UI.Xaml.Automation;
 using Microsoft.UI.Xaml.Controls;
@@ -69,18 +69,18 @@ public sealed partial class MainWindow
 
     private void RefreshOnlineFilterSummary(int matches, int loaded)
     {
-        OnlineFilterSummaryTextBlock.Text = L($"当前页 {matches}/{loaded} 个匹配", $"This page: {matches}/{loaded} matches")
-            + (_onlineAuthorId > 0 ? L($" · 作者：{_onlineAuthorName}（作者分页结果，文字仅筛选本页）", $" · Author: {_onlineAuthorName} (author pages; text filters this page only)")
-                : L(" · 搜索仅限本页；点击作者名查看跨页作品", " · Search filters this page only; click an author for all pages"));
-        AutomationProperties.SetName(OnlineSearchTextBox, L("搜索当前页的角色、Mod 或作者；author: 也仅搜索本页", "Search this page by character, mod or author; author: also filters this page only"));
+        OnlineFilterSummaryTextBlock.Text = T("OnlineLibrary.ThisPageMatches", matches, loaded)
+            + (_onlineAuthorId > 0 ? T("OnlineLibrary.AuthorAuthorPagesTextFiltersThis", _onlineAuthorName)
+                : T("OnlineLibrary.SearchFiltersThisPageOnlyClick"));
+        AutomationProperties.SetName(OnlineSearchTextBox, T("OnlineLibrary.SearchThisPageByCharacterMod"));
         ToolTipService.SetToolTip(OnlineFilterSummaryTextBlock, OnlineFilterSummaryTextBlock.Text);
-        ClearOnlineFiltersButton.Content = L("清空筛选", "Clear filters");
+        ClearOnlineFiltersButton.Content = T("OnlineLibrary.ClearFilters");
         ClearOnlineFiltersButton.IsEnabled = _onlineAuthorId > 0 || _onlineSearchText.Length > 0 || _onlineCharacterFilter.Length > 0 || _onlineAuthorWorkFilter > 0;
-        OnlineWorkFilterButton.Content = _onlineAuthorWorkFilter switch { 1 => L("本页已安装", "Installed on page"), 2 => L("本页已收藏", "Saved on page"), _ => L("本页全部", "All on page") };
-        ToolTipService.SetToolTip(OnlineSavedItemsButton, L("作者管理与稍后下载：搜索作者、批量下载", "Authors and saved Mods: find authors and download in bulk"));
-        AutomationProperties.SetName(OnlineSavedItemsButton, L("作者管理与稍后下载", "Authors and saved Mods"));
-        ToolTipService.SetToolTip(OnlineDownloadOptionsButton, L("下载选项", "Download options"));
-        AutomationProperties.SetName(OnlineDownloadOptionsButton, L("下载选项", "Download options"));
+        OnlineWorkFilterButton.Content = _onlineAuthorWorkFilter switch { 1 => T("OnlineLibrary.InstalledOnPage"), 2 => T("OnlineLibrary.SavedOnPage"), _ => T("OnlineLibrary.AllOnPage") };
+        ToolTipService.SetToolTip(OnlineSavedItemsButton, T("OnlineLibrary.AuthorsAndSavedModsFindAuthors"));
+        AutomationProperties.SetName(OnlineSavedItemsButton, T("OnlineLibrary.AuthorsAndSavedMods"));
+        ToolTipService.SetToolTip(OnlineDownloadOptionsButton, T("Common.DownloadOptions"));
+        AutomationProperties.SetName(OnlineDownloadOptionsButton, T("Common.DownloadOptions"));
     }
 
     private bool IsSavedOnlineMod(OnlineModCard mod) => _onlinePreferences.SavedMods.Any(item =>
@@ -106,15 +106,15 @@ public sealed partial class MainWindow
     private MenuFlyout CreateOnlineCardMenu(OnlineModCard mod)
     {
         var menu = new MenuFlyout();
-        var save = new MenuFlyoutItem { Text = IsSavedOnlineMod(mod) ? L("取消稍后下载", "Remove from saved") : L("加入稍后下载", "Save for later") };
+        var save = new MenuFlyoutItem { Text = IsSavedOnlineMod(mod) ? T("OnlineLibrary.RemoveFromSaved") : T("OnlineLibrary.SaveForLater") };
         save.Click += (_, _) => ToggleSavedOnlineMod(mod);
         menu.Items.Add(save);
-        var author = new MenuFlyoutItem { Text = L("查看作者作品（跨页）", "Browse author (all pages)"), IsEnabled = mod.AuthorId > 0 };
+        var author = new MenuFlyoutItem { Text = T("OnlineLibrary.BrowseAuthorAllPages"), IsEnabled = mod.AuthorId > 0 };
         author.Click += async (_, _) => await RunUiActionAsync("BrowseOnlineAuthorAsync", () => BrowseOnlineAuthorAsync(mod.AuthorId, mod.Author));
         menu.Items.Add(author);
         bool savedAuthor = _onlinePreferences.Authors.Any(item => item.Id == mod.AuthorId
             && item.CategoryId == GetEffectiveOnlineCategoryId(GetSelectedRepository()));
-        var favorite = new MenuFlyoutItem { Text = savedAuthor ? L("取消作者收藏", "Unsave author") : L("收藏作者", "Save author"), IsEnabled = mod.AuthorId > 0 };
+        var favorite = new MenuFlyoutItem { Text = savedAuthor ? T("OnlineLibrary.UnsaveAuthor") : T("OnlineLibrary.SaveAuthor"), IsEnabled = mod.AuthorId > 0 };
         favorite.Click += (_, _) =>
         {
             string category = GetEffectiveOnlineCategoryId(GetSelectedRepository());
@@ -126,10 +126,10 @@ public sealed partial class MainWindow
         menu.Items.Add(favorite);
         menu.Opening += (_, _) =>
         {
-            save.Text = IsSavedOnlineMod(mod) ? L("取消稍后下载", "Remove from saved") : L("加入稍后下载", "Save for later");
+            save.Text = IsSavedOnlineMod(mod) ? T("OnlineLibrary.RemoveFromSaved") : T("OnlineLibrary.SaveForLater");
             savedAuthor = _onlinePreferences.Authors.Any(item => item.Id == mod.AuthorId
                 && item.CategoryId == GetEffectiveOnlineCategoryId(GetSelectedRepository()));
-            favorite.Text = savedAuthor ? L("取消作者收藏", "Unsave author") : L("收藏作者", "Save author");
+            favorite.Text = savedAuthor ? T("OnlineLibrary.UnsaveAuthor") : T("OnlineLibrary.SaveAuthor");
         };
         return menu;
     }
@@ -141,7 +141,7 @@ public sealed partial class MainWindow
         catch (Exception ex)
         {
             LogApplicationIssue("Author and saved workspace", ex);
-            await ReportOnlineActionErrorAsync(ex.Message, L("无法完成操作", "Cannot complete action"));
+            await ReportOnlineActionErrorAsync(ex.Message, T("OnlineLibrary.CannotCompleteAction"));
         }
     }
 }

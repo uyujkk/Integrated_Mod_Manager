@@ -2,7 +2,7 @@ using System.Globalization;
 using System.Text;
 using System.Text.Json;
 
-namespace IntegratedModManager.Core;
+namespace IntegratedModManager.Core.Online;
 
 /// <summary>
 /// The apiv11 list omits download counts. The legacy Core/Item/Data endpoint returns them for many

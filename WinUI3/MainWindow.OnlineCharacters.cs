@@ -3,7 +3,8 @@ using System.Security.Cryptography;
 using System.Text;
 using System.Text.Json;
 using System.Text.RegularExpressions;
-using IntegratedModManager.Core;
+using IntegratedModManager.Core.Deployment;
+using IntegratedModManager.Core.Endfield;
 using IntegratedModManager.Data;
 using Microsoft.UI.Xaml;
 using Microsoft.UI.Xaml.Automation;
@@ -24,7 +25,7 @@ public sealed partial class MainWindow
             OnlineCharacterComboBox.Items.Clear();
             OnlineCharacterComboBox.Items.Add(new ComboBoxItem
             {
-                Content = L("全部角色", "All characters"),
+                Content = T("OnlineCharacters.AllCharacters"),
                 Tag = string.Empty
             });
 
@@ -285,7 +286,7 @@ public sealed partial class MainWindow
 
         OnlineCharacterAvatarPanel.Children.Add(CreateOnlineCharacterButton(
             string.Empty,
-            L("全部", "All"),
+            T("OnlineCharacters.All"),
             null,
             string.IsNullOrWhiteSpace(_onlineCharacterFilter) ? _onlineTotalCount : null,
             avatarRequestVersion,
@@ -306,11 +307,9 @@ public sealed partial class MainWindow
         }
 
         string currentRole = string.IsNullOrWhiteSpace(_onlineCharacterFilter)
-            ? L("全部", "All")
+            ? T("OnlineCharacters.All")
             : GetOnlineCharacterDisplayName(_onlineCharacterFilter);
-        OnlineCharacterRailHintTextBlock.Text = L(
-            $"{visibleCharacters.Count} 个分类 · 当前：{currentRole}",
-            $"{visibleCharacters.Count} categories · Current: {currentRole}");
+        OnlineCharacterRailHintTextBlock.Text = T("OnlineCharacters.CategoriesCurrent", visibleCharacters.Count, currentRole);
     }
 
     private FrameworkElement CreateOnlineCharacterButton(
@@ -392,7 +391,7 @@ public sealed partial class MainWindow
             {
                 compactCard.Children.Add(new TextBlock
                 {
-                    Text = L($"{modCount.Value} 个", $"{modCount.Value} mods"),
+                    Text = T("OnlineCharacters.Mods", modCount.Value),
                     MaxWidth = 82,
                     TextAlignment = TextAlignment.Center,
                     Style = (Style)Application.Current.Resources["CaptionTextStyle"]
@@ -437,7 +436,7 @@ public sealed partial class MainWindow
             {
                 textPanel.Children.Add(new TextBlock
                 {
-                    Text = L($"{modCount.Value} 个 Mod", $"{modCount.Value} mods"),
+                    Text = T("OnlineCharacters.Mods2", modCount.Value),
                     Style = (Style)Application.Current.Resources["CaptionTextStyle"],
                     TextTrimming = TextTrimming.CharacterEllipsis,
                     TextWrapping = TextWrapping.NoWrap
@@ -470,8 +469,8 @@ public sealed partial class MainWindow
         string tooltip = characterOption is null
             ? label
             : $"{characterOption.DisplayNameZh} / {characterOption.DisplayNameEn}";
-        ToolTipService.SetToolTip(button, string.IsNullOrWhiteSpace(character) ? L("显示全部角色", "Show all characters") : tooltip);
-        AutomationProperties.SetName(button, string.IsNullOrWhiteSpace(character) ? L("全部角色", "All characters") : label);
+        ToolTipService.SetToolTip(button, string.IsNullOrWhiteSpace(character) ? T("OnlineCharacters.ShowAllCharacters") : tooltip);
+        AutomationProperties.SetName(button, string.IsNullOrWhiteSpace(character) ? T("OnlineCharacters.AllCharacters") : label);
         button.Click += async (_, _) => await RunUiActionAsync("SelectOnlineCharacterAsync", () => SelectOnlineCharacterAsync(character));
         return WrapCharacterButtonWithFavorite(button, character);
     }
@@ -1631,13 +1630,13 @@ public sealed partial class MainWindow
 
     private string CharacterFolderReasonText(CharacterFolderPlan plan, string character) => plan.Reason switch
     {
-        CharacterFolderReason.Ambiguous => L($"有多个文件夹都可能属于“{character}”，请手动选择。", $"Several folders may belong to “{character}”; choose one."),
-        CharacterFolderReason.UnknownCharacter => L("无法确定这个 Mod 属于哪个角色，请手动选择位置。", "The Mod's character is unknown; choose a destination."),
-        CharacterFolderReason.MultipleCharacters => L($"“{character}”包含多个角色，请手动选择位置。", $"“{character}” covers several characters; choose a destination."),
-        CharacterFolderReason.MixedNamingLanguage => L("仓库中同时有中文和英文命名的文件夹，无法确定新文件夹用哪种语言，请手动选择。", "The repository mixes Chinese and English folder names, so a new folder name cannot be chosen automatically."),
-        CharacterFolderReason.NoNameInLanguage => L($"没有“{character}”在仓库命名语言中的名称，请手动选择。", $"No name for “{character}” in the repository's naming language; choose a destination."),
-        CharacterFolderReason.InvalidName => L($"“{character}”不能直接用作文件夹名，请手动选择。", $"“{character}” cannot be used as a folder name; choose a destination."),
-        CharacterFolderReason.NameConflict => L("仓库中已有同名文件，不能新建角色文件夹，请手动选择。", "A file with that name already exists; choose a destination."),
+        CharacterFolderReason.Ambiguous => T("OnlineCharacters.SeveralFoldersMayBelongToChoose", character),
+        CharacterFolderReason.UnknownCharacter => T("OnlineCharacters.TheModSCharacterIsUnknown"),
+        CharacterFolderReason.MultipleCharacters => T("OnlineCharacters.CoversSeveralCharactersChooseADestination", character),
+        CharacterFolderReason.MixedNamingLanguage => T("OnlineCharacters.TheRepositoryMixesChineseAndEnglish"),
+        CharacterFolderReason.NoNameInLanguage => T("OnlineCharacters.NoNameForInTheRepository", character),
+        CharacterFolderReason.InvalidName => T("OnlineCharacters.CannotBeUsedAsAFolder", character),
+        CharacterFolderReason.NameConflict => T("OnlineCharacters.AFileWithThatNameAlready"),
         _ => string.Empty
     };
 }

@@ -1,4 +1,6 @@
-namespace IntegratedModManager.Core;
+using IntegratedModManager.Core.Infrastructure;
+
+namespace IntegratedModManager.Core.Deployment;
 
 public sealed record ModCombinationDeploymentPlan(
     IReadOnlyList<string> DesiredSources, IReadOnlyList<string> InstallSources, IReadOnlyList<string> RemoveTargets);

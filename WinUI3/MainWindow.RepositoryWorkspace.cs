@@ -1,6 +1,6 @@
 using System.Collections.ObjectModel;
 using System.Collections.Specialized;
-using IntegratedModManager.Core;
+using IntegratedModManager.Core.Repository;
 using Microsoft.UI.Xaml;
 using Microsoft.UI.Xaml.Automation;
 using Microsoft.UI.Xaml.Controls;
@@ -71,7 +71,7 @@ public sealed partial class MainWindow
         _repositoryModCount = RepositoryText(12);
         _repositoryModSearch = new TextBox { Height = 36, MinWidth = 0 };
         _repositoryModSearch.TextChanged += (_, _) => RefreshRepositoryModView();
-        AutomationProperties.SetName(_repositoryModSearch, L("搜索 Mod", "Search Mods"));
+        AutomationProperties.SetName(_repositoryModSearch, T("RepositoryWorkspace.SearchMods"));
         var categoryGrid = RepositoryRows(GridLength.Auto, GridLength.Auto, new GridLength(1, GridUnitType.Star));
         var categoryHeading = RepositoryColumns(new GridLength(1, GridUnitType.Star), GridLength.Auto, GridLength.Auto);
         categoryHeading.Children.Add(_repositoryCategoryTitle);
@@ -309,7 +309,7 @@ public sealed partial class MainWindow
         bool noTask = string.IsNullOrWhiteSpace(message)
             || message == "当前无复制任务" || message == "No active copy task";
         _repositoryTaskStatusText.Text = noTask
-            ? (_repositoryWorkspaceBusy ? L("正在处理", "Working") : L("空闲", "Idle"))
+            ? (_repositoryWorkspaceBusy ? T("RepositoryWorkspace.Working") : T("RepositoryWorkspace.Idle"))
             : message;
         _repositoryTaskStatusIcon.Glyph = _repositoryWorkspaceBusy ? "\uE895" : "\uE73E";
         ToolTipService.SetToolTip(_repositoryTaskStatusText, message);
@@ -346,7 +346,7 @@ public sealed partial class MainWindow
         _repositorySelectedPath.TextTrimming = TextTrimming.CharacterEllipsis;
         _repositoryOpenModFolder = RepositoryButton("\uE8B7", (_, _) =>
         {
-            if (GetSelectedSecondLevelItem() is { } mod) OpenDirectory(mod.Path, L("Mod 文件夹", "Mod folder"));
+            if (GetSelectedSecondLevelItem() is { } mod) OpenDirectory(mod.Path, T("Common.ModFolder"));
         });
         RepositoryDecorateButton(OpenModLinkButton, "\uE774");
         var detailActions = RepositoryColumns(new GridLength(1, GridUnitType.Star), GridLength.Auto);
@@ -372,7 +372,7 @@ public sealed partial class MainWindow
         _shortcutCard!.Padding = new Thickness(12);
         ShortcutSectionSubtitleTextBlock.Visibility = Visibility.Collapsed;
         ShortcutHintTextBlock.Visibility = Visibility.Collapsed;
-        _previewTab!.Header = L("预览", "Preview");
+        _previewTab!.Header = T("RepositoryWorkspace.Preview");
     }
 
     private void InitializeCombinationWorkspaceV4()
@@ -448,7 +448,7 @@ public sealed partial class MainWindow
             && panel.Children.Contains(ConfigurationProfilesTitleTextBlock));
         if (oldCard is not null) UpdatesSupportPanel.Children.Remove(oldCard);
         var shortcut = RepositoryButton("\uE8F1", (_, _) => OnOpenCombinationPresetsClicked(this, new RoutedEventArgs()));
-        shortcut.Content = RepositoryIconLabel("\uE8F1", L("打开组合预设工作区", "Open Combination Workspace"));
+        shortcut.Content = RepositoryIconLabel("\uE8F1", T("Common.OpenCombinationWorkspace"));
         // Restoring a preset is a recovery action: keep it beside "Undo last change" instead of a lone card.
         shortcut.HorizontalAlignment = HorizontalAlignment.Stretch;
         Grid.SetColumn(shortcut, 1);
@@ -474,14 +474,14 @@ public sealed partial class MainWindow
     private void UpdateRepositoryWorkspaceLanguageV4()
     {
         if (!_repositoryV4Ready) return;
-        _workspaceTitleText!.Text = _repositoryWorkspaceView == RepositoryWorkspaceView.Presets ? L("组合预设", "Combination Presets") : L("Mod 工作台", "Mod Workspace");
-        _repositoryCategoryTitle!.Text = L("角色", "Characters");
-        _repositoryModTitle!.Text = FirstLevelListView.SelectedItem is FirstLevelFolderItem role ? role.Name : L("Mod 文件", "Mod Files");
-        _repositoryModSearch!.PlaceholderText = L("搜索当前角色的 Mod", "Search this character's Mods");
-        if (_localTagsButton is not null) _localTagsButton.Content = L("标签", "Tags");
-        AutomationProperties.SetName(_repositoryModSearch, L("搜索 Mod", "Search Mods"));
-        FirstLevelSearchTextBox.PlaceholderText = L("搜索角色", "Search characters");
-        string[] labels = [L("文件列表", "Files"), L("封面视图", "Covers"), L("组合预设", "Presets")];
+        _workspaceTitleText!.Text = _repositoryWorkspaceView == RepositoryWorkspaceView.Presets ? T("RepositoryWorkspace.CombinationPresets") : T("Common.ModWorkspace");
+        _repositoryCategoryTitle!.Text = T("RepositoryWorkspace.Characters");
+        _repositoryModTitle!.Text = FirstLevelListView.SelectedItem is FirstLevelFolderItem role ? role.Name : T("RepositoryWorkspace.ModFiles");
+        _repositoryModSearch!.PlaceholderText = T("RepositoryWorkspace.SearchThisCharacterSMods");
+        if (_localTagsButton is not null) _localTagsButton.Content = T("Common.Tags");
+        AutomationProperties.SetName(_repositoryModSearch, T("RepositoryWorkspace.SearchMods"));
+        FirstLevelSearchTextBox.PlaceholderText = T("RepositoryWorkspace.SearchCharacters");
+        string[] labels = [T("RepositoryWorkspace.Files"), T("RepositoryWorkspace.Covers"), T("RepositoryWorkspace.Presets")];
         string[] glyphs = ["\uEA37", "\uE80A", "\uE8F1"];
         for (int index = 0; index < _repositoryModeButtons.Length; index++)
         {
@@ -494,23 +494,23 @@ public sealed partial class MainWindow
                 _repositoryModeButtons[index].Resources["ToggleButtonBorderBrush" + state] = GetAppThemeBrush("AppNavSelectedBorderBrush");
             }
         }
-        _repositoryOpenDetails!.Content = RepositoryIconLabel("\uE8A5", L("详情", "Details"));
-        AutomationProperties.SetName(_repositoryOpenDetails, L("Mod 详情", "Mod Details"));
-        _repositoryOpenPresets!.Content = RepositoryIconLabel("\uE8F1", L("组合与状态预设", "Combination & State Presets"));
-        _repositoryOpenModFolder!.Content = RepositoryIconLabel("\uE8B7", L("打开文件夹", "Open Folder"));
-        AutomationProperties.SetName(_repositoryOpenModFolder, L("打开 Mod 文件夹", "Open Mod Folder"));
-        _previewTab!.Header = L("预览", "Preview");
-        _selectionEyebrowText!.Text = L("当前 Mod", "CURRENT MOD");
+        _repositoryOpenDetails!.Content = RepositoryIconLabel("\uE8A5", T("RepositoryWorkspace.Details"));
+        AutomationProperties.SetName(_repositoryOpenDetails, T("RepositoryWorkspace.ModDetails"));
+        _repositoryOpenPresets!.Content = RepositoryIconLabel("\uE8F1", T("RepositoryWorkspace.CombinationStatePresets"));
+        _repositoryOpenModFolder!.Content = RepositoryIconLabel("\uE8B7", T("RepositoryWorkspace.OpenFolder"));
+        AutomationProperties.SetName(_repositoryOpenModFolder, T("RepositoryWorkspace.OpenModFolder"));
+        _previewTab!.Header = T("RepositoryWorkspace.Preview");
+        _selectionEyebrowText!.Text = T("RepositoryWorkspace.CURRENTMOD");
         _modernFolderText!.Foreground = GetAppThemeBrush("AppNavDefaultForegroundBrush");
         _modernStateLabel!.Visibility = Visibility.Collapsed;
-        _combinationWorkspaceTitle!.Text = L("我的预设", "My Presets");
-        AutomationProperties.SetName(DeleteConfigurationProfileButton, L("删除预设", "Delete Preset"));
-        ToolTipService.SetToolTip(DeleteConfigurationProfileButton, L("删除预设", "Delete Preset"));
-        AutomationProperties.SetName(_repositoryWorkspacePicker!, L("当前仓库", "Current Repository"));
-        _combinationRecoveryTitle!.Text = L("保存与恢复", "Save & Restore");
-        _combinationRecoveryHint!.Text = L("1  退出游戏与加载器\n2  备份并恢复 Mod 组合\n3  回写已保存的持久参数", "1  Close the game and loader\n2  Back up and restore the Mod set\n3  Write saved persistent values");
-        _combinationNoProfiles!.Text = L("只管理当前仓库的可识别部署。\n不改写 Mod INI；其他 Mod 的参数保持不变。\n\n保存参数前，请在游戏中按 F10 并等待保存完成。", "Only recognized deployments in this repository are managed.\nMod INIs and other Mods' values remain unchanged.\n\nBefore capturing values, press F10 in game and wait for the file to be saved.");
-        foreach (var mod in _secondLevelItems) mod.CoverPlaceholder = L("未设置预览图", "No preview image");
+        _combinationWorkspaceTitle!.Text = T("RepositoryWorkspace.MyPresets");
+        AutomationProperties.SetName(DeleteConfigurationProfileButton, T("RepositoryWorkspace.DeletePreset"));
+        ToolTipService.SetToolTip(DeleteConfigurationProfileButton, T("RepositoryWorkspace.DeletePreset"));
+        AutomationProperties.SetName(_repositoryWorkspacePicker!, T("RepositoryWorkspace.CurrentRepository"));
+        _combinationRecoveryTitle!.Text = T("RepositoryWorkspace.SaveRestore");
+        _combinationRecoveryHint!.Text = T("RepositoryWorkspace.N1CloseTheGameAndLoader");
+        _combinationNoProfiles!.Text = T("RepositoryWorkspace.OnlyRecognizedDeploymentsInThisRepository");
+        foreach (var mod in _secondLevelItems) mod.CoverPlaceholder = T("RepositoryWorkspace.NoPreviewImage");
         RefreshRepositoryPickerV4();
         RefreshRepositoryCountsV4();
         RefreshCombinationWorkspaceV4();
@@ -628,24 +628,24 @@ public sealed partial class MainWindow
         _syncingRepositorySelection = true;
         try
         {
-            foreach (var mod in visible) mod.CoverPlaceholder = L("未设置预览图", "No preview image");
+            foreach (var mod in visible) mod.CoverPlaceholder = T("RepositoryWorkspace.NoPreviewImage");
             _repositoryVisibleMods.ReplaceAll(visible);
             SecondLevelListView.SelectedItem = visible.Contains(_repositorySelectedMod) ? _repositorySelectedMod : null;
             UpdateRepositoryCoverSelectionV4();
         }
         finally { _syncingRepositorySelection = false; }
         _repositoryViewRevision = _repositoryCatalogRevision;
-        _repositoryModTitle!.Text = FirstLevelListView.SelectedItem is FirstLevelFolderItem role ? role.Name : L("Mod 文件", "Mod Files");
-        _repositoryModCount!.Text = L($"{visible.Length} / {_secondLevelItems.Count} 个 Mod", $"{visible.Length} / {_secondLevelItems.Count} Mods");
+        _repositoryModTitle!.Text = FirstLevelListView.SelectedItem is FirstLevelFolderItem role ? role.Name : T("RepositoryWorkspace.ModFiles");
+        _repositoryModCount!.Text = T("RepositoryWorkspace.Mods", visible.Length, _secondLevelItems.Count);
         if (_localFiltersButton is not null)
         {
-            _localFiltersButton.Content = string.IsNullOrEmpty(_localTagFilter) ? L("筛选", "Filters") : L("标签筛选中", "Tag active");
-            ToolTipService.SetToolTip(_localFiltersButton, L("标签：", "Tag: ") + _localTagFilter);
+            _localFiltersButton.Content = string.IsNullOrEmpty(_localTagFilter) ? T("Common.Filters") : T("RepositoryWorkspace.TagActive");
+            ToolTipService.SetToolTip(_localFiltersButton, T("RepositoryWorkspace.Tag") + _localTagFilter);
         }
         _repositoryEmptyMessage!.Visibility = visible.Length == 0 ? Visibility.Visible : Visibility.Collapsed;
         _repositoryEmptyMessage.Text = _secondLevelItems.Count > 0
-            ? L("未找到匹配的 Mod。请调整搜索内容。", "No matching Mods. Try another search.")
-            : L("此角色还没有 Mod。可以导入压缩包或拖入文件夹。", "No Mods for this character. Import an archive or drop a folder here.");
+            ? T("RepositoryWorkspace.NoMatchingModsTryAnotherSearch")
+            : T("RepositoryWorkspace.NoModsForThisCharacterImport");
         QueueRepositoryCoverLayoutV4();
         UpdateRepositorySelectedMetadataV4();
     }
@@ -701,19 +701,19 @@ public sealed partial class MainWindow
     {
         if (_repositorySelectedPath is null) return;
         var mod = GetSelectedSecondLevelItem();
-        _repositorySelectedPath.Text = mod is null ? L("选择一个 Mod", "Select a Mod") : mod.Path + LocalModTagSummary(mod.Path);
+        _repositorySelectedPath.Text = mod is null ? T("RepositoryWorkspace.SelectAMod") : mod.Path + LocalModTagSummary(mod.Path);
         ToolTipService.SetToolTip(_repositorySelectedPath, mod?.Path);
         _repositoryOpenModFolder!.IsEnabled = mod is not null && !_repositoryWorkspaceBusy;
         _repositoryOpenDetails!.IsEnabled = mod is not null && !_repositoryWorkspaceBusy;
         _repositoryDeploymentHint!.Text = GetSelectedRepository()?.UseDirectoryLinks == true
-            ? L("链接部署；替换同角色旧链接，不删除仓库源文件。", "Link deployment replaces the same character's old link; source files are kept.")
-            : L("复制部署；安装与移除前保留可恢复备份。", "Copy deployment keeps a recoverable backup before installation or removal.");
+            ? T("RepositoryWorkspace.LinkDeploymentReplacesTheSameCharacter")
+            : T("RepositoryWorkspace.CopyDeploymentKeepsARecoverableBackup");
     }
 
     private void RefreshRepositoryCountsV4()
     {
         if (_repositoryCountText is not null)
-            _repositoryCountText.Text = L($"{FirstCountTextBlock.Text} 个角色  ·  {SecondCountTextBlock.Text} 个 Mod", $"{FirstCountTextBlock.Text} characters  ·  {SecondCountTextBlock.Text} Mods");
+            _repositoryCountText.Text = T("RepositoryWorkspace.CharactersMods", FirstCountTextBlock.Text, SecondCountTextBlock.Text);
     }
 
     private void RefreshRepositoryPickerV4()
@@ -725,7 +725,7 @@ public sealed partial class MainWindow
             _repositoryWorkspacePicker.Items.Clear();
             foreach (var repository in _repositories) _repositoryWorkspacePicker.Items.Add(new ComboBoxItem { Content = repository.Name, Tag = repository.Id });
             _repositoryWorkspacePicker.SelectedItem = _repositoryWorkspacePicker.Items.OfType<ComboBoxItem>().FirstOrDefault(item => (string?)item.Tag == _selectedRepositoryId);
-            _repositoryWorkspacePicker.PlaceholderText = L("选择仓库", "Select Repository");
+            _repositoryWorkspacePicker.PlaceholderText = T("RepositoryWorkspace.SelectRepository");
         }
         finally { _refreshingRepositoryPicker = false; }
     }
@@ -745,16 +745,16 @@ public sealed partial class MainWindow
                 var nameText = new TextBlock { Text = profile.Name, TextWrapping = TextWrapping.Wrap, MaxLines = 2, TextTrimming = TextTrimming.CharacterEllipsis };
                 Grid.SetColumn(nameText, 1); name.Children.Add(nameText);
                 label.Children.Add(name);
-                label.Children.Add(new TextBlock { Text = L($"{profile.ModRelativePaths.Count} 个 Mod · {(profile.IncludesPersistentState ? "组合 + 状态" : "仅组合")}", $"{profile.ModRelativePaths.Count} Mods · {(profile.IncludesPersistentState ? "set + state" : "set only")}"), FontSize = 12 });
+                label.Children.Add(new TextBlock { Text = T("RepositoryWorkspace.Mods2", profile.ModRelativePaths.Count, (profile.IncludesPersistentState ? "组合 + 状态" : "仅组合"), (profile.IncludesPersistentState ? "set + state" : "set only")), FontSize = 12 });
                 _combinationPresetList.Items.Add(new ListViewItem { Content = label, Tag = profile.Id, HorizontalContentAlignment = HorizontalAlignment.Stretch });
             }
             _combinationPresetList.SelectedItem = _combinationPresetList.Items.OfType<ListViewItem>().FirstOrDefault(item => (string?)item.Tag == _selectedConfigurationProfileId);
             var selected = GetSelectedConfigurationProfile();
-            _combinationMemberTitle!.Text = selected?.Name ?? L("预设中的 Mod", "Mods in Preset");
+            _combinationMemberTitle!.Text = selected?.Name ?? T("RepositoryWorkspace.ModsInPreset");
             _combinationMemberPanel!.Children.Clear();
             if (selected is null)
             {
-                var empty = new TextBlock { Text = L("还没有组合预设。\n部署需要的 Mod 后，点击左下角保存当前组合。", "No combination presets yet.\nDeploy your Mods, then save the current set using the button below."), TextWrapping = TextWrapping.Wrap, Margin = new Thickness(8, 20, 8, 8) };
+                var empty = new TextBlock { Text = T("RepositoryWorkspace.NoCombinationPresetsYetDeployYour"), TextWrapping = TextWrapping.Wrap, Margin = new Thickness(8, 20, 8, 8) };
                 _combinationMemberPanel.Children.Add(empty);
             }
             else foreach (string relative in selected.ModRelativePaths)
@@ -763,7 +763,7 @@ public sealed partial class MainWindow
                 var body = new StackPanel { Spacing = 5 };
                 body.Children.Add(new TextBlock { Text = Path.GetFileName(relative), FontWeight = Microsoft.UI.Text.FontWeights.SemiBold, TextWrapping = TextWrapping.Wrap });
                 body.Children.Add(new TextBlock { Text = Path.GetDirectoryName(relative), FontSize = 12, TextWrapping = TextWrapping.Wrap });
-                body.Children.Add(new TextBlock { Text = selected.IncludesPersistentState ? L($"已保存 {values} 个持久参数", $"{values} saved persistent values") : L("仅恢复部署组合", "Deployment set only"), FontSize = 12 });
+                body.Children.Add(new TextBlock { Text = selected.IncludesPersistentState ? T("RepositoryWorkspace.SavedPersistentValues", values) : T("RepositoryWorkspace.DeploymentSetOnly"), FontSize = 12 });
                 var row = RepositoryColumns(GridLength.Auto, new GridLength(1, GridUnitType.Star));
                 row.Children.Add(new FontIcon { Glyph = "\uE8A5", FontSize = 20, VerticalAlignment = VerticalAlignment.Center });
                 Grid.SetColumn(body, 1); row.Children.Add(body);
@@ -806,7 +806,7 @@ public sealed partial class MainWindow
             VerticalScrollBarVisibility = ScrollBarVisibility.Auto
         };
         _previewCard.Child = previewScroll;
-        var dialog = new ContentDialog { XamlRoot = RootGrid.XamlRoot, Content = _workspaceDetailHost, CloseButtonText = L("关闭", "Close"), RequestedTheme = RootGrid.ActualTheme };
+        var dialog = new ContentDialog { XamlRoot = RootGrid.XamlRoot, Content = _workspaceDetailHost, CloseButtonText = T("Common.Close"), RequestedTheme = RootGrid.ActualTheme };
         try { await dialog.ShowAsync(); }
         finally
         {

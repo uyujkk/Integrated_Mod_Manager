@@ -1,6 +1,6 @@
 using System.Diagnostics;
 using System.IO.Compression;
-using IntegratedModManager.Core;
+using IntegratedModManager.Core.Archives;
 
 namespace IntegratedModManager.Core.Tests;
 

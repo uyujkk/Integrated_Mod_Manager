@@ -1,4 +1,4 @@
-namespace IntegratedModManager.Core;
+namespace IntegratedModManager.Core.Online;
 
 public sealed record CharacterScreenRegion(double X, double Y, double Width, double Height)
 {

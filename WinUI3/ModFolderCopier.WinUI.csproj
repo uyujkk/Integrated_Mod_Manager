@@ -37,6 +37,11 @@
     <ProjectReference Include="..\IntegratedModManager.EndfieldLaunch\IntegratedModManager.EndfieldLaunch.csproj" />
   </ItemGroup>
 
+  <!-- UI text, one JSON file per language (see UiText.cs). -->
+  <ItemGroup>
+    <EmbeddedResource Include="Strings\*.json" LogicalName="ModFolderCopier.WinUI.Strings.%(Filename)%(Extension)" />
+  </ItemGroup>
+
   <!-- License texts shipped with every build: the release package as a whole is AGPL-3.0-only. -->
   <ItemGroup>
     <None Include="..\LICENSE" Link="licenses\MIT.txt" CopyToOutputDirectory="PreserveNewest" />

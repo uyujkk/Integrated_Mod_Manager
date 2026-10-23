@@ -1,4 +1,6 @@
-namespace IntegratedModManager.Core;
+using IntegratedModManager.Core.Online;
+
+namespace IntegratedModManager.Core.Updates;
 
 public static class ModUpdateRecoveryPolicy
 {

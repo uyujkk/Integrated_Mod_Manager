@@ -1,4 +1,5 @@
-using IntegratedModManager.Core;
+using IntegratedModManager.Core.Deployment;
+using IntegratedModManager.Core.Shortcuts;
 
 namespace IntegratedModManager.Core.Tests;
 

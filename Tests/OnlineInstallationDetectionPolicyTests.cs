@@ -1,4 +1,4 @@
-using IntegratedModManager.Core;
+using IntegratedModManager.Core.Online;
 
 namespace IntegratedModManager.Core.Tests;
 

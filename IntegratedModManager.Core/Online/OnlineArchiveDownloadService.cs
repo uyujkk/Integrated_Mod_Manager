@@ -2,7 +2,7 @@ using System.Diagnostics;
 using System.Net.Http;
 using System.Text;
 
-namespace IntegratedModManager.Core;
+namespace IntegratedModManager.Core.Online;
 
 public sealed record OnlineArchiveDownloadRequest(string DownloadUrl, string ProfileUrl,
     string PreferredFileName, string Title, int ItemId, long ExpectedBytes);

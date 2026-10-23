@@ -81,8 +81,8 @@ public sealed partial class MainWindow
     {
         WorkspaceRepository? existing = FindRepositoryForPreset(preset);
         statusTextBlock.Text = existing is null
-            ? L("点击创建并填写本地路径", "Create it and configure local paths")
-            : L($"已添加：{existing.Name}", $"Already added: {existing.Name}");
+            ? T("Dashboard.CreateItAndConfigureLocalPaths")
+            : T("Dashboard.AlreadyAdded", existing.Name);
     }
 
     private WorkspaceRepository? FindRepositoryForPreset(RepositoryPresetInfo preset)
@@ -184,7 +184,7 @@ public sealed partial class MainWindow
             BorderBrush = GetAppThemeBrush(isSelected ? "AppNavSelectedBorderBrush" : "AppCardBorderBrush"),
             Child = new TextBlock
             {
-                Text = isSelected ? L("当前仓库", "Current") : (snapshot.IsReady ? L("路径就绪", "Ready") : L("待配置", "Setup needed")),
+                Text = isSelected ? T("Dashboard.Current") : (snapshot.IsReady ? T("Dashboard.Ready") : T("Dashboard.SetupNeeded")),
                 Style = (Style)Application.Current.Resources["CaptionTextStyle"],
                 Foreground = GetAppThemeBrush(isSelected ? "AppSecondarySelectedForegroundBrush" : "AppSecondaryDefaultForegroundBrush")
             }
@@ -203,32 +203,32 @@ public sealed partial class MainWindow
         });
         stackPanel.Children.Add(new TextBlock
         {
-            Text = $"{L("Mod 存储", "Mod storage")}: {TrimPreviewPath(repository.SourcePath)}",
+            Text = $"{T("Dashboard.ModStorage")}: {TrimPreviewPath(repository.SourcePath)}",
             Opacity = 0.74,
             TextWrapping = TextWrapping.Wrap
         });
         stackPanel.Children.Add(new TextBlock
         {
-            Text = $"{L("目标目录", "Target")}: {TrimPreviewPath(repository.TargetPath)}",
+            Text = $"{T("Dashboard.Target")}: {TrimPreviewPath(repository.TargetPath)}",
             Opacity = 0.74,
             TextWrapping = TextWrapping.Wrap
         });
         stackPanel.Children.Add(new TextBlock
         {
-            Text = $"{L("启动器", "Launcher")}: {TrimPreviewPath(repository.LauncherPath)}",
+            Text = $"{T("Common.Launcher")}: {TrimPreviewPath(repository.LauncherPath)}",
             Opacity = 0.74,
             TextWrapping = TextWrapping.Wrap
         });
         stackPanel.Children.Add(new TextBlock
         {
             Text = repository.UseDirectoryLinks
-                ? L("部署方式：目录联接", "Deployment: directory junction")
-                : L("部署方式：复制", "Deployment: copy"),
+                ? T("Dashboard.DeploymentDirectoryJunction")
+                : T("Dashboard.DeploymentCopy"),
             Opacity = 0.74
         });
         stackPanel.Children.Add(new TextBlock
         {
-            Text = $"{L("分类", "Categories")} {snapshot.FirstLevelCount}  ·  {L("Mod", "Mods")} {snapshot.ModCount}",
+            Text = $"{T("Common.Categories")} {snapshot.FirstLevelCount}  ·  {T("Dashboard.Mods")} {snapshot.ModCount}",
             FontWeight = Microsoft.UI.Text.FontWeights.Medium
         });
 
@@ -239,7 +239,7 @@ public sealed partial class MainWindow
 
         var switchButton = new Button
         {
-            Content = isSelected ? L("正在使用", "In use") : L("切换到此仓库", "Switch to this repository"),
+            Content = isSelected ? T("Dashboard.InUse") : T("Dashboard.SwitchToThisRepository"),
             Style = (Style)Application.Current.Resources[isSelected ? "PrimaryButtonStyle" : "SecondaryButtonStyle"],
             IsEnabled = !isSelected,
             HorizontalAlignment = HorizontalAlignment.Stretch
@@ -249,7 +249,7 @@ public sealed partial class MainWindow
 
         var manageButton = new Button
         {
-            Content = L("管理", "Manage"),
+            Content = T("Dashboard.Manage"),
             Style = (Style)Application.Current.Resources["SecondaryButtonStyle"]
         };
         manageButton.Click += (_, _) => SwitchRepository(repository.Id, openManager: true);
@@ -265,14 +265,14 @@ public sealed partial class MainWindow
             Style = (Style)Application.Current.Resources["SecondaryButtonStyle"],
             IsEnabled = Uri.TryCreate(repository.WikiUrl, UriKind.Absolute, out _)
         };
-        ToolTipService.SetToolTip(wikiButton, L("打开游戏 Wiki", "Open game Wiki"));
+        ToolTipService.SetToolTip(wikiButton, T("Dashboard.OpenGameWiki"));
         wikiButton.Click += (_, _) => OpenRepositoryWiki(repository);
         Grid.SetColumn(wikiButton, 2);
         actionGrid.Children.Add(wikiButton);
         stackPanel.Children.Add(actionGrid);
 
         border.Child = stackPanel;
-        ToolTipService.SetToolTip(border, L("双击切换到此仓库", "Double-click to switch to this repository"));
+        ToolTipService.SetToolTip(border, T("Dashboard.DoubleClickToSwitchToThis"));
         border.DoubleTapped += (_, args) =>
         {
             if (IsSourceInsideButton(args.OriginalSource as DependencyObject))

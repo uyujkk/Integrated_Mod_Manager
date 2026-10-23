@@ -1,4 +1,4 @@
-namespace IntegratedModManager.Core;
+namespace IntegratedModManager.Core.Online;
 
 public readonly record struct OnlineScanPage<T>(IReadOnlyList<T> Items, int TotalPages);
 

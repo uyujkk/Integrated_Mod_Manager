@@ -1,6 +1,8 @@
 using System.Security;
+using IntegratedModManager.Core.Deployment;
+using IntegratedModManager.Core.Infrastructure;
 
-namespace IntegratedModManager.Core;
+namespace IntegratedModManager.Core.Presets;
 
 public sealed record CombinationPresetState(string ModRelativePath, IReadOnlyList<ModPersistentValue> Values);
 public sealed record CombinationRestoreRequest(

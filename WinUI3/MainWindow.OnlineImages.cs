@@ -1,4 +1,4 @@
-using IntegratedModManager.Core;
+using IntegratedModManager.Core.Infrastructure;
 using Microsoft.UI.Xaml.Media.Imaging;
 
 namespace ModFolderCopier.WinUI;

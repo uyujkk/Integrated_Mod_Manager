@@ -4,7 +4,8 @@ using System.Security.Cryptography;
 using System.Text;
 using System.Text.Json;
 using System.Text.RegularExpressions;
-using IntegratedModManager.Core;
+using IntegratedModManager.Core.Endfield;
+using IntegratedModManager.Core.Online;
 using IntegratedModManager.Data;
 using Microsoft.UI.Xaml;
 using Microsoft.UI.Xaml.Controls;
@@ -23,13 +24,13 @@ public sealed partial class MainWindow
 
     private void InitializeOnlineControls()
     {
-        OnlineSearchTextBox.PlaceholderText = L("搜索当前页：角色、Mod 或作者", "Search this page: character, mod or author");
+        OnlineSearchTextBox.PlaceholderText = T("OnlineFeed.SearchThisPageCharacterModOr");
         OnlineSortComboBox.Items.Clear();
-        OnlineSortComboBox.Items.Add(new ComboBoxItem { Content = L("按热度排序", "Sort by hotness"), Tag = OnlineSortMode.Hotness });
-        OnlineSortComboBox.Items.Add(new ComboBoxItem { Content = L("按下载量排序", "Sort by downloads"), Tag = OnlineSortMode.Downloads });
-        OnlineSortComboBox.Items.Add(new ComboBoxItem { Content = L("按点赞数排序", "Sort by likes"), Tag = OnlineSortMode.Likes });
-        OnlineSortComboBox.Items.Add(new ComboBoxItem { Content = L("按查看数排序", "Sort by views"), Tag = OnlineSortMode.Views });
-        OnlineSortComboBox.Items.Add(new ComboBoxItem { Content = L("按更新时间排序", "Sort by updated time"), Tag = OnlineSortMode.Updated });
+        OnlineSortComboBox.Items.Add(new ComboBoxItem { Content = T("OnlineFeed.SortByHotness"), Tag = OnlineSortMode.Hotness });
+        OnlineSortComboBox.Items.Add(new ComboBoxItem { Content = T("OnlineFeed.SortByDownloads"), Tag = OnlineSortMode.Downloads });
+        OnlineSortComboBox.Items.Add(new ComboBoxItem { Content = T("OnlineFeed.SortByLikes"), Tag = OnlineSortMode.Likes });
+        OnlineSortComboBox.Items.Add(new ComboBoxItem { Content = T("OnlineFeed.SortByViews"), Tag = OnlineSortMode.Views });
+        OnlineSortComboBox.Items.Add(new ComboBoxItem { Content = T("OnlineFeed.SortByUpdatedTime"), Tag = OnlineSortMode.Updated });
         OnlineSortComboBox.SelectedItem = OnlineSortComboBox.Items
             .OfType<ComboBoxItem>()
             .FirstOrDefault(item => item.Tag is OnlineSortMode sortMode && sortMode == _onlineSortMode)
@@ -60,29 +61,29 @@ public sealed partial class MainWindow
             _onlineMods.Clear();
         }
 
-        OnlineRepositoryValueTextBlock.Text = hasRepository ? repository!.Name : L("未选择", "Not selected");
-        OnlineSourceValueTextBlock.Text = hasRepository ? effectiveSource : L("未选择", "Not selected");
+        OnlineRepositoryValueTextBlock.Text = hasRepository ? repository!.Name : T("Common.NotSelected");
+        OnlineSourceValueTextBlock.Text = hasRepository ? effectiveSource : T("Common.NotSelected");
         OnlineReadyValueTextBlock.Text = canLoadOnlineMods
-            ? (_isLoadingOnlineMods ? L("加载中", "Loading") : L("就绪", "Ready"))
-            : L("待配置", "Needs setup");
+            ? (_isLoadingOnlineMods ? T("OnlineFeed.Loading") : T("Common.Ready"))
+            : T("Common.NeedsSetup");
         OnlineCategoryValueTextBlock.Text = hasRepository
             ? (string.IsNullOrWhiteSpace(effectiveGameName)
                 ? effectiveCategoryId
                 : $"{effectiveCategoryId} · {effectiveGameName}")
-            : L("先从左侧选择一个仓库。", "Select a repository from the left first.");
+            : T("OnlineFeed.SelectARepositoryFromTheLeft");
         OnlineNotesValueTextBlock.Text = hasRepository
             ? (string.IsNullOrWhiteSpace(repository!.Notes)
                 ? (string.IsNullOrWhiteSpace(effectiveGameName)
-                    ? L("当前仓库还没有备注，可用来记录目标游戏、来源说明或安装规则。", "No notes yet. Use this area to record the target game, source notes, or install rules.")
-                    : L($"当前目标游戏：{effectiveGameName}", $"Current game: {effectiveGameName}"))
+                    ? T("OnlineFeed.NoNotesYetUseThisArea")
+                    : T("OnlineFeed.CurrentGame", effectiveGameName))
                 : NormalizeUiText(repository.Notes))
-            : L("在线页面会按当前仓库的来源配置加载内容。", "The online page will load content based on the selected repository configuration.");
+            : T("OnlineFeed.TheOnlinePageWillLoadContent");
 
         RefreshOnlineButton.IsEnabled = canLoadOnlineMods && !_isLoadingOnlineMods;
         OnlineLoadingOverlay.Visibility = _isLoadingOnlineMods ? Visibility.Visible : Visibility.Collapsed;
-        OnlineLoadingTextBlock.Text = L("正在读取在线 Mod，请稍候...", "Loading online mods, please wait...");
+        OnlineLoadingTextBlock.Text = T("OnlineFeed.LoadingOnlineModsPleaseWait");
         OnlineStatusTextBlock.Text = string.IsNullOrWhiteSpace(_onlineStatusZh) || string.IsNullOrWhiteSpace(_onlineStatusEn)
-            ? L("点击刷新在线列表后，会从 GameBanana 拉取当前分类下的最新 Mod。", "Click Refresh Online List to fetch the latest mods for the current gameid from GameBanana.")
+            ? T("OnlineFeed.ClickRefreshOnlineListToFetch")
             : L(_onlineStatusZh!, _onlineStatusEn!);
         bool hasCacheStatus = !string.IsNullOrWhiteSpace(_onlineCacheStatusZh)
             && !string.IsNullOrWhiteSpace(_onlineCacheStatusEn);
@@ -94,17 +95,15 @@ public sealed partial class MainWindow
         List<OnlineModCard> visibleMods = GetVisibleOnlineMods(filteredMods);
         RefreshOnlineFilterSummary(visibleMods.Count, _onlineMods.Count);
         OnlinePaginationTextBlock.Text = canLoadOnlineMods
-            ? L(
-                $"第 {_onlineCurrentPage} / {_onlineTotalPages} 页，共 {_onlineTotalCount} 个 Mod",
-                $"Page {_onlineCurrentPage} / {_onlineTotalPages}, {_onlineTotalCount} mods total")
-            : L("等待在线配置", "Waiting for online config");
+            ? T("OnlineFeed.PageModsTotal", _onlineCurrentPage, _onlineTotalPages, _onlineTotalCount)
+            : T("OnlineFeed.WaitingForOnlineConfig");
         OnlinePrevPageButton.IsEnabled = canLoadOnlineMods && !_isLoadingOnlineMods && _onlineCurrentPage > 1;
         OnlineNextPageButton.IsEnabled = canLoadOnlineMods && !_isLoadingOnlineMods && _onlineCurrentPage < _onlineTotalPages;
-        OnlineSearchTextBox.PlaceholderText = L("搜索当前页：角色、Mod 或作者", "Search this page: character, mod or author");
+        OnlineSearchTextBox.PlaceholderText = T("OnlineFeed.SearchThisPageCharacterModOr");
         OnlineSearchTextBox.IsEnabled = canLoadOnlineMods && !_isLoadingOnlineMods;
         OnlineCharacterComboBox.IsEnabled = canLoadOnlineMods && !_isLoadingOnlineMods;
         OnlineSortComboBox.IsEnabled = canLoadOnlineMods && !_isLoadingOnlineMods;
-        OnlineCharacterRailTitleTextBlock.Text = L("按角色浏览", "Browse by character");
+        OnlineCharacterRailTitleTextBlock.Text = T("OnlineFeed.BrowseByCharacter");
         RefreshOnlineCharacterAvatarStrip();
         UpdateOnlineCardLayoutControls();
 
@@ -112,18 +111,16 @@ public sealed partial class MainWindow
         bool resultsChanged = OnlineBrowseStateAdapter.Synchronize(_onlineVisibleMods, visibleMods);
         RefreshOnlineCardPresentation();
         RefreshOnlineCardStates();
-        ToolTipService.SetToolTip(OnlineSearchTextBox, L(
-            "搜索当前页的角色、Mod 名称或作者；输入 author:作者名 可仅按作者筛选。清空搜索可恢复当前页。",
-            "Search this page by character, mod title or author. Use author:name for author-only search. Clear to show this page again."));
+        ToolTipService.SetToolTip(OnlineSearchTextBox, T("OnlineFeed.SearchThisPageByCharacterMod"));
         OnlineEmptyResultsContentControl.Content = null;
         OnlineEmptyResultsContentControl.Visibility = Visibility.Collapsed;
 
         if (!hasRepository)
         {
             ShowOnlineEmptyResults(CreateOnlinePreviewCard(
-                L("等待选择仓库", "Waiting for repository"),
-                L("请先在左侧选择一个仓库，在线资源库会根据这个仓库的来源配置继续加载。", "Select a repository from the left first. The online page will continue from that repository's source settings."),
-                L("未开始", "Not started")));
+                T("OnlineFeed.WaitingForRepository"),
+                T("OnlineFeed.SelectARepositoryFromTheLeft2"),
+                T("OnlineFeed.NotStarted")));
             AnimateOnlineCardsEntrance();
             return;
         }
@@ -131,8 +128,8 @@ public sealed partial class MainWindow
         if (!isSupportedSource)
         {
             ShowOnlineEmptyResults(CreateOnlinePreviewCard(
-                L("来源暂不支持", "Source not supported yet"),
-                L("当前在线页面优先支持 GameBanana。你可以把在线来源改成 GameBanana，或继续保留这个字段等待后续站点接入。", "This online page currently supports GameBanana first. Change the source to GameBanana or keep the field for later site integrations."),
+                T("OnlineFeed.SourceNotSupportedYet"),
+                T("OnlineFeed.ThisOnlinePageCurrentlySupportsGameBanana"),
                 effectiveSource));
             AnimateOnlineCardsEntrance();
             return;
@@ -141,18 +138,18 @@ public sealed partial class MainWindow
         if (_onlineMods.Count == 0)
         {
             ShowOnlineEmptyResults(CreateOnlinePreviewCard(
-                L("准备加载在线列表", "Ready to load real data"),
-                L("这里会根据当前仓库里的 GameBanana 配置拉取真实 Mod 列表，并提供查看详情、打开页面和下载解压入口。", "This page now uses the repository's GameBanana config to load real mods. The first pass shows title, author, updated time, page link, and download entry points."),
-                _isLoadingOnlineMods ? L("加载中", "Loading") : L("可以刷新", "Ready to refresh")));
+                T("OnlineFeed.ReadyToLoadRealData"),
+                T("OnlineFeed.ThisPageNowUsesTheRepository"),
+                _isLoadingOnlineMods ? T("OnlineFeed.Loading") : T("OnlineFeed.ReadyToRefresh")));
         }
         else
         {
             if (visibleMods.Count == 0)
             {
                 ShowOnlineEmptyResults(CreateOnlinePreviewCard(
-                    L("没有匹配的皮肤 Mod", "No matching skin mods"),
-                    L("当前页只显示 Skins 分类。可清空搜索、切换角色或翻页；支持搜索角色、Mod 名称和作者。", "This page shows Skins entries. Clear your search, change character or try another page. Search supports characters, mod titles and authors."),
-                    L("筛选结果为空", "No results")));
+                    T("OnlineFeed.NoMatchingSkinMods"),
+                    T("OnlineFeed.ThisPageShowsSkinsEntriesClear"),
+                    T("OnlineFeed.NoResults")));
             }
         }
 
@@ -235,7 +232,7 @@ public sealed partial class MainWindow
     {
         if (repository is null)
         {
-            return L("未选择", "Not selected");
+            return T("Common.NotSelected");
         }
 
         return string.IsNullOrWhiteSpace(repository.OnlineSourceSite)
@@ -443,7 +440,7 @@ public sealed partial class MainWindow
         int downloadEnrichmentVersion = ++_onlineDownloadEnrichmentVersion;
 
         _isLoadingOnlineMods = true;
-        RefreshOnlineButton.Content = L("加载中...", "Loading...");
+        RefreshOnlineButton.Content = T("Common.Loading");
         RefreshOnlineButton.IsEnabled = false;
         string gameName = GetEffectiveOnlineGameName(repository);
         string categoryLabel = string.IsNullOrWhiteSpace(gameName)
@@ -720,8 +717,8 @@ public sealed partial class MainWindow
             SetOnlineStatus("读取在线 Mod 失败，请稍后重试。", "Failed to load online mods. Please try again later.");
             SetOnlineCacheStatus("连接失败", "Connection failed");
             await ShowMessageAsync(
-                L("读取 GameBanana 列表失败：", "Failed to load the GameBanana list: ") + ex.Message,
-                L("在线加载失败", "Online load failed"));
+                T("OnlineFeed.FailedToLoadTheGameBananaList") + ex.Message,
+                T("OnlineFeed.OnlineLoadFailed"));
         }
         finally
         {
@@ -939,7 +936,7 @@ public sealed partial class MainWindow
             CategoryId = categoryId,
             IsCharacterNameInferred = isCharacterNameInferred,
             RootCategoryName = string.IsNullOrWhiteSpace(rootCategoryName) ? "Skins" : rootCategoryName,
-            Author = string.IsNullOrWhiteSpace(author) ? L("未知作者", "Unknown author") : author,
+            Author = string.IsNullOrWhiteSpace(author) ? T("OnlineFeed.UnknownAuthor") : author,
             AuthorId = authorId,
             Likes = likes,
             Views = views,
@@ -958,7 +955,7 @@ public sealed partial class MainWindow
         int itemId, bool useEndfieldMetadata = false, CancellationToken cancellationToken = default)
     {
         GameBananaModMetadata metadata = await _gameBananaMetadataService.GetModAsync(itemId, cancellationToken);
-        string category = string.IsNullOrWhiteSpace(metadata.CharacterName) ? L("未分类角色", "Uncategorized") : metadata.CharacterName;
+        string category = string.IsNullOrWhiteSpace(metadata.CharacterName) ? T("OnlineFeed.Uncategorized") : metadata.CharacterName;
         string character = ResolveOnlineCharacterName(category, metadata.Title, useEndfieldMetadata);
         OnlineDownloadCandidate? file = OnlineDownloadSelectionPolicy.SelectDefault(metadata.DownloadFiles);
         return new OnlineModCard
@@ -968,7 +965,7 @@ public sealed partial class MainWindow
             IsCharacterNameInferred = IsGenericOnlineCharacterName(category)
                 && !string.Equals(character, category, StringComparison.OrdinalIgnoreCase),
             RootCategoryName = metadata.RootCategoryName,
-            Author = string.IsNullOrWhiteSpace(metadata.Author) ? L("未知作者", "Unknown author") : metadata.Author,
+            Author = string.IsNullOrWhiteSpace(metadata.Author) ? T("OnlineFeed.UnknownAuthor") : metadata.Author,
             AuthorId = metadata.AuthorId,
             Likes = metadata.Likes, Views = metadata.Views, Downloads = metadata.Downloads,
             HotnessScore = CalculateOnlineHotness(metadata.Likes, metadata.Views, metadata.Downloads),

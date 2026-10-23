@@ -7,7 +7,7 @@ internal static class UiCrashDiagnostics
 {
     internal static bool Enabled { get; } = Environment.GetEnvironmentVariable("IMM_UI_DIAGNOSTICS") == "1";
     private static readonly object Gate = new();
-    private static IntegratedModManager.Core.UiActionTrail? _actionTrail;
+    private static IntegratedModManager.Core.Infrastructure.UiActionTrail? _actionTrail;
 
     internal static void RecordAction(string stage, int itemId = 0, double width = 0, double height = 0, bool closed = false)
     {
@@ -16,7 +16,7 @@ internal static class UiCrashDiagnostics
             lock (Gate)
             {
                 _actionTrail ??= new(Path.Combine(AppContext.BaseDirectory, "diagnostics", "ui-action-context.json"),
-                    IntegratedModManager.Core.ApplicationReleasePolicy.VersionLabel);
+                    IntegratedModManager.Core.Updates.ApplicationReleasePolicy.VersionLabel);
                 _actionTrail.Record(stage, itemId, width, height, closed);
             }
         }

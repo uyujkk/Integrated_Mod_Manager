@@ -2,7 +2,7 @@ using System.Runtime.InteropServices.WindowsRuntime;
 using System.Security.Cryptography;
 using System.Text;
 using System.Text.Json;
-using IntegratedModManager.Core;
+using IntegratedModManager.Core.Online;
 using Microsoft.UI.Xaml;
 using Microsoft.UI.Xaml.Controls;
 using Microsoft.UI.Xaml.Media;
@@ -33,35 +33,34 @@ public sealed partial class MainWindow
 
     private void BuildCharacterFollowControls(StackPanel pane)
     {
-        pane.Children.Add(new TextBlock { Text = L("跟随游戏角色（本地识别）", "Follow in-game character (local matching)"), FontSize = 18 });
+        pane.Children.Add(new TextBlock { Text = T("CharacterFollow.FollowInGameCharacterLocalMatching"), FontSize = 18 });
         pane.Children.Add(new TextBlock
         {
-            Text = L("首次框选只随当前出场角色变化的头像／名称区域，再逐个切换角色并保存参考图。不要框选固定队伍列表。",
-                "Select a HUD region that changes only with the active character, then save a reference for each character. Avoid the fixed party list."),
+            Text = T("CharacterFollow.SelectAHUDRegionThatChanges"),
             TextWrapping = TextWrapping.Wrap
         });
         var buttons = new StackPanel { Orientation = Orientation.Horizontal, Spacing = 8 };
-        buttons.Children.Add(ShortcutButton(L("框选识别区域", "Select HUD region"), () => _ = SelectCharacterRegionAsync()));
-        buttons.Children.Add(ShortcutButton(L("保存当前角色参考图", "Save character reference"), () => _ = SaveCharacterReferenceAsync()));
+        buttons.Children.Add(ShortcutButton(T("CharacterFollow.SelectHUDRegion"), () => _ = SelectCharacterRegionAsync()));
+        buttons.Children.Add(ShortcutButton(T("CharacterFollow.SaveCharacterReference"), () => _ = SaveCharacterReferenceAsync()));
         pane.Children.Add(buttons);
-        _characterFollowToggle = LocalizedToggle(L("自动切换角色快捷键", "Automatically follow character shortcuts"));
+        _characterFollowToggle = LocalizedToggle(T("CharacterFollow.AutomaticallyFollowCharacterShortcuts"));
         _characterFollowToggle.Toggled += (_, _) =>
         {
             _characterMatcher.Reset();
             if (_characterFollowToggle.IsOn && (_characterProfile.Region?.IsValid != true || _characterProfile.Templates.Count == 0))
             {
                 _characterFollowToggle.IsOn = false;
-                _characterFollowStatus!.Text = L("请先设置区域并保存角色参考图。", "Select a region and save references first.");
+                _characterFollowStatus!.Text = T("CharacterFollow.SelectARegionAndSaveReferences");
                 return;
             }
             _characterFollowStatus!.Text = _characterFollowToggle.IsOn
-                ? L("等待目标游戏前台画面；连续 3 次可靠匹配后切换。", "Waiting for foreground game; switches after 3 reliable matches.")
-                : L("自动跟随已暂停。", "Automatic following paused.");
+                ? T("CharacterFollow.WaitingForForegroundGameSwitchesAfter")
+                : T("CharacterFollow.AutomaticFollowingPaused");
         };
         pane.Children.Add(_characterFollowToggle);
         // Updated every recognition tick; a fixed height keeps the shortcut list below it still.
         _characterFollowStatus = FixedStatusText(lines: 2, fontSize: 14);
-        _characterFollowStatus.Text = L("未配置；参考图只保存在本机。", "Not configured; references remain local.");
+        _characterFollowStatus.Text = T("CharacterFollow.NotConfiguredReferencesRemainLocal");
         pane.Children.Add(_characterFollowStatus);
         _characterFollowTimer = new System.Threading.Timer(_ =>
             DispatcherQueue.TryEnqueue(() => _ = ObserveCharacterAsync()), null, 700, 700);
@@ -89,14 +88,14 @@ public sealed partial class MainWindow
             _characterProfile.Templates ??= new();
             _characterProfile.PreferredMods ??= new();
             foreach (var pair in _characterProfile.PreferredMods) _characterPreferredMods[pair.Key] = pair.Value;
-            _characterFollowStatus!.Text = L($"已加载 {_characterProfile.Templates.Count} 个角色参考图，自动跟随默认关闭。", $"Loaded {_characterProfile.Templates.Count} character references. Auto-follow starts disabled.");
+            _characterFollowStatus!.Text = T("CharacterFollow.LoadedCharacterReferencesAutoFollowStarts", _characterProfile.Templates.Count);
         }
         catch (Exception ex) { _characterFollowStatus!.Text = ex.Message; _characterProfile = new(); }
     }
 
     private void SaveCharacterFollowProfile()
     {
-        if (_characterProfilePath is null) throw new InvalidOperationException(L("请先选择仓库。", "Select a repository first."));
+        if (_characterProfilePath is null) throw new InvalidOperationException(T("Common.SelectARepositoryFirst"));
         Directory.CreateDirectory(Path.GetDirectoryName(_characterProfilePath)!);
         string temporary = _characterProfilePath + ".tmp";
         _characterProfile.PreferredMods = new(_characterPreferredMods, StringComparer.OrdinalIgnoreCase);
@@ -106,9 +105,9 @@ public sealed partial class MainWindow
 
     private async Task<CharacterFrame> CaptureCharacterReferenceAsync()
     {
-        if (_shortcutTargetPicker?.SelectedItem is not ShortcutTarget target) throw new InvalidOperationException(L("请选择游戏窗口。", "Select a game window."));
+        if (_shortcutTargetPicker?.SelectedItem is not ShortcutTarget target) throw new InvalidOperationException(T("CharacterFollow.SelectAGameWindow"));
         _shortcutOverlay?.AppWindow.Hide();
-        if (!ShortcutInputService.FocusTarget(target)) throw new InvalidOperationException(L("无法切换到游戏窗口。", "Could not focus the game window."));
+        if (!ShortcutInputService.FocusTarget(target)) throw new InvalidOperationException(T("CharacterFollow.CouldNotFocusTheGameWindow"));
         await Task.Delay(300);
         return await Task.Run(() => CharacterScreenCapture.Capture(target, IsEnglishUi));
     }
@@ -147,8 +146,8 @@ public sealed partial class MainWindow
             canvas.PointerReleased += (_, e) => { start = null; canvas.ReleasePointerCapture(e.Pointer); };
             var dialog = new ContentDialog
             {
-                XamlRoot = RootGrid.XamlRoot, Title = L("拖动框选当前角色头像或名称", "Drag over the active character portrait or name"),
-                Content = canvas, PrimaryButtonText = L("保存区域", "Save region"), CloseButtonText = L("取消", "Cancel")
+                XamlRoot = RootGrid.XamlRoot, Title = T("CharacterFollow.DragOverTheActiveCharacterPortrait"),
+                Content = canvas, PrimaryButtonText = T("CharacterFollow.SaveRegion"), CloseButtonText = T("Common.Cancel")
             };
             dialog.Resources["ContentDialogMaxWidth"] = 900d;
             dialog.PrimaryButtonClick += (_, e) => { if (chosen?.IsValid != true) e.Cancel = true; };
@@ -157,7 +156,7 @@ public sealed partial class MainWindow
                 _characterProfile.Region = chosen;
                 _characterProfile.Templates.Clear(); // Different geometry invalidates all old references.
                 SaveCharacterFollowProfile();
-                _characterFollowStatus!.Text = L("区域已保存，请为各角色保存参考图；旧区域参考已清除。", "Region saved. Save references for each character; previous-region references were cleared.");
+                _characterFollowStatus!.Text = T("CharacterFollow.RegionSavedSaveReferencesForEach");
             }
         }
         catch (Exception ex) { if (!_onlineWindowClosed) _characterFollowStatus!.Text = ex.Message; }
@@ -171,17 +170,17 @@ public sealed partial class MainWindow
         _characterFollowToggle!.IsOn = false;
         try
         {
-            string role = SelectedShortcutRole() ?? throw new InvalidOperationException(L("请选择对应角色的 Mod。", "Select a Mod for this character."));
-            CharacterScreenRegion region = _characterProfile.Region ?? throw new InvalidOperationException(L("请先框选识别区域。", "Select a HUD region first."));
+            string role = SelectedShortcutRole() ?? throw new InvalidOperationException(T("CharacterFollow.SelectAModForThisCharacter"));
+            CharacterScreenRegion region = _characterProfile.Region ?? throw new InvalidOperationException(T("CharacterFollow.SelectAHUDRegionFirst"));
             CharacterFrame frame = await CaptureCharacterReferenceAsync();
             if (_onlineWindowClosed) return;
             byte[] feature = CharacterImageMatcher.Extract(frame.Bgra, frame.Width, frame.Height, region);
-            if (!CharacterImageMatcher.HasDetail(feature)) throw new InvalidOperationException(L("该区域过于单一或画面为空，请重新框选。", "The region is too uniform or blank; choose another region."));
+            if (!CharacterImageMatcher.HasDetail(feature)) throw new InvalidOperationException(T("CharacterFollow.TheRegionIsTooUniformOr"));
             _characterProfile.Templates[role] = feature;
             if (_shortcutModPicker?.SelectedItem is ShortcutModOption selected) _characterPreferredMods[role] = selected.Path;
             SaveCharacterFollowProfile();
             Activate();
-            _characterFollowStatus!.Text = L($"已保存 {role} 的参考图（共 {_characterProfile.Templates.Count} 个）。", $"Saved reference for {role} ({_characterProfile.Templates.Count} total).");
+            _characterFollowStatus!.Text = T("CharacterFollow.SavedReferenceForTotal", role, _characterProfile.Templates.Count);
         }
         catch (Exception ex) { if (!_onlineWindowClosed) _characterFollowStatus!.Text = ex.Message; }
         finally { _characterCaptureBusy = false; if (!_onlineWindowClosed && _shortcutOverlayVisible) _shortcutOverlay?.ShowPanel(); }
@@ -195,7 +194,7 @@ public sealed partial class MainWindow
         if (!ShortcutInputService.IsTargetForeground(target))
         {
             _characterMatcher.Reset();
-            _characterFollowStatus!.Text = L("等待目标游戏回到前台。", "Waiting for the selected game to return to the foreground.");
+            _characterFollowStatus!.Text = T("CharacterFollow.WaitingForTheSelectedGameTo");
             return;
         }
         _characterCaptureBusy = true;
@@ -204,7 +203,7 @@ public sealed partial class MainWindow
             // If our panel covers the chosen HUD region, never match the panel itself.
             if (_shortcutOverlayVisible && _shortcutOverlay is not null
                 && CharacterScreenCapture.OverlapsRegion(WinRT.Interop.WindowNative.GetWindowHandle(_shortcutOverlay), target, region))
-            { _characterMatcher.Reset(); _characterFollowStatus!.Text = L("浮窗遮挡识别区域，请移动浮窗。", "Move the overlay away from the recognition region."); return; }
+            { _characterMatcher.Reset(); _characterFollowStatus!.Text = T("CharacterFollow.MoveTheOverlayAwayFromThe"); return; }
             CharacterFrame frame = await Task.Run(() => CharacterScreenCapture.Capture(target, IsEnglishUi));
             if (_onlineWindowClosed || _characterFollowToggle?.IsOn != true) return;
             if (_shortcutTargetPicker?.SelectedItem is not ShortcutTarget current
@@ -213,8 +212,8 @@ public sealed partial class MainWindow
             byte[] feature = CharacterImageMatcher.Extract(frame.Bgra, frame.Width, frame.Height, region);
             string? role = _characterMatcher.Observe(feature, _characterProfile.Templates, out double confidence);
             _characterFollowStatus!.Text = role is null
-                ? L($"等待稳定识别（匹配度 {confidence:P0}）", $"Waiting for stable recognition ({confidence:P0})")
-                : L($"当前角色：{role}（{confidence:P0}）", $"Current character: {role} ({confidence:P0})");
+                ? T("CharacterFollow.WaitingForStableRecognition", confidence)
+                : T("CharacterFollow.CurrentCharacter", role, confidence);
             if (role is null || role.Equals(SelectedShortcutRole(), StringComparison.OrdinalIgnoreCase)) return;
             var candidates = _shortcutModPicker!.ItemsSource as ShortcutModOption[] ?? [];
             var matching = candidates.Where(p => p.Label.Split(Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar)[0].Equals(role, StringComparison.OrdinalIgnoreCase)).ToArray();
@@ -224,7 +223,7 @@ public sealed partial class MainWindow
             var selected = matching.FirstOrDefault(p => _characterPreferredMods.TryGetValue(role, out string? preferred) && p.Path == preferred)
                 ?? (matching.Length == 1 ? matching[0] : null);
             if (selected is null && matching.Length > 1)
-                _characterFollowStatus.Text = L($"{role} 有多个 Mod，请手动选择一次。", $"{role} has multiple Mods; choose one manually first.");
+                _characterFollowStatus.Text = T("CharacterFollow.HasMultipleModsChooseOneManually", role);
             if (selected is null) return;
             _characterAutoSelecting = true;
             try { _shortcutModPicker.SelectedItem = selected; }

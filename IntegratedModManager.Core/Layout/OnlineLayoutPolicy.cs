@@ -1,4 +1,4 @@
-namespace IntegratedModManager.Core;
+namespace IntegratedModManager.Core.Layout;
 
 public readonly record struct OnlineCharacterRailLayout(bool Horizontal, double ColumnWidth);
 

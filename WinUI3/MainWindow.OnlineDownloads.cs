@@ -1,4 +1,5 @@
-using IntegratedModManager.Core;
+using IntegratedModManager.Core.Configuration;
+using IntegratedModManager.Core.Online;
 using Microsoft.UI.Xaml;
 using Microsoft.UI.Xaml.Controls;
 
@@ -12,14 +13,14 @@ public sealed partial class MainWindow
     {
         try
         {
-            var concurrency = new ComboBox { Header = L("同时执行的下载任务", "Concurrent download tasks"), HorizontalAlignment = HorizontalAlignment.Stretch };
+            var concurrency = new ComboBox { Header = T("OnlineDownloads.ConcurrentDownloadTasks"), HorizontalAlignment = HorizontalAlignment.Stretch };
             foreach (int value in Enumerable.Range(1, 4)) concurrency.Items.Add(value);
             concurrency.SelectedItem = _onlinePreferences.ConcurrentDownloads;
-            var remember = new CheckBox { Content = L("按仓库和角色记住确认过的下载目录", "Remember confirmed download folders per repository and character"), IsChecked = _onlinePreferences.RememberDownloadFolders };
+            var remember = new CheckBox { Content = T("OnlineDownloads.RememberConfirmedDownloadFoldersPerRepository"), IsChecked = _onlinePreferences.RememberDownloadFolders };
             var body = new StackPanel { Spacing = 12, MinWidth = 300 };
             body.Children.Add(concurrency); body.Children.Add(remember);
-            body.Children.Add(new TextBlock { Text = L("记住的目录必须仍位于原仓库内；目录失效时会重新询问。关闭此选项可恢复每次确认。", "Remembered folders must still be inside the original repository. Invalid folders prompt again. Turn this off to confirm every time."), TextWrapping = TextWrapping.Wrap, MaxWidth = 440 });
-            var dialog = new ContentDialog { Title = L("下载选项", "Download options"), Content = body, PrimaryButtonText = L("保存", "Save"), CloseButtonText = L("取消", "Cancel"), XamlRoot = RootGrid.XamlRoot, RequestedTheme = RootGrid.ActualTheme };
+            body.Children.Add(new TextBlock { Text = T("OnlineDownloads.RememberedFoldersMustStillBeInside"), TextWrapping = TextWrapping.Wrap, MaxWidth = 440 });
+            var dialog = new ContentDialog { Title = T("Common.DownloadOptions"), Content = body, PrimaryButtonText = T("Common.Save"), CloseButtonText = T("Common.Cancel"), XamlRoot = RootGrid.XamlRoot, RequestedTheme = RootGrid.ActualTheme };
             if (await dialog.ShowAsync() != ContentDialogResult.Primary) return;
             _onlinePreferences.ConcurrentDownloads = (int)concurrency.SelectedItem;
             _onlinePreferences.RememberDownloadFolders = remember.IsChecked == true;
@@ -53,7 +54,7 @@ public sealed partial class MainWindow
         if (confirmedDestination is not null)
         {
             if (!Directory.Exists(confirmedDestination))
-                throw new DirectoryNotFoundException(L("原下载目录已不存在，请从 Mod 卡片重新选择位置。", "The original destination no longer exists. Start from the mod card to choose a new folder."));
+                throw new DirectoryNotFoundException(T("OnlineDownloads.TheOriginalDestinationNoLongerExists"));
             return confirmedDestination;
         }
         string key = DownloadFolderKey(context, mod);
@@ -78,14 +79,14 @@ public sealed partial class MainWindow
         if (kind == OnlineDuplicateKind.None) return true;
         string summary = kind switch
         {
-            OnlineDuplicateKind.SameFile => L("当前仓库已安装相同下载文件。", "This repository already contains this download file."),
-            OnlineDuplicateKind.OtherFile => L("当前仓库已安装该条目的其他文件，可能是不同版本或变体。", "This repository contains another file from this entry, possibly a different version or variant."),
-            _ => L("当前仓库已安装该条目，但旧记录不足以确认是否为同一文件。", "This repository contains this entry, but its older record cannot identify the exact file.")
+            OnlineDuplicateKind.SameFile => T("OnlineDownloads.ThisRepositoryAlreadyContainsThisDownload"),
+            OnlineDuplicateKind.OtherFile => T("OnlineDownloads.ThisRepositoryContainsAnotherFileFrom"),
+            _ => T("OnlineDownloads.ThisRepositoryContainsThisEntryBut")
         };
         var body = new TextBlock { Text = summary + "\n\n" + string.Join("\n", installed.Take(5).Select(item => item.Path))
-            + L("\n\n继续会创建独立副本。", "\n\nContinuing creates a separate copy."), TextWrapping = TextWrapping.Wrap, MaxWidth = 560 };
-        var dialog = new ContentDialog { Title = L("发现已有安装", "Existing installation found"), Content = body,
-            PrimaryButtonText = L("仍然下载独立副本", "Download a separate copy"), CloseButtonText = L("取消", "Cancel"),
+            + T("OnlineDownloads.ContinuingCreatesASeparateCopy"), TextWrapping = TextWrapping.Wrap, MaxWidth = 560 };
+        var dialog = new ContentDialog { Title = T("OnlineDownloads.ExistingInstallationFound"), Content = body,
+            PrimaryButtonText = T("OnlineDownloads.DownloadASeparateCopy"), CloseButtonText = T("Common.Cancel"),
             DefaultButton = ContentDialogButton.Close, XamlRoot = RootGrid.XamlRoot, RequestedTheme = RootGrid.ActualTheme };
         return await dialog.ShowAsync() == ContentDialogResult.Primary;
     }
@@ -102,7 +103,7 @@ public sealed partial class MainWindow
                 capturedContext: request.Context, capturedEndfieldMetadata: request.EndfieldMetadata,
                 capturedCharacterAliases: request.CharacterAliases, confirmedDestination: request.Destination);
         }
-        catch (Exception ex) { await ReportOnlineActionErrorAsync(ex.Message, L("无法恢复下载", "Cannot restart download")); }
+        catch (Exception ex) { await ReportOnlineActionErrorAsync(ex.Message, T("OnlineDownloads.CannotRestartDownload")); }
         finally { task.RetryInProgress = false; if (!_onlineWindowClosed) RefreshDownloadTaskCard(task); }
     }
 }

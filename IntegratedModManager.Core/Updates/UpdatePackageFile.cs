@@ -1,6 +1,6 @@
 using System.Security.Cryptography;
 
-namespace IntegratedModManager.Core;
+namespace IntegratedModManager.Core.Updates;
 
 public static class UpdatePackageFile
 {

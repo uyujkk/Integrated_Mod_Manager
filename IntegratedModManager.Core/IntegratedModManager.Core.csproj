@@ -5,4 +5,7 @@
     <Nullable>enable</Nullable>
     <LangVersion>latest</LangVersion>
   </PropertyGroup>
+  <ItemGroup>
+    <EmbeddedResource Include="Endfield\endfield-characters.json" LogicalName="IntegratedModManager.Core.Endfield.endfield-characters.json" />
+  </ItemGroup>
 </Project>

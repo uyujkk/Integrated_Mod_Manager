@@ -14,4 +14,9 @@
     <Compile Include="..\WinUI3\BetaLocalization.cs" Link="WindowAdapters\BetaLocalization.cs" />
     <Compile Include="..\WinUI3\OnlineImageLoadAdapter.cs" Link="WindowAdapters\OnlineImageLoadAdapter.cs" />
   </ItemGroup>
+
+  <!-- UiTextResourceTests parses the window sources to check every text key and its values. -->
+  <ItemGroup>
+    <PackageReference Include="Microsoft.CodeAnalysis.CSharp" Version="4.11.0" />
+  </ItemGroup>
 </Project>

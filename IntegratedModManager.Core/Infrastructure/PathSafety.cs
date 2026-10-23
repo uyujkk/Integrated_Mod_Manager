@@ -1,4 +1,4 @@
-namespace IntegratedModManager.Core;
+namespace IntegratedModManager.Core.Infrastructure;
 
 public static class PathSafety
 {

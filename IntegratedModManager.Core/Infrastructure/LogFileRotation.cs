@@ -1,4 +1,4 @@
-namespace IntegratedModManager.Core;
+namespace IntegratedModManager.Core.Infrastructure;
 
 /// <summary>
 /// Keeps an append-only local log bounded: once it exceeds the limit it becomes

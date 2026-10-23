@@ -1,4 +1,4 @@
-namespace IntegratedModManager.Core;
+namespace IntegratedModManager.Core.Configuration;
 
 public sealed class ShortcutBinding
 {

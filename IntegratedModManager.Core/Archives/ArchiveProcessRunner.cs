@@ -1,6 +1,6 @@
 using System.Diagnostics;
 
-namespace IntegratedModManager.Core;
+namespace IntegratedModManager.Core.Archives;
 
 /// <summary>
 /// Runs an archive tool with one deadline for both its exit and redirected output.

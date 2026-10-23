@@ -1,6 +1,10 @@
 using System.Collections.ObjectModel;
 using System.Text.RegularExpressions;
-using IntegratedModManager.Core;
+using IntegratedModManager.Core.Archives;
+using IntegratedModManager.Core.Configuration;
+using IntegratedModManager.Core.Online;
+using IntegratedModManager.Core.Repository;
+using IntegratedModManager.Core.Updates;
 using IntegratedModManager.Data;
 using Microsoft.UI;
 using Microsoft.UI.Xaml;

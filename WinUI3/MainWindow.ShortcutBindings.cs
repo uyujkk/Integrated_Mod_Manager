@@ -1,5 +1,6 @@
 using System.Diagnostics;
-using IntegratedModManager.Core;
+using IntegratedModManager.Core.Configuration;
+using IntegratedModManager.Core.Shortcuts;
 using Microsoft.UI;
 using Microsoft.UI.Input;
 using Microsoft.UI.Xaml;
@@ -22,22 +23,22 @@ public sealed partial class MainWindow
 
         EnsureShortcutRowCapacity(InitialShortcutRows);
 
-        OnlineTitleTextBlock.Text = L("在线 Mod 浏览", "Online Mod Browser");
-        OnlineSubtitleTextBlock.Text = L("这里只保留在线 Mod 列表和右侧详情预览；不同游戏的 GameBanana 皮肤分类已经移到设置页按仓库配置。", "This page now focuses on the online mod list and the right-side detail preview. GameBanana skin categories for different games are configured per repository in Settings.");
-        OnlineRepositoryLabelTextBlock.Text = L("当前仓库", "Repository");
-        OnlineSourceLabelTextBlock.Text = L("在线来源", "Online source");
-        OnlineReadyLabelTextBlock.Text = L("准备状态", "Readiness");
-        OnlineConfigTitleTextBlock.Text = L("当前仓库映射", "Current repository mapping");
-        OnlineConfigHintTextBlock.Text = L("在线页面会优先读取当前仓库的来源站点、目标游戏和皮肤分类 ID。未填写游戏名时仍可直接用分类 ID 检索。", "The online page reads the current repository's source site, target game, and skin category ID first. If the game name is empty, the category ID still works on its own.");
-        OnlineCategoryLabelTextBlock.Text = L("分类 ID", "Category ID");
-        OnlineNotesLabelTextBlock.Text = L("备注", "Notes");
-        OnlinePreviewTitleTextBlock.Text = L("在线 Mod 列表", "Online Mod List");
-        OnlinePreviewHintTextBlock.Text = L("当前会从外网 Mod 站点读取列表；如果加载缓慢或失败，可能需要 VPN。详情页支持实验性自动翻译。", "This page loads data from an external mod site. If loading is slow or fails, a VPN may be required. The detail view includes experimental auto-translation.");
+        OnlineTitleTextBlock.Text = T("Common.OnlineModBrowser");
+        OnlineSubtitleTextBlock.Text = T("ShortcutBindings.ThisPageNowFocusesOnThe");
+        OnlineRepositoryLabelTextBlock.Text = T("Common.Repository");
+        OnlineSourceLabelTextBlock.Text = T("Common.OnlineSource");
+        OnlineReadyLabelTextBlock.Text = T("Common.Readiness");
+        OnlineConfigTitleTextBlock.Text = T("Common.CurrentRepositoryMapping");
+        OnlineConfigHintTextBlock.Text = T("ShortcutBindings.TheOnlinePageReadsTheCurrent");
+        OnlineCategoryLabelTextBlock.Text = T("Common.CategoryID");
+        OnlineNotesLabelTextBlock.Text = T("Common.Notes");
+        OnlinePreviewTitleTextBlock.Text = T("Common.OnlineModList");
+        OnlinePreviewHintTextBlock.Text = T("ShortcutBindings.ThisPageLoadsDataFromAn");
         RefreshSettingsButtonLabels();
         RefreshOnlineNavigationButtonLabels();
-        OpenOnlineDetailPageButton.Content = L("打开原页面", "Open Original Page");
-        SelectOnlineDetailDownloadButton.Content = L("选择文件", "Select File");
-        DownloadOnlineDetailButton.Content = L("下载最新压缩包", "Download Latest Archive");
+        OpenOnlineDetailPageButton.Content = T("Common.OpenOriginalPage");
+        SelectOnlineDetailDownloadButton.Content = T("Common.SelectFile");
+        DownloadOnlineDetailButton.Content = T("Common.DownloadLatestArchive");
         if (_activeOnlineDetailMod is null)
         {
             ResetOnlineDetailPaneToPlaceholder();
@@ -46,7 +47,7 @@ public sealed partial class MainWindow
         {
             UpdateOnlineDetailDownloadControls(_activeOnlineDetailMod);
         }
-        OnlineDetailRequirementTitleTextBlock.Text = L("可能存在额外访问要求", "Possible extra access requirements");
+        OnlineDetailRequirementTitleTextBlock.Text = T("Common.PossibleExtraAccessRequirements");
         ApplyShortcutPlaceholders();
         UpdateShortcutRowVisibility();
         UpdateShortcutKeyFocusVisuals();
@@ -73,7 +74,7 @@ public sealed partial class MainWindow
         {
             IsReadOnly = true,
             Style = (Style)Application.Current.Resources["ShortcutInputTextBoxStyle"],
-            PlaceholderText = L("快捷键", "Shortcut")
+            PlaceholderText = T("Common.Shortcut")
         };
         ConfigureShortcutTextBoxTheme(keyBox);
         AttachTrackedTextInput(keyBox);
@@ -87,7 +88,7 @@ public sealed partial class MainWindow
         var actionBox = new TextBox
         {
             Style = (Style)Application.Current.Resources["ShortcutInputTextBoxStyle"],
-            PlaceholderText = L("描述", "Description")
+            PlaceholderText = T("Common.Description")
         };
         ConfigureShortcutTextBoxTheme(actionBox);
         AttachTrackedTextInput(actionBox);
@@ -173,8 +174,8 @@ public sealed partial class MainWindow
             if (string.IsNullOrEmpty(_currentSecondLevelPath))
             {
                 await ShowMessageAsync(
-                    L("请先选择一个第二层 Mod。", "Select a second-level mod first."),
-                    L("未选择 Mod", "No mod selected"));
+                    T("Common.SelectASecondLevelModFirst"),
+                    T("Common.NoModSelected"));
                 return;
             }
 
@@ -251,8 +252,8 @@ public sealed partial class MainWindow
             if (string.IsNullOrWhiteSpace(currentLink))
             {
                 await ShowMessageAsync(
-                    L("请先为当前 Mod 填写一个可访问的网址。", "Enter a valid web link for the current mod first."),
-                    L("未设置链接", "Link not set"));
+                    T("ShortcutBindings.EnterAValidWebLinkFor"),
+                    T("ShortcutBindings.LinkNotSet"));
                 return;
             }
 
@@ -264,13 +265,13 @@ public sealed partial class MainWindow
                     FileName = normalized,
                     UseShellExecute = true
                 });
-                StatusTextBlock.Text = L("已在默认浏览器中打开 Mod 链接。", "Opened the mod link in the default browser.");
+                StatusTextBlock.Text = T("ShortcutBindings.OpenedTheModLinkInThe");
             }
             catch (Exception ex)
             {
                 await ShowMessageAsync(
-                    L("打开链接失败：", "Failed to open link: ") + ex.Message,
-                    L("打开失败", "Open failed"));
+                    T("Common.FailedToOpenLink") + ex.Message,
+                    T("Common.OpenFailed"));
             }
         }
         catch (Exception ex)
@@ -551,7 +552,7 @@ public sealed partial class MainWindow
             ShortcutRowsPanel.Children[i].Visibility = i < _visibleShortcutRows ? Visibility.Visible : Visibility.Collapsed;
         }
 
-        ShortcutRowsTextBlock.Text = L($"当前 {_visibleShortcutRows} 行", $"{_visibleShortcutRows} rows");
+        ShortcutRowsTextBlock.Text = T("ShortcutBindings.Rows", _visibleShortcutRows);
     }
 
     private void RefreshVisibleShortcutDescriptionsForLanguage()

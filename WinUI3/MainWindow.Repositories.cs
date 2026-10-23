@@ -128,12 +128,12 @@ public sealed partial class MainWindow
                 OnlineGameName = preset.DisplayNameEn,
                 OnlineCategoryId = preset.CategoryId,
                 WikiUrl = preset.WikiUrl,
-                Notes = L("内置游戏仓库预设，可继续填写本地路径和启动器。", "Built-in game repository preset. Configure local paths and a launcher as needed.")
+                Notes = T("Repositories.BuiltInGameRepositoryPresetConfigure")
             };
 
             RepositoryEditorResult? result = await PromptForRepositoryAsync(
-                L("预设已经填写在线分类和 Wiki。请补充本地 Mod 存储、目标文件夹及启动器路径。", "The online category and Wiki are prefilled. Add the local mod storage, target folder, and launcher paths."),
-                L($"创建{preset.DisplayNameZh}仓库", $"Create {preset.DisplayNameEn} Repository"),
+                T("Repositories.TheOnlineCategoryAndWikiAre"),
+                T("Repositories.CreateRepository2", preset.DisplayNameZh, preset.DisplayNameEn),
                 draftRepository);
             if (result is null || string.IsNullOrWhiteSpace(result.Name))
             {
@@ -202,9 +202,9 @@ public sealed partial class MainWindow
         try
         {
             string? repositoryName = await PromptForTextAsync(
-                L("输入新仓库名称，后面可以继续补充路径和用途。", "Enter a repository name. You can expand its settings later."),
-                L("新建仓库", "Create Repository"),
-                L("例如：原神正式 / ZZZ Test", "For example: GI Main / ZZZ Test"));
+                T("Repositories.EnterARepositoryNameYouCan"),
+                T("Repositories.CreateRepository"),
+                T("Repositories.ForExampleGIMainZZZTest"));
 
             if (string.IsNullOrWhiteSpace(repositoryName))
             {
@@ -236,7 +236,7 @@ public sealed partial class MainWindow
             SaveConfig();
             ApplyShellState(refreshRepository: false);
             RefreshDashboard();
-            StatusTextBlock.Text = L($"已创建仓库：{repository.Name}", $"Created repository: {repository.Name}");
+            StatusTextBlock.Text = T("Repositories.CreatedRepository", repository.Name);
         }
         catch (Exception ex)
         {
@@ -255,8 +255,8 @@ public sealed partial class MainWindow
             }
 
             string? repositoryName = await PromptForTextAsync(
-                L("输入新的仓库名称。", "Enter a new repository name."),
-                L("重命名仓库", "Rename Repository"),
+                T("Repositories.EnterANewRepositoryName"),
+                T("Repositories.RenameRepository"),
                 repository.Name);
 
             if (string.IsNullOrWhiteSpace(repositoryName))
@@ -269,7 +269,7 @@ public sealed partial class MainWindow
             RefreshSecondaryNavigation();
             RefreshDashboard();
             RefreshRepositoryActionButtons();
-            StatusTextBlock.Text = L($"已重命名仓库：{repository.Name}", $"Renamed repository: {repository.Name}");
+            StatusTextBlock.Text = T("Repositories.RenamedRepository", repository.Name);
         }
         catch (Exception ex)
         {
@@ -292,8 +292,8 @@ public sealed partial class MainWindow
             };
 
             RepositoryEditorResult? result = await PromptForRepositoryAsync(
-                L("创建一个新的自定义仓库，并一次性补充它的主要路径信息。", "Create a new custom repository and fill in its primary paths in one step."),
-                L("新建仓库", "Create Repository"),
+                T("Repositories.CreateANewCustomRepositoryAnd"),
+                T("Repositories.CreateRepository"),
                 draftRepository);
 
             if (result is null || string.IsNullOrWhiteSpace(result.Name))
@@ -317,7 +317,7 @@ public sealed partial class MainWindow
             SaveConfig();
             ApplyShellState(refreshRepository: false);
             RefreshDashboard();
-            StatusTextBlock.Text = L($"已创建仓库：{repository.Name}", $"Created repository: {repository.Name}");
+            StatusTextBlock.Text = T("Repositories.CreatedRepository", repository.Name);
         }
         catch (Exception ex)
         {
@@ -338,8 +338,8 @@ public sealed partial class MainWindow
             SaveSelectedRepositoryFromInputs();
 
             RepositoryEditorResult? result = await PromptForRepositoryAsync(
-                L("编辑当前仓库的名称、路径和预留的在线来源信息。", "Edit the current repository name, paths, and reserved online-source fields."),
-                L("编辑仓库", "Edit Repository"),
+                T("Repositories.EditTheCurrentRepositoryNamePaths"),
+                T("Repositories.EditRepository"),
                 repository);
 
             if (result is null || string.IsNullOrWhiteSpace(result.Name))
@@ -364,7 +364,7 @@ public sealed partial class MainWindow
             RefreshSecondaryNavigation();
             RefreshDashboard();
             RefreshRepositoryActionButtons();
-            StatusTextBlock.Text = L($"已更新仓库：{repository.Name}", $"Updated repository: {repository.Name}");
+            StatusTextBlock.Text = T("Repositories.UpdatedRepository", repository.Name);
         }
         catch (Exception ex)
         {
@@ -380,8 +380,8 @@ public sealed partial class MainWindow
             if (repository is null || _selectedRepositoryId is null)
             {
                 await ShowMessageAsync(
-                    L("请先在左侧选择一个仓库，再编辑它的在线分类配置。", "Select a repository on the left before editing its online category settings."),
-                    L("未选择仓库", "No repository selected"));
+                    T("Repositories.SelectARepositoryOnTheLeft"),
+                    T("Common.NoRepositorySelected"));
                 return;
             }
 
@@ -402,7 +402,7 @@ public sealed partial class MainWindow
             RefreshSettingsPane();
             RefreshOnlinePaneV2();
             ResetOnlineDetailPaneToPlaceholder();
-            StatusTextBlock.Text = L($"已更新在线分类配置：{repository.Name}", $"Updated online category settings: {repository.Name}");
+            StatusTextBlock.Text = T("Repositories.UpdatedOnlineCategorySettings", repository.Name);
         }
         catch (Exception ex)
         {
@@ -418,8 +418,8 @@ public sealed partial class MainWindow
             if (repository is null)
             {
                 await ShowMessageAsync(
-                    L("请先选择一个仓库。", "Select a repository first."),
-                    L("未选择仓库", "No Repository Selected"));
+                    T("Repositories.SelectARepositoryFirst"),
+                    T("Repositories.NoRepositorySelected"));
                 return;
             }
 
@@ -440,8 +440,8 @@ public sealed partial class MainWindow
             if (wikiCharacters.Count == 0)
             {
                 await ShowMessageAsync(
-                    L("暂时没有读取到 Wiki 角色目录。请检查当前仓库的 Wiki 地址和网络连接，然后刷新在线列表。", "The Wiki character catalog is not available yet. Check this repository's Wiki URL and network connection, then refresh the online list."),
-                    L("角色目录不可用", "Character Catalog Unavailable"));
+                    T("Repositories.TheWikiCharacterCatalogIsNot"),
+                    T("Repositories.CharacterCatalogUnavailable"));
                 return;
             }
 
@@ -455,7 +455,7 @@ public sealed partial class MainWindow
             ComboBox wikiCharacterBox = new()
             {
                 HorizontalAlignment = HorizontalAlignment.Stretch,
-                PlaceholderText = L("选择 Wiki 角色", "Select a Wiki character")
+                PlaceholderText = T("Repositories.SelectAWikiCharacter")
             };
             foreach (OnlineCharacterOption character in wikiCharacters)
             {
@@ -470,8 +470,8 @@ public sealed partial class MainWindow
             {
                 HorizontalAlignment = HorizontalAlignment.Stretch,
                 PlaceholderText = categoryCandidates.Count == 0
-                    ? L("尚未发现分类，可直接填写 ID", "No categories discovered; enter an ID below")
-                    : L("选择已发现的 GameBanana 分类", "Select a discovered GameBanana category")
+                    ? T("Repositories.NoCategoriesDiscoveredEnterAnID")
+                    : T("Repositories.SelectADiscoveredGameBananaCategory")
             };
             foreach (OnlineCharacterOption candidate in categoryCandidates)
             {
@@ -485,7 +485,7 @@ public sealed partial class MainWindow
             TextBox categoryIdBox = new()
             {
                 HorizontalAlignment = HorizontalAlignment.Stretch,
-                PlaceholderText = L("GameBanana 角色分类 ID", "GameBanana character category ID")
+                PlaceholderText = T("Repositories.GameBananaCharacterCategoryID")
             };
             TextBlock mappingStatus = new()
             {
@@ -498,7 +498,7 @@ public sealed partial class MainWindow
                 if (wikiCharacterBox.SelectedItem is not ComboBoxItem { Tag: OnlineCharacterOption character })
                 {
                     categoryIdBox.Text = string.Empty;
-                    mappingStatus.Text = L("先选择需要修正的 Wiki 角色。", "Select the Wiki character to correct first.");
+                    mappingStatus.Text = T("Repositories.SelectTheWikiCharacterToCorrect");
                     return;
                 }
 
@@ -511,10 +511,10 @@ public sealed partial class MainWindow
                     .FirstOrDefault(item => item.Tag is OnlineCharacterOption candidate
                         && string.Equals(candidate.CategoryId, categoryIdBox.Text, StringComparison.OrdinalIgnoreCase));
                 mappingStatus.Text = hasManualMapping
-                    ? L("当前使用手动映射，保存后始终优先采用。", "A manual mapping is active and always takes priority.")
+                    ? T("Repositories.AManualMappingIsActiveAnd")
                     : string.IsNullOrWhiteSpace(character.CategoryId)
-                        ? L("当前尚未自动匹配到分类。", "No category has been matched automatically.")
-                        : L("当前显示自动匹配结果；保存后会固定为手动映射。", "This is an automatic match. Saving will pin it as a manual mapping.");
+                        ? T("Repositories.NoCategoryHasBeenMatchedAutomatically")
+                        : T("Repositories.ThisIsAnAutomaticMatchSaving");
             }
 
             wikiCharacterBox.SelectionChanged += (_, _) => SyncSelectedWikiCharacter();
@@ -530,23 +530,21 @@ public sealed partial class MainWindow
             StackPanel panel = new() { Spacing = 10, MinWidth = 520, MaxWidth = 620 };
             panel.Children.Add(new TextBlock
             {
-                Text = L(
-                    "当 Wiki 名称与 GameBanana 分类名称不一致时，可在这里固定绑定。手动映射仅作用于当前仓库。",
-                    "When Wiki and GameBanana names differ, pin the correct category here. Manual mappings only affect the current repository."),
+                Text = T("Repositories.WhenWikiAndGameBananaNamesDiffer"),
                 TextWrapping = TextWrapping.Wrap
             });
-            panel.Children.Add(CreateLabeledEditor(L("Wiki 角色", "Wiki character"), wikiCharacterBox));
-            panel.Children.Add(CreateLabeledEditor(L("已发现分类", "Discovered category"), gameBananaCategoryBox));
-            panel.Children.Add(CreateLabeledEditor(L("分类 ID", "Category ID"), categoryIdBox));
+            panel.Children.Add(CreateLabeledEditor(T("Repositories.WikiCharacter"), wikiCharacterBox));
+            panel.Children.Add(CreateLabeledEditor(T("Repositories.DiscoveredCategory"), gameBananaCategoryBox));
+            panel.Children.Add(CreateLabeledEditor(T("Common.CategoryID"), categoryIdBox));
             panel.Children.Add(mappingStatus);
 
             ContentDialog dialog = new()
             {
-                Title = L("角色分类映射", "Character Category Mapping"),
+                Title = T("Common.CharacterCategoryMapping"),
                 Content = panel,
-                PrimaryButtonText = L("保存映射", "Save Mapping"),
-                SecondaryButtonText = L("清除映射", "Clear Mapping"),
-                CloseButtonText = L("取消", "Cancel"),
+                PrimaryButtonText = T("Repositories.SaveMapping"),
+                SecondaryButtonText = T("Repositories.ClearMapping"),
+                CloseButtonText = T("Common.Cancel"),
                 DefaultButton = ContentDialogButton.Primary,
                 XamlRoot = RootGrid.XamlRoot
             };
@@ -565,8 +563,8 @@ public sealed partial class MainWindow
                     || parsedCategoryId <= 0)
                 {
                     await ShowMessageAsync(
-                        L("请输入有效的数字分类 ID。", "Enter a valid numeric category ID."),
-                        L("分类 ID 无效", "Invalid Category ID"));
+                        T("Repositories.EnterAValidNumericCategoryID"),
+                        T("Repositories.InvalidCategoryID"));
                     return;
                 }
 
@@ -608,24 +606,22 @@ public sealed partial class MainWindow
             if (_repositories.Count <= 1)
             {
                 await ShowMessageAsync(
-                    L("至少要保留一个仓库。", "At least one repository must remain."),
-                    L("无法删除", "Cannot delete"));
+                    T("Repositories.AtLeastOneRepositoryMustRemain"),
+                    T("Repositories.CannotDelete"));
                 return;
             }
 
             bool confirmed = await ShowConfirmAsync(
-                L($"确定要删除这个仓库吗？\n\n{repository.Name}\n\n仓库配置会被移除，但不会删除磁盘上的 Mod 文件夹。",
-                  $"Delete this repository?\n\n{repository.Name}\n\nThe repository configuration will be removed, but no files on disk will be deleted."),
-                L("首次确认", "First confirmation"));
+                T("Repositories.DeleteThisRepositoryTheRepositoryConfiguration", repository.Name),
+                T("Repositories.FirstConfirmation"));
             if (!confirmed)
             {
                 return;
             }
 
             bool confirmedAgain = await ShowConfirmAsync(
-                L($"请再次确认删除仓库：{repository.Name}\n\n此操作无法撤销。",
-                  $"Please confirm again to delete repository: {repository.Name}\n\nThis action cannot be undone."),
-                L("第二次确认", "Second confirmation"));
+                T("Repositories.PleaseConfirmAgainToDeleteRepository", repository.Name),
+                T("Repositories.SecondConfirmation"));
             if (!confirmedAgain)
             {
                 return;
@@ -655,7 +651,7 @@ public sealed partial class MainWindow
 
             SaveShellConfig();
             ApplyShellState(refreshRepository: _currentPrimarySection == PrimarySection.Repository);
-            StatusTextBlock.Text = L($"已删除仓库：{repository.Name}", $"Deleted repository: {repository.Name}");
+            StatusTextBlock.Text = T("Repositories.DeletedRepository", repository.Name);
         }
         catch (Exception ex)
         {

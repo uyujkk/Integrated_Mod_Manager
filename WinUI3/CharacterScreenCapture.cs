@@ -7,7 +7,7 @@ internal sealed record CharacterFrame(int Width, int Height, byte[] Bgra);
 /// <summary>Visible desktop pixels in the selected game's client rectangle. No process-memory reads.</summary>
 internal static class CharacterScreenCapture
 {
-    public static bool OverlapsRegion(nint overlay, ShortcutTarget target, IntegratedModManager.Core.CharacterScreenRegion region)
+    public static bool OverlapsRegion(nint overlay, ShortcutTarget target, IntegratedModManager.Core.Online.CharacterScreenRegion region)
     {
         if (!GetClientRect(target.Handle, out var client) || !GetWindowRect(overlay, out var panel)) return true;
         var origin = new Point();

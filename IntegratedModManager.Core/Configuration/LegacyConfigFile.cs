@@ -1,7 +1,7 @@
 using System.Globalization;
 using System.Text;
 
-namespace IntegratedModManager.Core;
+namespace IntegratedModManager.Core.Configuration;
 
 /// <summary>
 /// The contents of config.ini. A null scalar means the line was absent, so callers keep

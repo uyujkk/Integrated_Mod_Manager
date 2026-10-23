@@ -1,4 +1,4 @@
-namespace IntegratedModManager.Core;
+namespace IntegratedModManager.Core.Layout;
 
 public readonly record struct DialogViewport(double MaxWidth, double ContentHeight);
 

@@ -1,6 +1,6 @@
 using System.Text.RegularExpressions;
 
-namespace IntegratedModManager.Core;
+namespace IntegratedModManager.Core.Updates;
 
 public static class UpdateChecksumParser
 {

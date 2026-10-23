@@ -1,7 +1,7 @@
 using System.Collections.ObjectModel;
 using System.Diagnostics;
 using System.Text.Json;
-using IntegratedModManager.Core;
+using IntegratedModManager.Core.Repository;
 using IntegratedModManager.Data;
 
 // Developer-only harness: uses existing synthetic fixtures read-only and writes

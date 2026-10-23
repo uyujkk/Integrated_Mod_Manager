@@ -1,7 +1,7 @@
 using System.Globalization;
 using System.Text.RegularExpressions;
 
-namespace IntegratedModManager.Core;
+namespace IntegratedModManager.Core.Shortcuts;
 
 public enum ShortcutUnsupportedReason { None, Empty, Mouse, Controller, UnknownKey, Contradictory, TooManyKeys, SystemShortcut }
 

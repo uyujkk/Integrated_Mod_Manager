@@ -1,7 +1,7 @@
 using System.Globalization;
 using System.Security;
 
-namespace IntegratedModManager.Core;
+namespace IntegratedModManager.Core.Repository;
 
 public sealed record RepositoryModIndexEntry(
     string FirstLevelPath, string ModPath, string FolderStampUtc,

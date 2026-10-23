@@ -1,6 +1,6 @@
 using System.Collections.Specialized;
 using System.ComponentModel;
-using IntegratedModManager.Core;
+using IntegratedModManager.Core.Repository;
 
 namespace IntegratedModManager.Core.Tests;
 

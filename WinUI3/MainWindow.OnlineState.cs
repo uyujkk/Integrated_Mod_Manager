@@ -1,4 +1,3 @@
-using IntegratedModManager.Core;
 
 namespace ModFolderCopier.WinUI;
 

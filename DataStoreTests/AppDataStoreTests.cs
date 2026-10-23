@@ -1,5 +1,5 @@
 using Microsoft.Data.Sqlite;
-using IntegratedModManager.Core;
+using IntegratedModManager.Core.Repository;
 using IntegratedModManager.Data;
 using Xunit;
 

@@ -1,4 +1,4 @@
-namespace IntegratedModManager.Core;
+namespace IntegratedModManager.Core.Infrastructure;
 
 public sealed record UiActionEntry(DateTimeOffset AtUtc, string Stage, int ItemId, double Width, double Height);
 public sealed class UiActionTrailDocument

@@ -1,4 +1,4 @@
-namespace IntegratedModManager.Core;
+namespace IntegratedModManager.Core.Online;
 
 /// <summary>A cancelable FIFO queue. Lowering the limit lets current work finish.</summary>
 public sealed class OnlineDownloadScheduler

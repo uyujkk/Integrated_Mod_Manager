@@ -1,5 +1,5 @@
 using System.Text;
-using IntegratedModManager.Core;
+using IntegratedModManager.Core.Presets;
 
 namespace IntegratedModManager.Core.Tests;
 

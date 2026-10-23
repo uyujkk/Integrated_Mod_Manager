@@ -1,4 +1,4 @@
-using IntegratedModManager.Core;
+using IntegratedModManager.Core.Endfield;
 
 namespace IntegratedModManager.Core.Tests;
 

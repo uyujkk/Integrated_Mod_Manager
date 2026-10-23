@@ -94,7 +94,7 @@ public sealed partial class MainWindow
             {
                 _trayHintShown = true;
                 ShowTrayBalloon(
-                    L("仍在后台运行", "Still running in the background"),
+                    T("Tray.StillRunningInTheBackground"),
                     BuildTraySummaryMessage());
             }
         });
@@ -204,21 +204,19 @@ public sealed partial class MainWindow
 
     private void RefreshTraySetting()
     {
-        TraySettingTitleTextBlock.Text = L("最小化到系统托盘", "Minimize to system tray");
-        TraySettingDescriptionTextBlock.Text = L(
-            "开启后，最小化窗口会继续在后台运行；双击托盘图标恢复。",
-            "Keep the app running in the background when minimized; double-click the tray icon to restore it.");
+        TraySettingTitleTextBlock.Text = T("Tray.MinimizeToSystemTray");
+        TraySettingDescriptionTextBlock.Text = T("Tray.KeepTheAppRunningInThe");
         _isApplyingTraySetting = true;
         MinimizeToTrayToggleSwitch.IsOn = _minimizeToTray;
-        MinimizeToTrayToggleSwitch.OnContent = L("开", "On");
-        MinimizeToTrayToggleSwitch.OffContent = L("关", "Off");
+        MinimizeToTrayToggleSwitch.OnContent = T("Common.On2");
+        MinimizeToTrayToggleSwitch.OffContent = T("Common.Off2");
         _isApplyingTraySetting = false;
     }
 
     private void UpdateTrayLanguage()
     {
-        _trayOpenText = L("打开主窗口", "Open main window");
-        _trayExitText = L("退出", "Exit");
+        _trayOpenText = T("Tray.OpenMainWindow");
+        _trayExitText = T("Tray.Exit");
         RefreshTrayStatus();
     }
 
@@ -236,13 +234,13 @@ public sealed partial class MainWindow
     private string BuildTrayRepositoryLine()
     {
         WorkspaceRepository? repository = GetSelectedRepository();
-        string name = repository?.Name ?? L("未选择", "Not selected");
-        return L($"当前仓库：{name}", $"Repository: {name}");
+        string name = repository?.Name ?? T("Common.NotSelected");
+        return T("Tray.Repository", name);
     }
 
     private string BuildTrayVersionLine()
     {
-        return L($"集成化 Mod 管理器 {AppVersion}", $"Integrated Mod Manager {AppVersion}");
+        return T("Common.IntegratedModManager", AppVersion);
     }
 
     private string BuildTrayModLine()
@@ -250,19 +248,19 @@ public sealed partial class MainWindow
         WorkspaceRepository? repository = GetSelectedRepository();
         if (repository is null)
         {
-            return L("Mod：0 · 待配置", "Mods: 0 · Needs setup");
+            return T("Tray.Mods0NeedsSetup");
         }
 
         RepositorySnapshot snapshot = BuildRepositorySnapshot(repository);
-        string state = snapshot.IsReady ? L("就绪", "Ready") : L("待配置", "Needs setup");
-        return L($"Mod：{snapshot.ModCount} · {state}", $"Mods: {snapshot.ModCount} · {state}");
+        string state = snapshot.IsReady ? T("Common.Ready") : T("Common.NeedsSetup");
+        return T("Tray.Mods", snapshot.ModCount, state);
     }
 
     private string BuildTraySourceLine()
     {
         WorkspaceRepository? repository = GetSelectedRepository();
-        string source = repository is null ? L("未选择", "Not selected") : GetEffectiveOnlineSource(repository);
-        return L($"在线来源：{source}", $"Online source: {source}");
+        string source = repository is null ? T("Common.NotSelected") : GetEffectiveOnlineSource(repository);
+        return T("Tray.OnlineSource", source);
     }
 
     private string BuildTraySummaryMessage()
@@ -273,16 +271,14 @@ public sealed partial class MainWindow
             BuildTrayRepositoryLine(),
             BuildTrayModLine(),
             BuildTraySourceLine(),
-            L("双击托盘图标恢复窗口。", "Double-click the tray icon to restore the window."));
+            T("Tray.DoubleClickTheTrayIconTo"));
     }
 
     private string BuildTrayTooltip()
     {
-        string repository = GetSelectedRepository()?.Name ?? L("未选择", "Not selected");
+        string repository = GetSelectedRepository()?.Name ?? T("Common.NotSelected");
         string modSummary = BuildTrayModLine();
-        string tooltip = L(
-            $"集成化 Mod 管理器 {AppVersion} · {repository} · {modSummary}",
-            $"Integrated Mod Manager {AppVersion} · {repository} · {modSummary}");
+        string tooltip = T("Tray.IntegratedModManager", AppVersion, repository, modSummary);
         return tooltip.Length < 128 ? tooltip : tooltip[..127];
     }
 

@@ -1,5 +1,5 @@
 using System.Text.Json;
-using IntegratedModManager.Core;
+using IntegratedModManager.Core.Repository;
 
 namespace IntegratedModManager.Core.Tests;
 

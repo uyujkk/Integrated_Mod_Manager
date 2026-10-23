@@ -1,4 +1,4 @@
-namespace IntegratedModManager.Core;
+namespace IntegratedModManager.Core.Updates;
 
 /// <summary>Stable release; application update checks honor the saved user preference.</summary>
 public static class ApplicationReleasePolicy

@@ -2,7 +2,7 @@ using System.Collections.ObjectModel;
 using System.Collections.Specialized;
 using System.ComponentModel;
 
-namespace IntegratedModManager.Core;
+namespace IntegratedModManager.Core.Repository;
 
 /// <summary>UI-thread-owned collection. Replace a snapshot with at most one Reset,
 /// preserving normal ObservableCollection behavior for individual edits.</summary>

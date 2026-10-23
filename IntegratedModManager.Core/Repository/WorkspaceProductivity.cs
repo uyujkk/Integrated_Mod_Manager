@@ -1,6 +1,6 @@
 using System.Text.Json;
 
-namespace IntegratedModManager.Core;
+namespace IntegratedModManager.Core.Repository;
 
 public sealed class OnlineBrowseSession
 {

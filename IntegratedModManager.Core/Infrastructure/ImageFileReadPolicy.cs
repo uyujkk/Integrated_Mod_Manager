@@ -1,4 +1,4 @@
-namespace IntegratedModManager.Core;
+namespace IntegratedModManager.Core.Infrastructure;
 
 /// <summary>Bounded .NET image streams, independent of WinRT path/URI parsing.</summary>
 public static class ImageFileReadPolicy

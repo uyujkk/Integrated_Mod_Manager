@@ -1,5 +1,8 @@
 using System.Text.Json;
-using IntegratedModManager.Core;
+using IntegratedModManager.Core.Configuration;
+using IntegratedModManager.Core.Repository;
+using IntegratedModManager.Core.Shortcuts;
+using IntegratedModManager.Core.Updates;
 using Microsoft.UI.Windowing;
 using Windows.Graphics;
 
@@ -268,7 +271,7 @@ public sealed partial class MainWindow
         {
             if (throwOnError) throw;
             LogApplicationIssue("Save repository configuration", ex);
-            StatusTextBlock.Text = L("保存仓库配置失败。", "Failed to save repository config.");
+            StatusTextBlock.Text = T("Configuration.FailedToSaveRepositoryConfig");
         }
     }
 
@@ -334,7 +337,7 @@ public sealed partial class MainWindow
         catch (Exception ex)
         {
             LogApplicationIssue("Load configuration", ex);
-            StatusTextBlock.Text = L("配置读取失败，已忽略旧配置。", "Failed to load config. Older config values were ignored.");
+            StatusTextBlock.Text = T("Configuration.FailedToLoadConfigOlderConfig");
         }
 
         if (DeduplicateTrackedModOrigins())
@@ -371,7 +374,7 @@ public sealed partial class MainWindow
         catch (Exception ex)
         {
             LogApplicationIssue("Save configuration", ex);
-            StatusTextBlock.Text = L("配置保存失败，但不影响当前使用。", "Failed to save config, but the app can continue.");
+            StatusTextBlock.Text = T("Configuration.FailedToSaveConfigButThe");
             return false;
         }
     }
@@ -381,9 +384,7 @@ public sealed partial class MainWindow
         ConfigurationReadResult result = _configurationFiles.Read(filePath, validator);
         if (result.RestoredFromBackup)
         {
-            StatusTextBlock.Text = L(
-                $"配置 {Path.GetFileName(filePath)} 损坏，已自动恢复最近备份。",
-                $"{Path.GetFileName(filePath)} was damaged and the latest backup was restored automatically.");
+            StatusTextBlock.Text = T("Configuration.WasDamagedAndTheLatestBackup", Path.GetFileName(filePath));
         }
 
         return result.Text;
