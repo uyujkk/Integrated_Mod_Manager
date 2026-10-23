@@ -27,7 +27,7 @@ Every file keeps the `IntegratedModManager.Core` namespace; folders only group f
 | 目录 / Folder | 内容 / Contents |
 | --- | --- |
 | `Archives` | `ArchiveExtractor`（ZIP、7-Zip、Bandizip、Windows tar）、清单校验、`ArchiveErrors` 错误分类、导入布局。Extraction, listing validation, error kinds, import layout. |
-| `Deployment` | 目录联接、组合部署、INI 冲突检测、旧库整理导入、角色文件夹规划。Junctions, combination deployment, INI conflicts, library import, character folders. |
+| `Deployment` | 安装事务与回滚（`ModInstallTransactions`）、文件冲突检测、目录联接、组合部署、INI 冲突检测、旧库整理导入、角色文件夹规划。Install transactions and rollback, file conflicts, junctions, combination deployment, INI conflicts, library import, character folders. |
 | `Presets` | 组合预设、恢复预览、可迁移组合包。Combination presets, restore preview, portable bundles. |
 | `Online` | GameBanana 元数据与下载数、下载传输与会话、浏览与预览策略。GameBanana metadata, download transport and sessions, browse policies. |
 | `Endfield` | 终末地桥接与干员目录解析。Endfield bridge integration and operator catalog parsing. |
@@ -35,7 +35,7 @@ Every file keeps the `IntegratedModManager.Core` namespace; folders only group f
 | `Updates` | 版本信息、更新包校验、Mod 更新替换与恢复。Release policy, update packages, Mod update replacement. |
 | `Repository` | 仓库扫描、性能记录、工作区策略、批量集合。Repository scanning, performance, workspace policies. |
 | `Layout` | 与控件无关的窗口和弹窗布局策略。Control-free window and dialog layout policies. |
-| `Infrastructure` | 路径安全、安全目录遍历、恢复用 JSON、日志轮换等通用工具。Path safety, safe tree inspection, recovery JSON, log rotation. |
+| `Infrastructure` | 路径安全、不跟随链接的目录遍历/复制/删除（`SafeDirectoryTree`）、错误分类标记（`ErrorTags`）、恢复用 JSON、日志轮换。Path safety, link-safe tree inspect/copy/delete, error tags, recovery JSON, log rotation. |
 
 ## WinUI 主窗口 / MainWindow
 
@@ -58,7 +58,7 @@ Records and view models used by the window live in `WinUI3/Models`, one type per
 
 - 新逻辑若不需要控件，放进 Core 并补单元测试；窗口只负责调用、显示和本地化。
   Logic that needs no controls goes into Core with unit tests; the window calls it, displays results and localizes them.
-- Core 抛出的解压错误带 `ArchiveErrorKind`，界面在 `MainWindow.Archives.cs` 的一张表中把它映射为中英文提示，不匹配异常消息文本。
-  Core archive failures carry an `ArchiveErrorKind`; `MainWindow.Archives.cs` maps each kind to Chinese/English text in one table instead of matching message text.
+- Core 用 `ErrorTags` 给异常附加错误类型（如 `ArchiveErrorKind`、`InstallTransactionErrorKind`），不改变异常类型；界面在 `MainWindow.Archives.cs`、`MainWindow.InstallTransactions.cs` 各用一张表映射为中英文提示，不匹配异常消息文本。
+  Core tags failures with a kind through `ErrorTags` (for example `ArchiveErrorKind`, `InstallTransactionErrorKind`) without changing the exception type; `MainWindow.Archives.cs` and `MainWindow.InstallTransactions.cs` each map kinds to Chinese/English text in one table instead of matching message text.
 - 路径包含判断统一使用 `PathSafety.ResolveInsideDirectory`、`IsSameOrInside` 或 `IsStrictlyInside`。
   Path containment checks use `PathSafety.ResolveInsideDirectory`, `IsSameOrInside` or `IsStrictlyInside`.

@@ -42,13 +42,11 @@ public enum ArchiveErrorKind
 /// <summary>
 /// Tags archive failures with a kind so callers can localize them without matching
 /// message text. <see cref="InvalidDataException"/> is sealed, so the kind travels in
-/// <see cref="Exception.Data"/> and existing exception-type handlers still apply.
+/// <see cref="Exception.Data"/> (see <see cref="ErrorTags"/>) and existing
+/// exception-type handlers still apply.
 /// </summary>
 public static class ArchiveErrors
 {
-    private const string KindKey = "IntegratedModManager.ArchiveErrorKind";
-    private const string DetailKey = "IntegratedModManager.ArchiveErrorDetail";
-
     public static InvalidDataException Create(ArchiveErrorKind kind, string message, string? detail = null, Exception? inner = null)
     {
         return Tag(new InvalidDataException(message, inner), kind, detail);
@@ -56,31 +54,11 @@ public static class ArchiveErrors
 
     public static TException Tag<TException>(TException exception, ArchiveErrorKind kind, string? detail = null)
         where TException : Exception
-    {
-        ArgumentNullException.ThrowIfNull(exception);
-        exception.Data[KindKey] = kind;
-        if (detail is not null)
-        {
-            exception.Data[DetailKey] = detail;
-        }
+        => ErrorTags.Tag(exception, kind, detail);
 
-        return exception;
-    }
+    public static bool Is(Exception exception, ArchiveErrorKind kind) => KindOf(exception) == kind;
 
-    public static bool Is(Exception exception, ArchiveErrorKind kind)
-    {
-        return KindOf(exception) == kind;
-    }
+    public static ArchiveErrorKind? KindOf(Exception exception) => ErrorTags.KindOf<ArchiveErrorKind>(exception);
 
-    public static ArchiveErrorKind? KindOf(Exception exception)
-    {
-        ArgumentNullException.ThrowIfNull(exception);
-        return exception.Data[KindKey] is ArchiveErrorKind kind ? kind : null;
-    }
-
-    public static string? DetailOf(Exception exception)
-    {
-        ArgumentNullException.ThrowIfNull(exception);
-        return exception.Data[DetailKey] as string;
-    }
+    public static string? DetailOf(Exception exception) => ErrorTags.DetailOf(exception);
 }

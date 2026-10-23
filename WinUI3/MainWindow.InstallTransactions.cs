@@ -1,9 +1,6 @@
-using System.Text;
-using System.Text.Json;
 using IntegratedModManager.Core;
 using Microsoft.UI.Xaml;
 using Microsoft.UI.Xaml.Controls;
-using IOFileAttributes = System.IO.FileAttributes;
 
 namespace ModFolderCopier.WinUI;
 
@@ -114,72 +111,7 @@ public sealed partial class MainWindow
         string targetRoot,
         IEnumerable<string> targetPathsToIgnore)
     {
-        HashSet<string> ignoredTargets = targetPathsToIgnore
-            .Select(Path.GetFullPath)
-            .ToHashSet(StringComparer.OrdinalIgnoreCase);
-        HashSet<string> sourceFiles = InspectDirectoryTreeSafely(sourcePath).Files
-            .Select(path => Path.GetRelativePath(sourcePath, path))
-            .Where(IsConflictRelevantRelativePath)
-            .ToHashSet(StringComparer.OrdinalIgnoreCase);
-        var conflicts = new List<string>();
-        foreach (string installedModPath in Directory.GetDirectories(targetRoot))
-        {
-            if (ignoredTargets.Contains(Path.GetFullPath(installedModPath)))
-            {
-                continue;
-            }
-
-            string inspectionRoot = installedModPath;
-            if (DirectoryLinkDeployment.IsBrokenLink(installedModPath))
-            {
-                // Its source was deleted or renamed: nothing to compare, and it must not
-                // stop every other installation. Cleanup is offered before deployment.
-                continue;
-            }
-
-            if (DirectoryLinkDeployment.IsDirectoryLink(installedModPath))
-            {
-                inspectionRoot = DirectoryLinkDeployment.TryGetTarget(installedModPath)
-                    ?? throw new IOException(L("无法读取已安装目录联接的目标。", "Unable to resolve an installed directory junction."));
-            }
-
-            foreach (string file in InspectDirectoryTreeSafely(inspectionRoot).Files)
-            {
-                string relativePath = Path.GetRelativePath(inspectionRoot, file);
-                if (IsConflictRelevantRelativePath(relativePath) && sourceFiles.Contains(relativePath))
-                {
-                    conflicts.Add($"{Path.GetFileName(installedModPath)}  →  {relativePath}");
-                    if (conflicts.Count >= 100)
-                    {
-                        return conflicts;
-                    }
-                }
-            }
-        }
-
-        return conflicts;
-    }
-
-    private static bool IsConflictRelevantRelativePath(string relativePath)
-    {
-        if (relativePath.Contains(Path.DirectorySeparatorChar) || relativePath.Contains(Path.AltDirectorySeparatorChar))
-        {
-            return true;
-        }
-
-        string fileName = Path.GetFileName(relativePath);
-        string baseName = Path.GetFileNameWithoutExtension(fileName);
-        if (baseName.Equals("preview", StringComparison.OrdinalIgnoreCase)
-            || baseName.Equals("cover", StringComparison.OrdinalIgnoreCase)
-            || baseName.Equals("thumbnail", StringComparison.OrdinalIgnoreCase)
-            || baseName.Equals("image", StringComparison.OrdinalIgnoreCase))
-        {
-            return false;
-        }
-
-        return !fileName.StartsWith("readme", StringComparison.OrdinalIgnoreCase)
-            && !fileName.StartsWith("license", StringComparison.OrdinalIgnoreCase)
-            && !fileName.Equals("desktop.ini", StringComparison.OrdinalIgnoreCase);
+        return WithLocalizedInstallErrors(() => ModFileConflictDetector.Detect(sourcePath, targetRoot, targetPathsToIgnore));
     }
 
     private async Task<bool> ConfirmInstallConflictsAsync(
@@ -210,94 +142,15 @@ public sealed partial class MainWindow
 
     private async Task<string> CreateInstallTransactionAsync(string description, WorkspaceRepository repository, IEnumerable<string> affectedTargets)
     {
-        string transactionPath = Path.Combine(_modInstallBackupPath, $"{DateTimeOffset.UtcNow:yyyyMMdd-HHmmssfff}-{Guid.NewGuid():N}");
-        Directory.CreateDirectory(transactionPath);
-        var transaction = new ModInstallTransaction
-        {
-            Description = description,
-            RepositoryId = repository.Id
-        };
-
-        try
-        {
-            int index = 0;
-            foreach (string targetPath in affectedTargets.Distinct(StringComparer.OrdinalIgnoreCase))
-            {
-                string fullTargetPath = Path.GetFullPath(targetPath);
-                if (!IsPathInsideDirectory(fullTargetPath, repository.TargetPath))
-                {
-                    throw new InvalidOperationException(L("拒绝备份目标文件夹之外的路径。", "Refused to back up a path outside the target folder."));
-                }
-
-                bool existed = Directory.Exists(fullTargetPath);
-                bool wasDirectoryLink = existed && DirectoryLinkDeployment.IsDirectoryLink(fullTargetPath);
-                string? linkTarget = wasDirectoryLink ? DirectoryLinkDeployment.TryGetTarget(fullTargetPath) : null;
-                if (wasDirectoryLink
-                    && (string.IsNullOrWhiteSpace(linkTarget) || !IsPathInsideDirectory(linkTarget, repository.SourcePath)))
-                {
-                    throw new InvalidOperationException(L(
-                        "拒绝备份目标指向仓库之外的目录联接。",
-                        "Refused to back up a directory junction that points outside the repository."));
-                }
-
-                string backupRelativePath = existed && !wasDirectoryLink
-                    ? Path.Combine("files", index.ToString("D4"))
-                    : string.Empty;
-                transaction.Entries.Add(new ModInstallBackupEntry
-                {
-                    TargetPath = fullTargetPath,
-                    ExistedBefore = existed,
-                    BackupRelativePath = backupRelativePath,
-                    LinkTarget = linkTarget
-                });
-                if (existed && !wasDirectoryLink)
-                {
-                    string backupPath = Path.Combine(transactionPath, backupRelativePath);
-                    await Task.Run(() => CopyDirectoryTree(fullTargetPath, backupPath));
-                }
-
-                index++;
-            }
-
-            string manifest = JsonSerializer.Serialize(transaction, new JsonSerializerOptions { WriteIndented = true });
-            File.WriteAllText(Path.Combine(transactionPath, "transaction.json"), manifest, Encoding.UTF8);
-            PruneInstallTransactionsByStorageLimit(transactionPath);
-            return transactionPath;
-        }
-        catch
-        {
-            if (Directory.Exists(transactionPath))
-            {
-                try
-                {
-                    DeleteDirectoryTreeSafely(transactionPath);
-                }
-                catch (Exception cleanupException)
-                {
-                    LogApplicationIssue("Install transaction cleanup", cleanupException);
-                }
-            }
-            throw;
-        }
+        List<string> targets = affectedTargets.ToList();
+        string transactionPath = await Task.Run(() => WithLocalizedInstallErrors(() => ModInstallTransactions.Create(
+            _modInstallBackupPath, description, repository.Id, repository.TargetPath, repository.SourcePath, targets, LogApplicationIssue)));
+        PruneInstallTransactionsByStorageLimit(transactionPath);
+        return transactionPath;
     }
 
     private static void CopyDirectoryTree(string sourcePath, string targetPath)
-    {
-        (List<string> directories, List<string> files) = InspectDirectoryTreeSafely(sourcePath);
-        Directory.CreateDirectory(targetPath);
-        foreach (string directory in directories)
-        {
-            string destination = GetSafePathInsideDirectory(targetPath, Path.GetRelativePath(sourcePath, directory));
-            Directory.CreateDirectory(destination);
-        }
-
-        foreach (string file in files)
-        {
-            string destination = GetSafePathInsideDirectory(targetPath, Path.GetRelativePath(sourcePath, file));
-            Directory.CreateDirectory(Path.GetDirectoryName(destination)!);
-            File.Copy(file, destination, true);
-        }
-    }
+        => SafeDirectoryTree.Copy(sourcePath, targetPath);
 
     private static (List<string> Directories, List<string> Files) InspectDirectoryTreeSafely(string rootPath)
         => SafeDirectoryTree.Inspect(rootPath);
@@ -308,41 +161,7 @@ public sealed partial class MainWindow
     }
 
     private static void DeleteDirectoryTreeSafely(string path)
-    {
-        if (!Directory.Exists(path))
-        {
-            return;
-        }
-
-        IOFileAttributes rootAttributes = File.GetAttributes(path);
-        if ((rootAttributes & IOFileAttributes.ReparsePoint) != 0)
-        {
-            Directory.Delete(path, false);
-            return;
-        }
-
-        foreach (FileSystemInfo entry in new DirectoryInfo(path).EnumerateFileSystemInfos())
-        {
-            IOFileAttributes attributes = entry.Attributes;
-            if ((attributes & IOFileAttributes.Directory) != 0)
-            {
-                if ((attributes & IOFileAttributes.ReparsePoint) != 0)
-                {
-                    Directory.Delete(entry.FullName, false);
-                }
-                else
-                {
-                    DeleteDirectoryTreeSafely(entry.FullName);
-                }
-            }
-            else
-            {
-                File.Delete(entry.FullName);
-            }
-        }
-
-        Directory.Delete(path, false);
-    }
+        => SafeDirectoryTree.Delete(path);
 
     private void CommitInstallTransaction(string transactionPath)
     {
@@ -352,178 +171,68 @@ public sealed partial class MainWindow
 
     private async Task RollbackInstallTransactionAsync(string transactionPath, bool clearLastTransaction)
     {
-        string manifestPath = Path.Combine(transactionPath, "transaction.json");
-        if (!File.Exists(manifestPath))
-        {
-            throw new FileNotFoundException(L("找不到安装备份清单。", "The install backup manifest was not found."), manifestPath);
-        }
-
-        ModInstallTransaction transaction = JsonSerializer.Deserialize<ModInstallTransaction>(await File.ReadAllTextAsync(manifestPath))
-            ?? throw new InvalidDataException(L("安装备份清单无效。", "The install backup manifest is invalid."));
+        ModInstallTransaction transaction = await Task.Run(() => WithLocalizedInstallErrors(() => ModInstallTransactions.ReadManifest(transactionPath)));
         WorkspaceRepository repository = _repositories.FirstOrDefault(item => item.Id == transaction.RepositoryId)
             ?? throw new InvalidOperationException(L("找不到此备份对应的仓库。", "The repository for this backup no longer exists."));
 
-        await Task.Run(() =>
+        await Task.Run(() => WithLocalizedInstallErrors(() =>
         {
-            var restoreItems = new List<(string TargetPath, string? BackupPath, string StagingPath, string DisplacedPath, bool ExistedBefore, string? LinkTarget)>();
-            var uniqueTargets = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
-            string restoreToken = Guid.NewGuid().ToString("N");
-
-            foreach (ModInstallBackupEntry entry in transaction.Entries)
-            {
-                string targetPath = Path.GetFullPath(entry.TargetPath);
-                if (!IsPathInsideDirectory(targetPath, repository.TargetPath))
-                {
-                    throw new InvalidOperationException(L("备份包含目标文件夹之外的路径，已停止回滚。", "The backup contains a path outside the target folder. Rollback was stopped."));
-                }
-
-                if (!uniqueTargets.Add(targetPath))
-                {
-                    throw new InvalidDataException(L("备份清单包含重复目标。", "The backup manifest contains duplicate targets."));
-                }
-
-                if (File.Exists(targetPath))
-                {
-                    throw new IOException(L("备份目标被同名文件占用。", "A backup target is occupied by a file."));
-                }
-
-                string? backupPath = null;
-                string? linkTarget = null;
-                if (entry.ExistedBefore)
-                {
-                    if (!string.IsNullOrWhiteSpace(entry.LinkTarget))
-                    {
-                        linkTarget = Path.GetFullPath(entry.LinkTarget);
-                        if (!IsPathInsideDirectory(linkTarget, repository.SourcePath) || !Directory.Exists(linkTarget))
-                        {
-                            throw new InvalidDataException(L(
-                                "安装备份中的目录联接目标无效。",
-                                "The directory-junction target in the install backup is invalid."));
-                        }
-                    }
-                    else if (string.IsNullOrWhiteSpace(entry.BackupRelativePath))
-                    {
-                        throw new InvalidDataException(L("安装备份清单无效。", "The install backup manifest is invalid."));
-                    }
-                    else
-                    {
-                        backupPath = GetSafePathInsideDirectory(transactionPath, entry.BackupRelativePath);
-                        if (!Directory.Exists(backupPath))
-                        {
-                            throw new DirectoryNotFoundException(L("安装备份内容不完整。", "The install backup is incomplete."));
-                        }
-                    }
-                }
-
-                string parentPath = Path.GetDirectoryName(targetPath)
-                    ?? throw new InvalidDataException(L("备份目标路径无效。", "The backup target path is invalid."));
-                Directory.CreateDirectory(parentPath);
-                string targetName = Path.GetFileName(targetPath);
-                string stagingPath = Path.Combine(parentPath, $".{targetName}.restore-{restoreToken}");
-                string displacedPath = Path.Combine(parentPath, $".{targetName}.previous-{restoreToken}");
-                if (Directory.Exists(stagingPath) || Directory.Exists(displacedPath) || File.Exists(stagingPath) || File.Exists(displacedPath))
-                {
-                    throw new IOException(L("无法创建安全恢复临时目录。", "Unable to create safe restore staging directories."));
-                }
-
-                restoreItems.Add((targetPath, backupPath, stagingPath, displacedPath, entry.ExistedBefore, linkTarget));
-            }
-
-            foreach (var item in restoreItems.Where(item => item.ExistedBefore))
-            {
-                if (!string.IsNullOrWhiteSpace(item.LinkTarget))
-                {
-                    DirectoryLinkDeployment.CreateJunction(item.StagingPath, item.LinkTarget);
-                }
-                else
-                {
-                    CopyDirectoryTree(item.BackupPath!, item.StagingPath);
-                }
-            }
-
-            var switchedItems = new List<(string TargetPath, string? BackupPath, string StagingPath, string DisplacedPath, bool ExistedBefore, string? LinkTarget)>();
-            try
-            {
-                try
-                {
-                    foreach (var item in restoreItems)
-                    {
-                        bool displacedCurrent = false;
-                        if (Directory.Exists(item.TargetPath))
-                        {
-                            Directory.Move(item.TargetPath, item.DisplacedPath);
-                            displacedCurrent = true;
-                        }
-
-                        try
-                        {
-                            if (item.ExistedBefore)
-                            {
-                                Directory.Move(item.StagingPath, item.TargetPath);
-                            }
-                            switchedItems.Add(item);
-                        }
-                        catch
-                        {
-                            if (displacedCurrent && Directory.Exists(item.DisplacedPath) && !Directory.Exists(item.TargetPath))
-                            {
-                                Directory.Move(item.DisplacedPath, item.TargetPath);
-                            }
-                            throw;
-                        }
-                    }
-                }
-                catch
-                {
-                    for (int index = switchedItems.Count - 1; index >= 0; index--)
-                    {
-                        var item = switchedItems[index];
-                        if (Directory.Exists(item.TargetPath))
-                        {
-                            DeleteDirectoryTreeSafely(item.TargetPath);
-                        }
-                        if (Directory.Exists(item.DisplacedPath))
-                        {
-                            Directory.Move(item.DisplacedPath, item.TargetPath);
-                        }
-                    }
-                    throw;
-                }
-
-                foreach (var item in switchedItems)
-                {
-                    if (!Directory.Exists(item.DisplacedPath))
-                    {
-                        continue;
-                    }
-
-                    try
-                    {
-                        DeleteDirectoryTreeSafely(item.DisplacedPath);
-                    }
-                    catch (Exception ex)
-                    {
-                        LogApplicationIssue("Restore cleanup", ex);
-                    }
-                }
-            }
-            finally
-            {
-                foreach (var item in restoreItems)
-                {
-                    if (Directory.Exists(item.StagingPath))
-                    {
-                        DeleteDirectoryTreeSafely(item.StagingPath);
-                    }
-                }
-            }
-        });
+            ModInstallTransactions.Rollback(transactionPath, transaction, repository.TargetPath, repository.SourcePath, LogApplicationIssue);
+            return true;
+        }));
 
         if (clearLastTransaction && string.Equals(_lastInstallTransactionPath, transactionPath, StringComparison.OrdinalIgnoreCase))
         {
             _lastInstallTransactionPath = null;
             SaveShellConfig();
         }
+    }
+
+    private T WithLocalizedInstallErrors<T>(Func<T> action)
+    {
+        try
+        {
+            return action();
+        }
+        catch (Exception ex) when (LocalizeInstallError(ex) is Exception localized)
+        {
+            throw localized;
+        }
+    }
+
+    /// <summary>Maps a tagged Core install failure to the user's language; null keeps the original.</summary>
+    private Exception? LocalizeInstallError(Exception ex)
+    {
+        return ErrorTags.KindOf<InstallTransactionErrorKind>(ex) switch
+        {
+            InstallTransactionErrorKind.TargetOutsideTargetRoot => new InvalidOperationException(
+                L("拒绝备份目标文件夹之外的路径。", "Refused to back up a path outside the target folder."), ex),
+            InstallTransactionErrorKind.LinkOutsideRepository => new InvalidOperationException(L(
+                "拒绝备份目标指向仓库之外的目录联接。",
+                "Refused to back up a directory junction that points outside the repository."), ex),
+            InstallTransactionErrorKind.ManifestMissing => new FileNotFoundException(
+                L("找不到安装备份清单。", "The install backup manifest was not found."), (ex as FileNotFoundException)?.FileName, ex),
+            InstallTransactionErrorKind.ManifestInvalid => new InvalidDataException(
+                L("安装备份清单无效。", "The install backup manifest is invalid."), ex),
+            InstallTransactionErrorKind.RestoreTargetOutsideTargetRoot => new InvalidOperationException(
+                L("备份包含目标文件夹之外的路径，已停止回滚。", "The backup contains a path outside the target folder. Rollback was stopped."), ex),
+            InstallTransactionErrorKind.DuplicateTargets => new InvalidDataException(
+                L("备份清单包含重复目标。", "The backup manifest contains duplicate targets."), ex),
+            InstallTransactionErrorKind.TargetOccupiedByFile => new IOException(
+                L("备份目标被同名文件占用。", "A backup target is occupied by a file."), ex),
+            InstallTransactionErrorKind.InvalidLinkTarget => new InvalidDataException(L(
+                "安装备份中的目录联接目标无效。",
+                "The directory-junction target in the install backup is invalid."), ex),
+            InstallTransactionErrorKind.BackupIncomplete => new DirectoryNotFoundException(
+                L("安装备份内容不完整。", "The install backup is incomplete."), ex),
+            InstallTransactionErrorKind.InvalidTargetPath => new InvalidDataException(
+                L("备份目标路径无效。", "The backup target path is invalid."), ex),
+            InstallTransactionErrorKind.StagingUnavailable => new IOException(
+                L("无法创建安全恢复临时目录。", "Unable to create safe restore staging directories."), ex),
+            InstallTransactionErrorKind.UnresolvedInstalledLink => new IOException(
+                L("无法读取已安装目录联接的目标。", "Unable to resolve an installed directory junction."), ex),
+            _ => null
+        };
     }
 
     private async void OnRollbackLastInstallClicked(object sender, RoutedEventArgs e)
