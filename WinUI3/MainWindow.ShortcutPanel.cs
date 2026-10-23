@@ -327,7 +327,31 @@ public sealed partial class MainWindow
         var previous = _shortcutTargetPicker.SelectedItem as ShortcutTarget;
         var targets = ShortcutInputService.ListTargets();
         _shortcutTargetPicker.ItemsSource = targets;
-        _shortcutTargetPicker.SelectedItem = targets.FirstOrDefault(t => t.Handle == previous?.Handle && t.StartTicks == previous.StartTicks);
+        ShortcutTarget? kept = targets.FirstOrDefault(t => t.Handle == previous?.Handle && t.StartTicks == previous.StartTicks);
+        // Without a (still running) chosen window, pick the game window. Input stays off until the
+        // user turns it on: selecting a target never arms it.
+        int detected = kept is null
+            ? GameWindowDetection.Find(targets.Select(t => new GameWindowCandidate(t.ProcessName, t.Label)).ToArray(),
+                PreferredGameProcesses(GetSelectedRepository()))
+            : -1;
+        _shortcutTargetPicker.SelectedItem = detected >= 0 ? targets[detected] : kept;
+        if (detected >= 0 && _shortcutStatus is not null)
+            _shortcutStatus.Text = T("ShortcutPanel.GameWindowDetected", targets[detected].Label);
+    }
+
+    // The process names of the current repository's game, so its window wins over other running games.
+    private string[] PreferredGameProcesses(WorkspaceRepository? repository)
+    {
+        if (repository is null) return [];
+        if (IsEndfieldRepository(repository)) return [.. GameWindowDetection.KnownGames[0]];
+        RepositoryPresetInfo? preset = BuiltInRepositoryPresets.FirstOrDefault(candidate => IsRepositoryForPreset(repository, candidate));
+        return preset?.Id switch
+        {
+            "genshin" => [.. GameWindowDetection.KnownGames[1]],
+            "hsr" => [.. GameWindowDetection.KnownGames[2]],
+            "zzz" => [.. GameWindowDetection.KnownGames[3]],
+            _ => []
+        };
     }
 
     private DetectedModShortcut[] VisibleShortcuts() => _shortcutHideUnsupported
@@ -518,6 +542,8 @@ public sealed partial class MainWindow
                 };
                 _shortcutOverlay.SetBackgroundOpacity(_shortcutOverlayOpacity);
             }
+            // The game may have started after the window list was read.
+            if (_shortcutTargetPicker?.SelectedItem is not ShortcutTarget) RefreshShortcutTargets();
             _shortcutOverlay.ShowPanel();
             _shortcutOverlayVisible = true;
             // Mods may have been enabled or disabled since the list was read.
@@ -620,7 +646,8 @@ public sealed partial class MainWindow
     private void SetShortcutInputFromOverlay(bool enable)
     {
         if (_shortcutEnabledToggle is null) return;
-        // Arming still needs a deliberately chosen target; the overlay cannot pick one.
+        // Arming needs a target: look for the game window first; the overlay cannot pick other windows.
+        if (enable && _shortcutTargetPicker?.SelectedItem is not ShortcutTarget) RefreshShortcutTargets();
         if (enable && _shortcutTargetPicker?.SelectedItem is not ShortcutTarget)
             _shortcutStatus!.Text = T("ShortcutPanel.SelectTheTargetGameWindowIn");
         else

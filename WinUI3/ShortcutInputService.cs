@@ -8,7 +8,7 @@ namespace ModFolderCopier.WinUI;
 
 internal sealed class ShortcutPrivilegeException(string message) : InvalidOperationException(message);
 
-internal sealed record ShortcutTarget(nint Handle, uint ProcessId, long StartTicks, string Label)
+internal sealed record ShortcutTarget(nint Handle, uint ProcessId, long StartTicks, string Label, string ProcessName = "")
 {
     public override string ToString() => Label;
 }
@@ -33,7 +33,7 @@ internal sealed class ShortcutInputService : IDisposable
                 using var process = Process.GetProcessById((int)pid);
                 var title = new StringBuilder(512);
                 GetWindowText(hwnd, title, title.Capacity);
-                result.Add(new(hwnd, pid, process.StartTime.ToUniversalTime().Ticks, $"{title} · {process.ProcessName} ({pid})"));
+                result.Add(new(hwnd, pid, process.StartTime.ToUniversalTime().Ticks, $"{title} · {process.ProcessName} ({pid})", process.ProcessName));
             }
             catch (Exception ex) when (ex is ArgumentException or InvalidOperationException or System.ComponentModel.Win32Exception) { }
             return result.Count < 200;

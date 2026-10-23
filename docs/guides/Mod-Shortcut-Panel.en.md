@@ -9,7 +9,7 @@ Version 4.4 adds a Shortcuts page. It reads the `[Key…]` bindings in a Mod's I
 ## Getting started
 
 1. Open Shortcuts in the left navigation and pick a Mod from the current repository. The page lists each binding's key, action, source section and conditions.
-2. Pick the target game window and turn on "Enable input to selected window".
+2. Pick the target game window and turn on "Enable input to selected window". When the game is already running, the manager selects its window automatically (Endfield `Endfield.exe`, plus Genshin Impact, Star Rail and Zenless Zone Zero; the current repository's game comes first). Opening the overlay, or turning input on from it, looks again, so the game may start after the manager. Turning input on stays a manual step.
 3. Click a key button to send it. Num5 sends numeric keypad 5, which is different from 5 on the number row.
 
 **Endfield requires running the manager as administrator.** `Endfield.exe` always runs elevated, and Windows silently drops simulated keys sent to it from a non-elevated program. The manager detects this before sending and shows a notice; click "Restart manager as administrator" (one UAC prompt). While elevated, Windows blocks drag-and-drop from File Explorer into the manager, so use the file picker to import Mods.
