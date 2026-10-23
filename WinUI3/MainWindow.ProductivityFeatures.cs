@@ -108,7 +108,7 @@ public sealed partial class MainWindow
     private void InitializeAccessibilityFeatures()
     {
         RootGrid.UseSystemFocusVisuals = true;
-        AutomationProperties.SetName(RootGrid, L("集成化 Mod 管理器主窗口", "Integrated Mod Manager main window"));
+        AutomationProperties.SetName(RootGrid, T("ProductivityFeatures.IntegratedModManagerMainWindow"));
         RefreshSystemAccessibilityPreferences();
         RootGrid.ActualThemeChanged += OnRootActualThemeChanged;
     }
@@ -274,8 +274,8 @@ public sealed partial class MainWindow
             }
         };
         string accessibleName = isFavorite
-            ? L("取消收藏角色", "Remove character from favorites")
-            : L("收藏角色并置顶", "Favorite and pin character");
+            ? T("ProductivityFeatures.RemoveCharacterFromFavorites")
+            : T("ProductivityFeatures.FavoriteAndPinCharacter");
         AutomationProperties.SetName(favoriteButton, accessibleName);
         ToolTipService.SetToolTip(favoriteButton, accessibleName);
         favoriteButton.Click += (_, args) =>
@@ -363,9 +363,9 @@ public sealed partial class MainWindow
         if (string.IsNullOrWhiteSpace(release.PackageUrl) || !TryParseVersion(release.Tag, out Version releaseVersion))
         {
             await ShowMessageAsync(
-                L("最新 Release 没有可识别的应用 ZIP，请从 Release 页面手动下载。", "The latest release has no recognized app ZIP. Download it manually from the release page."),
-                L("没有可下载更新", "No Downloadable Update"));
-            await OpenExternalUrlAsync(release.PageUrl, L("打开更新页面失败", "Failed to open the update page"));
+                T("ProductivityFeatures.TheLatestReleaseHasNoRecognized"),
+                T("ProductivityFeatures.NoDownloadableUpdate"));
+            await OpenExternalUrlAsync(release.PageUrl, T("Common.FailedToOpenTheUpdatePage"));
             return;
         }
 
@@ -379,7 +379,7 @@ public sealed partial class MainWindow
             AppUpdateProgressPanel.Visibility = Visibility.Visible;
             AppUpdateProgressBar.IsIndeterminate = true;
             AppUpdateProgressBar.Value = 0;
-            AppUpdateProgressTextBlock.Text = L("正在准备下载更新...", "Preparing update download...");
+            AppUpdateProgressTextBlock.Text = T("ProductivityFeatures.PreparingUpdateDownload");
 
             using var timeout = new CancellationTokenSource(TimeSpan.FromMinutes(15));
             using HttpResponseMessage response = await _httpClient.GetAsync(release.PackageUrl, HttpCompletionOption.ResponseHeadersRead, timeout.Token);
@@ -395,25 +395,21 @@ public sealed partial class MainWindow
                     {
                         double progress = Math.Clamp(downloaded * 100d / totalBytes.Value, 0, 100);
                         AppUpdateProgressBar.Value = progress;
-                        AppUpdateProgressTextBlock.Text = L(
-                            $"正在下载更新：{progress:0}%（{FormatStorageSize(downloaded)} / {FormatStorageSize(totalBytes.Value)}）",
-                            $"Downloading update: {progress:0}% ({FormatStorageSize(downloaded)} / {FormatStorageSize(totalBytes.Value)})");
+                        AppUpdateProgressTextBlock.Text = T("ProductivityFeatures.DownloadingUpdate", progress, FormatStorageSize(downloaded), FormatStorageSize(totalBytes.Value));
                     }
                     else
                     {
-                        AppUpdateProgressTextBlock.Text = L($"已下载 {FormatStorageSize(downloaded)}", $"Downloaded {FormatStorageSize(downloaded)}");
+                        AppUpdateProgressTextBlock.Text = T("ProductivityFeatures.Downloaded", FormatStorageSize(downloaded));
                     }
                 }, timeout.Token);
             }
 
             if (string.IsNullOrWhiteSpace(release.Sha256Url))
             {
-                throw new InvalidDataException(L(
-                    "此 Release 没有提供更新包校验文件，已停止自动更新。",
-                    "This release does not provide a package checksum. Automatic update was stopped."));
+                throw new InvalidDataException(T("ProductivityFeatures.ThisReleaseDoesNotProvideA"));
             }
 
-            AppUpdateProgressTextBlock.Text = L("正在校验更新包...", "Verifying update package...");
+            AppUpdateProgressTextBlock.Text = T("ProductivityFeatures.VerifyingUpdatePackage");
             string checksumText = await _httpClient.GetStringAsync(release.Sha256Url, timeout.Token);
             string packageFileName = Path.GetFileName(new Uri(release.PackageUrl).LocalPath);
             string checksumFileName = Path.GetFileName(new Uri(release.Sha256Url).LocalPath);
@@ -421,7 +417,7 @@ public sealed partial class MainWindow
             string actualHash = await UpdatePackageFile.ComputeSha256Async(temporaryPath, timeout.Token);
             if (!actualHash.Equals(expectedHash, StringComparison.OrdinalIgnoreCase))
             {
-                throw new InvalidDataException(L("更新包 SHA-256 校验失败。", "The update package failed SHA-256 verification."));
+                throw new InvalidDataException(T("ProductivityFeatures.TheUpdatePackageFailedSHA256"));
             }
 
             File.Move(temporaryPath, finalPath, true);
@@ -429,7 +425,7 @@ public sealed partial class MainWindow
             _localUpdatePackageVersion = releaseVersion;
             AppUpdateProgressBar.IsIndeterminate = false;
             AppUpdateProgressBar.Value = 100;
-            AppUpdateProgressTextBlock.Text = L("下载完成，正在启动更新程序...", "Download complete. Starting updater...");
+            AppUpdateProgressTextBlock.Text = T("ProductivityFeatures.DownloadCompleteStartingUpdater");
             await StartLocalUpdateAsync(finalPath);
         }
         catch (Exception ex)
@@ -448,7 +444,7 @@ public sealed partial class MainWindow
 
             AppUpdateProgressBar.IsIndeterminate = false;
             AppUpdateProgressPanel.Visibility = Visibility.Collapsed;
-            await ShowMessageAsync(L("下载或安装更新失败：", "Failed to download or install update: ") + ex.Message, L("更新失败", "Update Failed"));
+            await ShowMessageAsync(T("ProductivityFeatures.FailedToDownloadOrInstallUpdate") + ex.Message, T("Common.UpdateFailed"));
         }
     }
 
@@ -470,37 +466,37 @@ public sealed partial class MainWindow
 
     private void RefreshProductivitySettingsText()
     {
-        StartupUpdateTitleTextBlock.Text = L("启动时检查软件更新", "Check for app updates at startup");
-        StartupUpdateDescriptionTextBlock.Text = L("发现新版本时询问是否下载，完成后自动重启并保留本地配置。", "Ask before downloading a new version, then restart automatically while preserving local settings.");
+        StartupUpdateTitleTextBlock.Text = T("ProductivityFeatures.CheckForAppUpdatesAtStartup");
+        StartupUpdateDescriptionTextBlock.Text = T("ProductivityFeatures.AskBeforeDownloadingANewVersion");
         if (!AppSelfUpdateEnabled)
         {
             _checkAppUpdatesOnStartup = false;
-            StartupUpdateDescriptionTextBlock.Text = L("本地测试版不检查或自动安装软件自身更新；Mod 更新仍可使用。", "This local test build does not check for or install app self-updates; Mod updates remain available.");
+            StartupUpdateDescriptionTextBlock.Text = T("ProductivityFeatures.ThisLocalTestBuildDoesNot");
         }
         _isApplyingStartupUpdateSetting = true;
         StartupUpdateToggleSwitch.IsOn = _checkAppUpdatesOnStartup;
         StartupUpdateToggleSwitch.IsEnabled = AppSelfUpdateEnabled;
-        StartupUpdateToggleSwitch.OnContent = L("开", "On");
-        StartupUpdateToggleSwitch.OffContent = L("关", "Off");
+        StartupUpdateToggleSwitch.OnContent = T("Common.On2");
+        StartupUpdateToggleSwitch.OffContent = T("Common.Off2");
         _isApplyingStartupUpdateSetting = false;
 
-        DiagnosticsTitleTextBlock.Text = L("诊断与问题报告", "Diagnostics and Issue Report");
-        DiagnosticsHintTextBlock.Text = L("生成脱敏报告，不包含本地隐私路径或访问凭据。提交前由你检查并确认。", "Generate a sanitized report without private local paths or credentials. You review it before submitting.");
-        ExportDiagnosticsButton.Content = L("导出诊断报告", "Export Diagnostic Report");
-        SubmitDiagnosticsButton.Content = L("提交到 GitHub", "Report on GitHub");
+        DiagnosticsTitleTextBlock.Text = T("ProductivityFeatures.DiagnosticsAndIssueReport");
+        DiagnosticsHintTextBlock.Text = T("ProductivityFeatures.GenerateASanitizedReportWithoutPrivate");
+        ExportDiagnosticsButton.Content = T("ProductivityFeatures.ExportDiagnosticReport");
+        SubmitDiagnosticsButton.Content = T("ProductivityFeatures.ReportOnGitHub");
         AutomationProperties.SetName(ExportDiagnosticsButton, ExportDiagnosticsButton.Content?.ToString() ?? string.Empty);
         AutomationProperties.SetName(SubmitDiagnosticsButton, SubmitDiagnosticsButton.Content?.ToString() ?? string.Empty);
     }
 
     private void RefreshBackupManagerText()
     {
-        BackupManagerTitleTextBlock.Text = L("安装备份", "Install Backups");
-        BackupManagerHintTextBlock.Text = L("自动保留安装、移除和方案切换前的状态；展开历史记录后可手动恢复。", "Automatically preserve the state before installs, removals, and profile changes; expand history to restore an entry.");
-        BackupLimitLabelTextBlock.Text = L("空间上限 (GB)", "Storage limit (GB)");
-        RefreshBackupsButton.Content = L("刷新列表", "Refresh List");
-        AutomationProperties.SetName(BackupLimitNumberBox, L("安装备份空间上限 GB", "Install backup storage limit in GB"));
+        BackupManagerTitleTextBlock.Text = T("ProductivityFeatures.InstallBackups");
+        BackupManagerHintTextBlock.Text = T("ProductivityFeatures.AutomaticallyPreserveTheStateBeforeInstalls");
+        BackupLimitLabelTextBlock.Text = T("ProductivityFeatures.StorageLimitGB");
+        RefreshBackupsButton.Content = T("ProductivityFeatures.RefreshList");
+        AutomationProperties.SetName(BackupLimitNumberBox, T("ProductivityFeatures.InstallBackupStorageLimitInGB"));
         AutomationProperties.SetName(RefreshBackupsButton, RefreshBackupsButton.Content?.ToString() ?? string.Empty);
-        AutomationProperties.SetName(BackupHistoryExpander, L("展开安装备份历史", "Expand install backup history"));
+        AutomationProperties.SetName(BackupHistoryExpander, T("ProductivityFeatures.ExpandInstallBackupHistory"));
         _isApplyingBackupLimitSetting = true;
         BackupLimitNumberBox.Value = _installBackupLimitGb;
         _isApplyingBackupLimitSetting = false;
@@ -544,15 +540,13 @@ public sealed partial class MainWindow
         Directory.CreateDirectory(_modInstallBackupPath);
         List<InstallBackupDisplayItem> backups = await Task.Run(ReadInstallBackups);
         long totalBytes = backups.Sum(item => item.SizeBytes);
-        BackupSummaryTextBlock.Text = L(
-            $"共 {backups.Count} 份 · {FormatStorageSize(totalBytes)} / {_installBackupLimitGb:0.#} GB",
-            $"{backups.Count} backups · {FormatStorageSize(totalBytes)} / {_installBackupLimitGb:0.#} GB");
+        BackupSummaryTextBlock.Text = T("ProductivityFeatures.BackupsGB", backups.Count, FormatStorageSize(totalBytes), _installBackupLimitGb);
 
         if (backups.Count == 0)
         {
             BackupListPanel.Children.Add(new TextBlock
             {
-                Text = L("暂时没有安装备份。", "No install backups yet."),
+                Text = T("ProductivityFeatures.NoInstallBackupsYet"),
                 Style = (Style)Application.Current.Resources["CaptionTextStyle"]
             });
             return;
@@ -567,22 +561,20 @@ public sealed partial class MainWindow
             details.Children.Add(new TextBlock { Text = backup.Description, FontWeight = Microsoft.UI.Text.FontWeights.SemiBold, TextTrimming = TextTrimming.CharacterEllipsis });
             details.Children.Add(new TextBlock
             {
-                Text = L(
-                    $"{backup.CreatedAt.ToLocalTime():yyyy-MM-dd HH:mm} · {backup.ModNames} · {FormatStorageSize(backup.SizeBytes)}",
-                    $"{backup.CreatedAt.ToLocalTime():yyyy-MM-dd HH:mm} · {backup.ModNames} · {FormatStorageSize(backup.SizeBytes)}"),
+                Text = T("ProductivityFeatures.Text", backup.CreatedAt.ToLocalTime(), backup.ModNames, FormatStorageSize(backup.SizeBytes)),
                 Style = (Style)Application.Current.Resources["CaptionTextStyle"],
                 TextWrapping = TextWrapping.Wrap
             });
             grid.Children.Add(details);
             var restore = new Button
             {
-                Content = L("恢复", "Restore"),
+                Content = T("ProductivityFeatures.Restore"),
                 Style = (Style)Application.Current.Resources["SecondaryButtonStyle"],
                 VerticalAlignment = VerticalAlignment.Center,
                 Tag = backup.Path
             };
             Grid.SetColumn(restore, 1);
-            AutomationProperties.SetName(restore, L($"恢复备份 {backup.Description}", $"Restore backup {backup.Description}"));
+            AutomationProperties.SetName(restore, T("ProductivityFeatures.RestoreBackup", backup.Description));
             restore.Click += OnRestoreInstallBackupClicked;
             grid.Children.Add(restore);
             var border = new Border
@@ -627,9 +619,9 @@ public sealed partial class MainWindow
                 string mods = string.Join(", ", transaction.Entries.Select(entry => Path.GetFileName(entry.TargetPath)).Where(name => !string.IsNullOrWhiteSpace(name)).Distinct(StringComparer.OrdinalIgnoreCase).Take(5));
                 if (transaction.Entries.Count > 5)
                 {
-                    mods += L(" 等", " and more");
+                    mods += T("ProductivityFeatures.AndMore");
                 }
-                result.Add(new InstallBackupDisplayItem(directory, transaction.Description, transaction.CreatedAtUtc, string.IsNullOrWhiteSpace(mods) ? L("未记录 Mod", "No mod recorded") : mods, size));
+                result.Add(new InstallBackupDisplayItem(directory, transaction.Description, transaction.CreatedAtUtc, string.IsNullOrWhiteSpace(mods) ? T("ProductivityFeatures.NoModRecorded") : mods, size));
             }
             catch
             {
@@ -648,7 +640,7 @@ public sealed partial class MainWindow
                 return;
             }
 
-            if (!await ShowConfirmAsync(L("恢复此备份会替换对应 Mod 的当前文件。是否继续？", "Restoring this backup replaces the current files for the affected mods. Continue?"), L("恢复安装备份", "Restore Install Backup")))
+            if (!await ShowConfirmAsync(T("ProductivityFeatures.RestoringThisBackupReplacesTheCurrent"), T("ProductivityFeatures.RestoreInstallBackup")))
             {
                 return;
             }
@@ -663,7 +655,7 @@ public sealed partial class MainWindow
             }
             catch (Exception ex)
             {
-                await ShowMessageAsync(L("恢复备份失败：", "Failed to restore backup: ") + ex.Message, L("恢复失败", "Restore Failed"));
+                await ShowMessageAsync(T("ProductivityFeatures.FailedToRestoreBackup") + ex.Message, T("ProductivityFeatures.RestoreFailed"));
             }
             finally
             {
@@ -743,7 +735,7 @@ public sealed partial class MainWindow
         try
         {
             string path = await CreateDiagnosticReportAsync();
-            DiagnosticsStatusTextBlock.Text = L($"已导出：{Path.GetFileName(path)}", $"Exported: {Path.GetFileName(path)}");
+            DiagnosticsStatusTextBlock.Text = T("ProductivityFeatures.Exported", Path.GetFileName(path));
             Process.Start(new ProcessStartInfo { FileName = Path.GetDirectoryName(path)!, UseShellExecute = true });
         }
         catch (Exception ex)
@@ -758,9 +750,8 @@ public sealed partial class MainWindow
         {
             string path = await CreateDiagnosticReportAsync();
             bool confirmed = await ShowConfirmAsync(
-                L($"诊断报告已生成：{Path.GetFileName(path)}\n\n将打开 GitHub 新建 Issue 页面。请先检查内容，再自行附加此 ZIP 并提交。程序不会保存 GitHub 凭据。是否继续？",
-                  $"Diagnostic report created: {Path.GetFileName(path)}\n\nGitHub's new issue page will open. Review the content, optionally attach this ZIP, and submit it yourself. The app does not store GitHub credentials. Continue?"),
-                L("提交错误报告", "Report an Issue"));
+                T("ProductivityFeatures.DiagnosticReportCreatedGitHubSNew", Path.GetFileName(path)),
+                T("ProductivityFeatures.ReportAnIssue"));
             if (!confirmed)
             {
                 return;

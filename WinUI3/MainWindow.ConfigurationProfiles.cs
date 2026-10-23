@@ -42,14 +42,14 @@ public sealed partial class MainWindow
                 ConfigurationProfileComboBox.Items.Add(new ComboBoxItem
                 {
                     Content = $"{profile.Name}  ·  {profile.ModRelativePaths.Count} Mod" + (profile.IncludesPersistentState
-                        ? L($" · {profile.PersistentStates.Sum(state => state.Values.Count)} 参数", $" · {profile.PersistentStates.Sum(state => state.Values.Count)} values") : L(" · 仅组合", " · set only")),
+                        ? T("ConfigurationProfiles.Values", profile.PersistentStates.Sum(state => state.Values.Count)) : T("ConfigurationProfiles.SetOnly")),
                     Tag = profile.Id
                 });
             }
 
             ConfigurationProfileComboBox.PlaceholderText = profiles.Count == 0
-                ? L("当前仓库还没有配置方案", "No profiles for this repository")
-                : L("选择配置方案", "Select a profile");
+                ? T("ConfigurationProfiles.NoProfilesForThisRepository")
+                : T("ConfigurationProfiles.SelectAProfile");
             ConfigurationProfileComboBox.SelectedItem = ConfigurationProfileComboBox.Items
                 .OfType<ComboBoxItem>()
                 .FirstOrDefault(item => string.Equals(item.Tag as string, _selectedConfigurationProfileId, StringComparison.Ordinal));
@@ -72,7 +72,7 @@ public sealed partial class MainWindow
         CombinationUserIniTextBox.Text = GetSelectedRepository()?.PersistentUserIniPath is { Length: > 0 } userIni
             ? userIni : TryGetDefaultPersistentIniPath(GetSelectedRepository()) ?? string.Empty;
         ConfigurationProfileSummaryTextBlock.Text = selected is null
-            ? L("配置方案只会管理当前仓库中能够识别的 Mod。", "Profiles only manage mods recognized in the current repository.")
+            ? T("ConfigurationProfiles.ProfilesOnlyManageModsRecognizedIn")
             : L(
                 $"{selected.Name}：{selected.ModRelativePaths.Count} 个 Mod · {selected.PersistentStates.Sum(state => state.Values.Count)} 个参数。" + (selected.IncludesPersistentState ? "恢复组合后回写参数；请先退出游戏/加载器。" : "旧方案/仅组合，不修改加载器参数。"),
                 $"{selected.Name}: {selected.ModRelativePaths.Count} mods · {selected.PersistentStates.Sum(state => state.Values.Count)} parameters. " + (selected.IncludesPersistentState ? "Restores deployment then state. Close game/loader first." : "Legacy/set-only profile; loader state is unchanged."));
@@ -80,8 +80,8 @@ public sealed partial class MainWindow
         RollbackLastInstallButton.IsEnabled = !string.IsNullOrWhiteSpace(_lastInstallTransactionPath)
             && Directory.Exists(_lastInstallTransactionPath);
         InstallRollbackStatusTextBlock.Text = RollbackLastInstallButton.IsEnabled
-            ? L("可撤销最近一次 Mod 部署；组合参数另有 d3dx_user.ini.bak 备份。", "Undo covers Mod deployment; combination parameters have a separate d3dx_user.ini .bak backup.")
-            : L("目前没有可撤销的 Mod 操作。", "There is no mod operation to undo.");
+            ? T("ConfigurationProfiles.UndoCoversModDeploymentCombinationParameters")
+            : T("ConfigurationProfiles.ThereIsNoModOperationTo");
         RefreshCombinationWorkspaceV4();
         RefreshCombinationBundleActions();
     }
@@ -101,14 +101,14 @@ public sealed partial class MainWindow
             WorkspaceRepository? repository = GetSelectedRepository();
             if (repository is null)
             {
-                await ShowMessageAsync(L("请先选择仓库。", "Select a repository first."), L("无法新建方案", "Cannot Create Profile"));
+                await ShowMessageAsync(T("Common.SelectARepositoryFirst"), T("ConfigurationProfiles.CannotCreateProfile"));
                 return;
             }
 
             string? name = await PromptForTextAsync(
-                L("输入组合名称。若勾选保存参数，请先在游戏里按 F10 并等待文件保存完成。", "Name this combination. If including state, press F10 in game and wait for the file to be saved first."),
-                L("保存 Mod 组合", "Save Mod Combination"),
-                L("常用方案", "My Profile"));
+                T("ConfigurationProfiles.NameThisCombinationIfIncludingState"),
+                T("ConfigurationProfiles.SaveModCombination"),
+                T("ConfigurationProfiles.MyProfile"));
             name = name?.Trim();
             if (string.IsNullOrWhiteSpace(name))
             {
@@ -135,9 +135,8 @@ public sealed partial class MainWindow
 
             WorkspaceRepository? repository = GetSelectedRepository();
             if (repository is null) return;
-            if (!await ShowConfirmAsync(L($"用当前启用组合覆盖“{profile.Name}”？同时保存参数时，请先按 F10 保存游戏状态。",
-                $"Replace '{profile.Name}' with the enabled combination? Save state with F10 first if including parameters."),
-                L("更新组合预设", "Update Combination Preset"))) return;
+            if (!await ShowConfirmAsync(T("ConfigurationProfiles.ReplaceWithTheEnabledCombinationSave", profile.Name),
+                T("ConfigurationProfiles.UpdateCombinationPreset"))) return;
             await SaveCombinationProfileAsync(repository, profile.Name, profile);
         }
         catch (Exception ex)
@@ -157,8 +156,8 @@ public sealed partial class MainWindow
             }
 
             if (!await ShowConfirmAsync(
-                L($"确定删除配置方案“{profile.Name}”吗？这不会删除任何 Mod。", $"Delete the profile \"{profile.Name}\"? This will not delete any mods."),
-                L("删除配置方案", "Delete Configuration Profile")))
+                T("ConfigurationProfiles.DeleteTheProfileThisWillNot", profile.Name),
+                T("ConfigurationProfiles.DeleteConfigurationProfile")))
             {
                 return;
             }

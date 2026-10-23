@@ -50,7 +50,7 @@ public sealed partial class MainWindow
         }
         try
         {
-            if (!_downloadJournalAvailable) throw new IOException(L("下载记录无法读取，已保留原文件。请先检查诊断报告和记录文件。", "The download record could not be read and was preserved. Check diagnostics and the record before starting new downloads."));
+            if (!_downloadJournalAvailable) throw new IOException(T("DownloadRecovery.TheDownloadRecordCouldNotBe"));
             _downloadJournal.Save(_downloadTasks.Select(task => ModUpdateRecoveryPolicy.ForSnapshot(new DownloadTaskRecord<OnlineDownloadRetryRequest>(
                 task.Id, task.Title, task.SourceIdentity, task.DestinationPath, task.State, task.Progress,
                 task.StatusZh, task.StatusEn, task.RetryRequest, task.ArchivePath, task.Interrupted))));
@@ -72,13 +72,13 @@ public sealed partial class MainWindow
         if (request.Mod is null || request.Context is null || request.CharacterAliases is null
             || !_repositories.Any(repository => repository.Id == request.Context.RepositoryId
                 && string.Equals(repository.SourcePath, request.Context.RepositoryPath, StringComparison.OrdinalIgnoreCase)))
-            throw new InvalidDataException(L("原仓库已移除或路径已改变，请从在线卡片重新选择下载位置。", "The original repository was removed or changed. Start from the online card to choose a destination again."));
+            throw new InvalidDataException(T("DownloadRecovery.TheOriginalRepositoryWasRemovedOr"));
         if (!task.RestoredFromJournal) return true;
         var dialog = new ContentDialog
         {
-            Title = L("重新下载已恢复的任务", "Restart a restored download"),
-            Content = new TextBlock { Text = L($"仓库：{request.Context.RepositoryName}\n目录：{request.Destination}\n文件：{request.File?.FileName ?? request.Mod.DownloadFileName}\n\n将重新获取下载信息并从头下载，不会自动清理上次留下的文件。若上次在解压或安装阶段退出，请先检查原目录。", $"Repository: {request.Context.RepositoryName}\nFolder: {request.Destination}\nFile: {request.File?.FileName ?? request.Mod.DownloadFileName}\n\nDownloads again after refreshing file information. Files left by the previous attempt are preserved. Inspect the original folder if the app exited during extraction or installation."), TextWrapping = Microsoft.UI.Xaml.TextWrapping.Wrap, MaxWidth = 560 },
-            PrimaryButtonText = L("确认重新下载", "Confirm restart"), CloseButtonText = L("取消", "Cancel"),
+            Title = T("DownloadRecovery.RestartARestoredDownload"),
+            Content = new TextBlock { Text = T("DownloadRecovery.RepositoryFolderFileDownloadsAgainAfter", request.Context.RepositoryName, request.Destination, request.File?.FileName ?? request.Mod.DownloadFileName), TextWrapping = Microsoft.UI.Xaml.TextWrapping.Wrap, MaxWidth = 560 },
+            PrimaryButtonText = T("DownloadRecovery.ConfirmRestart"), CloseButtonText = T("Common.Cancel"),
             DefaultButton = ContentDialogButton.Close, XamlRoot = RootGrid.XamlRoot, RequestedTheme = RootGrid.ActualTheme
         };
         return await dialog.ShowAsync() == ContentDialogResult.Primary;

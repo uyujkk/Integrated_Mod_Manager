@@ -52,7 +52,7 @@ public sealed partial class MainWindow
         {
             SecondaryNavPanel.Children.Add(CreateSecondaryNavButton(
                 "all-repositories",
-                L("全部仓库", "All Repositories"),
+                T("Common.AllRepositories"),
                 _selectedRepositoryId is null));
         }
 
@@ -273,26 +273,26 @@ public sealed partial class MainWindow
     private void ApplyPrimaryNavigationContent()
     {
         UpdateRefinedWorkspaceLanguage();
-        DashboardNavButton.Content = CreatePrimaryNavContent("\uE80F", L("仪表板", "Dashboard"));
-        RepositoryNavButton.Content = CreatePrimaryNavContent("\uE8B7", L("仓库", "Repositories"));
-        OnlineNavButton.Content = CreatePrimaryNavContent("\uE774", L("在线", "Online"));
-        UpdatesNavButton.Content = CreatePrimaryNavContent("\uE895", L("更新", "Updates"));
-        ShortcutsNavButton.Content = CreatePrimaryNavContent("\uE765", L("快捷键", "Shortcuts"));
-        ToolTipService.SetToolTip(ShortcutsNavButton, L("Mod 快捷键", "Mod shortcuts"));
-        AutomationProperties.SetName(ShortcutsNavButton, L("Mod 快捷键", "Mod shortcuts"));
-        SettingsNavButton.Content = CreatePrimaryNavContent("\uE713", L("设置", "Settings"));
+        DashboardNavButton.Content = CreatePrimaryNavContent("\uE80F", T("Shell.Dashboard"));
+        RepositoryNavButton.Content = CreatePrimaryNavContent("\uE8B7", T("Shell.Repositories"));
+        OnlineNavButton.Content = CreatePrimaryNavContent("\uE774", T("Shell.Online"));
+        UpdatesNavButton.Content = CreatePrimaryNavContent("\uE895", T("Shell.Updates"));
+        ShortcutsNavButton.Content = CreatePrimaryNavContent("\uE765", T("Common.Shortcuts"));
+        ToolTipService.SetToolTip(ShortcutsNavButton, T("Common.ModShortcuts"));
+        AutomationProperties.SetName(ShortcutsNavButton, T("Common.ModShortcuts"));
+        SettingsNavButton.Content = CreatePrimaryNavContent("\uE713", T("Shell.Settings"));
 
-        ToolTipService.SetToolTip(DashboardNavButton, L("仪表板", "Dashboard"));
-        ToolTipService.SetToolTip(RepositoryNavButton, L("仓库", "Repositories"));
-        ToolTipService.SetToolTip(OnlineNavButton, L("在线 Mod", "Online Mods"));
-        ToolTipService.SetToolTip(UpdatesNavButton, L("更新", "Updates"));
-        ToolTipService.SetToolTip(SettingsNavButton, L("设置", "Settings"));
+        ToolTipService.SetToolTip(DashboardNavButton, T("Shell.Dashboard"));
+        ToolTipService.SetToolTip(RepositoryNavButton, T("Shell.Repositories"));
+        ToolTipService.SetToolTip(OnlineNavButton, T("Shell.OnlineMods"));
+        ToolTipService.SetToolTip(UpdatesNavButton, T("Shell.Updates"));
+        ToolTipService.SetToolTip(SettingsNavButton, T("Shell.Settings"));
 
-        AutomationProperties.SetName(DashboardNavButton, L("仪表板", "Dashboard"));
-        AutomationProperties.SetName(RepositoryNavButton, L("仓库", "Repositories"));
-        AutomationProperties.SetName(OnlineNavButton, L("在线 Mod", "Online Mods"));
-        AutomationProperties.SetName(UpdatesNavButton, L("更新", "Updates"));
-        AutomationProperties.SetName(SettingsNavButton, L("设置", "Settings"));
+        AutomationProperties.SetName(DashboardNavButton, T("Shell.Dashboard"));
+        AutomationProperties.SetName(RepositoryNavButton, T("Shell.Repositories"));
+        AutomationProperties.SetName(OnlineNavButton, T("Shell.OnlineMods"));
+        AutomationProperties.SetName(UpdatesNavButton, T("Shell.Updates"));
+        AutomationProperties.SetName(SettingsNavButton, T("Shell.Settings"));
     }
 
     private object CreatePrimaryNavContent(string glyph, string label)

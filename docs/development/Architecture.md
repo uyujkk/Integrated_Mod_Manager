@@ -45,7 +45,7 @@ Namespaces follow folders: files in `Archives` belong to `IntegratedModManager.C
 
 | 分组 / Group | 文件 / Files |
 | --- | --- |
-| 外壳与通用 / Shell | `Shell`, `Localization`, `Settings`, `Configuration`, `Dialogs`, `Tray`, `SingleInstance`, `UiActionGuard`, `UiDiagnostics`, `BuiltInData` |
+| 外壳与通用 / Shell | `Shell`, `Localization`（`T`/`L`，配合 `UiText.cs` 与 `Strings/*.json`）, `Settings`, `Configuration`, `Dialogs`, `Tray`, `SingleInstance`, `UiActionGuard`, `UiDiagnostics`, `BuiltInData` |
 | 仓库与本地库 / Repositories | `Dashboard`, `Repositories`, `LocalLibrary`, `RepositoryWorkspace`, `RefinedWorkspace`, `RepositoryPerformance`, `LocalTags`, `ExistingModImport` |
 | 安装与部署 / Install | `Archives`, `InstallTransactions`, `IniConflicts`, `ConfigurationProfiles`, `CombinationPresets`, `CombinationBundles`, `PersistentSlots` |
 | 在线浏览 / Online | `OnlineFeed`, `OnlineCharacters`, `OnlineCards`, `OnlineDetails`, `OnlineImageCache`, `OnlineImages`, `OnlineBrowse`, `OnlineState`, `OnlineLibrary`, `BrowseSessions`, `AuthorWorkspace` |
@@ -63,3 +63,5 @@ Records and view models used by the window live in `WinUI3/Models`, one type per
   Core tags failures with a kind through `ErrorTags` (for example `ArchiveErrorKind`, `InstallTransactionErrorKind`) without changing the exception type; `MainWindow.Archives.cs` and `MainWindow.InstallTransactions.cs` each map kinds to Chinese/English text in one table instead of matching message text.
 - 路径包含判断统一使用 `PathSafety.ResolveInsideDirectory`、`IsSameOrInside` 或 `IsStrictlyInside`。
   Path containment checks use `PathSafety.ResolveInsideDirectory`, `IsSameOrInside` or `IsStrictlyInside`.
+- 界面文案放在 `WinUI3/Strings/zh-CN.json` 和 `en-US.json`，代码里用 `T("功能.名称")` 取文本，带值的文本用 `T("键", 值…)` 并在文件里写 `{0}`、`{1}`。新增文案时两个文件都要加同一个键；`UiTextResourceTests` 会检查键是否齐全、值的个数是否对得上。`L(中, 英)` 只用于运行时才拼出的文本对（例如保存下来的状态消息）。
+  UI text lives in `WinUI3/Strings/zh-CN.json` and `en-US.json`. Code reads it with `T("Feature.Name")`, or `T("Key", values…)` for texts with `{0}`, `{1}` placeholders. Add each new key to both files; `UiTextResourceTests` checks that keys exist and value counts match. `L(zh, en)` is only for text pairs built at runtime, such as stored status messages.

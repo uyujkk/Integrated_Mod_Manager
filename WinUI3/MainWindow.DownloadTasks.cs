@@ -80,8 +80,8 @@ public sealed partial class MainWindow
         if (_downloadTasks.Count == 0)
         {
             DownloadTaskListPanel.Children.Add(CreateInfoCard(
-                L("暂无下载任务", "No download tasks"),
-                L("从在线 Mod 页面开始下载后，进度和结果会显示在这里。", "Downloads started from the online browser will appear here.")));
+                T("DownloadTasks.NoDownloadTasks"),
+                T("DownloadTasks.DownloadsStartedFromTheOnlineBrowser")));
             ClearDownloadTasksButton.IsEnabled = false;
             return;
         }
@@ -147,7 +147,7 @@ public sealed partial class MainWindow
 
                 if (task.State is DownloadTaskState.Failed or DownloadTaskState.Canceled && task.RetryRequest is not null)
                     await RetryOnlineDownloadAsync(task);
-                else OpenDirectory(task.DestinationPath, L("下载目录", "Download folder"));
+                else OpenDirectory(task.DestinationPath, T("DownloadTasks.DownloadFolder"));
             }
             catch (Exception ex)
             {
@@ -175,7 +175,7 @@ public sealed partial class MainWindow
         view.ProgressBar.IsIndeterminate = active
             && (task.State is not DownloadTaskState.Downloading || !task.HasKnownTotalLength);
         bool retry = task.State is DownloadTaskState.Failed or DownloadTaskState.Canceled && task.RetryRequest is not null;
-        view.ActionButton.Content = active ? L("取消", "Cancel") : retry ? L("重试", "Retry") : L("打开目录", "Open Folder");
+        view.ActionButton.Content = active ? T("Common.Cancel") : retry ? T("DownloadTasks.Retry") : T("DownloadTasks.OpenFolder");
         view.ActionButton.IsEnabled = active
             ? task.State is not DownloadTaskState.Canceling && task.Session?.CanCancel != false && !task.ReplacementCommitting
             : retry ? !task.RetryInProgress && !_onlineDownloadActions.IsPreparing : Directory.Exists(task.DestinationPath);

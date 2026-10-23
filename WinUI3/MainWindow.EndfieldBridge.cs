@@ -25,9 +25,7 @@ public sealed partial class MainWindow
 
     private EndfieldLaunchService CreateEndfieldLaunchService() => new(Program.EndfieldLaunchDataDirectory, LaunchExecutablePath);
 
-    private string BridgeRiskText => L(
-        "账号风险：内置终末地启动以官方签名的 Games.exe 作为父进程直接创建游戏，改变了正常启动链；结合 XXMI / EFMI 使用 Mod 涉及第三方 DLL 注入，可能导致账号处罚或封禁。签名校验与启动成功均不代表官方认可或账号安全。不能接受账号风险时，请使用官方启动器且不加载第三方 Mod。",
-        "Account risk: the integrated Endfield launch creates the game directly under the officially signed Games.exe, which changes the normal launch chain. Using Mods with XXMI / EFMI involves third-party DLL injection and may lead to account penalties or bans. Signature checks and successful launches do not establish official approval or account safety. If you cannot accept account risk, use the official launcher without third-party Mods.");
+    private string BridgeRiskText => T("EndfieldBridge.AccountRiskTheIntegratedEndfieldLaunch");
 
     private IEnumerable<string> DefaultLoaderPaths()
     {
@@ -44,11 +42,11 @@ public sealed partial class MainWindow
         WorkspaceRepository? repository = GetSelectedRepository();
         BridgeOptionsButton.Visibility = CanUseEndfieldBridge(repository) ? Visibility.Visible : Visibility.Collapsed;
         string label = repository?.UseEndfieldBridge == true
-            ? L("启动方式：内置终末地启动 · 设置与风险", "Launch: Integrated Endfield launch · Settings / Risks")
-            : L("启动方式：原有加载器 · 可改用内置启动", "Launch: Existing loader · Integrated launch available");
+            ? T("EndfieldBridge.LaunchIntegratedEndfieldLaunchSettingsRisks")
+            : T("EndfieldBridge.LaunchExistingLoaderIntegratedLaunchAvailable");
         BridgeOptionsButton.Content = new TextBlock { Text = label, TextWrapping = TextWrapping.Wrap };
         BridgeOptionsButton.IsEnabled = !_bridgeOperationInProgress && !_endfieldLaunchInProgress;
-        ToolTipService.SetToolTip(BridgeOptionsButton, L("仅作用于当前终末地仓库，打开设置不会启动游戏。", "Applies only to this Endfield repository. Opening settings never launches the game."));
+        ToolTipService.SetToolTip(BridgeOptionsButton, T("EndfieldBridge.AppliesOnlyToThisEndfieldRepository"));
     }
 
     private async Task OfferEndfieldBridgeAfterUpgradeAsync()
@@ -128,23 +126,23 @@ public sealed partial class MainWindow
             bool english = _currentLanguage == AppLanguage.EnUs;
             DialogViewport viewport = DialogViewportPolicy.Selection(RootGrid.ActualWidth, RootGrid.ActualHeight);
 
-            var gameBox = PathBox(repository.EndfieldGamePath, L("选择游戏目录中的 Endfield.exe", "Select Endfield.exe in the game folder"));
-            var parentBox = PathBox(repository.EndfieldParentPath, L("留空自动查找并校验官方 Games.exe", "Leave empty to find and verify the official Games.exe"));
-            var loaderBox = PathBox(EndfieldBridgeIntegration.ResolveLoader(repository.LauncherPath, DefaultLoaderPaths()), L("XXMI Launcher.exe", "XXMI Launcher.exe"));
+            var gameBox = PathBox(repository.EndfieldGamePath, T("EndfieldBridge.SelectEndfieldExeInTheGame"));
+            var parentBox = PathBox(repository.EndfieldParentPath, T("EndfieldBridge.LeaveEmptyToFindAndVerify"));
+            var loaderBox = PathBox(EndfieldBridgeIntegration.ResolveLoader(repository.LauncherPath, DefaultLoaderPaths()), T("EndfieldBridge.XXMILauncherExe"));
             var argumentsBox = PathBox(repository.EndfieldGameArguments, "-force-d3d11");
             // Switch captions stay short (ToggleSwitch content cannot wrap); the explanation wraps below it.
             var modsSwitch = new ToggleSwitch
             {
-                Header = L("通过 XXMI / EFMI 加载 Mod", "Load Mods through XXMI / EFMI"),
-                OnContent = L("开启", "On"), OffContent = L("关闭", "Off"),
+                Header = T("EndfieldBridge.LoadModsThroughXXMIEFMI"),
+                OnContent = T("Common.On"), OffContent = T("Common.Off"),
                 IsOn = repository.EndfieldUseMods
             };
             var modsHint = HintText();
             var integrated = new ToggleSwitch
             {
-                Header = L("启动方式", "Launch method"),
-                OnContent = L("内置终末地启动", "Integrated Endfield launch"),
-                OffContent = L("原有加载器", "Existing loader"),
+                Header = T("EndfieldBridge.LaunchMethod"),
+                OnContent = T("EndfieldBridge.IntegratedEndfieldLaunch"),
+                OffContent = T("EndfieldBridge.ExistingLoader"),
                 IsOn = repository.UseEndfieldBridge
             };
             var launchHint = HintText();
@@ -160,13 +158,13 @@ public sealed partial class MainWindow
                 Content = new FontIcon { Glyph = "", FontSize = 12 }, Padding = new Thickness(8, 4, 8, 4),
                 Style = (Style)Application.Current.Resources["SecondaryButtonStyle"], VerticalAlignment = VerticalAlignment.Top
             };
-            ToolTipService.SetToolTip(outputClose, L("关闭结果", "Close result"));
+            ToolTipService.SetToolTip(outputClose, T("EndfieldBridge.CloseResult"));
             var outputGrid = new Grid { ColumnSpacing = 8, RowSpacing = 6 };
             outputGrid.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(1, GridUnitType.Star) });
             outputGrid.ColumnDefinitions.Add(new ColumnDefinition { Width = GridLength.Auto });
             outputGrid.RowDefinitions.Add(new RowDefinition { Height = GridLength.Auto });
             outputGrid.RowDefinitions.Add(new RowDefinition { Height = GridLength.Auto });
-            outputGrid.Children.Add(new TextBlock { Text = L("运行结果", "Result"), FontWeight = Microsoft.UI.Text.FontWeights.SemiBold, VerticalAlignment = VerticalAlignment.Center });
+            outputGrid.Children.Add(new TextBlock { Text = T("EndfieldBridge.Result"), FontWeight = Microsoft.UI.Text.FontWeights.SemiBold, VerticalAlignment = VerticalAlignment.Center });
             Grid.SetColumn(outputClose, 1);
             outputGrid.Children.Add(outputClose);
             Grid.SetRow(outputViewer, 1);
@@ -176,7 +174,7 @@ public sealed partial class MainWindow
             outputClose.Click += (_, _) => outputBorder.Visibility = Visibility.Collapsed;
             var consent = new CheckBox
             {
-                Content = new TextBlock { Text = L("我已了解额外的账号风险，选择为此仓库使用内置启动。", "I understand the additional account risk and choose the integrated launch for this repository."), TextWrapping = TextWrapping.Wrap },
+                Content = new TextBlock { Text = T("EndfieldBridge.IUnderstandTheAdditionalAccountRisk"), TextWrapping = TextWrapping.Wrap },
                 IsChecked = repository.EndfieldRiskAccepted
             };
 
@@ -188,7 +186,7 @@ public sealed partial class MainWindow
             };
             void Show(LaunchText text, bool failure = false)
             {
-                output.Text = (failure ? L("未完成：", "Not completed: ") : string.Empty) + text.For(english);
+                output.Text = (failure ? T("EndfieldBridge.NotCompleted") : string.Empty) + text.For(english);
                 outputBorder.Visibility = Visibility.Visible;
             }
 
@@ -236,14 +234,14 @@ public sealed partial class MainWindow
                 Text = isUpgradeOffer
                     ? L($"仓库：{repository.Name}\n终末地启动已内置到管理器，不再需要单独下载 EndfieldBridge。" + (migrated ? "已导入旧桥接器的设置；如果之前适配过 EFMI，请点击“备份并适配 EFMI”切换到内置命令，原始恢复点会保留。" : string.Empty),
                         $"Repository: {repository.Name}\nThe Endfield launch is now built into the manager; EndfieldBridge no longer needs a separate download." + (migrated ? " Settings from the old bridge were imported. If EFMI was set up before, use Back up and set up EFMI to switch to the integrated command; the original restore point is kept." : string.Empty))
-                    : L($"仓库：{repository.Name}", $"Repository: {repository.Name}"),
+                    : T("EndfieldBridge.Repository", repository.Name),
                 TextWrapping = TextWrapping.Wrap,
                 Style = (Style)Application.Current.Resources["CaptionTextStyle"]
             });
             body.Children.Add(new InfoBar
             {
                 Severity = InfoBarSeverity.Warning, IsOpen = true, IsClosable = false,
-                Title = L("账号风险", "Account risk"), Message = BridgeRiskText
+                Title = T("EndfieldBridge.AccountRisk"), Message = BridgeRiskText
             });
 
             // The risk confirmation gates Save, so it sits right under the switch it belongs to.
@@ -257,26 +255,26 @@ public sealed partial class MainWindow
             paths.ColumnDefinitions.Add(new ColumnDefinition { Width = GridLength.Auto });
             paths.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(1, GridUnitType.Star) });
             paths.ColumnDefinitions.Add(new ColumnDefinition { Width = GridLength.Auto });
-            AddPathRow(paths, 0, L("游戏程序", "Game executable"), gameBox, ".exe");
-            AddPathRow(paths, 1, L("官方启动器（可选）", "Official launcher (optional)"), parentBox, ".exe");
-            AddPathRow(paths, 2, L("XXMI 启动器", "XXMI launcher"), loaderBox, ".exe");
-            AddPathRow(paths, 3, L("游戏参数", "Game arguments"), argumentsBox, null);
+            AddPathRow(paths, 0, T("EndfieldBridge.GameExecutable"), gameBox, ".exe");
+            AddPathRow(paths, 1, T("EndfieldBridge.OfficialLauncherOptional"), parentBox, ".exe");
+            AddPathRow(paths, 2, T("EndfieldBridge.XXMILauncher"), loaderBox, ".exe");
+            AddPathRow(paths, 3, T("EndfieldBridge.GameArguments"), argumentsBox, null);
             var settings = new StackPanel { Spacing = 10 };
-            settings.Children.Add(SectionTitle(L("游戏与加载器", "Game and loader")));
+            settings.Children.Add(SectionTitle(T("EndfieldBridge.GameAndLoader")));
             settings.Children.Add(paths);
             settings.Children.Add(modsSwitch);
             settings.Children.Add(modsHint);
             body.Children.Add(new Border { Style = (Style)Application.Current.Resources["InsetBorderStyle"], Padding = new Thickness(14, 12, 14, 14), Child = settings });
 
             var actions = new StackPanel { Spacing = 8 };
-            actions.Children.Add(SectionTitle(L("检查与 EFMI 适配", "Checks and EFMI setup")));
+            actions.Children.Add(SectionTitle(T("EndfieldBridge.ChecksAndEFMISetup")));
             var actionRow = new ButtonGrid(3);
-            actionRow.Add(ActionButton(L("检测配置", "Check"), async () =>
+            actionRow.Add(ActionButton(T("EndfieldBridge.Check"), async () =>
             {
                 LaunchProfile profile = CurrentProfile();
                 Show(await Task.Run(() => service.Check(profile)));
             }));
-            actionRow.Add(ActionButton(L("读取 EFMI 设置", "Import from EFMI"), () =>
+            actionRow.Add(ActionButton(T("EndfieldBridge.ImportFromEFMI"), () =>
             {
                 LaunchProfile profile = CurrentProfile();
                 LaunchText note = service.Integration.Import(profile);
@@ -285,7 +283,7 @@ public sealed partial class MainWindow
                 Show(note + new LaunchText("\n", "\n") + service.Integration.Inspect(profile));
                 return Task.CompletedTask;
             }));
-            actionRow.Add(ActionButton(L("备份并适配 EFMI", "Back up and set up EFMI"), () =>
+            actionRow.Add(ActionButton(T("EndfieldBridge.BackUpAndSetUpEFMI"), () =>
             {
                 LaunchProfile profile = CurrentProfile();
                 service.Integration.Import(profile);
@@ -309,14 +307,14 @@ public sealed partial class MainWindow
                     $"EFMI is set up. Full backup: {backup}\nOn first launch XXMI reports an unverified command: check that it points to this manager, then choose Keep.\n") + service.Integration.Inspect(profile));
                 return Task.CompletedTask;
             }));
-            actionRow.Add(ActionButton(L("恢复 EFMI", "Restore EFMI"), () =>
+            actionRow.Add(ActionButton(T("EndfieldBridge.RestoreEFMI"), () =>
             {
                 service.Integration.Restore();
                 modsSwitch.IsOn = false;
                 Show(new LaunchText("已恢复适配前的 EFMI 启动字段，其他设置保留。", "EFMI launch fields were restored to their values before setup; other settings were kept."));
                 return Task.CompletedTask;
             }));
-            actionRow.Add(ActionButton(L("打开启动日志", "Open launch log"), () =>
+            actionRow.Add(ActionButton(T("EndfieldBridge.OpenLaunchLog"), () =>
             {
                 if (!File.Exists(service.Store.LogPath)) service.Store.Log(new LaunchText("日志已创建。", "Log created."), english);
                 OpenTextDocument(service.Store.LogPath);
@@ -328,19 +326,18 @@ public sealed partial class MainWindow
             var legal = new StackPanel { Spacing = 8 };
             legal.Children.Add(new TextBlock
             {
-                Text = L("内置启动组件源自 EndfieldBridge 0.3.2，以 AGPL-3.0-only 授权，其启动核心参考并改写自 endfield-nolauncher / Better-Endfield。包含该组件的管理器发布包整体按 AGPL-3.0-only 分发；你可以依许可证复制、修改和再分发。风险确认不是附加的许可限制。",
-                    "The integrated launch component derives from EndfieldBridge 0.3.2 and is licensed AGPL-3.0-only; its launch core was adapted from endfield-nolauncher / Better-Endfield. Manager builds that include it are distributed as a whole under AGPL-3.0-only, and you may copy, modify and redistribute them under that license. The risk confirmation is not an additional license restriction."),
+                Text = T("EndfieldBridge.TheIntegratedLaunchComponentDerivesFrom"),
                 TextWrapping = TextWrapping.Wrap,
                 Style = (Style)Application.Current.Resources["CaptionTextStyle"]
             });
             var legalRow = new ButtonGrid(3);
-            legalRow.Add(ActionButton(L("AGPL-3.0 许可证", "AGPL-3.0 license"), () => { OpenTextDocument(Path.Combine(AppContext.BaseDirectory, "licenses", "AGPL-3.0.txt")); return Task.CompletedTask; }));
-            legalRow.Add(ActionButton(L("来源与修改说明", "Credits and changes"), () => { OpenTextDocument(Path.Combine(AppContext.BaseDirectory, "licenses", "EndfieldLaunch-NOTICE.md")); return Task.CompletedTask; }));
-            legalRow.Add(ActionButton(L("对应源码", "Corresponding source"), () => OpenExternalUrlAsync(EndfieldLaunchSourceUrl, L("打开页面失败", "Failed to open page"))));
+            legalRow.Add(ActionButton(T("EndfieldBridge.AGPL30License"), () => { OpenTextDocument(Path.Combine(AppContext.BaseDirectory, "licenses", "AGPL-3.0.txt")); return Task.CompletedTask; }));
+            legalRow.Add(ActionButton(T("EndfieldBridge.CreditsAndChanges"), () => { OpenTextDocument(Path.Combine(AppContext.BaseDirectory, "licenses", "EndfieldLaunch-NOTICE.md")); return Task.CompletedTask; }));
+            legalRow.Add(ActionButton(T("EndfieldBridge.CorrespondingSource"), () => OpenExternalUrlAsync(EndfieldLaunchSourceUrl, T("EndfieldBridge.FailedToOpenPage"))));
             legal.Children.Add(legalRow.Panel);
             body.Children.Add(new Expander
             {
-                Header = L("许可证与源码", "License and source"),
+                Header = T("EndfieldBridge.LicenseAndSource"),
                 Content = legal,
                 HorizontalAlignment = HorizontalAlignment.Stretch,
                 HorizontalContentAlignment = HorizontalAlignment.Stretch
@@ -363,10 +360,10 @@ public sealed partial class MainWindow
             content.Children.Add(outputBorder);
             var dialog = new ContentDialog
             {
-                Title = L("终末地启动设置", "Endfield launch settings"),
+                Title = T("EndfieldBridge.EndfieldLaunchSettings"),
                 Content = content,
-                PrimaryButtonText = L("保存", "Save"),
-                CloseButtonText = L("取消", "Cancel"),
+                PrimaryButtonText = T("Common.Save"),
+                CloseButtonText = T("Common.Cancel"),
                 DefaultButton = ContentDialogButton.Primary,
                 RequestedTheme = RootGrid.ActualTheme,
                 XamlRoot = RootGrid.XamlRoot
@@ -378,12 +375,11 @@ public sealed partial class MainWindow
                 consent.Visibility = useIntegrated ? Visibility.Visible : Visibility.Collapsed;
                 dialog.IsPrimaryButtonEnabled = !useIntegrated || consent.IsChecked == true;
                 launchHint.Text = useIntegrated
-                    ? L("由官方签名的 Games.exe 作为父进程直接启动游戏，无需额外下载。需勾选下方风险确认才能保存。",
-                        "Starts the game under the officially signed Games.exe; no extra download. Confirm the risk below to save.")
-                    : L("直接运行下方的 XXMI 或其他启动器，不使用内置启动。", "Runs the XXMI or other launcher below directly, without the integrated launch.");
+                    ? T("EndfieldBridge.StartsTheGameUnderTheOfficially")
+                    : T("EndfieldBridge.RunsTheXXMIOrOtherLauncher");
                 modsHint.Text = modsSwitch.IsOn
-                    ? L("通过 XXMI / EFMI 加载 Mod；首次使用需在下方“备份并适配 EFMI”。", "Loads Mods through XXMI / EFMI; set up EFMI below before first use.")
-                    : L("直接启动游戏，不加载 Mod。", "Starts the game directly without Mods.");
+                    ? T("EndfieldBridge.LoadsModsThroughXXMIEFMISet")
+                    : T("EndfieldBridge.StartsTheGameDirectlyWithoutMods");
             }
 
             integrated.Toggled += (_, _) => RefreshState();
@@ -419,8 +415,8 @@ public sealed partial class MainWindow
                 repository.LauncherPath = loaderBox.Text.Trim();
                 if (GetSelectedRepository()?.Id == repository.Id) LauncherTextBox.Text = repository.LauncherPath;
                 StatusTextBlock.Text = repository.UseEndfieldBridge
-                    ? L("已保存终末地启动设置；“运行启动器”将使用内置启动。", "Endfield launch settings saved. Run Launcher uses the integrated launch.")
-                    : L("已保存：“运行启动器”将直接运行原有加载器。", "Saved. Run Launcher starts the existing loader directly.");
+                    ? T("EndfieldBridge.EndfieldLaunchSettingsSavedRunLauncher")
+                    : T("EndfieldBridge.SavedRunLauncherStartsTheExisting");
             }
 
             SaveShellConfig();
@@ -429,7 +425,7 @@ public sealed partial class MainWindow
         {
             if (_onlineWindowClosed) return;
             LogApplicationIssue("Endfield launch settings", ex);
-            await ShowMessageAsync(L("无法打开终末地启动设置：", "Could not open Endfield launch settings: ") + ex.Message, L("终末地启动", "Endfield launch"));
+            await ShowMessageAsync(T("EndfieldBridge.CouldNotOpenEndfieldLaunchSettings") + ex.Message, T("EndfieldBridge.EndfieldLaunch"));
         }
         finally
         {
@@ -468,7 +464,7 @@ public sealed partial class MainWindow
                 return;
             }
 
-            var browse = new Button { Content = L("浏览", "Browse"), Style = (Style)Application.Current.Resources["SecondaryButtonStyle"] };
+            var browse = new Button { Content = T("EndfieldBridge.Browse"), Style = (Style)Application.Current.Resources["SecondaryButtonStyle"] };
             browse.Click += async (_, _) => await RunUiActionAsync("Pick Endfield path", async () =>
             {
                 string? picked = await PickFileAsync([extension]);
@@ -483,7 +479,7 @@ public sealed partial class MainWindow
 
     private void OpenTextDocument(string path)
     {
-        if (!File.Exists(path)) throw new FileNotFoundException(L("文件不存在：", "File not found: ") + path);
+        if (!File.Exists(path)) throw new FileNotFoundException(T("EndfieldBridge.FileNotFound") + path);
         Process.Start(new ProcessStartInfo("notepad.exe", CommandLine.Quote(path)) { UseShellExecute = true });
     }
 
@@ -506,7 +502,7 @@ public sealed partial class MainWindow
                 : (LauncherTextBox.Text ?? string.Empty).Trim();
             if (string.IsNullOrWhiteSpace(loader) || !File.Exists(loader))
             {
-                await ShowMessageAsync(L("未找到可用的默认 XXMI 路径，请选择实际的 XXMI Launcher.exe 或原有启动器。", "No valid default XXMI path was found. Select your actual XXMI Launcher.exe or existing launcher."), L("未设置启动器", "Launcher not set"));
+                await ShowMessageAsync(T("EndfieldBridge.NoValidDefaultXXMIPathWas"), T("EndfieldBridge.LauncherNotSet"));
                 return;
             }
 
@@ -515,13 +511,13 @@ public sealed partial class MainWindow
                 WorkingDirectory = Path.GetDirectoryName(loader) ?? AppContext.BaseDirectory,
                 UseShellExecute = true
             });
-            StatusTextBlock.Text = L("已启动原有加载器。", "Existing loader started.");
+            StatusTextBlock.Text = T("EndfieldBridge.ExistingLoaderStarted");
             if (string.IsNullOrWhiteSpace(LauncherTextBox.Text)) LauncherTextBox.Text = loader;
             SaveConfig();
         }
         catch (Exception ex)
         {
-            await ShowMessageAsync(L("运行启动器失败：", "Failed to run launcher: ") + ex.Message, L("启动失败", "Launch failed"));
+            await ShowMessageAsync(T("EndfieldBridge.FailedToRunLauncher") + ex.Message, T("EndfieldBridge.LaunchFailed"));
         }
     }
 
@@ -537,7 +533,7 @@ public sealed partial class MainWindow
 
         if (LaunchCommand.IsLaunchRunning())
         {
-            await ShowMessageAsync(L("已有终末地启动会话在运行，请先正常退出游戏。", "An Endfield launch session is already running. Exit the game normally first."), L("终末地启动", "Endfield launch"));
+            await ShowMessageAsync(T("EndfieldBridge.AnEndfieldLaunchSessionIsAlready"), T("EndfieldBridge.EndfieldLaunch"));
             return;
         }
 
@@ -545,7 +541,7 @@ public sealed partial class MainWindow
         LaunchProfile profile = BuildLaunchProfile(repository, sessionId);
         if (profile.WithMods && !File.Exists(profile.Xxmi))
         {
-            await ShowMessageAsync(L("已开启 Mod 加载，但没有找到 XXMI Launcher.exe。请在终末地启动设置中选择它。", "Mod loading is on, but XXMI Launcher.exe was not found. Select it in Endfield launch settings."), L("终末地启动", "Endfield launch"));
+            await ShowMessageAsync(T("EndfieldBridge.ModLoadingIsOnButXXMI"), T("EndfieldBridge.EndfieldLaunch"));
             return;
         }
 
@@ -562,13 +558,13 @@ public sealed partial class MainWindow
         }
         catch (Win32Exception ex) when (ex.NativeErrorCode == 1223)
         {
-            StatusTextBlock.Text = L("已取消管理员授权，没有启动游戏。", "Administrator approval was declined. The game was not started.");
+            StatusTextBlock.Text = T("EndfieldBridge.AdministratorApprovalWasDeclinedTheGame");
             return;
         }
 
         _endfieldLaunchInProgress = true;
         RefreshEndfieldBridgeControls();
-        StatusTextBlock.Text = L("正在启动终末地…", "Starting Endfield…");
+        StatusTextBlock.Text = T("EndfieldBridge.StartingEndfield");
         try
         {
             LaunchStatus? status = await WaitForLaunchStatusAsync(service.Store, sessionId, TimeSpan.FromSeconds(profile.WithMods ? 120 : 45));
@@ -581,14 +577,14 @@ public sealed partial class MainWindow
                     break;
                 case LaunchStates.Failed:
                 case LaunchStates.Exited:
-                    StatusTextBlock.Text = L("终末地启动未完成。", "The Endfield launch did not complete.");
-                    await ShowMessageAsync(status!.Message.For(english), L("终末地启动", "Endfield launch"));
+                    StatusTextBlock.Text = T("EndfieldBridge.TheEndfieldLaunchDidNotComplete");
+                    await ShowMessageAsync(status!.Message.For(english), T("EndfieldBridge.EndfieldLaunch"));
                     break;
                 case LaunchStates.LoaderStarted:
-                    StatusTextBlock.Text = L("已交给 XXMI / EFMI，尚未收到游戏启动回调。若 XXMI 弹出命令确认，请核对后选择“保持”。", "Handed to XXMI / EFMI; no game start reported yet. If XXMI asks about the command, verify it and choose Keep.");
+                    StatusTextBlock.Text = T("EndfieldBridge.HandedToXXMIEFMINoGame");
                     break;
                 default:
-                    StatusTextBlock.Text = L("仍未收到启动结果，可在终末地启动设置中打开启动日志。", "No launch result yet. Open the launch log from Endfield launch settings.");
+                    StatusTextBlock.Text = T("EndfieldBridge.NoLaunchResultYetOpenThe");
                     break;
             }
         }

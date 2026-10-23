@@ -239,10 +239,10 @@ public sealed partial class MainWindow
         ApplySecondaryNavButtonVisual(OnlineListLayoutButton, !showGrid);
         ApplySecondaryNavButtonVisual(OnlineGridLayoutButton, showGrid);
 
-        ToolTipService.SetToolTip(OnlineListLayoutButton, L("列表显示", "List view"));
-        ToolTipService.SetToolTip(OnlineGridLayoutButton, L("方块显示", "Grid view"));
-        AutomationProperties.SetName(OnlineListLayoutButton, L("切换为列表显示", "Switch to list view"));
-        AutomationProperties.SetName(OnlineGridLayoutButton, L("切换为方块显示", "Switch to grid view"));
+        ToolTipService.SetToolTip(OnlineListLayoutButton, T("OnlineCards.ListView"));
+        ToolTipService.SetToolTip(OnlineGridLayoutButton, T("OnlineCards.GridView"));
+        AutomationProperties.SetName(OnlineListLayoutButton, T("OnlineCards.SwitchToListView"));
+        AutomationProperties.SetName(OnlineGridLayoutButton, T("OnlineCards.SwitchToGridView"));
     }
 
     private void OnOnlineListCardPresenterDataContextChanged(FrameworkElement sender, DataContextChangedEventArgs args)
@@ -416,7 +416,7 @@ public sealed partial class MainWindow
         {
             imageHost.Child = new TextBlock
             {
-                Text = L("暂无缩略图", "No preview"),
+                Text = T("OnlineCards.NoPreview"),
                 HorizontalAlignment = HorizontalAlignment.Center,
                 VerticalAlignment = VerticalAlignment.Center,
                 Style = (Style)Application.Current.Resources["CaptionTextStyle"]
@@ -439,7 +439,7 @@ public sealed partial class MainWindow
         authorRow.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(1, GridUnitType.Star) });
         authorRow.Children.Add(new TextBlock
         {
-            Text = $"{GetOnlineCharacterDisplayName(mod.CharacterName)}{(mod.IsCharacterNameInferred ? L("（自动识别）", " (detected)") : string.Empty)} ·",
+            Text = $"{GetOnlineCharacterDisplayName(mod.CharacterName)}{(mod.IsCharacterNameInferred ? T("Common.Detected") : string.Empty)} ·",
             Style = (Style)Application.Current.Resources["MutedTextStyle"],
             VerticalAlignment = VerticalAlignment.Center
         });
@@ -451,7 +451,7 @@ public sealed partial class MainWindow
         var installedHost = new ContentControl { Height = 24, HorizontalContentAlignment = HorizontalAlignment.Left };
         contentPanel.Children.Add(installedHost);
         var metricsPanel = new StackPanel { Orientation = Orientation.Horizontal, Spacing = 8 };
-        Border heatMetric = CreateOnlineMetricBadge($"{L("热度", "Heat")} {mod.HotnessScore:F1}", true);
+        Border heatMetric = CreateOnlineMetricBadge($"{T("OnlineCards.Heat")} {mod.HotnessScore:F1}", true);
         Border downloadMetric = CreateOnlineMetricBadge($"↓ {mod.Downloads}", false);
         metricsPanel.Children.Add(heatMetric);
         metricsPanel.Children.Add(CreateOnlineMetricBadge($"♥ {mod.Likes}", false));
@@ -460,12 +460,12 @@ public sealed partial class MainWindow
         contentPanel.Children.Add(metricsPanel);
         TrackOnlineCardMetrics(metricsPanel, () =>
         {
-            ((TextBlock)heatMetric.Child).Text = $"{L("热度", "Heat")} {mod.HotnessScore:F1}";
+            ((TextBlock)heatMetric.Child).Text = $"{T("OnlineCards.Heat")} {mod.HotnessScore:F1}";
             ((TextBlock)downloadMetric.Child).Text = $"↓ {mod.Downloads}";
         });
         var cardStatus = new TextBlock
         {
-            Text = $"{L("更新", "Updated")} {mod.UpdatedAt:yyyy-MM-dd}  ·  ID {mod.ItemId}",
+            Text = $"{T("OnlineCards.Updated")} {mod.UpdatedAt:yyyy-MM-dd}  ·  ID {mod.ItemId}",
             Style = (Style)Application.Current.Resources["CaptionTextStyle"],
             TextTrimming = TextTrimming.CharacterEllipsis
         };
@@ -479,7 +479,7 @@ public sealed partial class MainWindow
         };
         Button detailsButton = new()
         {
-            Content = L("查看详情", "Details"),
+            Content = T("OnlineCards.Details"),
             Style = (Style)Application.Current.Resources["SecondaryButtonStyle"],
             MinHeight = 36,
             HorizontalAlignment = HorizontalAlignment.Stretch
@@ -506,9 +506,9 @@ public sealed partial class MainWindow
             HorizontalAlignment = HorizontalAlignment.Stretch,
             HorizontalContentAlignment = HorizontalAlignment.Center
         };
-        ToolTipService.SetToolTip(openPageButton, L("打开原页面", "Open original page"));
-        AutomationProperties.SetName(openPageButton, L("打开原页面", "Open original page"));
-        openPageButton.Click += async (_, _) => await RunUiActionAsync("OpenExternalUrlAsync", () => OpenExternalUrlAsync(mod.ProfileUrl, L("打开页面失败", "Open page failed")));
+        ToolTipService.SetToolTip(openPageButton, T("OnlineCards.OpenOriginalPage"));
+        AutomationProperties.SetName(openPageButton, T("OnlineCards.OpenOriginalPage"));
+        openPageButton.Click += async (_, _) => await RunUiActionAsync("OpenExternalUrlAsync", () => OpenExternalUrlAsync(mod.ProfileUrl, T("Common.OpenPageFailed")));
         quickActions.Children.Add(openPageButton);
 
         Button downloadButton = new()
@@ -525,8 +525,8 @@ public sealed partial class MainWindow
         };
         Grid.SetColumn(downloadButton, 1);
         string downloadActionText = installedOrigin is null
-            ? L("下载并解压", "Download and extract")
-            : L("重新下载并解压", "Download and extract again");
+            ? T("Common.DownloadAndExtract")
+            : T("Common.DownloadAndExtractAgain");
         ToolTipService.SetToolTip(downloadButton, downloadActionText);
         AutomationProperties.SetName(downloadButton, downloadActionText);
         downloadButton.Click += async (_, _) => await RunUiActionAsync("RunOnlineCardDownloadAsync", () => RunOnlineCardDownloadAsync(mod, downloadButton));
@@ -596,7 +596,7 @@ public sealed partial class MainWindow
         {
             imageHost.Child = new TextBlock
             {
-                Text = L("暂无缩略图", "No preview"),
+                Text = T("OnlineCards.NoPreview"),
                 HorizontalAlignment = HorizontalAlignment.Center,
                 VerticalAlignment = VerticalAlignment.Center,
                 Style = (Style)Application.Current.Resources["CaptionTextStyle"]
@@ -664,7 +664,7 @@ public sealed partial class MainWindow
         content.Children.Add(CreateOnlineAuthorLink(mod));
         var cardStatus = new TextBlock
         {
-            Text = $"{L("更新", "Updated")} {mod.UpdatedAt:yyyy-MM-dd}",
+            Text = $"{T("OnlineCards.Updated")} {mod.UpdatedAt:yyyy-MM-dd}",
             Style = (Style)Application.Current.Resources["CaptionTextStyle"],
             TextTrimming = TextTrimming.CharacterEllipsis
         };
@@ -674,9 +674,9 @@ public sealed partial class MainWindow
         metrics.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(1, GridUnitType.Star) });
         metrics.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(1, GridUnitType.Star) });
         metrics.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(1, GridUnitType.Star) });
-        Border likes = CreateOnlineTileStat("♥", FormatCompactMetric(mod.Likes), L("点赞", "Likes"));
-        Border views = CreateOnlineTileStat("◉", FormatCompactMetric(mod.Views), L("查看", "Views"));
-        Border downloads = CreateOnlineTileStat("↓", FormatCompactMetric(mod.Downloads), L("下载", "Downloads"));
+        Border likes = CreateOnlineTileStat("♥", FormatCompactMetric(mod.Likes), T("OnlineCards.Likes"));
+        Border views = CreateOnlineTileStat("◉", FormatCompactMetric(mod.Views), T("OnlineCards.Views"));
+        Border downloads = CreateOnlineTileStat("↓", FormatCompactMetric(mod.Downloads), T("OnlineCards.Downloads"));
         metrics.Children.Add(likes);
         Grid.SetColumn(views, 1);
         metrics.Children.Add(views);
@@ -699,7 +699,7 @@ public sealed partial class MainWindow
 
         Button detailsButton = new()
         {
-            Content = L("查看详情", "Details"),
+            Content = T("OnlineCards.Details"),
             MinHeight = 36,
             HorizontalAlignment = HorizontalAlignment.Stretch,
             Style = (Style)Application.Current.Resources["PrimaryButtonStyle"]
@@ -716,8 +716,8 @@ public sealed partial class MainWindow
             Style = (Style)Application.Current.Resources["SecondaryButtonStyle"]
         };
         Grid.SetColumn(openPageButton, 1);
-        ToolTipService.SetToolTip(openPageButton, L("打开原页面", "Open original page"));
-        openPageButton.Click += async (_, _) => await RunUiActionAsync("OpenExternalUrlAsync", () => OpenExternalUrlAsync(mod.ProfileUrl, L("打开页面失败", "Open page failed")));
+        ToolTipService.SetToolTip(openPageButton, T("OnlineCards.OpenOriginalPage"));
+        openPageButton.Click += async (_, _) => await RunUiActionAsync("OpenExternalUrlAsync", () => OpenExternalUrlAsync(mod.ProfileUrl, T("Common.OpenPageFailed")));
         actions.Children.Add(openPageButton);
 
         Button downloadButton = new()
@@ -733,8 +733,8 @@ public sealed partial class MainWindow
         ToolTipService.SetToolTip(
             downloadButton,
             installedOrigin is null
-                ? L("下载并解压", "Download and extract")
-                : L("重新下载并解压", "Download and extract again"));
+                ? T("Common.DownloadAndExtract")
+                : T("Common.DownloadAndExtractAgain"));
         downloadButton.Click += async (_, _) => await RunUiActionAsync("RunOnlineCardDownloadAsync", () => RunOnlineCardDownloadAsync(mod, downloadButton));
         actions.Children.Add(downloadButton);
 
@@ -858,7 +858,7 @@ public sealed partial class MainWindow
         });
         content.Children.Add(new TextBlock
         {
-            Text = L("已安装", "Installed"),
+            Text = T("Common.Installed"),
             FontSize = 12,
             FontWeight = Microsoft.UI.Text.FontWeights.SemiBold,
             MaxLines = 1,
@@ -878,7 +878,7 @@ public sealed partial class MainWindow
         };
         ToolTipService.SetToolTip(
             indicator,
-            L($"已安装到：{installedPath}", $"Installed at: {installedPath}"));
+            T("OnlineCards.InstalledAt", installedPath));
         return indicator;
     }
 
@@ -892,7 +892,7 @@ public sealed partial class MainWindow
         };
         content.Children.Add(new TextBlock
         {
-            Text = L("热度", "HEAT"),
+            Text = T("OnlineCards.HEAT"),
             FontSize = 10,
             Foreground = new SolidColorBrush(ColorHelper.FromArgb(210, 255, 255, 255)),
             VerticalAlignment = VerticalAlignment.Center
@@ -915,7 +915,7 @@ public sealed partial class MainWindow
             Padding = new Thickness(8, 4, 8, 4),
             Child = content
         };
-        ToolTipService.SetToolTip(indicator, $"{L("热度", "Hotness")}: {hotnessScore:F1}");
+        ToolTipService.SetToolTip(indicator, $"{T("OnlineCards.Hotness")}: {hotnessScore:F1}");
         return indicator;
     }
 }

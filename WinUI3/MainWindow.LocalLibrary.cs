@@ -42,7 +42,7 @@ public sealed partial class MainWindow
     {
         try
         {
-            await ShowImageViewerAsync(PreviewImage.Source, L("Mod 预览图", "Mod Preview"));
+            await ShowImageViewerAsync(PreviewImage.Source, T("LocalLibrary.ModPreview"));
         }
         catch (Exception ex)
         {
@@ -103,11 +103,11 @@ public sealed partial class MainWindow
         }
     }
 
-    private void OnOpenSourceClicked(object sender, RoutedEventArgs e) => OpenDirectory(SourceTextBox.Text, L("主文件夹", "source folder"));
+    private void OnOpenSourceClicked(object sender, RoutedEventArgs e) => OpenDirectory(SourceTextBox.Text, T("LocalLibrary.SourceFolder"));
 
-    private void OnOpenTargetClicked(object sender, RoutedEventArgs e) => OpenDirectory(TargetTextBox.Text, L("目标文件夹", "target folder"));
+    private void OnOpenTargetClicked(object sender, RoutedEventArgs e) => OpenDirectory(TargetTextBox.Text, T("LocalLibrary.TargetFolder"));
 
-    private void OnOpenLauncherClicked(object sender, RoutedEventArgs e) => OpenFileLocation(LauncherTextBox.Text, L("启动器", "launcher"));
+    private void OnOpenLauncherClicked(object sender, RoutedEventArgs e) => OpenFileLocation(LauncherTextBox.Text, T("LocalLibrary.Launcher"));
 
     private async void OnRunLauncherClicked(object sender, RoutedEventArgs e) => await RunUiActionAsync("OnRunLauncherClicked", RunRepositoryLauncherAsync);
 
@@ -121,8 +121,8 @@ public sealed partial class MainWindow
             if (item is null)
             {
                 await ShowMessageAsync(
-                    L("请先选择一个第一层分类。", "Select a first-level category first."),
-                    L("未选择分类", "No category selected"));
+                    T("LocalLibrary.SelectAFirstLevelCategoryFirst"),
+                    T("LocalLibrary.NoCategorySelected"));
                 return;
             }
 
@@ -146,8 +146,8 @@ public sealed partial class MainWindow
         {
             LogApplicationIssue("Open archive picker", ex);
             await ShowMessageAsync(
-                L("无法打开压缩包选择器：", "Could not open the archive picker: ") + ex.Message,
-                L("导入 Mod 失败", "Import Mod Failed"));
+                T("LocalLibrary.CouldNotOpenTheArchivePicker") + ex.Message,
+                T("LocalLibrary.ImportModFailed"));
         }
     }
 
@@ -159,8 +159,8 @@ public sealed partial class MainWindow
             if (item is null)
             {
                 await ShowMessageAsync(
-                    L("请先选择一个第二层 Mod。", "Select a second-level mod first."),
-                    L("未选择 Mod", "No mod selected"));
+                    T("Common.SelectASecondLevelModFirst"),
+                    T("Common.NoModSelected"));
                 return;
             }
 
@@ -193,15 +193,15 @@ public sealed partial class MainWindow
         var menu = new MenuFlyout();
         var openItem = new MenuFlyoutItem
         {
-            Text = L("打开文件夹", "Open folder"),
+            Text = T("LocalLibrary.OpenFolder"),
             Icon = new FontIcon { Glyph = "\uE838" }
         };
-        openItem.Click += (_, _) => OpenDirectory(item.Path, L("第一层文件夹", "First-level folder"));
+        openItem.Click += (_, _) => OpenDirectory(item.Path, T("LocalLibrary.FirstLevelFolder"));
         menu.Items.Add(openItem);
 
         var renameItem = new MenuFlyoutItem
         {
-            Text = L("重命名", "Rename"),
+            Text = T("LocalLibrary.Rename"),
             Icon = new FontIcon { Glyph = "\uE70F" }
         };
         renameItem.Click += OnRenameFirstLevelClicked;
@@ -218,14 +218,14 @@ public sealed partial class MainWindow
             if (string.IsNullOrWhiteSpace(sourceDir) || !Directory.Exists(sourceDir))
             {
                 await ShowMessageAsync(
-                    L("请先设置有效的 Mod 仓库文件夹。", "Set a valid mod storage folder first."),
-                    L("路径无效", "Invalid path"));
+                    T("LocalLibrary.SetAValidModStorageFolder"),
+                    T("Common.InvalidPath"));
                 return;
             }
 
             string? name = await PromptForTextAsync(
-                L("请输入新的第一层文件夹名称。", "Enter the new first-level folder name."),
-                L("新建第一层文件夹", "Create first-level folder"),
+                T("LocalLibrary.EnterTheNewFirstLevelFolder"),
+                T("Common.CreateFirstLevelFolder"),
                 string.Empty);
             if (string.IsNullOrWhiteSpace(name))
             {
@@ -238,21 +238,21 @@ public sealed partial class MainWindow
                 if (Directory.Exists(targetPath))
                 {
                     await ShowMessageAsync(
-                        L("同名第一层文件夹已存在。", "A first-level folder with the same name already exists."),
-                        L("创建失败", "Create failed"));
+                        T("LocalLibrary.AFirstLevelFolderWithThe"),
+                        T("LocalLibrary.CreateFailed"));
                     return;
                 }
 
                 Directory.CreateDirectory(targetPath);
                 await RefreshListsAsync();
                 SelectFirstLevelByPath(targetPath);
-                StatusTextBlock.Text = L($"已创建第一层文件夹：{name.Trim()}", $"Created first-level folder: {name.Trim()}");
+                StatusTextBlock.Text = T("LocalLibrary.CreatedFirstLevelFolder", name.Trim());
             }
             catch (Exception ex)
             {
                 await ShowMessageAsync(
-                    L("创建第一层文件夹失败：", "Failed to create the first-level folder: ") + ex.Message,
-                    L("创建失败", "Create failed"));
+                    T("LocalLibrary.FailedToCreateTheFirstLevel") + ex.Message,
+                    T("LocalLibrary.CreateFailed"));
             }
         }
         catch (Exception ex)
@@ -269,14 +269,14 @@ public sealed partial class MainWindow
             if (item is null)
             {
                 await ShowMessageAsync(
-                    L("请先选择一个第一层文件夹。", "Select a first-level folder first."),
-                    L("未选择文件夹", "No folder selected"));
+                    T("LocalLibrary.SelectAFirstLevelFolderFirst"),
+                    T("LocalLibrary.NoFolderSelected"));
                 return;
             }
 
             string? name = await PromptForTextAsync(
-                L("请输入新的第一层文件夹名称。", "Enter the new first-level folder name."),
-                L("重命名第一层文件夹", "Rename first-level folder"),
+                T("LocalLibrary.EnterTheNewFirstLevelFolder"),
+                T("LocalLibrary.RenameFirstLevelFolder"),
                 item.Name);
             if (string.IsNullOrWhiteSpace(name))
             {
@@ -294,15 +294,15 @@ public sealed partial class MainWindow
                 string? parentDir = Path.GetDirectoryName(item.Path);
                 if (string.IsNullOrWhiteSpace(parentDir))
                 {
-                    throw new InvalidOperationException(L("无法确定父目录。", "Could not determine the parent directory."));
+                    throw new InvalidOperationException(T("LocalLibrary.CouldNotDetermineTheParentDirectory"));
                 }
 
                 string newPath = Path.Combine(parentDir, trimmed);
                 if (Directory.Exists(newPath))
                 {
                     await ShowMessageAsync(
-                        L("目标名称已存在，请换一个名称。", "The target name already exists. Choose a different name."),
-                        L("重命名失败", "Rename failed"));
+                        T("LocalLibrary.TheTargetNameAlreadyExistsChoose"),
+                        T("LocalLibrary.RenameFailed"));
                     return;
                 }
 
@@ -313,13 +313,13 @@ public sealed partial class MainWindow
                 SaveShellConfig();
                 await RefreshListsAsync();
                 SelectFirstLevelByPath(newPath);
-                StatusTextBlock.Text = L($"已重命名第一层文件夹为：{trimmed}", $"Renamed first-level folder to: {trimmed}");
+                StatusTextBlock.Text = T("LocalLibrary.RenamedFirstLevelFolderTo", trimmed);
             }
             catch (Exception ex)
             {
                 await ShowMessageAsync(
-                    L("重命名第一层文件夹失败：", "Failed to rename the first-level folder: ") + ex.Message,
-                    L("重命名失败", "Rename failed"));
+                    T("LocalLibrary.FailedToRenameTheFirstLevel") + ex.Message,
+                    T("LocalLibrary.RenameFailed"));
             }
         }
         catch (Exception ex)
@@ -343,18 +343,14 @@ public sealed partial class MainWindow
                     && string.Equals(_currentSecondLevelPath, item.Path, StringComparison.CurrentCultureIgnoreCase))
                 {
                     LoadBindingsForCurrentMod(item);
-                    StatusTextBlock.Text = L(
-                        "已从 Mod 的 INI 配置自动读取快捷键，可在右侧继续修正。",
-                        "Shortcuts were detected from the Mod INI files and can be adjusted on the right.");
+                    StatusTextBlock.Text = T("LocalLibrary.ShortcutsWereDetectedFromTheMod");
                 }
             }
             catch (Exception ex)
             {
                 LogApplicationIssue("Mod selection", ex);
                 ClearPreview();
-                StatusTextBlock.Text = L(
-                    $"无法读取所选 Mod：{ex.Message}",
-                    $"Could not read the selected mod: {ex.Message}");
+                StatusTextBlock.Text = T("LocalLibrary.CouldNotReadTheSelectedMod", ex.Message);
             }
         }
         catch (Exception ex)
@@ -391,7 +387,7 @@ public sealed partial class MainWindow
         bool isInstalled = item.State == StateCopiedText || item.State == StateLinkedText;
         var toggleItem = new MenuFlyoutItem
         {
-            Text = isInstalled ? L("从目标文件夹移除", "Remove from target") : L("部署到目标文件夹", "Deploy to target"),
+            Text = isInstalled ? T("LocalLibrary.RemoveFromTarget") : T("LocalLibrary.DeployToTarget"),
             Icon = new FontIcon { Glyph = isInstalled ? "\uE74D" : "\uE8B0" }
         };
         toggleItem.Click += async (_, _) => await RunUiActionAsync("ToggleDirectoryCopyAsync", () => ToggleDirectoryCopyAsync(item));
@@ -399,19 +395,19 @@ public sealed partial class MainWindow
 
         var openItem = new MenuFlyoutItem
         {
-            Text = L("打开 Mod 文件夹", "Open mod folder"),
+            Text = T("LocalLibrary.OpenModFolder"),
             Icon = new FontIcon { Glyph = "\uE838" }
         };
-        openItem.Click += (_, _) => OpenDirectory(item.Path, L("Mod 文件夹", "Mod folder"));
+        openItem.Click += (_, _) => OpenDirectory(item.Path, T("Common.ModFolder"));
         menu.Items.Add(openItem);
         menu.Items.Add(new MenuFlyoutSeparator());
 
-        var tagsItem = new MenuFlyoutItem { Text = L("编辑标签…", "Edit tags…") };
+        var tagsItem = new MenuFlyoutItem { Text = T("LocalLibrary.EditTags") };
         tagsItem.Click += async (_, _) => await RunUiActionAsync("EditLocalTagsAsync", () => EditLocalTagsAsync(item));
         menu.Items.Add(tagsItem);
         var deleteItem = new MenuFlyoutItem
         {
-            Text = L("删除 Mod...", "Delete mod..."),
+            Text = T("LocalLibrary.DeleteMod"),
             Icon = new FontIcon { Glyph = "\uE74D" }
         };
         deleteItem.Click += OnDeleteSecondLevelClicked;
@@ -428,8 +424,8 @@ public sealed partial class MainWindow
             if (item is null)
             {
                 await ShowMessageAsync(
-                    L("请先选择一个第二层 Mod。", "Select a second-level mod first."),
-                    L("未选择 Mod", "No mod selected"));
+                    T("Common.SelectASecondLevelModFirst"),
+                    T("Common.NoModSelected"));
                 return;
             }
 
@@ -449,12 +445,10 @@ public sealed partial class MainWindow
 
             string linkNote = deployedLinks.Count == 0
                 ? string.Empty
-                : L($"\n\n加载目录中指向它的 {deployedLinks.Count} 个联接也会一并移除（只移除联接本身）：\n{string.Join("\n", deployedLinks)}",
-                    $"\n\n{deployedLinks.Count} link(s) in the loader folder that point to it will also be removed (only the links themselves):\n{string.Join("\n", deployedLinks)}");
+                : T("LocalLibrary.LinkSInTheLoaderFolder", deployedLinks.Count, string.Join("\n", deployedLinks));
             bool confirmed = await ShowConfirmAsync(
-                L($"确定要删除这个第二层 Mod 吗？\n\n{item.Name}\n\n此操作会删除原始文件夹，无法撤销。",
-                  $"Are you sure you want to delete this second-level mod?\n\n{item.Name}\n\nThis will delete the original folder and cannot be undone.") + linkNote,
-                L("确认删除", "Confirm delete"));
+                T("LocalLibrary.AreYouSureYouWantTo", item.Name) + linkNote,
+                T("LocalLibrary.ConfirmDelete"));
             if (!confirmed)
             {
                 return;
@@ -480,13 +474,13 @@ public sealed partial class MainWindow
                 SaveConfig();
                 await RefreshListsAsync();
                 SelectFirstLevelByPath(selectedFirstLevelPath);
-                StatusTextBlock.Text = L($"已删除第二层 Mod：{item.Name}", $"Deleted second-level mod: {item.Name}");
+                StatusTextBlock.Text = T("LocalLibrary.DeletedSecondLevelMod", item.Name);
             }
             catch (Exception ex)
             {
                 await ShowMessageAsync(
-                    L("删除第二层 Mod 失败：", "Failed to delete the second-level mod: ") + ex.Message,
-                    L("删除失败", "Delete failed"));
+                    T("LocalLibrary.FailedToDeleteTheSecondLevel") + ex.Message,
+                    T("LocalLibrary.DeleteFailed"));
             }
         }
         catch (Exception ex)
@@ -545,16 +539,16 @@ public sealed partial class MainWindow
             if (item is null)
             {
                 await ShowMessageAsync(
-                    L("请先选择一个第二层 Mod，再把图片拖到预览区。", "Select a second-level mod before dropping an image."),
-                    L("未选择 Mod", "No mod selected"));
+                    T("LocalLibrary.SelectASecondLevelModBefore"),
+                    T("Common.NoModSelected"));
                 return;
             }
 
             if (!e.DataView.Contains(StandardDataFormats.StorageItems))
             {
                 await ShowMessageAsync(
-                    L("只支持从资源管理器拖入图片文件。", "Only image files dragged from File Explorer are supported."),
-                    L("不支持的拖放内容", "Unsupported drop content"));
+                    T("LocalLibrary.OnlyImageFilesDraggedFromFile"),
+                    T("LocalLibrary.UnsupportedDropContent"));
                 return;
             }
 
@@ -563,8 +557,8 @@ public sealed partial class MainWindow
             if (imageFile is null)
             {
                 await ShowMessageAsync(
-                    L("没有检测到可用的图片文件。", "No supported image file was detected."),
-                    L("未找到图片", "No image found"));
+                    T("LocalLibrary.NoSupportedImageFileWasDetected"),
+                    T("LocalLibrary.NoImageFound"));
                 return;
             }
 
@@ -612,16 +606,16 @@ public sealed partial class MainWindow
             if (item is null)
             {
                 await ShowMessageAsync(
-                    L("请先选择一个第一层分类，再把压缩包拖到这里。", "Select a first-level category before dropping an archive here."),
-                    L("未选择分类", "No category selected"));
+                    T("LocalLibrary.SelectAFirstLevelCategoryBefore"),
+                    T("LocalLibrary.NoCategorySelected"));
                 return;
             }
 
             if (!e.DataView.Contains(StandardDataFormats.StorageItems))
             {
                 await ShowMessageAsync(
-                    L("这里只支持从资源管理器拖入压缩包文件。", "Only archive files dragged from File Explorer are supported here."),
-                    L("不支持的拖放内容", "Unsupported drop content"));
+                    T("LocalLibrary.OnlyArchiveFilesDraggedFromFile"),
+                    T("LocalLibrary.UnsupportedDropContent"));
                 return;
             }
 
@@ -633,8 +627,8 @@ public sealed partial class MainWindow
             if (archiveFile is null)
             {
                 await ShowMessageAsync(
-                    L("没有检测到受支持的压缩包文件。", "No supported archive file was detected."),
-                    L("未找到压缩包", "No archive found"));
+                    T("LocalLibrary.NoSupportedArchiveFileWasDetected"),
+                    T("LocalLibrary.NoArchiveFound"));
                 return;
             }
 
@@ -667,19 +661,19 @@ public sealed partial class MainWindow
         LoadDefaultShortcutTemplate();
         LoadLinkForCurrentMod(null);
         ClearPreview();
-        UpdateProgress(0, L("当前无复制任务", "No active copy task"));
+        UpdateProgress(0, T("Common.NoActiveCopyTask"));
 
         string sourceDir = (SourceTextBox.Text ?? string.Empty).Trim();
         string targetDir = (TargetTextBox.Text ?? string.Empty).Trim();
         if (string.IsNullOrWhiteSpace(sourceDir) || !Directory.Exists(sourceDir))
         {
-            StatusTextBlock.Text = L("请先选择有效的 Mod 仓库文件夹。", "Choose a valid mod storage folder first.");
+            StatusTextBlock.Text = T("LocalLibrary.ChooseAValidModStorageFolder");
             return;
         }
 
         if (!string.IsNullOrWhiteSpace(targetDir) && !Directory.Exists(targetDir))
         {
-            StatusTextBlock.Text = L("目标文件夹不存在，请重新选择。", "The target folder does not exist. Please choose it again.");
+            StatusTextBlock.Text = T("LocalLibrary.TheTargetFolderDoesNotExist");
             return;
         }
 
@@ -706,10 +700,8 @@ public sealed partial class MainWindow
             FirstCountTextBlock.Text = _allFirstLevelItems.Count.ToString();
             SecondCountTextBlock.Text = loaded.SecondCount.ToString();
             StatusTextBlock.Text = loaded.Warnings == 0
-                ? L($"已加载 {_allFirstLevelItems.Count} 个第一层目录，{loaded.SecondCount} 个第二层目录。",
-                    $"Loaded {_allFirstLevelItems.Count} first-level folders and {loaded.SecondCount} second-level folders.")
-                : L($"已加载 {_allFirstLevelItems.Count} 个分类、{loaded.SecondCount} 个 Mod；扫描或缓存有 {loaded.Warnings} 项问题，请查看诊断日志。",
-                    $"Loaded {_allFirstLevelItems.Count} categories and {loaded.SecondCount} mods; {loaded.Warnings} scan/cache issue(s). See diagnostics.");
+                ? T("LocalLibrary.LoadedFirstLevelFoldersAndSecond", _allFirstLevelItems.Count, loaded.SecondCount)
+                : T("LocalLibrary.LoadedCategoriesAndModsScanCache", _allFirstLevelItems.Count, loaded.SecondCount, loaded.Warnings);
             if (_firstLevelItems.Count > 0)
             {
                 SelectFirstLevelByPath(previousCategory);
@@ -725,8 +717,7 @@ public sealed partial class MainWindow
         {
             LogApplicationIssue("Refresh repository folders", ex);
             if (generation == _folderRefreshGeneration && !cancellation.IsCancellationRequested)
-                StatusTextBlock.Text = L("仓库扫描失败，未覆盖已有索引。请检查路径或访问权限后重试。",
-                    "Repository scan failed; the existing index was preserved. Check the path/permissions and retry.");
+                StatusTextBlock.Text = T("LocalLibrary.RepositoryScanFailedTheExistingIndex");
         }
         finally
         {
@@ -759,7 +750,7 @@ public sealed partial class MainWindow
 
         if (!preserveStatus)
         {
-            StatusTextBlock.Text = L("当前第一层目录：", "Current first-level folder: ") + firstItem.Path;
+            StatusTextBlock.Text = T("LocalLibrary.CurrentFirstLevelFolder") + firstItem.Path;
         }
 
         if (_secondLevelItems.Count > 0)
@@ -788,7 +779,7 @@ public sealed partial class MainWindow
 
         if (!preserveStatus)
         {
-            StatusTextBlock.Text = L("当前查看：", "Viewing: ") + item.Path;
+            StatusTextBlock.Text = T("LocalLibrary.Viewing") + item.Path;
         }
     }
 
@@ -825,8 +816,8 @@ public sealed partial class MainWindow
         if (string.IsNullOrWhiteSpace(targetDir) || !Directory.Exists(targetDir))
         {
             await ShowMessageAsync(
-                L("请先选择有效的目标文件夹。", "Choose a valid target folder first."),
-                L("未设置目标文件夹", "Target folder not set"));
+                T("LocalLibrary.ChooseAValidTargetFolderFirst"),
+                T("LocalLibrary.TargetFolderNotSet"));
             return;
         }
 
@@ -834,7 +825,7 @@ public sealed partial class MainWindow
         WorkspaceRepository? repository = GetSelectedRepository();
         if (repository is null)
         {
-            await ShowMessageAsync(L("请先选择仓库。", "Select a repository first."), L("无法操作", "Cannot Continue"));
+            await ShowMessageAsync(T("Common.SelectARepositoryFirst"), T("LocalLibrary.CannotContinue"));
             return;
         }
         repository.TargetPath = targetDir;
@@ -871,8 +862,8 @@ public sealed partial class MainWindow
         {
             LogApplicationIssue("Mod deployment planning", ex);
             await ShowMessageAsync(
-                L("无法检查所选 Mod 的目录或链接：", "Could not inspect the selected mod directory or links: ") + ex.Message,
-                L("无法操作", "Cannot Continue"));
+                T("LocalLibrary.CouldNotInspectTheSelectedMod") + ex.Message,
+                T("LocalLibrary.CannotContinue"));
             return;
         }
 
@@ -882,26 +873,26 @@ public sealed partial class MainWindow
         {
             transactionPath = await CreateInstallTransactionAsync(
                 targetExists
-                    ? L($"移除 Mod：{item.Name}", $"Remove mod: {item.Name}")
+                    ? T("LocalLibrary.RemoveMod", item.Name)
                     : siblingLinksToReplace.Count > 0
-                        ? L($"切换同角色 Mod：{item.Name}", $"Switch same-character mod: {item.Name}")
-                    : L($"安装 Mod：{item.Name}", $"Install mod: {item.Name}"),
+                        ? T("LocalLibrary.SwitchSameCharacterMod", item.Name)
+                    : T("LocalLibrary.InstallMod", item.Name),
                 repository,
                 [targetPath, .. siblingLinksToReplace]);
 
             if (targetExists)
             {
-                UpdateProgress(15, L("正在移除目录...", "Removing folder..."));
+                UpdateProgress(15, T("LocalLibrary.RemovingFolder"));
                 await Task.Run(() => DeleteDirectoryTreeSafely(targetPath));
-                UpdateProgress(100, L("移除完成", "Removal complete"));
-                StatusTextBlock.Text = item.Name + L(" 已从目标文件夹移除。", " was removed from the target folder.");
+                UpdateProgress(100, T("LocalLibrary.RemovalComplete"));
+                StatusTextBlock.Text = item.Name + T("LocalLibrary.WasRemovedFromTheTargetFolder");
                 ShowAppNotification($"{item.Name} 已从目标文件夹移除。", $"{item.Name} was removed from the target folder.");
             }
             else
             {
                 if (siblingLinksToReplace.Count > 0)
                 {
-                    UpdateProgress(10, L("正在断开同角色的旧 Mod 链接...", "Disconnecting the previous link for this character..."));
+                    UpdateProgress(10, T("LocalLibrary.DisconnectingThePreviousLinkForThis"));
                     await Task.Run(() =>
                     {
                         foreach (string oldLinkPath in siblingLinksToReplace)
@@ -916,9 +907,9 @@ public sealed partial class MainWindow
                 string replacedNames = string.Join("、", siblingLinksToReplace.Select(Path.GetFileName));
                 StatusTextBlock.Text = repository.UseDirectoryLinks
                     ? siblingLinksToReplace.Count > 0
-                        ? L($"已断开 {replacedNames}，并链接 {item.Name}。", $"Disconnected {replacedNames} and linked {item.Name}.")
-                        : item.Name + L(" 已链接到目标文件夹。", " was linked into the target folder.")
-                    : item.Name + L(" 已复制到目标文件夹。", " was copied to the target folder.");
+                        ? T("LocalLibrary.DisconnectedAndLinked", replacedNames, item.Name)
+                        : item.Name + T("LocalLibrary.WasLinkedIntoTheTargetFolder")
+                    : item.Name + T("LocalLibrary.WasCopiedToTheTargetFolder");
                 ShowAppNotification(
                     repository.UseDirectoryLinks
                         ? siblingLinksToReplace.Count > 0
@@ -949,8 +940,8 @@ public sealed partial class MainWindow
             }
 
             await ShowMessageAsync(
-                L("操作失败，已尝试恢复操作前状态：", "Operation failed. The app attempted to restore the previous state: ") + ex.Message,
-                L("错误", "Error"));
+                T("LocalLibrary.OperationFailedTheAppAttemptedTo") + ex.Message,
+                T("LocalLibrary.Error"));
         }
         finally
         {
@@ -968,8 +959,7 @@ public sealed partial class MainWindow
             string importedPath = await Task.Run(() => ImportArchiveContents(archivePath, item.Path));
 
             string importedName = Path.GetFileName(importedPath);
-            StatusTextBlock.Text = L($"已将 {Path.GetFileName(archivePath)} 安装为 {item.Name}\\{importedName}：{importedPath}",
-                $"Installed {Path.GetFileName(archivePath)} as {item.Name}\\{importedName}: {importedPath}");
+            StatusTextBlock.Text = T("LocalLibrary.InstalledAs", Path.GetFileName(archivePath), item.Name, importedName, importedPath);
             ShowAppNotification($"压缩包已安装到 {item.Name}\\{importedName}。", $"The archive was installed to {item.Name}\\{importedName}.");
             await RefreshListsAsync();
             SelectFirstLevelByPath(item.Path);
@@ -979,8 +969,8 @@ public sealed partial class MainWindow
         catch (Exception ex)
         {
             await ShowMessageAsync(
-                L("导入压缩文件失败：", "Archive import failed: ") + ex.Message,
-                L("导入失败", "Import failed"));
+                T("LocalLibrary.ArchiveImportFailed") + ex.Message,
+                T("LocalLibrary.ImportFailed"));
         }
         finally
         {
@@ -995,7 +985,7 @@ public sealed partial class MainWindow
         {
             if (!IsImageFile(imagePath))
             {
-                throw new InvalidOperationException(L("拖入的文件不是受支持的图片格式。", "The dropped file is not a supported image format."));
+                throw new InvalidOperationException(T("LocalLibrary.TheDroppedFileIsNotA"));
             }
 
             string extension = Path.GetExtension(imagePath).ToLowerInvariant();
@@ -1015,7 +1005,7 @@ public sealed partial class MainWindow
                 File.Copy(imagePath, targetPath, true);
             });
 
-            StatusTextBlock.Text = item.Name + L(" 的预览图已更新。", "'s preview image was updated.");
+            StatusTextBlock.Text = item.Name + T("LocalLibrary.SPreviewImageWasUpdated");
             ShowAppNotification($"{item.Name} 的预览图已更新。", $"The preview image for {item.Name} was updated.");
             await RefreshListsAsync();
             SelectSecondLevelByPath(item.Path);
@@ -1023,8 +1013,8 @@ public sealed partial class MainWindow
         catch (Exception ex)
         {
             await ShowMessageAsync(
-                L("导入预览图失败：", "Preview import failed: ") + ex.Message,
-                L("导入失败", "Import failed"));
+                T("LocalLibrary.PreviewImportFailed") + ex.Message,
+                T("LocalLibrary.ImportFailed"));
         }
         finally
         {
@@ -1042,14 +1032,14 @@ public sealed partial class MainWindow
 
             Directory.CreateDirectory(targetPath);
             currentStep++;
-            progress.Report(new ProgressInfo(currentStep * 100 / totalSteps, L("正在创建目录...", "Creating folder...")));
+            progress.Report(new ProgressInfo(currentStep * 100 / totalSteps, T("LocalLibrary.CreatingFolder")));
 
             foreach (string directory in directories)
             {
                 string relativePath = Path.GetRelativePath(sourcePath, directory);
                 Directory.CreateDirectory(GetSafePathInsideDirectory(targetPath, relativePath));
                 currentStep++;
-                progress.Report(new ProgressInfo(currentStep * 100 / totalSteps, L("正在创建子目录...", "Creating subfolders...")));
+                progress.Report(new ProgressInfo(currentStep * 100 / totalSteps, T("LocalLibrary.CreatingSubfolders")));
             }
 
             foreach (string file in files)
@@ -1064,10 +1054,10 @@ public sealed partial class MainWindow
 
                 File.Copy(file, destinationFile, true);
                 currentStep++;
-                progress.Report(new ProgressInfo(currentStep * 100 / totalSteps, L("正在复制文件...", "Copying files...")));
+                progress.Report(new ProgressInfo(currentStep * 100 / totalSteps, T("LocalLibrary.CopyingFiles")));
             }
 
-            progress.Report(new ProgressInfo(100, L("复制完成", "Copy complete")));
+            progress.Report(new ProgressInfo(100, T("LocalLibrary.CopyComplete")));
         });
     }
 
@@ -1083,15 +1073,15 @@ public sealed partial class MainWindow
             return;
         }
 
-        progress.Report(new ProgressInfo(15, L("正在验证仓库路径...", "Validating repository path...")));
+        progress.Report(new ProgressInfo(15, T("LocalLibrary.ValidatingRepositoryPath")));
         string fullSourcePath = Path.GetFullPath(sourcePath);
         if (!IsPathInsideDirectory(fullSourcePath, repository.SourcePath))
         {
-            throw new InvalidOperationException(L("拒绝链接仓库之外的目录。", "Refused to link a directory outside the repository."));
+            throw new InvalidOperationException(T("LocalLibrary.RefusedToLinkADirectoryOutside"));
         }
 
         await Task.Run(() => DirectoryLinkDeployment.CreateJunction(targetPath, fullSourcePath));
-        progress.Report(new ProgressInfo(100, L("目录联接创建完成", "Directory junction created")));
+        progress.Report(new ProgressInfo(100, T("LocalLibrary.DirectoryJunctionCreated")));
     }
 
     private void UpdateProgress(int percent, string message)
@@ -1190,7 +1180,7 @@ public sealed partial class MainWindow
                 if (requestVersion == _previewImageRequestVersion)
                 {
                     PreviewImage.Source = null;
-                    PreviewHintTextBlock.Text = L("图片无法读取或格式不受支持。", "The image could not be loaded or is not supported.");
+                    PreviewHintTextBlock.Text = T("LocalLibrary.TheImageCouldNotBeLoaded");
                     PreviewHintTextBlock.Visibility = Visibility.Visible;
                 }
             }
@@ -1208,7 +1198,7 @@ public sealed partial class MainWindow
             if (requestVersion == _previewImageRequestVersion)
             {
                 PreviewImage.Source = null;
-                PreviewHintTextBlock.Text = L("当前第二层文件夹未找到可预览图片。", "No preview image was found for the current second-level folder.");
+                PreviewHintTextBlock.Text = T("LocalLibrary.NoPreviewImageWasFoundFor");
                 PreviewHintTextBlock.Visibility = Visibility.Visible;
             }
             return;
@@ -1227,7 +1217,7 @@ public sealed partial class MainWindow
     {
         _previewImageRequestVersion++;
         PreviewImage.Source = null;
-        PreviewHintTextBlock.Text = L("当前第二层文件夹未找到可预览图片。", "No preview image was found for the current second-level folder.");
+        PreviewHintTextBlock.Text = T("LocalLibrary.NoPreviewImageWasFoundFor");
         PreviewHintTextBlock.Visibility = Visibility.Visible;
     }
 

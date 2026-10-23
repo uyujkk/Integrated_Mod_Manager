@@ -102,7 +102,7 @@ public sealed partial class MainWindow
     }
 
     // ToggleSwitch otherwise shows On/Off in the Windows display language, not the app language.
-    private ToggleSwitch LocalizedToggle(string header) => new() { Header = header, OnContent = L("开", "On"), OffContent = L("关", "Off") };
+    private ToggleSwitch LocalizedToggle(string header) => new() { Header = header, OnContent = T("Common.On2"), OffContent = T("Common.Off2") };
 
     private Button ShortcutButton(string label, Action action)
     {
@@ -115,14 +115,13 @@ public sealed partial class MainWindow
     {
         if (_shortcutModPicker is not null) return;
         var pane = ShortcutPaneContent;
-        pane.Children.Add(new TextBlock { Text = L("Mod 快捷键", "Mod shortcuts"), FontSize = 26, FontWeight = Microsoft.UI.Text.FontWeights.SemiBold });
+        pane.Children.Add(new TextBlock { Text = T("Common.ModShortcuts"), FontSize = 26, FontWeight = Microsoft.UI.Text.FontWeights.SemiBold });
         pane.Children.Add(new TextBlock
         {
-            Text = L("选择 Mod 和游戏窗口，点击按键按钮即可发送。INI 条件仍由游戏内加载器判断。",
-                "Select a Mod and game window, then click a shortcut to send it. INI conditions are still evaluated by the in-game loader."),
+            Text = T("ShortcutPanel.SelectAModAndGameWindow"),
             TextWrapping = TextWrapping.Wrap
         });
-        _shortcutModPicker = new ComboBox { Header = L("Mod（当前仓库）", "Mod (current repository)"), HorizontalAlignment = HorizontalAlignment.Stretch };
+        _shortcutModPicker = new ComboBox { Header = T("ShortcutPanel.ModCurrentRepository"), HorizontalAlignment = HorizontalAlignment.Stretch };
         _shortcutModPicker.SelectionChanged += async (_, _) =>
         {
             if (!_characterAutoSelecting)
@@ -134,7 +133,7 @@ public sealed partial class MainWindow
             await LoadShortcutSelectionAsync();
         };
         pane.Children.Add(_shortcutModPicker);
-        _shortcutTargetPicker = new ComboBox { Header = L("目标游戏窗口", "Target game window"), PlaceholderText = L("请选择窗口", "Select a window"), HorizontalAlignment = HorizontalAlignment.Stretch };
+        _shortcutTargetPicker = new ComboBox { Header = T("ShortcutPanel.TargetGameWindow"), PlaceholderText = T("ShortcutPanel.SelectAWindow"), HorizontalAlignment = HorizontalAlignment.Stretch };
         _shortcutTargetPicker.SelectionChanged += (_, _) =>
         {
             // A newly selected target always requires deliberate re-arming.
@@ -145,27 +144,27 @@ public sealed partial class MainWindow
         };
         pane.Children.Add(_shortcutTargetPicker);
         var tools = new StackPanel { Orientation = Orientation.Horizontal, Spacing = 8 };
-        tools.Children.Add(ShortcutButton(L("刷新窗口", "Refresh windows"), RefreshShortcutTargets));
-        tools.Children.Add(ShortcutButton(L("重新读取 INI", "Reload INI"), () => _ = LoadShortcutSelectionAsync()));
-        tools.Children.Add(ShortcutButton(L("独立置顶面板", "Floating panel"), OpenShortcutOverlay));
+        tools.Children.Add(ShortcutButton(T("ShortcutPanel.RefreshWindows"), RefreshShortcutTargets));
+        tools.Children.Add(ShortcutButton(T("ShortcutPanel.ReloadINI"), () => _ = LoadShortcutSelectionAsync()));
+        tools.Children.Add(ShortcutButton(T("ShortcutPanel.FloatingPanel"), OpenShortcutOverlay));
         pane.Children.Add(tools);
         _shortcutPrivilegeNotice = new TextBlock { TextWrapping = TextWrapping.Wrap };
         pane.Children.Add(_shortcutPrivilegeNotice);
-        _shortcutElevateButton = ShortcutButton(L("以管理员身份重启管理器", "Restart manager as administrator"), RestartManagerElevated);
+        _shortcutElevateButton = ShortcutButton(T("ShortcutPanel.RestartManagerAsAdministrator"), RestartManagerElevated);
         pane.Children.Add(_shortcutElevateButton);
         UpdateShortcutPrivilegeNotice();
         var hotkeySettings = new StackPanel { Orientation = Orientation.Horizontal, Spacing = 8 };
-        var modifiers = new ComboBox { Header = L("显示／隐藏浮窗", "Show/hide overlay") };
+        var modifiers = new ComboBox { Header = T("ShortcutPanel.ShowHideOverlay") };
         foreach (var item in new[] { ("Ctrl+Alt", 3u), ("Ctrl+Shift", 6u), ("Alt+Shift", 5u) })
             modifiers.Items.Add(new ComboBoxItem { Content = item.Item1, Tag = item.Item2 });
         modifiers.SelectedItem = modifiers.Items.Cast<ComboBoxItem>().First(i => (uint)i.Tag == _shortcutPanelHotkeyModifiers);
-        var keyPicker = new ComboBox { Header = L("按键", "Key") };
+        var keyPicker = new ComboBox { Header = T("ShortcutPanel.Key2") };
         foreach (uint key in Enumerable.Range('A', 26).Concat(Enumerable.Range(0x70, 12)).Select(k => (uint)k))
             keyPicker.Items.Add(new ComboBoxItem { Content = key >= 0x70 ? "F" + (key - 0x6F) : ((char)key).ToString(), Tag = key });
         keyPicker.SelectedItem = keyPicker.Items.Cast<ComboBoxItem>().First(i => (uint)i.Tag == _shortcutPanelHotkeyKey);
         hotkeySettings.Children.Add(modifiers);
         hotkeySettings.Children.Add(keyPicker);
-        hotkeySettings.Children.Add(ShortcutButton(L("应用", "Apply"), () =>
+        hotkeySettings.Children.Add(ShortcutButton(T("Common.Apply"), () =>
         {
             uint mod = (uint)((ComboBoxItem)modifiers.SelectedItem).Tag;
             uint key = (uint)((ComboBoxItem)keyPicker.SelectedItem).Tag;
@@ -179,9 +178,9 @@ public sealed partial class MainWindow
                 SaveShellConfig();
                 UpdateShortcutHotkeyStatus();
             }
-            else _shortcutHotkeyStatus!.Text = L("快捷键被占用，已保留原设置，请换一个组合。", "Hotkey unavailable. Previous settings retained; choose another chord.");
+            else _shortcutHotkeyStatus!.Text = T("ShortcutPanel.HotkeyUnavailablePreviousSettingsRetainedChoose");
         }));
-        hotkeySettings.Children.Add(ShortcutButton(L("禁用", "Disable"), () =>
+        hotkeySettings.Children.Add(ShortcutButton(T("ShortcutPanel.Disable"), () =>
         {
             _shortcutPanelHotkey?.Disable();
             _shortcutPanelHotkeyEnabled = false;
@@ -193,7 +192,7 @@ public sealed partial class MainWindow
         _shortcutHotkeyStatus = new TextBlock { TextWrapping = TextWrapping.Wrap };
         pane.Children.Add(_shortcutHotkeyStatus);
         UpdateShortcutHotkeyStatus();
-        _shortcutEnabledToggle = LocalizedToggle(L("允许向所选窗口发送按键", "Enable input to selected window"));
+        _shortcutEnabledToggle = LocalizedToggle(T("ShortcutPanel.EnableInputToSelectedWindow"));
         _shortcutEnabledToggle.Toggled += (_, _) =>
         {
             _shortcutInputEnabled = _shortcutEnabledToggle.IsOn && _shortcutTargetPicker.SelectedItem is ShortcutTarget;
@@ -201,9 +200,9 @@ public sealed partial class MainWindow
             RefreshShortcutOverlay();
         };
         pane.Children.Add(_shortcutEnabledToggle);
-        _shortcutInputModePicker = new ComboBox { Header = L("输入方式", "Input method"), HorizontalAlignment = HorizontalAlignment.Left };
-        _shortcutInputModePicker.Items.Add(new ComboBoxItem { Content = L("扫描码（模拟物理按键）", "Scan codes (physical-key simulation)"), Tag = ShortcutInputMode.ScanCode });
-        _shortcutInputModePicker.Items.Add(new ComboBoxItem { Content = L("虚拟键（旧版兼容模式）", "Virtual keys (legacy compatibility)"), Tag = ShortcutInputMode.VirtualKey });
+        _shortcutInputModePicker = new ComboBox { Header = T("ShortcutPanel.InputMethod"), HorizontalAlignment = HorizontalAlignment.Left };
+        _shortcutInputModePicker.Items.Add(new ComboBoxItem { Content = T("ShortcutPanel.ScanCodesPhysicalKeySimulation"), Tag = ShortcutInputMode.ScanCode });
+        _shortcutInputModePicker.Items.Add(new ComboBoxItem { Content = T("ShortcutPanel.VirtualKeysLegacyCompatibility"), Tag = ShortcutInputMode.VirtualKey });
         _shortcutInputModePicker.SelectedIndex = _shortcutInputMode == ShortcutInputMode.VirtualKey ? 1 : 0;
         _shortcutInputModePicker.SelectionChanged += (_, _) =>
         {
@@ -213,28 +212,28 @@ public sealed partial class MainWindow
         pane.Children.Add(_shortcutInputModePicker);
         _shortcutTapDuration = new NumberBox
         {
-            Header = L("单次按压时间（毫秒）", "Tap duration (ms)"), Minimum = 100, Maximum = 2000, Value = 200,
+            Header = T("ShortcutPanel.TapDurationMs"), Minimum = 100, Maximum = 2000, Value = 200,
             SmallChange = 100, Width = 260, HorizontalAlignment = HorizontalAlignment.Left,
             SpinButtonPlacementMode = NumberBoxSpinButtonPlacementMode.Compact
         };
         pane.Children.Add(_shortcutTapDuration);
-        pane.Children.Add(ShortcutButton(L("切换 Num Lock（小键盘数字锁）", "Toggle Num Lock"), async () => await SendNumLockAsync()));
+        pane.Children.Add(ShortcutButton(T("ShortcutPanel.ToggleNumLock"), async () => await SendNumLockAsync()));
         _shortcutHoldDuration = new NumberBox
         {
-            Header = L("长按类按键持续时间（毫秒）", "Hold-type duration (ms)"),
+            Header = T("ShortcutPanel.HoldTypeDurationMs"),
             Minimum = 100, Maximum = 2000, Value = 300, SmallChange = 100, Width = 260,
             HorizontalAlignment = HorizontalAlignment.Left, SpinButtonPlacementMode = NumberBoxSpinButtonPlacementMode.Compact
         };
         pane.Children.Add(_shortcutHoldDuration);
-        _shortcutOpacitySlider = CreateOverlayOpacitySlider(L("浮窗不透明度（%）", "Overlay opacity (%)"));
+        _shortcutOpacitySlider = CreateOverlayOpacitySlider(T("ShortcutPanel.OverlayOpacity"));
         _shortcutOpacitySlider.Width = 260;
         _shortcutOpacitySlider.HorizontalAlignment = HorizontalAlignment.Left;
         pane.Children.Add(_shortcutOpacitySlider);
         pane.Children.Add(BuildOverlayTextColorButton());
         var hideUnsupported = new ToggleSwitch
         {
-            OnContent = L("开", "On"), OffContent = L("关", "Off"),
-            Header = L("隐藏无法发送的绑定（鼠标、手柄等）", "Hide bindings that cannot be sent (mouse, controller, ...)"),
+            OnContent = T("Common.On2"), OffContent = T("Common.Off2"),
+            Header = T("ShortcutPanel.HideBindingsThatCannotBeSent"),
             IsOn = _shortcutHideUnsupported
         };
         hideUnsupported.Toggled += (_, _) =>
@@ -247,8 +246,7 @@ public sealed partial class MainWindow
         BuildCharacterFollowControls(pane);
         pane.Children.Add(new TextBlock
         {
-            Text = L("浮窗支持窗口化／无边框全屏；独占全屏可能遮住浮窗。无法发送的绑定会显示原因；相同按键可能同时触发多个 Mod。",
-                "The overlay supports windowed/borderless mode; exclusive fullscreen may cover it. Bindings that cannot be sent show the reason. A shared key can trigger multiple Mods."),
+            Text = T("ShortcutPanel.TheOverlaySupportsWindowedBorderlessMode"),
             TextWrapping = TextWrapping.Wrap, Opacity = .7
         });
         // Fixed height: status changes must not move the shortcut list below it.
@@ -271,7 +269,7 @@ public sealed partial class MainWindow
         _shortcutDetected = [];
         _shortcutLoadedPath = string.Empty;
         RenderShortcutButtons();
-        _shortcutStatus!.Text = L("正在读取当前仓库…", "Reading current repository…");
+        _shortcutStatus!.Text = T("ShortcutPanel.ReadingCurrentRepository");
         ShortcutModOption[] options = await Task.Run(() =>
         {
             if (!Directory.Exists(repository)) return Array.Empty<ShortcutModOption>();
@@ -289,7 +287,7 @@ public sealed partial class MainWindow
         _ = RefreshShortcutDeployedModsAsync();
         LoadCharacterFollowProfile(repository);
         _shortcutModPicker.SelectedItem = options.FirstOrDefault(p => string.Equals(p.Path, previous, StringComparison.OrdinalIgnoreCase)) ?? options.FirstOrDefault();
-        if (options.Length == 0) _shortcutStatus.Text = L("当前仓库没有可读取的 Mod，请先在仓库模块选择仓库。", "No Mods found. Select a repository in Repositories first.");
+        if (options.Length == 0) _shortcutStatus.Text = T("ShortcutPanel.NoModsFoundSelectARepository");
     }
 
     private async Task RefreshShortcutPaneSafelyAsync()
@@ -307,12 +305,12 @@ public sealed partial class MainWindow
         if (_shortcutModPicker?.SelectedItem is not ShortcutModOption mod) return;
         try
         {
-            _shortcutStatus!.Text = L("正在读取 INI…", "Reading INI…");
+            _shortcutStatus!.Text = T("ShortcutPanel.ReadingINI");
             var detected = await Task.Run(() => ModShortcutScanner.ScanDirectory(mod.Path, activeOnly: true));
             if (_onlineWindowClosed || revision != _shortcutScanRevision) return;
             _shortcutDetected = detected;
             _shortcutLoadedPath = mod.Path;
-            _shortcutStatus.Text = L($"已读取 {detected.Count} 个绑定；不能确定当前游戏内条件是否成立。", $"Read {detected.Count} bindings; in-game conditions are not known.");
+            _shortcutStatus.Text = T("ShortcutPanel.ReadBindingsInGameConditionsAre", detected.Count);
             RenderShortcutButtons();
         }
         catch (Exception ex)
@@ -344,7 +342,7 @@ public sealed partial class MainWindow
         if (hidden > 0)
             _shortcutButtons.Children.Add(new TextBlock
             {
-                Text = L($"已隐藏 {hidden} 个无法发送的绑定。", $"{hidden} bindings that cannot be sent are hidden."),
+                Text = T("ShortcutPanel.BindingsThatCannotBeSentAre", hidden),
                 Opacity = .65, TextWrapping = TextWrapping.Wrap
             });
         foreach (var shortcut in visible) _shortcutButtons.Children.Add(CreateShortcutAction(shortcut));
@@ -353,13 +351,13 @@ public sealed partial class MainWindow
 
     private string UnsupportedReasonText(ShortcutUnsupportedReason reason) => reason switch
     {
-        ShortcutUnsupportedReason.Mouse => L("鼠标按键：这是 Mod 菜单的点击／拖动操作，需要在游戏内用鼠标直接操作", "Mouse button: a Mod-menu click or drag; use the mouse in game"),
-        ShortcutUnsupportedReason.Controller => L("手柄按键：键盘输入无法模拟手柄，请用手柄或同一节里的键盘绑定", "Controller button: keyboard input cannot emulate a controller; use a controller or the section's keyboard binding"),
-        ShortcutUnsupportedReason.UnknownKey => L("含无法识别的按键名", "Contains an unrecognized key name"),
-        ShortcutUnsupportedReason.Contradictory => L("按键条件互相矛盾（同一个键既要求按下又要求不按）", "Contradictory key constraints"),
-        ShortcutUnsupportedReason.TooManyKeys => L("需要同时按住的键过多", "Too many keys held at once"),
-        ShortcutUnsupportedReason.SystemShortcut => L("会触发系统操作（如 Alt+F4、Win 键），已禁止发送", "Would trigger a system action (such as Alt+F4 or Win); blocked"),
-        _ => L("没有可按下的键", "No key to press")
+        ShortcutUnsupportedReason.Mouse => T("ShortcutPanel.MouseButtonAModMenuClick"),
+        ShortcutUnsupportedReason.Controller => T("ShortcutPanel.ControllerButtonKeyboardInputCannotEmulate"),
+        ShortcutUnsupportedReason.UnknownKey => T("ShortcutPanel.ContainsAnUnrecognizedKeyName"),
+        ShortcutUnsupportedReason.Contradictory => T("ShortcutPanel.ContradictoryKeyConstraints"),
+        ShortcutUnsupportedReason.TooManyKeys => T("ShortcutPanel.TooManyKeysHeldAtOnce"),
+        ShortcutUnsupportedReason.SystemShortcut => T("ShortcutPanel.WouldTriggerASystemActionSuch"),
+        _ => T("ShortcutPanel.NoKeyToPress")
     };
 
     private TextBlock FixedStatusText(int lines, double fontSize)
@@ -403,7 +401,7 @@ public sealed partial class MainWindow
             presets.Children.Add(swatch);
         }
         var flyoutContent = new StackPanel { Spacing = 10 };
-        flyoutContent.Children.Add(new TextBlock { Text = L("常用颜色", "Presets") });
+        flyoutContent.Children.Add(new TextBlock { Text = T("ShortcutPanel.Presets") });
         flyoutContent.Children.Add(presets);
         flyoutContent.Children.Add(picker);
         var flyout = new Flyout { Content = flyoutContent };
@@ -414,7 +412,7 @@ public sealed partial class MainWindow
             Width = 18, Height = 18, CornerRadius = new CornerRadius(3), Background = _overlayTextBrush,
             BorderBrush = new SolidColorBrush(Color.FromArgb(120, 128, 128, 128)), BorderThickness = new Thickness(1)
         });
-        label.Children.Add(new TextBlock { Text = L("浮窗字体颜色", "Overlay text color"), VerticalAlignment = VerticalAlignment.Center });
+        label.Children.Add(new TextBlock { Text = T("ShortcutPanel.OverlayTextColor"), VerticalAlignment = VerticalAlignment.Center });
         return new Button { Content = label, Flyout = flyout };
     }
 
@@ -459,15 +457,15 @@ public sealed partial class MainWindow
         var title = new TextBlock { Text = shortcut.Shortcut, FontSize = 18, FontWeight = Microsoft.UI.Text.FontWeights.SemiBold, TextWrapping = TextWrapping.Wrap };
         var description = new TextBlock { Text = DescribeDetectedShortcut(shortcut), TextWrapping = TextWrapping.Wrap };
         string source = $"{shortcut.SourceFile} · [{shortcut.Section}]";
-        if (shortcut.Condition.Length > 0) source += " · " + L("条件：", "Condition: ") + shortcut.Condition;
-        if (shortcut.Behavior.Equals("hold", StringComparison.OrdinalIgnoreCase)) source += " · " + L("按设定时长长按", "Hold for configured duration");
+        if (shortcut.Condition.Length > 0) source += " · " + T("ShortcutPanel.Condition") + shortcut.Condition;
+        if (shortcut.Behavior.Equals("hold", StringComparison.OrdinalIgnoreCase)) source += " · " + T("ShortcutPanel.HoldForConfiguredDuration");
         var sourceText = new TextBlock { Text = source, FontSize = 11, Opacity = .65, TextWrapping = TextWrapping.Wrap };
         if (floating) title.Foreground = description.Foreground = sourceText.Foreground = _overlayTextBrush;
         content.Children.Add(title); content.Children.Add(description); content.Children.Add(sourceText);
         if (!supported)
             content.Children.Add(new TextBlock
             {
-                Text = L("无法发送：", "Cannot send: ") + UnsupportedReasonText(reason) + L($"（key = {shortcut.RawKey}）", $" (key = {shortcut.RawKey})"),
+                Text = T("ShortcutPanel.CannotSend") + UnsupportedReasonText(reason) + T("ShortcutPanel.Key", shortcut.RawKey),
                 FontSize = 11, TextWrapping = TextWrapping.Wrap,
                 Foreground = new SolidColorBrush(Color.FromArgb(255, 230, 150, 60))
             });
@@ -484,9 +482,9 @@ public sealed partial class MainWindow
         try
         {
             if (!_shortcutInputEnabled || _shortcutTargetPicker?.SelectedItem is not ShortcutTarget target)
-                throw new InvalidOperationException(L("请先选择目标窗口并开启按键发送。", "Select a target window and enable input first."));
+                throw new InvalidOperationException(T("ShortcutPanel.SelectATargetWindowAndEnable"));
             if (!Directory.Exists(_shortcutLoadedPath) || Path.GetFileName(_shortcutLoadedPath).StartsWith("DISABLED", StringComparison.OrdinalIgnoreCase))
-                throw new InvalidOperationException(L("Mod 目录已变化，请重新读取。", "The Mod folder changed; reload it first."));
+                throw new InvalidOperationException(T("ShortcutPanel.TheModFolderChangedReloadIt"));
             if (!ShortcutKeyPlan.TryCreate(shortcut.RawKey, out var plan)) return;
             int hold = shortcut.Behavior.Equals("hold", StringComparison.OrdinalIgnoreCase)
                 ? (int)(double.IsFinite(_shortcutHoldDuration!.Value) ? _shortcutHoldDuration.Value : 300)
@@ -508,7 +506,7 @@ public sealed partial class MainWindow
         {
             if (_shortcutOverlay is null)
             {
-                var overlay = new ShortcutOverlayWindow(BuildShortcutOverlayContent(), _overlayTextBrush, L("Mod 快捷键", "Mod shortcuts"));
+                var overlay = new ShortcutOverlayWindow(BuildShortcutOverlayContent(), _overlayTextBrush, T("Common.ModShortcuts"));
                 _shortcutOverlay = overlay;
                 _shortcutOverlay.Closed += (_, _) =>
                 {
@@ -538,8 +536,8 @@ public sealed partial class MainWindow
         // Only in-game-safe actions live here: switching Mod, arming input and a read-only preset save.
         // Restoring presets or slots needs the game closed and stays in the main window.
         _overlayModPicker = new ComboBox { HorizontalAlignment = HorizontalAlignment.Stretch, Foreground = _overlayTextBrush,
-            PlaceholderText = L("请选择 Mod", "Select a Mod") };
-        ToolTipService.SetToolTip(_overlayModPicker, L("切换要显示快捷键的 Mod", "Switch the Mod whose shortcuts are shown"));
+            PlaceholderText = T("ShortcutPanel.SelectAMod") };
+        ToolTipService.SetToolTip(_overlayModPicker, T("ShortcutPanel.SwitchTheModWhoseShortcutsAre"));
         _overlayModPicker.SelectionChanged += (_, _) =>
         {
             if (_overlaySyncing || _shortcutModPicker is null || _overlayModPicker.SelectedItem is not ShortcutModOption chosen) return;
@@ -552,12 +550,11 @@ public sealed partial class MainWindow
         var actions = new Grid { ColumnSpacing = 6 };
         for (int i = 0; i < 3; i++) actions.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(1, GridUnitType.Star) });
         _overlayInputToggle = new ToggleButton { HorizontalAlignment = HorizontalAlignment.Stretch, Foreground = _overlayTextBrush };
-        ToolTipService.SetToolTip(_overlayInputToggle, L("开启或暂停向所选游戏窗口发送按键", "Arm or pause input to the selected game window"));
+        ToolTipService.SetToolTip(_overlayInputToggle, T("ShortcutPanel.ArmOrPauseInputToThe"));
         _overlayInputToggle.Click += (_, _) => SetShortcutInputFromOverlay(_overlayInputToggle.IsChecked == true);
-        var savePreset = ShortcutButton(L("保存预设", "Save preset"), () => _ = QuickSaveCombinationFromOverlayAsync());
-        ToolTipService.SetToolTip(savePreset, L("把当前启用的 Mod 组合和加载器参数保存为组合预设（只读取，不改动游戏）。恢复预设需先退出游戏，在主窗口操作。",
-            "Save the enabled Mod combination and loader parameters as a preset (read-only; the game is not changed). Restoring needs the game closed and is done in the main window."));
-        var hide = ShortcutButton(L("隐藏", "Hide"), () => { _shortcutOverlay?.AppWindow.Hide(); _shortcutOverlayVisible = false; });
+        var savePreset = ShortcutButton(T("ShortcutPanel.SavePreset"), () => _ = QuickSaveCombinationFromOverlayAsync());
+        ToolTipService.SetToolTip(savePreset, T("ShortcutPanel.SaveTheEnabledModCombinationAnd"));
+        var hide = ShortcutButton(T("ShortcutPanel.Hide"), () => { _shortcutOverlay?.AppWindow.Hide(); _shortcutOverlayVisible = false; });
         savePreset.Foreground = hide.Foreground = _overlayTextBrush;
         savePreset.HorizontalAlignment = hide.HorizontalAlignment = HorizontalAlignment.Stretch;
         // Three equal columns at the default 420 DIP width: default padding cut "Input: off" / "Save preset".
@@ -572,10 +569,10 @@ public sealed partial class MainWindow
         var opacityRow = new Grid { ColumnSpacing = 8 };
         opacityRow.ColumnDefinitions.Add(new ColumnDefinition { Width = GridLength.Auto });
         opacityRow.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(1, GridUnitType.Star) });
-        var opacityLabel = new TextBlock { Text = L("不透明", "Opacity"), VerticalAlignment = VerticalAlignment.Center, FontSize = 12, Foreground = _overlayTextBrush };
+        var opacityLabel = new TextBlock { Text = T("ShortcutPanel.Opacity"), VerticalAlignment = VerticalAlignment.Center, FontSize = 12, Foreground = _overlayTextBrush };
         _overlayOpacitySlider = CreateOverlayOpacitySlider(string.Empty);
         _overlayOpacitySlider.VerticalAlignment = VerticalAlignment.Center;
-        ToolTipService.SetToolTip(_overlayOpacitySlider, L("浮窗背景不透明度", "Overlay background opacity"));
+        ToolTipService.SetToolTip(_overlayOpacitySlider, T("ShortcutPanel.OverlayBackgroundOpacity"));
         Grid.SetColumn(_overlayOpacitySlider, 1);
         opacityRow.Children.Add(opacityLabel); opacityRow.Children.Add(_overlayOpacitySlider);
         panel.Children.Add(opacityRow);
@@ -622,7 +619,7 @@ public sealed partial class MainWindow
         if (_shortcutEnabledToggle is null) return;
         // Arming still needs a deliberately chosen target; the overlay cannot pick one.
         if (enable && _shortcutTargetPicker?.SelectedItem is not ShortcutTarget)
-            _shortcutStatus!.Text = L("请先在主窗口选择目标游戏窗口，再开启发送。", "Select the target game window in the main window before arming input.");
+            _shortcutStatus!.Text = T("ShortcutPanel.SelectTheTargetGameWindowIn");
         else
             _shortcutEnabledToggle.IsOn = enable;
         RefreshShortcutOverlay();
@@ -634,14 +631,14 @@ public sealed partial class MainWindow
         if (_applyingCombinationProfile || _restoringPersistentRuntime) return;
         if (GetSelectedRepository() is not { } repository)
         {
-            _shortcutStatus!.Text = L("请先在主窗口选择仓库。", "Select a repository in the main window first.");
+            _shortcutStatus!.Text = T("ShortcutPanel.SelectARepositoryInTheMain");
             RefreshShortcutOverlay();
             return;
         }
         string? userIni = repository.PersistentUserIniPath is { Length: > 0 } configured ? configured : TryGetDefaultPersistentIniPath(repository);
         bool includeState = userIni is not null && File.Exists(userIni);
-        string name = L($"游戏内 {DateTime.Now:MM-dd HH:mm}", $"In-game {DateTime.Now:MM-dd HH:mm}");
-        _shortcutStatus!.Text = L("正在保存组合预设…", "Saving combination preset…");
+        string name = T("ShortcutPanel.InGame", DateTime.Now);
+        _shortcutStatus!.Text = T("ShortcutPanel.SavingCombinationPreset");
         RefreshShortcutOverlay();
         SetCombinationBusy(true);
         try
@@ -649,14 +646,13 @@ public sealed partial class MainWindow
             (int Mods, int Parameters)? saved = await CaptureCombinationProfileAsync(repository, name, null, includeState, userIni ?? string.Empty,
                 () => Task.FromResult(false));
             _shortcutStatus.Text = saved is (int mods, int parameters)
-                ? L($"已保存预设“{name}”：{mods} 个 Mod，{parameters} 个参数。刚调整的 Mod 状态需先按 F10 写入再保存；恢复请退出游戏后在主窗口操作。",
-                    $"Saved preset '{name}': {mods} Mods, {parameters} parameters. Press F10 first to write fresh Mod state; restore from the main window after closing the game.")
-                : L("当前没有已启用的 Mod，未保存预设。", "No enabled Mods; the preset was not saved.");
+                ? T("ShortcutPanel.SavedPresetModsParametersPressF10", name, mods, parameters)
+                : T("ShortcutPanel.NoEnabledModsThePresetWas");
         }
         catch (Exception ex)
         {
             LogApplicationIssue("Overlay combination capture", ex);
-            _shortcutStatus.Text = L("未保存预设：", "Preset not saved: ") + ex.Message;
+            _shortcutStatus.Text = T("ShortcutPanel.PresetNotSaved") + ex.Message;
         }
         finally
         {
@@ -687,13 +683,13 @@ public sealed partial class MainWindow
             var current = _shortcutModPicker?.SelectedItem as ShortcutModOption;
             _overlayModPicker!.SelectedItem = current is not null && _overlayModOptions.Contains(current) ? current : null;
             _overlayModPicker.PlaceholderText = _overlayModOptions.Length == 0
-                ? L("没有已启用的 Mod", "No enabled Mods")
-                : current is null ? L("请选择 Mod", "Select a Mod") : L("当前 Mod 未启用 · 选择已启用的 Mod", "Current Mod not enabled · pick an enabled one");
+                ? T("ShortcutPanel.NoEnabledMods")
+                : current is null ? T("ShortcutPanel.SelectAMod") : T("ShortcutPanel.CurrentModNotEnabledPickAn");
             _overlayInputToggle!.IsChecked = _shortcutInputEnabled;
-            _overlayInputToggle.Content = _shortcutInputEnabled ? L("发送：开", "Input: on") : L("发送：关", "Input: off");
+            _overlayInputToggle.Content = _shortcutInputEnabled ? T("ShortcutPanel.InputOn") : T("ShortcutPanel.InputOff");
         }
         finally { _overlaySyncing = false; }
-        _overlayTargetText!.Text = (_shortcutTargetPicker?.SelectedItem as ShortcutTarget)?.Label ?? L("未选择目标窗口（在主窗口选择）", "No target window (select it in the main window)");
+        _overlayTargetText!.Text = (_shortcutTargetPicker?.SelectedItem as ShortcutTarget)?.Label ?? T("ShortcutPanel.NoTargetWindowSelectItIn");
         _overlayStatusText!.Text = _shortcutStatus?.Text ?? string.Empty;
         // Status, pause and target changes must not replace the scroll container or buttons.
         DetectedModShortcut[] visible = VisibleShortcuts();
@@ -711,7 +707,7 @@ public sealed partial class MainWindow
         try
         {
             if (!_shortcutInputEnabled || _shortcutTargetPicker?.SelectedItem is not ShortcutTarget target)
-                throw new InvalidOperationException(L("请先选择目标窗口并开启按键发送。", "Select a target window and enable input first."));
+                throw new InvalidOperationException(T("ShortcutPanel.SelectATargetWindowAndEnable"));
             _shortcutStatus!.Text = await _shortcutInput.SendAsync(target, new ShortcutKeyPlan(new ushort[] { 0x90 }, Array.Empty<ushort>()), 150, ShortcutInputMode.VirtualKey, IsEnglishUi);
         }
         catch (Exception ex) { if (!_onlineWindowClosed) _shortcutStatus!.Text = ex.Message; }
@@ -771,21 +767,18 @@ public sealed partial class MainWindow
         _shortcutElevateButton.Visibility = elevated ? Visibility.Collapsed : Visibility.Visible;
         if (elevated)
         {
-            _shortcutPrivilegeNotice.Text = L("管理器以管理员权限运行，可以向管理员权限的游戏发送按键。",
-                "The manager is elevated and can send input to an elevated game.");
+            _shortcutPrivilegeNotice.Text = T("ShortcutPanel.TheManagerIsElevatedAndCan");
             return;
         }
         if (_shortcutTargetPicker?.SelectedItem is not ShortcutTarget target)
         {
-            _shortcutPrivilegeNotice.Text = L("终末地以管理员权限运行；普通权限的管理器发送的按键会被 Windows 静默丢弃，需要以管理员身份重启管理器。",
-                "Endfield runs as administrator; input from a non-elevated manager is silently dropped, so restart the manager as administrator.");
+            _shortcutPrivilegeNotice.Text = T("ShortcutPanel.EndfieldRunsAsAdministratorInputFrom");
             return;
         }
         ShortcutSecurity destination = ShortcutProcessSecurity.Read(target.ProcessId);
         _shortcutPrivilegeNotice.Text = ShortcutPrivilegePolicy.Evaluate(own.Integrity, own.UiAccess, destination.Integrity, destination.Error) == ShortcutPrivilegeVerdict.Allowed
-            ? L("所选窗口与管理器权限相同，可以发送。", "The selected window runs at the manager's permission level.")
-            : L("所选窗口以管理员权限运行，当前管理器无法向它发送按键。请以管理员身份重启管理器。",
-                "The selected window runs as administrator; this manager cannot send input to it. Restart the manager as administrator.");
+            ? T("ShortcutPanel.TheSelectedWindowRunsAtThe")
+            : T("ShortcutPanel.TheSelectedWindowRunsAsAdministrator");
     }
 
     private void RestartManagerElevated()
@@ -802,7 +795,7 @@ public sealed partial class MainWindow
         }
         catch (Win32Exception ex) when (ex.NativeErrorCode == 1223)
         {
-            _shortcutStatus!.Text = L("已取消管理员授权，管理器保持当前权限。", "Administrator approval was declined; the manager keeps its current permissions.");
+            _shortcutStatus!.Text = T("ShortcutPanel.AdministratorApprovalWasDeclinedTheManager");
             return;
         }
         catch (Exception ex) { ReportUiActionFailure(nameof(RestartManagerElevated), ex); return; }
@@ -815,7 +808,7 @@ public sealed partial class MainWindow
         string mod = _shortcutPanelHotkeyModifiers switch { 6 => "Ctrl+Shift", 5 => "Alt+Shift", _ => "Ctrl+Alt" };
         string key = _shortcutPanelHotkeyKey >= 0x70 ? "F" + (_shortcutPanelHotkeyKey - 0x6F) : ((char)_shortcutPanelHotkeyKey).ToString();
         _shortcutHotkeyStatus.Text = _shortcutHotkeyRegistered
-            ? L($"全局快捷键：{mod}+{key}（显示／隐藏浮窗）", $"Global hotkey: {mod}+{key} (show/hide overlay)")
-            : L("全局快捷键未启用或已被占用；可更换组合后应用。", "Global hotkey disabled or unavailable; choose a chord and Apply.");
+            ? T("ShortcutPanel.GlobalHotkeyShowHideOverlay", mod, key)
+            : T("ShortcutPanel.GlobalHotkeyDisabledOrUnavailableChoose");
     }
 }

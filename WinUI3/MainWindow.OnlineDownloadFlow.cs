@@ -109,8 +109,8 @@ public sealed partial class MainWindow
         catch (Exception ex)
         {
             LogApplicationIssue("Prepare online download", ex);
-            await ReportOnlineActionErrorAsync(L("准备下载失败：", "Failed to prepare download: ") + ex.Message,
-                L("在线下载失败", "Online download failed"));
+            await ReportOnlineActionErrorAsync(T("OnlineDownloadFlow.FailedToPrepareDownload") + ex.Message,
+                T("Common.OnlineDownloadFailed"));
         }
         finally
         {
@@ -134,7 +134,7 @@ public sealed partial class MainWindow
 
         if (confirmedDestination is not null && selectedFile is { FileId.Length: > 0 }
             && !effectiveMod.DownloadFiles.Any(file => file.FileId == selectedFile.FileId))
-            throw new InvalidOperationException(L("原下载文件已不在当前文件列表中，请打开详情重新选择。", "The original file is no longer listed. Open details and select a file again."));
+            throw new InvalidOperationException(T("OnlineDownloadFlow.TheOriginalFileIsNoLonger"));
 
         OnlineDownloadCandidate? effectiveFile = selectedFile is null
             ? OnlineDownloadSelectionPolicy.SelectDefault(effectiveMod.DownloadFiles)
@@ -153,8 +153,8 @@ public sealed partial class MainWindow
         if (string.IsNullOrWhiteSpace(effectiveMod.DownloadUrl))
         {
             await ShowMessageAsync(
-                L("当前条目没有可用下载链接。", "This entry does not have a usable download link."),
-                L("无法下载", "Cannot download"));
+                T("OnlineDownloadFlow.ThisEntryDoesNotHaveA"),
+                T("OnlineDownloadFlow.CannotDownload"));
             return;
         }
 
@@ -206,15 +206,13 @@ public sealed partial class MainWindow
             downloadTask.ArchivePath = resolvedArchivePath;
             if (!IsSupportedArchiveFile(resolvedArchivePath))
             {
-                throw new InvalidOperationException(L(
-                    $"文件已下载，但它不是当前可自动解压的压缩包格式：\n{Path.GetFileName(resolvedArchivePath)}",
-                    $"The file was downloaded, but it is not a supported archive for automatic extraction:\n{Path.GetFileName(resolvedArchivePath)}"));
+                throw new InvalidOperationException(T("OnlineDownloadFlow.TheFileWasDownloadedButIt", Path.GetFileName(resolvedArchivePath)));
             }
 
             string extractFolder = CreateUniqueExtractionFolder(selectedFolder, effectiveMod.Title, effectiveMod.ItemId);
             // Do not acquire or later delete a pre-existing extraction folder.
             if (File.Exists(extractFolder) || Directory.Exists(extractFolder))
-                throw new IOException(L("解压目标已存在，请重试以创建独立目录。", "The extraction destination already exists. Retry to create a separate folder."));
+                throw new IOException(T("OnlineDownloadFlow.TheExtractionDestinationAlreadyExistsRetry"));
             Directory.CreateDirectory(extractFolder);
             session.RegisterExtraction(extractFolder);
 
@@ -258,9 +256,8 @@ public sealed partial class MainWindow
                 RefreshUpdatesPane();
                 ShowAppNotification($"下载完成：{effectiveMod.Title}", $"Download completed: {effectiveMod.Title}");
                 if (prepared.PersistenceWarning is not null)
-                    await ShowMessageAsync(L("Mod 已安装，但安装记录保存失败。请检查应用目录的写入权限并重新保存配置。",
-                        "The mod is installed, but its tracking record could not be saved. Check application-folder permissions and save the configuration again."),
-                        L("安装记录未保存", "Tracking record not saved"));
+                    await ShowMessageAsync(T("OnlineDownloadFlow.TheModIsInstalledButIts"),
+                        T("OnlineDownloadFlow.TrackingRecordNotSaved"));
             }
             catch (Exception refreshException)
             {
@@ -283,9 +280,7 @@ public sealed partial class MainWindow
             {
                 if (message.Contains("End of Central Directory", StringComparison.OrdinalIgnoreCase))
                 {
-                    message = L(
-                        "下载到的文件不是有效压缩包，通常是网站返回了下载页面、限流页面，或当前链接需要额外跳转验证。",
-                        "The downloaded file is not a valid archive. The site likely returned a download page, a rate-limit page, or a response that requires extra verification.");
+                    message = T("OnlineDownloadFlow.TheDownloadedFileIsNotA");
                 }
             }
 
@@ -345,9 +340,7 @@ public sealed partial class MainWindow
         }
         catch (OnlineArchiveSizeException ex)
         {
-            throw new InvalidOperationException(L(
-                $"下载文件大小异常，预期约 {FormatFileSize(ex.ExpectedBytes)}，实际为 {FormatFileSize(ex.ActualBytes)}。",
-                $"Downloaded file size is incorrect. Expected about {FormatFileSize(ex.ExpectedBytes)}, received {FormatFileSize(ex.ActualBytes)}."), ex);
+            throw new InvalidOperationException(T("OnlineDownloadFlow.DownloadedFileSizeIsIncorrectExpected", FormatFileSize(ex.ExpectedBytes), FormatFileSize(ex.ActualBytes)), ex);
         }
     }
 
@@ -469,9 +462,8 @@ public sealed partial class MainWindow
     private async Task RemoveTrackedModRecordAsync(TrackedModUpdateResult result)
     {
         bool confirmed = await ShowConfirmAsync(
-            L($"确定要移除这个 Mod 的更新追踪记录吗？\n\n{result.Title}\n\n这不会删除本地文件夹，只会停止更新检查。",
-              $"Remove the update tracking record for this mod?\n\n{result.Title}\n\nThis will not delete the local folder. It only stops update checks."),
-            L("移除追踪", "Remove tracking"));
+            T("OnlineDownloadFlow.RemoveTheUpdateTrackingRecordFor", result.Title),
+            T("OnlineDownloadFlow.RemoveTracking"));
         if (!confirmed)
         {
             return;
@@ -728,7 +720,7 @@ public sealed partial class MainWindow
             };
             folderComboBox.Items.Add(new ComboBoxItem
             {
-                Content = L("直接放到 Mod 仓库根目录", "Use the repository root folder"),
+                Content = T("OnlineDownloadFlow.UseTheRepositoryRootFolder"),
                 Tag = repository.SourcePath
             });
 
@@ -737,7 +729,7 @@ public sealed partial class MainWindow
             {
                 folderComboBox.Items.Add(new ComboBoxItem
                 {
-                    Content = L($"新建角色文件夹：{Path.GetFileName(plan.Path)}（推荐）", $"New character folder: {Path.GetFileName(plan.Path)} (Recommended)"),
+                    Content = T("OnlineDownloadFlow.NewCharacterFolderRecommended", Path.GetFileName(plan.Path)),
                     Tag = new NewCharacterFolderChoice(plan.Path!)
                 });
                 suggestedIndex = 1;
@@ -750,7 +742,7 @@ public sealed partial class MainWindow
                 folderComboBox.Items.Add(new ComboBoxItem
                 {
                     Content = isSuggested
-                        ? L($"{Path.GetFileName(childFolder)}（推荐）", $"{Path.GetFileName(childFolder)} (Recommended)")
+                        ? T("OnlineDownloadFlow.Recommended", Path.GetFileName(childFolder))
                         : Path.GetFileName(childFolder),
                     Tag = childFolder
                 });
@@ -765,18 +757,14 @@ public sealed partial class MainWindow
             string characterDisplayName = GetOnlineCharacterDisplayName(mod.CharacterName);
             string destinationHint = plan.Action switch
             {
-                CharacterFolderAction.UseExisting => L(
-                    $"已识别角色“{characterDisplayName}”，并预选角色文件夹：{Path.GetFileName(suggestedFolder)}。",
-                    $"Recognized “{characterDisplayName}” and preselected: {Path.GetFileName(suggestedFolder)}."),
-                CharacterFolderAction.Create => L(
-                    $"仓库中还没有“{characterDisplayName}”的文件夹。确认后才会新建：\n{plan.Path}",
-                    $"This repository has no folder for “{characterDisplayName}”. It is created only after you confirm:\n{plan.Path}"),
+                CharacterFolderAction.UseExisting => T("OnlineDownloadFlow.RecognizedAndPreselected", characterDisplayName, Path.GetFileName(suggestedFolder)),
+                CharacterFolderAction.Create => T("OnlineDownloadFlow.ThisRepositoryHasNoFolderFor", characterDisplayName, plan.Path),
                 _ => CharacterFolderReasonText(plan, characterDisplayName)
             };
 
             ContentDialog dialog = new()
             {
-                Title = L("选择下载位置", "Choose download location"),
+                Title = T("OnlineDownloadFlow.ChooseDownloadLocation"),
                 Content = new ScrollViewer
                 {
                     MaxHeight = viewport.ContentHeight,
@@ -789,18 +777,16 @@ public sealed partial class MainWindow
                         {
                             new TextBlock
                             {
-                                Text = L(
-                                    $"当前仓库的 Mod 仓库目录：\n{repository.SourcePath}\n\n{destinationHint}\n下载后会在所选目录中创建独立的 Mod 文件夹。也可以改为手动选择其他位置。",
-                                    $"Current mod repository folder:\n{repository.SourcePath}\n\n{destinationHint}\nA separate mod folder will be created inside the selected destination. You can also choose another location manually."),
+                                Text = T("OnlineDownloadFlow.CurrentModRepositoryFolderASeparate", repository.SourcePath, destinationHint),
                                 TextWrapping = TextWrapping.Wrap
                             },
                             folderComboBox
                         }
                     }
                 },
-                PrimaryButtonText = L("使用选中文件夹", "Use selected folder"),
-                SecondaryButtonText = L("手动选择其他位置", "Choose another location"),
-                CloseButtonText = L("取消", "Cancel"),
+                PrimaryButtonText = T("OnlineDownloadFlow.UseSelectedFolder"),
+                SecondaryButtonText = T("OnlineDownloadFlow.ChooseAnotherLocation"),
+                CloseButtonText = T("Common.Cancel"),
                 DefaultButton = ContentDialogButton.Primary,
                 XamlRoot = RootGrid.XamlRoot,
                 RequestedTheme = RootGrid.ActualTheme
@@ -819,8 +805,8 @@ public sealed partial class MainWindow
                     }
                     catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
                     {
-                        await ShowMessageAsync(L("无法新建角色文件夹，未开始下载：", "Could not create the character folder; the download did not start: ") + ex.Message,
-                            L("下载位置", "Download location"));
+                        await ShowMessageAsync(T("OnlineDownloadFlow.CouldNotCreateTheCharacterFolder") + ex.Message,
+                            T("OnlineDownloadFlow.DownloadLocation"));
                         return null;
                     }
                 }

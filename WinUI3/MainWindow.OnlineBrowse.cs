@@ -43,8 +43,8 @@ public sealed partial class MainWindow
             IsEnabled = !string.IsNullOrWhiteSpace(mod.Author)
                 && mod.Author != "Unknown author" && mod.Author != "未知作者"
         };
-        string hint = mod.AuthorId > 0 || mod.ItemId > 0 ? L($"查看作者作品（跨页）：{mod.Author}", $"Browse author (all pages): {mod.Author}")
-            : L($"搜索当前页作者：{mod.Author}", $"Search this page by author: {mod.Author}");
+        string hint = mod.AuthorId > 0 || mod.ItemId > 0 ? T("OnlineBrowse.BrowseAuthorAllPages", mod.Author)
+            : T("OnlineBrowse.SearchThisPageByAuthor", mod.Author);
         ToolTipService.SetToolTip(link, hint);
         AutomationProperties.SetName(link, hint);
         link.Click += async (_, _) =>
@@ -105,21 +105,21 @@ public sealed partial class MainWindow
             if (active && task is not null && DownloadProgressPolicy.IsTerminal(task.State)) task = null;
             string text = task?.State switch
             {
-                DownloadTaskState.Queued => L("等待下载", "Queued"),
-                DownloadTaskState.Preparing => L("准备下载…", "Preparing…"),
-                DownloadTaskState.Downloading => L($"正在下载 {task.Progress:0}%", $"Downloading {task.Progress:0}%"),
-                DownloadTaskState.Extracting => L("正在解压…", "Extracting…"),
-                DownloadTaskState.Canceling => L("正在取消…", "Canceling…"),
-                DownloadTaskState.Completed => L("下载完成", "Download completed"),
-                DownloadTaskState.Failed => L("下载失败，可重试", "Download failed; retry available"),
-                DownloadTaskState.Canceled => L("下载已取消", "Download canceled"),
-                _ => active ? L("准备下载…", "Preparing…") : defaultStatus
+                DownloadTaskState.Queued => T("OnlineBrowse.Queued"),
+                DownloadTaskState.Preparing => T("OnlineBrowse.Preparing"),
+                DownloadTaskState.Downloading => T("OnlineBrowse.Downloading", task.Progress),
+                DownloadTaskState.Extracting => T("OnlineBrowse.Extracting"),
+                DownloadTaskState.Canceling => T("OnlineBrowse.Canceling"),
+                DownloadTaskState.Completed => T("OnlineBrowse.DownloadCompleted"),
+                DownloadTaskState.Failed => T("OnlineBrowse.DownloadFailedRetryAvailable"),
+                DownloadTaskState.Canceled => T("OnlineBrowse.DownloadCanceled"),
+                _ => active ? T("OnlineBrowse.Preparing") : defaultStatus
             };
             status.Text = text;
             ToolTipService.SetToolTip(status, task is null ? text : L(task.StatusZh, task.StatusEn));
             string action = active ? text : installed is null
-                ? L("下载并解压", "Download and extract")
-                : L("重新下载并解压", "Download and extract again");
+                ? T("Common.DownloadAndExtract")
+                : T("Common.DownloadAndExtractAgain");
             ToolTipService.SetToolTip(button, action);
             AutomationProperties.SetName(button, action);
             if (button.Content is FontIcon icon)

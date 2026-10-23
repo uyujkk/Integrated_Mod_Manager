@@ -77,7 +77,7 @@ public sealed partial class MainWindow
 
         var loadingText = new TextBlock
         {
-            Text = L("正在加载高清图片...", "Loading high-resolution image..."),
+            Text = T("Dialogs.LoadingHighResolutionImage"),
             Foreground = new SolidColorBrush(Colors.White),
             HorizontalAlignment = HorizontalAlignment.Center,
             VerticalAlignment = VerticalAlignment.Center,
@@ -85,13 +85,13 @@ public sealed partial class MainWindow
         };
         imageStage.Children.Add(loadingText);
 
-        Button previousButton = CreateImageViewerNavigationButton("\uE76B", L("上一张", "Previous image"));
+        Button previousButton = CreateImageViewerNavigationButton("\uE76B", T("Dialogs.PreviousImage"));
         previousButton.Margin = new Thickness(16);
         previousButton.HorizontalAlignment = HorizontalAlignment.Left;
         previousButton.VerticalAlignment = VerticalAlignment.Center;
         imageStage.Children.Add(previousButton);
 
-        Button nextButton = CreateImageViewerNavigationButton("\uE76C", L("下一张", "Next image"));
+        Button nextButton = CreateImageViewerNavigationButton("\uE76C", T("Dialogs.NextImage"));
         nextButton.Margin = new Thickness(16);
         nextButton.HorizontalAlignment = HorizontalAlignment.Right;
         nextButton.VerticalAlignment = VerticalAlignment.Center;
@@ -225,10 +225,10 @@ public sealed partial class MainWindow
             AppInfoBar.Severity = severity;
             AppInfoBar.Title = severity switch
             {
-                InfoBarSeverity.Error => L("操作未完成", "Action not completed"),
-                InfoBarSeverity.Warning => L("访问已停止", "Stopped"),
-                InfoBarSeverity.Informational => L("提示", "Notice"),
-                _ => L("操作完成", "Completed")
+                InfoBarSeverity.Error => T("Dialogs.ActionNotCompleted"),
+                InfoBarSeverity.Warning => T("Dialogs.Stopped"),
+                InfoBarSeverity.Informational => T("Dialogs.Notice"),
+                _ => T("Dialogs.Completed")
             };
             AppInfoBar.Message = L(zh, en);
             AppInfoBar.IsOpen = true;
@@ -251,7 +251,7 @@ public sealed partial class MainWindow
         if (string.IsNullOrWhiteSpace(url))
         {
             await ShowMessageAsync(
-                L("当前条目没有可用链接。", "This entry does not have a usable link."),
+                T("Dialogs.ThisEntryDoesNotHaveA"),
                 failureTitle);
             return;
         }
@@ -267,7 +267,7 @@ public sealed partial class MainWindow
         catch (Exception ex)
         {
             await ShowMessageAsync(
-                L("打开链接失败：", "Failed to open link: ") + ex.Message,
+                T("Common.FailedToOpenLink") + ex.Message,
                 failureTitle);
         }
     }
@@ -332,8 +332,8 @@ public sealed partial class MainWindow
             if (string.IsNullOrWhiteSpace(directory) || !Directory.Exists(directory))
             {
                 _ = ShowMessageAsync(
-                    title + L("不存在，请重新选择。", " does not exist. Please choose it again."),
-                L("路径无效", "Invalid path"));
+                    title + T("Dialogs.DoesNotExistPleaseChooseIt"),
+                T("Common.InvalidPath"));
                 return;
             }
 
@@ -346,8 +346,8 @@ public sealed partial class MainWindow
         catch (Exception ex)
         {
             _ = ShowMessageAsync(
-                L("打开目录失败：", "Failed to open folder: ") + ex.Message,
-                L("操作失败", "Operation failed"));
+                T("Dialogs.FailedToOpenFolder") + ex.Message,
+                T("Dialogs.OperationFailed"));
         }
     }
 
@@ -358,8 +358,8 @@ public sealed partial class MainWindow
             if (string.IsNullOrWhiteSpace(filePath) || !File.Exists(filePath))
             {
                 _ = ShowMessageAsync(
-                    title + L("不存在，请重新选择。", " does not exist. Please choose it again."),
-                L("路径无效", "Invalid path"));
+                    title + T("Dialogs.DoesNotExistPleaseChooseIt"),
+                T("Common.InvalidPath"));
                 return;
             }
 
@@ -373,8 +373,8 @@ public sealed partial class MainWindow
         catch (Exception ex)
         {
             _ = ShowMessageAsync(
-                L("打开启动器位置失败：", "Failed to open file location: ") + ex.Message,
-                L("操作失败", "Operation failed"));
+                T("Dialogs.FailedToOpenFileLocation") + ex.Message,
+                T("Dialogs.OperationFailed"));
         }
     }
 
@@ -390,7 +390,7 @@ public sealed partial class MainWindow
                 HorizontalScrollBarVisibility = ScrollBarVisibility.Disabled,
                 Content = new TextBlock { Text = content, TextWrapping = TextWrapping.Wrap }
             },
-            CloseButtonText = L("确定", "OK"),
+            CloseButtonText = T("Dialogs.OK"),
             RequestedTheme = RootGrid.ActualTheme,
             XamlRoot = RootGrid.XamlRoot
         };
@@ -403,7 +403,7 @@ public sealed partial class MainWindow
         var textBox = new TextBox
         {
             Text = defaultValue,
-            PlaceholderText = L("输入名称", "Enter a name"),
+            PlaceholderText = T("Dialogs.EnterAName"),
             Margin = new Thickness(0, 12, 0, 0)
         };
 
@@ -419,8 +419,8 @@ public sealed partial class MainWindow
         {
             Title = title,
             Content = panel,
-            PrimaryButtonText = L("确定", "OK"),
-            CloseButtonText = L("取消", "Cancel"),
+            PrimaryButtonText = T("Dialogs.OK"),
+            CloseButtonText = T("Common.Cancel"),
             DefaultButton = ContentDialogButton.Primary,
             XamlRoot = RootGrid.XamlRoot
         };
@@ -434,61 +434,61 @@ public sealed partial class MainWindow
         TextBox nameBox = new()
         {
             Text = initial.Name,
-            PlaceholderText = L("输入仓库名称", "Enter repository name")
+            PlaceholderText = T("Dialogs.EnterRepositoryName")
         };
 
         TextBox sourceBox = new()
         {
             Text = initial.SourcePath,
-            PlaceholderText = L("第一层 Mod 仓库路径", "First-level mod storage path")
+            PlaceholderText = T("Dialogs.FirstLevelModStoragePath")
         };
 
         TextBox targetBox = new()
         {
             Text = initial.TargetPath,
-            PlaceholderText = L("目标游戏 Mod 文件夹路径", "Target game mod folder path")
+            PlaceholderText = T("Dialogs.TargetGameModFolderPath")
         };
 
         CheckBox linkDeploymentBox = new()
         {
             IsChecked = initial.UseDirectoryLinks,
-            Content = L("使用目录联接部署（仓库与加载器共享同一份 Mod 文件）", "Deploy with directory junctions (repository and loader share the same Mod files)")
+            Content = T("Dialogs.DeployWithDirectoryJunctionsRepositoryAnd")
         };
 
         TextBox launcherBox = new()
         {
             Text = initial.LauncherPath,
-            PlaceholderText = L("启动器路径（可选）", "Launcher path (optional)")
+            PlaceholderText = T("Dialogs.LauncherPathOptional")
         };
 
         TextBox siteBox = new()
         {
             Text = string.IsNullOrWhiteSpace(initial.OnlineSourceSite) ? DefaultOnlineSourceSite : initial.OnlineSourceSite,
-            PlaceholderText = L("在线来源，例如 GameBanana", "Online source, for example GameBanana")
+            PlaceholderText = T("Dialogs.OnlineSourceForExampleGameBanana")
         };
 
         TextBox gameBox = new()
         {
             Text = string.IsNullOrWhiteSpace(initial.OnlineGameName) ? DefaultOnlineGameName : initial.OnlineGameName,
-            PlaceholderText = L("目标游戏名称，例如 Arknights: Endfield", "Target game name, for example Arknights: Endfield")
+            PlaceholderText = T("Dialogs.TargetGameNameForExampleArknights")
         };
 
         TextBox categoryBox = new()
         {
             Text = string.IsNullOrWhiteSpace(initial.OnlineCategoryId) ? DefaultOnlineCategoryId : initial.OnlineCategoryId,
-            PlaceholderText = L("分类 ID，例如 21842", "Category ID, for example 21842")
+            PlaceholderText = T("Dialogs.CategoryIDForExample21842")
         };
 
         TextBox wikiBox = new()
         {
             Text = initial.WikiUrl,
-            PlaceholderText = L("游戏 Wiki 地址（可选）", "Game Wiki URL (optional)")
+            PlaceholderText = T("Dialogs.GameWikiURLOptional")
         };
 
         TextBox notesBox = new()
         {
             Text = initial.Notes,
-            PlaceholderText = L("备注（可选）", "Notes (optional)"),
+            PlaceholderText = T("Dialogs.NotesOptional"),
             AcceptsReturn = true,
             MinHeight = 72,
             TextWrapping = TextWrapping.Wrap
@@ -500,24 +500,24 @@ public sealed partial class MainWindow
             Text = content,
             TextWrapping = TextWrapping.Wrap
         });
-        panel.Children.Add(CreateLabeledEditor(L("仓库名称", "Repository name"), nameBox));
-        panel.Children.Add(CreateLabeledEditor(L("Mod 仓库路径", "Mod storage path"), sourceBox));
-        panel.Children.Add(CreateLabeledEditor(L("目标路径", "Target path"), targetBox));
+        panel.Children.Add(CreateLabeledEditor(T("Dialogs.RepositoryName"), nameBox));
+        panel.Children.Add(CreateLabeledEditor(T("Dialogs.ModStoragePath"), sourceBox));
+        panel.Children.Add(CreateLabeledEditor(T("Dialogs.TargetPath"), targetBox));
         panel.Children.Add(linkDeploymentBox);
-        panel.Children.Add(CreateLabeledEditor(L("启动器路径", "Launcher path"), launcherBox));
-        panel.Children.Add(CreateLabeledEditor(L("在线来源", "Online source"), siteBox));
-        panel.Children.Add(CreateLabeledEditor(L("目标游戏", "Target game"), gameBox));
-        panel.Children.Add(CreateLabeledEditor(L("分类标识", "Category ID"), categoryBox));
-        panel.Children.Add(CreateLabeledEditor(L("备注", "Notes"), notesBox));
+        panel.Children.Add(CreateLabeledEditor(T("Dialogs.LauncherPath"), launcherBox));
+        panel.Children.Add(CreateLabeledEditor(T("Common.OnlineSource"), siteBox));
+        panel.Children.Add(CreateLabeledEditor(T("Dialogs.TargetGame"), gameBox));
+        panel.Children.Add(CreateLabeledEditor(T("Dialogs.CategoryID"), categoryBox));
+        panel.Children.Add(CreateLabeledEditor(T("Common.Notes"), notesBox));
 
-        panel.Children.Insert(panel.Children.Count - 1, CreateLabeledEditor(L("游戏 Wiki", "Game Wiki"), wikiBox));
+        panel.Children.Insert(panel.Children.Count - 1, CreateLabeledEditor(T("Dialogs.GameWiki"), wikiBox));
 
         ContentDialog dialog = new()
         {
             Title = title,
             Content = panel,
-            PrimaryButtonText = L("保存", "Save"),
-            CloseButtonText = L("取消", "Cancel"),
+            PrimaryButtonText = T("Common.Save"),
+            CloseButtonText = T("Common.Cancel"),
             DefaultButton = ContentDialogButton.Primary,
             XamlRoot = RootGrid.XamlRoot
         };
@@ -548,31 +548,31 @@ public sealed partial class MainWindow
         TextBox siteBox = new()
         {
             Text = string.IsNullOrWhiteSpace(initial.OnlineSourceSite) ? DefaultOnlineSourceSite : initial.OnlineSourceSite,
-            PlaceholderText = L("在线来源，例如 GameBanana", "Online source, for example GameBanana")
+            PlaceholderText = T("Dialogs.OnlineSourceForExampleGameBanana")
         };
 
         TextBox gameBox = new()
         {
             Text = string.IsNullOrWhiteSpace(initial.OnlineGameName) ? DefaultOnlineGameName : initial.OnlineGameName,
-            PlaceholderText = L("目标游戏名称，例如 Arknights: Endfield", "Target game name, for example Arknights: Endfield")
+            PlaceholderText = T("Dialogs.TargetGameNameForExampleArknights")
         };
 
         TextBox categoryBox = new()
         {
             Text = string.IsNullOrWhiteSpace(initial.OnlineCategoryId) ? DefaultOnlineCategoryId : initial.OnlineCategoryId,
-            PlaceholderText = L("皮肤分类 ID，例如 42770", "Skin category ID, for example 42770")
+            PlaceholderText = T("Dialogs.SkinCategoryIDForExample42770")
         };
 
         TextBox wikiBox = new()
         {
             Text = initial.WikiUrl,
-            PlaceholderText = L("游戏 Wiki 地址（可选）", "Game Wiki URL (optional)")
+            PlaceholderText = T("Dialogs.GameWikiURLOptional")
         };
 
         TextBox notesBox = new()
         {
             Text = initial.Notes,
-            PlaceholderText = L("备注（可选）", "Notes (optional)"),
+            PlaceholderText = T("Dialogs.NotesOptional"),
             AcceptsReturn = true,
             MinHeight = 88,
             TextWrapping = TextWrapping.Wrap
@@ -581,33 +581,29 @@ public sealed partial class MainWindow
         StackPanel panel = new() { Spacing = 10, MaxWidth = 620 };
         panel.Children.Add(new TextBlock
         {
-            Text = L(
-                "这里配置的是当前仓库对应的在线 Mod 分类。不同游戏在 GameBanana 上的皮肤分类 ID 不一样，所以建议每个游戏单独建一个仓库并分别填写。",
-                "This config controls the online mod category used by the current repository. Different games use different skin category IDs on GameBanana, so it is best to keep one repository per game and configure them separately."),
+            Text = T("Dialogs.ThisConfigControlsTheOnlineMod"),
             TextWrapping = TextWrapping.Wrap
         });
-        panel.Children.Add(CreateLabeledEditor(L("在线来源", "Online source"), siteBox));
-        panel.Children.Add(CreateLabeledEditor(L("目标游戏", "Target game"), gameBox));
-        panel.Children.Add(CreateLabeledEditor(L("皮肤分类 ID", "Skin category ID"), categoryBox));
-        panel.Children.Add(CreateLabeledEditor(L("备注", "Notes"), notesBox));
+        panel.Children.Add(CreateLabeledEditor(T("Common.OnlineSource"), siteBox));
+        panel.Children.Add(CreateLabeledEditor(T("Dialogs.TargetGame"), gameBox));
+        panel.Children.Add(CreateLabeledEditor(T("Dialogs.SkinCategoryID"), categoryBox));
+        panel.Children.Add(CreateLabeledEditor(T("Common.Notes"), notesBox));
 
         panel.Children.Add(new TextBlock
         {
-            Text = L(
-                "当前检索逻辑会把这里的分类 ID 直接传给 GameBanana 的 Generic_Category 过滤器，因此只要改这里，就能切换到别的游戏皮肤分类。",
-                "The current fetch logic passes this category ID directly to GameBanana's Generic_Category filter, so changing this value switches the browser to another game's skin category."),
+            Text = T("Dialogs.TheCurrentFetchLogicPassesThis"),
             TextWrapping = TextWrapping.Wrap,
             Style = (Style)Application.Current.Resources["CaptionTextStyle"]
         });
 
-        panel.Children.Insert(panel.Children.Count - 1, CreateLabeledEditor(L("游戏 Wiki", "Game Wiki"), wikiBox));
+        panel.Children.Insert(panel.Children.Count - 1, CreateLabeledEditor(T("Dialogs.GameWiki"), wikiBox));
 
         ContentDialog dialog = new()
         {
-            Title = L("编辑当前仓库在线分类", "Edit Current Repository Online Category"),
+            Title = T("Dialogs.EditCurrentRepositoryOnlineCategory"),
             Content = panel,
-            PrimaryButtonText = L("保存", "Save"),
-            CloseButtonText = L("取消", "Cancel"),
+            PrimaryButtonText = T("Common.Save"),
+            CloseButtonText = T("Common.Cancel"),
             DefaultButton = ContentDialogButton.Primary,
             XamlRoot = RootGrid.XamlRoot
         };
@@ -651,8 +647,8 @@ public sealed partial class MainWindow
                 HorizontalScrollBarVisibility = ScrollBarVisibility.Disabled,
                 Content = new TextBlock { Text = content, TextWrapping = TextWrapping.Wrap }
             },
-            PrimaryButtonText = L("确认", "Confirm"),
-            CloseButtonText = L("取消", "Cancel"),
+            PrimaryButtonText = T("Dialogs.Confirm"),
+            CloseButtonText = T("Common.Cancel"),
             DefaultButton = ContentDialogButton.Close,
             RequestedTheme = RootGrid.ActualTheme,
             XamlRoot = RootGrid.XamlRoot

@@ -113,32 +113,28 @@ public sealed partial class MainWindow
     {
         if (!AppSelfUpdateEnabled)
         {
-            LatestReleaseTitleTextBlock.Text = L($"独立测试版：{AppVersion}", $"Standalone beta: {AppVersion}");
-            LatestReleaseMetaTextBlock.Text = L("手动下载 · 与稳定版分开解压使用", "Manual download · extract separately from the stable app");
-            UpdateNotesTextBlock.Text = L(
-                "Mod 更新修复测试版：修复检查频率切换崩溃，新增更新弹窗、下载并替换和旧版备份。\n本地测试包未发布；软件自身更新已关闭，Mod 更新仍可使用。",
-                "Mod update test build: fixes interval selection crashes and adds update prompts, download and replace, and old-version backups.\nThis local test package is unpublished; app self-updates are disabled and Mod updates remain available.");
+            LatestReleaseTitleTextBlock.Text = T("Updates.StandaloneBeta", AppVersion);
+            LatestReleaseMetaTextBlock.Text = T("Updates.ManualDownloadExtractSeparatelyFromThe");
+            UpdateNotesTextBlock.Text = T("Updates.ModUpdateTestBuildFixesInterval");
             return;
         }
-        string latestTag = string.IsNullOrWhiteSpace(_latestReleaseTag) ? L("尚未检查", "Not checked yet") : _latestReleaseTag!;
+        string latestTag = string.IsNullOrWhiteSpace(_latestReleaseTag) ? T("Updates.NotCheckedYet") : _latestReleaseTag!;
         string latestTitle = string.IsNullOrWhiteSpace(_latestReleaseTitle)
-            ? L("最新版本信息会显示在这里", "Latest release details will appear here")
+            ? T("Updates.LatestReleaseDetailsWillAppearHere")
             : NormalizeUiText(_latestReleaseTitle);
 
         string publishedText = TryParseDateTimeOffset(_latestReleasePublishedAt) is DateTimeOffset publishedAt
             ? publishedAt.ToLocalTime().ToString("yyyy-MM-dd HH:mm")
-            : L("未知时间", "Unknown time");
+            : T("Updates.UnknownTime");
 
         string lastCheckedText = _lastUpdateCheckUtc.HasValue
             ? _lastUpdateCheckUtc.Value.ToLocalTime().ToString("yyyy-MM-dd HH:mm")
-            : L("尚未检查", "Not checked yet");
+            : T("Updates.NotCheckedYet");
 
-        LatestReleaseTitleTextBlock.Text = L($"最新版本：{latestTag}", $"Latest release: {latestTag}");
-        LatestReleaseMetaTextBlock.Text = L(
-            $"标题：{latestTitle}\n发布时间：{publishedText}\n上次检查：{lastCheckedText}",
-            $"Title: {latestTitle}\nPublished: {publishedText}\nLast checked: {lastCheckedText}");
+        LatestReleaseTitleTextBlock.Text = T("Updates.LatestRelease", latestTag);
+        LatestReleaseMetaTextBlock.Text = T("Updates.TitlePublishedLastChecked", latestTitle, publishedText, lastCheckedText);
         UpdateNotesTextBlock.Text = string.IsNullOrWhiteSpace(_latestReleaseBody)
-            ? L("检查到新版本后，这里会显示 GitHub Release 的更新内容。", "GitHub release notes will appear here after an update check.")
+            ? T("Updates.GitHubReleaseNotesWillAppearHere")
             : NormalizeUiText(_latestReleaseBody);
     }
 
@@ -157,38 +153,38 @@ public sealed partial class MainWindow
 
     private void RefreshUpdatesPane()
     {
-        UpdatesTitleTextBlock.Text = L("Mod 更新", "Mod Updates");
-        UpdatesSubtitleTextBlock.Text = L("检查已安装 Mod 的新版本，并集中处理下载、配置方案和安装恢复。", "Check installed mods for new versions and manage downloads, profiles, and recovery in one place.");
-        ConfigurationProfilesTitleTextBlock.Text = L("Mod 组合预设（实验）", "Mod Combination Presets (Experimental)");
-        ConfigurationProfilesHintTextBlock.Text = L("保存启用组合和持久参数；恢复时先部署组合，再定向回写加载器。", "Save enabled Mods and persistent state; restore deployment first, then loader parameters.");
-        CaptureCombinationStateCheckBox.Content = L("新建/更新时同时保存 d3dx_user.ini 参数", "Include d3dx_user.ini parameters when saving/updating");
-        BrowseCombinationUserIniButton.Content = L("选择文件", "Browse");
-        CreateConfigurationProfileButton.Content = L("新建方案", "New Profile");
-        UpdateConfigurationProfileButton.Content = L("更新方案", "Update Profile");
-        ApplyConfigurationProfileButton.Content = L("预览并恢复组合", "Preview and Restore");
+        UpdatesTitleTextBlock.Text = T("Updates.ModUpdates");
+        UpdatesSubtitleTextBlock.Text = T("Updates.CheckInstalledModsForNewVersions");
+        ConfigurationProfilesTitleTextBlock.Text = T("Updates.ModCombinationPresetsExperimental");
+        ConfigurationProfilesHintTextBlock.Text = T("Updates.SaveEnabledModsAndPersistentState");
+        CaptureCombinationStateCheckBox.Content = T("Updates.IncludeD3dxUserIniParametersWhen");
+        BrowseCombinationUserIniButton.Content = T("Common.Browse");
+        CreateConfigurationProfileButton.Content = T("Updates.NewProfile");
+        UpdateConfigurationProfileButton.Content = T("Updates.UpdateProfile");
+        ApplyConfigurationProfileButton.Content = T("Updates.PreviewAndRestore");
         DeleteConfigurationProfileButton.Content = new FontIcon { Glyph = "\uE74D", FontSize = 16 };
-        ToolTipService.SetToolTip(DeleteConfigurationProfileButton, L("删除选中的配置方案", "Delete the selected profile"));
-        InstallSafetyTitleTextBlock.Text = L("安装安全", "Install Safety");
-        InstallSafetyHintTextBlock.Text = L("安装前检查文件冲突；复制、移除和方案切换均可通过备份恢复。", "Check file conflicts before installation; copies, removals, and profile changes can be recovered from backups.");
-        ConflictDetectionToggleSwitch.Header = L("安装前检测冲突", "Detect conflicts before install");
-        ConflictDetectionToggleSwitch.OnContent = L("开启", "On");
-        ConflictDetectionToggleSwitch.OffContent = L("关闭", "Off");
+        ToolTipService.SetToolTip(DeleteConfigurationProfileButton, T("Updates.DeleteTheSelectedProfile"));
+        InstallSafetyTitleTextBlock.Text = T("Updates.InstallSafety");
+        InstallSafetyHintTextBlock.Text = T("Updates.CheckFileConflictsBeforeInstallationCopies");
+        ConflictDetectionToggleSwitch.Header = T("Updates.DetectConflictsBeforeInstall");
+        ConflictDetectionToggleSwitch.OnContent = T("Common.On");
+        ConflictDetectionToggleSwitch.OffContent = T("Common.Off");
         ConflictDetectionToggleSwitch.IsOn = _enableConflictDetection;
-        RollbackLastInstallButton.Content = L("撤销上次 Mod 操作", "Undo Last Mod Change");
+        RollbackLastInstallButton.Content = T("Updates.UndoLastModChange");
         // "Downloads" maps to the download-count label in the shared table; use a distinct key.
-        DownloadTaskCenterTitleTextBlock.Text = L("下载任务", "Download tasks");
-        DownloadTaskCenterHintTextBlock.Text = L("显示在线 Mod 的下载与解压进度。", "Shows online mod download and extraction progress.");
-        ClearDownloadTasksButton.Content = L("清除已完成", "Clear Finished");
+        DownloadTaskCenterTitleTextBlock.Text = T("Updates.DownloadTasks");
+        DownloadTaskCenterHintTextBlock.Text = T("Updates.ShowsOnlineModDownloadAndExtraction");
+        ClearDownloadTasksButton.Content = T("Updates.ClearFinished");
         RefreshBackupManagerText();
         _ = RefreshInstallBackupListAsync();
         RefreshConfigurationProfiles();
         RefreshDownloadTaskCenter();
-        TrackedModSettingsTitleTextBlock.Text = L("检查方式", "Check Settings");
-        TrackedModSettingsHintTextBlock.Text = L("按设定频率在启动时检查，也可立即刷新当前仓库。", "Check on startup at the selected interval, or refresh this repository now.");
-        ModUpdateIntervalLabelTextBlock.Text = L("检查频率", "Check interval");
-        ModUpdateIntervalHintTextBlock.Text = L("仅检查已保存来源 ID 的在线安装 Mod。", "Only online-installed mods with a saved source ID are checked.");
-        CheckModUpdatesButton.Content = _isCheckingModUpdates ? L("检查中...", "Checking...") : L("手动检查更新", "Check Now");
-        TrackedModsTitleTextBlock.Text = L("已追踪 Mod", "Tracked Mods");
+        TrackedModSettingsTitleTextBlock.Text = T("Updates.CheckSettings");
+        TrackedModSettingsHintTextBlock.Text = T("Updates.CheckOnStartupAtTheSelected");
+        ModUpdateIntervalLabelTextBlock.Text = T("Updates.CheckInterval");
+        ModUpdateIntervalHintTextBlock.Text = T("Updates.OnlyOnlineInstalledModsWithA");
+        CheckModUpdatesButton.Content = _isCheckingModUpdates ? T("Common.Checking") : T("Updates.CheckNow");
+        TrackedModsTitleTextBlock.Text = T("Updates.TrackedMods");
 
         if (string.IsNullOrWhiteSpace(_modUpdateStatusZh) || string.IsNullOrWhiteSpace(_modUpdateStatusEn))
         {
@@ -201,12 +197,10 @@ public sealed partial class MainWindow
 
         string lastCheckedText = _lastModUpdateCheckUtc.HasValue
             ? _lastModUpdateCheckUtc.Value.ToLocalTime().ToString("yyyy-MM-dd HH:mm")
-            : L("尚未检查", "Not checked yet");
+            : T("Updates.NotCheckedYet");
         int trackedCount = _trackedModOrigins.Count;
         int updateCount = _trackedModUpdateResults.Count(item => item.HasUpdate);
-        TrackedModsSummaryTextBlock.Text = L(
-            $"已追踪 {trackedCount} 个 Mod，上次检查：{lastCheckedText}，发现可更新 {updateCount} 个。",
-            $"{trackedCount} tracked mods. Last checked: {lastCheckedText}. Updates available: {updateCount}.");
+        TrackedModsSummaryTextBlock.Text = T("Updates.TrackedModsLastCheckedUpdatesAvailable", trackedCount, lastCheckedText, updateCount);
 
         PopulateModUpdateIntervalOptions();
         TrackedModsListPanel.Children.Clear();
@@ -221,8 +215,8 @@ public sealed partial class MainWindow
             if (_trackedModOrigins.Count == 0)
             {
                 TrackedModsListPanel.Children.Add(CreateInfoCard(
-                    L("还没有可追踪的在线 Mod", "No tracked online mods yet"),
-                    L("从在线模块下载并解压到仓库后，这里会自动记录来源链接、图片和远程 ID。", "After downloading and extracting from the online browser, this page will automatically track the source link, preview image, and remote ID.")));
+                    T("Updates.NoTrackedOnlineModsYet"),
+                    T("Updates.AfterDownloadingAndExtractingFromThe")));
             }
             else
             {
@@ -324,7 +318,7 @@ public sealed partial class MainWindow
         {
             previewHost.Child = new TextBlock
             {
-                Text = L("暂无预览", "No preview"),
+                Text = T("Updates.NoPreview"),
                 HorizontalAlignment = HorizontalAlignment.Center,
                 VerticalAlignment = VerticalAlignment.Center,
                 Style = (Style)Application.Current.Resources["CaptionTextStyle"]
@@ -353,8 +347,8 @@ public sealed partial class MainWindow
             BorderBrush = statusBrush, BorderThickness = new Thickness(1),
             Child = new TextBlock
             {
-                Text = !isChecked ? L("未检查", "Not checked") : result.CheckFailed ? L("检查失败", "Check failed")
-                    : result.HasUpdate ? L("有更新", "Update") : L("已是最新", "Up to date"),
+                Text = !isChecked ? T("Updates.NotChecked") : result.CheckFailed ? T("Updates.CheckFailed")
+                    : result.HasUpdate ? T("Updates.Update") : T("Updates.UpToDate"),
                 Foreground = statusBrush, FontSize = 12, FontWeight = Microsoft.UI.Text.FontWeights.SemiBold
             }
         };
@@ -363,7 +357,7 @@ public sealed partial class MainWindow
         content.Children.Add(heading);
         var pathText = new TextBlock
         {
-            Text = $"{L("本地路径", "Local path")}: {TrimPreviewPath(result.Path)}",
+            Text = $"{T("Updates.LocalPath")}: {TrimPreviewPath(result.Path)}",
             Style = (Style)Application.Current.Resources["CaptionTextStyle"],
             TextTrimming = TextTrimming.CharacterEllipsis, MaxLines = 1
         };
@@ -371,7 +365,7 @@ public sealed partial class MainWindow
         content.Children.Add(pathText);
         content.Children.Add(new TextBlock
         {
-            Text = $"{L("记录时间", "Recorded")}: {FormatDateForDisplay(result.LastKnownUpdatedAt)}    {L("最新时间", "Latest")}: {FormatDateForDisplay(result.LatestUpdatedAt)}",
+            Text = $"{T("Updates.Recorded")}: {FormatDateForDisplay(result.LastKnownUpdatedAt)}    {T("Updates.Latest")}: {FormatDateForDisplay(result.LatestUpdatedAt)}",
             Style = (Style)Application.Current.Resources["MutedTextStyle"],
             TextWrapping = TextWrapping.Wrap
         });
@@ -391,7 +385,7 @@ public sealed partial class MainWindow
         {
             var replaceButton = new Button
             {
-                Content = L("下载并替换", "Download and replace"),
+                Content = T("Common.DownloadAndReplace"),
                 Style = (Style)Application.Current.Resources["PrimaryButtonStyle"], MinHeight = 36,
                 IsEnabled = !_modUpdatesInProgress.Contains(result.Path) && Directory.Exists(result.Path)
             };
@@ -400,18 +394,18 @@ public sealed partial class MainWindow
         }
         Button openPageButton = new()
         {
-            Content = L("打开页面", "Open Page"),
+            Content = T("Updates.OpenPage"),
             Style = (Style)Application.Current.Resources["SecondaryButtonStyle"],
             MinHeight = 36,
             IsEnabled = !string.IsNullOrWhiteSpace(result.ProfileUrl)
         };
-        openPageButton.Click += async (_, _) => await RunUiActionAsync("OpenExternalUrlAsync", () => OpenExternalUrlAsync(result.ProfileUrl, L("打开页面失败", "Open page failed")));
+        openPageButton.Click += async (_, _) => await RunUiActionAsync("OpenExternalUrlAsync", () => OpenExternalUrlAsync(result.ProfileUrl, T("Common.OpenPageFailed")));
         actions.Children.Add(openPageButton);
 
         var more = new MenuFlyout { Placement = Microsoft.UI.Xaml.Controls.Primitives.FlyoutPlacementMode.BottomEdgeAlignedLeft };
         var openFolderItem = new MenuFlyoutItem
         {
-            Text = L("打开本地目录", "Open Folder"), Icon = new FontIcon { Glyph = "" },
+            Text = T("Updates.OpenFolder"), Icon = new FontIcon { Glyph = "" },
             IsEnabled = Directory.Exists(result.Path)
         };
         openFolderItem.Click += (_, _) =>
@@ -429,14 +423,14 @@ public sealed partial class MainWindow
         more.Items.Add(openFolderItem);
         if (!string.IsNullOrWhiteSpace(result.BackupPath))
         {
-            var backupItem = new MenuFlyoutItem { Text = L("打开旧版备份", "Open old backup"), Icon = new FontIcon { Glyph = "" } };
-            backupItem.Click += (_, _) => OpenDirectory(result.BackupPath, L("旧版备份", "Old backup"));
+            var backupItem = new MenuFlyoutItem { Text = T("Updates.OpenOldBackup"), Icon = new FontIcon { Glyph = "" } };
+            backupItem.Click += (_, _) => OpenDirectory(result.BackupPath, T("Updates.OldBackup"));
             more.Items.Add(backupItem);
         }
         more.Items.Add(new MenuFlyoutSeparator());
         var removeTrackingItem = new MenuFlyoutItem
         {
-            Text = L("删除记录", "Remove Tracking"), Icon = new FontIcon { Glyph = "" },
+            Text = T("Updates.RemoveTracking"), Icon = new FontIcon { Glyph = "" },
             IsEnabled = !_modUpdatesInProgress.Contains(result.Path)
         };
         removeTrackingItem.Click += async (_, _) => await RunUiActionAsync("RemoveTrackedModRecordAsync", () => RemoveTrackedModRecordAsync(result));
@@ -444,7 +438,7 @@ public sealed partial class MainWindow
         actions.Children.Add(new DropDownButton
         {
             // No Button style here: it would replace the template and drop the chevron.
-            Content = L("更多", "More"), Flyout = more, MinHeight = 36
+            Content = T("Updates.More"), Flyout = more, MinHeight = 36
         });
 
         content.Children.Add(actions);
@@ -474,8 +468,8 @@ public sealed partial class MainWindow
             if (showDialogs)
             {
                 await ShowMessageAsync(
-                    L("请先从在线模块下载并解压至少一个 Mod，系统才会记录来源并检查更新。", "Download and extract at least one mod from the online browser first so the app can track and check updates."),
-                    L("没有可检查的 Mod", "No tracked mods"));
+                    T("Updates.DownloadAndExtractAtLeastOne"),
+                    T("Updates.NoTrackedMods"));
             }
             return;
         }
@@ -543,10 +537,10 @@ public sealed partial class MainWindow
             {
                 await ShowMessageAsync(
                     updateCount > 0
-                        ? L($"已检查 {_trackedModUpdateResults.Count} 个 Mod，发现 {updateCount} 个有更新。", $"Checked {_trackedModUpdateResults.Count} mods and found {updateCount} updates.")
-                        : failedCount > 0 ? L($"{failedCount} 个 Mod 检查失败，请重试。", $"{failedCount} Mod checks failed. Please retry.")
-                        : L($"已检查 {_trackedModUpdateResults.Count} 个 Mod，没有发现新更新。", $"Checked {_trackedModUpdateResults.Count} mods and found no new updates."),
-                    L("更新检查完成", "Update check complete"));
+                        ? T("Updates.CheckedModsAndFoundUpdates", _trackedModUpdateResults.Count, updateCount)
+                        : failedCount > 0 ? T("Updates.ModChecksFailedPleaseRetry", failedCount)
+                        : T("Updates.CheckedModsAndFoundNoNew", _trackedModUpdateResults.Count),
+                    T("Updates.UpdateCheckComplete"));
             }
         }
         catch (Exception ex)
@@ -556,8 +550,8 @@ public sealed partial class MainWindow
             if (showDialogs)
             {
                 await ShowMessageAsync(
-                    L("检查已追踪 Mod 更新失败：", "Failed to check tracked mod updates: ") + ex.Message,
-                    L("更新检查失败", "Update check failed"));
+                    T("Updates.FailedToCheckTrackedModUpdates") + ex.Message,
+                    T("Updates.UpdateCheckFailed"));
             }
         }
         finally
@@ -742,7 +736,7 @@ public sealed partial class MainWindow
         {
             if (!AppSelfUpdateEnabled)
             {
-                await OpenExternalUrlAsync(ApplicationReleasePolicy.ReleasePageUrl, L("打开公开发布页失败", "Failed to open the public release page"));
+                await OpenExternalUrlAsync(ApplicationReleasePolicy.ReleasePageUrl, T("Updates.FailedToOpenThePublicRelease"));
                 return;
             }
             DetectLocalUpdatePackage();
@@ -771,7 +765,7 @@ public sealed partial class MainWindow
                 return;
             }
 
-            await OpenExternalUrlAsync(_latestReleaseUrl, L("打开更新页面失败", "Failed to open the update page"));
+            await OpenExternalUrlAsync(_latestReleaseUrl, T("Common.FailedToOpenTheUpdatePage"));
         }
         catch (Exception ex)
         {
@@ -845,10 +839,8 @@ public sealed partial class MainWindow
 
         _hasPromptedForLocalUpdate = true;
         bool confirmed = await ShowConfirmAsync(
-            L(
-                $"检测到本地更新包 v{_localUpdatePackageVersion}。\n\n程序将退出并自动完成更新，然后重新启动。现有仓库、路径、语言、主题、快捷键和 Mod 链接配置都会保留。\n\n是否现在更新？",
-                $"Local update v{_localUpdatePackageVersion} was detected.\n\nThe app will close, update itself, and restart. Existing repositories, paths, language, theme, shortcuts, and mod links will be preserved.\n\nUpdate now?"),
-            L("安装本地更新", "Install Local Update"));
+            T("Updates.LocalUpdateVWasDetectedThe", _localUpdatePackageVersion),
+            T("Updates.InstallLocalUpdate"));
 
         if (!confirmed)
         {
@@ -865,8 +857,8 @@ public sealed partial class MainWindow
         {
             // The window-less launch process runs this executable until the game exits.
             await ShowMessageAsync(
-                L("终末地启动会话仍在运行，更新需要替换正在使用的程序文件。请先退出游戏再更新。", "An Endfield launch session is still running and the update must replace files it uses. Exit the game, then update."),
-                L("暂不能更新", "Update unavailable"));
+                T("Updates.AnEndfieldLaunchSessionIsStill"),
+                T("Updates.UpdateUnavailable"));
             return;
         }
 
@@ -883,8 +875,8 @@ public sealed partial class MainWindow
             if (!File.Exists(updaterSource))
             {
                 await ShowMessageAsync(
-                    L("更新组件 LocalUpdateAgent.exe 不存在，请重新下载完整发布包。", "LocalUpdateAgent.exe is missing. Download the complete release package again."),
-                    L("无法开始更新", "Unable to Update"));
+                    T("Updates.LocalUpdateAgentExeIsMissingDownloadThe"),
+                    T("Updates.UnableToUpdate"));
                 return;
             }
 
@@ -915,8 +907,8 @@ public sealed partial class MainWindow
         catch (Exception ex)
         {
             await ShowMessageAsync(
-                L("启动本地更新失败：", "Failed to start the local update: ") + ex.Message,
-                L("更新失败", "Update Failed"));
+                T("Updates.FailedToStartTheLocalUpdate") + ex.Message,
+                T("Common.UpdateFailed"));
         }
     }
 
@@ -962,9 +954,8 @@ public sealed partial class MainWindow
                 if (showDialogs || promptIfAvailable)
                 {
                     bool install = await ShowConfirmAsync(
-                        L($"发现新版本 {release.Tag}。\n\n是否自动下载、安装并重启软件？本地仓库、路径和界面设置会保留。",
-                          $"Version {release.Tag} is available.\n\nDownload, install, and restart automatically? Local repositories, paths, and interface settings will be preserved."),
-                        L("软件更新可用", "App Update Available"));
+                        T("Updates.VersionIsAvailableDownloadInstallAnd", release.Tag),
+                        T("Updates.AppUpdateAvailable"));
                     if (install)
                     {
                         await DownloadAndInstallApplicationUpdateAsync(release);
@@ -978,8 +969,8 @@ public sealed partial class MainWindow
             if (showDialogs)
             {
                 await ShowMessageAsync(
-                    L("从 GitHub 检查更新失败：", "Failed to check updates from GitHub: ") + ex.Message,
-                    L("检查失败", "Check failed"));
+                    T("Updates.FailedToCheckUpdatesFromGitHub") + ex.Message,
+                    T("Updates.CheckFailed"));
             }
         }
         finally

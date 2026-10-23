@@ -17,10 +17,10 @@ public sealed partial class MainWindow
     {
         (UpdateCheckInterval Value, string Label)[] choices =
         [
-            (UpdateCheckInterval.Manual, L("仅手动检查", "Manual only")),
-            (UpdateCheckInterval.Daily, L("每天启动时检查", "Check daily on startup")),
-            (UpdateCheckInterval.EveryThreeDays, L("每 3 天启动时检查", "Check every 3 days on startup")),
-            (UpdateCheckInterval.Weekly, L("每周启动时检查", "Check weekly on startup"))
+            (UpdateCheckInterval.Manual, T("ModUpdates.ManualOnly")),
+            (UpdateCheckInterval.Daily, T("ModUpdates.CheckDailyOnStartup")),
+            (UpdateCheckInterval.EveryThreeDays, T("ModUpdates.CheckEvery3DaysOnStartup")),
+            (UpdateCheckInterval.Weekly, T("ModUpdates.CheckWeeklyOnStartup"))
         ];
         // Do not clear/recreate an open ComboBox in its SelectionChanged call stack.
         if (combo.Items.Count == 0)
@@ -43,15 +43,15 @@ public sealed partial class MainWindow
         {
             var dialog = new ContentDialog
             {
-                Title = L("发现 Mod 更新", "Mod updates available"),
+                Title = T("ModUpdates.ModUpdatesAvailable"),
                 Content = new TextBlock
                 {
-                    Text = L($"发现 {updates.Length} 个 Mod 有更新：", $"Updates found for {updates.Length} Mods:")
+                    Text = T("ModUpdates.UpdatesFoundForMods", updates.Length)
                         + "\n\n" + string.Join("\n", updates.Take(6).Select(item => "• " + item.Title))
-                        + L("\n\n请在更新页选择文件并确认后下载替换，旧版将保留备份。", "\n\nChoose a file and confirm Download and Replace in Updates. The old version will be backed up."),
+                        + T("ModUpdates.ChooseAFileAndConfirmDownload"),
                     TextWrapping = TextWrapping.Wrap, MaxWidth = 520
                 },
-                PrimaryButtonText = L("查看更新", "View updates"), CloseButtonText = L("稍后", "Later"),
+                PrimaryButtonText = T("ModUpdates.ViewUpdates"), CloseButtonText = T("ModUpdates.Later"),
                 DefaultButton = ContentDialogButton.Close, XamlRoot = RootGrid.XamlRoot, RequestedTheme = RootGrid.ActualTheme
             };
             if (await dialog.ShowAsync() == ContentDialogResult.Primary)
@@ -73,15 +73,15 @@ public sealed partial class MainWindow
         {
             WorkspaceRepository? repository = GetSelectedRepository();
             if (repository is null || !_trackedModOrigins.TryGetValue(result.Path, out TrackedModOrigin? origin)
-                || origin.ItemId != result.ItemId) throw new IOException(L("原 Mod 记录已改变，请重新检查更新。", "The tracked Mod changed. Check for updates again."));
+                || origin.ItemId != result.ItemId) throw new IOException(T("ModUpdates.TheTrackedModChangedCheckFor"));
             string repositoryId = repository.Id;
             string repositoryPath = repository.SourcePath;
             ModUpdateSnapshot snapshot = await Task.Run(() => ModUpdateReplacement.Capture(repositoryPath, result.Path));
             OnlineModCard mod = await FetchGameBananaModCardAsyncV2(result.ItemId)
-                ?? throw new IOException(L("无法读取最新下载文件。", "Could not load current download files."));
+                ?? throw new IOException(T("ModUpdates.CouldNotLoadCurrentDownloadFiles"));
             var candidates = mod.DownloadFiles.Where(file => file.IsSupportedArchive && !file.IsArchived && !string.IsNullOrWhiteSpace(file.DownloadUrl)).ToArray();
-            if (candidates.Length == 0) throw new IOException(L("此条目没有可用压缩包，请打开页面查看。", "No supported archives are available. Review the source page."));
-            var picker = new ComboBox { Header = L("选择更新文件／变体", "Choose update file / variant"), HorizontalAlignment = HorizontalAlignment.Stretch };
+            if (candidates.Length == 0) throw new IOException(T("ModUpdates.NoSupportedArchivesAreAvailableReview"));
+            var picker = new ComboBox { Header = T("ModUpdates.ChooseUpdateFileVariant"), HorizontalAlignment = HorizontalAlignment.Stretch };
             foreach (var file in candidates)
                 picker.Items.Add(new ComboBoxItem { Content = $"{file.FileName} ({FormatFileSize(file.FileSizeBytes)})", Tag = file });
             picker.SelectedItem = picker.Items.OfType<ComboBoxItem>().FirstOrDefault(item => item.Tag is OnlineDownloadCandidate file
@@ -90,14 +90,14 @@ public sealed partial class MainWindow
             var body = new StackPanel { Spacing = 12, MaxWidth = 560 };
             body.Children.Add(new TextBlock
             {
-                Text = result.Path + L("\n\n将完整替换这个本地 Mod 文件夹；旧文件（含自行修改的 INI）会备份在仓库旁的 .imm-mod-update-backups。目录联接继续使用原路径；复制部署的目标目录需在更新后重新部署。", "\n\nThe entire local Mod folder will be replaced. Old files, including edited INIs, will be backed up beside the repository in .imm-mod-update-backups. Directory links keep their path; copy deployments must be deployed again."),
+                Text = result.Path + T("ModUpdates.TheEntireLocalModFolderWill"),
                 TextWrapping = TextWrapping.Wrap
             });
             body.Children.Add(picker);
             var dialog = new ContentDialog
             {
-                Title = L("下载并替换 Mod", "Download and replace Mod"), Content = body,
-                PrimaryButtonText = L("下载并替换", "Download and replace"), CloseButtonText = L("取消", "Cancel"),
+                Title = T("ModUpdates.DownloadAndReplaceMod"), Content = body,
+                PrimaryButtonText = T("Common.DownloadAndReplace"), CloseButtonText = T("Common.Cancel"),
                 IsPrimaryButtonEnabled = picker.SelectedItem is not null, DefaultButton = ContentDialogButton.Close,
                 XamlRoot = RootGrid.XamlRoot, RequestedTheme = RootGrid.ActualTheme
             };
@@ -113,7 +113,7 @@ public sealed partial class MainWindow
             Directory.CreateDirectory(work);
             using IDisposable execution = await _onlineDownloadScheduler.AcquireAsync(task.Cancellation.Token);
             string archive = EnsureDownloadArchiveExtension(await DownloadOnlineModArchiveAsync(effective, work, task, task.Cancellation.Token));
-            if (!IsSupportedArchiveFile(archive)) throw new InvalidDataException(L("下载文件不是可解压的压缩包。", "The downloaded file is not a supported archive."));
+            if (!IsSupportedArchiveFile(archive)) throw new InvalidDataException(T("ModUpdates.TheDownloadedFileIsNotA"));
             string payload = Path.Combine(work, "payload");
             Directory.CreateDirectory(payload);
             UpdateDownloadTask(task, DownloadTaskState.Extracting, 92, "正在解压更新...", "Extracting update...", forceRefresh: true);
@@ -126,7 +126,7 @@ public sealed partial class MainWindow
             // Never redirect a captured update to whichever repository is now visible.
             if (!_repositories.Any(item => item.Id == repositoryId && string.Equals(item.SourcePath, repositoryPath, StringComparison.OrdinalIgnoreCase))
                 || !_trackedModOrigins.TryGetValue(result.Path, out var current) || !ReferenceEquals(current, origin))
-                throw new IOException(L("原仓库或跟踪记录已改变，未替换文件。", "The original repository or tracking record changed. Files were not replaced."));
+                throw new IOException(T("ModUpdates.TheOriginalRepositoryOrTrackingRecord"));
             string backupRoot = Path.Combine(Path.GetDirectoryName(Path.TrimEndingDirectorySeparator(Path.GetFullPath(repositoryPath)))!, ".imm-mod-update-backups");
             task.ReplacementCommitting = true;
             UpdateDownloadTask(task, DownloadTaskState.Extracting, 98, "正在备份并替换...", "Backing up and replacing...", forceRefresh: true);
@@ -150,7 +150,7 @@ public sealed partial class MainWindow
                 $"已更新 {origin.Title}，旧版已备份" + (keptImages > 0 ? $"，保留了 {keptImages} 张原预览图" : string.Empty) + "；复制部署请重新部署。",
                 $"Updated {origin.Title}; old version backed up" + (keptImages > 0 ? $", {keptImages} preview image(s) kept" : string.Empty) + ". Redeploy copy installations.");
             UpdateDownloadTask(task, DownloadTaskState.Completed, 100, $"已替换，旧版备份：{replaced.BackupPath}", $"Replaced; old version backed up: {replaced.BackupPath}", forceRefresh: true);
-            if (!SaveConfig()) throw new IOException(L("更新文件已替换，但跟踪记录未能保存。", "Updated files were replaced, but tracking could not be saved."));
+            if (!SaveConfig()) throw new IOException(T("ModUpdates.UpdatedFilesWereReplacedButTracking"));
             SaveShellConfig(throwOnError: true);
             if (GetSelectedRepository()?.Id == repositoryId) await RefreshListsAsync();
             ShowAppNotification($"Mod 已更新：{origin.Title}。复制部署请重新部署。", $"Mod updated: {origin.Title}. Redeploy copy installations.");
@@ -165,7 +165,7 @@ public sealed partial class MainWindow
             if (task is not null && !committed) UpdateDownloadTask(task, DownloadTaskState.Failed, task.Progress, $"更新失败：{ex.Message}", $"Update failed: {ex.Message}", forceRefresh: true);
             if (!_onlineWindowClosed) await ShowMessageAsync(
                 L(committed ? "文件已替换并备份，但保存记录或刷新失败：" : "更新未完成，原文件保留：", committed ? "Files were replaced and backed up, but saving or refreshing failed: " : "Update stopped; original files retained: ") + ex.Message,
-                L("Mod 更新", "Mod update"));
+                T("ModUpdates.ModUpdate"));
         }
         finally
         {

@@ -340,22 +340,22 @@ public sealed partial class MainWindow
         {
             return;
         }
-        _workspacePathsExpander.Header = L("路径、启动器与部署方式", "Paths, launcher, and deployment mode");
-        _workspaceTitleText!.Text = L("Mod 工作台", "Mod Workspace");
-        _selectionEyebrowText!.Text = L("当前选择", "CURRENT SELECTION");
-        _modernStateLabel!.Text = L("部署状态", "DEPLOYMENT STATUS");
-        _categoriesBadgeLabel!.Text = L("分类", "Categories");
+        _workspacePathsExpander.Header = T("RefinedWorkspace.PathsLauncherAndDeploymentMode");
+        _workspaceTitleText!.Text = T("Common.ModWorkspace");
+        _selectionEyebrowText!.Text = T("RefinedWorkspace.CURRENTSELECTION");
+        _modernStateLabel!.Text = T("RefinedWorkspace.DEPLOYMENTSTATUS");
+        _categoriesBadgeLabel!.Text = T("Common.Categories");
         _modsBadgeLabel!.Text = "Mods";
-        _previewTab!.Header = L("预览与链接", "Preview & Link");
-        _shortcutTab!.Header = L("快捷键", "Shortcuts");
-        _persistentSlotsTab!.Header = L("状态槽位", "State Slots");
+        _previewTab!.Header = T("RefinedWorkspace.PreviewLink");
+        _shortcutTab!.Header = T("Common.Shortcuts");
+        _persistentSlotsTab!.Header = T("RefinedWorkspace.StateSlots");
         if (_settingsSectionLabels.Length == 5)
         {
-            _settingsSectionLabels[0].Text = L("界面与语言", "Appearance & Language");
-            _settingsSectionLabels[1].Text = L("软件更新", "App Updates");
-            _settingsSectionLabels[2].Text = L("仓库在线", "Repository Online");
-            _settingsSectionLabels[3].Text = L("诊断工具", "Diagnostics");
-            _settingsSectionLabels[4].Text = L("项目与开源", "Project & Open Source");
+            _settingsSectionLabels[0].Text = T("RefinedWorkspace.AppearanceLanguage");
+            _settingsSectionLabels[1].Text = T("RefinedWorkspace.AppUpdates");
+            _settingsSectionLabels[2].Text = T("RefinedWorkspace.RepositoryOnline");
+            _settingsSectionLabels[3].Text = T("RefinedWorkspace.Diagnostics");
+            _settingsSectionLabels[4].Text = T("RefinedWorkspace.ProjectOpenSource");
             for (int index = 0; index < _settingsSectionButtons.Length; index++)
             {
                 ToolTipService.SetToolTip(_settingsSectionButtons[index], _settingsSectionLabels[index].Text);
@@ -588,19 +588,17 @@ public sealed partial class MainWindow
         }
 
         WorkspaceRepository? repository = GetSelectedRepository();
-        string repositoryName = repository?.Name ?? L("未选择仓库", "No repository selected");
-        _dashboardPathTitleText.Text = L("当前仓库路径", "Current Repository Paths");
-        _dashboardPathHintText.Text = L(
-            $"以下路径只属于“{repositoryName}”；切换仓库后会显示另一组独立配置。",
-            $"These paths belong only to “{repositoryName}”. Switching repositories shows its independent configuration.");
-        _workspacePathsExpander.Header = L($"配置 {repositoryName}", $"Configure {repositoryName}");
+        string repositoryName = repository?.Name ?? T("Common.NoRepositorySelected");
+        _dashboardPathTitleText.Text = T("RefinedWorkspace.CurrentRepositoryPaths");
+        _dashboardPathHintText.Text = T("RefinedWorkspace.ThesePathsBelongOnlyToSwitching", repositoryName);
+        _workspacePathsExpander.Header = T("RefinedWorkspace.Configure", repositoryName);
     }
 
     private void RefreshRefinedActionIcons()
     {
-        SetActionIcon(CreateFirstLevelButton, "\uE710", L("新建分类", "New category"));
-        SetActionIcon(RenameFirstLevelButton, "\uE70F", L("重命名分类", "Rename category"));
-        SetActionIcon(DeleteSecondLevelButton, "\uE74D", L("删除选中的 Mod", "Delete selected mod"));
+        SetActionIcon(CreateFirstLevelButton, "\uE710", T("RefinedWorkspace.NewCategory"));
+        SetActionIcon(RenameFirstLevelButton, "\uE70F", T("RefinedWorkspace.RenameCategory"));
+        SetActionIcon(DeleteSecondLevelButton, "\uE74D", T("RefinedWorkspace.DeleteSelectedMod"));
     }
 
     private static void SetActionIcon(Button button, string glyph, string label)
