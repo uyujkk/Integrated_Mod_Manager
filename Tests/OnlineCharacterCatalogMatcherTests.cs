@@ -137,6 +137,20 @@ public sealed class OnlineCharacterCatalogMatcherTests
         Assert.Equal(["Z", "C", "A", "B"], characters.Select(character => character.DisplayNameEn));
     }
 
+    [Fact]
+    public void WithFallback_AddsOnlyCharactersTheCatalogLacks()
+    {
+        var official = new OnlineCharacterOption { Key = "Laevatain", DisplayNameZh = "莱万汀", DisplayNameEn = "Laevatain", AvatarUrl = "https://new/laev.png" };
+        var newcomer = new OnlineCharacterOption { Key = "Newcomer", DisplayNameZh = "新干员", DisplayNameEn = "Newcomer" };
+        var builtInLaev = new OnlineCharacterOption { Key = "Laev", DisplayNameZh = "莱万汀", DisplayNameEn = "Laevatain", AvatarUrl = "https://old/laev.png" };
+        var builtInOnly = new OnlineCharacterOption { Key = "Ember", DisplayNameZh = "余烬", DisplayNameEn = "Ember", Aliases = ["Ember"] };
+
+        List<OnlineCharacterOption> merged = OnlineCharacterCatalogMatcher.WithFallback([official, newcomer], [builtInLaev, builtInOnly]);
+
+        Assert.Equal([official, newcomer, builtInOnly], merged);
+        Assert.Equal([builtInOnly], OnlineCharacterCatalogMatcher.WithFallback([], [builtInOnly]));
+    }
+
     private static OnlineCharacterOption Wiki(string zh, string en, string url) => new()
     {
         Key = en, DisplayNameZh = zh, DisplayNameEn = en, WikiUrl = url, IsWikiCharacter = true, Aliases = [zh, en]

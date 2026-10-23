@@ -212,6 +212,8 @@ public sealed partial class MainWindow : Window
     private int? _savedWindowX;
     private int? _savedWindowY;
     private int? _savedWindowWidth;
+    private bool _savedWindowMaximized;
+    private Microsoft.UI.Windowing.OverlappedPresenterState? _lastPresenterState;
     private int? _savedWindowHeight;
     private readonly HashSet<string> _onlineKnownCharacters = new(StringComparer.OrdinalIgnoreCase);
     private InterfaceDensity _interfaceDensity = InterfaceDensity.Comfortable;

@@ -8,12 +8,14 @@ namespace ModFolderCopier.WinUI;
 
 // Avatars for repository character folders: the folder's own image, the character the
 // folder is bound to, or the catalog character with the same name (CharacterFolderAvatars).
-// The catalog is the built-in Endfield list or the cached online character catalog; this
-// never downloads a catalog by itself.
+// The catalog is the online character catalog (official list and GameBanana categories), with
+// the built-in Endfield list filling gaps. Without a fresh catalog the repository page loads one
+// in the background once per session, so newly released characters get their avatars.
 public sealed partial class MainWindow
 {
     private const int CharacterAvatarDecodeWidth = 64;
     private CancellationTokenSource _characterAvatarCancellation = new();
+    private readonly HashSet<string> _avatarCatalogRefreshRequested = new(StringComparer.Ordinal);
 
     private async Task RefreshCharacterFolderAvatarsAsync()
     {
@@ -31,7 +33,7 @@ public sealed partial class MainWindow
 
         try
         {
-            IReadOnlyList<OnlineCharacterOption> catalog = await GetCharacterAvatarCatalogAsync(repository);
+            (IReadOnlyList<OnlineCharacterOption> catalog, bool fresh) = await GetCharacterAvatarCatalogAsync(repository);
             var bindings = new Dictionary<string, string>(repository.CharacterAvatarBindings ?? [], StringComparer.OrdinalIgnoreCase);
             CharacterAvatar[] avatars = await Task.Run(
                 () => items.Select(item => CharacterFolderAvatars.Resolve(item.Path, catalog, bindings)).ToArray(),
@@ -39,6 +41,15 @@ public sealed partial class MainWindow
             for (int index = 0; index < items.Length && !cancellationToken.IsCancellationRequested; index++)
             {
                 await ApplyCharacterAvatarAsync(items[index], avatars[index], cancellationToken);
+            }
+
+            if (!fresh && !cancellationToken.IsCancellationRequested && _avatarCatalogRefreshRequested.Add(repository.Id))
+            {
+                await EnsureOnlineCharacterCatalogAsync(repository, forceReload: false);
+                if (!cancellationToken.IsCancellationRequested && ReferenceEquals(GetSelectedRepository(), repository))
+                {
+                    await RefreshCharacterFolderAvatarsAsync();
+                }
             }
         }
         catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
@@ -58,7 +69,7 @@ public sealed partial class MainWindow
             return;
         }
 
-        IReadOnlyList<OnlineCharacterOption> catalog = await GetCharacterAvatarCatalogAsync(repository);
+        (IReadOnlyList<OnlineCharacterOption> catalog, _) = await GetCharacterAvatarCatalogAsync(repository);
         var bindings = new Dictionary<string, string>(repository.CharacterAvatarBindings ?? [], StringComparer.OrdinalIgnoreCase);
         item.AvatarImageSource = null;
         await ApplyCharacterAvatarAsync(item, CharacterFolderAvatars.Resolve(item.Path, catalog, bindings), _characterAvatarCancellation.Token);
@@ -89,29 +100,30 @@ public sealed partial class MainWindow
         }
     }
 
-    private async Task<IReadOnlyList<OnlineCharacterOption>> GetCharacterAvatarCatalogAsync(WorkspaceRepository repository)
+    // The catalog for avatar matching and whether it is fresh (see OnlineCharacterCatalogFreshFor).
+    private async Task<(IReadOnlyList<OnlineCharacterOption> Characters, bool Fresh)> GetCharacterAvatarCatalogAsync(WorkspaceRepository repository)
     {
-        if (IsEndfieldRepository(repository))
-        {
-            return EndfieldCharacters.Select((character, index) => new OnlineCharacterOption
-            {
-                Key = character.EnglishName,
-                DisplayNameZh = character.ChineseName,
-                DisplayNameEn = character.EnglishName,
-                AvatarUrl = character.AvatarUrl,
-                Aliases = [.. character.AllNames],
-                WikiOrder = index
-            }).ToList();
-        }
-
         string catalogKey = GetOnlineCharacterCatalogKey(repository);
-        if (string.Equals(_onlineCharacterCatalogKey, catalogKey, StringComparison.Ordinal) && _onlineCharacterOptions.Count > 0)
+        OnlineCharacterCatalogCacheSnapshot? cached = await TryReadOnlineCharacterCatalogCacheAsync(catalogKey);
+        IReadOnlyList<OnlineCharacterOption> online =
+            string.Equals(_onlineCharacterCatalogKey, catalogKey, StringComparison.Ordinal) && _onlineCharacterOptions.Count > 0
+                ? [.. _onlineCharacterOptions]
+                : cached?.Characters ?? [];
+        if (!IsEndfieldRepository(repository))
         {
-            return [.. _onlineCharacterOptions];
+            return (online, cached?.IsFresh == true);
         }
 
-        OnlineCharacterCatalogCacheSnapshot? cached = await TryReadOnlineCharacterCatalogCacheAsync(catalogKey);
-        return cached?.Characters ?? [];
+        OnlineCharacterOption[] builtIn = EndfieldCharacters.Select((character, index) => new OnlineCharacterOption
+        {
+            Key = character.EnglishName,
+            DisplayNameZh = character.ChineseName,
+            DisplayNameEn = character.EnglishName,
+            AvatarUrl = character.AvatarUrl,
+            Aliases = [.. character.AllNames],
+            WikiOrder = index
+        }).ToArray();
+        return (OnlineCharacterCatalogMatcher.WithFallback(online, builtIn), cached?.IsFresh == true);
     }
 
     private void AddCharacterAvatarMenuItems(MenuFlyout menu, FirstLevelFolderItem item)
@@ -173,7 +185,7 @@ public sealed partial class MainWindow
             return false;
         }
 
-        IReadOnlyList<OnlineCharacterOption> catalog = await GetCharacterAvatarCatalogAsync(repository);
+        (IReadOnlyList<OnlineCharacterOption> catalog, _) = await GetCharacterAvatarCatalogAsync(repository);
         if (catalog.Count == 0)
         {
             await ShowMessageAsync(T("CharacterAvatars.NoCharacterListYet"), T("CharacterAvatars.BindToCharacter"));
