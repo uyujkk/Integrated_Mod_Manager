@@ -81,6 +81,7 @@ Mod Storage Folder
   - the character chosen with right-click **Avatar > Bind to character**;
   - the character whose Chinese name, English name or alias equals the folder name (case, width and spaces are ignored).
 - Avatars use the same character catalog as the Online page: the official operator list for Endfield (with the built-in list filling gaps), the wiki plus GameBanana character categories for other games. A catalog older than a day is refreshed once in the background, so newly released characters get avatars.
+- With a character selected, the avatar button above the list offers the same actions as the right-click **Avatar** menu.
 - Right-click **Avatar > Choose image** copies the image into the category folder as `.imm_avatar.*`. The previous avatar is kept as `.imm_avatar.previous.*`, and **Restore previous avatar** swaps it back.
 
 ### 4.3 Second-level mods and copy toggling
@@ -91,7 +92,7 @@ Mod Storage Folder
 - If the target has no folder with the same name, the whole mod folder is copied.
 - If the same folder already exists, toggling again removes it from the target.
 - With directory-link deployment, each character keeps one enabled Mod by default: enabling another replaces the links of its sibling Mods.
-  - Right-click a character and check **Allow several enabled Mods** to keep several enabled for that character.
+  - Select a character and click the toggle to the right of the avatar button above the list (or right-click and check **Allow several enabled Mods**) to keep several enabled for that character. A highlighted toggle means several are allowed.
   - The repository editor can make several Mods the default; individual characters can then be unchecked.
   - Copy mode never removes sibling copies automatically.
   - Restoring a combination preset asks first when it enables several Mods of a single-selection character.

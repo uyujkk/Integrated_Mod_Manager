@@ -465,6 +465,8 @@
                                     <ColumnDefinition Width="*" />
                                     <ColumnDefinition Width="Auto" />
                                     <ColumnDefinition Width="Auto" />
+                                    <ColumnDefinition Width="Auto" />
+                                    <ColumnDefinition Width="Auto" />
                                 </Grid.ColumnDefinitions>
                                 <TextBlock x:Name="FirstLevelSectionTitleTextBlock" VerticalAlignment="Center" Style="{StaticResource SectionTitleTextStyle}" />
                                 <Button
@@ -487,6 +489,25 @@
                                     Style="{StaticResource SecondaryButtonStyle}">
                                     <FontIcon FontSize="16" Glyph="&#xE70F;" />
                                 </Button>
+                                <Button
+                                    x:Name="CharacterAvatarButton"
+                                    Grid.Column="3"
+                                    Width="42"
+                                    Height="42"
+                                    Padding="0"
+                                    Click="OnCharacterAvatarButtonClicked"
+                                    Style="{StaticResource SecondaryButtonStyle}">
+                                    <FontIcon FontSize="16" Glyph="&#xE77B;" />
+                                </Button>
+                                <ToggleButton
+                                    x:Name="CharacterMultipleModsToggle"
+                                    Grid.Column="4"
+                                    Width="42"
+                                    Height="42"
+                                    Padding="0"
+                                    Click="OnCharacterMultipleModsToggleClicked">
+                                    <FontIcon FontSize="16" Glyph="&#xE8B3;" />
+                                </ToggleButton>
                             </Grid>
                             <TextBlock x:Name="FirstLevelSectionSubtitleTextBlock" Grid.Row="1" Style="{StaticResource MutedTextStyle}" TextWrapping="Wrap" />
                             <Border Grid.Row="2" Style="{StaticResource InsetBorderStyle}">

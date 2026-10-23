@@ -599,6 +599,7 @@ public sealed partial class MainWindow
         SetActionIcon(CreateFirstLevelButton, "\uE710", T("RefinedWorkspace.NewCategory"));
         SetActionIcon(RenameFirstLevelButton, "\uE70F", T("RefinedWorkspace.RenameCategory"));
         SetActionIcon(DeleteSecondLevelButton, "\uE74D", T("RefinedWorkspace.DeleteSelectedMod"));
+        UpdateCharacterHeaderActions();
     }
 
     private static void SetActionIcon(Button button, string glyph, string label)

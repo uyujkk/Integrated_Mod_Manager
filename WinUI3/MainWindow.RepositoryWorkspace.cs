@@ -69,12 +69,19 @@ public sealed partial class MainWindow
         _repositoryModSearch.TextChanged += (_, _) => RefreshRepositoryModView();
         AutomationProperties.SetName(_repositoryModSearch, T("RepositoryWorkspace.SearchMods"));
         var categoryGrid = RepositoryRows(GridLength.Auto, GridLength.Auto, new GridLength(1, GridUnitType.Star));
-        var categoryHeading = RepositoryColumns(new GridLength(1, GridUnitType.Star), GridLength.Auto, GridLength.Auto);
+        var categoryHeading = RepositoryColumns(new GridLength(1, GridUnitType.Star), GridLength.Auto, GridLength.Auto, GridLength.Auto, GridLength.Auto);
         categoryHeading.Children.Add(_repositoryCategoryTitle);
         RepositoryMove(CreateFirstLevelButton, categoryHeading, 0, 1);
         RepositoryMove(RenameFirstLevelButton, categoryHeading, 0, 2);
-        foreach (var button in new[] { CreateFirstLevelButton, RenameFirstLevelButton })
-        { button.Width = 32; button.Height = 32; button.MinHeight = 32; button.Padding = new Thickness(6); }
+        // Every header control must be moved here: this heading replaces the XAML one.
+        RepositoryMove(CharacterAvatarButton, categoryHeading, 0, 3);
+        RepositoryMove(CharacterMultipleModsToggle, categoryHeading, 0, 4);
+        // Four 30 px buttons with tight spacing keep the title readable in the narrow character column.
+        categoryHeading.ColumnSpacing = 4;
+        foreach (Control button in new Control[] { CreateFirstLevelButton, RenameFirstLevelButton, CharacterAvatarButton, CharacterMultipleModsToggle })
+        { button.Width = 30; button.Height = 30; button.MinWidth = 30; button.MinHeight = 30; button.Padding = new Thickness(5); }
+        _repositoryCategoryTitle.MinWidth = 36;
+        CharacterAvatarButton.CornerRadius = CharacterMultipleModsToggle.CornerRadius = CreateFirstLevelButton.CornerRadius;
         RepositoryDecorateButton(CreateFirstLevelButton, "\uE710", true);
         RepositoryDecorateButton(RenameFirstLevelButton, "\uE70F", true);
         categoryGrid.Children.Add(categoryHeading);

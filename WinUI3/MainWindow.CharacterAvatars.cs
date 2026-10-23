@@ -133,7 +133,33 @@ public sealed partial class MainWindow
             Text = T("CharacterAvatars.Avatar"),
             Icon = new FontIcon { Glyph = "" }
         };
+        foreach (MenuFlyoutItemBase entry in CreateCharacterAvatarMenuItems(item))
+        {
+            avatarMenu.Items.Add(entry);
+        }
+        menu.Items.Add(avatarMenu);
+    }
 
+    // The avatar button in the character list header: the same actions for the selected character.
+    private void OnCharacterAvatarButtonClicked(object sender, RoutedEventArgs e)
+    {
+        if (FirstLevelListView.SelectedItem is not FirstLevelFolderItem item)
+        {
+            StatusTextBlock.Text = T("CharacterAvatars.SelectACharacterFirst");
+            return;
+        }
+
+        var menu = new MenuFlyout();
+        foreach (MenuFlyoutItemBase entry in CreateCharacterAvatarMenuItems(item))
+        {
+            menu.Items.Add(entry);
+        }
+        menu.ShowAt((FrameworkElement)sender);
+    }
+
+    private List<MenuFlyoutItemBase> CreateCharacterAvatarMenuItems(FirstLevelFolderItem item)
+    {
+        var avatarMenu = new List<MenuFlyoutItemBase>();
         var choose = new MenuFlyoutItem { Text = T("CharacterAvatars.ChooseImage") };
         choose.Click += async (_, _) => await RunCharacterAvatarActionAsync(item, async () =>
         {
@@ -142,22 +168,22 @@ public sealed partial class MainWindow
             CharacterFolderAvatars.SetCustomAvatar(item.Path, image);
             return true;
         });
-        avatarMenu.Items.Add(choose);
+        avatarMenu.Add(choose);
 
         var bind = new MenuFlyoutItem { Text = T("CharacterAvatars.BindToCharacter") };
         bind.Click += async (_, _) => await RunCharacterAvatarActionAsync(item, () => PromptCharacterAvatarBindingAsync(item));
-        avatarMenu.Items.Add(bind);
+        avatarMenu.Add(bind);
 
-        avatarMenu.Items.Add(new MenuFlyoutSeparator());
+        avatarMenu.Add(new MenuFlyoutSeparator());
         var restore = new MenuFlyoutItem { Text = T("CharacterAvatars.RestorePreviousImage") };
         restore.Click += async (_, _) => await RunCharacterAvatarActionAsync(item, () => Task.FromResult(CharacterFolderAvatars.RestorePreviousAvatar(item.Path)));
-        avatarMenu.Items.Add(restore);
+        avatarMenu.Add(restore);
 
         var remove = new MenuFlyoutItem { Text = T("CharacterAvatars.RemoveCustomImage") };
         remove.Click += async (_, _) => await RunCharacterAvatarActionAsync(item, () => Task.FromResult(CharacterFolderAvatars.RemoveCustomAvatar(item.Path)));
-        avatarMenu.Items.Add(remove);
+        avatarMenu.Add(remove);
 
-        menu.Items.Add(avatarMenu);
+        return avatarMenu;
     }
 
     private async Task RunCharacterAvatarActionAsync(FirstLevelFolderItem item, Func<Task<bool>> action)

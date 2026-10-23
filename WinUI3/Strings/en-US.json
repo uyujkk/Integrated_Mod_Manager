@@ -74,9 +74,11 @@
   "CharacterAvatars.ChooseImage": "Choose image…",
   "CharacterAvatars.ChooseTheCharacterForFolder": "Choose the character for folder \"{0}\" to show its avatar. A custom avatar in the folder still takes precedence.",
   "CharacterAvatars.CouldNotChangeTheAvatar": "Could not change the avatar: ",
+  "CharacterAvatars.HeaderTip": "Avatar of \"{0}\": choose an image, bind to a character, restore or remove",
   "CharacterAvatars.NoCharacterListYet": "There is no character list for this repository yet. Open the repository once on the Online page to load it, then bind again.",
   "CharacterAvatars.RemoveCustomImage": "Remove custom avatar",
   "CharacterAvatars.RestorePreviousImage": "Restore previous avatar",
+  "CharacterAvatars.SelectACharacterFirst": "Select a character on the left first, then set its avatar.",
   "CharacterFollow.AutomaticFollowingPaused": "Automatic following paused.",
   "CharacterFollow.AutomaticallyFollowCharacterShortcuts": "Automatically follow character shortcuts",
   "CharacterFollow.CouldNotFocusTheGameWindow": "Could not focus the game window.",
@@ -104,6 +106,9 @@
   "CharacterSelection.AllowSeveralMods": "Allow several enabled Mods",
   "CharacterSelection.NowAllowsSeveral": "\"{0}\" can now have several Mods enabled.",
   "CharacterSelection.NowSingle": "\"{0}\" now keeps one enabled Mod; enabling another as a link replaces the others.",
+  "CharacterSelection.SelectACharacterToSet": "Select a character to set whether it may keep several Mods enabled",
+  "CharacterSelection.ToggleTipOff": "\"{0}\" keeps one enabled Mod (click to allow several)",
+  "CharacterSelection.ToggleTipOn": "\"{0}\" may keep several Mods enabled (click to keep only one)",
   "CombinationBundles.BundleCreatedModsSavedValues": "Bundle created: {0} Mods · {1} saved values.\n{2}",
   "CombinationBundles.BundleGame": "Bundle game: ",
   "CombinationBundles.BundleInstallationPreview": "Bundle Installation Preview",
@@ -1282,5 +1287,9 @@
   "Updates.UpdateCheckFailed": "Update check failed",
   "Updates.UpdateProfile": "Update Profile",
   "Updates.UpdateUnavailable": "Update unavailable",
-  "Updates.VersionIsAvailableDownloadInstallAnd": "Version {0} is available.\n\nDownload, install, and restart automatically? Local repositories, paths, and interface settings will be preserved."
+  "Updates.VersionIsAvailableDownloadInstallAnd": "Version {0} is available.\n\nDownload, install, and restart automatically? Local repositories, paths, and interface settings will be preserved.",
+  "WhatsNew.Body": "New in this version:\n\n• Character avatars: each character on the left of the repository page shows an avatar. Select a character and click the avatar button above the list (or right-click the character) to choose an image or bind it to a character.\n\n• Several Mods per character: select a character and click the toggle to the right of the avatar button. When on, enabling a Mod as a link no longer replaces the character's other Mods.\n\n• Single-Mod state slots: select a Mod and save on the State Slots tab on the right. More… updates, renames, writes Mod defaults, imports JASM variants and saves whole d3dx_user.ini snapshots.\n\n• F10 hot apply (experimental): with the game window chosen on the Shortcuts page (selected automatically while the game runs) and input on, restoring a slot can reload the loader in place; with \"Switch state slots in the overlay\" on, the overlay (Ctrl+Alt+K) switches slots with one click.\n\n• New characters reach the character list within a day; restoring a maximized window shrinks it to 80% of the screen.\n\nSee \"Testing State Slots and F10 Hot Apply\" under docs/guides.",
+  "WhatsNew.Close": "Got it",
+  "WhatsNew.OpenGuide": "Open the testing guide",
+  "WhatsNew.Title": "New in {0}"
 }
