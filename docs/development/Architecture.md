@@ -31,7 +31,7 @@ Namespaces follow folders: files in `Archives` belong to `IntegratedModManager.C
 | `Deployment` | 安装事务与回滚（`ModInstallTransactions`）、文件冲突检测、目录联接、组合部署、INI 冲突检测、旧库整理导入、角色文件夹规划。Install transactions and rollback, file conflicts, junctions, combination deployment, INI conflicts, library import, character folders. |
 | `Presets` | 组合预设、恢复预览、可迁移组合包。Combination presets, restore preview, portable bundles. |
 | `Online` | GameBanana 元数据与下载数、下载传输与会话、浏览与预览策略。GameBanana metadata, download transport and sessions, browse policies. |
-| `Endfield` | 终末地桥接与干员目录解析。Endfield bridge integration and operator catalog parsing. |
+| `Endfield` | 终末地桥接、干员目录解析，以及内置干员表（`endfield-characters.json`，嵌入程序集，新增干员只改这个文件）。Endfield bridge integration, operator catalog parsing and the built-in operator list in the embedded `endfield-characters.json`. |
 | `Shortcuts` | Mod 快捷键扫描、描述与按键输入。Mod shortcut scanning, descriptions and key input. |
 | `Updates` | 版本信息、更新包校验、Mod 更新替换与恢复。Release policy, update packages, Mod update replacement. |
 | `Repository` | 仓库扫描、性能记录、工作区策略、批量集合。Repository scanning, performance, workspace policies. |
