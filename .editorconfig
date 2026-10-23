@@ -1,0 +1,32 @@
+root = true
+
+[*]
+charset = utf-8
+end_of_line = lf
+insert_final_newline = true
+trim_trailing_whitespace = true
+
+[*.cs]
+indent_style = space
+indent_size = 4
+# Reported by scripts/check-code-style.ps1 (and in the IDE).
+dotnet_diagnostic.IDE0005.severity = warning
+
+# Also compiled by the .NET Framework compiler without implicit usings (build_winui.bat),
+# so its usings look unnecessary to the SDK build.
+[{LocalUpdateAgent.cs,WinUILauncher.cs}]
+dotnet_diagnostic.IDE0005.severity = none
+
+[*.{csproj,props,targets,xml,xaml,json,yml,yaml}]
+indent_style = space
+indent_size = 2
+
+[*.ps1]
+indent_style = space
+indent_size = 4
+
+[*.sln]
+end_of_line = crlf
+
+[*.md]
+trim_trailing_whitespace = false

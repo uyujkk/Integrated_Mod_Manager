@@ -19,41 +19,8 @@ function Resolve-RepositoryPath {
     return $resolved
 }
 
-function Test-IsUserStatePath {
-    param([Parameter(Mandatory)] [string]$RelativePath)
-
-    $normalized = $RelativePath.Replace('/', '\')
-    $fileName = [IO.Path]::GetFileName($normalized)
-    if ($fileName.EndsWith('.pdb', [StringComparison]::OrdinalIgnoreCase) -or
-        $fileName.EndsWith('.log', [StringComparison]::OrdinalIgnoreCase) -or
-        $fileName.EndsWith('.download', [StringComparison]::OrdinalIgnoreCase)) {
-        return $true
-    }
-
-    $preservedFiles = @(
-        'config.ini',
-        'beta-shell.json',
-        'startup.log',
-        'update-success.log',
-        'update-rollback.log',
-        'WinUI3\config.ini',
-        'WinUI3\beta-shell.json',
-        'WinUI3\startup.log'
-    )
-    if ($preservedFiles -contains $normalized) {
-        return $true
-    }
-
-    $preservedPrefixes = @(
-        'backups\',
-        'cache\',
-        'diagnostics\',
-        'WinUI3\backups\',
-        'WinUI3\cache\',
-        'WinUI3\diagnostics\'
-    )
-    return $preservedPrefixes.Where({ $normalized.StartsWith($_, [StringComparison]::OrdinalIgnoreCase) }).Count -gt 0
-}
+# Runtime state (settings, caches, logs, backups) is never part of a release package.
+. (Join-Path $PSScriptRoot "release-file-policy.ps1")
 
 $source = Resolve-RepositoryPath $SourceDirectory
 $output = Resolve-RepositoryPath $OutputDirectory

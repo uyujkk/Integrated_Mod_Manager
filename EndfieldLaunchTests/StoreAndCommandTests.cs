@@ -1,7 +1,6 @@
 // SPDX-License-Identifier: AGPL-3.0-only
 // Copyright (c) 2026 EndfieldBridge contributors and Integrated Mod Manager contributors.
 using System.Text.Json.Nodes;
-using IntegratedModManager.EndfieldLaunch;
 
 namespace IntegratedModManager.EndfieldLaunch.Tests;
 

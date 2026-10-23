@@ -1,0 +1,19 @@
+<Project>
+  <!-- Settings shared by every project. A project may still override them (UpdateAgent keeps Nullable disabled). -->
+  <PropertyGroup>
+    <LangVersion>latest</LangVersion>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <Nullable>enable</Nullable>
+  </PropertyGroup>
+
+  <!--
+    scripts/check-code-style.ps1 builds with ImmCodeStyle=true so .editorconfig rules such as
+    IDE0005 (unnecessary using) are reported at build time. IDE0005 only runs when XML docs are
+    generated, so this stays opt-in: normal builds must not put .xml files into the release output.
+  -->
+  <PropertyGroup Condition="'$(ImmCodeStyle)' == 'true'">
+    <EnforceCodeStyleInBuild>true</EnforceCodeStyleInBuild>
+    <GenerateDocumentationFile>true</GenerateDocumentationFile>
+    <NoWarn>$(NoWarn);CS1591;CS1573;CS1572;CS1574;CS1587</NoWarn>
+  </PropertyGroup>
+</Project>

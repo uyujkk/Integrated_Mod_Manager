@@ -220,13 +220,28 @@ if (!$SkipBuild) {
         throw "Displayed app version v$appVersion does not match file version $($declaredVersions[0])."
     }
 
+    # Start from an empty staging folder and leave out runtime state, so settings, caches and
+    # logs from a local run of the build output never reach ReleaseSource.
     $releaseSource = Join-Path $artifacts "ReleaseSource"
+    if (Test-Path -LiteralPath $releaseSource) {
+        Remove-Item -LiteralPath $releaseSource -Recurse -Force
+    }
     New-Item -ItemType Directory -Path (Join-Path $releaseSource "WinUI3") -Force | Out-Null
     Copy-Item -LiteralPath $launcherOutput -Destination (Join-Path $releaseSource "IntegratedModManager.exe") -Force
     Copy-Item -LiteralPath $legacyLauncherOutput -Destination (Join-Path $releaseSource "ModFolderCopier.exe") -Force
     Copy-Item -LiteralPath $updaterOutput -Destination (Join-Path $releaseSource "LocalUpdateAgent.exe") -Force
-    Copy-Item -Path (Join-Path (Split-Path -Parent $runtimeOutput) '*') `
-        -Destination (Join-Path $releaseSource "WinUI3") -Recurse -Force
+    . (Join-Path $root "scripts\release-file-policy.ps1")
+    $runtimeDirectory = Split-Path -Parent $runtimeOutput
+    $runtimePrefix = $runtimeDirectory.TrimEnd('\', '/') + [IO.Path]::DirectorySeparatorChar
+    foreach ($file in Get-ChildItem -LiteralPath $runtimeDirectory -Recurse -File -Force) {
+        $relativePath = "WinUI3\" + $file.FullName.Substring($runtimePrefix.Length)
+        if (Test-IsUserStatePath $relativePath) {
+            continue
+        }
+        $destination = Join-Path $releaseSource $relativePath
+        New-Item -ItemType Directory -Path ([IO.Path]::GetDirectoryName($destination)) -Force | Out-Null
+        Copy-Item -LiteralPath $file.FullName -Destination $destination -Force
+    }
     & (Join-Path $root "scripts\package-release.ps1") `
         -SourceDirectory (Get-RepositoryRelativePath $releaseSource) `
         -OutputDirectory (Get-RepositoryRelativePath (Join-Path $artifacts "ReleasePackage")) |

@@ -1,5 +1,4 @@
 using ModFolderCopier.WinUI;
-using Xunit;
 
 namespace IntegratedModManager.Tests;
 
