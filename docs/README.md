@@ -10,6 +10,7 @@ This directory contains the usage, release, development, and research documentat
 
 - [4.4 新功能、升级与已知问题 / Features, Upgrade and Known Issues](./releases/v4.4.0.md)
 - [Mod 快捷键面板与置顶浮窗](./guides/Mod-Shortcut-Panel.zh-CN.md) / [Mod Shortcut Panel and Overlay](./guides/Mod-Shortcut-Panel.en.md)
+- [状态槽位与 F10 热应用测试](./guides/State-Slots-Hot-Apply-Testing.zh-CN.md) / [Testing State Slots and F10 Hot Apply](./guides/State-Slots-Hot-Apply-Testing.en.md)
 - [浏览、下载与旧库整理 / Browsing, Downloads and Library Import](./guides/Browse-Download-Task-Pack.zh-CN.md)
 - [内置终末地启动：使用与风险 / Integrated Endfield Launch](./guides/Endfield-Bridge.md)
 - [升级到 4.1.1](./guides/Upgrade-v4.1.1.zh-CN.md)
