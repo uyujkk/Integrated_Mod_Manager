@@ -37,7 +37,7 @@ namespace ModFolderCopier.WinUI;
 
 public sealed partial class MainWindow : Window
 {
-    private const string AppVersion = "v4.4.0";
+    private const string AppVersion = ApplicationReleasePolicy.VersionLabel;
     private static bool AppSelfUpdateEnabled => ApplicationReleasePolicy.ApplicationSelfUpdateEnabled;
     private const string GitHubRepositoryUrl = "https://github.com/uyujkk/Integrated_Mod_Manager";
     private const string GitHubLatestReleaseApiUrl = "https://api.github.com/repos/uyujkk/Integrated_Mod_Manager/releases/latest";
@@ -48,7 +48,6 @@ public sealed partial class MainWindow : Window
     private const string EndfieldOfficialOperatorCatalogUrl = "https://endfield.hypergryph.com/operator";
     private const string HoYoWikiApiBaseUrl = "https://sg-wiki-api-static.hoyolab.com/hoyowiki/wapi";
     private const int OnlineDisplayPageSize = 40;
-    private const int OnlineRawFetchPageSize = 50;
     private const int OnlineRawPageLimit = 80;
     private static readonly TimeSpan OnlineModListRequestTimeout = TimeSpan.FromSeconds(5);
     private static readonly TimeSpan OnlinePreviewImageRequestTimeout = TimeSpan.FromSeconds(15);
@@ -2477,32 +2476,6 @@ public sealed partial class MainWindow : Window
         }
     }
 
-    private static bool DeploymentMatches(string sourcePath, string targetPath, bool useDirectoryLinks)
-    {
-        if (!Directory.Exists(targetPath))
-        {
-            return false;
-        }
-
-        bool isLink = DirectoryLinkDeployment.IsDirectoryLink(targetPath);
-        if (!useDirectoryLinks)
-        {
-            return !isLink;
-        }
-
-        if (!isLink)
-        {
-            return false;
-        }
-
-        string? actualTarget = DirectoryLinkDeployment.TryGetTarget(targetPath);
-        return !string.IsNullOrWhiteSpace(actualTarget)
-            && string.Equals(
-                Path.GetFullPath(actualTarget),
-                Path.GetFullPath(sourcePath),
-                StringComparison.OrdinalIgnoreCase);
-    }
-
     private void RefreshSecondaryNavigation()
     {
         SecondaryNavPanel.Children.Clear();
@@ -4307,39 +4280,6 @@ public sealed partial class MainWindow : Window
         }
     }
 
-    private async Task<List<OnlineModCard>> FetchAllGameBananaSkinModsAsync(string gameId)
-    {
-        List<OnlineModCard> allMods = [];
-
-        for (int page = 1; page <= OnlineRawPageLimit; page++)
-        {
-            OnlineModPageResult pageResult = await FetchGameBananaModIdsAsync(gameId, page);
-            if (pageResult.ModIds.Count == 0)
-            {
-                break;
-            }
-
-            foreach (int itemId in pageResult.ModIds)
-            {
-                OnlineModCard? mod = await FetchGameBananaModCardAsyncV2(itemId);
-                if (mod is not null && IsAllowedSkinCategory(mod.RootCategoryName))
-                {
-                    allMods.Add(mod);
-                }
-            }
-
-            if (pageResult.ModIds.Count < OnlineRawFetchPageSize)
-            {
-                break;
-            }
-        }
-
-        return allMods
-            .GroupBy(mod => mod.ItemId)
-            .Select(group => group.First())
-            .ToList();
-    }
-
     private async Task<OnlineCategoryPageResult> FetchGameBananaCharacterFallbackPageAsync(
         string categoryId,
         string characterName,
@@ -4455,55 +4395,6 @@ public sealed partial class MainWindow : Window
         return new OnlineCategoryPageResult(mods, totalCount, page, responsePageSize);
     }
 
-    private static OnlineModCard MergeOnlineModCard(OnlineModCard baseCard, OnlineModCard? enrichedCard)
-    {
-        if (enrichedCard is null)
-        {
-            return baseCard;
-        }
-
-        baseCard.Downloads = enrichedCard.Downloads > 0 ? enrichedCard.Downloads : baseCard.Downloads;
-        baseCard.Likes = enrichedCard.Likes > 0 ? enrichedCard.Likes : baseCard.Likes;
-        baseCard.Views = enrichedCard.Views > 0 ? enrichedCard.Views : baseCard.Views;
-        baseCard.HotnessScore = CalculateOnlineHotness(baseCard.Likes, baseCard.Views, baseCard.Downloads);
-        baseCard.FileSizeBytes = enrichedCard.FileSizeBytes > 0 ? enrichedCard.FileSizeBytes : baseCard.FileSizeBytes;
-        baseCard.DownloadUrl = !string.IsNullOrWhiteSpace(enrichedCard.DownloadUrl) ? enrichedCard.DownloadUrl : baseCard.DownloadUrl;
-        baseCard.DownloadFileName = !string.IsNullOrWhiteSpace(enrichedCard.DownloadFileName)
-            ? enrichedCard.DownloadFileName
-            : baseCard.DownloadFileName;
-        if (enrichedCard.DownloadFiles.Count > 0)
-        {
-            baseCard.DownloadFiles = enrichedCard.DownloadFiles;
-        }
-        baseCard.ProfileUrl = !string.IsNullOrWhiteSpace(enrichedCard.ProfileUrl) ? enrichedCard.ProfileUrl : baseCard.ProfileUrl;
-        baseCard.PreviewUrl = !string.IsNullOrWhiteSpace(enrichedCard.PreviewUrl) ? enrichedCard.PreviewUrl : baseCard.PreviewUrl;
-        baseCard.HasUpdates = enrichedCard.HasUpdates;
-        baseCard.UpdatedAt = enrichedCard.UpdatedAt > baseCard.UpdatedAt ? enrichedCard.UpdatedAt : baseCard.UpdatedAt;
-        if (!string.IsNullOrWhiteSpace(enrichedCard.Author))
-        {
-            baseCard.Author = enrichedCard.Author;
-        }
-        if (enrichedCard.AuthorId > 0) baseCard.AuthorId = enrichedCard.AuthorId;
-
-        if (!string.IsNullOrWhiteSpace(enrichedCard.CharacterName))
-        {
-            baseCard.CharacterName = enrichedCard.CharacterName;
-            baseCard.IsCharacterNameInferred = enrichedCard.IsCharacterNameInferred;
-        }
-
-        if (!string.IsNullOrWhiteSpace(enrichedCard.CategoryId))
-        {
-            baseCard.CategoryId = enrichedCard.CategoryId;
-        }
-
-        if (!string.IsNullOrWhiteSpace(enrichedCard.RootCategoryName))
-        {
-            baseCard.RootCategoryName = enrichedCard.RootCategoryName;
-        }
-
-        return baseCard;
-    }
-
     private OnlineModCard? ParseGameBananaCategoryMod(JsonElement record, bool useEndfieldMetadata)
     {
         if (record.ValueKind != JsonValueKind.Object)
@@ -4602,69 +4493,6 @@ public sealed partial class MainWindow : Window
             HasUpdates = false,
             UpdatedAt = updatedAt
         };
-    }
-
-    private async Task<OnlineModPageResult> FetchGameBananaModIdsAsync(string gameId, int page)
-    {
-        string requestUrl = $"https://api.gamebanana.com/Core/List/New?page={page}&itemtype=Mod&gameid={Uri.EscapeDataString(gameId)}&include_updated=true&perpage={OnlineRawFetchPageSize}&format=json_min";
-        using HttpResponseMessage response = await _httpClient.GetAsync(requestUrl);
-        response.EnsureSuccessStatusCode();
-
-        string json = await response.Content.ReadAsStringAsync();
-        using JsonDocument document = JsonDocument.Parse(json);
-
-        List<int> modIds = [];
-        int totalCount = 0;
-        JsonElement root = document.RootElement;
-        JsonElement valueElement = root;
-        if (root.ValueKind == JsonValueKind.Object)
-        {
-            totalCount = TryGetInt32Property(root, "Count");
-            if (!root.TryGetProperty("value", out valueElement))
-            {
-                return new OnlineModPageResult(modIds, totalCount, page, OnlineRawFetchPageSize);
-            }
-        }
-
-        if (valueElement.ValueKind != JsonValueKind.Array)
-        {
-            return new OnlineModPageResult(modIds, totalCount, page, OnlineRawFetchPageSize);
-        }
-
-        foreach (JsonElement item in valueElement.EnumerateArray())
-        {
-            if (item.ValueKind != JsonValueKind.Array || item.GetArrayLength() < 2)
-            {
-                continue;
-            }
-
-            if (item[0].ValueKind != JsonValueKind.String || item[1].ValueKind != JsonValueKind.Number)
-            {
-                continue;
-            }
-
-            string? itemType = item[0].GetString();
-            if (!string.Equals(itemType, "Mod", StringComparison.OrdinalIgnoreCase))
-            {
-                continue;
-            }
-
-            if (item[1].TryGetInt32(out int modId))
-            {
-                modIds.Add(modId);
-            }
-        }
-
-        if (totalCount <= 0)
-        {
-            // GameBanana may omit Count in json_min responses.
-            // When a full page comes back, keep the next-page navigation enabled.
-            totalCount = modIds.Count == OnlineRawFetchPageSize
-                ? (page * OnlineRawFetchPageSize) + 1
-                : ((page - 1) * OnlineRawFetchPageSize) + modIds.Count;
-        }
-
-        return new OnlineModPageResult(modIds, totalCount, page, OnlineRawFetchPageSize);
     }
 
     private async Task<OnlineModCard?> FetchGameBananaModCardAsyncV2(
@@ -5020,18 +4848,6 @@ public sealed partial class MainWindow : Window
         }
 
         return 0;
-    }
-
-    private static bool TryGetBoolProperty(JsonElement element, string propertyName)
-    {
-        if (element.ValueKind != JsonValueKind.Object)
-        {
-            return false;
-        }
-
-        return element.TryGetProperty(propertyName, out JsonElement propertyElement)
-            && propertyElement.ValueKind is JsonValueKind.True or JsonValueKind.False
-            && propertyElement.GetBoolean();
     }
 
     private static string ExtractTrailingNumericId(string? url)
@@ -7428,9 +7244,6 @@ public sealed partial class MainWindow : Window
     }
 
 
-    private static string StripHtmlToPlainText(string value)
-        => GameBananaMetadataParser.PlainText(value);
-
     private static bool IsSourceInsideButton(DependencyObject? source)
     {
         DependencyObject? current = source;
@@ -7445,107 +7258,6 @@ public sealed partial class MainWindow : Window
         }
 
         return false;
-    }
-
-    private UIElement CreateOnlineModCard(OnlineModCard mod)
-    {
-        TrackedModOrigin? installedOrigin = FindInstalledOnlineMod(mod);
-        Border border = new()
-        {
-            Style = (Style)Application.Current.Resources["InsetBorderStyle"],
-            Padding = new Thickness(14)
-        };
-
-        Grid rootGrid = new() { ColumnSpacing = 14 };
-        rootGrid.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(120) });
-        rootGrid.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(1, GridUnitType.Star) });
-
-        Border imageHost = new()
-        {
-            Style = (Style)Application.Current.Resources["InsetBorderStyle"],
-            MinHeight = 68,
-            Height = 68
-        };
-
-        if (!string.IsNullOrWhiteSpace(mod.PreviewUrl))
-        {
-            var previewImage = new Image
-            {
-                Stretch = Stretch.UniformToFill
-            };
-            imageHost.Child = previewImage;
-            _ = SetCachedOnlineImageAsync(previewImage, mod.PreviewUrl);
-        }
-        else
-        {
-            imageHost.Child = new TextBlock
-            {
-                Text = L("暂无缩略图", "No preview"),
-                HorizontalAlignment = HorizontalAlignment.Center,
-                VerticalAlignment = VerticalAlignment.Center,
-                Style = (Style)Application.Current.Resources["CaptionTextStyle"]
-            };
-        }
-
-        Grid.SetColumn(imageHost, 0);
-        rootGrid.Children.Add(imageHost);
-
-        StackPanel contentPanel = new() { Spacing = 8 };
-        contentPanel.Children.Add(new TextBlock
-        {
-            Text = mod.Title,
-            FontSize = 18,
-            FontWeight = Microsoft.UI.Text.FontWeights.SemiBold,
-            TextWrapping = TextWrapping.Wrap
-        });
-        contentPanel.Children.Add(new TextBlock
-        {
-            Text = $"{L("作者", "Author")}: {mod.Author}",
-            Style = (Style)Application.Current.Resources["MutedTextStyle"],
-            TextWrapping = TextWrapping.Wrap
-        });
-        if (installedOrigin is not null)
-        {
-            contentPanel.Children.Add(CreateOnlineInstalledIndicator(installedOrigin.Path));
-        }
-        contentPanel.Children.Add(new TextBlock
-        {
-            Text = $"{L("鏇存柊浜", "Updated")}: {mod.UpdatedAt:yyyy-MM-dd HH:mm}    ID: {mod.ItemId}",
-            Style = (Style)Application.Current.Resources["CaptionTextStyle"],
-            TextWrapping = TextWrapping.Wrap
-        });
-        contentPanel.Children.Add(new TextBlock
-        {
-            Text = mod.HasUpdates ? L("该条目包含更新记录。", "This entry reports update records.") : L("该条目当前没有更新记录标记。", "This entry currently has no update record flag."),
-            Foreground = mod.HasUpdates ? CopiedBrush : NeutralBrush
-        });
-
-        StackPanel actionsPanel = new() { Orientation = Orientation.Horizontal, Spacing = 10 };
-        Button openPageButton = new()
-        {
-            Content = L("打开页面", "Open Page"),
-            Style = (Style)Application.Current.Resources["SecondaryButtonStyle"],
-            MinHeight = 36
-        };
-        openPageButton.Click += async (_, _) => await RunUiActionAsync("OpenExternalUrlAsync", () => OpenExternalUrlAsync(mod.ProfileUrl, L("打开页面失败", "Open page failed")));
-        actionsPanel.Children.Add(openPageButton);
-
-        Button downloadButton = new()
-        {
-            Content = L("下载文件", "Download"),
-            Style = (Style)Application.Current.Resources["SecondaryButtonStyle"],
-            MinHeight = 36,
-            IsEnabled = !string.IsNullOrWhiteSpace(mod.DownloadUrl) && !IsOnlineDownloadActionBlocked(mod)
-        };
-        downloadButton.Click += async (_, _) => await RunUiActionAsync("RunOnlineCardDownloadAsync", () => RunOnlineCardDownloadAsync(mod, downloadButton));
-        actionsPanel.Children.Add(downloadButton);
-
-        contentPanel.Children.Add(actionsPanel);
-        Grid.SetColumn(contentPanel, 1);
-        rootGrid.Children.Add(contentPanel);
-
-        border.Child = rootGrid;
-        return border;
     }
 
     private UIElement CreateOnlineModCardV2(OnlineModCard mod)
@@ -12264,17 +11976,6 @@ public sealed partial class MainWindow : Window
         }
     }
 
-    private string GetPreferredDownloadStartFolder()
-    {
-        WorkspaceRepository? repository = GetSelectedRepository();
-        if (repository is not null && Directory.Exists(repository.SourcePath))
-        {
-            return repository.SourcePath;
-        }
-
-        return Environment.GetFolderPath(Environment.SpecialFolder.DesktopDirectory);
-    }
-
     private IReadOnlyCollection<string> GetCharacterFolderAliases(OnlineModCard mod)
     {
         var aliases = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
@@ -13437,30 +13138,6 @@ public sealed partial class MainWindow : Window
         _isLoadingBindings = false;
     }
 
-    private async Task DetectShortcutsForChildModsAsync(string firstLevelDirectory)
-    {
-        if (!Directory.Exists(firstLevelDirectory))
-        {
-            return;
-        }
-
-        string[] modDirectories;
-        try
-        {
-            modDirectories = Directory.GetDirectories(firstLevelDirectory);
-        }
-        catch (Exception ex)
-        {
-            LogApplicationIssue("Enumerate imported Mods for shortcut detection", ex);
-            return;
-        }
-
-        foreach (string modDirectory in modDirectories)
-        {
-            await TryImportShortcutBindingsFromModFilesAsync(modDirectory);
-        }
-    }
-
     private async Task<int> TryImportShortcutBindingsFromModFilesAsync(string modFolder)
     {
         if (string.IsNullOrWhiteSpace(modFolder)
@@ -13896,22 +13573,6 @@ public sealed partial class MainWindow : Window
                 second.State = GetFolderCopyState(targetDir, second.Path);
             }
         }
-    }
-
-    private SecondLevelFolderItem? FindSecondLevelByPath(string path)
-    {
-        foreach (FirstLevelFolderItem first in _firstLevelItems)
-        {
-            foreach (SecondLevelFolderItem second in first.Children)
-            {
-                if (string.Equals(second.Path, path, StringComparison.CurrentCultureIgnoreCase))
-                {
-                    return second;
-                }
-            }
-        }
-
-        return null;
     }
 
     private SecondLevelFolderItem? GetSelectedSecondLevelItem()
@@ -14963,27 +14624,6 @@ public sealed class TrackedModUpdateResult
     public string StatusTextZh { get; set; } = string.Empty;
 
     public string StatusTextEn { get; set; } = string.Empty;
-}
-
-public sealed class OnlineModPageResult
-{
-    public OnlineModPageResult(List<int> modIds, int totalCount, int page, int pageSize)
-    {
-        ModIds = modIds;
-        TotalCount = totalCount;
-        Page = page;
-        PageSize = Math.Max(1, pageSize);
-    }
-
-    public List<int> ModIds { get; }
-
-    public int TotalCount { get; }
-
-    public int Page { get; }
-
-    public int PageSize { get; }
-
-    public int TotalPages => Math.Max(1, (int)Math.Ceiling(TotalCount / (double)PageSize));
 }
 
 public sealed class OnlineCategoryPageResult
