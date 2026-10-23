@@ -15,6 +15,7 @@ public sealed partial class MainWindow
     private const ushort LoaderReloadKey = 0x79; // F10, the 3DMigoto/XXMI default reload_config key.
     private bool _overlaySlotSwitchEnabled;
     private StackPanel? _overlaySlotList;
+    private ScrollViewer? _overlaySlotScroll;
     private TextBlock? _overlaySlotHeader;
     private string _overlaySlotSignature = string.Empty;
 
@@ -76,20 +77,21 @@ public sealed partial class MainWindow
     {
         _overlaySlotHeader = new TextBlock { FontSize = 12, Foreground = _overlayTextBrush, Opacity = .8 };
         _overlaySlotList = new StackPanel { Orientation = Orientation.Horizontal, Spacing = 6 };
-        panel.Children.Add(_overlaySlotHeader);
-        panel.Children.Add(new ScrollViewer
+        _overlaySlotScroll = new ScrollViewer
         {
             Content = _overlaySlotList, Height = 40,
             HorizontalScrollBarVisibility = ScrollBarVisibility.Auto, HorizontalScrollMode = ScrollMode.Enabled,
             VerticalScrollBarVisibility = ScrollBarVisibility.Disabled, VerticalScrollMode = ScrollMode.Disabled
-        });
+        };
+        panel.Children.Add(_overlaySlotHeader);
+        panel.Children.Add(_overlaySlotScroll);
         _overlaySlotSignature = string.Empty;
     }
 
     // Slots of the Mod chosen in the overlay; rebuilt only when they change.
     private void UpdateOverlaySlotSection()
     {
-        if (_overlaySlotList is null || _overlaySlotHeader is null) return;
+        if (_overlaySlotList is null || _overlaySlotHeader is null || _overlaySlotScroll is null) return;
         WorkspaceRepository? repository = GetSelectedRepository();
         string? modPath = (_shortcutModPicker?.SelectedItem as ShortcutModOption)?.Path;
         string? relative = TryGetCurrentModRelativePath(repository, modPath);
@@ -103,7 +105,7 @@ public sealed partial class MainWindow
 
         Visibility visibility = _overlaySlotSwitchEnabled ? Visibility.Visible : Visibility.Collapsed;
         _overlaySlotHeader.Visibility = visibility;
-        ((FrameworkElement)_overlaySlotList.Parent).Visibility = visibility;
+        _overlaySlotScroll.Visibility = visibility;
         _overlaySlotHeader.Text = slots.Length == 0 ? T("HotReload.NoSlotsForThisMod") : T("HotReload.StateSlotsHotSwitch");
         _overlaySlotList.Children.Clear();
         foreach (ModPersistentSlot slot in slots)

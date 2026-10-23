@@ -1148,6 +1148,7 @@
   "ShortcutPanel.EnableInputToSelectedWindow": "Enable input to selected window",
   "ShortcutPanel.EndfieldRunsAsAdministratorInputFrom": "Endfield runs as administrator; input from a non-elevated manager is silently dropped, so restart the manager as administrator.",
   "ShortcutPanel.FloatingPanel": "Floating panel",
+  "ShortcutPanel.GameWindowDetected": "Game window selected automatically: {0}. Turn input on to send shortcuts.",
   "ShortcutPanel.GlobalHotkeyDisabledOrUnavailableChoose": "Global hotkey disabled or unavailable; choose a chord and Apply.",
   "ShortcutPanel.GlobalHotkeyShowHideOverlay": "Global hotkey: {0}+{1} (show/hide overlay)",
   "ShortcutPanel.Hide": "Hide",

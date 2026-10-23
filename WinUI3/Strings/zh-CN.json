@@ -1148,6 +1148,7 @@
   "ShortcutPanel.EnableInputToSelectedWindow": "允许向所选窗口发送按键",
   "ShortcutPanel.EndfieldRunsAsAdministratorInputFrom": "终末地以管理员权限运行；普通权限的管理器发送的按键会被 Windows 静默丢弃，需要以管理员身份重启管理器。",
   "ShortcutPanel.FloatingPanel": "独立置顶面板",
+  "ShortcutPanel.GameWindowDetected": "已自动选择游戏窗口：{0}。开启输入后即可发送快捷键。",
   "ShortcutPanel.GlobalHotkeyDisabledOrUnavailableChoose": "全局快捷键未启用或已被占用；可更换组合后应用。",
   "ShortcutPanel.GlobalHotkeyShowHideOverlay": "全局快捷键：{0}+{1}（显示／隐藏浮窗）",
   "ShortcutPanel.Hide": "隐藏",
