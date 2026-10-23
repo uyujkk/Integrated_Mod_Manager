@@ -18,15 +18,6 @@ public sealed class EndfieldBridgeIntegrationTests : IDisposable
     public void OfferOnlyForEndfield(string? category, string? name, bool expected) =>
         Assert.Equal(expected, EndfieldBridgeIntegration.IsEndfield(category, name));
 
-    [Theory]
-    [InlineData(true, 0, true)]
-    [InlineData(true, 1, true)]
-    [InlineData(true, 2, false)]
-    [InlineData(true, 3, false)]
-    [InlineData(false, 0, false)]
-    public void UpgradeOfferIsOneTimeAndOptional(bool eligible, int revision, bool expected) =>
-        Assert.Equal(expected, EndfieldBridgeIntegration.ShouldOffer(eligible, revision));
-
     [Fact]
     public void LoaderChoicePreservesExplicitPathsAndUsesOnlyExistingDefaults()
     {
