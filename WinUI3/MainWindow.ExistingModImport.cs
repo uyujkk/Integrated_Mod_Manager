@@ -127,7 +127,7 @@ public sealed partial class MainWindow
         if (_existingModImportBusy || manifest is null || repository is null) return;
         try
         {
-            if (!Path.GetFullPath(manifest).StartsWith(Path.GetFullPath(ExistingImportRecordsRoot) + Path.DirectorySeparatorChar, StringComparison.OrdinalIgnoreCase))
+            if (!PathSafety.IsStrictlyInside(manifest, ExistingImportRecordsRoot))
                 throw new InvalidDataException("Import record is outside the application records folder.");
             var record = RecoveryJsonFile.Read<ExistingModImportManifest>(manifest);
             if (!IsPathInsideDirectory(record.DestinationRoot, repository.SourcePath))

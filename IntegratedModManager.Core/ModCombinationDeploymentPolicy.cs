@@ -88,11 +88,7 @@ public static class ModCombinationDeploymentPolicy
 
     private static void ValidateSeparateRoots(string sourceRoot, string targetRoot)
     {
-        string source = Path.TrimEndingDirectorySeparator(Path.GetFullPath(sourceRoot));
-        string target = Path.TrimEndingDirectorySeparator(Path.GetFullPath(targetRoot));
-        if (source.Equals(target, StringComparison.OrdinalIgnoreCase)
-            || source.StartsWith(target + Path.DirectorySeparatorChar, StringComparison.OrdinalIgnoreCase)
-            || target.StartsWith(source + Path.DirectorySeparatorChar, StringComparison.OrdinalIgnoreCase))
+        if (PathSafety.IsSameOrInside(sourceRoot, targetRoot) || PathSafety.IsSameOrInside(targetRoot, sourceRoot))
             throw new InvalidDataException("Repository and loader Mods folders must be separate, non-nested directories.");
     }
 

@@ -220,9 +220,7 @@ public static class CombinationRestorePreviewService
             && part is not "." and not ".." && !part.EndsWith('.') && !part.EndsWith(' ')
             && part.IndexOfAny(Path.GetInvalidFileNameChars()) < 0) ? string.Join('\\', parts) : null;
     }
-    private static bool IsInside(string root, string path) => path.StartsWith(
-        root.TrimEnd(Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar) + Path.DirectorySeparatorChar,
-        StringComparison.OrdinalIgnoreCase);
+    private static bool IsInside(string root, string path) => PathSafety.IsStrictlyInside(path, root);
     private static string NormalizeKey(string key) => key.Trim().Replace('/', '\\').ToLowerInvariant();
     private static bool IsPreflightError(Exception ex)
         => ex is IOException or InvalidDataException or UnauthorizedAccessException or SecurityException or ArgumentException;

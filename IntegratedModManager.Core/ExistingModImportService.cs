@@ -308,9 +308,7 @@ public static class ExistingModImportService
         return PathSafety.ResolveInsideDirectory(root, name);
     }
 
-    private static bool Contains(string root, string path)
-        => string.Equals(root, path, StringComparison.OrdinalIgnoreCase)
-            || path.StartsWith(Path.TrimEndingDirectorySeparator(root) + Path.DirectorySeparatorChar, StringComparison.OrdinalIgnoreCase);
+    private static bool Contains(string root, string path) => PathSafety.IsSameOrInside(path, root);
 
     private static void RejectLinks(string path)
     {
