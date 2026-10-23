@@ -687,8 +687,9 @@ public sealed partial class MainWindow
                         checkedAt = existingEntry.CachedAtUtc;
                     }
                 }
-                catch
+                catch (Exception ex)
                 {
+                    LogApplicationIssue("Read existing character catalog cache", ex);
                 }
             }
 
@@ -700,8 +701,9 @@ public sealed partial class MainWindow
             _appDataStore.WriteCache("character-catalog", catalogKey, entry, checkedAt);
             await File.WriteAllTextAsync(cacheFile, JsonSerializer.Serialize(entry));
         }
-        catch
+        catch (Exception ex)
         {
+            LogApplicationIssue("Write character catalog cache", ex);
         }
     }
 

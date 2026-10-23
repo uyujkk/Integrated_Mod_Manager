@@ -108,8 +108,9 @@ public sealed partial class MainWindow
                         action = translatedAction;
                     }
                 }
-                catch
+                catch (Exception ex)
                 {
+                    LogApplicationIssue("Translate shortcut action", ex);
                 }
             }
 

@@ -122,7 +122,7 @@ public sealed partial class MainWindow
             TextWrapping = TextWrapping.Wrap
         });
         _shortcutModPicker = new ComboBox { Header = T("ShortcutPanel.ModCurrentRepository"), HorizontalAlignment = HorizontalAlignment.Stretch };
-        _shortcutModPicker.SelectionChanged += async (_, _) =>
+        _shortcutModPicker.SelectionChanged += async (_, _) => await RunUiActionAsync("Select shortcut Mod", async () =>
         {
             if (!_characterAutoSelecting)
             {
@@ -131,7 +131,7 @@ public sealed partial class MainWindow
                     _characterPreferredMods[role] = selected.Path;
             }
             await LoadShortcutSelectionAsync();
-        };
+        });
         pane.Children.Add(_shortcutModPicker);
         _shortcutTargetPicker = new ComboBox { Header = T("ShortcutPanel.TargetGameWindow"), PlaceholderText = T("ShortcutPanel.SelectAWindow"), HorizontalAlignment = HorizontalAlignment.Stretch };
         _shortcutTargetPicker.SelectionChanged += (_, _) =>
@@ -472,7 +472,7 @@ public sealed partial class MainWindow
             });
         var button = new Button { Content = content, IsEnabled = supported, HorizontalAlignment = HorizontalAlignment.Stretch, HorizontalContentAlignment = HorizontalAlignment.Left, Padding = new Thickness(14, 10, 14, 10) };
         if (floating) button.AllowFocusOnInteraction = false;
-        button.Click += async (_, _) => await SendShortcutFromPanelAsync(shortcut);
+        button.Click += async (_, _) => await RunUiActionAsync("Send shortcut", () => SendShortcutFromPanelAsync(shortcut));
         return button;
     }
 

@@ -569,8 +569,9 @@ public sealed partial class MainWindow
         {
             latest = await FetchGameBananaModCardAsyncV2(origin.ItemId);
         }
-        catch
+        catch (Exception ex)
         {
+            LogApplicationIssue("Check tracked Mod update", ex);
         }
 
         if (latest is null)

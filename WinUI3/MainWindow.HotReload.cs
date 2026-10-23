@@ -113,7 +113,7 @@ public sealed partial class MainWindow
                 Content = ReferenceEquals(slot, current) ? "● " + slot.Name : slot.Name,
                 Foreground = _overlayTextBrush, AllowFocusOnInteraction = false, Padding = new Thickness(10, 4, 10, 5), FontSize = 13
             };
-            button.Click += async (_, _) => await SwitchSlotFromOverlayAsync(slot.Id, modPath!);
+            button.Click += async (_, _) => await RunUiActionAsync("Overlay slot switch", () => SwitchSlotFromOverlayAsync(slot.Id, modPath!));
             _overlaySlotList.Children.Add(button);
         }
     }

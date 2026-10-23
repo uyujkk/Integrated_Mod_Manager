@@ -948,8 +948,9 @@ public sealed partial class MainWindow
                 GetGameBananaDownloadMetricCacheFile(itemId),
                 JsonSerializer.Serialize(entry));
         }
-        catch
+        catch (Exception ex)
         {
+            LogApplicationIssue("Write download count cache", ex);
         }
     }
 
@@ -1168,8 +1169,9 @@ public sealed partial class MainWindow
             string json = JsonSerializer.Serialize(entry);
             await File.WriteAllTextAsync(GetOnlineCategoryPageCacheFile(categoryId, result.Page), json);
         }
-        catch
+        catch (Exception ex)
         {
+            LogApplicationIssue("Write online page cache", ex);
         }
     }
 }
