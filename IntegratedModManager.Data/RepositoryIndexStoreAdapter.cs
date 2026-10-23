@@ -1,6 +1,6 @@
 using IntegratedModManager.Core;
 
-namespace ModFolderCopier.WinUI;
+namespace IntegratedModManager.Data;
 
 // Keeps the existing SQLite schema and public IndexedModFolder compatibility.
 // Core scanning knows neither SQLite nor the legacy WinUI namespace.

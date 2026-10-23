@@ -368,11 +368,7 @@ public static class DirectoryLinkDeployment
         return fullPath;
     }
 
-    private static bool IsSameOrInside(string candidate, string root)
-    {
-        return string.Equals(candidate, root, StringComparison.OrdinalIgnoreCase)
-            || candidate.StartsWith(root + Path.DirectorySeparatorChar, StringComparison.OrdinalIgnoreCase);
-    }
+    private static bool IsSameOrInside(string candidate, string root) => PathSafety.IsSameOrInside(candidate, root);
 
     private static void WriteUInt16(byte[] buffer, int offset, ushort value)
     {

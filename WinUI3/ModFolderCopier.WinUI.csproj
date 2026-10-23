@@ -37,10 +37,6 @@
     <ProjectReference Include="..\IntegratedModManager.EndfieldLaunch\IntegratedModManager.EndfieldLaunch.csproj" />
   </ItemGroup>
 
-  <ItemGroup>
-    <Compile Remove="AppDataStore.cs" />
-  </ItemGroup>
-
   <!-- License texts shipped with every build: the release package as a whole is AGPL-3.0-only. -->
   <ItemGroup>
     <None Include="..\LICENSE" Link="licenses\MIT.txt" CopyToOutputDirectory="PreserveNewest" />

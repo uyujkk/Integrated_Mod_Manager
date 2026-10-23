@@ -47,6 +47,7 @@ This directory contains the usage, release, development, and research documentat
 
 ## 开发文档 / Development
 
+- [源码结构 / Source Layout](./development/Architecture.md)
 - [v4.4.0 正式版验证 / Stable Release Verification](./verification/v4.4.0.md)
 - [v4.3.1 正式版验证 / Stable Release Verification](./verification/v4.3.1.md)
 - [快捷键面板测试记录 test.3–test.9 / Shortcut Panel Test Records](./verification/hotkey-panel-test.9.md)

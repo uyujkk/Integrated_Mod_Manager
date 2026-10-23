@@ -1,6 +1,6 @@
 using System.Text.Json;
 using IntegratedModManager.Core;
-using ModFolderCopier.WinUI;
+using IntegratedModManager.Data;
 using Xunit;
 
 namespace IntegratedModManager.DataStore.Tests;

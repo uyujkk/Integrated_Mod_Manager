@@ -126,8 +126,7 @@ public static class OnlineTrackingScopePolicy
             string normalized;
             try { normalized = Path.GetFullPath(root).TrimEnd(Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar); }
             catch (Exception ex) when (ex is ArgumentException or NotSupportedException or PathTooLongException) { continue; }
-            if ((string.Equals(path, normalized, StringComparison.OrdinalIgnoreCase)
-                    || path.StartsWith(normalized + Path.DirectorySeparatorChar, StringComparison.OrdinalIgnoreCase))
+            if (PathSafety.IsSameOrInside(path, root)
                 && (best is null || normalized.Length > best.Length))
                 best = normalized;
         }

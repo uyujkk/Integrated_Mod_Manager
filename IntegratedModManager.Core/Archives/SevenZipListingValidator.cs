@@ -44,7 +44,14 @@ public static class SevenZipListingValidator
                 || (TryReadProperty(line, "Copy Link", out string copyLink) && IsPopulated(copyLink))
                 || (TryReadProperty(line, "Mode", out string mode) && IsUnixSymbolicLinkMode(mode)))
             {
-                throw new InvalidDataException("The archive contains an unsupported link.");
+                throw ArchiveErrors.Create(ArchiveErrorKind.LinkEntry, "The archive contains an unsupported link.");
+            }
+
+            // Extraction runs with stdin closed, so a password-protected entry can only
+            // fail later with an opaque tool error; report it before extracting.
+            if (TryReadProperty(line, "Encrypted", out string encrypted) && encrypted == "+")
+            {
+                throw ArchiveErrors.Create(ArchiveErrorKind.Encrypted, "The archive contains password-protected entries.");
             }
         }
     }

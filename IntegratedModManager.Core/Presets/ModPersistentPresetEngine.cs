@@ -505,7 +505,7 @@ public static class ModPersistentPresetEngine
         return (File.GetAttributes(path) & FileAttributes.ReparsePoint) != 0;
     }
 
-    private static bool IsInside(string root, string path) => path.StartsWith(root + Path.DirectorySeparatorChar, StringComparison.OrdinalIgnoreCase);
+    private static bool IsInside(string root, string path) => PathSafety.IsStrictlyInside(path, root);
 
     private static string NormalizeRelative(string path)
     {

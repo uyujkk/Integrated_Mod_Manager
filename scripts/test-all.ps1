@@ -201,7 +201,17 @@ if (!$SkipBuild) {
     if (($declaredVersions | Select-Object -Unique).Count -ne 1) {
         throw "Application, launcher, and updater versions do not match: $($declaredVersions -join ', ')"
     }
-    $appVersion = (Select-String -LiteralPath (Join-Path $root "WinUI3\MainWindow.xaml.cs") -Pattern 'AppVersion\s*=\s*"v([^"]+)"').Matches.Groups[1].Value
+    # MainWindow.AppVersion aliases this label, so the release policy is the single source.
+    $releasePolicy = Get-ChildItem -LiteralPath (Join-Path $root "IntegratedModManager.Core") -Recurse -Filter "ApplicationReleasePolicy.cs" |
+        Where-Object { $_.FullName -notmatch '\\(bin|obj)\\' } |
+        Select-Object -First 1
+    if (!$releasePolicy) {
+        throw "ApplicationReleasePolicy.cs was not found."
+    }
+    $appVersion = (Select-String -LiteralPath $releasePolicy.FullName -Pattern 'VersionLabel\s*=\s*"v([^"]+)"').Matches.Groups[1].Value
+    if (!$appVersion) {
+        throw "ApplicationReleasePolicy.VersionLabel was not found."
+    }
     $declaredSemanticVersion = ([Version]$declaredVersions[0]).ToString(3)
     # Display labels may include a prerelease suffix and omit the patch zero.
     $displayVersion = [Version]($appVersion -replace '-.*$', '')

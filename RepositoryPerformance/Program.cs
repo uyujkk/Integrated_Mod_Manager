@@ -2,7 +2,7 @@ using System.Collections.ObjectModel;
 using System.Diagnostics;
 using System.Text.Json;
 using IntegratedModManager.Core;
-using ModFolderCopier.WinUI;
+using IntegratedModManager.Data;
 
 // Developer-only harness: uses existing synthetic fixtures read-only and writes
 // fresh isolated SQLite indexes/results. Never deployed with the application.

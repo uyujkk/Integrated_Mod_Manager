@@ -75,4 +75,37 @@ public sealed class PathSafetyTests
 
         Assert.Equal(Path.GetFullPath(Path.Combine(root, "mods", "preview.png")), result);
     }
+
+    [Fact]
+    public void ResolveInsideDirectory_ResolvesUnderDriveRootNotCurrentDirectory()
+    {
+        // The current directory is on this drive, so "D:" + relative would resolve under it.
+        string driveRoot = Path.GetPathRoot(Environment.CurrentDirectory)!;
+
+        string result = PathSafety.ResolveInsideDirectory(driveRoot, Path.Combine("mods", "a.ini"));
+
+        Assert.Equal(Path.Combine(driveRoot, "mods", "a.ini"), result);
+    }
+
+    [Theory]
+    [InlineData(@"C:\Mods", @"C:\Mods", true)]
+    [InlineData(@"C:\Mods\A\b.ini", @"C:\Mods", true)]
+    [InlineData(@"c:\mods\a", @"C:\Mods\", true)]
+    [InlineData(@"C:\Mods-old\a", @"C:\Mods", false)]
+    [InlineData(@"C:\Mods\..\Other", @"C:\Mods", false)]
+    [InlineData(@"C:\Mods\A", @"C:\", true)]
+    [InlineData(@"D:\Mods", @"C:\", false)]
+    public void IsSameOrInside_MatchesOnlyTheRootAndDescendants(string candidate, string root, bool expected)
+    {
+        Assert.Equal(expected, PathSafety.IsSameOrInside(candidate, root));
+    }
+
+    [Theory]
+    [InlineData(@"C:\Mods", @"C:\Mods\", false)]
+    [InlineData(@"C:\Mods\A", @"C:\Mods", true)]
+    [InlineData(@"C:\Mods-old", @"C:\Mods", false)]
+    public void IsStrictlyInside_ExcludesTheRoot(string candidate, string root, bool expected)
+    {
+        Assert.Equal(expected, PathSafety.IsStrictlyInside(candidate, root));
+    }
 }
