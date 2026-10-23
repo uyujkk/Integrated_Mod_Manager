@@ -76,6 +76,12 @@ Mod Storage Folder
 - Use the plus button to create a category.
 - Use the edit button to rename the selected category.
 - Each item shows its second-level mod count.
+- Each category shows a character avatar, taken from, in order:
+  - an `.imm_avatar.*` or `avatar.*` image in the category folder;
+  - the character chosen with right-click **Avatar > Bind to character**;
+  - the character whose Chinese name, English name or alias equals the folder name (case, width and spaces are ignored).
+- Endfield repositories use the built-in operator list. Other games use the character list the Online page has loaded; until then only the initial is shown. The app never downloads a character list just for avatars.
+- Right-click **Avatar > Choose image** copies the image into the category folder as `.imm_avatar.*`. The previous avatar is kept as `.imm_avatar.previous.*`, and **Restore previous avatar** swaps it back.
 
 ### 4.3 Second-level mods and copy toggling
 
@@ -84,6 +90,11 @@ Mod Storage Folder
 - Double-click or use the deployment action at the bottom of Details to toggle deployment. Lists scroll inside panels rather than moving the whole page.
 - If the target has no folder with the same name, the whole mod folder is copied.
 - If the same folder already exists, toggling again removes it from the target.
+- With directory-link deployment, each character keeps one enabled Mod by default: enabling another replaces the links of its sibling Mods.
+  - Right-click a character and check **Allow several enabled Mods** to keep several enabled for that character.
+  - The repository editor can make several Mods the default; individual characters can then be unchecked.
+  - Copy mode never removes sibling copies automatically.
+  - Restoring a combination preset asks first when it enables several Mods of a single-selection character.
 - The delete button removes the source mod after a confirmation prompt. This is separate from removing a copied target folder.
 - Copy, remove, and profile operations create transactional backups and automatically roll back on failure.
 
@@ -182,6 +193,20 @@ Open Presets at the top of Repositories to create, update, delete, or restore th
 Adjust appearance in game and have the loader save it first (usually F10; check the actual file timestamp). Before restoration, exit the game and loader and review the install/remove and parameter preview. Recognized deployments are restored first, then matching numeric `global persist` values, leaving Mod INIs and unrelated values unchanged. No keys are sent to the game. See the [full preset guide](./Combination-Presets.en.md).
 
 Individual Mod state slots are in Details. They hold different states of the same Mod, not settings transferred to unrelated Mods. Unknown deployments, missing sources, duplicate names, namespace conflicts, invalid values, or concurrent changes prevent restoration.
+
+The **More…** menu of State Slots adds:
+
+- **Update selected slot with current values**: reads `d3dx_user.ini` again and replaces the selected slot. The slot saved, updated or restored last is marked "current" in the list.
+- **Rename selected slot**.
+- **Write selected slot as Mod defaults**:
+  - Writes the slot's values into `global persist $variable = default` in the Mod's own INI files, so they survive clearing or deleting `d3dx_user.ini`.
+  - Each file is backed up beside it as `.imm-persist-*.bak` first. The result is read back, and a failure restores the originals.
+  - In copy mode the deployed copy changes too.
+  - Updating the Mod replaces these edits; the old files stay in the update backup.
+- **Import JASM variants**: reads JASM's `.JASM_Variants.json` from the Mod folder (or a chosen file) and adds one slot per variant; JASM's active variant becomes "current". Keys that do not match this Mod's declarations are skipped and counted.
+- **Save / Restore whole d3dx_user.ini snapshot** and **Open snapshot folder**:
+  - A snapshot keeps the whole file, per repository, in `WinUI3/snapshots/user-ini/`, as a manual restore point.
+  - Restoring returns every Mod's values to the snapshot. The current file is first backed up as `.imm-snapshot-*.bak`, and the game must be fully closed.
 
 ### 6.2 Conflict detection
 

@@ -31,7 +31,8 @@ function Test-IsUserStatePath {
         'diagnostics\',
         'WinUI3\backups\',
         'WinUI3\cache\',
-        'WinUI3\diagnostics\'
+        'WinUI3\diagnostics\',
+        'WinUI3\snapshots\'
     )
     return $preservedPrefixes.Where({ $normalized.StartsWith($_, [StringComparison]::OrdinalIgnoreCase) }).Count -gt 0
 }

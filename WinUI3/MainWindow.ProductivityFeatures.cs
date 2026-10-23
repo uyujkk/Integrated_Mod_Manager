@@ -621,8 +621,9 @@ public sealed partial class MainWindow
                 }
                 result.Add(new InstallBackupDisplayItem(directory, transaction.Description, transaction.CreatedAtUtc, string.IsNullOrWhiteSpace(mods) ? T("ProductivityFeatures.NoModRecorded") : mods, size));
             }
-            catch
+            catch (Exception ex)
             {
+                LogApplicationIssue("Read install backup", ex);
             }
         }
 
@@ -826,8 +827,9 @@ public sealed partial class MainWindow
                 }
                 WriteZipText(archive, "logs/" + Path.GetFileName(logPath), SanitizeDiagnosticText(text));
             }
-            catch
+            catch (Exception ex)
             {
+                LogApplicationIssue("Add log to diagnostic report", ex);
             }
         }
         return reportPath;

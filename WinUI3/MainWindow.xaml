@@ -506,7 +506,15 @@
                                                     <ColumnDefinition Width="*" />
                                                     <ColumnDefinition Width="Auto" />
                                                 </Grid.ColumnDefinitions>
-                                                <FontIcon Glyph="&#xE8B7;" Opacity="0.75" />
+                                                <Grid Width="28" Height="28">
+                                                    <Ellipse Fill="{ThemeResource ControlFillColorSecondaryBrush}" />
+                                                    <TextBlock Text="{x:Bind AvatarInitial}" FontSize="12" FontWeight="SemiBold" HorizontalAlignment="Center" VerticalAlignment="Center" Opacity="0.75" Visibility="{x:Bind AvatarPlaceholderVisibility, Mode=OneWay}" />
+                                                    <Ellipse>
+                                                        <Ellipse.Fill>
+                                                            <ImageBrush ImageSource="{x:Bind AvatarImageSource, Mode=OneWay}" Stretch="UniformToFill" />
+                                                        </Ellipse.Fill>
+                                                    </Ellipse>
+                                                </Grid>
                                                 <TextBlock Grid.Column="1" FontWeight="SemiBold" Text="{x:Bind Name}" MaxLines="1" TextTrimming="CharacterEllipsis" VerticalAlignment="Center" />
                                                 <TextBlock Grid.Column="2" FontSize="12" Text="{x:Bind ChildrenCount}" VerticalAlignment="Center" Opacity="0.75" />
                                             </Grid>
@@ -702,6 +710,7 @@
                             <Button x:Name="DeletePersistentSlotButton" Grid.Column="1" Click="OnDeletePersistentSlotClicked" HorizontalAlignment="Stretch" Style="{StaticResource SecondaryButtonStyle}" />
                         </Grid>
                         <Button x:Name="RestorePersistentRuntimeButton" Click="OnRestorePersistentRuntimeClicked" HorizontalAlignment="Stretch" Style="{StaticResource PrimaryButtonStyle}" />
+                        <DropDownButton x:Name="PersistentSlotMoreButton" HorizontalAlignment="Stretch" HorizontalContentAlignment="Center" />
                         <Button x:Name="OpenCombinationPresetsButton" Click="OnOpenCombinationPresetsClicked" HorizontalAlignment="Stretch" Style="{StaticResource SecondaryButtonStyle}" />
                         <TextBlock x:Name="PersistentSlotStatusTextBlock" Style="{StaticResource CaptionTextStyle}" TextWrapping="Wrap" />
                     </StackPanel>

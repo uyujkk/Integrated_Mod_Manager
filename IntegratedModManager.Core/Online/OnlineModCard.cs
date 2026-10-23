@@ -1,6 +1,4 @@
-using IntegratedModManager.Core.Online;
-
-namespace ModFolderCopier.WinUI;
+namespace IntegratedModManager.Core.Online;
 
 public sealed class OnlineModCard
 {

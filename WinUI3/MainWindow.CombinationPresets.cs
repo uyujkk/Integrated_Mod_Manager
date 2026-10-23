@@ -124,13 +124,15 @@ public sealed partial class MainWindow
             foreach (var issue in preview.Issues.Where(issue => issue.Error is not null))
                 LogApplicationIssue("Combination preview: " + issue.Code, issue.Error!);
             if (!await ConfirmCombinationRestoreAsync(profile.Name, preview)) return;
+            if (repository.UseDirectoryLinks
+                && !await ConfirmSingleSelectionViolationsAsync(repository, preview.Deployment!.DesiredSources)) return;
             ModCombinationDeploymentPlan deployment = preview.Deployment!;
             runtimePlan = preview.Runtime;
 
             if (_enableConflictDetection)
             {
                 string[] deploymentTargets = deployment.RemoveTargets
-                    .Concat(deployment.InstallSources.Select(item => Path.Combine(repository.TargetPath, Path.GetFileName(item)))).ToArray();
+                    .Concat(deployment.InstallSources.Select(item => ModDeploymentLayout.DeployedPath(repository.TargetPath, item))).ToArray();
                 List<string> conflicts = await Task.Run(() => deployment.InstallSources.SelectMany(source => DetectModFileConflicts(
                     source, repository.TargetPath, deploymentTargets))
                     .Distinct(StringComparer.OrdinalIgnoreCase).Take(100).ToList());
@@ -147,14 +149,14 @@ public sealed partial class MainWindow
             deployment = fresh.Deployment!;
             runtimePlan = fresh.Runtime;
             string[] affected = deployment.RemoveTargets.Concat(deployment.InstallSources.Select(source =>
-                Path.Combine(repository.TargetPath, Path.GetFileName(source)))).Distinct(StringComparer.OrdinalIgnoreCase).ToArray();
+                ModDeploymentLayout.DeployedPath(repository.TargetPath, source))).Distinct(StringComparer.OrdinalIgnoreCase).ToArray();
             if (affected.Length > 0)
                 transaction = await CreateInstallTransactionAsync(T("CombinationPresets.RestoreCombination", profile.Name), repository, affected);
             started = true;
             foreach (string target in deployment.RemoveTargets) await Task.Run(() => DeleteDirectoryTreeSafely(target));
             foreach (string source in deployment.InstallSources)
             {
-                await DeployModAsync(source, Path.Combine(repository.TargetPath, Path.GetFileName(source)), repository,
+                await DeployModAsync(source, ModDeploymentLayout.DeployedPath(repository.TargetPath, source), repository,
                     new Progress<ProgressInfo>(info => UpdateProgress(info.Percent, T("CombinationPresets.RestoringCombination") + Path.GetFileName(source))));
             }
             var actual = await Task.Run(() => ModCombinationDeploymentPolicy.Capture(repository.SourcePath, repository.TargetPath));

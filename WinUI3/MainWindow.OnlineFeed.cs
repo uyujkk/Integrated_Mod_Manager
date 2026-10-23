@@ -3,7 +3,6 @@ using System.Net;
 using System.Security.Cryptography;
 using System.Text;
 using System.Text.Json;
-using System.Text.RegularExpressions;
 using IntegratedModManager.Core.Endfield;
 using IntegratedModManager.Core.Online;
 using IntegratedModManager.Data;
@@ -830,8 +829,8 @@ public sealed partial class MainWindow
         }
 
         JsonElement metadata = root.TryGetProperty("_aMetadata", out JsonElement metadataElement) ? metadataElement : default;
-        int totalCount = TryGetInt32Property(metadata, "_nRecordCount");
-        int responsePageSize = Math.Max(1, TryGetInt32Property(metadata, "_nPerpage"));
+        int totalCount = GameBananaJson.Int32(metadata, "_nRecordCount");
+        int responsePageSize = Math.Max(1, GameBananaJson.Int32(metadata, "_nPerpage"));
 
         if (!root.TryGetProperty("_aRecords", out JsonElement recordsElement) || recordsElement.ValueKind != JsonValueKind.Array)
         {
@@ -853,103 +852,24 @@ public sealed partial class MainWindow
 
     private OnlineModCard? ParseGameBananaCategoryMod(JsonElement record, bool useEndfieldMetadata)
     {
-        if (record.ValueKind != JsonValueKind.Object)
+        OnlineModCard? card = GameBananaListingParser.ParseRecord(record, DateTimeOffset.Now);
+        if (card is null)
         {
             return null;
         }
 
-        int itemId = TryGetInt32Property(record, "_idRow");
-        if (itemId <= 0)
+        string categoryName = card.CharacterName;
+        card.CharacterName = ResolveOnlineCharacterName(categoryName, card.Title, useEndfieldMetadata);
+        card.IsCharacterNameInferred = IsGenericOnlineCharacterName(categoryName)
+            && !string.Equals(card.CharacterName, categoryName, StringComparison.OrdinalIgnoreCase);
+        if (string.IsNullOrWhiteSpace(card.Author))
         {
-            return null;
+            card.Author = T("OnlineFeed.UnknownAuthor");
         }
 
-        string title = TryGetStringProperty(record, "_sName") ?? $"Mod {itemId}";
-        string profileUrl = TryGetStringProperty(record, "_sProfileUrl") ?? $"https://gamebanana.com/mods/{itemId}";
-        string author = string.Empty;
-        int authorId = 0;
-        if (record.TryGetProperty("_aSubmitter", out JsonElement submitterElement))
-        {
-            author = TryGetStringProperty(submitterElement, "_sName") ?? string.Empty;
-            authorId = TryGetInt32Property(submitterElement, "_idRow");
-        }
-
-        string rootCategoryName = string.Empty;
-        if (record.TryGetProperty("_aRootCategory", out JsonElement rootCategoryElement))
-        {
-            rootCategoryName = TryGetStringProperty(rootCategoryElement, "_sName") ?? string.Empty;
-        }
-
-        string characterName = string.Empty;
-        string categoryId = string.Empty;
-        if (record.TryGetProperty("_aSubCategory", out JsonElement subCategoryElement))
-        {
-            characterName = TryGetStringProperty(subCategoryElement, "_sName") ?? string.Empty;
-            string? categoryUrl = TryGetStringProperty(subCategoryElement, "_sProfileUrl");
-            categoryId = ExtractTrailingNumericId(categoryUrl);
-        }
-
-        string? previewUrl = null;
-        if (record.TryGetProperty("_aPreviewMedia", out JsonElement previewMediaElement)
-            && previewMediaElement.ValueKind == JsonValueKind.Object
-            && previewMediaElement.TryGetProperty("_aImages", out JsonElement imagesElement)
-            && imagesElement.ValueKind == JsonValueKind.Array)
-        {
-            foreach (JsonElement imageElement in imagesElement.EnumerateArray())
-            {
-                string? baseUrl = TryGetStringProperty(imageElement, "_sBaseUrl");
-                string? fileName = TryGetStringProperty(imageElement, "_sFile220")
-                    ?? TryGetStringProperty(imageElement, "_sFile530")
-                    ?? TryGetStringProperty(imageElement, "_sFile100")
-                    ?? TryGetStringProperty(imageElement, "_sFile");
-                if (!string.IsNullOrWhiteSpace(baseUrl) && !string.IsNullOrWhiteSpace(fileName))
-                {
-                    previewUrl = $"{baseUrl}/{fileName}";
-                    break;
-                }
-            }
-        }
-
-        long updatedEpoch = TryGetInt64Property(record, "_tsDateModified");
-        if (updatedEpoch <= 0)
-        {
-            updatedEpoch = TryGetInt64Property(record, "_tsDateUpdated");
-        }
-        if (updatedEpoch <= 0)
-        {
-            updatedEpoch = TryGetInt64Property(record, "_tsDateAdded");
-        }
-
-        int likes = TryGetInt32Property(record, "_nLikeCount");
-        int views = TryGetInt32Property(record, "_nViewCount");
-        int downloads = TryGetInt32Property(record, "_nDownloadCount");
-        DateTimeOffset updatedAt = FromGameBananaUnixTime(updatedEpoch);
-
-        string resolvedCharacterName = ResolveOnlineCharacterName(characterName, title, useEndfieldMetadata);
-        bool isCharacterNameInferred = IsGenericOnlineCharacterName(characterName)
-            && !string.Equals(resolvedCharacterName, characterName, StringComparison.OrdinalIgnoreCase);
-        return new OnlineModCard
-        {
-            ItemId = itemId,
-            Title = title,
-            CharacterName = resolvedCharacterName,
-            CategoryId = categoryId,
-            IsCharacterNameInferred = isCharacterNameInferred,
-            RootCategoryName = string.IsNullOrWhiteSpace(rootCategoryName) ? "Skins" : rootCategoryName,
-            Author = string.IsNullOrWhiteSpace(author) ? T("OnlineFeed.UnknownAuthor") : author,
-            AuthorId = authorId,
-            Likes = likes,
-            Views = views,
-            Downloads = downloads,
-            HotnessScore = CalculateOnlineHotness(likes, views, downloads),
-            PreviewUrl = previewUrl,
-            ProfileUrl = profileUrl,
-            DownloadUrl = $"https://gamebanana.com/mods/download/{itemId}",
-            FileSizeBytes = 0,
-            HasUpdates = false,
-            UpdatedAt = updatedAt
-        };
+        return card;
     }
+
 
     private async Task<OnlineModCard?> FetchGameBananaModCardAsyncV2(
         int itemId, bool useEndfieldMetadata = false, CancellationToken cancellationToken = default)
@@ -968,13 +888,13 @@ public sealed partial class MainWindow
             Author = string.IsNullOrWhiteSpace(metadata.Author) ? T("OnlineFeed.UnknownAuthor") : metadata.Author,
             AuthorId = metadata.AuthorId,
             Likes = metadata.Likes, Views = metadata.Views, Downloads = metadata.Downloads,
-            HotnessScore = CalculateOnlineHotness(metadata.Likes, metadata.Views, metadata.Downloads),
+            HotnessScore = GameBananaListingParser.Hotness(metadata.Likes, metadata.Views, metadata.Downloads),
             PreviewUrl = metadata.PreviewUrl, ProfileUrl = metadata.ProfileUrl,
             DownloadUrl = file?.DownloadUrl ?? metadata.FallbackDownloadUrl,
             DownloadFileName = file?.FileName ?? string.Empty, DownloadFiles = metadata.DownloadFiles.ToList(),
             DownloadFileId = file?.FileId ?? string.Empty,
             FileSizeBytes = file?.FileSizeBytes ?? 0, HasUpdates = metadata.HasUpdates,
-            UpdatedAt = FromGameBananaUnixTime(metadata.UpdatedEpoch)
+            UpdatedAt = GameBananaJson.UnixTime(metadata.UpdatedEpoch, DateTimeOffset.Now)
         };
     }
 
@@ -1028,8 +948,9 @@ public sealed partial class MainWindow
                 GetGameBananaDownloadMetricCacheFile(itemId),
                 JsonSerializer.Serialize(entry));
         }
-        catch
+        catch (Exception ex)
         {
+            LogApplicationIssue("Write download count cache", ex);
         }
     }
 
@@ -1075,7 +996,7 @@ public sealed partial class MainWindow
         {
             if (mod.Downloads == downloads) return 0;
             mod.Downloads = Math.Max(0, downloads);
-            mod.HotnessScore = CalculateOnlineHotness(mod.Likes, mod.Views, mod.Downloads);
+            mod.HotnessScore = GameBananaListingParser.Hotness(mod.Likes, mod.Views, mod.Downloads);
             return 1;
         }
     }
@@ -1120,127 +1041,12 @@ public sealed partial class MainWindow
             searchText, character?.AllNames);
     }
 
-    private static double CalculateOnlineHotness(int likes, int views, int downloads)
-    {
-        double downloadPart = Math.Log10(downloads + 1) * 0.55d;
-        double likePart = Math.Log10(likes + 1) * 0.30d;
-        double viewPart = Math.Log10(views + 1) * 0.15d;
-        double weighted = downloadPart + likePart + viewPart;
-        double normalized = Math.Min(10d, weighted * 2d);
-        return Math.Round(normalized, 2, MidpointRounding.AwayFromZero);
-    }
 
-    private static DateTimeOffset FromGameBananaUnixTime(long value)
-    {
-        if (value <= 0)
-        {
-            return DateTimeOffset.Now;
-        }
 
-        try
-        {
-            return DateTimeOffset.FromUnixTimeSeconds(value).ToLocalTime();
-        }
-        catch (ArgumentOutOfRangeException)
-        {
-            return DateTimeOffset.Now;
-        }
-    }
 
-    private static string? TryGetStringProperty(JsonElement element, string propertyName)
-    {
-        if (element.ValueKind != JsonValueKind.Object)
-        {
-            return null;
-        }
 
-        if (element.TryGetProperty(propertyName, out JsonElement propertyElement))
-        {
-            return propertyElement.ValueKind switch
-            {
-                JsonValueKind.String => propertyElement.GetString(),
-                JsonValueKind.Number or JsonValueKind.True or JsonValueKind.False => propertyElement.ToString(),
-                _ => null
-            };
-        }
 
-        return null;
-    }
 
-    private static long TryGetInt64Property(JsonElement element, string propertyName)
-    {
-        if (element.ValueKind != JsonValueKind.Object || !element.TryGetProperty(propertyName, out JsonElement propertyElement))
-        {
-            return 0;
-        }
-
-        return TryReadInt64(propertyElement);
-    }
-
-    private static int TryGetInt32Property(JsonElement element, string propertyName)
-    {
-        if (element.ValueKind != JsonValueKind.Object || !element.TryGetProperty(propertyName, out JsonElement propertyElement))
-        {
-            return 0;
-        }
-
-        long value = TryReadInt64(propertyElement);
-        if (value > int.MaxValue)
-        {
-            return int.MaxValue;
-        }
-
-        if (value < int.MinValue)
-        {
-            return int.MinValue;
-        }
-
-        return (int)value;
-    }
-
-    private static long TryReadInt64(JsonElement element)
-    {
-        if (element.TryGetInt64(out long int64Value))
-        {
-            return int64Value;
-        }
-
-        if (element.ValueKind == JsonValueKind.Number && element.TryGetDouble(out double doubleValue))
-        {
-            return (long)Math.Round(doubleValue, MidpointRounding.AwayFromZero);
-        }
-
-        if (element.ValueKind == JsonValueKind.String)
-        {
-            string? text = element.GetString();
-            if (!string.IsNullOrWhiteSpace(text))
-            {
-                string normalized = text.Replace(",", string.Empty).Trim();
-                if (long.TryParse(normalized, NumberStyles.Any, CultureInfo.InvariantCulture, out long parsedLong))
-                {
-                    return parsedLong;
-                }
-
-                if (double.TryParse(normalized, NumberStyles.Any, CultureInfo.InvariantCulture, out double parsedDouble))
-                {
-                    return (long)Math.Round(parsedDouble, MidpointRounding.AwayFromZero);
-                }
-            }
-        }
-
-        return 0;
-    }
-
-    private static string ExtractTrailingNumericId(string? url)
-    {
-        if (string.IsNullOrWhiteSpace(url))
-        {
-            return string.Empty;
-        }
-
-        Match match = Regex.Match(url, @"(?<id>\d+)/?$", RegexOptions.CultureInvariant);
-        return match.Success ? match.Groups["id"].Value : string.Empty;
-    }
 
     private async void OnOnlinePrevPageClicked(object sender, RoutedEventArgs e)
     {
@@ -1363,8 +1169,9 @@ public sealed partial class MainWindow
             string json = JsonSerializer.Serialize(entry);
             await File.WriteAllTextAsync(GetOnlineCategoryPageCacheFile(categoryId, result.Page), json);
         }
-        catch
+        catch (Exception ex)
         {
+            LogApplicationIssue("Write online page cache", ex);
         }
     }
 }

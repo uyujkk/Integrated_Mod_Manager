@@ -1,4 +1,4 @@
-namespace ModFolderCopier.WinUI;
+namespace IntegratedModManager.Core.Online;
 
 public sealed class OnlineCharacterOption
 {

@@ -9,5 +9,8 @@ public sealed class ModPersistentSlot
     public string ModRelativePath { get; set; } = string.Empty;
     public string Name { get; set; } = string.Empty;
     public DateTimeOffset SavedAtUtc { get; set; } = DateTimeOffset.UtcNow;
+    // Set when the slot is saved, updated, imported as active or restored. The slot of a Mod with
+    // the latest time is shown as its current variant.
+    public DateTimeOffset? ActivatedAtUtc { get; set; }
     public List<ModPersistentValue> Values { get; set; } = [];
 }

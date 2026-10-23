@@ -1,5 +1,6 @@
 using System.Diagnostics;
 using System.Globalization;
+using IntegratedModManager.Core.Online;
 using Microsoft.UI.Xaml;
 using Microsoft.UI.Xaml.Controls;
 
@@ -168,6 +169,7 @@ public sealed partial class MainWindow
             SourcePath = result.SourcePath.Trim(),
             TargetPath = result.TargetPath.Trim(),
             UseDirectoryLinks = result.UseDirectoryLinks,
+            AllowMultipleModsPerCharacter = result.AllowMultipleModsPerCharacter,
             LauncherPath = result.LauncherPath.Trim(),
             OnlineSourceSite = result.OnlineSourceSite.Trim(),
             OnlineGameName = result.OnlineGameName.Trim(),
@@ -351,6 +353,7 @@ public sealed partial class MainWindow
             repository.SourcePath = result.SourcePath.Trim();
             repository.TargetPath = result.TargetPath.Trim();
             repository.UseDirectoryLinks = result.UseDirectoryLinks;
+            repository.AllowMultipleModsPerCharacter = result.AllowMultipleModsPerCharacter;
             repository.LauncherPath = result.LauncherPath.Trim();
             repository.OnlineSourceSite = result.OnlineSourceSite.Trim();
             repository.OnlineGameName = result.OnlineGameName.Trim();
@@ -502,7 +505,7 @@ public sealed partial class MainWindow
                     return;
                 }
 
-                string mappingKey = GetCharacterMappingKey(character);
+                string mappingKey = OnlineCharacterCatalogMatcher.MappingKey(character);
                 bool hasManualMapping = repository.CharacterCategoryMappings.TryGetValue(mappingKey, out string? mappedCategoryId)
                     && !string.IsNullOrWhiteSpace(mappedCategoryId);
                 categoryIdBox.Text = hasManualMapping ? mappedCategoryId! : character.CategoryId;
@@ -555,7 +558,7 @@ public sealed partial class MainWindow
                 return;
             }
 
-            string selectedMappingKey = GetCharacterMappingKey(selectedCharacter);
+            string selectedMappingKey = OnlineCharacterCatalogMatcher.MappingKey(selectedCharacter);
             if (result == ContentDialogResult.Primary)
             {
                 string categoryId = categoryIdBox.Text.Trim();

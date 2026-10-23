@@ -289,8 +289,7 @@ public static class DirectoryLinkDeployment
                 continue;
             }
 
-            string siblingName = Path.GetFileName(fullSiblingSource);
-            string deployedPath = Path.Combine(fullLoaderRoot, siblingName);
+            string deployedPath = ModDeploymentLayout.DeployedPath(fullLoaderRoot, fullSiblingSource);
             if (!IsDirectoryLink(deployedPath))
             {
                 continue;

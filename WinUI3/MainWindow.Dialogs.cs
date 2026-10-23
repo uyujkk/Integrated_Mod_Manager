@@ -455,6 +455,12 @@ public sealed partial class MainWindow
             Content = T("Dialogs.DeployWithDirectoryJunctionsRepositoryAnd")
         };
 
+        CheckBox multipleModsBox = new()
+        {
+            IsChecked = initial.AllowMultipleModsPerCharacter,
+            Content = T("Dialogs.AllowSeveralModsPerCharacterByDefault")
+        };
+
         TextBox launcherBox = new()
         {
             Text = initial.LauncherPath,
@@ -504,6 +510,7 @@ public sealed partial class MainWindow
         panel.Children.Add(CreateLabeledEditor(T("Dialogs.ModStoragePath"), sourceBox));
         panel.Children.Add(CreateLabeledEditor(T("Dialogs.TargetPath"), targetBox));
         panel.Children.Add(linkDeploymentBox);
+        panel.Children.Add(multipleModsBox);
         panel.Children.Add(CreateLabeledEditor(T("Dialogs.LauncherPath"), launcherBox));
         panel.Children.Add(CreateLabeledEditor(T("Common.OnlineSource"), siteBox));
         panel.Children.Add(CreateLabeledEditor(T("Dialogs.TargetGame"), gameBox));
@@ -534,6 +541,7 @@ public sealed partial class MainWindow
             SourcePath = sourceBox.Text,
             TargetPath = targetBox.Text,
             UseDirectoryLinks = linkDeploymentBox.IsChecked == true,
+            AllowMultipleModsPerCharacter = multipleModsBox.IsChecked == true,
             LauncherPath = launcherBox.Text,
             OnlineSourceSite = siteBox.Text,
             OnlineGameName = gameBox.Text,

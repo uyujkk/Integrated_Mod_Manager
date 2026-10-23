@@ -95,6 +95,7 @@ public sealed partial class MainWindow
             if (!Enum.IsDefined(_shortcutInputMode)) _shortcutInputMode = ShortcutInputMode.ScanCode;
             _shortcutOverlayOpacity = Math.Clamp(config?.ShortcutOverlayOpacity ?? 100, ShortcutOverlayWindow.MinimumOpacity, 100);
             _shortcutHideUnsupported = config?.ShortcutHideUnsupported ?? false;
+            _overlaySlotSwitchEnabled = config?.OverlaySlotSwitchEnabled ?? false;
             _overlayTextBrush.Color = ParseOverlayTextColor(config?.ShortcutOverlayTextColor);
             _lastModUpdateCheckUtc = TryParseDateTimeOffset(config?.LastModUpdateCheckUtc);
             _latestReleaseTag = config?.LatestReleaseTag;
@@ -185,6 +186,8 @@ public sealed partial class MainWindow
         foreach (WorkspaceRepository repository in _repositories)
         {
             repository.CharacterCategoryMappings ??= [];
+            repository.CharacterAvatarBindings ??= [];
+            repository.CharacterSelectionOverrides ??= [];
             RepositoryPresetInfo? preset = BuiltInRepositoryPresets.FirstOrDefault(candidate =>
                 IsRepositoryForPreset(repository, candidate));
             if (preset is null)
@@ -235,6 +238,7 @@ public sealed partial class MainWindow
                 ShortcutInputMode = _shortcutInputMode.ToString(),
                 ShortcutOverlayOpacity = _shortcutOverlayOpacity,
                 ShortcutHideUnsupported = _shortcutHideUnsupported,
+                OverlaySlotSwitchEnabled = _overlaySlotSwitchEnabled,
                 ShortcutOverlayTextColor = OverlayTextColorValue,
                 LastModUpdateCheckUtc = _lastModUpdateCheckUtc?.ToString("O"),
                 LatestReleaseTag = _latestReleaseTag,

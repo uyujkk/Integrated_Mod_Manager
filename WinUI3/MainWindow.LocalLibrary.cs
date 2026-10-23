@@ -206,6 +206,8 @@ public sealed partial class MainWindow
         };
         renameItem.Click += OnRenameFirstLevelClicked;
         menu.Items.Add(renameItem);
+        AddCharacterSelectionMenuItem(menu, item);
+        AddCharacterAvatarMenuItems(menu, item);
         menu.ShowAt(element);
         e.Handled = true;
     }
@@ -697,6 +699,7 @@ public sealed partial class MainWindow
             _allFirstLevelItems.AddRange(loaded.Items);
             timing?.SetCounts(loaded.SecondCount);
             ApplyFirstLevelFilter();
+            _ = RefreshCharacterFolderAvatarsAsync();
             FirstCountTextBlock.Text = _allFirstLevelItems.Count.ToString();
             SecondCountTextBlock.Text = loaded.SecondCount.ToString();
             StatusTextBlock.Text = loaded.Warnings == 0
@@ -839,7 +842,7 @@ public sealed partial class MainWindow
         IReadOnlyList<string> siblingLinksToReplace = Array.Empty<string>();
         try
         {
-            if (!targetExists && repository.UseDirectoryLinks)
+            if (!targetExists && repository.UseDirectoryLinks && !AllowsMultipleMods(repository, item.Path))
             {
                 siblingLinksToReplace = await Task.Run(() =>
                     DirectoryLinkDeployment.FindSiblingLinksToReplace(item.Path, repository.SourcePath, targetDir));
@@ -1138,7 +1141,7 @@ public sealed partial class MainWindow
 
     private static string GetTargetDirectoryPath(string targetDir, string sourceDirectoryPath)
     {
-        return Path.Combine(targetDir, Path.GetFileName(sourceDirectoryPath));
+        return ModDeploymentLayout.DeployedPath(targetDir, sourceDirectoryPath);
     }
 
     private string GetFolderCopyState(string targetDir, string directoryPath)

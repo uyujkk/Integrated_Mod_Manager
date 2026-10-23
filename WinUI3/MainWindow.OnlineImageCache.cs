@@ -227,8 +227,9 @@ public sealed partial class MainWindow
                 }
             }
         }
-        catch
+        catch (Exception ex)
         {
+            LogApplicationIssue("Trim online image cache", ex);
         }
     }
 }

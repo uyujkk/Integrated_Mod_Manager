@@ -10,6 +10,8 @@ public sealed class RepositoryEditorResult
 
     public bool UseDirectoryLinks { get; set; }
 
+    public bool AllowMultipleModsPerCharacter { get; set; }
+
     public string LauncherPath { get; set; } = string.Empty;
 
     public string OnlineSourceSite { get; set; } = string.Empty;

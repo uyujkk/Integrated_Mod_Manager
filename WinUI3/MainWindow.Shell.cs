@@ -608,8 +608,9 @@ public sealed partial class MainWindow
         {
             _lastFocusedTextBox.Select(0, 0);
         }
-        catch
+        catch (Exception)
         {
+            // The text box may already be unloaded; clearing its selection is cosmetic.
         }
     }
 
