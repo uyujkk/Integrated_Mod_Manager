@@ -1,5 +1,3 @@
-using System.Globalization;
-using System.Text;
 using System.Text.Json;
 using IntegratedModManager.Core;
 using Microsoft.UI.Windowing;
@@ -43,7 +41,7 @@ public sealed partial class MainWindow
 
         try
         {
-            string shellJson = ReadConfigurationTextWithRecovery(_shellConfigPath, IsValidShellConfiguration);
+            string shellJson = ReadConfigurationTextWithRecovery(_shellConfigPath, ConfigurationFileStore.IsJsonObject);
             BetaShellConfig? config = JsonSerializer.Deserialize<BetaShellConfig>(shellJson);
             if (config?.Repositories is { Count: > 0 })
             {
@@ -317,101 +315,21 @@ public sealed partial class MainWindow
 
         try
         {
-            string configText = ReadConfigurationTextWithRecovery(_configPath, IsValidLegacyConfiguration);
-            foreach (string line in configText.Split(["\r\n", "\n"], StringSplitOptions.RemoveEmptyEntries))
+            LegacyConfig config = LegacyConfigFile.Parse(ReadConfigurationTextWithRecovery(_configPath, LegacyConfigFile.IsValid));
+            if (config.SourceDirectory is not null) SourceTextBox.Text = config.SourceDirectory;
+            if (config.TargetDirectory is not null) TargetTextBox.Text = config.TargetDirectory;
+            if (config.LauncherPath is not null) LauncherTextBox.Text = config.LauncherPath;
+            if (config.DarkTheme is bool darkTheme) _isDarkTheme = darkTheme;
+            if (config.Language is not null)
             {
-                if (line.StartsWith("source_dir=", StringComparison.Ordinal))
-                {
-                    SourceTextBox.Text = DecodeValue(line["source_dir=".Length..]);
-                }
-                else if (line.StartsWith("target_dir=", StringComparison.Ordinal))
-                {
-                    TargetTextBox.Text = DecodeValue(line["target_dir=".Length..]);
-                }
-                else if (line.StartsWith("launcher_path=", StringComparison.Ordinal))
-                {
-                    LauncherTextBox.Text = DecodeValue(line["launcher_path=".Length..]);
-                }
-                else if (line.StartsWith("theme=", StringComparison.Ordinal))
-                {
-                    _isDarkTheme = string.Equals(DecodeValue(line["theme=".Length..]), "dark", StringComparison.OrdinalIgnoreCase);
-                }
-                else if (line.StartsWith("language=", StringComparison.Ordinal))
-                {
-                    string language = DecodeValue(line["language=".Length..]);
-                    _currentLanguage = string.Equals(language, "en", StringComparison.OrdinalIgnoreCase)
-                        ? AppLanguage.EnUs
-                        : AppLanguage.ZhCn;
-                }
-                else if (line.StartsWith("binding=", StringComparison.Ordinal))
-                {
-                    string[] parts = line["binding=".Length..].Split('\t');
-                    if (parts.Length == 3)
-                    {
-                        string modPath = DecodeValue(parts[0]);
-                        if (!_modBindings.TryGetValue(modPath, out List<ShortcutBinding>? bindings))
-                        {
-                            bindings = [];
-                            _modBindings[modPath] = bindings;
-                        }
-
-                        bindings.Add(new ShortcutBinding(DecodeValue(parts[1]), DecodeValue(parts[2])));
-                    }
-                }
-                else if (line.StartsWith("binding_auto=", StringComparison.Ordinal))
-                {
-                    string[] parts = line["binding_auto=".Length..].Split('\t');
-                    if (parts.Length == 6
-                        && int.TryParse(DecodeValue(parts[1]), NumberStyles.Integer, CultureInfo.InvariantCulture, out int bindingIndex))
-                    {
-                        string modPath = DecodeValue(parts[0]);
-                        if (_modBindings.TryGetValue(modPath, out List<ShortcutBinding>? bindings)
-                            && bindingIndex >= 0
-                            && bindingIndex < bindings.Count)
-                        {
-                            ShortcutBinding binding = bindings[bindingIndex];
-                            binding.AutoSection = DecodeValue(parts[2]);
-                            binding.AutoBehavior = DecodeValue(parts[3]);
-                            binding.AutoTarget = DecodeValue(parts[4]);
-                            binding.AutoSourceFile = DecodeValue(parts[5]);
-                        }
-                    }
-                }
-                else if (line.StartsWith("mod_link=", StringComparison.Ordinal))
-                {
-                    string[] parts = line["mod_link=".Length..].Split('\t');
-                    if (parts.Length == 2)
-                    {
-                        _modLinks[DecodeValue(parts[0])] = DecodeValue(parts[1]);
-                    }
-                }
-                else if (line.StartsWith("mod_origin=", StringComparison.Ordinal))
-                {
-                    string[] parts = line["mod_origin=".Length..].Split('\t');
-                    if (parts.Length >= 7)
-                    {
-                        string path = DecodeValue(parts[0]);
-                        if (string.IsNullOrWhiteSpace(path))
-                        {
-                            continue;
-                        }
-
-                        int.TryParse(DecodeValue(parts[2]), out int itemId);
-                        _trackedModOrigins[path] = new TrackedModOrigin
-                        {
-                            Path = path,
-                            SourceSite = DecodeValue(parts[1]),
-                            ItemId = itemId,
-                            Title = DecodeValue(parts[3]),
-                            ProfileUrl = DecodeValue(parts[4]),
-                            PreviewUrl = DecodeValue(parts[5]),
-                            LastKnownUpdatedAt = TryParseDateTimeOffset(DecodeValue(parts[6])),
-                            DownloadFileId = parts.Length > 7 ? DecodeValue(parts[7]) : string.Empty,
-                            DownloadFileName = parts.Length > 8 ? DecodeValue(parts[8]) : string.Empty
-                        };
-                    }
-                }
+                _currentLanguage = string.Equals(config.Language, "en", StringComparison.OrdinalIgnoreCase)
+                    ? AppLanguage.EnUs
+                    : AppLanguage.ZhCn;
             }
+
+            foreach ((string modPath, List<ShortcutBinding> bindings) in config.Bindings) _modBindings[modPath] = bindings;
+            foreach ((string modPath, string link) in config.ModLinks) _modLinks[modPath] = link;
+            foreach ((string modPath, TrackedModOrigin origin) in config.ModOrigins) _trackedModOrigins[modPath] = origin;
         }
         catch (Exception ex)
         {
@@ -434,61 +352,19 @@ public sealed partial class MainWindow
         {
             SaveSelectedRepositoryFromInputs();
 
-            var lines = new List<string>
+            var config = new LegacyConfig
             {
-                "source_dir=" + EncodeValue(SourceTextBox.Text ?? string.Empty),
-                "target_dir=" + EncodeValue(TargetTextBox.Text ?? string.Empty),
-                "launcher_path=" + EncodeValue(LauncherTextBox.Text ?? string.Empty),
-                "theme=" + EncodeValue(_isDarkTheme ? "dark" : "light"),
-                "language=" + EncodeValue(_currentLanguage == AppLanguage.EnUs ? "en" : "zh")
+                SourceDirectory = SourceTextBox.Text ?? string.Empty,
+                TargetDirectory = TargetTextBox.Text ?? string.Empty,
+                LauncherPath = LauncherTextBox.Text ?? string.Empty,
+                DarkTheme = _isDarkTheme,
+                Language = _currentLanguage == AppLanguage.EnUs ? "en" : "zh"
             };
+            foreach ((string modPath, List<ShortcutBinding> bindings) in _modBindings) config.Bindings[modPath] = bindings;
+            foreach ((string modPath, string link) in _modLinks) config.ModLinks[modPath] = link;
+            foreach ((string modPath, TrackedModOrigin origin) in _trackedModOrigins) config.ModOrigins[modPath] = origin;
 
-            foreach ((string path, List<ShortcutBinding> bindings) in _modBindings.OrderBy(item => item.Key, StringComparer.CurrentCultureIgnoreCase))
-            {
-                for (int bindingIndex = 0; bindingIndex < bindings.Count; bindingIndex++)
-                {
-                    ShortcutBinding binding = bindings[bindingIndex];
-                    if (string.IsNullOrWhiteSpace(binding.Shortcut) && string.IsNullOrWhiteSpace(binding.Action))
-                    {
-                        continue;
-                    }
-
-                    lines.Add("binding=" + EncodeValue(path) + "\t" + EncodeValue(binding.Shortcut) + "\t" + EncodeValue(binding.Action));
-                    if (binding.HasAutoDescription)
-                    {
-                        lines.Add("binding_auto="
-                            + EncodeValue(path) + "\t"
-                            + EncodeValue(bindingIndex.ToString(CultureInfo.InvariantCulture)) + "\t"
-                            + EncodeValue(binding.AutoSection) + "\t"
-                            + EncodeValue(binding.AutoBehavior) + "\t"
-                            + EncodeValue(binding.AutoTarget) + "\t"
-                            + EncodeValue(binding.AutoSourceFile));
-                    }
-                }
-            }
-
-            foreach ((string path, string link) in _modLinks.OrderBy(item => item.Key, StringComparer.CurrentCultureIgnoreCase))
-            {
-                if (!string.IsNullOrWhiteSpace(link))
-                {
-                    lines.Add("mod_link=" + EncodeValue(path) + "\t" + EncodeValue(link));
-                }
-            }
-
-            foreach ((string path, TrackedModOrigin origin) in _trackedModOrigins.OrderBy(item => item.Key, StringComparer.CurrentCultureIgnoreCase))
-            {
-                lines.Add("mod_origin="
-                    + EncodeValue(path) + "\t"
-                    + EncodeValue(origin.SourceSite) + "\t"
-                    + EncodeValue(origin.ItemId.ToString()) + "\t"
-                    + EncodeValue(origin.Title) + "\t"
-                    + EncodeValue(origin.ProfileUrl) + "\t"
-                    + EncodeValue(origin.PreviewUrl ?? string.Empty) + "\t"
-                    + EncodeValue(origin.LastKnownUpdatedAt?.ToString("O") ?? string.Empty) + "\t"
-                    + EncodeValue(origin.DownloadFileId) + "\t" + EncodeValue(origin.DownloadFileName));
-            }
-
-            WriteConfigurationTextWithBackup(_configPath, string.Join(Environment.NewLine, lines) + Environment.NewLine);
+            WriteConfigurationTextWithBackup(_configPath, LegacyConfigFile.Format(config));
             SaveShellConfig();
             return true;
         }
@@ -502,145 +378,19 @@ public sealed partial class MainWindow
 
     private string ReadConfigurationTextWithRecovery(string filePath, Func<string, bool> validator)
     {
-        try
-        {
-            string text = File.ReadAllText(filePath, Encoding.UTF8);
-            if (!validator(text))
-            {
-                throw new InvalidDataException($"Invalid configuration file: {Path.GetFileName(filePath)}");
-            }
-
-            return text;
-        }
-        catch when (TryRestoreLatestConfigurationBackup(filePath, validator, out string restoredText))
+        ConfigurationReadResult result = _configurationFiles.Read(filePath, validator);
+        if (result.RestoredFromBackup)
         {
             StatusTextBlock.Text = L(
                 $"配置 {Path.GetFileName(filePath)} 损坏，已自动恢复最近备份。",
                 $"{Path.GetFileName(filePath)} was damaged and the latest backup was restored automatically.");
-            return restoredText;
         }
+
+        return result.Text;
     }
 
     private void WriteConfigurationTextWithBackup(string filePath, string content)
     {
-        string directory = Path.GetDirectoryName(filePath) ?? AppContext.BaseDirectory;
-        Directory.CreateDirectory(directory);
-
-        if (File.Exists(filePath)
-            && (!_lastConfigurationBackupUtc.TryGetValue(filePath, out DateTimeOffset lastBackup)
-                || DateTimeOffset.UtcNow - lastBackup >= TimeSpan.FromMinutes(10)))
-        {
-            Directory.CreateDirectory(_configurationBackupPath);
-            string backupName = $"{Path.GetFileName(filePath)}.{DateTimeOffset.UtcNow:yyyyMMdd-HHmmssfff}.bak";
-            File.Copy(filePath, Path.Combine(_configurationBackupPath, backupName), overwrite: false);
-            _lastConfigurationBackupUtc[filePath] = DateTimeOffset.UtcNow;
-            PruneConfigurationBackups(filePath, keepCount: 10);
-        }
-
-        string temporaryPath = filePath + ".tmp-" + Guid.NewGuid().ToString("N");
-        try
-        {
-            File.WriteAllText(temporaryPath, content, new UTF8Encoding(encoderShouldEmitUTF8Identifier: false));
-            File.Move(temporaryPath, filePath, overwrite: true);
-        }
-        finally
-        {
-            if (File.Exists(temporaryPath))
-            {
-                File.Delete(temporaryPath);
-            }
-        }
-    }
-
-    private bool TryRestoreLatestConfigurationBackup(
-        string filePath,
-        Func<string, bool> validator,
-        out string restoredText)
-    {
-        restoredText = string.Empty;
-        try
-        {
-            if (!Directory.Exists(_configurationBackupPath))
-            {
-                return false;
-            }
-
-            foreach (string backupPath in Directory.EnumerateFiles(
-                         _configurationBackupPath,
-                         Path.GetFileName(filePath) + ".*.bak",
-                         SearchOption.TopDirectoryOnly)
-                     .OrderByDescending(File.GetLastWriteTimeUtc))
-            {
-                string candidate = File.ReadAllText(backupPath, Encoding.UTF8);
-                if (!validator(candidate))
-                {
-                    continue;
-                }
-
-                string restoreTemporaryPath = filePath + ".restore-" + Guid.NewGuid().ToString("N");
-                File.WriteAllText(restoreTemporaryPath, candidate, new UTF8Encoding(false));
-                File.Move(restoreTemporaryPath, filePath, overwrite: true);
-                restoredText = candidate;
-                return true;
-            }
-        }
-        catch
-        {
-        }
-
-        return false;
-    }
-
-    private void PruneConfigurationBackups(string filePath, int keepCount)
-    {
-        try
-        {
-            foreach (string staleBackup in Directory.EnumerateFiles(
-                         _configurationBackupPath,
-                         Path.GetFileName(filePath) + ".*.bak",
-                         SearchOption.TopDirectoryOnly)
-                     .OrderByDescending(File.GetLastWriteTimeUtc)
-                     .Skip(Math.Max(1, keepCount)))
-            {
-                File.Delete(staleBackup);
-            }
-        }
-        catch
-        {
-        }
-    }
-
-    private static bool IsValidShellConfiguration(string text)
-    {
-        try
-        {
-            using JsonDocument document = JsonDocument.Parse(text);
-            return document.RootElement.ValueKind == JsonValueKind.Object;
-        }
-        catch
-        {
-            return false;
-        }
-    }
-
-    private static bool IsValidLegacyConfiguration(string text)
-    {
-        return !string.IsNullOrWhiteSpace(text)
-            && text.Split(["\r\n", "\n"], StringSplitOptions.RemoveEmptyEntries)
-                .Any(line => line.StartsWith("source_dir=", StringComparison.Ordinal));
-    }
-
-    private static string EncodeValue(string value) => Convert.ToBase64String(Encoding.UTF8.GetBytes(value));
-
-    private static string DecodeValue(string value)
-    {
-        try
-        {
-            return Encoding.UTF8.GetString(Convert.FromBase64String(value));
-        }
-        catch
-        {
-            return string.Empty;
-        }
+        _configurationFiles.Write(filePath, content);
     }
 }

@@ -1,3 +1,5 @@
+using IntegratedModManager.Core;
+
 namespace ModFolderCopier.WinUI;
 
 public sealed class OnlineModDetails
