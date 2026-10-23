@@ -1,4 +1,4 @@
-namespace ModFolderCopier.WinUI;
+namespace IntegratedModManager.Core;
 
 public sealed class ModInstallBackupEntry
 {
