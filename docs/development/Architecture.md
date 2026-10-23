@@ -27,6 +27,7 @@ Every file keeps the `IntegratedModManager.Core` namespace; folders only group f
 | 目录 / Folder | 内容 / Contents |
 | --- | --- |
 | `Archives` | `ArchiveExtractor`（ZIP、7-Zip、Bandizip、Windows tar）、清单校验、`ArchiveErrors` 错误分类、导入布局。Extraction, listing validation, error kinds, import layout. |
+| `Configuration` | `config.ini` 的解析与生成（`LegacyConfigFile`）、配置文件的原子写入、备份与损坏恢复（`ConfigurationFileStore`）。config.ini parsing/formatting, atomic writes, backups and recovery. |
 | `Deployment` | 安装事务与回滚（`ModInstallTransactions`）、文件冲突检测、目录联接、组合部署、INI 冲突检测、旧库整理导入、角色文件夹规划。Install transactions and rollback, file conflicts, junctions, combination deployment, INI conflicts, library import, character folders. |
 | `Presets` | 组合预设、恢复预览、可迁移组合包。Combination presets, restore preview, portable bundles. |
 | `Online` | GameBanana 元数据与下载数、下载传输与会话、浏览与预览策略。GameBanana metadata, download transport and sessions, browse policies. |

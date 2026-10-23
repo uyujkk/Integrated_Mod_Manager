@@ -106,7 +106,7 @@ public sealed partial class MainWindow : Window
     private readonly string _onlinePageCachePath = Path.Combine(AppContext.BaseDirectory, "cache", "online-pages");
     private readonly string _onlineDetailsCachePath = Path.Combine(AppContext.BaseDirectory, "cache", "online-details");
     private readonly string _onlineCharacterCachePath = Path.Combine(AppContext.BaseDirectory, "cache", "online-characters");
-    private readonly string _configurationBackupPath = Path.Combine(AppContext.BaseDirectory, "backups", "config");
+    private readonly ConfigurationFileStore _configurationFiles = new(Path.Combine(AppContext.BaseDirectory, "backups", "config"));
     private readonly string _modInstallBackupPath = Path.Combine(AppContext.BaseDirectory, "backups", "mod-installs");
     private readonly HttpClient _httpClient = CreateHttpClient();
     private readonly RequestCooldown _onlineRateLimit = new();
@@ -122,7 +122,6 @@ public sealed partial class MainWindow : Window
     private readonly Dictionary<string, string> _modLinks = new(StringComparer.CurrentCultureIgnoreCase);
     private readonly Dictionary<string, TrackedModOrigin> _trackedModOrigins = new(StringComparer.CurrentCultureIgnoreCase);
     private readonly GameBananaMetadataService _gameBananaMetadataService;
-    private readonly Dictionary<string, DateTimeOffset> _lastConfigurationBackupUtc = new(StringComparer.OrdinalIgnoreCase);
     private readonly List<WorkspaceRepository> _repositories = [];
     private readonly List<OnlineModCard> _onlineMods = [];
     private readonly List<OnlineCharacterOption> _onlineCharacterOptions = [];
