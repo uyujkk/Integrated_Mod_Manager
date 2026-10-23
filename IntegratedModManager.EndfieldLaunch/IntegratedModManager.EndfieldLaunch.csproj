@@ -2,9 +2,6 @@
   <!-- SPDX-License-Identifier: AGPL-3.0-only. See LICENSE and NOTICE.md in this directory. -->
   <PropertyGroup>
     <TargetFramework>net8.0-windows</TargetFramework>
-    <ImplicitUsings>enable</ImplicitUsings>
-    <Nullable>enable</Nullable>
-    <LangVersion>latest</LangVersion>
     <RootNamespace>IntegratedModManager.EndfieldLaunch</RootNamespace>
     <PackageLicenseExpression>AGPL-3.0-only</PackageLicenseExpression>
     <Copyright>Copyright (c) 2026 EndfieldBridge contributors and Integrated Mod Manager contributors; upstream credits in NOTICE.md</Copyright>

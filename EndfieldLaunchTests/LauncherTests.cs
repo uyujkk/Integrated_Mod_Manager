@@ -2,7 +2,6 @@
 // Copyright (c) 2026 EndfieldBridge contributors and Integrated Mod Manager contributors.
 // Ported and extended from the EndfieldBridge 0.3.2 self-test; see ../IntegratedModManager.EndfieldLaunch/NOTICE.md.
 using System.Diagnostics;
-using IntegratedModManager.EndfieldLaunch;
 
 namespace IntegratedModManager.EndfieldLaunch.Tests;
 

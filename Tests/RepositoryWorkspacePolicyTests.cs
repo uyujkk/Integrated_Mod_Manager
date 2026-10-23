@@ -67,7 +67,7 @@ public sealed class RepositoryWorkspacePolicyTests
     public void PresentationChangesPreserveSelectionByPathRatherThanIndex()
     {
         string[] paths = [@"G:\Mods\A", @"G:\Mods\B"];
-        Assert.Equal(paths[1], RepositoryWorkspacePolicy.PreserveSelection(paths.Reverse(), @"g:\mods\b"));
+        Assert.Equal(paths[1], RepositoryWorkspacePolicy.PreserveSelection(paths.AsEnumerable().Reverse(), @"g:\mods\b"));
         Assert.Equal(paths[0], RepositoryWorkspacePolicy.PreserveSelection(paths, @"G:\Mods\missing"));
         Assert.Null(RepositoryWorkspacePolicy.PreserveSelection([], @"G:\Mods\B"));
     }

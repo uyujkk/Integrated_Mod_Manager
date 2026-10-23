@@ -15,6 +15,18 @@ Requires Windows, .NET SDK 8 and Visual Studio 2022/Build Tools with Windows app
 Use a new repository-local output directory: the script clears that directory. Never use user-data or running-app directories.
 建议每次使用新的仓库内输出目录，脚本会清理该目录；不能指向用户数据或运行中的测试应用。
 
+CI runs on every branch push (documentation-only pushes are skipped) and on pull requests to `main`.
+CI 在每个分支推送时运行（只改文档的推送除外），指向 `main` 的 PR 也会运行。
+
+## Code style / 代码风格
+
+```powershell
+./scripts/check-code-style.ps1
+```
+
+Builds every project with the `.editorconfig` rules enabled (for example IDE0005, unnecessary `using`) and fails on any finding. Shared compiler settings live in `Directory.Build.props`. CI runs this before `test-all`; locally, run it before `test-all` too, because its rebuild cleans the shared intermediate files.
+按 `.editorconfig` 规则（例如 IDE0005 多余的 `using`）编译所有项目，有任何问题即失败。公共编译设置在 `Directory.Build.props`。CI 在 `test-all` 之前运行它；本地也请先运行它再运行 `test-all`，因为它的重新生成会清理共享的中间文件。
+
 ## Three suites / 三组测试
 
 | Project | Scope / 范围 |
@@ -37,8 +49,8 @@ Coverage selects each named assembly, not aggregate coverage. Four script self-c
 
 ## Release and native checks / 发布与窗口检查
 
-Package only clean runtime files and user guides with `scripts/package-release.ps1`. Check the managed manifest, exact ZIP/SHA-256 sidecar pairing, versions and exclusion of settings, caches, test Mods and logs. Keep Developer Tools separate. Verify public metadata and downloaded hashes after publication.
-只从干净运行目录打包，核对受管清单、精确同名校验附件、EXE 版本及用户数据排除；开发者工具独立。发布后核对公开下载与哈希。
+Package only clean runtime files and user guides with `scripts/package-release.ps1`. Which files count as user state is defined once in `scripts/release-file-policy.ps1`; `test-all` uses the same rule when it stages `ReleaseSource`, and starts from an empty folder each time. Check the managed manifest, exact ZIP/SHA-256 sidecar pairing, versions and exclusion of settings, caches, test Mods and logs. Keep Developer Tools separate. Verify public metadata and downloaded hashes after publication.
+只从干净运行目录打包，核对受管清单、精确同名校验附件、EXE 版本及用户数据排除；开发者工具独立。哪些文件属于用户数据统一定义在 `scripts/release-file-policy.ps1`，`test-all` 准备 `ReleaseSource` 时也用同一规则，并且每次都从空目录开始。发布后核对公开下载与哈希。
 
 Native windows, live websites, DPI, real games and actual user-installation upgrades are distinct checks, not proved by unit tests. Use isolated data and the [regression checklist](./Regression-Checklist.md). Historical journals remain in verification, including [opt11](../verification/combined-regression-opt11-20261007.md); this guide no longer repeats their running totals.
 实际窗口、网站、DPI、真实游戏和用户安装目录升级分别验证，不能用单测代替。使用隔离数据和回归清单。阶段日志保留在验证目录，本页不再重复流水账。

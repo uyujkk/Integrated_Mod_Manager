@@ -16,7 +16,7 @@ public sealed class BatchObservableCollectionTests
         object[] values = Enumerable.Range(0, count).Select(_ => new object()).ToArray();
         Assert.True(collection.ReplaceAll(values)); Assert.Equal(1, events); Assert.Equal(values, collection);
         Assert.False(collection.ReplaceAll(values)); Assert.Equal(1, events);
-        Assert.Equal(count > 1, collection.ReplaceAll(values.Reverse()));
+        Assert.Equal(count > 1, collection.ReplaceAll(values.AsEnumerable().Reverse()));
     }
     [Fact]
     public void EmptyAndSelfSnapshotsAreNoOps()

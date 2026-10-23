@@ -1,8 +1,13 @@
 name: Build and Test
 
 on:
+  # Every branch push runs, so a feature branch has a result before its pull request.
+  # Documentation-only pushes are skipped; pull requests always run.
   push:
-    branches: [main]
+    branches: ['**']
+    paths-ignore:
+      - 'docs/**'
+      - '**/*.md'
   pull_request:
     branches: [main]
   workflow_dispatch:
@@ -25,6 +30,11 @@ jobs:
         with:
           dotnet-version: 8.0.x
       - uses: microsoft/setup-msbuild@v2
+      # Runs first: its rebuild cleans shared intermediate files, and test-all then rebuilds
+      # the outputs that are uploaded below.
+      - name: Check code style (unnecessary usings and other .editorconfig rules)
+        shell: pwsh
+        run: .\scripts\check-code-style.ps1 -OutputDirectory artifacts\code-style
       - name: Run tests and build verification
         shell: pwsh
         run: .\scripts\test-all.ps1 -ArtifactsDirectory artifacts\verification

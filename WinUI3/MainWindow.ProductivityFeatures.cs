@@ -1,5 +1,4 @@
 using System.Diagnostics;
-using System.Globalization;
 using System.IO.Compression;
 using System.Net.Http.Headers;
 using System.Runtime.InteropServices;
@@ -14,7 +13,6 @@ using IntegratedModManager.Data;
 using Microsoft.UI.Xaml;
 using Microsoft.UI.Xaml.Automation;
 using Microsoft.UI.Xaml.Controls;
-using Microsoft.UI.Xaml.Media;
 using Windows.System;
 
 namespace ModFolderCopier.WinUI;
