@@ -74,9 +74,11 @@
   "CharacterAvatars.ChooseImage": "选择图片…",
   "CharacterAvatars.ChooseTheCharacterForFolder": "为文件夹“{0}”选择角色，以后显示该角色的头像。文件夹里有自定义头像时仍优先显示自定义头像。",
   "CharacterAvatars.CouldNotChangeTheAvatar": "无法修改头像：",
+  "CharacterAvatars.HeaderTip": "“{0}”的头像：选择图片、绑定到角色、恢复或移除",
   "CharacterAvatars.NoCharacterListYet": "还没有这个仓库的角色列表。先在“在线”页打开一次这个仓库，加载角色列表后再绑定。",
   "CharacterAvatars.RemoveCustomImage": "移除自定义头像",
   "CharacterAvatars.RestorePreviousImage": "恢复上一张头像",
+  "CharacterAvatars.SelectACharacterFirst": "先在左侧选择一个角色，再设置头像。",
   "CharacterFollow.AutomaticFollowingPaused": "自动跟随已暂停。",
   "CharacterFollow.AutomaticallyFollowCharacterShortcuts": "自动切换角色快捷键",
   "CharacterFollow.CouldNotFocusTheGameWindow": "无法切换到游戏窗口。",
@@ -104,6 +106,9 @@
   "CharacterSelection.AllowSeveralMods": "允许同时启用多个 Mod",
   "CharacterSelection.NowAllowsSeveral": "“{0}”现在可以同时启用多个 Mod。",
   "CharacterSelection.NowSingle": "“{0}”现在只保留一个启用的 Mod，以链接方式启用时会替换同角色的其他链接。",
+  "CharacterSelection.SelectACharacterToSet": "选择一个角色后，可以设置它是否允许同时启用多个 Mod",
+  "CharacterSelection.ToggleTipOff": "“{0}”只保留一个启用的 Mod（点击改为允许多个）",
+  "CharacterSelection.ToggleTipOn": "“{0}”允许同时启用多个 Mod（点击改为只保留一个）",
   "CombinationBundles.BundleCreatedModsSavedValues": "已生成组合包：{0} 个 Mod · {1} 个保存参数。\n{2}",
   "CombinationBundles.BundleGame": "组合包游戏：",
   "CombinationBundles.BundleInstallationPreview": "安装组合包预览",
@@ -1282,5 +1287,9 @@
   "Updates.UpdateCheckFailed": "更新检查失败",
   "Updates.UpdateProfile": "更新方案",
   "Updates.UpdateUnavailable": "暂不能更新",
-  "Updates.VersionIsAvailableDownloadInstallAnd": "发现新版本 {0}。\n\n是否自动下载、安装并重启软件？本地仓库、路径和界面设置会保留。"
+  "Updates.VersionIsAvailableDownloadInstallAnd": "发现新版本 {0}。\n\n是否自动下载、安装并重启软件？本地仓库、路径和界面设置会保留。",
+  "WhatsNew.Body": "本版本新增：\n\n• 角色头像：仓库页左侧每个角色前显示头像。选中角色后点击列表上方的头像按钮（或右键角色），可以选择图片或绑定到角色。\n\n• 每个角色启用多个 Mod：选中角色后，点击列表上方头像按钮右边的开关。打开后，以链接方式启用 Mod 时不会再替换同角色的其他 Mod。\n\n• 单 Mod 状态槽位：选中 Mod，打开右侧“状态槽位”页保存。“更多…”里可以更新、重命名、写入 Mod 默认值、导入 JASM 变体和保存整份 d3dx_user.ini 快照。\n\n• F10 热应用（实验）：在“快捷键”页选中游戏窗口（游戏运行时会自动选中）并开启输入后，恢复槽位时可以直接热重载；打开“在置顶浮窗中热切换状态槽位”后，可在浮窗（Ctrl+Alt+K）里一键切换。\n\n• 新角色一天内进入角色列表；最大化后还原会缩到屏幕的 80%。\n\n测试方法见 docs/guides 下的《状态槽位与 F10 热应用测试》。",
+  "WhatsNew.Close": "知道了",
+  "WhatsNew.OpenGuide": "打开测试指南",
+  "WhatsNew.Title": "{0} 新功能"
 }

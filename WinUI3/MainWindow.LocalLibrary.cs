@@ -175,6 +175,7 @@ public sealed partial class MainWindow
     private void OnFirstLevelSelectionChanged(object sender, SelectionChangedEventArgs e)
     {
         PopulateSecondLevelList(FirstLevelListView.SelectedItem as FirstLevelFolderItem);
+        UpdateCharacterHeaderActions();
     }
 
     private void OnFirstLevelSearchTextChanged(object sender, TextChangedEventArgs e)

@@ -145,6 +145,7 @@ public sealed partial class MainWindow
             _savedWindowWidth = config?.WindowWidth;
             _savedWindowHeight = config?.WindowHeight;
             _savedWindowMaximized = config?.WindowMaximized ?? false;
+            _whatsNewSeenVersion = config?.WhatsNewSeenVersion;
         }
         catch
         {
@@ -268,6 +269,7 @@ public sealed partial class MainWindow
                 WindowWidth = _savedWindowWidth,
                 WindowHeight = _savedWindowHeight,
                 WindowMaximized = _savedWindowMaximized,
+                WhatsNewSeenVersion = _whatsNewSeenVersion,
                 Repositories = [.. _repositories]
             };
 

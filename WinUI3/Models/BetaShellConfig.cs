@@ -71,6 +71,7 @@ public sealed class BetaShellConfig
 
     public int? WindowWidth { get; set; }
     public bool? WindowMaximized { get; set; }
+    public string? WhatsNewSeenVersion { get; set; }
 
     public int? WindowHeight { get; set; }
 
