@@ -76,7 +76,9 @@ public sealed class ArchiveImportLayoutTests : IDisposable
     {
         string extracted = Extracted("empty", "__MACOSX/x".Replace('/', Path.DirectorySeparatorChar));
 
-        Assert.Throws<InvalidDataException>(() => ArchiveImportLayout.Plan(extracted, "Empty.zip", Extensions));
+        var error = Assert.Throws<InvalidDataException>(() => ArchiveImportLayout.Plan(extracted, "Empty.zip", Extensions));
+        Assert.True(ArchiveErrors.Is(error, ArchiveErrorKind.Empty));
+        Assert.False(ArchiveErrors.Is(error, ArchiveErrorKind.LinkEntry));
     }
 
     [Theory]

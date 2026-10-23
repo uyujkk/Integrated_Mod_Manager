@@ -9177,10 +9177,7 @@ public sealed partial class MainWindow : Window
 
     private static bool IsPathInsideDirectory(string candidatePath, string parentPath)
     {
-        string normalizedCandidate = Path.GetFullPath(candidatePath).TrimEnd(Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar);
-        string normalizedParent = Path.GetFullPath(parentPath).TrimEnd(Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar);
-        return normalizedCandidate.StartsWith(normalizedParent + Path.DirectorySeparatorChar, StringComparison.OrdinalIgnoreCase)
-            || string.Equals(normalizedCandidate, normalizedParent, StringComparison.OrdinalIgnoreCase);
+        return PathSafety.IsSameOrInside(candidatePath, parentPath);
     }
 
     private static string SanitizeFileName(string value)
@@ -14092,7 +14089,7 @@ public sealed partial class MainWindow : Window
                 $"角色目录中已有同名文件夹，未合并或覆盖：\n{ex.Destination}\n请先重命名或删除原有文件夹，再导入。",
                 $"A folder with the same name already exists and was not merged or overwritten:\n{ex.Destination}\nRename or remove it first, then import again."), ex);
         }
-        catch (InvalidDataException ex) when (ex.Message == "The archive is empty.")
+        catch (InvalidDataException ex) when (ArchiveErrors.Is(ex, ArchiveErrorKind.Empty))
         {
             throw new InvalidOperationException(L("压缩包是空的，没有可导入的内容。", "The archive is empty; there is nothing to import."), ex);
         }
@@ -14269,17 +14266,8 @@ public sealed partial class MainWindow : Window
 
     private void RunSevenZipExtraction(string sevenZipPath, string archivePath, string destinationDirectory)
     {
-        var startInfo = new ProcessStartInfo
-        {
-            FileName = sevenZipPath,
-            Arguments = $"x -y -aoa -o\"{destinationDirectory}\" \"{archivePath}\"",
-            UseShellExecute = false,
-            RedirectStandardError = true,
-            RedirectStandardOutput = true,
-            CreateNoWindow = true
-        };
-
-        (int exitCode, _, string error) = RunProcessAndCapture(startInfo);
+        ProcessStartInfo startInfo = CreateSevenZipStartInfo(sevenZipPath, "x", "-y", "-aoa", "-o" + destinationDirectory, archivePath);
+        (int exitCode, _, string error) = RunArchiveProcessWithTimeout(startInfo);
         if (exitCode != 0)
         {
             throw new InvalidOperationException(string.IsNullOrWhiteSpace(error)
@@ -14312,26 +14300,29 @@ public sealed partial class MainWindow : Window
 
     private void ValidateSevenZipArchiveEntries(string sevenZipPath, string archivePath, string destinationDirectory)
     {
-        var startInfo = new ProcessStartInfo
-        {
-            FileName = sevenZipPath,
-            Arguments = $"l -slt \"{archivePath}\"",
-            UseShellExecute = false,
-            RedirectStandardError = true,
-            RedirectStandardOutput = true,
-            CreateNoWindow = true
-        };
-        (int exitCode, string output, string error) = RunProcessAndCapture(startInfo);
+        ProcessStartInfo startInfo = CreateSevenZipStartInfo(sevenZipPath, "l", "-slt", archivePath);
+        (int exitCode, string output, string error) = RunArchiveProcessWithTimeout(startInfo);
         if (exitCode != 0)
         {
-            throw new InvalidDataException(string.IsNullOrWhiteSpace(error) ? "Unable to inspect the archive." : error.Trim());
+            // With encrypted headers 7-Zip cannot even list the archive and only reports
+            // that the closed password prompt was interrupted.
+            throw new InvalidDataException(L(
+                "7-Zip 无法读取压缩包，它可能已损坏或设置了密码（不支持带密码的压缩包）。详情：",
+                "7-Zip could not read the archive. It may be damaged or password-protected (password-protected archives are not supported). Details: ")
+                + (string.IsNullOrWhiteSpace(error) ? exitCode.ToString(CultureInfo.InvariantCulture) : error.Trim()));
         }
 
         try
         {
             SevenZipListingValidator.Validate(output, destinationDirectory);
         }
-        catch (InvalidDataException ex) when (ex.Message.Contains("unsupported link", StringComparison.OrdinalIgnoreCase))
+        catch (InvalidDataException ex) when (ArchiveErrors.Is(ex, ArchiveErrorKind.Encrypted))
+        {
+            throw new InvalidDataException(
+                L("压缩包设置了密码，暂不支持导入。请先解压后再导入文件夹。", "The archive is password-protected, which is not supported. Extract it yourself first, then import the folder."),
+                ex);
+        }
+        catch (InvalidDataException ex) when (ArchiveErrors.Is(ex, ArchiveErrorKind.LinkEntry))
         {
             throw new InvalidDataException(
                 L("压缩包包含真实的符号链接、硬链接或复制链接，已停止解压。", "The archive contains an actual symbolic, hard, or copy link. Extraction was stopped."),
@@ -14394,20 +14385,25 @@ public sealed partial class MainWindow : Window
         }
     }
 
-    private static (int ExitCode, string Output, string Error) RunProcessAndCapture(ProcessStartInfo startInfo)
+    private static ProcessStartInfo CreateSevenZipStartInfo(string sevenZipPath, params string[] arguments)
     {
-        using Process process = Process.Start(startInfo)
-            ?? throw new InvalidOperationException("Unable to start the archive tool.");
-        if (startInfo.RedirectStandardInput)
+        // stdin is redirected so ArchiveProcessRunner closes it: an encrypted archive
+        // fails instead of waiting for a hidden password prompt until the timeout.
+        var startInfo = new ProcessStartInfo
         {
-            // A downloaded encrypted archive must fail instead of waiting for a hidden prompt.
-            process.StandardInput.Close();
+            FileName = sevenZipPath,
+            UseShellExecute = false,
+            RedirectStandardInput = true,
+            RedirectStandardError = true,
+            RedirectStandardOutput = true,
+            CreateNoWindow = true
+        };
+        foreach (string argument in arguments)
+        {
+            startInfo.ArgumentList.Add(argument);
         }
-        Task<string> outputTask = process.StandardOutput.ReadToEndAsync();
-        Task<string> errorTask = process.StandardError.ReadToEndAsync();
-        process.WaitForExit();
-        Task.WaitAll(outputTask, errorTask);
-        return (process.ExitCode, outputTask.Result, errorTask.Result);
+
+        return startInfo;
     }
 
     private async Task ShowMessageAsync(string content, string title)

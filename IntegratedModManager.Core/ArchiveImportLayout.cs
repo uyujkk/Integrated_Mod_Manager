@@ -49,7 +49,7 @@ public static class ArchiveImportLayout
         string[] files = Directory.GetFiles(root).Where(path => !IsArchiveClutter(Path.GetFileName(path))).ToArray();
         if (directories.Length == 0 && files.Length == 0)
         {
-            throw new InvalidDataException("The archive is empty.");
+            throw ArchiveErrors.Create(ArchiveErrorKind.Empty, "The archive is empty.");
         }
 
         if (files.Length == 0 && directories.Length == 1)

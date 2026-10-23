@@ -31,8 +31,27 @@ public sealed class SevenZipListingValidatorTests
     {
         string listing = $"----------\nPath = Fangyi\\mod.ini\n{property}";
 
-        Assert.Throws<InvalidDataException>(() =>
+        var error = Assert.Throws<InvalidDataException>(() =>
             SevenZipListingValidator.Validate(listing, CreateDestinationPath()));
+        Assert.True(ArchiveErrors.Is(error, ArchiveErrorKind.LinkEntry));
+    }
+
+    [Fact]
+    public void Validate_RejectsPasswordProtectedEntries()
+    {
+        const string listing = "----------\nPath = mod.ini\nEncrypted = +\nMethod = LZMA2:12 7zAES:19";
+
+        var error = Assert.Throws<InvalidDataException>(() =>
+            SevenZipListingValidator.Validate(listing, CreateDestinationPath()));
+        Assert.True(ArchiveErrors.Is(error, ArchiveErrorKind.Encrypted));
+    }
+
+    [Fact]
+    public void Validate_AllowsUnencryptedEntries()
+    {
+        const string listing = "----------\nPath = mod.ini\nEncrypted = -";
+
+        SevenZipListingValidator.Validate(listing, CreateDestinationPath());
     }
 
     [Fact]
@@ -40,8 +59,9 @@ public sealed class SevenZipListingValidatorTests
     {
         const string listing = "----------\nPath = ..\\outside.ini";
 
-        Assert.Throws<InvalidDataException>(() =>
+        var error = Assert.Throws<InvalidDataException>(() =>
             SevenZipListingValidator.Validate(listing, CreateDestinationPath()));
+        Assert.False(ArchiveErrors.Is(error, ArchiveErrorKind.LinkEntry));
     }
 
     [Fact]
