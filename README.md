@@ -1,4 +1,4 @@
-> **v4.5.0 stable release.** Adds character folder avatars, several Mods per character, single-Mod state slot variants and experimental F10 hot apply. See the [release notes](docs/releases/v4.5.0.md) for new features, upgrade guidance, and known issues.
+> **v4.5.1 stable release.** Adds saving a named single-Mod preset from the overlay, on top of 4.5.0's character avatars, several Mods per character, single-Mod state slots and experimental F10 hot apply. See the [release notes](docs/releases/v4.5.1.md).
 
 <div align="center">
   <img src="./WinUI3/Assets/AppIcon.png" width="96" alt="Integrated Mod Manager icon">

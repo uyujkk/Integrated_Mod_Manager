@@ -6,6 +6,12 @@
 
 This document records version changes in Integrated Mod Manager. Unpublished versions are marked separately.
 
+## v4.5.1 — 2026-10-23（正式版 / Stable）
+
+可以在置顶浮窗中命名并保存单 Mod 预设（保存为该 Mod 的状态槽位）。见 [v4.5.1](v4.5.1.md)。
+
+Name and save a single-Mod preset from the overlay, as one of that Mod's state slots. See [v4.5.1](v4.5.1.md).
+
 ## v4.5.0 — 2026-10-23（正式版 / Stable）
 
 新增角色文件夹头像（新角色一天内自动加入）、每个角色同时启用多个 Mod、单 Mod 状态槽位变体（写入 Mod 默认值、导入 JASM 变体、整份 `d3dx_user.ini` 快照）、实验性的 F10 热应用与浮窗槽位切换、自动识别游戏窗口，以及最大化后按比例还原。不再在启动时弹出旧的终末地启动升级引导。中文与英文分开见 [v4.5.0](v4.5.0.md)。
