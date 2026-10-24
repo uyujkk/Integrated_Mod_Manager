@@ -9,6 +9,7 @@
   [![最新版本](https://img.shields.io/github/v/release/uyujkk/Integrated_Mod_Manager?display_name=tag&sort=semver)](https://github.com/uyujkk/Integrated_Mod_Manager/releases/latest)
   [![许可证](https://img.shields.io/github/license/uyujkk/Integrated_Mod_Manager)](./LICENSE)
   [![平台](https://img.shields.io/badge/platform-Windows%20x64-0078D4)](#系统要求)
+  [![Ko-fi 赞助](https://img.shields.io/badge/Ko--fi-Support%20Development-FF5E5B?logo=ko-fi&logoColor=white)](https://ko-fi.com/uyujkk)
 
   **中文** · [English](./README.md)
 
