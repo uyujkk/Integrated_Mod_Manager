@@ -594,6 +594,10 @@ public sealed partial class MainWindow
         Grid.SetColumn(savePreset, 1); Grid.SetColumn(hide, 2);
         actions.Children.Add(_overlayInputToggle); actions.Children.Add(savePreset); actions.Children.Add(hide);
         panel.Children.Add(actions);
+        var saveSingle = ShortcutButton(T("ShortcutPanel.SaveSingleModPreset"), () => _ = SaveSingleModPresetFromOverlayAsync());
+        saveSingle.Foreground = _overlayTextBrush;
+        saveSingle.HorizontalAlignment = HorizontalAlignment.Stretch;
+        panel.Children.Add(saveSingle);
         var opacityRow = new Grid { ColumnSpacing = 8 };
         opacityRow.ColumnDefinitions.Add(new ColumnDefinition { Width = GridLength.Auto });
         opacityRow.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(1, GridUnitType.Star) });
@@ -772,7 +776,7 @@ public sealed partial class MainWindow
     {
         try
         {
-            if (_onlineWindowClosed) return;
+            if (_onlineWindowClosed || _savingOverlaySinglePreset) return;
             if (_shortcutOverlayVisible)
             {
                 _shortcutOverlay?.AppWindow.Hide();

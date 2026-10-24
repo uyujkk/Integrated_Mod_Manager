@@ -25,6 +25,7 @@ Version 4.4 adds a Shortcuts page. It reads the `[Key…]` bindings in a Mod's I
   - **Switch Mod**: lists only enabled Mods (deployed to the loader's Mods folder).
   - **Sending on/off**: pause or resume sending.
   - **Save preset**: saves the enabled Mods and the values in `d3dx_user.ini` as a combination preset. It only reads and never changes the game. Press F10 in the game first so recent changes are written.
+  - **Save single-Mod preset**: press F10 in the game first, then click this button and enter a name in the overlay. Only the Mod selected when you clicked is saved, as one of its state slots; blank names and names that Mod already uses are rejected, and Cancel saves nothing. The overlay takes keyboard focus while you type, then gives it back to the game. Saving only reads the loader state and does not send F10. Undeployed Mods, missing values and save failures are reported in the overlay.
   - **Hot switching state slots (experimental, off by default)**:
     - Turn on "Switch state slots in the overlay" on the Shortcuts page, and the overlay lists the current Mod's state slots; ● marks the current one.
     - Clicking a slot writes its values into `d3dx_user.ini` and sends **F10** to the chosen game window.

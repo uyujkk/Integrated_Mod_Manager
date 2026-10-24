@@ -16,6 +16,7 @@ internal sealed class ShortcutOverlayWindow : Window
     private const int DefaultWidth = 420, DefaultHeight = 860;
     private readonly nint handle;
     private readonly SubclassProc callback;
+    private bool keyboardInputEnabled;
     // Only the background carries the opacity; text and buttons stay fully opaque.
     private readonly SolidColorBrush background = new(Color.FromArgb(255, 28, 31, 38));
 
@@ -73,12 +74,21 @@ internal sealed class ShortcutOverlayWindow : Window
 
     public void ShowPanel() => AppWindow.Show(false);
 
+    // Naming a preset needs real keyboard/IME focus; ordinary shortcut clicks must not take it.
+    public void SetKeyboardInputEnabled(bool enabled)
+    {
+        keyboardInputEnabled = enabled;
+        nint style = GetWindowLongPtr(handle, -20);
+        SetWindowLongPtr(handle, -20, enabled ? style & ~(nint)0x08000000 : style | (nint)0x08000000);
+        if (enabled) Activate();
+    }
+
     public void SetBackgroundOpacity(int percent) =>
         background.Color = Color.FromArgb((byte)Math.Round(Math.Clamp(percent, MinimumOpacity, 100) * 2.55), 28, 31, 38);
 
     private nint OnMessage(nint hwnd, uint message, nuint wParam, nint lParam, nuint id, nuint data)
     {
-        if (message == 0x0021) return 3; // WM_MOUSEACTIVATE -> MA_NOACTIVATE, still deliver the click.
+        if (message == 0x0021 && !keyboardInputEnabled) return 3; // WM_MOUSEACTIVATE -> MA_NOACTIVATE, still deliver the click.
         return DefSubclassProc(hwnd, message, wParam, lParam);
     }
 
