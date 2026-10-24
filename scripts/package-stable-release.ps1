@@ -1,8 +1,8 @@
 ﻿[CmdletBinding()]
 param(
-    [string]$Version = '4.5.0',
-    [string]$BaseTag = 'v4.4.0',
-    [string]$VerificationDirectory = 'artifacts\verification\v4.5.0',
+    [string]$Version = '4.5.1',
+    [string]$BaseTag = 'v4.5.0',
+    [string]$VerificationDirectory = 'artifacts\verification\v4.5.1',
     [switch]$ForGitHubRelease,
     [string]$CiUrl = '',
     # Only for machines without git: JSON exported by git elsewhere from this same
