@@ -24,7 +24,7 @@ Copy-Item (Join-Path $taskInstall 'LocalUpdateAgent.exe') $taskAgent
 $taskSource = Join-Path $taskAccept 'Repository'
 $taskTarget = Join-Path $taskAccept 'Mods'
 New-Item -ItemType Directory -Path (Join-Path $taskSource 'Character\Mod'), $taskTarget -Force | Out-Null
-'[Constants]' | Set-Content (Join-Path $taskSource 'Character\Mod\mod.ini')
+@('[Constants]', 'global persist $x = 0') | Set-Content (Join-Path $taskSource 'Character\Mod\mod.ini')
 function Encode([string]$value) { [Convert]::ToBase64String([Text.Encoding]::UTF8.GetBytes($value)) }
 @("source_dir=$(Encode $taskSource)", "target_dir=$(Encode $taskTarget)", 'launcher_path=', "theme=$(Encode 'dark')", "language=$(Encode 'en')") |
     Set-Content (Join-Path $taskInstall 'WinUI3\config.ini') -Encoding utf8
@@ -36,7 +36,7 @@ $taskShell = [ordered]@{
     OnlinePreferences=@{ConcurrentDownloads=3;RememberDownloadFolders=$true;DownloadFolders=@{synthetic=$taskSource}}
     LocalLibraries=@{'preview-upgrade'=@{ModTags=@{'Character\Mod'=@('favorite','preview')};Filters=@()}}
     ConfigurationProfiles=@(@{Id='profile';RepositoryId='preview-upgrade';Name='Saved combination';ModRelativePaths=@('Character\Mod');IncludesPersistentState=$false;PersistentStates=@()})
-    ModPersistentSlots=@(@{Id='slot';RepositoryId='preview-upgrade';Name='Saved slot';ModRelativePath='Character\Mod';Values=@()})
+    ModPersistentSlots=@(@{Id='slot';RepositoryId='preview-upgrade';Name='Saved slot';ModRelativePath='Character\Mod';Values=@(@{RelativeIniPath='mod.ini';Variable='x';RuntimeKey='$\Mods\Mod\mod.ini\x';Value='7'})})
 }
 $taskShell | ConvertTo-Json -Depth 20 | Set-Content (Join-Path $taskInstall 'WinUI3\beta-shell.json') -Encoding utf8
 $taskSentinels = @('WinUI3\backups\acceptance\sentinel.txt','WinUI3\snapshots\user-ini\preview-upgrade\sentinel.ini')
