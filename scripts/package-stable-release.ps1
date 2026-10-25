@@ -1,4 +1,4 @@
-﻿[CmdletBinding()]
+[CmdletBinding()]
 param(
     [string]$Version = '4.5.1',
     [string]$BaseTag = 'v4.5.0',
@@ -119,7 +119,7 @@ foreach ($tool in @('7z.exe','7z.dll','License.txt')) {
 foreach ($file in @('LICENSE','LICENSING.md','开始使用.md')) {
     Copy-Item -LiteralPath (Join-Path $taskRoot $file) -Destination $taskApp
 }
-Copy-Item -LiteralPath (Join-Path $taskRoot 'IntegratedModManager.EndfieldLaunch\LICENSE') -Destination (Join-Path $taskApp 'LICENSE-AGPL-3.0.txt')
+Copy-Item -LiteralPath (Join-Path $taskRoot 'src\IntegratedModManager.EndfieldLaunch\LICENSE') -Destination (Join-Path $taskApp 'LICENSE-AGPL-3.0.txt')
 
 # Ship user documentation and public release history, without following source-code links.
 foreach ($folder in @('docs\guides','docs\releases','docs\assets','docs\verification')) {

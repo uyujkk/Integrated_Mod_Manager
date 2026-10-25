@@ -1,0 +1,11 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <TargetFramework>net8.0</TargetFramework>
+  </PropertyGroup>
+
+  <Import Project="..\TestDependencies.props" />
+
+  <ItemGroup>
+    <ProjectReference Include="..\..\src\IntegratedModManager.Data\IntegratedModManager.Data.csproj" />
+  </ItemGroup>
+</Project>

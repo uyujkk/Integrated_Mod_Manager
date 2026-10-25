@@ -85,7 +85,7 @@
 - **整份快照**：
   - 点击“更多…” → “保存整份 d3dx_user.ini 快照”，然后在模拟加载器里改值并按 F10。
   - 再点击“恢复整份 d3dx_user.ini 快照”。加载器运行时可以勾选热重载，否则先关闭模拟加载器。
-- **导入 JASM 变体**：在 `ModRepository\TestCharacter\TestModA` 下新建 `.JASM_Variants.json`：
+- **导入变体文件（待验证）**：在 `ModRepository\TestCharacter\TestModA` 下新建 `variants.json`：
 
   ```json
   {
@@ -97,7 +97,7 @@
   }
   ```
 
-  然后点击“更多…” → “导入 JASM 变体”。预期结果：导入 2 个槽位，“短发”标为当前。
+  然后点击“更多…” → “导入变体文件（待验证）”。预期结果：导入 2 个槽位，“短发”标为当前。
 
 ## 七、在真实游戏里确认
 

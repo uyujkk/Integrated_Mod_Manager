@@ -5,31 +5,31 @@ VisualStudioVersion = 17.0.31903.59
 MinimumVisualStudioVersion = 10.0.40219.1
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "src", "src", "{827E0CD3-B72D-47B6-A68D-7590B98EB39B}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "IntegratedModManager.Core", "IntegratedModManager.Core\IntegratedModManager.Core.csproj", "{5A6C2091-59A4-4A7D-8119-3E3E68D196FA}"
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "IntegratedModManager.Core", "src\IntegratedModManager.Core\IntegratedModManager.Core.csproj", "{5A6C2091-59A4-4A7D-8119-3E3E68D196FA}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "IntegratedModManager.Data", "IntegratedModManager.Data\IntegratedModManager.Data.csproj", "{E4AC7756-A126-40EA-9F8A-699A6887DDA5}"
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "IntegratedModManager.Data", "src\IntegratedModManager.Data\IntegratedModManager.Data.csproj", "{E4AC7756-A126-40EA-9F8A-699A6887DDA5}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "IntegratedModManager.EndfieldLaunch", "IntegratedModManager.EndfieldLaunch\IntegratedModManager.EndfieldLaunch.csproj", "{78CFDF04-2BD5-49F4-9B3B-74283E746D61}"
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "IntegratedModManager.EndfieldLaunch", "src\IntegratedModManager.EndfieldLaunch\IntegratedModManager.EndfieldLaunch.csproj", "{78CFDF04-2BD5-49F4-9B3B-74283E746D61}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "IntegratedModManager.UpdateAgent.Core", "IntegratedModManager.UpdateAgent.Core\IntegratedModManager.UpdateAgent.Core.csproj", "{84C5D781-B261-4249-AD58-47FF5DF6B855}"
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "IntegratedModManager.UpdateAgent.Core", "src\IntegratedModManager.UpdateAgent.Core\IntegratedModManager.UpdateAgent.Core.csproj", "{84C5D781-B261-4249-AD58-47FF5DF6B855}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "ModFolderCopier.WinUI", "WinUI3\ModFolderCopier.WinUI.csproj", "{D3549490-0A5D-4CC8-BE9B-B6FABDD22103}"
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "ModFolderCopier.WinUI", "src\WinUI3\ModFolderCopier.WinUI.csproj", "{D3549490-0A5D-4CC8-BE9B-B6FABDD22103}"
 EndProject
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "tests", "tests", "{0AB3BF05-4346-4AA6-1389-037BE0695223}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "IntegratedModManager.Core.Tests", "Tests\IntegratedModManager.Core.Tests.csproj", "{753D6BF3-9B4D-4659-8D0E-A0BE4E668587}"
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "IntegratedModManager.Core.Tests", "tests\Core.Tests\IntegratedModManager.Core.Tests.csproj", "{753D6BF3-9B4D-4659-8D0E-A0BE4E668587}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "IntegratedModManager.DataStore.Tests", "DataStoreTests\IntegratedModManager.DataStore.Tests.csproj", "{A2E3AC82-9405-44C8-A522-14A029B0D2E5}"
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "IntegratedModManager.DataStore.Tests", "tests\DataStore.Tests\IntegratedModManager.DataStore.Tests.csproj", "{A2E3AC82-9405-44C8-A522-14A029B0D2E5}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "IntegratedModManager.UpdateAgent.Tests", "UpdaterTests\IntegratedModManager.UpdateAgent.Tests.csproj", "{E618EF6C-2A92-4C79-843D-320DD32C82C5}"
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "IntegratedModManager.UpdateAgent.Tests", "tests\UpdateAgent.Tests\IntegratedModManager.UpdateAgent.Tests.csproj", "{E618EF6C-2A92-4C79-843D-320DD32C82C5}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "IntegratedModManager.EndfieldLaunch.Tests", "EndfieldLaunchTests\IntegratedModManager.EndfieldLaunch.Tests.csproj", "{992C46DB-D357-4B9F-8849-8E794E9D2C48}"
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "IntegratedModManager.EndfieldLaunch.Tests", "tests\EndfieldLaunch.Tests\IntegratedModManager.EndfieldLaunch.Tests.csproj", "{992C46DB-D357-4B9F-8849-8E794E9D2C48}"
 EndProject
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "tools", "tools", "{07C2787E-EAC7-C090-1BA3-A61EC2A24D84}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "RepositoryPerformance", "RepositoryPerformance\RepositoryPerformance.csproj", "{F6899F61-F752-4495-B50F-DDA075982F69}"
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "RepositoryPerformance", "tests\Performance\RepositoryPerformance.csproj", "{F6899F61-F752-4495-B50F-DDA075982F69}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "IntegratedModManager.DeveloperTools", "DeveloperTools\IntegratedModManager.DeveloperTools.csproj", "{42922F7D-A7B0-4EF3-8E08-B7F92FB143D5}"
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "IntegratedModManager.DeveloperTools", "tools\DeveloperTools\IntegratedModManager.DeveloperTools.csproj", "{42922F7D-A7B0-4EF3-8E08-B7F92FB143D5}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution

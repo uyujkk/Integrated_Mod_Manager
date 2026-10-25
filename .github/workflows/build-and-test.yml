@@ -56,8 +56,8 @@ jobs:
           name: verified-windows-x64-${{ github.sha }}
           path: |
             artifacts/verification/Smoke/*
-            WinUI3/bin/x64/Release/net8.0-windows10.0.19041.0/win-x64/**
-            !WinUI3/bin/**/*.pdb
+            src/WinUI3/bin/x64/Release/net8.0-windows10.0.19041.0/win-x64/**
+            !src/WinUI3/bin/**/*.pdb
           if-no-files-found: error
           retention-days: 7
       - name: Upload verified release package

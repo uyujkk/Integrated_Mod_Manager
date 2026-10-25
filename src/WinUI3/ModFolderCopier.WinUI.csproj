@@ -1,0 +1,55 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <OutputType>WinExe</OutputType>
+    <TargetFramework>net8.0-windows10.0.19041.0</TargetFramework>
+    <TargetPlatformMinVersion>10.0.17763.0</TargetPlatformMinVersion>
+    <RootNamespace>ModFolderCopier.WinUI</RootNamespace>
+    <AssemblyName>ModFolderCopier.WinUI</AssemblyName>
+    <ApplicationManifest>app.manifest</ApplicationManifest>
+    <UseWinUI>true</UseWinUI>
+    <WindowsPackageType>None</WindowsPackageType>
+    <WindowsAppSDKSelfContained>true</WindowsAppSDKSelfContained>
+    <RuntimeIdentifier>win-x64</RuntimeIdentifier>
+    <PlatformTarget>x64</PlatformTarget>
+    <GenerateAssemblyInfo>false</GenerateAssemblyInfo>
+    <EnablePreviewMsixTooling>false</EnablePreviewMsixTooling>
+    <ApplicationIcon>Assets\AppIcon.ico</ApplicationIcon>
+    <!-- Program.cs owns Main so a second launch can be redirected to the running instance. -->
+    <DefineConstants>$(DefineConstants);DISABLE_XAML_GENERATED_MAIN</DefineConstants>
+  </PropertyGroup>
+
+  <PropertyGroup Condition="'$(AppxMSBuildToolsPath)' == '' and Exists('$(MSBuildProgramFiles32)\Microsoft Visual Studio\2022\BuildTools\MSBuild\Microsoft\VisualStudio\v17.0\AppxPackage\Microsoft.Build.Packaging.Pri.Tasks.dll')">
+    <AppxMSBuildToolsPath>$(MSBuildProgramFiles32)\Microsoft Visual Studio\2022\BuildTools\MSBuild\Microsoft\VisualStudio\v17.0\AppxPackage\</AppxMSBuildToolsPath>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Microsoft.WindowsAppSDK" Version="1.7.250401001" />
+    <PackageReference Include="Microsoft.Windows.SDK.BuildTools" Version="10.0.26100.6584" PrivateAssets="all" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\IntegratedModManager.Core\IntegratedModManager.Core.csproj" />
+    <ProjectReference Include="..\IntegratedModManager.Data\IntegratedModManager.Data.csproj" />
+    <!-- AGPL-3.0-only component: builds that include it are distributed under AGPL-3.0-only as a whole. -->
+    <ProjectReference Include="..\IntegratedModManager.EndfieldLaunch\IntegratedModManager.EndfieldLaunch.csproj" />
+  </ItemGroup>
+
+  <!-- UI text, one JSON file per language (see UiText.cs). -->
+  <PropertyGroup Condition="'$(ImmShortcutBenchmark)' == 'true'">
+    <DefineConstants>$(DefineConstants);IMM_SHORTCUT_BENCHMARK</DefineConstants>
+  </PropertyGroup>
+  <ItemGroup Condition="'$(ImmShortcutBenchmark)' == 'true'">
+    <Compile Include="..\..\tests\Performance\ShortcutUiBenchmark.cs" Link="ShortcutUiBenchmark.cs" />
+  </ItemGroup>
+  <ItemGroup>
+    <EmbeddedResource Include="Strings\*.json" LogicalName="ModFolderCopier.WinUI.Strings.%(Filename)%(Extension)" />
+  </ItemGroup>
+
+  <!-- License texts shipped with every build: the release package as a whole is AGPL-3.0-only. -->
+  <ItemGroup>
+    <None Include="..\..\LICENSE" Link="licenses\MIT.txt" CopyToOutputDirectory="PreserveNewest" />
+    <None Include="..\IntegratedModManager.EndfieldLaunch\LICENSE" Link="licenses\AGPL-3.0.txt" CopyToOutputDirectory="PreserveNewest" />
+    <None Include="..\IntegratedModManager.EndfieldLaunch\NOTICE.md" Link="licenses\EndfieldLaunch-NOTICE.md" CopyToOutputDirectory="PreserveNewest" />
+    <None Include="..\..\LICENSING.md" Link="licenses\LICENSING.md" CopyToOutputDirectory="PreserveNewest" />
+  </ItemGroup>
+</Project>

@@ -1,0 +1,697 @@
+using System;
+using System.Collections.Generic;
+using System.Diagnostics;
+using System.IO;
+using System.IO.Compression;
+using System.Linq;
+using System.Reflection;
+using System.Threading;
+using System.Windows.Forms;
+
+[assembly: AssemblyTitle("Integrated Mod Manager Local Update Agent")]
+[assembly: AssemblyProduct("Integrated Mod Manager")]
+[assembly: AssemblyCopyright("Copyright (c) 2026 uyujkk")]
+[assembly: AssemblyVersion("4.5.2.0")]
+[assembly: AssemblyFileVersion("4.5.2.0")]
+[assembly: AssemblyInformationalVersion("4.5.2-preview.1")]
+#if !UPDATE_AGENT_TESTS
+// csc.exe emits no target framework, so .NET Framework applied legacy path handling (set before Main
+// runs) and rejected both long paths and \\?\ prefixes (issue #16). 4.6.2 defaults accept \\?\ paths.
+[assembly: System.Runtime.Versioning.TargetFramework(".NETFramework,Version=v4.6.2", FrameworkDisplayName = ".NET Framework 4.6.2")]
+#endif
+#if UPDATE_AGENT_TESTS
+[assembly: System.Runtime.CompilerServices.InternalsVisibleTo("IntegratedModManager.UpdateAgent.Tests")]
+#endif
+
+internal static class LocalUpdateAgent
+{
+    private const string ManagedFilesManifestName = ".managed-files.txt";
+    private static readonly string[] PreservedRelativePaths =
+    {
+        "config.ini",
+        "beta-shell.json",
+        Path.Combine("WinUI3", "config.ini"),
+        Path.Combine("WinUI3", "beta-shell.json"),
+        Path.Combine("WinUI3", "cache", "app-index.db"),
+        Path.Combine("WinUI3", "cache", "app-index.db-wal"),
+        Path.Combine("WinUI3", "cache", "app-index.db-shm")
+    };
+    private static readonly string[] PreservedDirectoryPrefixes =
+    {
+        "backups" + Path.DirectorySeparatorChar,
+        Path.Combine("WinUI3", "backups") + Path.DirectorySeparatorChar,
+        Path.Combine("WinUI3", "cache") + Path.DirectorySeparatorChar,
+        Path.Combine("WinUI3", "diagnostics") + Path.DirectorySeparatorChar,
+        Path.Combine("WinUI3", "snapshots") + Path.DirectorySeparatorChar
+    };
+
+#if !UPDATE_AGENT_TESTS
+    [STAThread]
+    private static int Main(string[] args)
+    {
+        Dictionary<string, string> options = ParseArguments(args);
+        string packagePath;
+        string installRoot;
+        string launcherPath;
+        string processIdText;
+        string language;
+        string expectedVersion;
+
+        if (!options.TryGetValue("package", out packagePath) ||
+            !options.TryGetValue("install-root", out installRoot) ||
+            !options.TryGetValue("launcher", out launcherPath) ||
+            !options.TryGetValue("process-id", out processIdText))
+        {
+            return 2;
+        }
+
+        options.TryGetValue("language", out language);
+        options.TryGetValue("expected-version", out expectedVersion);
+        bool english = string.Equals(language, "en", StringComparison.OrdinalIgnoreCase);
+        string extractionRoot = Path.Combine(Path.GetTempPath(), "IntegratedModManagerUpdate-" + Guid.NewGuid().ToString("N"));
+        string updateBackupRoot = string.Empty;
+        string backupFilesRoot = string.Empty;
+        var createdFiles = new List<string>();
+
+        try
+        {
+            packagePath = Path.GetFullPath(packagePath);
+            installRoot = Path.GetFullPath(installRoot);
+            launcherPath = Path.GetFullPath(launcherPath);
+            string updateBackupsRoot = Path.Combine(installRoot, "backups", "updates");
+            updateBackupRoot = Path.Combine(
+                updateBackupsRoot,
+                DateTime.Now.ToString("yyyyMMdd-HHmmss") + "-v" + NormalizeVersionLabel(expectedVersion));
+            backupFilesRoot = Path.Combine(updateBackupRoot, "files");
+
+            if (!File.Exists(LongPath(packagePath)))
+            {
+                throw new FileNotFoundException("The update package was not found.", packagePath);
+            }
+
+            WaitForApplicationExit(processIdText);
+            Directory.CreateDirectory(LongPath(extractionRoot));
+
+            string payloadExtractionRoot = Path.Combine(extractionRoot, "payload");
+            Directory.CreateDirectory(LongPath(payloadExtractionRoot));
+            ExtractZipSafely(packagePath, payloadExtractionRoot);
+
+            string payloadRoot = FindPayloadRoot(payloadExtractionRoot);
+            ValidatePayload(payloadRoot, expectedVersion);
+            HashSet<string> newManagedFiles = BuildPayloadManagedFileSet(payloadRoot);
+            HashSet<string> previousManagedFiles = ReadManagedFileSet(installRoot);
+            List<string> obsoleteManagedFiles = previousManagedFiles
+                .Except(newManagedFiles, StringComparer.OrdinalIgnoreCase)
+                .Where(path => !IsPreserved(path))
+                .ToList();
+            Directory.CreateDirectory(LongPath(backupFilesRoot));
+            BackupFilesThatWillBeReplaced(payloadRoot, installRoot, backupFilesRoot, obsoleteManagedFiles);
+            CopyPayload(payloadRoot, installRoot, createdFiles);
+            DeleteObsoleteManagedFiles(installRoot, obsoleteManagedFiles);
+            WriteManagedFileSet(installRoot, newManagedFiles, createdFiles);
+            RestorePreservedConfiguration(backupFilesRoot, installRoot);
+            WriteUpdateBackupManifest(updateBackupRoot, installRoot, expectedVersion, createdFiles);
+
+            Process launcherProcess = Process.Start(new ProcessStartInfo
+            {
+                FileName = launcherPath,
+                WorkingDirectory = installRoot,
+                UseShellExecute = true
+            });
+            if (launcherProcess == null || !WaitForUpdatedRuntimeStart(installRoot, TimeSpan.FromSeconds(12)))
+            {
+                throw new InvalidOperationException("The updated application did not start within 12 seconds.");
+            }
+
+            File.WriteAllText(
+                LongPath(Path.Combine(installRoot, "update-success.log")),
+                DateTime.Now.ToString("yyyy-MM-dd HH:mm:ss") + Environment.NewLine + Path.GetFileName(packagePath));
+            PruneUpdateBackups(updateBackupsRoot, updateBackupRoot, 3);
+
+            return 0;
+        }
+        catch (Exception ex)
+        {
+            try
+            {
+                RollBackFiles(backupFilesRoot, installRoot, createdFiles);
+                File.WriteAllText(
+                    LongPath(Path.Combine(installRoot, "update-rollback.log")),
+                    DateTime.Now.ToString("yyyy-MM-dd HH:mm:ss") + Environment.NewLine + ex);
+                TryRestartExistingApplication(launcherPath, installRoot);
+                File.WriteAllText(Path.Combine(Path.GetTempPath(), "IntegratedModManagerUpdate-error.log"), ex.ToString());
+            }
+            catch
+            {
+            }
+
+            MessageBox.Show(
+                english
+                    ? "The local update failed. The previous version and configuration were restored.\n\n" + ex.Message
+                    : "本地更新失败，已恢复上一版本和现有配置。\n\n" + ex.Message,
+                english ? "Update Failed" : "更新失败",
+                MessageBoxButtons.OK,
+                MessageBoxIcon.Error);
+            return 1;
+        }
+        finally
+        {
+            try
+            {
+                if (Directory.Exists(LongPath(extractionRoot)))
+                {
+                    DeleteDirectoryTreeSafely(extractionRoot);
+                }
+            }
+            catch
+            {
+            }
+        }
+    }
+#endif
+
+    // Issue #16: .NET Framework passes paths straight to Win32, which rejects >= 248/260 characters
+    // unless Windows long paths are enabled system-wide. Paths stay normal inside the agent; only the
+    // file-system calls get the \\?\ form, so no Windows setting is needed.
+    private const int LongPathThreshold = 240;
+    private const string ExtendedPrefix = @"\\?\";
+
+    internal static string LongPath(string path)
+    {
+        if (string.IsNullOrEmpty(path) || path.Length < LongPathThreshold || path.StartsWith(ExtendedPrefix, StringComparison.Ordinal))
+        {
+            return path;
+        }
+
+        string full = Path.GetFullPath(path);
+        return full.StartsWith(@"\\", StringComparison.Ordinal)
+            ? ExtendedPrefix + "UNC" + full.Substring(1)
+            : ExtendedPrefix + full;
+    }
+
+    internal static string NormalPath(string path)
+    {
+        if (path.StartsWith(ExtendedPrefix + "UNC" + Path.DirectorySeparatorChar, StringComparison.OrdinalIgnoreCase))
+        {
+            return @"\" + path.Substring(ExtendedPrefix.Length + 3);
+        }
+
+        return path.StartsWith(ExtendedPrefix, StringComparison.Ordinal) ? path.Substring(ExtendedPrefix.Length) : path;
+    }
+
+    private static string[] GetFilesRecursive(string root)
+    {
+        return Directory.GetFiles(LongPath(root), "*", SearchOption.AllDirectories).Select(NormalPath).ToArray();
+    }
+
+    private static void CreateDirectoryFor(string file)
+    {
+        Directory.CreateDirectory(LongPath(Path.GetDirectoryName(file)));
+    }
+
+    internal static string NormalizeVersionLabel(string version)
+    {
+        string normalized = string.IsNullOrWhiteSpace(version) ? "unknown" : version.Trim();
+        foreach (char invalid in Path.GetInvalidFileNameChars())
+        {
+            normalized = normalized.Replace(invalid, '-');
+        }
+
+        return normalized;
+    }
+
+    private static void WriteUpdateBackupManifest(
+        string updateBackupRoot,
+        string installRoot,
+        string expectedVersion,
+        IEnumerable<string> createdFiles)
+    {
+        Directory.CreateDirectory(LongPath(updateBackupRoot));
+        File.WriteAllLines(
+            LongPath(Path.Combine(updateBackupRoot, "backup-manifest.txt")),
+            new[]
+            {
+                "created_at=" + DateTimeOffset.Now.ToString("O"),
+                "install_root=" + installRoot,
+                "target_version=" + expectedVersion
+            });
+        File.WriteAllLines(
+            LongPath(Path.Combine(updateBackupRoot, "created-files.txt")),
+            createdFiles.Select(path => GetRelativePath(installRoot, path)));
+    }
+
+    private static bool WaitForUpdatedRuntimeStart(string installRoot, TimeSpan timeout)
+    {
+        string expectedRuntime = Path.GetFullPath(Path.Combine(installRoot, "WinUI3", "ModFolderCopier.WinUI.exe"));
+        DateTime deadline = DateTime.UtcNow.Add(timeout);
+        while (DateTime.UtcNow < deadline)
+        {
+            foreach (Process process in Process.GetProcessesByName("ModFolderCopier.WinUI"))
+            {
+                try
+                {
+                    using (process)
+                    {
+                        string processPath = process.MainModule == null ? string.Empty : process.MainModule.FileName;
+                        if (string.Equals(Path.GetFullPath(processPath), expectedRuntime, StringComparison.OrdinalIgnoreCase))
+                        {
+                            Thread.Sleep(3000);
+                            return !process.HasExited;
+                        }
+                    }
+                }
+                catch
+                {
+                    process.Dispose();
+                }
+            }
+
+            Thread.Sleep(250);
+        }
+
+        return false;
+    }
+
+    private static void TryRestartExistingApplication(string launcherPath, string installRoot)
+    {
+        try
+        {
+            if (File.Exists(LongPath(launcherPath)))
+            {
+                Process.Start(new ProcessStartInfo
+                {
+                    FileName = launcherPath,
+                    WorkingDirectory = installRoot,
+                    UseShellExecute = true
+                });
+            }
+        }
+        catch
+        {
+        }
+    }
+
+    private static void PruneUpdateBackups(string backupsRoot, string currentBackupRoot, int keepCount)
+    {
+        try
+        {
+            if (!Directory.Exists(LongPath(backupsRoot)))
+            {
+                return;
+            }
+
+            // Compare normal-form names: a prefixed listing must never look unlike the current backup.
+            foreach (string staleDirectory in Directory.GetDirectories(LongPath(backupsRoot))
+                         .Select(NormalPath)
+                         .Where(path => !string.Equals(path, currentBackupRoot, StringComparison.OrdinalIgnoreCase))
+                         .OrderByDescending(path => Directory.GetLastWriteTimeUtc(LongPath(path)))
+                         .Skip(Math.Max(0, keepCount - 1)))
+            {
+                DeleteDirectoryTreeSafely(staleDirectory);
+            }
+        }
+        catch
+        {
+        }
+    }
+
+    internal static Dictionary<string, string> ParseArguments(string[] args)
+    {
+        var options = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
+        for (int index = 0; index + 1 < args.Length; index += 2)
+        {
+            if (args[index].StartsWith("--", StringComparison.Ordinal))
+            {
+                options[args[index].Substring(2)] = args[index + 1];
+            }
+        }
+
+        return options;
+    }
+
+    private static void WaitForApplicationExit(string processIdText)
+    {
+        int processId;
+        if (!int.TryParse(processIdText, out processId))
+        {
+            return;
+        }
+
+        try
+        {
+            using (Process process = Process.GetProcessById(processId))
+            {
+                if (!process.WaitForExit(30000))
+                {
+                    throw new TimeoutException("The application did not exit within 30 seconds.");
+                }
+            }
+        }
+        catch (ArgumentException)
+        {
+        }
+    }
+
+    internal static void ExtractZipSafely(string packagePath, string destinationRoot)
+    {
+        string normalizedRoot = Path.GetFullPath(destinationRoot).TrimEnd(Path.DirectorySeparatorChar) + Path.DirectorySeparatorChar;
+        using (FileStream stream = File.OpenRead(LongPath(packagePath)))
+        using (var archive = new ZipArchive(stream, ZipArchiveMode.Read))
+        {
+            foreach (ZipArchiveEntry entry in archive.Entries)
+            {
+                if (IsZipLinkEntry(entry))
+                {
+                    throw new InvalidDataException("The update package contains a symbolic link or reparse point: " + entry.FullName);
+                }
+
+                string relativePath = entry.FullName.Replace('/', Path.DirectorySeparatorChar);
+                string destinationPath = Path.GetFullPath(Path.Combine(destinationRoot, relativePath));
+                if (!destinationPath.StartsWith(normalizedRoot, StringComparison.OrdinalIgnoreCase))
+                {
+                    throw new InvalidDataException("The update package contains an unsafe path: " + entry.FullName);
+                }
+
+                if (string.IsNullOrEmpty(entry.Name))
+                {
+                    Directory.CreateDirectory(LongPath(destinationPath));
+                    continue;
+                }
+
+                string destinationDirectory = Path.GetDirectoryName(destinationPath);
+                if (!string.IsNullOrEmpty(destinationDirectory))
+                {
+                    Directory.CreateDirectory(LongPath(destinationDirectory));
+                }
+
+                using (Stream input = entry.Open())
+                using (FileStream output = new FileStream(LongPath(destinationPath), FileMode.Create, FileAccess.Write, FileShare.None))
+                {
+                    input.CopyTo(output);
+                }
+            }
+        }
+    }
+
+    internal static bool IsZipLinkEntry(ZipArchiveEntry entry)
+    {
+        int unixFileType = (entry.ExternalAttributes >> 16) & 0xF000;
+        bool unixSymbolicLink = unixFileType == 0xA000;
+        bool windowsReparsePoint = (entry.ExternalAttributes & (int)FileAttributes.ReparsePoint) != 0;
+        return unixSymbolicLink || windowsReparsePoint;
+    }
+
+    internal static string FindPayloadRoot(string extractionRoot)
+    {
+        if (IsPayloadRoot(extractionRoot))
+        {
+            return extractionRoot;
+        }
+
+        string[] candidates = Directory.GetDirectories(LongPath(extractionRoot), "*", SearchOption.AllDirectories)
+            .Select(NormalPath)
+            .Where(IsPayloadRoot)
+            .OrderBy(path => path.Count(character => character == Path.DirectorySeparatorChar))
+            .ToArray();
+
+        if (candidates.Length == 0)
+        {
+            throw new InvalidDataException("The ZIP is not an Integrated Mod Manager release package.");
+        }
+
+        return candidates[0];
+    }
+
+    private static bool IsPayloadRoot(string path)
+    {
+        bool hasLauncher = File.Exists(LongPath(Path.Combine(path, "IntegratedModManager.exe"))) ||
+                           File.Exists(LongPath(Path.Combine(path, "ModFolderCopier.exe")));
+        return hasLauncher && File.Exists(LongPath(Path.Combine(path, "WinUI3", "ModFolderCopier.WinUI.exe")));
+    }
+
+    private static void ValidatePayload(string payloadRoot, string expectedVersionText)
+    {
+        string launcherPath = File.Exists(LongPath(Path.Combine(payloadRoot, "IntegratedModManager.exe")))
+            ? Path.Combine(payloadRoot, "IntegratedModManager.exe")
+            : Path.Combine(payloadRoot, "ModFolderCopier.exe");
+        var launcherInfo = new FileInfo(LongPath(launcherPath));
+        string runtimePath = Path.Combine(payloadRoot, "WinUI3", "ModFolderCopier.WinUI.exe");
+        var runtimeInfo = new FileInfo(LongPath(runtimePath));
+        if (launcherInfo.Length == 0 || runtimeInfo.Length == 0)
+        {
+            throw new InvalidDataException("The update package contains an empty executable.");
+        }
+
+        Version expectedVersion;
+        Version payloadVersion;
+        string payloadVersionText = FileVersionInfo.GetVersionInfo(runtimePath).FileVersion;
+        if (!string.IsNullOrWhiteSpace(expectedVersionText) &&
+            (!Version.TryParse(expectedVersionText, out expectedVersion) ||
+             !Version.TryParse(payloadVersionText, out payloadVersion) ||
+             expectedVersion.Major != payloadVersion.Major ||
+             expectedVersion.Minor != payloadVersion.Minor ||
+             expectedVersion.Build != payloadVersion.Build))
+        {
+            throw new InvalidDataException("The version in the ZIP filename does not match the application files inside it.");
+        }
+    }
+
+    internal static void BackupFilesThatWillBeReplaced(
+        string payloadRoot,
+        string installRoot,
+        string backupRoot,
+        IEnumerable<string> obsoleteManagedFiles)
+    {
+        foreach (string preservedPath in PreservedRelativePaths)
+        {
+            BackupFileIfPresent(installRoot, backupRoot, preservedPath);
+        }
+        BackupFileIfPresent(installRoot, backupRoot, ManagedFilesManifestName);
+
+        foreach (string sourceFile in GetFilesRecursive(payloadRoot))
+        {
+            string relativePath = GetRelativePath(payloadRoot, sourceFile);
+            if (IsPreserved(relativePath))
+            {
+                continue;
+            }
+
+            BackupFileIfPresent(installRoot, backupRoot, relativePath);
+        }
+
+        foreach (string obsoletePath in obsoleteManagedFiles)
+        {
+            BackupFileIfPresent(installRoot, backupRoot, obsoletePath);
+        }
+    }
+
+    private static void BackupFileIfPresent(string installRoot, string backupRoot, string relativePath)
+    {
+        string installedFile = GetPathInsideRoot(installRoot, relativePath);
+        if (!File.Exists(LongPath(installedFile)))
+        {
+            return;
+        }
+
+        string backupFile = GetPathInsideRoot(backupRoot, relativePath);
+        CreateDirectoryFor(backupFile);
+        File.Copy(LongPath(installedFile), LongPath(backupFile), true);
+    }
+
+    internal static void CopyPayload(string payloadRoot, string installRoot, List<string> createdFiles)
+    {
+        foreach (string sourceFile in GetFilesRecursive(payloadRoot))
+        {
+            string relativePath = GetRelativePath(payloadRoot, sourceFile);
+            if (IsPreserved(relativePath)
+                || string.Equals(relativePath, ManagedFilesManifestName, StringComparison.OrdinalIgnoreCase))
+            {
+                continue;
+            }
+
+            string destinationFile = GetPathInsideRoot(installRoot, relativePath);
+            CreateDirectoryFor(destinationFile);
+            if (!File.Exists(LongPath(destinationFile)))
+            {
+                createdFiles.Add(destinationFile);
+            }
+
+            File.Copy(LongPath(sourceFile), LongPath(destinationFile), true);
+        }
+    }
+
+    internal static HashSet<string> BuildPayloadManagedFileSet(string payloadRoot)
+    {
+        var result = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+        foreach (string sourceFile in GetFilesRecursive(payloadRoot))
+        {
+            string relativePath = GetRelativePath(payloadRoot, sourceFile);
+            if (!IsPreserved(relativePath)
+                && !string.Equals(relativePath, ManagedFilesManifestName, StringComparison.OrdinalIgnoreCase))
+            {
+                result.Add(relativePath);
+            }
+        }
+        result.Add(ManagedFilesManifestName);
+        return result;
+    }
+
+    internal static HashSet<string> ReadManagedFileSet(string installRoot)
+    {
+        var result = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+        string manifestPath = Path.Combine(installRoot, ManagedFilesManifestName);
+        if (!File.Exists(LongPath(manifestPath)))
+        {
+            return result;
+        }
+
+        foreach (string rawLine in File.ReadAllLines(LongPath(manifestPath)))
+        {
+            // Manifests written with "/" must compare equal to payload paths; otherwise every file in a
+            // subfolder looks obsolete and is deleted after the copy.
+            string relativePath = rawLine.Trim().Replace('/', Path.DirectorySeparatorChar);
+            if (string.IsNullOrWhiteSpace(relativePath))
+            {
+                continue;
+            }
+            GetPathInsideRoot(installRoot, relativePath);
+            result.Add(relativePath);
+        }
+        return result;
+    }
+
+    internal static void WriteManagedFileSet(string installRoot, IEnumerable<string> managedFiles, List<string> createdFiles)
+    {
+        string manifestPath = Path.Combine(installRoot, ManagedFilesManifestName);
+        if (!File.Exists(LongPath(manifestPath)))
+        {
+            createdFiles.Add(manifestPath);
+        }
+        File.WriteAllLines(LongPath(manifestPath), managedFiles.OrderBy(path => path, StringComparer.OrdinalIgnoreCase));
+    }
+
+    internal static void DeleteObsoleteManagedFiles(string installRoot, IEnumerable<string> obsoleteManagedFiles)
+    {
+        foreach (string relativePath in obsoleteManagedFiles)
+        {
+            string installedFile = GetPathInsideRoot(installRoot, relativePath);
+            if (File.Exists(LongPath(installedFile)))
+            {
+                File.Delete(LongPath(installedFile));
+            }
+        }
+    }
+
+    internal static void RestorePreservedConfiguration(string backupRoot, string installRoot)
+    {
+        foreach (string preservedPath in PreservedRelativePaths)
+        {
+            string backupFile = GetPathInsideRoot(backupRoot, preservedPath);
+            if (!File.Exists(LongPath(backupFile)))
+            {
+                continue;
+            }
+
+            string destinationFile = GetPathInsideRoot(installRoot, preservedPath);
+            CreateDirectoryFor(destinationFile);
+            File.Copy(LongPath(backupFile), LongPath(destinationFile), true);
+        }
+    }
+
+    internal static void RollBackFiles(string backupRoot, string installRoot, List<string> createdFiles)
+    {
+        foreach (string createdFile in createdFiles)
+        {
+            if (File.Exists(LongPath(createdFile)))
+            {
+                File.Delete(LongPath(createdFile));
+            }
+        }
+
+        if (string.IsNullOrEmpty(backupRoot) || !Directory.Exists(LongPath(backupRoot)))
+        {
+            return;
+        }
+
+        foreach (string backupFile in GetFilesRecursive(backupRoot))
+        {
+            string relativePath = GetRelativePath(backupRoot, backupFile);
+            string destinationFile = GetPathInsideRoot(installRoot, relativePath);
+            CreateDirectoryFor(destinationFile);
+            File.Copy(LongPath(backupFile), LongPath(destinationFile), true);
+        }
+    }
+
+    internal static bool IsPreserved(string relativePath)
+    {
+        return PreservedRelativePaths.Any(path => string.Equals(path, relativePath, StringComparison.OrdinalIgnoreCase))
+            || PreservedDirectoryPrefixes.Any(prefix => relativePath.StartsWith(prefix, StringComparison.OrdinalIgnoreCase));
+    }
+
+    internal static string GetRelativePath(string root, string path)
+    {
+        string normalizedRoot = Path.GetFullPath(root).TrimEnd(Path.DirectorySeparatorChar) + Path.DirectorySeparatorChar;
+        string normalizedPath = Path.GetFullPath(path);
+        if (!normalizedPath.StartsWith(normalizedRoot, StringComparison.OrdinalIgnoreCase))
+        {
+            throw new InvalidOperationException("Path is outside the expected root.");
+        }
+
+        return normalizedPath.Substring(normalizedRoot.Length);
+    }
+
+    internal static string GetPathInsideRoot(string root, string relativePath)
+    {
+        if (string.IsNullOrWhiteSpace(relativePath) || Path.IsPathRooted(relativePath))
+        {
+            throw new InvalidDataException("A managed file path is invalid.");
+        }
+
+        string normalizedRoot = Path.GetFullPath(root).TrimEnd(Path.DirectorySeparatorChar) + Path.DirectorySeparatorChar;
+        string normalizedPath = Path.GetFullPath(Path.Combine(root, relativePath));
+        if (!normalizedPath.StartsWith(normalizedRoot, StringComparison.OrdinalIgnoreCase))
+        {
+            throw new InvalidDataException("A managed file path is outside the installation root.");
+        }
+        return normalizedPath;
+    }
+
+    private static void DeleteDirectoryTreeSafely(string path)
+    {
+        path = LongPath(path);
+        if (!Directory.Exists(path))
+        {
+            return;
+        }
+
+        FileAttributes rootAttributes = File.GetAttributes(path);
+        if ((rootAttributes & FileAttributes.ReparsePoint) != 0)
+        {
+            Directory.Delete(path, false);
+            return;
+        }
+
+        // Entries of a prefixed directory are prefixed too, so recursion stays long-path safe.
+        foreach (FileSystemInfo entry in new DirectoryInfo(path).GetFileSystemInfos())
+        {
+            FileAttributes attributes = entry.Attributes;
+            if ((attributes & FileAttributes.Directory) != 0)
+            {
+                if ((attributes & FileAttributes.ReparsePoint) != 0)
+                {
+                    Directory.Delete(LongPath(entry.FullName), false);
+                }
+                else
+                {
+                    DeleteDirectoryTreeSafely(entry.FullName);
+                }
+            }
+            else
+            {
+                File.Delete(LongPath(entry.FullName));
+            }
+        }
+
+        Directory.Delete(path, false);
+    }
+}

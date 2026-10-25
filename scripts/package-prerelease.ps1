@@ -1,8 +1,8 @@
-﻿[CmdletBinding()]
+[CmdletBinding()]
 param(
-    [string]$Version = '4.3.0-preview.1',
-    [string]$BaseTag = 'v4.2.0',
-    [string]$VerificationDirectory = 'artifacts\verification\v4.3.0-preview.1',
+    [string]$Version = '4.5.2-preview.1',
+    [string]$BaseTag = 'v4.5.1',
+    [string]$VerificationDirectory = 'artifacts\verification\v4.5.2-preview.1',
     [switch]$ForGitHubPrerelease,
     [string]$CiUrl = '',
     # Only for machines without git: JSON exported by git elsewhere from this same
@@ -119,7 +119,7 @@ foreach ($tool in @('7z.exe','7z.dll','License.txt')) {
 foreach ($file in @('LICENSE','LICENSING.md','开始使用.md')) {
     Copy-Item -LiteralPath (Join-Path $taskRoot $file) -Destination $taskApp
 }
-Copy-Item -LiteralPath (Join-Path $taskRoot 'IntegratedModManager.EndfieldLaunch\LICENSE') -Destination (Join-Path $taskApp 'LICENSE-AGPL-3.0.txt')
+Copy-Item -LiteralPath (Join-Path $taskRoot 'src\IntegratedModManager.EndfieldLaunch\LICENSE') -Destination (Join-Path $taskApp 'LICENSE-AGPL-3.0.txt')
 
 # Ship user documentation and public release history, without following source-code links.
 foreach ($folder in @('docs\guides','docs\releases','docs\assets','docs\verification')) {
@@ -171,7 +171,7 @@ $taskStatus = @"
 - Release/x64 主程序、启动器和更新器已构建，文件版本统一为 $taskFileVersion，产品版本为 $Version。
 - 打包时检查必需运行文件、许可证文件、用户状态排除、文件清单及 ZIP SHA-256。
 - 尚未在真实游戏和 XXMI / EFMI 上走完整启动链；失效联接清理和压缩包导入的界面流程未在真实 Mod 库上实机点击验证。该包是开发预览，不是正式版。
-- 本预览版关闭软件自身的自动更新，v4.2.0 稳定通道不受影响。
+- 本预览版关闭软件自身的自动更新，稳定通道不受影响。
 - 许可证：包含终末地启动组件（AGPL-3.0-only），整个发布包按 AGPL-3.0-only 分发；见 LICENSING.md。
 $taskValidationScope
 

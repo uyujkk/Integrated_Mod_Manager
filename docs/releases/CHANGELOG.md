@@ -1,5 +1,11 @@
 # CHANGELOG / 更新日志
 
+## v4.5.2-preview.1 (local preview / 本地预览)
+
+Overlay F10-before-save, deployment refresh, shortcut caching/control reuse, neutral import wording and source/test layout cleanup. [Notes](v4.5.2-preview.1.md).
+
+浮窗保存前同步 F10、部署后刷新、快捷键缓存与控件复用、导入文案及源码测试目录整理。[说明](v4.5.2-preview.1.md)。
+
 [中文说明](../../README.zh-CN.md) | [English README](../../README.md) | [文档索引 / Documentation Index](../README.md) | [GitHub Releases](https://github.com/uyujkk/Integrated_Mod_Manager/releases)
 
 本文档记录集成化 Mod 管理器的版本变化；未发布版本会单独标注。
@@ -14,9 +20,9 @@ Name and save a single-Mod preset from the overlay, as one of that Mod's state s
 
 ## v4.5.0 — 2026-10-23（正式版 / Stable）
 
-新增角色文件夹头像（新角色一天内自动加入）、每个角色同时启用多个 Mod、单 Mod 状态槽位变体（写入 Mod 默认值、导入 JASM 变体、整份 `d3dx_user.ini` 快照）、实验性的 F10 热应用与浮窗槽位切换、自动识别游戏窗口，以及最大化后按比例还原。不再在启动时弹出旧的终末地启动升级引导。中文与英文分开见 [v4.5.0](v4.5.0.md)。
+新增角色文件夹头像（新角色一天内自动加入）、每个角色同时启用多个 Mod、单 Mod 状态槽位变体（写入 Mod 默认值、导入变体文件（待验证）、整份 `d3dx_user.ini` 快照）、实验性的 F10 热应用与浮窗槽位切换、自动识别游戏窗口，以及最大化后按比例还原。不再在启动时弹出旧的终末地启动升级引导。中文与英文分开见 [v4.5.0](v4.5.0.md)。
 
-Add character folder avatars (new characters within a day), several Mods per character, single-Mod state slot variants (Mod default writes, JASM variant import, whole `d3dx_user.ini` snapshots), experimental F10 hot apply with overlay slot switching, automatic game window selection, and proportional restore from maximized. The old Endfield launch upgrade prompt no longer appears at startup. Separate Chinese and English notes: [v4.5.0](v4.5.0.md).
+Add character folder avatars (new characters within a day), several Mods per character, single-Mod state slot variants (Mod default writes, variant file import (unverified), whole `d3dx_user.ini` snapshots), experimental F10 hot apply with overlay slot switching, automatic game window selection, and proportional restore from maximized. The old Endfield launch upgrade prompt no longer appears at startup. Separate Chinese and English notes: [v4.5.0](v4.5.0.md).
 
 ## v4.4.0 — 2026-10-22（正式版 / Stable）
 
