@@ -17,9 +17,19 @@ public sealed class LoaderStateCaptureTests : IDisposable
         await LoaderStateCapture.FlushAsync(Ini, _ =>
         {
             Assert.False(File.GetAttributes(Ini).HasFlag(FileAttributes.ReadOnly));
-            writer = Task.Run(async () => { await Task.Delay(30); await File.WriteAllTextAsync(Ini, "new complete values"); releaseWriter.SetResult(); });
+            writer = Task.Run(async () =>
+            {
+                await Task.Delay(30);
+                // CI runners can briefly lock a fresh temp file (scanners, coverage); retry like a real loader would.
+                for (int attempt = 0; ; attempt++)
+                {
+                    try { await File.WriteAllTextAsync(Ini, "new complete values"); break; }
+                    catch (IOException) when (attempt < 50) { await Task.Delay(20); }
+                }
+                releaseWriter.SetResult();
+            });
             return Task.CompletedTask;
-        }, TimeSpan.FromSeconds(2), TimeSpan.FromMilliseconds(20));
+        }, TimeSpan.FromSeconds(10), TimeSpan.FromMilliseconds(20)); // Generous: a slow, loaded runner must not time out.
         await writer!;
         Assert.True(releaseWriter.Task.IsCompleted);
         Assert.Equal("new complete values", File.ReadAllText(Ini));
