@@ -1,4 +1,4 @@
-[CmdletBinding()]
+﻿[CmdletBinding()]
 param(
     [string]$Version = '4.5.2-preview.1',
     [string]$BaseTag = 'v4.5.1',

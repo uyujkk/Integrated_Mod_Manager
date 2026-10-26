@@ -69,7 +69,7 @@ Bindings that can't be sent show the reason and the original text. You can also 
 - The game doesn't react: make sure the target is the game itself and sending is on; look for a permission notice; try both scan-code and virtual-key modes; try a 500 ms press.
 - Each click writes a local diagnostic line to `WinUI3/diagnostics/shortcut-input.jsonl` (input mode, key, count accepted by Windows, foreground window, permission check). Nothing is uploaded. Windows accepting the input doesn't guarantee the game ran the Mod action.
 
-## Preview 4.5.2 changes
+## Saving and refreshing in the overlay
 
 Both overlay save buttons send F10 and wait for a changed, stable loader file before capture. A five-second timeout cancels the save. F10 briefly reloads the scene. Saving never changes file attributes and waits for an active hot apply to finish. If input is unavailable, choose Cancel to configure it or explicitly read the existing disk file, which may contain old values.
 
