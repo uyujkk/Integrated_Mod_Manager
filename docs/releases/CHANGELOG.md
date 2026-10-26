@@ -1,16 +1,16 @@
 # CHANGELOG / 更新日志
 
-## v4.5.2-preview.1 (local preview / 本地预览)
-
-Overlay F10-before-save, deployment refresh, shortcut caching/control reuse, neutral import wording and source/test layout cleanup. [Notes](v4.5.2-preview.1.md).
-
-浮窗保存前同步 F10、部署后刷新、快捷键缓存与控件复用、导入文案及源码测试目录整理。[说明](v4.5.2-preview.1.md)。
-
 [中文说明](../README.zh-CN.md) | [English README](../../README.md) | [文档索引 / Documentation Index](../README.md) | [GitHub Releases](https://github.com/uyujkk/Integrated_Mod_Manager/releases)
 
 本文档记录集成化 Mod 管理器的版本变化；未发布版本会单独标注。
 
 This document records version changes in Integrated Mod Manager. Unpublished versions are marked separately.
+
+## v4.5.2 — 2026-10-26（正式版 / Stable）
+
+浮窗保存预设前自动发送 F10 并等待写入；新增浮窗刷新；多按键 Mod 提速；变体导入改为中性名称并标为待验证，链接部署、恢复到加载器和组合预设去掉实验标记；源码整理为 src/、tests/、tools/。取代本地预览 v4.5.2-preview.1。见 [v4.5.2](v4.5.2.md)。
+
+The overlay sends F10 and waits for the write before saving presets; overlay refresh; faster Mods with many bindings; variant import renamed and marked unverified, and directory links, loader state restore and combination presets no longer experimental; source moved to src/, tests/, tools/. Supersedes the local preview v4.5.2-preview.1. See [v4.5.2](v4.5.2.md).
 
 ## v4.5.1 — 2026-10-23（正式版 / Stable）
 
