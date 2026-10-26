@@ -1,5 +1,19 @@
 # Homepage screenshots / 主页截图
 
+## 4.5 avatars, state slots and overlay / 头像、状态槽位与浮窗
+
+Captured on 2026-10-26 from an isolated copy of the Release build of `main` after v4.5.1 (the same application code later merged as PR #29; native windows, dark theme, English UI) with `PrintWindow`, so only the app's own windows are in the images.
+
+| File | Surface |
+| --- | --- |
+| `repository-avatars-v4.5.png` | Repository page: three placeholder characters (`Demo A`–`Demo C`) with avatars, the avatar and multi-select buttons, and two linked Mods for `Demo A`, which allows several Mods |
+| `state-slots-v4.5.png` | State Slots tab cropped from the same window: three saved slots, the current one selected with its values |
+| `shortcut-overlay-v4.5.png` | Overlay at 100% background opacity, cropped below the last binding: save buttons, Refresh (next release), state slot buttons and three demonstration bindings |
+
+The fixture is synthetic: avatars are generated letter-on-colour images stored as custom character avatars; the Mods contain only demonstration `[Constants]` and `[Key…]` sections; `d3dx_user.ini` and the saved slots were written by the fixture script. The only paths shown belong to the fixture folder `G:\IMM-Demo-4.5b`. No game, loader, real Mod or online content was used, no target window was selected and no input was sent. Apart from the crops noted above, images are unedited.
+
+2026-10-26 使用 v4.5.1 之后 `main` 的 Release 构建隔离副本截图（与之后合并的 PR #29 应用代码相同），用 `PrintWindow` 只截取应用自身窗口。角色、头像（生成的字母图）、Mod、`d3dx_user.ini` 和状态槽位均为模拟数据；画面中的路径只属于演示文件夹 `G:\IMM-Demo-4.5b`。未连接游戏或加载器，未选择目标窗口，也未发送按键。除表中说明的裁剪外未做修改。
+
 ## 4.4 shortcut panel / 快捷键面板
 
 Captured on 2026-10-22 from an isolated copy of the v4.4.0 Release build (native window, dark theme, English UI).

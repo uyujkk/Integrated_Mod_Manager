@@ -42,7 +42,7 @@
 
 ### 许可证
 
-启动组件源自 EndfieldBridge 0.3.2，以 AGPL-3.0-only 授权，其启动核心参考并改写自 endfield-nolauncher / Better-Endfield。包含该组件的管理器发布包整体按 AGPL-3.0-only 分发，仓库中其他文件仍是 MIT。详见 [LICENSING.md](../../LICENSING.md) 与 [组件 NOTICE](../../src/IntegratedModManager.EndfieldLaunch/NOTICE.md)。
+启动组件源自 EndfieldBridge 0.3.2，以 AGPL-3.0-only 授权，其启动核心参考并改写自 endfield-nolauncher / Better-Endfield。包含该组件的管理器发布包整体按 AGPL-3.0-only 分发，仓库中其他文件仍是 MIT。详见 [LICENSING.md](../LICENSING.md) 与 [组件 NOTICE](../../src/IntegratedModManager.EndfieldLaunch/NOTICE.md)。
 
 ## English
 
@@ -81,7 +81,7 @@ Launching requires administrator rights. Settings, logs, restore points and laun
 
 ### License
 
-The launch component derives from EndfieldBridge 0.3.2 and is licensed AGPL-3.0-only. Its launch core was adapted from endfield-nolauncher / Better-Endfield. Manager builds that include it are distributed as a whole under AGPL-3.0-only; other repository files remain MIT. See [LICENSING.md](../../LICENSING.md) and the [component NOTICE](../../src/IntegratedModManager.EndfieldLaunch/NOTICE.md).
+The launch component derives from EndfieldBridge 0.3.2 and is licensed AGPL-3.0-only. Its launch core was adapted from endfield-nolauncher / Better-Endfield. Manager builds that include it are distributed as a whole under AGPL-3.0-only; other repository files remain MIT. See [LICENSING.md](../LICENSING.md) and the [component NOTICE](../../src/IntegratedModManager.EndfieldLaunch/NOTICE.md).
 
 ## Manager 4.1.1–4.2.0 (standalone bridge) / 旧版说明
 

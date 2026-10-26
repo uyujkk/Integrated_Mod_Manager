@@ -116,7 +116,7 @@ foreach ($tool in @('7z.exe','7z.dll','License.txt')) {
 }
 # The package as a whole is AGPL-3.0-only; the root keeps the MIT notice for MIT files
 # and explains the split. Full texts are also under WinUI3\licenses.
-foreach ($file in @('LICENSE','LICENSING.md','开始使用.md')) {
+foreach ($file in @('LICENSE','docs\LICENSING.md')) {
     Copy-Item -LiteralPath (Join-Path $taskRoot $file) -Destination $taskApp
 }
 Copy-Item -LiteralPath (Join-Path $taskRoot 'src\IntegratedModManager.EndfieldLaunch\LICENSE') -Destination (Join-Path $taskApp 'LICENSE-AGPL-3.0.txt')
@@ -135,7 +135,11 @@ foreach ($folder in @('docs\guides','docs\releases','docs\assets','docs\verifica
 $taskBundleContract = Join-Path $taskApp 'docs\development\Combination-Bundles.md'
 New-Item -ItemType Directory -Path ([IO.Path]::GetDirectoryName($taskBundleContract)) -Force | Out-Null
 Copy-Item -LiteralPath (Join-Path $taskRoot 'docs\development\Combination-Bundles.md') -Destination $taskBundleContract
-Copy-Item -LiteralPath (Join-Path $taskRoot '开始使用.md') -Destination (Join-Path $taskApp 'README.md')
+$taskStartGuide = [IO.File]::ReadAllText((Join-Path $taskRoot 'docs\guides\开始使用.md'), [Text.Encoding]::UTF8)
+$taskStartGuide = [regex]::Replace($taskStartGuide, '\]\((?![a-zA-Z][a-zA-Z0-9+.-]*:|#|/)', '](docs/guides/')
+foreach ($taskStartName in @('开始使用.md', 'README.md')) {
+    [IO.File]::WriteAllText((Join-Path $taskApp $taskStartName), $taskStartGuide, [Text.UTF8Encoding]::new($false))
+}
 $taskMinor = ($taskCoreVersion -split '\.')[0..1] -join '.'
 [IO.File]::WriteAllText((Join-Path $taskApp 'docs\README.md'),
     "# $taskMinor 正式版文档`n`n当前版本以 [$Version 说明](releases/v$Version.md) 为准；基础手册和历史发布说明保留用于查阅。`n`n[用户手册](guides/用户手册.zh-CN.md) · [快捷键面板](guides/Mod-Shortcut-Panel.zh-CN.md) · [内置终末地启动](guides/Endfield-Bridge.md) · [浏览下载与旧库整理](guides/Browse-Download-Task-Pack.zh-CN.md) · [组合预设](guides/Combination-Presets.zh-CN.md)`n",

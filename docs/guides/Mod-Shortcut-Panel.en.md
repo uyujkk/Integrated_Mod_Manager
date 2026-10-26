@@ -16,7 +16,7 @@ Version 4.4 adds a Shortcuts page. It reads the `[Key…]` bindings in a Mod's I
 
 ## Overlay
 
-![Overlay with a translucent background and a picker for enabled Mods](../assets/screenshots/shortcut-overlay-v4.4.png)
+<img src="../assets/screenshots/shortcut-overlay-v4.5.png" width="320" alt="Overlay with a picker for enabled Mods, save and refresh buttons, state slot buttons and key bindings">
 
 - Open it with the Floating panel button, or with the global hotkey **Ctrl + Alt + K** (default). The hotkey can be changed or disabled on the Shortcuts page.
 - The overlay never takes focus, so the game stays in the foreground after you click. Drag it and resize it as needed.

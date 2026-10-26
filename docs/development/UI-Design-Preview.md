@@ -25,7 +25,7 @@
 
 ## 使用与边界
 
-在本分支运行 `build_winui.bat`，启动 `dist/IntegratedModManager.exe`。必须保留整个 `dist` 目录，不能只复制入口 EXE。
+在本分支运行 `scripts\build_winui.bat`，启动 `dist/IntegratedModManager.exe`。必须保留整个 `dist` 目录，不能只复制入口 EXE。
 
 开发工作目录：`G:\Integrated_Mod_Manager_Development\Integrated_Mod_Manager-ui-design`。测试配置与用户正式安装相互独立。首次使用需要选择自己的仓库和目标路径。配置真实路径后，部署和删除等操作仍是实际操作，不是模拟器。
 
