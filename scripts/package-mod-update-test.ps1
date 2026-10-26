@@ -32,7 +32,7 @@ foreach($folder in @('guides','releases','assets','verification','development'))
  }
 }
 foreach($file in @('LICENSE','LICENSING.md','开始使用.md')){Copy-Item (Join-Path $root $file) $app}
-Copy-Item (Join-Path $root 'IntegratedModManager.EndfieldLaunch\LICENSE') (Join-Path $app 'LICENSE-AGPL-3.0.txt')
+Copy-Item (Join-Path $root 'src\IntegratedModManager.EndfieldLaunch\LICENSE') (Join-Path $app 'LICENSE-AGPL-3.0.txt')
 New-Item -ItemType Directory -Path (Join-Path $app 'WinUI3\Tools') -Force | Out-Null
 foreach($file in @('7z.exe','7z.dll','License.txt')){
  $name=if($file -eq 'License.txt'){'7zip-License.txt'}else{$file}

@@ -8,16 +8,16 @@ This page maps each project and folder to its responsibility. [`IntegratedModMan
 
 | 项目 / Project | 职责 / Responsibility | 依赖 / Depends on |
 | --- | --- | --- |
-| [`IntegratedModManager.Core`](../../IntegratedModManager.Core/) | 不依赖界面的逻辑：解压与校验、部署、预设、在线元数据、更新等。Logic without UI: archives, deployment, presets, online metadata, updates. | — |
-| [`IntegratedModManager.Data`](../../IntegratedModManager.Data/) | SQLite 缓存与仓库索引（命名空间 `IntegratedModManager.Data`）。SQLite caches and the repository index. | Core |
-| [`IntegratedModManager.EndfieldLaunch`](../../IntegratedModManager.EndfieldLaunch/) | 内置终末地启动，**AGPL-3.0-only**。Integrated Endfield launch, AGPL-3.0-only. | — |
-| [`IntegratedModManager.UpdateAgent.Core`](../../IntegratedModManager.UpdateAgent.Core/) | 把根目录 `LocalUpdateAgent.cs` 编译成可测试的程序集。Compiles the root `LocalUpdateAgent.cs` for tests. | — |
-| [`WinUI3`](../../WinUI3/) | WinUI 3 主程序 `ModFolderCopier.WinUI`。The WinUI 3 application. | Core, Data, EndfieldLaunch |
-| `Tests`, `DataStoreTests`, `UpdaterTests`, `EndfieldLaunchTests` | 四个 xUnit 测试套件，覆盖率门槛见 `scripts/test-all.ps1`。Four xUnit suites with coverage gates. | 各自对应项目 |
-| `RepositoryPerformance`, `DeveloperTools` | 性能基准与独立发布的开发者工具。Benchmark harness and the separately released developer tools. | Core (+ Data) |
+| [`IntegratedModManager.Core`](../../src/IntegratedModManager.Core/) | 不依赖界面的逻辑：解压与校验、部署、预设、在线元数据、更新等。Logic without UI: archives, deployment, presets, online metadata, updates. | — |
+| [`IntegratedModManager.Data`](../../src/IntegratedModManager.Data/) | SQLite 缓存与仓库索引（命名空间 `IntegratedModManager.Data`）。SQLite caches and the repository index. | Core |
+| [`IntegratedModManager.EndfieldLaunch`](../../src/IntegratedModManager.EndfieldLaunch/) | 内置终末地启动，**AGPL-3.0-only**。Integrated Endfield launch, AGPL-3.0-only. | — |
+| [`IntegratedModManager.UpdateAgent.Core`](../../src/IntegratedModManager.UpdateAgent.Core/) | 把`src/Launcher/LocalUpdateAgent.cs` 编译成可测试的程序集。Compiles `src/Launcher/LocalUpdateAgent.cs` for tests. | — |
+| [`WinUI3`](../../src/WinUI3/) | WinUI 3 主程序 `ModFolderCopier.WinUI`。The WinUI 3 application. | Core, Data, EndfieldLaunch |
+| `tests/Core.Tests`, `tests/DataStore.Tests`, `tests/UpdateAgent.Tests`, `tests/EndfieldLaunch.Tests` | 四个 xUnit 测试套件，覆盖率门槛见 `scripts/test-all.ps1`。Four xUnit suites with coverage gates. | 各自对应项目 |
+| `tests/Performance`, `tools/DeveloperTools` | 性能基准与独立发布的开发者工具。Benchmark harness and the separately released developer tools. | Core (+ Data) |
 
-根目录的 `WinUILauncher.cs` 与 `LocalUpdateAgent.cs` 由 `build_winui.bat` 用 .NET Framework 编译器单独编译为启动器和更新器。
-`WinUILauncher.cs` and `LocalUpdateAgent.cs` at the root are compiled separately by `build_winui.bat` into the launcher and updater.
+`src/Launcher/` 中的 `WinUILauncher.cs` 与 `LocalUpdateAgent.cs` 由 `scripts/build_winui.bat` 用 .NET Framework 编译器单独编译为启动器和更新器。
+`src/Launcher/WinUILauncher.cs` and `LocalUpdateAgent.cs` are compiled separately by `scripts/build_winui.bat` into the launcher and updater.
 
 ## Core 目录 / Core folders
 
@@ -29,7 +29,7 @@ Namespaces follow folders: files in `Archives` belong to `IntegratedModManager.C
 | `Archives` | `ArchiveExtractor`（ZIP、7-Zip、Bandizip、Windows tar）、清单校验、`ArchiveErrors` 错误分类、导入布局。Extraction, listing validation, error kinds, import layout. |
 | `Configuration` | `config.ini` 的解析与生成（`LegacyConfigFile`）、配置文件的原子写入、备份与损坏恢复（`ConfigurationFileStore`）。config.ini parsing/formatting, atomic writes, backups and recovery. |
 | `Deployment` | 部署布局与按角色单选/多选（`ModDeploymentLayout`、`CharacterSelectionPolicy`）、安装事务与回滚（`ModInstallTransactions`）、文件冲突检测、目录联接、组合部署、INI 冲突检测、旧库整理导入、角色文件夹规划。Install transactions and rollback, file conflicts, junctions, combination deployment, INI conflicts, library import, character folders. |
-| `Presets` | 组合预设、恢复预览、可迁移组合包、持久参数引擎（含写入 Mod 默认值）、JASM 变体导入、整份 `d3dx_user.ini` 快照、加载器热重载（`LoaderHotReload`）。Combination presets, restore preview, portable bundles, persistent state engine (including Mod default writes), JASM variant import, whole user.ini snapshots. |
+| `Presets` | 组合预设、恢复预览、可迁移组合包、持久参数引擎（含写入 Mod 默认值）、变体文件导入（待验证）、整份 `d3dx_user.ini` 快照、加载器热重载（`LoaderHotReload`）。Combination presets, restore preview, portable bundles, persistent state engine (including Mod default writes), variant file import (unverified), whole user.ini snapshots. |
 | `Online` | GameBanana 元数据与下载数、JSON 读取（`GameBananaJson`）、分类列表解析、角色目录匹配与合并（`OnlineCharacterCatalogMatcher`）、下载传输与会话、浏览与预览策略。GameBanana metadata, JSON readers, listing parsing, character catalog matching, download transport and sessions, browse policies. |
 | `Endfield` | 终末地桥接、干员目录解析，以及内置干员表（`endfield-characters.json`，嵌入程序集，新增干员只改这个文件）。Endfield bridge integration, operator catalog parsing and the built-in operator list in the embedded `endfield-characters.json`. |
 | `Shortcuts` | Mod 快捷键扫描、描述与按键输入。Mod shortcut scanning, descriptions and key input. |
@@ -52,8 +52,8 @@ Namespaces follow folders: files in `Archives` belong to `IntegratedModManager.C
 | 下载与更新 / Downloads | `OnlineDownloadFlow`, `OnlineDownloads`, `OnlineInstall`, `DownloadTasks`, `DownloadRecovery`, `BatchDownloads`, `Updates`, `ModUpdates` |
 | 快捷键与终末地 / Shortcuts, Endfield | `ShortcutBindings`, `ShortcutPanel`, `HotReload`, `CharacterFollow`, `EndfieldBridge`, `ProductivityFeatures` |
 
-窗口使用的记录与视图模型放在 [`WinUI3/Models`](../../WinUI3/Models/)，每个类型一个文件。
-Records and view models used by the window live in `WinUI3/Models`, one type per file.
+窗口使用的记录与视图模型放在 [`src/WinUI3/Models`](../../src/WinUI3/Models/)，每个类型一个文件。
+Records and view models used by the window live in `src/WinUI3/Models`, one type per file.
 
 ## 约定 / Conventions
 
@@ -63,5 +63,5 @@ Records and view models used by the window live in `WinUI3/Models`, one type per
   Core tags failures with a kind through `ErrorTags` (for example `ArchiveErrorKind`, `InstallTransactionErrorKind`) without changing the exception type; `MainWindow.Archives.cs` and `MainWindow.InstallTransactions.cs` each map kinds to Chinese/English text in one table instead of matching message text.
 - 路径包含判断统一使用 `PathSafety.ResolveInsideDirectory`、`IsSameOrInside` 或 `IsStrictlyInside`。
   Path containment checks use `PathSafety.ResolveInsideDirectory`, `IsSameOrInside` or `IsStrictlyInside`.
-- 界面文案放在 `WinUI3/Strings/zh-CN.json` 和 `en-US.json`，代码里用 `T("功能.名称")` 取文本，带值的文本用 `T("键", 值…)` 并在文件里写 `{0}`、`{1}`。新增文案时两个文件都要加同一个键；`UiTextResourceTests` 会检查键是否齐全、值的个数是否对得上。`L(中, 英)` 只用于运行时才拼出的文本对（例如保存下来的状态消息）。
-  UI text lives in `WinUI3/Strings/zh-CN.json` and `en-US.json`. Code reads it with `T("Feature.Name")`, or `T("Key", values…)` for texts with `{0}`, `{1}` placeholders. Add each new key to both files; `UiTextResourceTests` checks that keys exist and value counts match. `L(zh, en)` is only for text pairs built at runtime, such as stored status messages.
+- 界面文案放在 `src/WinUI3/Strings/zh-CN.json` 和 `en-US.json`，代码里用 `T("功能.名称")` 取文本，带值的文本用 `T("键", 值…)` 并在文件里写 `{0}`、`{1}`。新增文案时两个文件都要加同一个键；`UiTextResourceTests` 会检查键是否齐全、值的个数是否对得上。`L(中, 英)` 只用于运行时才拼出的文本对（例如保存下来的状态消息）。
+  UI text lives in `src/WinUI3/Strings/zh-CN.json` and `en-US.json`. Code reads it with `T("Feature.Name")`, or `T("Key", values…)` for texts with `{0}`, `{1}` placeholders. Add each new key to both files; `UiTextResourceTests` checks that keys exist and value counts match. `L(zh, en)` is only for text pairs built at runtime, such as stored status messages.

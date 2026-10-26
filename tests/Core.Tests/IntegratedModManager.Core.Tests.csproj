@@ -1,0 +1,20 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <TargetFramework>net8.0</TargetFramework>
+  </PropertyGroup>
+
+  <Import Project="..\TestDependencies.props" />
+
+  <ItemGroup>
+    <ProjectReference Include="..\..\src\IntegratedModManager.Core\IntegratedModManager.Core.csproj" />
+    <Compile Include="..\..\src\WinUI3\OnlinePageStateAdapter.cs" Link="WindowAdapters\OnlinePageStateAdapter.cs" />
+    <Compile Include="..\..\src\WinUI3\OnlineBrowseStateAdapter.cs" Link="WindowAdapters\OnlineBrowseStateAdapter.cs" />
+    <Compile Include="..\..\src\WinUI3\BetaLocalization.cs" Link="WindowAdapters\BetaLocalization.cs" />
+    <Compile Include="..\..\src\WinUI3\OnlineImageLoadAdapter.cs" Link="WindowAdapters\OnlineImageLoadAdapter.cs" />
+  </ItemGroup>
+
+  <!-- UiTextResourceTests parses the window sources to check every text key and its values. -->
+  <ItemGroup>
+    <PackageReference Include="Microsoft.CodeAnalysis.CSharp" Version="4.11.0" />
+  </ItemGroup>
+</Project>

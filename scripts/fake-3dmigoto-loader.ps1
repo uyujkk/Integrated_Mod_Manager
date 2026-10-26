@@ -19,7 +19,7 @@ param(
 $ErrorActionPreference = 'Stop'
 
 if ($PSCmdlet.ParameterSetName -eq 'Fixture') {
-    $source = Join-Path (Split-Path -Parent $PSScriptRoot) 'TestData'
+    $source = Join-Path (Split-Path -Parent $PSScriptRoot) 'tests\TestData'
     if (Test-Path -LiteralPath $CreateFixture) { throw "Choose a folder that does not exist yet: $CreateFixture" }
     New-Item -ItemType Directory -Path $CreateFixture | Out-Null
     Copy-Item -Path (Join-Path $source 'ModRepository'), (Join-Path $source 'Loader') -Destination $CreateFixture -Recurse

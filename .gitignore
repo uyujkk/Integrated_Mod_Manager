@@ -44,3 +44,8 @@ WinUI3/cache/
 *.suo
 Thumbs.db
 Desktop.ini
+
+# Build output at every source/test/tool depth
+**/bin/
+**/obj/
+**/TestResults/

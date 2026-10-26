@@ -19,5 +19,5 @@ foreach ($taskPath in @($taskFixtures, $taskOutput)) {
     }
 }
 if (Test-Path -LiteralPath $taskOutput) { throw 'Results already exist; select a new output directory.' }
-& dotnet run --project (Join-Path $taskRoot 'RepositoryPerformance\RepositoryPerformance.csproj') -c Release -- $taskFixtures $taskOutput
+& dotnet run --project (Join-Path $taskRoot 'tests\Performance\RepositoryPerformance.csproj') -c Release -- $taskFixtures $taskOutput
 if ($LASTEXITCODE -ne 0) { throw "Repository benchmark failed: $LASTEXITCODE" }

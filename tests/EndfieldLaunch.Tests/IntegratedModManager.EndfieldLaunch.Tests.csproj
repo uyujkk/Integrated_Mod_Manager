@@ -1,0 +1,13 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <!-- SPDX-License-Identifier: AGPL-3.0-only. Tests for the AGPL Endfield launch component. -->
+  <PropertyGroup>
+    <TargetFramework>net8.0-windows</TargetFramework>
+  </PropertyGroup>
+
+  <Import Project="..\TestDependencies.props" />
+
+  <ItemGroup>
+    <Using Include="Xunit" />
+    <ProjectReference Include="..\..\src\IntegratedModManager.EndfieldLaunch\IntegratedModManager.EndfieldLaunch.csproj" />
+  </ItemGroup>
+</Project>

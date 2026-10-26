@@ -6,11 +6,11 @@ $taskRoot = [IO.Path]::GetFullPath((Join-Path $PSScriptRoot '..'))
 if (-not $SkipBuild) {
     $taskMSBuild = Get-Command MSBuild.exe -ErrorAction SilentlyContinue
     $taskMSBuildPath = if ($taskMSBuild) { $taskMSBuild.Source } else { 'C:\BuildTools\MSBuild\Current\Bin\MSBuild.exe' }
-    & $taskMSBuildPath (Join-Path $taskRoot 'WinUI3\ModFolderCopier.WinUI.csproj') /t:Build /p:Configuration=Release /p:Platform=x64 /p:Restore=false /p:NoWarn=CA1416 /v:q /nologo
+    & $taskMSBuildPath (Join-Path $taskRoot 'src\WinUI3\ModFolderCopier.WinUI.csproj') /t:Build /p:Configuration=Release /p:Platform=x64 /p:Restore=false /p:NoWarn=CA1416 /v:q /nologo
     if ($LASTEXITCODE -ne 0) { throw 'WinUI beta build failed.' }
 }
 $taskCompiler = Join-Path $env:WINDIR 'Microsoft.NET\Framework64\v4.0.30319\csc.exe'
-$taskRuntimeSource = Join-Path $taskRoot 'WinUI3\bin\x64\Release\net8.0-windows10.0.19041.0\win-x64'
+$taskRuntimeSource = Join-Path $taskRoot 'src\WinUI3\bin\x64\Release\net8.0-windows10.0.19041.0\win-x64'
 $taskRuntimeExe = Join-Path $taskRuntimeSource 'ModFolderCopier.WinUI.exe'
 if (-not (Test-Path -LiteralPath $taskRuntimeExe)) { throw 'Runtime output is missing.' }
 if ([Diagnostics.FileVersionInfo]::GetVersionInfo($taskRuntimeExe).FileVersion -ne '4.0.0.0') { throw 'Build is not 4.0-beta.' }
@@ -28,13 +28,13 @@ Get-ChildItem -LiteralPath $taskRuntimeSource -Recurse -File | ForEach-Object {
     New-Item -ItemType Directory -Path ([IO.Path]::GetDirectoryName($taskDestination)) -Force | Out-Null
     Copy-Item -LiteralPath $_.FullName -Destination $taskDestination
 }
-Copy-Item -LiteralPath (Join-Path $taskRoot 'TestData') -Destination $taskPackageRoot -Recurse
+Copy-Item -LiteralPath (Join-Path $taskRoot 'tests\TestData') -Destination $taskPackageRoot -Recurse
 Copy-Item -LiteralPath (Join-Path $taskRoot 'LICENSE') -Destination $taskPackageRoot
 Copy-Item -LiteralPath (Join-Path $taskRoot 'docs\research\state-slots-test-guide.zh-CN.md') -Destination (Join-Path $taskPackageRoot 'TEST-GUIDE.zh-CN.md')
 Copy-Item -LiteralPath (Join-Path $taskRoot 'docs\guides\Beta-Presets.en.md') -Destination (Join-Path $taskPackageRoot 'TEST-GUIDE.en.md')
 Copy-Item -LiteralPath (Join-Path $taskRoot 'docs\releases\v4.0-beta.md') -Destination (Join-Path $taskPackageRoot 'RELEASE-NOTES.md')
 $taskLauncher = Join-Path $taskPackageRoot 'IntegratedModManager-Beta.exe'
-& $taskCompiler /nologo /target:winexe (('/win32icon:' + (Join-Path $taskRoot 'WinUI3\Assets\AppIcon.ico'))) (('/out:' + $taskLauncher)) /reference:System.dll /reference:System.Windows.Forms.dll (Join-Path $taskRoot 'WinUILauncher.cs')
+& $taskCompiler /nologo /target:winexe (('/win32icon:' + (Join-Path $taskRoot 'src\WinUI3\Assets\AppIcon.ico'))) (('/out:' + $taskLauncher)) /reference:System.dll /reference:System.Windows.Forms.dll (Join-Path $taskRoot 'src\Launcher\WinUILauncher.cs')
 if ($LASTEXITCODE -ne 0) { throw 'Beta launcher compilation failed.' }
 $taskRequired = @('IntegratedModManager-Beta.exe', 'WinUI3\ModFolderCopier.WinUI.exe',
     'WinUI3\ModFolderCopier.WinUI.dll', 'WinUI3\ModFolderCopier.WinUI.runtimeconfig.json',

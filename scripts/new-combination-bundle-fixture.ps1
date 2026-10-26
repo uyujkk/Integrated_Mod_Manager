@@ -3,7 +3,7 @@ param(
     [ValidateRange(3, 100)] [int]$ModCount = 8,
     [ValidateRange(0, 512)] [int]$PayloadMegabytesPerMod = 0,
     [string]$OutputDirectory = 'artifacts\combination-bundle-fixture\TestData',
-    [string]$CoreAssembly = 'IntegratedModManager.Core\bin\Release\net8.0\IntegratedModManager.Core.dll'
+    [string]$CoreAssembly = 'src\IntegratedModManager.Core\bin\Release\net8.0\IntegratedModManager.Core.dll'
 )
 
 $ErrorActionPreference = 'Stop'

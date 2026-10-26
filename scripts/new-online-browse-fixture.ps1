@@ -3,7 +3,7 @@ param([switch]$IncludeLiveDownloadProbe)
 
 $ErrorActionPreference = 'Stop'
 $taskRoot = [IO.Path]::GetFullPath((Join-Path $PSScriptRoot '..'))
-$taskRuntime = Join-Path $taskRoot 'WinUI3\bin\x64\Release\net8.0-windows10.0.19041.0\win-x64'
+$taskRuntime = Join-Path $taskRoot 'src\WinUI3\bin\x64\Release\net8.0-windows10.0.19041.0\win-x64'
 if (!(Test-Path -LiteralPath (Join-Path $taskRuntime 'ModFolderCopier.WinUI.exe'))) {
     throw 'Build the WinUI Release x64 application before creating this fixture.'
 }

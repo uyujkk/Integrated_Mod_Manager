@@ -6,7 +6,7 @@ param(
 
 $ErrorActionPreference = "Stop"
 $repositoryRoot = Split-Path -Parent $PSScriptRoot
-$projectPath = Join-Path $repositoryRoot "DeveloperTools\IntegratedModManager.DeveloperTools.csproj"
+$projectPath = Join-Path $repositoryRoot "tools\DeveloperTools\IntegratedModManager.DeveloperTools.csproj"
 
 function Find-MSBuild {
     $command = Get-Command msbuild.exe -ErrorAction SilentlyContinue
@@ -41,7 +41,7 @@ function Find-MSBuild {
 
 $msbuildPath = Find-MSBuild
 
-$projectAssetsPath = Join-Path $repositoryRoot "DeveloperTools\obj\project.assets.json"
+$projectAssetsPath = Join-Path $repositoryRoot "tools\DeveloperTools\obj\project.assets.json"
 $buildArguments = @(
     $projectPath,
     "/t:Build",
@@ -60,7 +60,7 @@ if ($LASTEXITCODE -ne 0) {
     throw "Developer tools build failed with exit code $LASTEXITCODE"
 }
 
-$outputPath = Join-Path $repositoryRoot "DeveloperTools\bin\x64\$Configuration\net8.0-windows10.0.19041.0\win-x64\IntegratedModManager.DeveloperTools.exe"
+$outputPath = Join-Path $repositoryRoot "tools\DeveloperTools\bin\x64\$Configuration\net8.0-windows10.0.19041.0\win-x64\IntegratedModManager.DeveloperTools.exe"
 if (-not (Test-Path -LiteralPath $outputPath)) {
     throw "Build succeeded but the executable was not found at $outputPath"
 }

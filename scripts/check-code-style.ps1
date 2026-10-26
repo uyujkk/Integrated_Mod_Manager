@@ -21,19 +21,19 @@ if (!$msbuild) {
 }
 
 $dotnetProjects = @(
-    "IntegratedModManager.Core\IntegratedModManager.Core.csproj",
-    "IntegratedModManager.Data\IntegratedModManager.Data.csproj",
-    "IntegratedModManager.EndfieldLaunch\IntegratedModManager.EndfieldLaunch.csproj",
-    "IntegratedModManager.UpdateAgent.Core\IntegratedModManager.UpdateAgent.Core.csproj",
-    "Tests\IntegratedModManager.Core.Tests.csproj",
-    "DataStoreTests\IntegratedModManager.DataStore.Tests.csproj",
-    "UpdaterTests\IntegratedModManager.UpdateAgent.Tests.csproj",
-    "EndfieldLaunchTests\IntegratedModManager.EndfieldLaunch.Tests.csproj",
-    "RepositoryPerformance\RepositoryPerformance.csproj"
+    "src\IntegratedModManager.Core\IntegratedModManager.Core.csproj",
+    "src\IntegratedModManager.Data\IntegratedModManager.Data.csproj",
+    "src\IntegratedModManager.EndfieldLaunch\IntegratedModManager.EndfieldLaunch.csproj",
+    "src\IntegratedModManager.UpdateAgent.Core\IntegratedModManager.UpdateAgent.Core.csproj",
+    "tests\Core.Tests\IntegratedModManager.Core.Tests.csproj",
+    "tests\DataStore.Tests\IntegratedModManager.DataStore.Tests.csproj",
+    "tests\UpdateAgent.Tests\IntegratedModManager.UpdateAgent.Tests.csproj",
+    "tests\EndfieldLaunch.Tests\IntegratedModManager.EndfieldLaunch.Tests.csproj",
+    "tests\Performance\RepositoryPerformance.csproj"
 )
 $winuiProjects = @(
-    "WinUI3\ModFolderCopier.WinUI.csproj",
-    "DeveloperTools\IntegratedModManager.DeveloperTools.csproj"
+    "src\WinUI3\ModFolderCopier.WinUI.csproj",
+    "tools\DeveloperTools\IntegratedModManager.DeveloperTools.csproj"
 )
 
 $findings = New-Object System.Collections.Generic.List[string]

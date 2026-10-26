@@ -24,8 +24,8 @@ Version 4.4 adds a Shortcuts page. It reads the `[Key…]` bindings in a Mod's I
 - Available in the overlay:
   - **Switch Mod**: lists only enabled Mods (deployed to the loader's Mods folder).
   - **Sending on/off**: pause or resume sending.
-  - **Save preset**: saves the enabled Mods and the values in `d3dx_user.ini` as a combination preset. It only reads and never changes the game. Press F10 in the game first so recent changes are written.
-  - **Save single-Mod preset**: press F10 in the game first, then click this button and enter a name in the overlay. Only the Mod selected when you clicked is saved, as one of its state slots; blank names and names that Mod already uses are rejected, and Cancel saves nothing. The overlay takes keyboard focus while you type, then gives it back to the game. Saving only reads the loader state and does not send F10. Undeployed Mods, missing values and save failures are reported in the overlay.
+  - **Save preset**: saves the enabled Mods and the values in `d3dx_user.ini` as a combination preset. It sends F10 first and waits for a changed, stable loader file. F10 briefly reloads the scene.
+  - **Save single-Mod preset**: click this button and enter a name in the overlay. Only the Mod selected when you clicked is saved, as one of its state slots; blank names and names that Mod already uses are rejected, and Cancel saves nothing. The overlay takes keyboard focus while you type, then gives it back to the game. After naming it, saving sends F10 and waits for a changed, stable loader file; a five-second timeout cancels the save. Undeployed Mods, missing values and save failures are reported in the overlay.
   - **Hot switching state slots (experimental, off by default)**:
     - Turn on "Switch state slots in the overlay" on the Shortcuts page, and the overlay lists the current Mod's state slots; ● marks the current one.
     - Clicking a slot writes its values into `d3dx_user.ini` and sends **F10** to the chosen game window.
@@ -68,3 +68,9 @@ Bindings that can't be sent show the reason and the original text. You can also 
 
 - The game doesn't react: make sure the target is the game itself and sending is on; look for a permission notice; try both scan-code and virtual-key modes; try a 500 ms press.
 - Each click writes a local diagnostic line to `WinUI3/diagnostics/shortcut-input.jsonl` (input mode, key, count accepted by Windows, foreground window, permission check). Nothing is uploaded. Windows accepting the input doesn't guarantee the game ran the Mod action.
+
+## Saving and refreshing in the overlay
+
+Both overlay save buttons send F10 and wait for a changed, stable loader file before capture. A five-second timeout cancels the save. F10 briefly reloads the scene. Saving never changes file attributes and waits for an active hot apply to finish. If input is unavailable, choose Cancel to configure it or explicitly read the existing disk file, which may contain old values.
+
+Refresh rereads deployed Mods, the current bindings and slots. Successful deployment or combination restoration also refreshes the overlay. A replaced current Mod follows its replacement; otherwise its old actions are cleared.

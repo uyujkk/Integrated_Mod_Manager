@@ -128,10 +128,10 @@ New-Item -ItemType Directory -Path $testResults, $smokeOutput -Force | Out-Null
 
 $dotnetCommand = Get-Command dotnet.exe -ErrorAction Stop
 $testProjects = @(
-    @{ Name = "core"; Assembly = "IntegratedModManager.Core"; Path = Join-Path $root "Tests\IntegratedModManager.Core.Tests.csproj"; Line = 0.90; Branch = 0.85 },
-    @{ Name = "datastore"; Assembly = "IntegratedModManager.Data"; Path = Join-Path $root "DataStoreTests\IntegratedModManager.DataStore.Tests.csproj"; Line = 0.70; Branch = 0.60 },
-    @{ Name = "updater"; Assembly = "IntegratedModManager.UpdateAgent.Core"; Path = Join-Path $root "UpdaterTests\IntegratedModManager.UpdateAgent.Tests.csproj"; Line = 0.60; Branch = 0.55 },
-    @{ Name = "endfield-launch"; Assembly = "IntegratedModManager.EndfieldLaunch"; Path = Join-Path $root "EndfieldLaunchTests\IntegratedModManager.EndfieldLaunch.Tests.csproj"; Line = 0.75; Branch = 0.65 }
+    @{ Name = "core"; Assembly = "IntegratedModManager.Core"; Path = Join-Path $root "tests\Core.Tests\IntegratedModManager.Core.Tests.csproj"; Line = 0.90; Branch = 0.85 },
+    @{ Name = "datastore"; Assembly = "IntegratedModManager.Data"; Path = Join-Path $root "tests\DataStore.Tests\IntegratedModManager.DataStore.Tests.csproj"; Line = 0.70; Branch = 0.60 },
+    @{ Name = "updater"; Assembly = "IntegratedModManager.UpdateAgent.Core"; Path = Join-Path $root "tests\UpdateAgent.Tests\IntegratedModManager.UpdateAgent.Tests.csproj"; Line = 0.60; Branch = 0.55 },
+    @{ Name = "endfield-launch"; Assembly = "IntegratedModManager.EndfieldLaunch"; Path = Join-Path $root "tests\EndfieldLaunch.Tests\IntegratedModManager.EndfieldLaunch.Tests.csproj"; Line = 0.75; Branch = 0.65 }
 )
 
 & (Join-Path $PSScriptRoot "test-coverage-gate.ps1")
@@ -154,7 +154,7 @@ foreach ($testProject in $testProjects) {
 
 if (!$SkipBuild) {
     $msbuild = Find-MSBuild
-    $project = Join-Path $root "WinUI3\ModFolderCopier.WinUI.csproj"
+    $project = Join-Path $root "src\WinUI3\ModFolderCopier.WinUI.csproj"
     Invoke-Checked $msbuild @(
         $project,
         "/restore",
@@ -171,13 +171,13 @@ if (!$SkipBuild) {
     $launcherOutput = Join-Path $smokeOutput "IntegratedModManager.exe"
     $legacyLauncherOutput = Join-Path $smokeOutput "ModFolderCopier.exe"
     $updaterOutput = Join-Path $smokeOutput "LocalUpdateAgent.exe"
-    $icon = Join-Path $root "WinUI3\Assets\AppIcon.ico"
+    $icon = Join-Path $root "src\WinUI3\Assets\AppIcon.ico"
     $iconArgument = if (Test-Path -LiteralPath $icon) { @("/win32icon:$icon") } else { @() }
 
     Invoke-Checked $compiler (@(
         "/nologo", "/target:winexe", "/out:$launcherOutput",
         "/reference:System.dll", "/reference:System.Windows.Forms.dll"
-    ) + $iconArgument + @(Join-Path $root "WinUILauncher.cs"))
+    ) + $iconArgument + @(Join-Path $root "src\Launcher\WinUILauncher.cs"))
     Copy-Item -LiteralPath $launcherOutput -Destination $legacyLauncherOutput -Force
 
     Invoke-Checked $compiler (@(
@@ -185,24 +185,24 @@ if (!$SkipBuild) {
         "/reference:System.dll", "/reference:System.Core.dll",
         "/reference:System.Windows.Forms.dll", "/reference:System.IO.Compression.dll",
         "/reference:System.IO.Compression.FileSystem.dll"
-    ) + $iconArgument + @(Join-Path $root "LocalUpdateAgent.cs"))
+    ) + $iconArgument + @(Join-Path $root "src\Launcher\LocalUpdateAgent.cs"))
 
-    $runtimeOutput = Join-Path $root "WinUI3\bin\x64\Release\net8.0-windows10.0.19041.0\win-x64\ModFolderCopier.WinUI.exe"
+    $runtimeOutput = Join-Path $root "src\WinUI3\bin\x64\Release\net8.0-windows10.0.19041.0\win-x64\ModFolderCopier.WinUI.exe"
     Assert-FileExists $runtimeOutput
     Assert-FileExists $launcherOutput
     Assert-FileExists $legacyLauncherOutput
     Assert-FileExists $updaterOutput
 
     $declaredVersions = @(
-        (Select-String -LiteralPath (Join-Path $root "WinUI3\AssemblyInfo.cs") -Pattern 'AssemblyFileVersion\("([^"]+)"\)').Matches.Groups[1].Value,
-        (Select-String -LiteralPath (Join-Path $root "WinUILauncher.cs") -Pattern 'AssemblyFileVersion\("([^"]+)"\)').Matches.Groups[1].Value,
-        (Select-String -LiteralPath (Join-Path $root "LocalUpdateAgent.cs") -Pattern 'AssemblyFileVersion\("([^"]+)"\)').Matches.Groups[1].Value
+        (Select-String -LiteralPath (Join-Path $root "src\WinUI3\AssemblyInfo.cs") -Pattern 'AssemblyFileVersion\("([^"]+)"\)').Matches.Groups[1].Value,
+        (Select-String -LiteralPath (Join-Path $root "src\Launcher\WinUILauncher.cs") -Pattern 'AssemblyFileVersion\("([^"]+)"\)').Matches.Groups[1].Value,
+        (Select-String -LiteralPath (Join-Path $root "src\Launcher\LocalUpdateAgent.cs") -Pattern 'AssemblyFileVersion\("([^"]+)"\)').Matches.Groups[1].Value
     )
     if (($declaredVersions | Select-Object -Unique).Count -ne 1) {
         throw "Application, launcher, and updater versions do not match: $($declaredVersions -join ', ')"
     }
     # MainWindow.AppVersion aliases this label, so the release policy is the single source.
-    $releasePolicy = Get-ChildItem -LiteralPath (Join-Path $root "IntegratedModManager.Core") -Recurse -Filter "ApplicationReleasePolicy.cs" |
+    $releasePolicy = Get-ChildItem -LiteralPath (Join-Path $root "src\IntegratedModManager.Core") -Recurse -Filter "ApplicationReleasePolicy.cs" |
         Where-Object { $_.FullName -notmatch '\\(bin|obj)\\' } |
         Select-Object -First 1
     if (!$releasePolicy) {

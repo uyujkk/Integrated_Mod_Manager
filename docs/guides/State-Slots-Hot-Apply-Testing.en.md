@@ -79,7 +79,7 @@ The simulated loader reproduces that in a window:
 
 - **Write selected slot as Mod defaults**: `global persist $hair = …` in `ModRepository\TestCharacter\TestModA\mod.ini` changes to the slot's value, with a `.imm-persist-*.bak` beside it. In copy mode, `Loader\Mods\TestModA\mod.ini` changes too.
 - **Whole snapshots**: save one, change values in the loader and press F10, then restore the snapshot. Either check hot reload, or close the loader first.
-- **Import JASM variants**: put the `.JASM_Variants.json` example from the Chinese guide in `ModRepository\TestCharacter\TestModA` and import it. Expected: two slots, with the active one marked current.
+- **Import variant files (unverified)**: put the `variants.json` example from the Chinese guide in `ModRepository\TestCharacter\TestModA` and import it. Expected: two slots, with the active one marked current.
 
 ## 7. Confirm with a real game
 

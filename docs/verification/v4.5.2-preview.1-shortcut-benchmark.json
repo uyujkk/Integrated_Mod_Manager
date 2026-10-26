@@ -1,0 +1,41 @@
+{
+  "Scope": "Synthetic WinUI controls, repository and native F10 receiver only; no game access.",
+  "DeploymentReplacementAndClearPassed": true,
+  "ManualRefreshReadsNewModsPassed": true,
+  "F10ReceiverResult": "Native synthetic F10 capture, timeout rejection, queuing behind hot apply and localized missing values passed. No real game validation.",
+  "Rows": [
+    {
+      "Bindings": 100,
+      "ScanMs": 13.492,
+      "CachedScanMs": 0.1834,
+      "CreateAllButtonsMs": 22.2066,
+      "SelectAndLayoutMs": 128.3769,
+      "ReusedSelectAndLayoutMs": 0.2202,
+      "HiddenRenderMs": 0.0005,
+      "OpenOverlayAndLayoutMs": 699.1663,
+      "StatusOnlyMeanMs": 0.065091
+    },
+    {
+      "Bindings": 200,
+      "ScanMs": 1.6448,
+      "CachedScanMs": 0.0894,
+      "CreateAllButtonsMs": 19.2041,
+      "SelectAndLayoutMs": 101.1558,
+      "ReusedSelectAndLayoutMs": 0.0234,
+      "HiddenRenderMs": 0.0005,
+      "OpenOverlayAndLayoutMs": 582.139,
+      "StatusOnlyMeanMs": 0.049943
+    },
+    {
+      "Bindings": 300,
+      "ScanMs": 2.2023,
+      "CachedScanMs": 0.0868,
+      "CreateAllButtonsMs": 41.3056,
+      "SelectAndLayoutMs": 142.0843,
+      "ReusedSelectAndLayoutMs": 0.021,
+      "HiddenRenderMs": 0.0008,
+      "OpenOverlayAndLayoutMs": 422.8262,
+      "StatusOnlyMeanMs": 0.042656
+    }
+  ]
+}

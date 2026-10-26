@@ -27,16 +27,17 @@ CI 在每个分支推送时运行（只改文档的推送除外），指向 `mai
 Builds every project with the `.editorconfig` rules enabled (for example IDE0005, unnecessary `using`) and fails on any finding. Shared compiler settings live in `Directory.Build.props`. CI runs this before `test-all`; locally, run it before `test-all` too, because its rebuild cleans the shared intermediate files.
 按 `.editorconfig` 规则（例如 IDE0005 多余的 `using`）编译所有项目，有任何问题即失败。公共编译设置在 `Directory.Build.props`。CI 在 `test-all` 之前运行它；本地也请先运行它再运行 `test-all`，因为它的重新生成会清理共享的中间文件。
 
-## Three suites / 三组测试
+## Four suites / 四组测试
 
 | Project | Scope / 范围 |
 | --- | --- |
-| Tests | Paths, presets/bundles, archive safety, scanning, downloads, metadata, adapters, layouts / 路径、预设与组合包、解压安全、扫描、下载、元数据、适配器及布局 |
-| DataStoreTests | Actual isolated SQLite cache/index transactions / 真实隔离 SQLite 缓存与索引事务 |
-| UpdaterTests | Checksums, downloads, extraction, configuration preservation and rollback / 校验、下载、解压、配置保留与回滚 |
+| tests/Core.Tests | Paths, presets/bundles, archive safety, scanning, downloads, metadata, adapters, layouts / 路径、预设与组合包、解压安全、扫描、下载、元数据、适配器及布局 |
+| tests/DataStore.Tests | Actual isolated SQLite cache/index transactions / 真实隔离 SQLite 缓存与索引事务 |
+| tests/UpdateAgent.Tests | Checksums, downloads, extraction, configuration preservation and rollback / 校验、下载、解压、配置保留与回滚 |
+| tests/EndfieldLaunch.Tests | Isolated launch, configuration and lifecycle tests / 隔离启动、配置和生命周期测试 |
 
-Shared references live in `Tests/TestDependencies.props`. Each suite remains independent; safety cases are retained. Developer-only fixtures/harnesses are excluded from release payloads.
-依赖统一放在 `Tests/TestDependencies.props`，保留三组独立测试和安全用例。开发测试数据及基准工具不随主程序发布。
+Shared references live in `tests/TestDependencies.props`. Each suite remains independent; safety cases are retained. Developer-only fixtures/harnesses are excluded from release payloads.
+依赖统一放在 `tests/TestDependencies.props`，保留四组独立测试和安全用例。开发测试数据及基准工具不随主程序发布。
 
 | Assembly | Line minimum | Branch minimum |
 | --- | ---: | ---: |
@@ -54,3 +55,9 @@ Package only clean runtime files and user guides with `scripts/package-release.p
 
 Native windows, live websites, DPI, real games and actual user-installation upgrades are distinct checks, not proved by unit tests. Use isolated data and the [regression checklist](./Regression-Checklist.md). Historical journals remain in verification, including [opt11](../verification/combined-regression-opt11-20261007.md); this guide no longer repeats their running totals.
 实际窗口、网站、DPI、真实游戏和用户安装目录升级分别验证，不能用单测代替。使用隔离数据和回归清单。阶段日志保留在验证目录，本页不再重复流水账。
+
+## Shortcut performance / 快捷键性能
+
+`tests/Performance/ShortcutUiBenchmark.cs` is compiled into a separate WinUI test build only with `ImmShortcutBenchmark=true`. It generates 100/200/300-binding fixtures, measures INI scanning, button creation, actual layout, overlay opening and status updates, and checks deployment replacement and stale-action removal. `LoaderFlushReceiver.cs` is a standalone synthetic F10 target compiled with the .NET Framework compiler and `IMM_FLUSH_RECEIVER`. Normal release builds include neither test entry point. Record foreground/input failures separately from the synthetic flush/capture contract; this never proves real-game input.
+
+快捷键基准只在专用构建中运行；正常包不包含测试入口。Windows 拒绝前台切换时应记录真实按键验证未完成，不能把模拟写文件当成游戏响应。`scripts/test-preview-upgrade.ps1` 可用旧公开包的更新器，在新隔离目录验证升级、旧业务字段保留和副本回退。

@@ -204,7 +204,7 @@ The **More…** menu of State Slots adds:
   - Each file is backed up beside it as `.imm-persist-*.bak` first. The result is read back, and a failure restores the originals.
   - In copy mode the deployed copy changes too.
   - Updating the Mod replaces these edits; the old files stay in the update backup.
-- **Import JASM variants**: reads JASM's `.JASM_Variants.json` from the Mod folder (or a chosen file) and adds one slot per variant; JASM's active variant becomes "current". Keys that do not match this Mod's declarations are skipped and counted.
+- **Import variant files (unverified)**: reads a variant JSON exported by another tool from the Mod folder (or a chosen file) and adds one slot per variant; The active variant in the file becomes "current". Keys that do not match this Mod's declarations are skipped and counted.
 - **Save / Restore whole d3dx_user.ini snapshot** and **Open snapshot folder**:
   - A snapshot keeps the whole file, per repository, in `WinUI3/snapshots/user-ini/`, as a manual restore point.
   - Restoring returns every Mod's values to the snapshot. The current file is first backed up as `.imm-snapshot-*.bak`, and the game must be fully closed.
@@ -312,3 +312,5 @@ Ensure the app directory is writable, the ZIP is complete, and the app is not ru
 - Review screenshots, configs, and diagnostics before sharing them to avoid exposing personal paths, accounts, or credentials.
 
 Source code, issues, and full release history: <https://github.com/uyujkk/Integrated_Mod_Manager>
+
+Link deployment, loader state restoration and combination presets no longer carry the experimental label, within the existing automated and user-reported EFMI repository validation scope. Variant import still needs a real exported file and in-game confirmation. F10 hot apply and online automatic translation remain experimental.

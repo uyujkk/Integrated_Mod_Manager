@@ -17,7 +17,7 @@ if (!$SkipBuild) {
     & (Join-Path $PSScriptRoot "build-developer-tools.ps1") -Configuration Release | Out-Host
 }
 
-$source = Join-Path $root "DeveloperTools\bin\x64\Release\net8.0-windows10.0.19041.0\win-x64"
+$source = Join-Path $root "tools\DeveloperTools\bin\x64\Release\net8.0-windows10.0.19041.0\win-x64"
 $sourceBoundary = $source.TrimEnd('\', '/') + [IO.Path]::DirectorySeparatorChar
 $runtimePath = Join-Path $source "IntegratedModManager.DeveloperTools.exe"
 if (!(Test-Path -LiteralPath $runtimePath -PathType Leaf) -or (Get-Item -LiteralPath $runtimePath).Length -eq 0) {
@@ -53,7 +53,7 @@ try {
         Copy-Item -LiteralPath $file.FullName -Destination $destination -Force
     }
 
-    Copy-Item -LiteralPath (Join-Path $root "DeveloperTools\README.md") -Destination (Join-Path $staging "README.md") -Force
+    Copy-Item -LiteralPath (Join-Path $root "tools\DeveloperTools\README.md") -Destination (Join-Path $staging "README.md") -Force
 
     Remove-Item -LiteralPath $packagePath -Force -ErrorAction SilentlyContinue
     Remove-Item -LiteralPath $checksumPath -Force -ErrorAction SilentlyContinue
