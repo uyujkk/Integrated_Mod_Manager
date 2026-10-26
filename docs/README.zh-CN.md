@@ -1,4 +1,4 @@
-> **v4.5.1 正式版。** 在 4.5.0 的角色头像、多 Mod 启用、单 Mod 状态槽位和实验性 F10 热应用之上，新增在浮窗中命名并保存单 Mod 预设。见 [4.5.1 发布说明](releases/v4.5.1.md)。历史版本与说明继续保留。
+> **v4.5.2 正式版。** 浮窗保存预设前自动发送 F10，新增刷新按钮，多按键 Mod 响应更快；目录联接、恢复到加载器和组合预设不再标为实验功能。见 [4.5.2 发布说明](releases/v4.5.2.md)。
 
 <div align="center">
   <img src="../src/WinUI3/Assets/AppIcon.png" width="96" alt="集成化 Mod 管理器图标">
@@ -26,11 +26,11 @@
 
 ## 项目简介
 
-**当前正式版：[v4.5.1](https://github.com/uyujkk/Integrated_Mod_Manager/releases/tag/v4.5.1)。**仓库里的角色显示头像，一个角色可以同时启用多个 Mod，每个 Mod 可以保存多个命名状态槽位，置顶浮窗可以保存单 Mod 预设并在游戏中切换槽位。快捷键面板、内置终末地启动、浏览下载、旧库整理和组合预设继续保留。使用前请阅读 [4.5.1 发布说明](./releases/v4.5.1.md)、[快捷键面板说明](./guides/Mod-Shortcut-Panel.zh-CN.md)及[内置启动与账号风险说明](./guides/Endfield-Bridge.md)。
+**当前正式版：[v4.5.2](https://github.com/uyujkk/Integrated_Mod_Manager/releases/tag/v4.5.2)。**仓库里的角色显示头像，一个角色可以同时启用多个 Mod，每个 Mod 可以保存多个命名状态槽位，置顶浮窗可以保存预设（先发送 F10）、在游戏中切换槽位，并在 Mod 变化后刷新。快捷键面板、内置终末地启动、浏览下载、旧库整理和组合预设继续保留。使用前请阅读 [4.5.2 发布说明](./releases/v4.5.2.md)、[快捷键面板说明](./guides/Mod-Shortcut-Panel.zh-CN.md)及[内置启动与账号风险说明](./guides/Endfield-Bridge.md)。
 
 集成化 Mod 管理器以独立“仓库”管理不同游戏或不同 Mod 环境。它可以在本地仓库和游戏实际读取的目标目录之间复制或移除完整 Mod 文件夹，并集中管理预览图、来源链接、快捷键说明、在线下载、更新记录、配置方案和安装备份。
 
-主程序、启动器和更新器统一为 **4.5.1**（`4.5.1.0`）。工具维护者为 `uyujkk`，既有 Bandizip 备用解压功能由 [CaramelizedCUDA](https://github.com/CaramelizedCUDA) 贡献；此前的 [4.0-beta](https://github.com/uyujkk/Integrated_Mod_Manager/releases/tag/v4.0-beta) 继续独立保留。
+主程序、启动器和更新器统一为 **4.5.2**（`4.5.2.0`）。工具维护者为 `uyujkk`，既有 Bandizip 备用解压功能由 [CaramelizedCUDA](https://github.com/CaramelizedCUDA) 贡献；此前的 [4.0-beta](https://github.com/uyujkk/Integrated_Mod_Manager/releases/tag/v4.0-beta) 继续独立保留。
 
 ## 界面预览
 
@@ -46,7 +46,7 @@
   <img src="./assets/screenshots/shortcut-overlay-v4.5.png" width="290" alt="置顶浮窗：保存按钮、状态槽位按钮和按键绑定">
 </p>
 
-**状态槽位（4.5）**：把 Mod 的持久参数保存为命名槽位；“更多…”里可以更新、重命名、写入 Mod 默认值（自动备份）、导入变体文件，以及保存整份 `d3dx_user.ini` 快照。**置顶浮窗（4.5.1）**：在游戏画面上切换已启用的 Mod、热切换槽位（实验）、保存组合预设或命名的单 Mod 预设。图中的“刷新”按钮将在下一个版本提供。
+**状态槽位（4.5）**：把 Mod 的持久参数保存为命名槽位；“更多…”里可以更新、重命名、写入 Mod 默认值（自动备份）、导入变体文件，以及保存整份 `d3dx_user.ini` 快照。**置顶浮窗（4.5.1）**：在游戏画面上切换已启用的 Mod、热切换槽位（实验）、保存组合预设或命名的单 Mod 预设（保存前先发送 F10），Mod 变化后可刷新（4.5.2）。
 
 **Mod 快捷键面板（4.4）**：选择 Mod 后列出其 INI 中的按键绑定，点击即可发送到游戏；鼠标、手柄等无法发送的绑定会说明原因。
 
@@ -74,9 +74,10 @@
 - **单 Mod 状态槽位**：每个 Mod 保存多套命名参数；可写入 Mod 默认值（自动备份）、导入变体文件（待验证）、保存整份 `d3dx_user.ini` 快照。
 - **F10 热应用（实验）**：游戏运行时恢复槽位，或在浮窗中切换槽位。
 - **4.5.1**：在浮窗中命名并保存单 Mod 预设。
+- **4.5.2**：浮窗保存前发送 F10，等加载器写入后再保存；新增刷新按钮，Mod 变化后自动刷新；多按键 Mod 更快；目录联接、恢复到加载器和组合预设不再标为实验功能。
 - 自动识别游戏窗口；最大化后还原时窗口缩到屏幕的 80%。
 
-[4.5.1 发布说明](./releases/v4.5.1.md) · [4.5.0 发布说明](./releases/v4.5.0.md) · [验证范围](./verification/v4.5.1.md)
+[4.5.2 发布说明](./releases/v4.5.2.md) · [4.5.1](./releases/v4.5.1.md) · [4.5.0](./releases/v4.5.0.md) · [验证范围](./verification/v4.5.2.md)
 
 ## 早期版本
 
@@ -186,7 +187,7 @@ cmd /c scripts\build_winui.bat
 powershell -NoProfile -ExecutionPolicy Bypass -File .\scripts\test-all.ps1
 ```
 
-GitHub Actions 会在推送到 `main`、Pull Request 和手动触发时执行统一四组验证。测试依赖集中管理，未删除安全用例。当前结果及验证边界见[测试说明](./development/TESTING.md)与[4.5.1 验证记录](./verification/v4.5.1.md)。
+GitHub Actions 会在推送到 `main`、Pull Request 和手动触发时执行统一四组验证。测试依赖集中管理，未删除安全用例。当前结果及验证边界见[测试说明](./development/TESTING.md)与[4.5.2 验证记录](./verification/v4.5.2.md)。
 
 ## 数据与安全
 

@@ -1,4 +1,4 @@
-> **v4.5.1 stable release.** Adds saving a named single-Mod preset from the overlay, on top of 4.5.0's character avatars, several Mods per character, single-Mod state slots and experimental F10 hot apply. See the [release notes](docs/releases/v4.5.1.md).
+> **v4.5.2 stable release.** The overlay sends F10 before saving a preset, gains a Refresh button and responds faster for Mods with many bindings; directory links, loader state restore and combination presets are no longer experimental. See the [release notes](docs/releases/v4.5.2.md).
 
 <div align="center">
   <img src="./src/WinUI3/Assets/AppIcon.png" width="96" alt="Integrated Mod Manager icon">
@@ -26,11 +26,11 @@
 
 ## Overview
 
-**Current stable version: [v4.5.1](https://github.com/uyujkk/Integrated_Mod_Manager/releases/tag/v4.5.1).** Characters in a repository show avatars, a character can keep several Mods enabled, each Mod can keep named state slots, and the always-on-top overlay can save a single-Mod preset and switch slots in game. The shortcut panel, integrated Endfield launch, browsing and downloading, library tools and combination presets remain. See the [4.5.1 release notes](./docs/releases/v4.5.1.md), the [shortcut panel guide](./docs/guides/Mod-Shortcut-Panel.en.md) and the [launch and risk guide](./docs/guides/Endfield-Bridge.md).
+**Current stable version: [v4.5.2](https://github.com/uyujkk/Integrated_Mod_Manager/releases/tag/v4.5.2).** Characters in a repository show avatars, a character can keep several Mods enabled, each Mod can keep named state slots, and the always-on-top overlay can save presets (sending F10 first), switch slots in game and refresh after Mod changes. The shortcut panel, integrated Endfield launch, browsing and downloading, library tools and combination presets remain. See the [4.5.2 release notes](./docs/releases/v4.5.2.md), the [shortcut panel guide](./docs/guides/Mod-Shortcut-Panel.en.md) and the [launch and risk guide](./docs/guides/Endfield-Bridge.md).
 
 Integrated Mod Manager organizes different games or mod environments into independent repositories. It copies or removes complete mod folders between a local library and the target directory read by the game, while keeping preview images, source links, shortcut notes, online downloads, update records, profiles, and installation backups in one application.
 
-The application, launcher, and updater use version **4.5.1** (`4.5.1.0`). The tool is maintained by `uyujkk`. The Bandizip extraction fallback was contributed by [CaramelizedCUDA](https://github.com/CaramelizedCUDA). The earlier [4.0-beta](https://github.com/uyujkk/Integrated_Mod_Manager/releases/tag/v4.0-beta) remains archived separately.
+The application, launcher, and updater use version **4.5.2** (`4.5.2.0`). The tool is maintained by `uyujkk`. The Bandizip extraction fallback was contributed by [CaramelizedCUDA](https://github.com/CaramelizedCUDA). The earlier [4.0-beta](https://github.com/uyujkk/Integrated_Mod_Manager/releases/tag/v4.0-beta) remains archived separately.
 
 ## Interface Preview
 
@@ -46,7 +46,7 @@ Screenshots come from an isolated copy of the app with a synthetic demo reposito
   <img src="./docs/assets/screenshots/shortcut-overlay-v4.5.png" width="290" alt="Overlay with save buttons, state slot buttons and key bindings">
 </p>
 
-**State slots (4.5)** — save a Mod's persistent values as named slots; More… updates or renames a slot, writes it as the Mod's defaults (with backups), imports a variant file and snapshots the whole `d3dx_user.ini`. **Overlay (4.5.1)** — over the game, switch enabled Mods, hot-switch slots (experimental), and save a combination or a named single-Mod preset. The Refresh button shown here ships in the next release.
+**State slots (4.5)** — save a Mod's persistent values as named slots; More… updates or renames a slot, writes it as the Mod's defaults (with backups), imports a variant file and snapshots the whole `d3dx_user.ini`. **Overlay (4.5.1)** — over the game, switch enabled Mods, hot-switch slots (experimental), save a combination or a named single-Mod preset (F10 is sent first), and Refresh after Mod changes (4.5.2).
 
 **Mod shortcut panel (4.4)** — pick a Mod and the page lists the key bindings from its INI files. Click one to send the key to the game; bindings that can't be sent (mouse, controller) show the reason.
 
@@ -74,9 +74,10 @@ Guides: [shortcut panel and overlay](./docs/guides/Mod-Shortcut-Panel.en.md) · 
 - **Single-Mod state slots:** several named value sets per Mod; write a slot as the Mod's defaults (with backups), import a variant file (unverified), or snapshot the whole `d3dx_user.ini`.
 - **F10 hot apply (experimental):** restore a slot while the game runs, or switch slots from the overlay.
 - **4.5.1:** name and save a single-Mod preset from the overlay.
+- **4.5.2:** the overlay sends F10 before saving and saves only once the loader has written; a Refresh button and automatic refresh after Mod changes; faster Mods with many bindings; directory links, loader state restore and combination presets are no longer experimental.
 - The game window is selected automatically; restoring a maximized window shrinks it to 80% of the screen.
 
-[4.5.1 release notes](./docs/releases/v4.5.1.md) · [4.5.0 release notes](./docs/releases/v4.5.0.md) · [Verification scope](./docs/verification/v4.5.1.md)
+[4.5.2 release notes](./docs/releases/v4.5.2.md) · [4.5.1](./docs/releases/v4.5.1.md) · [4.5.0](./docs/releases/v4.5.0.md) · [Verification scope](./docs/verification/v4.5.2.md)
 
 ## Earlier Versions
 
@@ -186,7 +187,7 @@ Run the complete test, coverage, WinUI x64 build, and package verification flow:
 powershell -NoProfile -ExecutionPolicy Bypass -File .\scripts\test-all.ps1
 ```
 
-GitHub Actions runs the same four-suite verification flow on pushes to `main`, pull requests, and manual dispatches. Test dependencies are centralized without removing safety cases. See the [Testing Guide](./docs/development/TESTING.md) and [4.5.1 verification record](./docs/verification/v4.5.1.md) for current results and testing boundaries.
+GitHub Actions runs the same four-suite verification flow on pushes to `main`, pull requests, and manual dispatches. Test dependencies are centralized without removing safety cases. See the [Testing Guide](./docs/development/TESTING.md) and [4.5.2 verification record](./docs/verification/v4.5.2.md) for current results and testing boundaries.
 
 ## Data and Security
 
