@@ -142,7 +142,7 @@ foreach ($taskStartName in @('开始使用.md', 'README.md')) {
 }
 $taskMinor = ($taskCoreVersion -split '\.')[0..1] -join '.'
 [IO.File]::WriteAllText((Join-Path $taskApp 'docs\README.md'),
-    "# $taskMinor 正式版文档`n`n当前版本以 [$Version 说明](releases/v$Version.md) 为准；基础手册和历史发布说明保留用于查阅。`n`n[用户手册](guides/用户手册.zh-CN.md) · [快捷键面板](guides/Mod-Shortcut-Panel.zh-CN.md) · [内置终末地启动](guides/Endfield-Bridge.md) · [浏览下载与旧库整理](guides/Browse-Download-Task-Pack.zh-CN.md) · [组合预设](guides/Combination-Presets.zh-CN.md)`n",
+    "# $taskMinor 正式版文档`n`n当前版本以 [$Version 说明](releases/v$Version.md) 为准；基础手册和历史发布说明保留用于查阅。`n`n[快速上手](guides/zh-CN/快速上手.md) · [用户手册](guides/zh-CN/用户手册.md) · [快捷键与浮窗](guides/zh-CN/快捷键与浮窗.md) · [状态槽位](guides/zh-CN/状态槽位.md) · [组合预设](guides/zh-CN/组合预设.md) · [浏览与下载](guides/zh-CN/浏览与下载.md) · [内置终末地启动](guides/zh-CN/终末地启动.md)`n`nEnglish: [Quick Start](guides/en/Quick-Start.md) · [User Guide](guides/en/User-Guide.md)`n",
     [Text.UTF8Encoding]::new($false))
 
 $taskSourceHashes = foreach ($relative in $taskSourceFiles) {

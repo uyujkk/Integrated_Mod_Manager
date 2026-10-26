@@ -1,6 +1,8 @@
 # 升级到 4.0.0
 
-[English](./Upgrade-v4.0.en.md) · [组合与状态预设](./Combination-Presets.zh-CN.md) · [下载正式版](https://github.com/uyujkk/Integrated_Mod_Manager/releases/tag/v4.0.0)
+> 归档文档，只适用于对应的旧版本；当前说明见[文档索引](../../README.md)。Archived: applies only to the version it names; see the [documentation index](../../README.md) for current guides.
+
+[English](./Upgrade-v4.0.en.md) · [组合与状态预设](../zh-CN/组合预设.md) · [下载正式版](https://github.com/uyujkk/Integrated_Mod_Manager/releases/tag/v4.0.0)
 
 ## 新安装
 

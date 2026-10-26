@@ -1,6 +1,8 @@
 # Upgrade to 4.0.0
 
-[中文](./Upgrade-v4.0.zh-CN.md) · [Combination and State Presets](./Combination-Presets.en.md) · [Stable Download](https://github.com/uyujkk/Integrated_Mod_Manager/releases/tag/v4.0.0)
+> 归档文档，只适用于对应的旧版本；当前说明见[文档索引](../../README.md)。Archived: applies only to the version it names; see the [documentation index](../../README.md) for current guides.
+
+[中文](./Upgrade-v4.0.zh-CN.md) · [Combination and State Presets](../en/Combination-Presets.md) · [Stable Download](https://github.com/uyujkk/Integrated_Mod_Manager/releases/tag/v4.0.0)
 
 ## New Installation
 

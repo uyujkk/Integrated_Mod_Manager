@@ -14,8 +14,8 @@
   [中文](./docs/README.zh-CN.md) · **English**
 
   [Download Latest](https://github.com/uyujkk/Integrated_Mod_Manager/releases/latest) ·
-  [Quick Start](./docs/guides/Quick-Start.en.md) ·
-  [Full Guide](./docs/guides/User-Guide.en.md) ·
+  [Quick Start](./docs/guides/en/Quick-Start.md) ·
+  [Full Guide](./docs/guides/en/User-Guide.md) ·
   [Changelog](./docs/releases/CHANGELOG.md) ·
   [Screenshots](#interface-preview) ·
   [Report an Issue](https://github.com/uyujkk/Integrated_Mod_Manager/issues/new/choose)
@@ -26,7 +26,7 @@
 
 ## Overview
 
-**Current stable version: [v4.5.2](https://github.com/uyujkk/Integrated_Mod_Manager/releases/tag/v4.5.2).** Characters in a repository show avatars, a character can keep several Mods enabled, each Mod can keep named state slots, and the always-on-top overlay can save presets (sending F10 first), switch slots in game and refresh after Mod changes. The shortcut panel, integrated Endfield launch, browsing and downloading, library tools and combination presets remain. See the [4.5.2 release notes](./docs/releases/v4.5.2.md), the [shortcut panel guide](./docs/guides/Mod-Shortcut-Panel.en.md) and the [launch and risk guide](./docs/guides/Endfield-Bridge.md).
+**Current stable version: [v4.5.2](https://github.com/uyujkk/Integrated_Mod_Manager/releases/tag/v4.5.2).** Characters in a repository show avatars, a character can keep several Mods enabled, each Mod can keep named state slots, and the always-on-top overlay can save presets (sending F10 first), switch slots in game and refresh after Mod changes. The shortcut panel, integrated Endfield launch, browsing and downloading, library tools and combination presets remain. See the [4.5.2 release notes](./docs/releases/v4.5.2.md), the [shortcut panel guide](./docs/guides/en/Shortcut-Panel.md) and the [launch and risk guide](./docs/guides/en/Endfield-Launch.md).
 
 Integrated Mod Manager organizes different games or mod environments into independent repositories. It copies or removes complete mod folders between a local library and the target directory read by the game, while keeping preview images, source links, shortcut notes, online downloads, update records, profiles, and installation backups in one application.
 
@@ -65,7 +65,7 @@ When the full overview cannot fit, Settings switches to sections. Language, them
 
 </details>
 
-Guides: [shortcut panel and overlay](./docs/guides/Mod-Shortcut-Panel.en.md) · [combination presets](./docs/guides/Combination-Presets.en.md)
+Guides: [shortcut panel and overlay](./docs/guides/en/Shortcut-Panel.md) · [state slots](./docs/guides/en/State-Slots.md) · [combination presets](./docs/guides/en/Combination-Presets.md)
 
 ## What's New in 4.5
 
@@ -153,11 +153,14 @@ The first level is a character, purpose, or other category. The second level con
 
 | Document | Chinese | English |
 | --- | --- | --- |
-| Quick use | [快速使用手册](./docs/guides/快速使用手册.md) | [Quick Start](./docs/guides/Quick-Start.en.md) |
-| Complete guide | [详细中文手册](./docs/guides/用户手册.zh-CN.md) | [Complete User Guide](./docs/guides/User-Guide.en.md) |
-| Shortcut panel and overlay | [快捷键面板与置顶浮窗](./docs/guides/Mod-Shortcut-Panel.zh-CN.md) | [Shortcut Panel and Overlay](./docs/guides/Mod-Shortcut-Panel.en.md) |
-| Combination and state presets | [组合与状态预设](./docs/guides/Combination-Presets.zh-CN.md) | [Combination and State Presets](./docs/guides/Combination-Presets.en.md) |
-| Upgrade to 4.0 | [升级指南](./docs/guides/Upgrade-v4.0.zh-CN.md) | [Upgrade Guide](./docs/guides/Upgrade-v4.0.en.md) |
+| Quick start | [快速上手](./docs/guides/zh-CN/快速上手.md) | [Quick Start](./docs/guides/en/Quick-Start.md) |
+| Complete guide | [用户手册](./docs/guides/zh-CN/用户手册.md) | [User Guide](./docs/guides/en/User-Guide.md) |
+| Shortcut panel and overlay | [快捷键面板与置顶浮窗](./docs/guides/zh-CN/快捷键与浮窗.md) | [Shortcut Panel and Overlay](./docs/guides/en/Shortcut-Panel.md) |
+| State slots | [单 Mod 状态槽位](./docs/guides/zh-CN/状态槽位.md) | [Single-Mod State Slots](./docs/guides/en/State-Slots.md) |
+| Combination presets | [组合预设与组合包](./docs/guides/zh-CN/组合预设.md) | [Combination Presets and Bundles](./docs/guides/en/Combination-Presets.md) |
+| Browse and download | [浏览与下载](./docs/guides/zh-CN/浏览与下载.md) | [Browse and Download](./docs/guides/en/Browse-and-Download.md) |
+| Endfield launch | [内置终末地启动](./docs/guides/zh-CN/终末地启动.md) | [Integrated Endfield Launch](./docs/guides/en/Endfield-Launch.md) |
+| Older upgrade notes (archive) | [归档](./docs/guides/archive/) | [Archive](./docs/guides/archive/) |
 | Release history | [Bilingual Changelog](./docs/releases/CHANGELOG.md) | [Bilingual Changelog](./docs/releases/CHANGELOG.md) |
 | Cross-mod state experiments | [Current conclusions](./docs/research/跨Mod状态保存试验结论.md) | [Current conclusions](./docs/research/跨Mod状态保存试验结论.md) |
 | Tests and builds | [Testing Guide](./docs/development/TESTING.md) | [Testing Guide](./docs/development/TESTING.md) |

@@ -1,6 +1,8 @@
 # 升级到 4.1.0
 
-[English](./Upgrade-v4.1.en.md) · [组合预设指南](./Combination-Presets.zh-CN.md)
+> 归档文档，只适用于对应的旧版本；当前说明见[文档索引](../../README.md)。Archived: applies only to the version it names; see the [documentation index](../../README.md) for current guides.
+
+[English](./Upgrade-v4.1.en.md) · [组合预设指南](../zh-CN/组合预设.md)
 
 从官方 Release 下载 `Integrated_Mod_Manager-v4.1.0.zip` 和精确同名的 `.zip.sha256`。完整解压到可写目录，运行 `IntegratedModManager.exe`。保留全部目录结构；这是便携 ZIP，不是 MSI。
 
