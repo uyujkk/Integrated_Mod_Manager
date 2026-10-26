@@ -667,15 +667,18 @@ public sealed partial class MainWindow
         }
         if (_onlineWindowClosed || revision != _shortcutDeployedRevision || repository != GetSelectedRepository()
             || source != (repository?.SourcePath ?? string.Empty) || target != (repository?.TargetPath ?? string.Empty)) return;
+        var current = _shortcutModPicker.SelectedItem as ShortcutModOption;
+        // Only a Mod that was enabled and has just been disabled or replaced is followed. The main page also
+        // lists Mods that were never enabled; picking one of those must not be undone by a refresh.
+        bool wasDeployed = current is not null && _shortcutDeployedMods?.Contains(current.Label) == true;
         _shortcutDeployedMods = deployed;
         _overlayModOptionsSource = null;
-        var current = _shortcutModPicker.SelectedItem as ShortcutModOption;
         var previous = _shortcutModPicker.ItemsSource as ShortcutModOption[] ?? [];
         // Retain record identity so unchanged lists and selections do not trigger a rescan.
         var byPath = previous.ToDictionary(option => option.Path, StringComparer.OrdinalIgnoreCase);
         var options = fresh.Select(option => byPath.GetValueOrDefault(option.Path) ?? option).ToArray();
         ShortcutModOption? chosen = current is null ? null : options.FirstOrDefault(option => option.Path == current.Path);
-        if (current is not null && (chosen is null || !IsShortcutModDeployed(chosen)))
+        if (current is not null && (chosen is null || (wasDeployed && !IsShortcutModDeployed(chosen))))
         {
             string? role = Path.GetDirectoryName(current.Path);
             chosen = options.FirstOrDefault(option => IsShortcutModDeployed(option)
@@ -730,8 +733,8 @@ public sealed partial class MainWindow
         SetCombinationBusy(true);
         try
         {
-            if (!includeState) throw new InvalidDataException(T("HotReload.SetTheUserIniFirst"));
-            if (!await PrepareOverlayCaptureAsync(userIni!)) return;
+            // Without a d3dx_user.ini there is no loader state to flush: save the Mod combination alone, as before.
+            if (includeState && !await PrepareOverlayCaptureAsync(userIni!)) return;
             (int Mods, int Parameters)? saved = await CaptureCombinationProfileAsync(repository, name, null, includeState, userIni ?? string.Empty,
                 () => Task.FromResult(false));
             _shortcutStatus.Text = saved is (int mods, int parameters)
