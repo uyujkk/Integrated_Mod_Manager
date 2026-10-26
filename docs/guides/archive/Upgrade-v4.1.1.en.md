@@ -1,6 +1,8 @@
 # Upgrade to 4.1.1
 
-[中文](./Upgrade-v4.1.1.zh-CN.md) · [Bridge setup and risks](./Endfield-Bridge.md)
+> 归档文档，只适用于对应的旧版本；当前说明见[文档索引](../../README.md)。Archived: applies only to the version it names; see the [documentation index](../../README.md) for current guides.
+
+[中文](./Upgrade-v4.1.1.zh-CN.md) · [Bridge setup and risks](../en/Endfield-Launch.md)
 
 Download `Integrated_Mod_Manager-v4.1.1.zip` and its exact `.zip.sha256` sidecar. This is a portable ZIP, not an MSI. Extract the entire folder and run `IntegratedModManager.exe`. Windows x64 and .NET 8 x64 runtime are required.
 

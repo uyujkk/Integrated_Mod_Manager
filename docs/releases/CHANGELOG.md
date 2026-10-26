@@ -79,7 +79,7 @@ Integrated Endfield launch, INI conflict warnings, link and archive-import fixes
 - Pinned downloads, SHA-256 verification and bounded extraction; failures do not enable the bridge. Its license, notices and source link remain included.
 - First use opens configuration, not the game. Documented account risk, XXMI authorization and EFMI restoration before switching back.
 
-[使用与风险 / Usage and risks](../guides/Endfield-Bridge.md)
+[使用与风险](../guides/zh-CN/终末地启动.md) / [Usage and risks](../guides/en/Endfield-Launch.md)
 
 ## v4.1.0 - 组合包与体验优化 / Portable Bundles and Usability (2026-10-07)
 
@@ -111,7 +111,7 @@ Integrated Endfield launch, INI conflict warnings, link and archive-import fixes
 - The single-line status bar hides idle progress and provides full-path tooltips; view-switching and initial cover-viewport layout issues were fixed.
 - Stable-channel app updates are enabled again. The separate 4.0-beta prerelease is retained. Automated verification includes 325 tests.
 
-详见 / See [v4.0.0](./v4.0.0.md)、[升级指南 / Upgrade Guide](../guides/Upgrade-v4.0.en.md)。
+详见 / See [v4.0.0](./v4.0.0.md)、[升级指南 / Upgrade Guide](../guides/archive/Upgrade-v4.0.en.md)。
 
 ## v4.0-beta - Mod 组合与状态预设 / Mod Combination and State Presets
 

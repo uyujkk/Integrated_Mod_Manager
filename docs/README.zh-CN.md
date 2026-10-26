@@ -14,8 +14,8 @@
   **中文** · [English](../README.md)
 
   [下载最新版](https://github.com/uyujkk/Integrated_Mod_Manager/releases/latest) ·
-  [快速手册](./guides/快速使用手册.md) ·
-  [完整手册](./guides/用户手册.zh-CN.md) ·
+  [快速手册](./guides/zh-CN/快速上手.md) ·
+  [完整手册](./guides/zh-CN/用户手册.md) ·
   [更新日志](./releases/CHANGELOG.md) ·
   [界面预览](#界面预览) ·
   [提交问题](https://github.com/uyujkk/Integrated_Mod_Manager/issues/new/choose)
@@ -26,7 +26,7 @@
 
 ## 项目简介
 
-**当前正式版：[v4.5.2](https://github.com/uyujkk/Integrated_Mod_Manager/releases/tag/v4.5.2)。**仓库里的角色显示头像，一个角色可以同时启用多个 Mod，每个 Mod 可以保存多个命名状态槽位，置顶浮窗可以保存预设（先发送 F10）、在游戏中切换槽位，并在 Mod 变化后刷新。快捷键面板、内置终末地启动、浏览下载、旧库整理和组合预设继续保留。使用前请阅读 [4.5.2 发布说明](./releases/v4.5.2.md)、[快捷键面板说明](./guides/Mod-Shortcut-Panel.zh-CN.md)及[内置启动与账号风险说明](./guides/Endfield-Bridge.md)。
+**当前正式版：[v4.5.2](https://github.com/uyujkk/Integrated_Mod_Manager/releases/tag/v4.5.2)。**仓库里的角色显示头像，一个角色可以同时启用多个 Mod，每个 Mod 可以保存多个命名状态槽位，置顶浮窗可以保存预设（先发送 F10）、在游戏中切换槽位，并在 Mod 变化后刷新。快捷键面板、内置终末地启动、浏览下载、旧库整理和组合预设继续保留。使用前请阅读 [4.5.2 发布说明](./releases/v4.5.2.md)、[快捷键面板说明](./guides/zh-CN/快捷键与浮窗.md)及[内置启动与账号风险说明](./guides/zh-CN/终末地启动.md)。
 
 集成化 Mod 管理器以独立“仓库”管理不同游戏或不同 Mod 环境。它可以在本地仓库和游戏实际读取的目标目录之间复制或移除完整 Mod 文件夹，并集中管理预览图、来源链接、快捷键说明、在线下载、更新记录、配置方案和安装备份。
 
@@ -65,7 +65,7 @@
 
 </details>
 
-使用说明：[快捷键面板与置顶浮窗](./guides/Mod-Shortcut-Panel.zh-CN.md) · [组合预设](./guides/Combination-Presets.zh-CN.md)
+使用说明：[快捷键面板与置顶浮窗](./guides/zh-CN/快捷键与浮窗.md) · [状态槽位](./guides/zh-CN/状态槽位.md) · [组合预设](./guides/zh-CN/组合预设.md)
 
 ## 4.5 更新
 
@@ -153,11 +153,14 @@ Mod 存储文件夹
 
 | 文档 | 中文 | English |
 | --- | --- | --- |
-| 快速使用 | [快速使用手册](./guides/快速使用手册.md) | [Quick Start](./guides/Quick-Start.en.md) |
-| 完整用户手册 | [详细中文手册](./guides/用户手册.zh-CN.md) | [Complete User Guide](./guides/User-Guide.en.md) |
-| 快捷键面板与置顶浮窗 | [快捷键面板与置顶浮窗](./guides/Mod-Shortcut-Panel.zh-CN.md) | [Shortcut Panel and Overlay](./guides/Mod-Shortcut-Panel.en.md) |
-| 组合与状态预设 | [组合与状态预设](./guides/Combination-Presets.zh-CN.md) | [Combination and State Presets](./guides/Combination-Presets.en.md) |
-| 升级到 4.0 | [升级指南](./guides/Upgrade-v4.0.zh-CN.md) | [Upgrade Guide](./guides/Upgrade-v4.0.en.md) |
+| 快速上手 | [快速上手](./guides/zh-CN/快速上手.md) | [Quick Start](./guides/en/Quick-Start.md) |
+| 完整用户手册 | [用户手册](./guides/zh-CN/用户手册.md) | [User Guide](./guides/en/User-Guide.md) |
+| 快捷键与浮窗 | [快捷键面板与置顶浮窗](./guides/zh-CN/快捷键与浮窗.md) | [Shortcut Panel and Overlay](./guides/en/Shortcut-Panel.md) |
+| 状态槽位 | [单 Mod 状态槽位](./guides/zh-CN/状态槽位.md) | [Single-Mod State Slots](./guides/en/State-Slots.md) |
+| 组合预设 | [组合预设与组合包](./guides/zh-CN/组合预设.md) | [Combination Presets and Bundles](./guides/en/Combination-Presets.md) |
+| 浏览与下载 | [浏览与下载](./guides/zh-CN/浏览与下载.md) | [Browse and Download](./guides/en/Browse-and-Download.md) |
+| 终末地启动 | [内置终末地启动](./guides/zh-CN/终末地启动.md) | [Integrated Endfield Launch](./guides/en/Endfield-Launch.md) |
+| 旧版升级说明（归档） | [归档](./guides/archive/) | [Archive](./guides/archive/) |
 | 更新历史 | [双语更新日志](./releases/CHANGELOG.md) | [Bilingual Changelog](./releases/CHANGELOG.md) |
 | 跨 Mod 状态试验 | [试验路线与当前结论](./research/跨Mod状态保存试验结论.md) | [Current conclusions](./research/跨Mod状态保存试验结论.md) |
 | 测试与构建 | [测试说明](./development/TESTING.md) | [Testing Guide](./development/TESTING.md) |

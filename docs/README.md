@@ -8,17 +8,18 @@ This directory contains the usage, release, development, and research documentat
 
 ## 使用指南 / Guides
 
-- [4.5 新功能、升级与已知问题 / Features, Upgrade and Known Issues](./releases/v4.5.2.md)
-- [Mod 快捷键面板与置顶浮窗](./guides/Mod-Shortcut-Panel.zh-CN.md) / [Mod Shortcut Panel and Overlay](./guides/Mod-Shortcut-Panel.en.md)
-- [浏览、下载与旧库整理 / Browsing, Downloads and Library Import](./guides/Browse-Download-Task-Pack.zh-CN.md)
-- [内置终末地启动：使用与风险 / Integrated Endfield Launch](./guides/Endfield-Bridge.md)
-- [4.0 组合预设指南](./guides/Combination-Presets.zh-CN.md)
-- [4.0 Combination Presets Guide](./guides/Combination-Presets.en.md)
-- [中文快速使用手册](./guides/快速使用手册.md)
-- [中文详细用户手册](./guides/用户手册.zh-CN.md)
-- [English Quick Start](./guides/Quick-Start.en.md)
-- [Complete English User Guide](./guides/User-Guide.en.md)
-- [简洁手册入口 / Compact Guide Index](./guides/使用说明.md)
+| 主题 / Topic | 中文 | English |
+| --- | --- | --- |
+| 快速上手 / Quick start | [快速上手](./guides/zh-CN/快速上手.md) | [Quick Start](./guides/en/Quick-Start.md) |
+| 完整手册 / User guide | [用户手册](./guides/zh-CN/用户手册.md) | [User Guide](./guides/en/User-Guide.md) |
+| 快捷键与浮窗 / Shortcuts and overlay | [快捷键面板与置顶浮窗](./guides/zh-CN/快捷键与浮窗.md) | [Shortcut Panel and Overlay](./guides/en/Shortcut-Panel.md) |
+| 状态槽位 / State slots | [单 Mod 状态槽位](./guides/zh-CN/状态槽位.md) | [Single-Mod State Slots](./guides/en/State-Slots.md) |
+| 组合预设 / Combination presets | [组合预设与组合包](./guides/zh-CN/组合预设.md) | [Combination Presets and Bundles](./guides/en/Combination-Presets.md) |
+| 浏览与下载 / Browse and download | [浏览与下载](./guides/zh-CN/浏览与下载.md) | [Browse and Download](./guides/en/Browse-and-Download.md) |
+| 终末地启动 / Endfield launch | [内置终末地启动](./guides/zh-CN/终末地启动.md) | [Integrated Endfield Launch](./guides/en/Endfield-Launch.md) |
+| 新功能与已知问题 / What's new | [4.5.2 发布说明](./releases/v4.5.2.md) | [4.5.2 release notes](./releases/v4.5.2.md) |
+
+安装包根目录的 [开始使用](./guides/开始使用.md) 是解压后的启动说明。4.0、4.1、4.1.1 的升级说明和 4.0-beta 说明保留在 [归档](./guides/archive/) 中。The package start page is [开始使用](./guides/开始使用.md); upgrade notes for 4.0–4.1.1 and the 4.0-beta guide are kept in the [archive](./guides/archive/).
 
 ## 发布记录 / Releases
 
@@ -48,7 +49,7 @@ This directory contains the usage, release, development, and research documentat
 - [v4.5.2 正式版验证 / Stable Release Verification](./verification/v4.5.2.md)
 - [v4.5.1 正式版验证 / Stable Release Verification](./verification/v4.5.1.md)
 - [v4.5.0 正式版验证 / Stable Release Verification](./verification/v4.5.0.md)
-- [状态槽位与 F10 热应用测试 / Testing State Slots and F10 Hot Apply](./guides/State-Slots-Hot-Apply-Testing.zh-CN.md)
+- [状态槽位与 F10 热应用测试 / Testing State Slots and F10 Hot Apply](./development/State-Slots-Hot-Apply-Testing.zh-CN.md)
 - [v4.4.0 正式版验证 / Stable Release Verification](./verification/v4.4.0.md)
 - [v4.3.1 正式版验证 / Stable Release Verification](./verification/v4.3.1.md)
 - [快捷键面板测试记录 test.3–test.9 / Shortcut Panel Test Records](./verification/hotkey-panel-test.9.md)

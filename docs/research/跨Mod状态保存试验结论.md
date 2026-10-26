@@ -10,7 +10,7 @@
 
 这不是重新启用整文件热覆盖、双 F10 桥接或常驻控制器实验，也不是任意 Mod 的通用状态 API。恢复前必须退出游戏和加载器，不支持纯内存或无法识别的复杂状态。用户此前在 beta 环境确认组合与状态恢复成功，但新正式界面的本轮验证没有重新进行真实游戏恢复测试。
 
-当前步骤请看[中文预设指南](../guides/Combination-Presets.zh-CN.md) / [English preset guide](../guides/Combination-Presets.en.md)。以下历史记录保留原有事实。
+当前步骤请看[中文预设指南](../guides/zh-CN/组合预设.md) / [English preset guide](../guides/en/Combination-Presets.md)。以下历史记录保留原有事实。
 
 > **历史实验结论：任意第三方 XXMI / EFMI Mod 的通用、自动、可靠状态恢复不能由这些原型实现。4.0.0 仅支持上文的受限离线方案。**
 >

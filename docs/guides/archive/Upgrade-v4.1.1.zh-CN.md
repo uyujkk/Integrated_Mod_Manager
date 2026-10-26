@@ -1,6 +1,8 @@
 # 升级到 4.1.1
 
-[English](./Upgrade-v4.1.1.en.md) · [桥接器与风险](./Endfield-Bridge.md)
+> 归档文档，只适用于对应的旧版本；当前说明见[文档索引](../../README.md)。Archived: applies only to the version it names; see the [documentation index](../../README.md) for current guides.
+
+[English](./Upgrade-v4.1.1.en.md) · [桥接器与风险](../zh-CN/终末地启动.md)
 
 下载 `Integrated_Mod_Manager-v4.1.1.zip` 和精确同名的 `.zip.sha256`。这是便携 ZIP，不是 MSI；完整解压并保留全部目录结构，运行 `IntegratedModManager.exe`。需要 Windows x64 和 .NET 8 x64 运行时。
 

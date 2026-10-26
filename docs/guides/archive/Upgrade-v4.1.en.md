@@ -1,6 +1,8 @@
 # Upgrade to 4.1.0
 
-[中文](./Upgrade-v4.1.zh-CN.md) · [Preset guide](./Combination-Presets.en.md)
+> 归档文档，只适用于对应的旧版本；当前说明见[文档索引](../../README.md)。Archived: applies only to the version it names; see the [documentation index](../../README.md) for current guides.
+
+[中文](./Upgrade-v4.1.zh-CN.md) · [Preset guide](../en/Combination-Presets.md)
 
 Download `Integrated_Mod_Manager-v4.1.0.zip` and its exact `.zip.sha256` sidecar from the official Release. Fully extract into a writable folder and run `IntegratedModManager.exe`. Keep the full directory structure; this is a portable ZIP, not an MSI.
 

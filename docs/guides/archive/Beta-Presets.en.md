@@ -1,6 +1,8 @@
 # 4.0-beta: mod combinations and persistent-state presets
 
-> Historical guide for the separately archived beta package. Current stable users should read the [4.0 preset guide](./Combination-Presets.en.md) and [upgrade guide](./Upgrade-v4.0.en.md). The beta launcher/demo instructions below do not apply to the stable package.
+> 归档文档，只适用于对应的旧版本；当前说明见[文档索引](../../README.md)。Archived: applies only to the version it names; see the [documentation index](../../README.md) for current guides.
+
+> Historical guide for the separately archived beta package. Current stable users should read the [4.0 preset guide](../en/Combination-Presets.md) and [upgrade guide](./Upgrade-v4.0.en.md). The beta launcher/demo instructions below do not apply to the stable package.
 
 ## Install separately
 
