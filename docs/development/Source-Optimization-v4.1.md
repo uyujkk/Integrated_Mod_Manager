@@ -24,7 +24,7 @@ This is incremental extraction, not a complete MainWindow/MVVM rewrite. Core ser
 
 ## Performance evidence / 性能依据
 
-- A separate [RepositoryPerformance](../../RepositoryPerformance/Program.cs) harness measures isolated 100/500/1,000-Mod fixtures and collection notification counts. Optional local timings separate scan, projection, refresh, population, filtering and cover-layout work. Diagnostics are off without the opt-in marker; the harness is not shipped in the main package.
+- A separate [RepositoryPerformance](../../tests/Performance/Program.cs) harness measures isolated 100/500/1,000-Mod fixtures and collection notification counts. Optional local timings separate scan, projection, refresh, population, filtering and cover-layout work. Diagnostics are off without the opt-in marker; the harness is not shipped in the main package.
 - 独立基准工具和可选本地计时用于定位耗时，不上传数据。集合批量替换有通知数量依据，但 Reset 仍可能重建控件；模拟扫描耗时不等于真实图片仓库的帧率，也不能据此宣称固定百分比的加速。
 
 See [performance scope](./Repository-Performance.md) and [measurement evidence](../verification/repository-performance-opt3-20261005.md). “Cold” refers to an empty application index, not a cleared OS/disk cache.

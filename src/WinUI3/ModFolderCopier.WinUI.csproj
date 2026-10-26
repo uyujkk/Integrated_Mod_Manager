@@ -50,6 +50,6 @@
     <None Include="..\..\LICENSE" Link="licenses\MIT.txt" CopyToOutputDirectory="PreserveNewest" />
     <None Include="..\IntegratedModManager.EndfieldLaunch\LICENSE" Link="licenses\AGPL-3.0.txt" CopyToOutputDirectory="PreserveNewest" />
     <None Include="..\IntegratedModManager.EndfieldLaunch\NOTICE.md" Link="licenses\EndfieldLaunch-NOTICE.md" CopyToOutputDirectory="PreserveNewest" />
-    <None Include="..\..\LICENSING.md" Link="licenses\LICENSING.md" CopyToOutputDirectory="PreserveNewest" />
+    <None Include="..\..\docs\LICENSING.md" Link="licenses\LICENSING.md" CopyToOutputDirectory="PreserveNewest" />
   </ItemGroup>
 </Project>

@@ -79,8 +79,8 @@ This directory contains the usage, release, development, and research documentat
 - [四项合并回归与窗口修复 / Combined Regression and Native UI Repairs](./verification/combined-regression-opt11-20261007.md)
 - [在线图片缓存显示修复 / Online Image Cache Rendering Repair](./verification/online-image-stream-fix-20261007.md)
 - [v3.9.0 界面设计记录 / v3.9.0 UI Design Record](./development/UI-Design-Preview.md)
-- [贡献指南 / Contributing](../CONTRIBUTING.md)
-- [安全策略 / Security Policy](../SECURITY.md)
+- [贡献指南 / Contributing](../.github/CONTRIBUTING.md)
+- [安全策略 / Security Policy](../.github/SECURITY.md)
 
 ## 研究记录 / Research
 
@@ -90,7 +90,7 @@ This directory contains the usage, release, development, and research documentat
 
 ## 项目入口 / Project
 
-- [中文项目首页](../README.zh-CN.md)
+- [中文项目首页](README.zh-CN.md)
 - [English Project Home](../README.md)
 - [GitHub Releases](https://github.com/uyujkk/Integrated_Mod_Manager/releases)
 - [GitHub Wiki](https://github.com/uyujkk/Integrated_Mod_Manager/wiki)

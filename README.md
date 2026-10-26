@@ -1,7 +1,7 @@
 > **v4.5.1 stable release.** Adds saving a named single-Mod preset from the overlay, on top of 4.5.0's character avatars, several Mods per character, single-Mod state slots and experimental F10 hot apply. See the [release notes](docs/releases/v4.5.1.md).
 
 <div align="center">
-  <img src="./WinUI3/Assets/AppIcon.png" width="96" alt="Integrated Mod Manager icon">
+  <img src="./src/WinUI3/Assets/AppIcon.png" width="96" alt="Integrated Mod Manager icon">
   <h1>Integrated Mod Manager</h1>
   <p>A WinUI 3 app for organizing, switching, browsing, and updating mods on Windows 10/11</p>
 
@@ -11,7 +11,7 @@
   [![Platform](https://img.shields.io/badge/platform-Windows%20x64-0078D4)](#requirements)
   [![Ko-fi](https://img.shields.io/badge/Ko--fi-Support%20Development-FF5E5B?logo=ko-fi&logoColor=white)](https://ko-fi.com/uyujkk)
 
-  [中文](./README.zh-CN.md) · **English**
+  [中文](./docs/README.zh-CN.md) · **English**
 
   [Download Latest](https://github.com/uyujkk/Integrated_Mod_Manager/releases/latest) ·
   [Quick Start](./docs/guides/Quick-Start.en.md) ·
@@ -26,36 +26,38 @@
 
 ## Overview
 
-**Current stable version: [v4.4.0](https://github.com/uyujkk/Integrated_Mod_Manager/releases/tag/v4.4.0).** Adds a Mod shortcut panel and always-on-top overlay that send a Mod's INI key bindings to the game with a click, keeps preview images after Mod updates, supports long paths in the updater, and creates character folders on download. Integrated Endfield launch, browsing, downloading, library tools and combination presets remain supported. See the [shortcut panel guide](./docs/guides/Mod-Shortcut-Panel.en.md), the [launch and risk guide](./docs/guides/Endfield-Bridge.md) and the [preset guide](./docs/guides/Combination-Presets.en.md).
+**Current stable version: [v4.5.1](https://github.com/uyujkk/Integrated_Mod_Manager/releases/tag/v4.5.1).** Characters in a repository show avatars, a character can keep several Mods enabled, each Mod can keep named state slots, and the always-on-top overlay can save a single-Mod preset and switch slots in game. The shortcut panel, integrated Endfield launch, browsing and downloading, library tools and combination presets remain. See the [4.5.1 release notes](./docs/releases/v4.5.1.md), the [shortcut panel guide](./docs/guides/Mod-Shortcut-Panel.en.md) and the [launch and risk guide](./docs/guides/Endfield-Bridge.md).
 
 Integrated Mod Manager organizes different games or mod environments into independent repositories. It copies or removes complete mod folders between a local library and the target directory read by the game, while keeping preview images, source links, shortcut notes, online downloads, update records, profiles, and installation backups in one application.
 
-The application, launcher, and updater use version **4.4.0** (`4.4.0.0`). The tool is maintained by `uyujkk`. The Bandizip extraction fallback was contributed by [CaramelizedCUDA](https://github.com/CaramelizedCUDA). The earlier [4.0-beta](https://github.com/uyujkk/Integrated_Mod_Manager/releases/tag/v4.0-beta) remains archived separately.
+The application, launcher, and updater use version **4.5.1** (`4.5.1.0`). The tool is maintained by `uyujkk`. The Bandizip extraction fallback was contributed by [CaramelizedCUDA](https://github.com/CaramelizedCUDA). The earlier [4.0-beta](https://github.com/uyujkk/Integrated_Mod_Manager/releases/tag/v4.0-beta) remains archived separately.
 
 ## Interface Preview
+
+Screenshots come from an isolated copy of the app with a synthetic demo repository: placeholder characters with generated avatars and demonstration Mods. No game, loader, real Mod or online content is shown. See [how they were captured](./docs/assets/screenshots/README.md).
+
+**Character avatars and several Mods per character (4.5)** — every character shows an avatar from its folder or a bound character. The two buttons above the list change the avatar and let the selected character keep several Mods enabled; here Demo A has two linked Mods.
+
+![Repository page: characters with avatars, the avatar and multi-select buttons, and two linked Mods for one character](./docs/assets/screenshots/repository-avatars-v4.5.png)
+
+<p align="center">
+  <img src="./docs/assets/screenshots/state-slots-v4.5.png" width="430" alt="State Slots tab: a selected slot marked current with its saved values">
+  &nbsp;
+  <img src="./docs/assets/screenshots/shortcut-overlay-v4.5.png" width="290" alt="Overlay with save buttons, state slot buttons and key bindings">
+</p>
+
+**State slots (4.5)** — save a Mod's persistent values as named slots; More… updates or renames a slot, writes it as the Mod's defaults (with backups), imports a variant file and snapshots the whole `d3dx_user.ini`. **Overlay (4.5.1)** — over the game, switch enabled Mods, hot-switch slots (experimental), and save a combination or a named single-Mod preset. The Refresh button shown here ships in the next release.
 
 **Mod shortcut panel (4.4)** — pick a Mod and the page lists the key bindings from its INI files. Click one to send the key to the game; bindings that can't be sent (mouse, controller) show the reason.
 
 ![Shortcuts page listing a Mod's INI key bindings, with unsupported mouse and controller bindings explained](./docs/assets/screenshots/shortcut-panel-v4.4.png)
 
-**Always-on-top overlay** — use the shortcuts over the game without switching windows. The overlay never takes focus; its background opacity and text colour are adjustable, and it can switch between enabled Mods and save the current combination as a preset.
-
-![Translucent overlay over the main window, with a Mod picker, input toggle, Save preset and key buttons](./docs/assets/screenshots/shortcut-overlay-v4.4.png)
-
-[How the shortcut panel works](./docs/guides/Mod-Shortcut-Panel.en.md)
-
-The screenshots below show the 4.1.0 interface. Version 4.1.1 adds an optional standalone EndfieldBridge entry under the repository launcher settings; opening the manager does not auto-launch the game.
-
-Real screenshots of an isolated **4.1.0** app using synthetic folders and demonstration presets. No actual online Mod previews, character avatars or local filesystem paths are shown. The demo is not connected to a game or loader.
-
-**Combination presets and portable bundles** — save a Mod set with persistent values, review its members, and export or install a combination bundle. Restore uses a separate preview and confirmation step; the demonstration presets below are not playable Mods.
+**Combination presets and portable bundles (4.1)** — save a Mod set with persistent values, review its members, and export or install a combination bundle. Restore uses a separate preview and confirmation step.
 
 ![Combination preset workspace with synthetic members and saved-value counts](./docs/assets/screenshots/combination-presets-v4.1.png)
 
-[How combination presets work](./docs/guides/Combination-Presets.en.md)
-
 <details>
-<summary>Settings in a restored window</summary>
+<summary>Settings in a restored window (4.1)</summary>
 
 When the full overview cannot fit, Settings switches to sections. Language, theme, density and tray controls stay accessible without squeezing the lower cards out of view.
 
@@ -63,56 +65,28 @@ When the full overview cannot fit, Settings switches to sections. Language, them
 
 </details>
 
-## What's New in 4.4
+Guides: [shortcut panel and overlay](./docs/guides/Mod-Shortcut-Panel.en.md) · [combination presets](./docs/guides/Combination-Presets.en.md)
 
-- **Mod shortcut panel:** reads `[Key…]` bindings from Mod INI files and sends them to the selected game window with a click, following 3DMigoto key rules. No numeric keypad needed.
-- **Always-on-top overlay (Ctrl + Alt + K):** focus-free, adjustable background opacity and text colour; switch enabled Mods, toggle input and save presets without leaving the game.
-- **Follow the active character:** save a HUD reference per character and the panel switches to that character's Mod. References stay local.
-- Endfield runs as administrator, so the manager detects when input would be dropped and offers to restart itself as administrator.
-- Preview images are kept after Mod updates (#14); the updater handles paths over 260 characters (#16); downloads can create a missing character folder after confirmation (#6).
-- Faster online paging and download counts, a tidier Mod updates page, and a fixed Endfield launch settings layout.
+## What's New in 4.5
 
-[4.4 release notes and known issues](./docs/releases/v4.4.0.md) · [Verification scope](./docs/verification/v4.4.0.md)
+- **Character avatars:** an `.imm_avatar.*` or `avatar.*` image in the character folder, a bound character, or the catalog character with the same name. New characters reach the list within a day.
+- **Several Mods per character:** one Mod per character by default; turn on multi-select per character.
+- **Single-Mod state slots:** several named value sets per Mod; write a slot as the Mod's defaults (with backups), import a variant file (unverified), or snapshot the whole `d3dx_user.ini`.
+- **F10 hot apply (experimental):** restore a slot while the game runs, or switch slots from the overlay.
+- **4.5.1:** name and save a single-Mod preset from the overlay.
+- The game window is selected automatically; restoring a maximized window shrinks it to 80% of the screen.
 
-## What's New in 4.3
+[4.5.1 release notes](./docs/releases/v4.5.1.md) · [4.5.0 release notes](./docs/releases/v4.5.0.md) · [Verification scope](./docs/verification/v4.5.1.md)
 
-- Integrated Endfield launch with EFMI setup, backup and restore; no separate EndfieldBridge download.
-- INI conflict warnings, broken-link cleanup (#10) and archive-import fixes (#11).
-- Mod update notifications and backed-up Download and replace (4.3.1).
+## Earlier Versions
 
-[4.3.1 release notes](./docs/releases/v4.3.1.md)
+- **4.4** — Mod shortcut panel and overlay, following the active character, long-path updates. [Notes](./docs/releases/v4.4.0.md)
+- **4.3** — integrated Endfield launch, INI conflict warnings, Mod update notifications. [Notes](./docs/releases/v4.3.1.md)
+- **4.2** — download task center, saved authors, batch tags and saved filters. [Notes](./docs/releases/v4.2.0.md)
+- **4.1** — portable combination bundles, faster repository scanning. [Notes](./docs/releases/v4.1.0.md)
+- **3.9** — redesigned interface, Bandizip fallback contributed by [CaramelizedCUDA](https://github.com/CaramelizedCUDA) ([PR #4](https://github.com/uyujkk/Integrated_Mod_Manager/pull/4)), standalone Developer Tools. [Notes](./docs/releases/v3.9.5.md)
 
-## What's New in 4.2
-
-- Download progress updates in place; browsing sessions are saved per repository.
-- Search and manage saved or recent authors, and batch download saved Mods after reviewing files and destinations.
-- Apply local tags in batches and save library filters.
-- Recover interrupted download/import tasks and export local diagnostics.
-- Stable application update checks honor your saved preference. The native detail-page crash remains an unresolved known issue.
-
-[4.2 release notes](./docs/releases/v4.2.0.md) · [Verification scope](./docs/verification/v4.2.0.md)
-
-## What's New in 4.1.1
-
-- Optional EndfieldBridge download after upgrading, with explicit risk consent and SHA-256 verification.
-- Save the launch method per Endfield repository; declining preserves the existing loader and checks standard XXMI locations when no path is configured.
-- First use opens bridge configuration rather than starting the game. Launch-method controls remain accessible in narrow windows.
-
-The bridge is downloaded separately, not bundled. Third-party launching and Mods may lead to account penalties or bans. Restore EFMI inside the bridge before switching back if previously adapted.
-
-[4.1.1 release notes](./docs/releases/v4.1.1.md) · [Upgrade guide](./docs/guides/Upgrade-v4.1.1.en.md) · [Bridge setup and risks](./docs/guides/Endfield-Bridge.md)
-
-## What's New in 4.1
-
-- Portable combination bundles: export a saved preset with its Mod files and numeric state, then preview and install it in another repository.
-- Identical installed Mods can be reused; different existing files are never overwritten by bundle import.
-- Faster repository scanning and smoother large-library refreshes.
-- Fixed online previews and character avatars; improved download cancellation and immediate installed-state refresh.
-- Better short-window layouts, including section-based Settings when the full overview cannot fit.
-
-Before capturing state, have the loader save it (usually F10). Close the game and loader before restoring. Mod INI defaults and unrelated runtime values are not rewritten. This is not universal compatibility with every Mod or a guarantee against account risk.
-
-[Release notes](./docs/releases/v4.1.0.md) · [Upgrade guide](./docs/guides/Upgrade-v4.1.en.md) · [Wiki](https://github.com/uyujkk/Integrated_Mod_Manager/wiki)
+Full history: [Changelog](./docs/releases/CHANGELOG.md).
 
 ## Core Features
 
@@ -120,8 +94,11 @@ Before capturing state, have the loader save it (usually F10). Close the game an
 | --- | --- |
 | Multiple repositories | Keep separate paths and online categories for different games or XXMI setups |
 | Local mod switching | Browse, search, copy, remove, create, rename, and delete two-level mod folders |
-| Mod shortcut panel | Click a Mod's INI key bindings to send them to the game, from the main window or an always-on-top overlay that can follow the active character |
-| Optional directory junctions | Let the loader and library share one mod directory, safely replacing the previous link for the same character |
+| Character avatars | Show an avatar for each character folder; use your own image or bind the folder to a catalog character |
+| Several Mods per character | Keep one Mod enabled per character by default, or allow several for chosen characters |
+| Single-Mod state slots | Save named sets of a Mod's persistent values; restore them, write them as Mod defaults, or snapshot `d3dx_user.ini` |
+| Mod shortcut panel | Click a Mod's INI key bindings to send them to the game, from the main window or an always-on-top overlay that can follow the active character, save presets and hot-switch slots (experimental) |
+| Directory junctions | Let the loader and library share one mod directory; with single selection, enabling a Mod replaces the previous link for that character |
 | Archive import | Import ZIP, 7Z, RAR, ZIPX, CAB, TAR, and common compressed stream formats |
 | Previews and notes | Store an image, source link, shortcut keys, and action descriptions for each mod |
 | Repository workspace | Switch between a compact file list and cover gallery; keep selection and actions together |
@@ -171,37 +148,6 @@ Mod Storage Folder
 
 The first level is a character, purpose, or other category. The second level contains the complete mod folders managed by the app.
 
-## v3.9.5 Update Summary
-
-- Thanks to [CaramelizedCUDA](https://github.com/CaramelizedCUDA) for [PR #4](https://github.com/uyujkk/Integrated_Mod_Manager/pull/4): when 7-Zip is unavailable, the app can discover an installed Bandizip `bz.exe` and use it as a fallback for RAR, 7Z, ZIPX, CAB, and related archives. Existing 7-Zip priority and ZIP/TAR paths are preserved.
-- The Bandizip path uses a temporary snapshot and archive link/path checks. Unsupported or suspicious archives stop with an explicit error rather than bypassing validation. Each tar/bz invocation has a 10-minute limit; this also applies to the existing TAR import path.
-- Online Mod lists and details now show installed status. Tracked Mods scroll inside their panel, Install Safety moves to the right column, and restoring from the system tray attempts to bring the app to the foreground.
-- Both the main app and standalone Developer Tools have v3.9.5 ZIPs and SHA-256 checksums. Developer Tools remains separate from the main app updater payload.
-
-See the [v3.9.5 Release Report](./docs/releases/v3.9.5.md) for details.
-
-## v3.9.4 Update Summary
-
-- Refined the Updates workspace: tracked Mods use a responsive two-column card layout on wide screens, profile actions share one compact row, and narrow windows automatically return to a single column.
-- Online items with multiple files now default to the newest usable archive. The details pane retains manual selection with version, date, size, and archive state.
-- Online installation decodes real image dimensions and chooses a clear, normally proportioned detail image for the local Mod preview instead of directly saving the low-resolution list thumbnail.
-- Restored automatic character-folder routing through category IDs, localized character names, Wiki names, and aliases. Ambiguous results are never guessed.
-- Improved wide-screen use and information hierarchy across online cards, Settings, and Updates, with open-source dependency, project, and author links in Settings.
-- Added a separately released graphical Developer Tools app for checking versions, repository paths, directory junctions, configuration, logs, caches, backups, and sanitized diagnostics. It remains outside the main updater package.
-- The main app and standalone Developer Tools archives each include a SHA-256 checksum file.
-
-## v3.9.0 Major Update
-
-- Rebuilt the Dashboard, repository workspace, online browser, updater, and settings surfaces with responsive wide, split, and compact layouts. Dashboard path and game-preset cards now share an exact baseline on wide screens.
-- Moved per-repository path configuration and status to the Dashboard. The app can minimize to the system tray while keeping repository, Mod count, online source, and version details visible.
-- Added read-only shortcut discovery from `[Key...]` sections in Mod `.ini` files, readable descriptions localized to the current app language, and an editor without the previous 10-row limit.
-- Added Arknights: Endfield GameBanana/Wiki presets and online operator-catalog refresh alongside the existing Genshin Impact, Zenless Zone Zero, and Honkai: Star Rail presets.
-- Fixed archive-picker crashes and regressing or jumping download progress while preserving safe archive validation, directory-junction deployment, and failed-update rollback.
-- Renamed the public launcher to `IntegratedModManager.exe`; one legacy entry point remains in this release so v3.8.5 installations can update in place.
-- Expanded automated verification to **146 tests**, retaining coverage gates, WinUI x64 builds, release-package validation, and update-agent transaction tests.
-
-See the [Changelog](./docs/releases/CHANGELOG.md) for the complete bilingual history and the [v3.9.5 Release Report](./docs/releases/v3.9.5.md) for release and verification details.
-
 ## Documentation
 
 | Document | Chinese | English |
@@ -215,8 +161,8 @@ See the [Changelog](./docs/releases/CHANGELOG.md) for the complete bilingual his
 | Cross-mod state experiments | [Current conclusions](./docs/research/跨Mod状态保存试验结论.md) | [Current conclusions](./docs/research/跨Mod状态保存试验结论.md) |
 | Tests and builds | [Testing Guide](./docs/development/TESTING.md) | [Testing Guide](./docs/development/TESTING.md) |
 | 4.1 source optimization | [源码优化记录](./docs/development/Source-Optimization-v4.1.md) | [Source Optimization Record](./docs/development/Source-Optimization-v4.1.md) |
-| Contributions | [Contributing](./CONTRIBUTING.md) | [Contributing](./CONTRIBUTING.md) |
-| Security | [Security Policy](./SECURITY.md) | [Security Policy](./SECURITY.md) |
+| Contributions | [Contributing](./.github/CONTRIBUTING.md) | [Contributing](./.github/CONTRIBUTING.md) |
+| Security | [Security Policy](./.github/SECURITY.md) | [Security Policy](./.github/SECURITY.md) |
 
 ## Requirements
 
@@ -231,7 +177,7 @@ See the [Changelog](./docs/releases/CHANGELOG.md) for the complete bilingual his
 Development requires Windows 10/11 x64, the .NET 8 SDK, Visual Studio 2022 or Build Tools 2022, MSBuild, Windows App SDK, and Windows SDK.
 
 ```powershell
-cmd /c build_winui.bat
+cmd /c scripts\build_winui.bat
 ```
 
 Run the complete test, coverage, WinUI x64 build, and package verification flow:
@@ -240,7 +186,7 @@ Run the complete test, coverage, WinUI x64 build, and package verification flow:
 powershell -NoProfile -ExecutionPolicy Bypass -File .\scripts\test-all.ps1
 ```
 
-GitHub Actions runs the same four-suite verification flow on pushes to `main`, pull requests, and manual dispatches. Test dependencies are centralized without removing safety cases. See the [Testing Guide](./docs/development/TESTING.md) and [4.4.0 verification record](./docs/verification/v4.4.0.md) for current results and testing boundaries.
+GitHub Actions runs the same four-suite verification flow on pushes to `main`, pull requests, and manual dispatches. Test dependencies are centralized without removing safety cases. See the [Testing Guide](./docs/development/TESTING.md) and [4.5.1 verification record](./docs/verification/v4.5.1.md) for current results and testing boundaries.
 
 ## Data and Security
 
@@ -248,10 +194,10 @@ GitHub Actions runs the same four-suite verification flow on pushes to `main`, p
 - Diagnostic reports exclude access credentials and sanitize user paths, but users should still review them before submitting.
 - The app does not bypass payments, subscriptions, permissions, CAPTCHAs, or restrictions set by mod authors.
 - Do not disclose local configuration files, personal paths, access tokens, or other sensitive information in issues, screenshots, or archives.
-- Follow [SECURITY.md](./SECURITY.md) when reporting a security issue.
+- Follow [SECURITY.md](./.github/SECURITY.md) when reporting a security issue.
 
 ## License and Notices
 
-Source files are available under the [MIT License](./LICENSE), copyright `uyujkk`, except the integrated Endfield launch component in [`IntegratedModManager.EndfieldLaunch/`](./src/IntegratedModManager.EndfieldLaunch/), which is **AGPL-3.0-only** (derived from EndfieldBridge, endfield-nolauncher and Better-Endfield; see its [NOTICE](./src/IntegratedModManager.EndfieldLaunch/NOTICE.md)). Because the application includes that component, **release packages from v4.3.0 on are distributed as a whole under AGPL-3.0-only**; v4.2.0 and earlier remain MIT. See [LICENSING.md](./LICENSING.md). Third-party components retain their own licenses; bundled 7-Zip files include their license text.
+Source files are available under the [MIT License](./LICENSE), copyright `uyujkk`, except the integrated Endfield launch component in [`IntegratedModManager.EndfieldLaunch/`](./src/IntegratedModManager.EndfieldLaunch/), which is **AGPL-3.0-only** (derived from EndfieldBridge, endfield-nolauncher and Better-Endfield; see its [NOTICE](./src/IntegratedModManager.EndfieldLaunch/NOTICE.md)). Because the application includes that component, **release packages from v4.3.0 on are distributed as a whole under AGPL-3.0-only**; v4.2.0 and earlier remain MIT. See [LICENSING.md](./docs/LICENSING.md). Third-party components retain their own licenses; bundled 7-Zip files include their license text.
 
 The tool does not include game files or mod content. Rights related to games, characters, images, mods, and third-party services belong to their respective owners.

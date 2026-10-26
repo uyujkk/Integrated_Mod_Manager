@@ -16,7 +16,7 @@
 
 ## 置顶浮窗
 
-![置顶浮窗：半透明背景，顶部可切换已启用的 Mod](../assets/screenshots/shortcut-overlay-v4.4.png)
+<img src="../assets/screenshots/shortcut-overlay-v4.5.png" width="320" alt="置顶浮窗：切换已启用的 Mod、保存与刷新按钮、状态槽位按钮和按键绑定">
 
 - 点击“独立置顶面板”打开，或用全局快捷键 **Ctrl + Alt + K**（默认）显示或隐藏；快捷键可在模块内更换或禁用。
 - 浮窗不抢焦点，点击按钮后游戏仍保持前台。可以拖动、调整大小。

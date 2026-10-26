@@ -20,7 +20,7 @@
 ```powershell
 git clone https://github.com/uyujkk/Integrated_Mod_Manager.git
 cd Integrated_Mod_Manager
-cmd /c build_winui.bat
+cmd /c scripts\build_winui.bat
 powershell -NoProfile -ExecutionPolicy Bypass -File .\scripts\test-all.ps1
 ```
 
@@ -52,7 +52,7 @@ Development requires Windows x64, the .NET 8 SDK, Visual Studio 2022 or Build To
 ```powershell
 git clone https://github.com/uyujkk/Integrated_Mod_Manager.git
 cd Integrated_Mod_Manager
-cmd /c build_winui.bat
+cmd /c scripts\build_winui.bat
 powershell -NoProfile -ExecutionPolicy Bypass -File .\scripts\test-all.ps1
 ```
 

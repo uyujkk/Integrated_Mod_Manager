@@ -1,4 +1,4 @@
-[CmdletBinding()]
+﻿[CmdletBinding()]
 param([string]$VerificationDirectory='artifacts\verification\v4.3.1-test.1-final')
 $ErrorActionPreference='Stop'
 $root=[IO.Path]::GetFullPath((Join-Path $PSScriptRoot '..'))
@@ -31,7 +31,9 @@ foreach($folder in @('guides','releases','assets','verification','development'))
   Copy-Item $file.FullName $target
  }
 }
-foreach($file in @('LICENSE','LICENSING.md','开始使用.md')){Copy-Item (Join-Path $root $file) $app}
+foreach($file in @('LICENSE','docs\LICENSING.md')){Copy-Item (Join-Path $root $file) $app}
+$startGuide=[regex]::Replace([IO.File]::ReadAllText((Join-Path $root 'docs\guides\开始使用.md'),[Text.Encoding]::UTF8),'\]\((?![a-zA-Z][a-zA-Z0-9+.-]*:|#|/)','](docs/guides/')
+[IO.File]::WriteAllText((Join-Path $app '开始使用.md'),$startGuide,[Text.UTF8Encoding]::new($false))
 Copy-Item (Join-Path $root 'src\IntegratedModManager.EndfieldLaunch\LICENSE') (Join-Path $app 'LICENSE-AGPL-3.0.txt')
 New-Item -ItemType Directory -Path (Join-Path $app 'WinUI3\Tools') -Force | Out-Null
 foreach($file in @('7z.exe','7z.dll','License.txt')){

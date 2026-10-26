@@ -1,6 +1,6 @@
 # Testing / 测试说明
 
-[English README](../../README.md) · [中文首页](../../README.zh-CN.md) · [4.1.1 verification / 验证记录](../verification/v4.1.1.md)
+[English README](../../README.md) · [中文首页](../README.zh-CN.md) · [4.1.1 verification / 验证记录](../verification/v4.1.1.md)
 
 ## One entry point / 统一入口
 
