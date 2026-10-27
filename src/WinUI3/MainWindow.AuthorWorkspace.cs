@@ -13,8 +13,8 @@ public sealed partial class MainWindow
         for (int i = 0; i < names.Length; i++)
         {
             int value = i;
-            var item = new ToggleMenuFlyoutItem { Text = names[i], IsChecked = _onlineAuthorWorkFilter == i };
-            item.Click += (_, _) => { _onlineAuthorWorkFilter = value; ResetOnlineBrowsePosition(); RefreshOnlinePaneV2(); SaveShellConfig(); };
+            var item = new ToggleMenuFlyoutItem { Text = names[i], IsChecked = _onlinePage.AuthorWorkFilter == i };
+            item.Click += (_, _) => { _onlinePage.AuthorWorkFilter = value; ResetOnlineBrowsePosition(); RefreshOnlinePaneV2(); SaveShellConfig(); };
             menu.Items.Add(item);
         }
         menu.ShowAt(OnlineWorkFilterButton);

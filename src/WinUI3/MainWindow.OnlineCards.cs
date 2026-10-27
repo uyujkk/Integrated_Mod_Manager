@@ -1,13 +1,11 @@
 using System.Globalization;
 using System.Numerics;
-using IntegratedModManager.Core.Configuration;
 using IntegratedModManager.Core.Layout;
 using IntegratedModManager.Core.Online;
 using Microsoft.UI.Xaml;
 using Microsoft.UI.Xaml.Automation;
 using Microsoft.UI.Xaml.Controls;
 using Microsoft.UI.Xaml.Hosting;
-using Microsoft.UI.Xaml.Media;
 using Windows.System;
 
 namespace ModFolderCopier.WinUI;
@@ -158,7 +156,7 @@ public sealed partial class MainWindow
         var visual = ElementCompositionPreview.GetElementVisual(resultsElement);
         visual.StopAnimation("Opacity");
 
-        if (_reduceMotion || _onlineVisibleMods.Count == 0)
+        if (_reduceMotion || _onlinePage.VisibleMods.Count == 0)
         {
             visual.Opacity = 1f;
             return;
@@ -207,9 +205,9 @@ public sealed partial class MainWindow
         if (_restoringBrowseControls) return;
         if (OnlineSortComboBox.SelectedItem is ComboBoxItem { Tag: OnlineSortMode sortMode })
         {
-            if (_onlineSortMode == sortMode) return;
+            if (_onlinePage.SortMode == sortMode) return;
             ResetOnlineBrowsePosition();
-            _onlineSortMode = sortMode;
+            _onlinePage.SortMode = sortMode;
             RefreshOnlinePaneV2();
             SaveShellConfig();
         }
@@ -227,14 +225,14 @@ public sealed partial class MainWindow
 
     private void SetOnlineCardLayout(OnlineCardLayoutMode layoutMode)
     {
-        if (_onlineCardLayoutMode == layoutMode)
+        if (_onlinePage.CardLayoutMode == layoutMode)
         {
             return;
         }
 
         CaptureOnlineBrowseSession();
         _pendingBrowsePosition = _activeBrowseSessionKey is not null && _onlinePreferences.BrowseSessions.TryGetValue(_activeBrowseSessionKey, out var savedPosition) ? savedPosition : new();
-        _onlineCardLayoutMode = layoutMode;
+        _onlinePage.CardLayoutMode = layoutMode;
         _animateOnlineCardsOnNextRefresh = true;
         SaveShellConfig();
         RefreshOnlinePaneV2();
@@ -242,14 +240,14 @@ public sealed partial class MainWindow
 
     private FrameworkElement GetOnlineResultsElement()
     {
-        return _onlineCardLayoutMode == OnlineCardLayoutMode.Grid
+        return _onlinePage.CardLayoutMode == OnlineCardLayoutMode.Grid
             ? OnlineVirtualizedGridView
             : OnlineVirtualizedListView;
     }
 
     private void UpdateOnlineCardLayoutControls()
     {
-        bool showGrid = _onlineCardLayoutMode == OnlineCardLayoutMode.Grid;
+        bool showGrid = _onlinePage.CardLayoutMode == OnlineCardLayoutMode.Grid;
         OnlineVirtualizedListView.Visibility = showGrid ? Visibility.Collapsed : Visibility.Visible;
         OnlineVirtualizedGridView.Visibility = showGrid ? Visibility.Visible : Visibility.Collapsed;
         ApplySecondaryNavButtonVisual(OnlineListLayoutButton, !showGrid);
@@ -266,7 +264,7 @@ public sealed partial class MainWindow
         if (sender is ContentControl presenter)
         {
             presenter.Content = args.NewValue is OnlineModCard mod
-                ? CreateOnlineModCardV2(mod)
+                ? CreateOnlineModRow(mod)
                 : null;
         }
     }
@@ -284,7 +282,7 @@ public sealed partial class MainWindow
     private void OnOnlineResultsHostSizeChanged(object sender, SizeChangedEventArgs e)
     {
         TraceOnlineUiState("Results size changed");
-        if (_onlineCardLayoutMode == OnlineCardLayoutMode.Grid)
+        if (_onlinePage.CardLayoutMode == OnlineCardLayoutMode.Grid)
         {
             UpdateOnlineGridCardMetrics(GetOnlineGridAvailableWidth(e.NewSize.Width));
         }
@@ -293,6 +291,18 @@ public sealed partial class MainWindow
     // The window's SizeChanged runs before the page is measured again, so its rail width
     // used the old content width after maximizing. Re-run once the page has its new size;
     // this only changes the rail and drawer inside the host, never the host itself.
+    // The page's size can change while it is hidden. When it is shown again the host's
+    // SizeChanged can arrive before the grid has re-created its item panel, which left the
+    // tiles sized for the old width; the panel's Loaded and the grid's own size catch up.
+    private void OnOnlineGridPanelLoaded(object sender, RoutedEventArgs e)
+        => UpdateOnlineGridCardMetrics(GetOnlineGridAvailableWidth(OnlineVirtualizedGridView.ActualWidth));
+
+    private void OnOnlineGridSizeChanged(object sender, SizeChangedEventArgs e)
+    {
+        if (Math.Abs(e.NewSize.Width - e.PreviousSize.Width) > 0.5)
+            UpdateOnlineGridCardMetrics(GetOnlineGridAvailableWidth(e.NewSize.Width));
+    }
+
     private void OnOnlineDetailsHostSizeChanged(object sender, SizeChangedEventArgs e)
     {
         if (Math.Abs(e.NewSize.Width - e.PreviousSize.Width) > 0.5) UpdateOnlineResponsiveLayout(Bounds.Width);
@@ -319,7 +329,7 @@ public sealed partial class MainWindow
         OnlineWorkspaceGrid.ClearValue(FrameworkElement.WidthProperty);
         OnlineResultsHost.ClearValue(FrameworkElement.WidthProperty);
 
-        if (_onlineCardLayoutMode == OnlineCardLayoutMode.Grid)
+        if (_onlinePage.CardLayoutMode == OnlineCardLayoutMode.Grid)
         {
             double availableWidth = OnlineVirtualizedGridView.ActualWidth > 0
                 ? OnlineVirtualizedGridView.ActualWidth
@@ -347,219 +357,13 @@ public sealed partial class MainWindow
         if (Math.Abs(itemsPanel.ItemHeight - layout.ItemHeight) > 0.5) itemsPanel.ItemHeight = layout.ItemHeight;
     }
 
-    private static bool IsSourceInsideButton(DependencyObject? source)
-    {
-        DependencyObject? current = source;
-        while (current is not null)
-        {
-            if (current is Microsoft.UI.Xaml.Controls.Primitives.ButtonBase)
-            {
-                return true;
-            }
+    // List rows and grid tiles are XAML controls bound to one view model; the window supplies
+    // the actions, the cached preview, the author link and the live download state.
+    private UIElement CreateOnlineModRow(OnlineModCard mod) => AttachOnlineModView(new OnlineModRow(CreateOnlineTileModel(mod)));
 
-            current = VisualTreeHelper.GetParent(current);
-        }
+    private UIElement CreateOnlineModTile(OnlineModCard mod) => AttachOnlineModView(new OnlineModTile(CreateOnlineTileModel(mod)));
 
-        return false;
-    }
-
-    private UIElement CreateOnlineModCardV2(OnlineModCard mod)
-    {
-        TrackedModOrigin? installedOrigin = FindInstalledOnlineMod(mod);
-        Border border = new()
-        {
-            ContextFlyout = CreateOnlineCardMenu(mod),
-            Style = (Style)Application.Current.Resources["InsetBorderStyle"],
-            Padding = new Thickness(0),
-            CornerRadius = new CornerRadius(12)
-        };
-        border.Tapped += async (_, args) =>
-        {
-            try
-            {
-                if (IsSourceInsideButton(args.OriginalSource as DependencyObject))
-                {
-                    return;
-                }
-
-                await ShowOnlineModDetailsAsync(mod);
-            }
-            catch (Exception ex)
-            {
-                ReportUiActionFailure("border.Tapped", ex);
-            }
-        };
-        border.PointerEntered += (_, _) => AnimateOnlineModCardHover(border, true);
-        border.PointerExited += (_, _) => AnimateOnlineModCardHover(border, false);
-
-        Grid rootGrid = new() { ColumnSpacing = 12, Padding = new Thickness(0, 10, 10, 10) };
-        rootGrid.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(4) });
-        rootGrid.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(132) });
-        rootGrid.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(1, GridUnitType.Star) });
-        rootGrid.ColumnDefinitions.Add(new ColumnDefinition { Width = GridLength.Auto });
-
-        var accentBar = new Border
-        {
-            Width = 4,
-            Margin = new Thickness(0, 2, 0, 2),
-            CornerRadius = new CornerRadius(2),
-            Background = GetAppThemeBrush("AppNavSelectedBorderBrush")
-        };
-        Grid.SetColumn(accentBar, 0);
-        rootGrid.Children.Add(accentBar);
-
-        Border imageHost = new()
-        {
-            Style = (Style)Application.Current.Resources["InsetBorderStyle"],
-            MinHeight = 88,
-            Height = 88,
-            CornerRadius = new CornerRadius(10)
-        };
-
-        if (!string.IsNullOrWhiteSpace(mod.PreviewUrl))
-        {
-            var previewImage = new Image
-            {
-                Stretch = Stretch.UniformToFill
-            };
-            imageHost.Child = previewImage;
-            _ = SetCachedOnlineImageAsync(previewImage, mod.PreviewUrl);
-        }
-        else
-        {
-            imageHost.Child = new TextBlock
-            {
-                Text = T("OnlineCards.NoPreview"),
-                HorizontalAlignment = HorizontalAlignment.Center,
-                VerticalAlignment = VerticalAlignment.Center,
-                Style = (Style)Application.Current.Resources["CaptionTextStyle"]
-            };
-        }
-
-        Grid.SetColumn(imageHost, 1);
-        rootGrid.Children.Add(imageHost);
-
-        StackPanel contentPanel = new() { Spacing = 4, VerticalAlignment = VerticalAlignment.Center };
-        contentPanel.Children.Add(new TextBlock
-        {
-            Text = mod.Title,
-            FontSize = 16,
-            FontWeight = Microsoft.UI.Text.FontWeights.SemiBold,
-            TextTrimming = TextTrimming.CharacterEllipsis
-        });
-        var authorRow = new Grid { ColumnSpacing = 6 };
-        authorRow.ColumnDefinitions.Add(new ColumnDefinition { Width = GridLength.Auto });
-        authorRow.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(1, GridUnitType.Star) });
-        authorRow.Children.Add(new TextBlock
-        {
-            Text = $"{GetOnlineCharacterDisplayName(mod.CharacterName)}{(mod.IsCharacterNameInferred ? T("Common.Detected") : string.Empty)} ·",
-            Style = (Style)Application.Current.Resources["MutedTextStyle"],
-            VerticalAlignment = VerticalAlignment.Center
-        });
-        HyperlinkButton authorLink = CreateOnlineAuthorLink(mod);
-        Grid.SetColumn(authorLink, 1);
-        authorRow.Children.Add(authorLink);
-        contentPanel.Children.Add(authorRow);
-        // Reserve badge space so finishing an installation does not resize the row.
-        var installedHost = new ContentControl { Height = 24, HorizontalContentAlignment = HorizontalAlignment.Left };
-        contentPanel.Children.Add(installedHost);
-        var metricsPanel = new StackPanel { Orientation = Orientation.Horizontal, Spacing = 8 };
-        Border heatMetric = CreateOnlineMetricBadge($"{T("OnlineCards.Heat")} {mod.HotnessScore:F1}", true);
-        Border downloadMetric = CreateOnlineMetricBadge($"↓ {mod.Downloads}", false);
-        metricsPanel.Children.Add(heatMetric);
-        metricsPanel.Children.Add(CreateOnlineMetricBadge($"♥ {mod.Likes}", false));
-        metricsPanel.Children.Add(downloadMetric);
-        metricsPanel.Children.Add(CreateOnlineMetricBadge($"◉ {mod.Views}", false));
-        contentPanel.Children.Add(metricsPanel);
-        TrackOnlineCardMetrics(metricsPanel, () =>
-        {
-            ((TextBlock)heatMetric.Child).Text = $"{T("OnlineCards.Heat")} {mod.HotnessScore:F1}";
-            ((TextBlock)downloadMetric.Child).Text = $"↓ {mod.Downloads}";
-        });
-        var cardStatus = new TextBlock
-        {
-            Text = $"{T("OnlineCards.Updated")} {mod.UpdatedAt:yyyy-MM-dd}  ·  ID {mod.ItemId}",
-            Style = (Style)Application.Current.Resources["CaptionTextStyle"],
-            TextTrimming = TextTrimming.CharacterEllipsis
-        };
-        contentPanel.Children.Add(cardStatus);
-
-        StackPanel actionsPanel = new()
-        {
-            Width = 124,
-            Spacing = 6,
-            VerticalAlignment = VerticalAlignment.Center
-        };
-        Button detailsButton = new()
-        {
-            Content = T("OnlineCards.Details"),
-            Style = (Style)Application.Current.Resources["SecondaryButtonStyle"],
-            MinHeight = 36,
-            HorizontalAlignment = HorizontalAlignment.Stretch
-        };
-        detailsButton.Click += async (_, _) => await RunUiActionAsync("ShowOnlineModDetailsAsync", () => ShowOnlineModDetailsAsync(mod));
-        actionsPanel.Children.Add(detailsButton);
-
-        Grid quickActions = new()
-        {
-            ColumnSpacing = 6,
-            HorizontalAlignment = HorizontalAlignment.Stretch
-        };
-        quickActions.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(1, GridUnitType.Star) });
-        quickActions.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(1, GridUnitType.Star) });
-
-        Button openPageButton = new()
-        {
-            Content = new FontIcon { Glyph = "\uE774", FontSize = 15 },
-            Style = (Style)Application.Current.Resources["SecondaryButtonStyle"],
-            MinHeight = 34,
-            MinWidth = 0,
-            Padding = new Thickness(0),
-            CornerRadius = new CornerRadius(8),
-            HorizontalAlignment = HorizontalAlignment.Stretch,
-            HorizontalContentAlignment = HorizontalAlignment.Center
-        };
-        ToolTipService.SetToolTip(openPageButton, T("OnlineCards.OpenOriginalPage"));
-        AutomationProperties.SetName(openPageButton, T("OnlineCards.OpenOriginalPage"));
-        openPageButton.Click += async (_, _) => await RunUiActionAsync("OpenExternalUrlAsync", () => OpenExternalUrlAsync(mod.ProfileUrl, T("Common.OpenPageFailed")));
-        quickActions.Children.Add(openPageButton);
-
-        Button downloadButton = new()
-        {
-            Content = new FontIcon { Glyph = "\uE896", FontSize = 15 },
-            Style = (Style)Application.Current.Resources["SecondaryButtonStyle"],
-            MinHeight = 34,
-            MinWidth = 0,
-            Padding = new Thickness(0),
-            CornerRadius = new CornerRadius(8),
-            HorizontalAlignment = HorizontalAlignment.Stretch,
-            HorizontalContentAlignment = HorizontalAlignment.Center,
-            IsEnabled = !string.IsNullOrWhiteSpace(mod.DownloadUrl) && !IsOnlineDownloadActionBlocked(mod)
-        };
-        Grid.SetColumn(downloadButton, 1);
-        string downloadActionText = installedOrigin is null
-            ? T("Common.DownloadAndExtract")
-            : T("Common.DownloadAndExtractAgain");
-        ToolTipService.SetToolTip(downloadButton, downloadActionText);
-        AutomationProperties.SetName(downloadButton, downloadActionText);
-        downloadButton.Click += async (_, _) => await RunUiActionAsync("RunOnlineCardDownloadAsync", () => RunOnlineCardDownloadAsync(mod, downloadButton));
-        quickActions.Children.Add(downloadButton);
-        actionsPanel.Children.Add(quickActions);
-        TrackOnlineCardState(mod, downloadButton, installedHost, cardStatus, cardStatus.Text);
-
-        Grid.SetColumn(contentPanel, 2);
-        rootGrid.Children.Add(contentPanel);
-
-        Grid.SetColumn(actionsPanel, 3);
-        rootGrid.Children.Add(actionsPanel);
-
-        border.Child = rootGrid;
-        return border;
-    }
-
-    // Grid tiles are an XAML control bound to a view model; the window supplies the actions,
-    // the cached preview, the author link and the live download state.
-    private UIElement CreateOnlineModTile(OnlineModCard mod)
+    private OnlineModTileViewModel CreateOnlineTileModel(OnlineModCard mod)
     {
         var model = new OnlineModTileViewModel(mod,
             openPage: () => RunUiActionAsync("OpenExternalUrlAsync", () => OpenExternalUrlAsync(mod.ProfileUrl, T("Common.OpenPageFailed"))),
@@ -571,14 +375,21 @@ public sealed partial class MainWindow
             OpenPageToolTip = T("OnlineCards.OpenOriginalPage")
         };
         UpdateOnlineTileMetrics(model);
-        var tile = new OnlineModTile(model) { ContextFlyout = CreateOnlineCardMenu(mod) };
-        if (model.HasPreview) _ = SetCachedOnlineImageAsync(tile.Preview, mod.PreviewUrl!);
-        tile.Author.Content = CreateOnlineAuthorLink(mod);
-        tile.PointerEntered += (_, _) => AnimateOnlineModCardHover(tile.Card, true);
-        tile.PointerExited += (_, _) => AnimateOnlineModCardHover(tile.Card, false);
-        TrackOnlineCardMetrics(tile, () => UpdateOnlineTileMetrics(model));
-        TrackOnlineTileState(tile, $"{T("OnlineCards.Updated")} {mod.UpdatedAt:yyyy-MM-dd}");
-        return tile;
+        return model;
+    }
+
+    private TView AttachOnlineModView<TView>(TView view) where TView : UserControl, IOnlineModView
+    {
+        OnlineModTileViewModel model = view.ViewModel;
+        OnlineModCard mod = model.Mod;
+        view.ContextFlyout = CreateOnlineCardMenu(mod);
+        if (model.HasPreview) _ = SetCachedOnlineImageAsync(view.Preview, mod.PreviewUrl!);
+        view.Author.Content = CreateOnlineAuthorLink(mod);
+        view.PointerEntered += (_, _) => AnimateOnlineModCardHover(view.Card, true);
+        view.PointerExited += (_, _) => AnimateOnlineModCardHover(view.Card, false);
+        TrackOnlineCardMetrics(view, () => UpdateOnlineTileMetrics(model));
+        TrackOnlineTileState(view, $"{T("OnlineCards.Updated")} {mod.UpdatedAt:yyyy-MM-dd}");
+        return view;
     }
 
     private void UpdateOnlineTileMetrics(OnlineModTileViewModel model)
@@ -595,29 +406,13 @@ public sealed partial class MainWindow
             $"{T("OnlineCards.Downloads")}: {mod.Downloads:N0}");
     }
 
-    private async void OnOnlineGridItemClick(object sender, ItemClickEventArgs e)
+    private async void OnOnlineResultItemClick(object sender, ItemClickEventArgs e)
     {
         if (e.ClickedItem is OnlineModCard mod)
             await RunUiActionAsync("ShowOnlineModDetailsAsync", () => ShowOnlineModDetailsAsync(mod));
     }
 
-    private string FormatCompactMetric(int value)
-    {
-        if (_currentLanguage == AppLanguage.ZhCn)
-        {
-            return value >= 100_000_000
-                ? $"{value / 100_000_000d:0.#}亿"
-                : value >= 10_000
-                    ? $"{value / 10_000d:0.#}万"
-                    : value.ToString("N0", CultureInfo.CurrentCulture);
-        }
-
-        return value >= 1_000_000
-            ? $"{value / 1_000_000d:0.#}M"
-            : value >= 1_000
-                ? $"{value / 1_000d:0.#}K"
-                : value.ToString("N0", CultureInfo.CurrentCulture);
-    }
+    private string FormatCompactMetric(int value) => OnlineBrowseOrder.CompactCount(value, _currentLanguage == AppLanguage.ZhCn);
 
     private void AnimateOnlineModCardHover(Border card, bool isPointerOver)
     {
@@ -637,27 +432,6 @@ public sealed partial class MainWindow
         float value = isPointerOver ? 1.006f : 1f;
         scale.InsertKeyFrame(1f, new Vector3(value, value, 1f), easing);
         visual.StartAnimation("Scale", scale);
-    }
-
-    private Border CreateOnlineMetricBadge(string text, bool highlighted)
-    {
-        return new Border
-        {
-            Background = GetAppThemeBrush(highlighted ? "AppAccentSoftBrush" : "AppSecondaryDefaultBrush"),
-            BorderBrush = GetAppThemeBrush(highlighted ? "AppNavSelectedBorderBrush" : "AppCardBorderBrush"),
-            BorderThickness = new Thickness(1),
-            CornerRadius = new CornerRadius(4),
-            Padding = new Thickness(8, 4, 8, 4),
-            Child = new TextBlock
-            {
-                Text = text,
-                FontSize = 12,
-                MaxLines = 1,
-                TextAlignment = TextAlignment.Center,
-                TextTrimming = TextTrimming.CharacterEllipsis,
-                FontWeight = highlighted ? Microsoft.UI.Text.FontWeights.SemiBold : Microsoft.UI.Text.FontWeights.Normal
-            }
-        };
     }
 
     private Border CreateOnlineInstalledIndicator(string installedPath)

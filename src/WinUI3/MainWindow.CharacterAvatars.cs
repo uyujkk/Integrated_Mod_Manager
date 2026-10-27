@@ -107,8 +107,8 @@ public sealed partial class MainWindow
         string catalogKey = GetOnlineCharacterCatalogKey(repository);
         OnlineCharacterCatalogCacheSnapshot? cached = await TryReadOnlineCharacterCatalogCacheAsync(catalogKey);
         IReadOnlyList<OnlineCharacterOption> online =
-            string.Equals(_onlineCharacterCatalogKey, catalogKey, StringComparison.Ordinal) && _onlineCharacterOptions.Count > 0
-                ? [.. _onlineCharacterOptions]
+            string.Equals(_onlineCharacterCatalogKey, catalogKey, StringComparison.Ordinal) && _onlinePage.CharacterOptions.Count > 0
+                ? [.. _onlinePage.CharacterOptions]
                 : cached?.Characters ?? [];
         if (!IsEndfieldRepository(repository))
         {

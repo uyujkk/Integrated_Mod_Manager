@@ -5,6 +5,7 @@ namespace ModFolderCopier.WinUI;
 
 public sealed partial class MainWindow
 {
+    private readonly OnlinePageViewModel _onlinePage = new();
     private readonly OnlinePageStateAdapter _onlineDetailState = new();
     private readonly OnlineDownloadActionAdapter _onlineDownloadActions = new();
     private int _onlineInstallBusyCount;

@@ -24,7 +24,7 @@ public sealed partial class MainWindow
             if (parent is ContentControl { DataContext: OnlineModCard mod, Tag: string tag } presenter
                 && tag is "OnlineListCardPresenter" or "OnlineGridCardPresenter")
             {
-                presenter.Content = tag == "OnlineListCardPresenter" ? CreateOnlineModCardV2(mod) : CreateOnlineModTile(mod);
+                presenter.Content = tag == "OnlineListCardPresenter" ? CreateOnlineModRow(mod) : CreateOnlineModTile(mod);
                 return;
             }
             for (int i = 0; i < Microsoft.UI.Xaml.Media.VisualTreeHelper.GetChildrenCount(parent); i++)
@@ -80,7 +80,7 @@ public sealed partial class MainWindow
         return link;
     }
 
-    // What a card shows for its download: shared by list cards (controls) and grid tiles (view model).
+    // What a card shows for its download: list rows and grid tiles share it through their view model.
     private readonly record struct OnlineCardStatus(bool CanDownload, string Text, string ToolTip, string Action, string Glyph);
 
     private OnlineCardStatus GetOnlineCardStatus(OnlineModCard mod, TrackedModOrigin? installed, string defaultStatus)
@@ -125,36 +125,14 @@ public sealed partial class MainWindow
         installedHost.Content = installed is null ? null : CreateOnlineInstalledIndicator(path);
     }
 
-    private void TrackOnlineCardState(OnlineModCard mod, Button button, ContentControl installedHost,
-        TextBlock status, string defaultStatus)
+    private void TrackOnlineTileState<TView>(TView view, string defaultStatus) where TView : UserControl, IOnlineModView
     {
-        TrackedModOrigin? installed = null;
-        void Refresh(bool refreshInstalled)
-        {
-            // Byte-progress callbacks must not probe every tracked directory on disk.
-            if (refreshInstalled) installed = FindInstalledOnlineMod(mod);
-            ApplyOnlineInstalledIndicator(installedHost, installed);
-            OnlineCardStatus state = GetOnlineCardStatus(mod, installed, defaultStatus);
-            button.IsEnabled = state.CanDownload;
-            status.Text = state.Text;
-            ToolTipService.SetToolTip(status, state.ToolTip);
-            ToolTipService.SetToolTip(button, state.Action);
-            AutomationProperties.SetName(button, state.Action);
-            if (button.Content is FontIcon icon) icon.Glyph = state.Glyph;
-        }
-        button.Loaded += (_, _) => { _onlineCardRefreshers.Add(Refresh); Refresh(true); };
-        button.Unloaded += (_, _) => _onlineCardRefreshers.Remove(Refresh);
-        Refresh(true);
-    }
-
-    private void TrackOnlineTileState(OnlineModTile tile, string defaultStatus)
-    {
-        OnlineModTileViewModel model = tile.ViewModel;
+        OnlineModTileViewModel model = view.ViewModel;
         TrackedModOrigin? installed = null;
         void Refresh(bool refreshInstalled)
         {
             if (refreshInstalled) installed = FindInstalledOnlineMod(model.Mod);
-            ApplyOnlineInstalledIndicator(tile.Installed, installed);
+            ApplyOnlineInstalledIndicator(view.Installed, installed);
             OnlineCardStatus state = GetOnlineCardStatus(model.Mod, installed, defaultStatus);
             model.CanDownload = state.CanDownload;
             model.StatusText = state.Text;
@@ -162,8 +140,8 @@ public sealed partial class MainWindow
             model.DownloadToolTip = state.Action;
             model.DownloadGlyph = state.Glyph;
         }
-        tile.Loaded += (_, _) => { _onlineCardRefreshers.Add(Refresh); Refresh(true); };
-        tile.Unloaded += (_, _) => _onlineCardRefreshers.Remove(Refresh);
+        view.Loaded += (_, _) => { _onlineCardRefreshers.Add(Refresh); Refresh(true); };
+        view.Unloaded += (_, _) => _onlineCardRefreshers.Remove(Refresh);
         Refresh(true);
     }
 

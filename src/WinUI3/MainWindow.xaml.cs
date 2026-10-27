@@ -90,21 +90,6 @@ public sealed partial class MainWindow : Window
         Weekly
     }
 
-    private enum OnlineSortMode
-    {
-        Hotness,
-        Downloads,
-        Likes,
-        Views,
-        Updated
-    }
-
-    private enum OnlineCardLayoutMode
-    {
-        List,
-        Grid
-    }
-
     private static readonly string[] ImageExtensions = [".png", ".jpg", ".jpeg", ".bmp", ".gif", ".webp"];
     private static readonly SolidColorBrush CopiedBrush = new(ColorHelper.FromArgb(255, 36, 124, 76));
     private static readonly SolidColorBrush MissingBrush = new(ColorHelper.FromArgb(255, 177, 76, 55));
@@ -123,7 +108,6 @@ public sealed partial class MainWindow : Window
     private readonly SemaphoreSlim _onlineCharacterAvatarDownloadGate = new(3, 3);
     private readonly BatchObservableCollection<FirstLevelFolderItem> _firstLevelItems = [];
     private readonly BatchObservableCollection<SecondLevelFolderItem> _secondLevelItems = [];
-    private readonly ObservableCollection<OnlineModCard> _onlineVisibleMods = [];
     private readonly List<FirstLevelFolderItem> _allFirstLevelItems = [];
     private readonly List<Border> _shortcutKeyBorders = [];
     private readonly List<TextBox> _shortcutKeyBoxes = [];
@@ -133,8 +117,6 @@ public sealed partial class MainWindow : Window
     private readonly Dictionary<string, TrackedModOrigin> _trackedModOrigins = new(StringComparer.CurrentCultureIgnoreCase);
     private readonly GameBananaMetadataService _gameBananaMetadataService;
     private readonly List<WorkspaceRepository> _repositories = [];
-    private readonly List<OnlineModCard> _onlineMods = [];
-    private readonly List<OnlineCharacterOption> _onlineCharacterOptions = [];
     private readonly List<string> _onlineDetailImageUrls = [];
     private readonly List<TrackedModUpdateResult> _trackedModUpdateResults = [];
     private readonly List<ModConfigurationProfile> _configurationProfiles = [];
@@ -174,20 +156,11 @@ public sealed partial class MainWindow : Window
     private string? _latestReleaseUrl;
     private string? _localUpdatePackagePath;
     private Version? _localUpdatePackageVersion;
-    private string? _onlineStatusZh;
-    private string? _onlineStatusEn;
-    private string? _onlineCacheStatusZh;
-    private string? _onlineCacheStatusEn;
     private string? _lastLoadedOnlineConfigKey;
     private string? _blockedOnlineAutoLoadConfigKey;
     private string? _onlineCharacterStripSignature;
     private string? _onlineCharacterCatalogKey;
     private bool _useHorizontalOnlineCharacterRail;
-    private int _onlineCurrentPage = 1;
-    private int _onlineTotalCount;
-    private int _onlineTotalPages = 1;
-    private string _onlineCharacterFilter = string.Empty;
-    private string _onlineSearchText = string.Empty;
     private string? _selectedRepositoryId;
     private string? _selectedConfigurationProfileId;
     private string? _lastInstallTransactionPath;
@@ -201,8 +174,6 @@ public sealed partial class MainWindow : Window
     private ShellLayoutMode _shellLayoutMode = (ShellLayoutMode)(-1);
     private bool _primaryNavExpanded;
     private bool _navigationCollapsed;
-    private OnlineSortMode _onlineSortMode = OnlineSortMode.Hotness;
-    private OnlineCardLayoutMode _onlineCardLayoutMode = OnlineCardLayoutMode.List;
     private UpdateCheckInterval _updateCheckInterval = UpdateCheckInterval.Manual;
     private DateTimeOffset? _lastUpdateCheckUtc;
     private UpdateCheckInterval _modUpdateCheckInterval = UpdateCheckInterval.Manual;
@@ -227,7 +198,6 @@ public sealed partial class MainWindow : Window
     private bool _savedWindowMaximized;
     private Microsoft.UI.Windowing.OverlappedPresenterState? _lastPresenterState;
     private int? _savedWindowHeight;
-    private readonly HashSet<string> _onlineKnownCharacters = new(StringComparer.OrdinalIgnoreCase);
     private InterfaceDensity _interfaceDensity = InterfaceDensity.Comfortable;
 
     public MainWindow()
@@ -250,8 +220,8 @@ public sealed partial class MainWindow : Window
         EditOnlineRepositoryButton.Click += OnEditOnlineRepositoryClicked;
         FirstLevelListView.ItemsSource = _firstLevelItems;
         SecondLevelListView.ItemsSource = _secondLevelItems;
-        OnlineVirtualizedListView.ItemsSource = _onlineVisibleMods;
-        OnlineVirtualizedGridView.ItemsSource = _onlineVisibleMods;
+        OnlineVirtualizedListView.ItemsSource = _onlinePage.VisibleMods;
+        OnlineVirtualizedGridView.ItemsSource = _onlinePage.VisibleMods;
         TraceStartupStage("List sources attached");
         RegisterTrackedTextInputs();
         BuildShortcutRows();

@@ -82,15 +82,13 @@ public sealed partial class MainWindow
         CancelOnlineModListRequest();
         InvalidateOnlineDetailRequest();
         _onlineDownloadEnrichmentVersion++;
-        _onlineCurrentPage = 1;
-        _onlineTotalCount = 0;
-        _onlineTotalPages = 1;
-        _onlineCharacterFilter = string.Empty;
-        _onlineKnownCharacters.Clear();
-        _onlineAuthorId = 0;
-        _onlineAuthorName = string.Empty;
+        _onlinePage.ResetPaging();
+        _onlinePage.CharacterFilter = string.Empty;
+        _onlinePage.KnownCharacters.Clear();
+        _onlinePage.AuthorId = 0;
+        _onlinePage.AuthorName = string.Empty;
         _lastLoadedOnlineConfigKey = null;
-        _onlineMods.Clear();
+        _onlinePage.Mods.Clear();
         _activeOnlineDetailMod = null;
         ResetOnlineDetailPaneToPlaceholder();
     }
@@ -226,13 +224,11 @@ public sealed partial class MainWindow
 
             _repositories.Add(repository);
             _selectedRepositoryId = repository.Id;
-            _onlineCurrentPage = 1;
-            _onlineTotalCount = 0;
-            _onlineTotalPages = 1;
-            _onlineCharacterFilter = string.Empty;
-            _onlineKnownCharacters.Clear();
+            _onlinePage.ResetPaging();
+            _onlinePage.CharacterFilter = string.Empty;
+            _onlinePage.KnownCharacters.Clear();
             _lastLoadedOnlineConfigKey = null;
-            _onlineMods.Clear();
+            _onlinePage.Mods.Clear();
             _currentPrimarySection = PrimarySection.Repository;
             ApplySelectedRepositoryToInputs();
             SaveConfig();
@@ -308,13 +304,11 @@ public sealed partial class MainWindow
             _repositories.Add(repository);
             _selectedRepositoryId = repository.Id;
             _currentPrimarySection = PrimarySection.Repository;
-            _onlineCurrentPage = 1;
-            _onlineTotalCount = 0;
-            _onlineTotalPages = 1;
-            _onlineCharacterFilter = string.Empty;
-            _onlineKnownCharacters.Clear();
+            _onlinePage.ResetPaging();
+            _onlinePage.CharacterFilter = string.Empty;
+            _onlinePage.KnownCharacters.Clear();
             _lastLoadedOnlineConfigKey = null;
-            _onlineMods.Clear();
+            _onlinePage.Mods.Clear();
             ApplySelectedRepositoryToInputs();
             SaveConfig();
             ApplyShellState(refreshRepository: false);
@@ -432,16 +426,16 @@ public sealed partial class MainWindow
             }
 
             EnsureOnlineCharacterOptionsForRepository(repository);
-            if (!_onlineCharacterOptions.Any(character => character.IsWikiCharacter))
+            if (!_onlinePage.CharacterOptions.Any(character => character.IsWikiCharacter))
             {
                 _ = EnsureOnlineCharacterCatalogAsync(repository, forceReload: false);
-                for (int attempt = 0; attempt < 12 && !_onlineCharacterOptions.Any(character => character.IsWikiCharacter); attempt++)
+                for (int attempt = 0; attempt < 12 && !_onlinePage.CharacterOptions.Any(character => character.IsWikiCharacter); attempt++)
                 {
                     await Task.Delay(250);
                 }
             }
 
-            List<OnlineCharacterOption> wikiCharacters = _onlineCharacterOptions
+            List<OnlineCharacterOption> wikiCharacters = _onlinePage.CharacterOptions
                 .Where(character => character.IsWikiCharacter)
                 .OrderBy(character => character.WikiOrder)
                 .ToList();
@@ -453,7 +447,7 @@ public sealed partial class MainWindow
                 return;
             }
 
-            List<OnlineCharacterOption> categoryCandidates = _onlineCharacterOptions
+            List<OnlineCharacterOption> categoryCandidates = _onlinePage.CharacterOptions
                 .Where(character => !string.IsNullOrWhiteSpace(character.CategoryId))
                 .GroupBy(character => character.CategoryId, StringComparer.OrdinalIgnoreCase)
                 .Select(group => group.First())
