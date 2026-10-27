@@ -26,6 +26,9 @@ $taskTarget = Join-Path $taskAccept 'Mods'
 New-Item -ItemType Directory -Path (Join-Path $taskSource 'Character\Mod'), $taskTarget -Force | Out-Null
 @('[Constants]', 'global persist $x = 0') | Set-Content (Join-Path $taskSource 'Character\Mod\mod.ini')
 function Encode([string]$value) { [Convert]::ToBase64String([Text.Encoding]::UTF8.GetBytes($value)) }
+# Match WorkspaceIdentity.Library and its slash-normalized relative Mod paths so
+# this fixture tests the active library, rather than an unused dictionary entry.
+$taskLibraryKey = ConvertTo-Json -InputObject @('preview-upgrade', $taskSource.TrimEnd('\', '/').ToUpperInvariant()) -Compress
 @("source_dir=$(Encode $taskSource)", "target_dir=$(Encode $taskTarget)", 'launcher_path=', "theme=$(Encode 'dark')", "language=$(Encode 'en')") |
     Set-Content (Join-Path $taskInstall 'WinUI3\config.ini') -Encoding utf8
 $taskShell = [ordered]@{
@@ -34,7 +37,7 @@ $taskShell = [ordered]@{
     Repositories=@(@{Id='preview-upgrade';Name='Synthetic upgrade';SourcePath=$taskSource;TargetPath=$taskTarget;UseDirectoryLinks=$false
         AllowMultipleModsPerCharacter=$true;CharacterSelectionOverrides=@{Character=$false};CharacterAvatarBindings=@{Character='test-character'}})
     OnlinePreferences=@{ConcurrentDownloads=3;RememberDownloadFolders=$true;DownloadFolders=@{synthetic=$taskSource}}
-    LocalLibraries=@{'preview-upgrade'=@{ModTags=@{'Character\Mod'=@('favorite','preview')};Filters=@()}}
+    LocalLibraries=@{$taskLibraryKey=@{ModTags=@{'Character/Mod'=@('favorite','preview')};Filters=@(@{Name='Favorites';Character='Character';Search='';Tag='favorite'})}}
     ConfigurationProfiles=@(@{Id='profile';RepositoryId='preview-upgrade';Name='Saved combination';ModRelativePaths=@('Character\Mod');IncludesPersistentState=$false;PersistentStates=@()})
     ModPersistentSlots=@(@{Id='slot';RepositoryId='preview-upgrade';Name='Saved slot';ModRelativePath='Character\Mod';Values=@(@{RelativeIniPath='mod.ini';Variable='x';RuntimeKey='$\Mods\Mod\mod.ini\x';Value='7'})})
 }
