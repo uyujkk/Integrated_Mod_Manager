@@ -191,6 +191,13 @@ public sealed partial class MainWindow
         }
 
         FirstLevelListView.SelectedItem = item;
+        CreateFirstLevelMenu(item).ShowAt(element);
+        e.Handled = true;
+    }
+
+    // Shared by the character right-click menu and the "More" button in the character list header.
+    private MenuFlyout CreateFirstLevelMenu(FirstLevelFolderItem item)
+    {
         var menu = new MenuFlyout();
         var openItem = new MenuFlyoutItem
         {
@@ -209,8 +216,7 @@ public sealed partial class MainWindow
         menu.Items.Add(renameItem);
         AddCharacterSelectionMenuItem(menu, item);
         AddCharacterAvatarMenuItems(menu, item);
-        menu.ShowAt(element);
-        e.Handled = true;
+        return menu;
     }
 
     private async void OnCreateFirstLevelClicked(object sender, RoutedEventArgs e)

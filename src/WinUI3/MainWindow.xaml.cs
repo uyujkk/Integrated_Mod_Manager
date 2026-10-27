@@ -232,7 +232,7 @@ public sealed partial class MainWindow : Window
         TraceStartupStage("InitializeComponent completed");
         InitializePersistentDataStore();
         TraceStartupStage("Persistent data store initialized");
-        ExtendsContentIntoTitleBar = false;
+        InitializeAppTitleBar();
         EditOnlineRepositoryButton.Click -= OnEditRepositoryDetailsClicked;
         EditOnlineRepositoryButton.Click += OnEditOnlineRepositoryClicked;
         FirstLevelListView.ItemsSource = _firstLevelItems;
