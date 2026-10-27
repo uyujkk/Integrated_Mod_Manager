@@ -158,6 +158,7 @@ public sealed partial class MainWindow
 
     private void RefreshUpdatesPane()
     {
+        RefreshUpdatesNavBadge();
         UpdatesPageHeader.Title = T("Updates.ModUpdates");
         UpdatesPageHeader.Description = T("Updates.CheckInstalledModsForNewVersions");
         ConfigurationProfilesTitleTextBlock.Text = T("Updates.ModCombinationPresets");

@@ -12,6 +12,19 @@ public readonly record struct RepositoryCoverGrid(
 /// <summary>How the details colour a Mod's deployment state.</summary>
 public enum ModStateTone { Neutral, Deployed, NotDeployed }
 
+/// <summary>The Mod list's state chips: every Mod, the deployed ones, or the rest.</summary>
+public enum ModStateFilter { All, Deployed, NotDeployed }
+
+/// <summary>The three settings a repository needs before its first deployment.</summary>
+public readonly record struct RepositorySetup(bool HasGame, bool HasRepositoryFolder, bool HasDeployTarget)
+{
+    public const int Total = 3;
+
+    public int Done => (HasGame ? 1 : 0) + (HasRepositoryFolder ? 1 : 0) + (HasDeployTarget ? 1 : 0);
+
+    public bool IsComplete => Done == Total;
+}
+
 /// <summary>Why the Mod list shows nothing, which decides its message and whether it offers an import.</summary>
 public enum ModListEmptyKind { None, NoMatches, NoMods, NoCharacter }
 
@@ -30,7 +43,8 @@ public static class RepositoryWorkspacePolicy
     public static RepositoryWorkspaceLayout Layout(double availableWidth)
     {
         double width = double.IsFinite(availableWidth) ? Math.Max(0, availableWidth) : 0;
-        double category = width >= 1200 ? 208 : width >= 700 ? 184 : 156;
+        // Wide enough for an avatar, a short character name and its Mod count without an ellipsis.
+        double category = width >= 1200 ? 220 : width >= 700 ? 200 : 176;
         bool inline = width >= 980;
         double detail = inline ? Math.Clamp(width * .30, 336, 480) : 0;
         double gallery = Math.Max(160, width - category - 12);
@@ -62,6 +76,23 @@ public static class RepositoryWorkspacePolicy
             ? path
             : "…" + Path.DirectorySeparatorChar + relative;
     }
+
+    public static bool MatchesStateFilter(ModStateTone tone, ModStateFilter filter) => filter switch
+    {
+        ModStateFilter.Deployed => tone == ModStateTone.Deployed,
+        ModStateFilter.NotDeployed => tone != ModStateTone.Deployed,
+        _ => true
+    };
+
+    /// <summary>
+    /// The deployed Mod of the same character that deploying <paramref name="currentName"/> would
+    /// replace, or null when nothing else is deployed.
+    /// </summary>
+    public static string? ReplacedByDeploy(IEnumerable<(string Name, ModStateTone Tone)> siblings, string currentName)
+        => siblings.Where(sibling => sibling.Tone == ModStateTone.Deployed
+                && !string.Equals(sibling.Name, currentName, StringComparison.OrdinalIgnoreCase))
+            .Select(sibling => sibling.Name)
+            .FirstOrDefault();
 
     /// <summary>Items whose name contains the trimmed keyword, ignoring case, in their original order.</summary>
     public static IEnumerable<T> FilterByName<T>(IEnumerable<T> items, Func<T, string> name, string? keyword)

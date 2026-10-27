@@ -249,6 +249,11 @@
                 <Setter Property="UseSystemFocusVisuals" Value="True" />
             </Style>
 
+            <!-- Narrow side lists (the workspace's characters): less item padding, so names keep more room. -->
+            <Style x:Key="CompactListViewItemStyle" TargetType="ListViewItem" BasedOn="{StaticResource AppListViewItemStyle}">
+                <Setter Property="Padding" Value="6,0,6,0" />
+            </Style>
+
             <Style x:Key="ShortcutInputTextBoxStyle" TargetType="TextBox">
                 <Setter Property="Background" Value="Transparent" />
                 <Setter Property="BorderBrush" Value="Transparent" />
