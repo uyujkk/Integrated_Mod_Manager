@@ -29,7 +29,6 @@ public sealed partial class MainWindow
     private bool _checkAppUpdatesOnStartup = false;
     private bool _isApplyingStartupUpdateSetting;
     private bool _isApplyingBackupLimitSetting;
-    private bool _useWideTrackedModsLayout;
     private double _installBackupLimitGb = DefaultInstallBackupLimitGb;
     private string? _latestReleasePackageUrl;
     private string? _latestReleaseSha256Url;
@@ -172,17 +171,34 @@ public sealed partial class MainWindow
         double width = PageWidth(UpdatesScrollViewer);
         int columns = UpdatesLayoutPolicy.Columns(width);
 
-        // With columns side by side the tracked Mods card reaches the bottom of the window.
-        double above = UpdatesPageHeader.ActualHeight + 16 + 12;
-        UpdatesTrackedModsCard.MinHeight = columns > 1 && UpdatesScrollViewer.ActualHeight > 0
-            ? Math.Max(0, UpdatesScrollViewer.ActualHeight - above)
-            : 0;
-
-        bool useWideTrackedModsLayout = UpdatesLayoutPolicy.TrackedModsInTwoColumns(width);
-        if (_useWideTrackedModsLayout != useWideTrackedModsLayout)
+        // Side-by-side columns fill the window and scroll inside, so the page itself never scrolls;
+        // a stacked or very short page scrolls as a whole, with each list capped in height.
+        double? fixedHeight = columns > 1
+            ? UpdatesLayoutPolicy.FixedColumnHeight(UpdatesScrollViewer.ActualHeight, UpdatesPageHeader.ActualHeight)
+            : null;
+        UpdatesScrollViewer.VerticalScrollMode = fixedHeight is null ? ScrollMode.Enabled : ScrollMode.Disabled;
+        UpdatesScrollViewer.VerticalScrollBarVisibility = fixedHeight is null ? ScrollBarVisibility.Auto : ScrollBarVisibility.Disabled;
+        UpdatesTrackedModsCard.MinHeight = 0;
+        // A narrow history card keeps its description in the title's tooltip, leaving the rows the room.
+        bool narrowHistory = columns == 2;
+        DownloadTaskCenterHintTextBlock.Visibility = narrowHistory ? Visibility.Collapsed : Visibility.Visible;
+        ToolTipService.SetToolTip(DownloadTaskCenterTitleTextBlock, narrowHistory ? DownloadTaskCenterHintTextBlock.Text : null);
+        if (fixedHeight is double height)
         {
-            _useWideTrackedModsLayout = useWideTrackedModsLayout;
-            ApplyTrackedModsListLayout();
+            UpdatesTrackedModsCard.Height = height;
+            UpdatesDownloadsCard.Height = columns == 3 ? height : Math.Max(360, Math.Round(height * 0.65));
+            UpdatesSupportScroll.Height = height;
+            TrackedModsListScroll.MaxHeight = double.PositiveInfinity;
+            DownloadHistoryListScroll.MaxHeight = double.PositiveInfinity;
+        }
+        else
+        {
+            UpdatesTrackedModsCard.Height = double.NaN;
+            UpdatesDownloadsCard.Height = double.NaN;
+            UpdatesSupportScroll.Height = double.NaN;
+            double viewport = UpdatesScrollViewer.ActualHeight > 0 ? UpdatesScrollViewer.ActualHeight : 800;
+            TrackedModsListScroll.MaxHeight = Math.Max(320, Math.Round(viewport * 0.6));
+            DownloadHistoryListScroll.MaxHeight = 360;
         }
 
         if (_updatesColumns == columns)
@@ -205,14 +221,14 @@ public sealed partial class MainWindow
             Grid.SetRow(UpdatesDownloadsCard, 0);
             Grid.SetColumn(UpdatesDownloadsCard, 1);
             UpdatesTopGrid.Children.Add(UpdatesDownloadsCard);
-            Grid.SetRow(UpdatesSupportPanel, 0);
-            Grid.SetColumn(UpdatesSupportPanel, 2);
+            Grid.SetRow(UpdatesSupportScroll, 0);
+            Grid.SetColumn(UpdatesSupportScroll, 2);
         }
         else
         {
             UpdatesSupportPanel.Children.Insert(0, UpdatesDownloadsCard);
-            Grid.SetRow(UpdatesSupportPanel, columns == 2 ? 0 : 1);
-            Grid.SetColumn(UpdatesSupportPanel, columns == 2 ? 1 : 0);
+            Grid.SetRow(UpdatesSupportScroll, columns == 2 ? 0 : 1);
+            Grid.SetColumn(UpdatesSupportScroll, columns == 2 ? 1 : 0);
         }
     }
 

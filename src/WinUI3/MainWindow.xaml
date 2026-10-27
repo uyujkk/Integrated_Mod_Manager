@@ -1428,7 +1428,14 @@
 
                             <StackPanel x:Name="UpdatesMainPanel" Grid.Column="0" Spacing="16">
                                 <Border x:Name="UpdatesTrackedModsCard" Style="{StaticResource CardBorderStyle}">
-                                    <StackPanel Spacing="14">
+                                    <!-- Header, settings and filters stay put; only the list scrolls, so many Mods never stretch the page. -->
+                                    <Grid RowSpacing="12">
+                                        <Grid.RowDefinitions>
+                                            <RowDefinition Height="Auto" />
+                                            <RowDefinition Height="Auto" />
+                                            <RowDefinition Height="Auto" />
+                                            <RowDefinition Height="*" />
+                                        </Grid.RowDefinitions>
                                     <Grid ColumnSpacing="14">
                                         <Grid.ColumnDefinitions>
                                             <ColumnDefinition Width="44" />
@@ -1453,52 +1460,73 @@
                                             MinHeight="42"
                                             Style="{StaticResource PrimaryButtonStyle}" />
                                     </Grid>
-
-                                    <Border Style="{StaticResource InsetBorderStyle}" Padding="14,12">
-                                        <Grid ColumnSpacing="14">
+                                    <Border Grid.Row="1" Style="{StaticResource InsetBorderStyle}" Padding="12,8">
+                                        <Grid ColumnSpacing="12">
                                             <Grid.ColumnDefinitions>
                                                 <ColumnDefinition Width="*" />
-                                                <ColumnDefinition Width="220" />
+                                                <ColumnDefinition Width="200" />
                                             </Grid.ColumnDefinitions>
-                                            <StackPanel Spacing="4" VerticalAlignment="Center">
+                                            <StackPanel Spacing="2" VerticalAlignment="Center">
                                                 <TextBlock x:Name="TrackedModSettingsTitleTextBlock" FontWeight="SemiBold" />
-                                                <TextBlock x:Name="TrackedModSettingsHintTextBlock" Style="{StaticResource CaptionTextStyle}" TextWrapping="Wrap" />
-                                                <TextBlock x:Name="ModUpdateIntervalHintTextBlock" Style="{StaticResource CaptionTextStyle}" TextWrapping="Wrap" />
                                                 <TextBlock x:Name="ModUpdateStatusTextBlock" Style="{StaticResource CaptionTextStyle}" TextWrapping="Wrap" />
+                                                <!-- The longer explanations live in the interval box's tooltip. -->
+                                                <TextBlock x:Name="TrackedModSettingsHintTextBlock" Visibility="Collapsed" />
+                                                <TextBlock x:Name="ModUpdateIntervalHintTextBlock" Visibility="Collapsed" />
                                             </StackPanel>
-                                            <StackPanel Grid.Column="1" Spacing="5" VerticalAlignment="Center">
+                                            <StackPanel Grid.Column="1" Spacing="4" VerticalAlignment="Center">
                                                 <TextBlock x:Name="ModUpdateIntervalLabelTextBlock" Style="{StaticResource CaptionTextStyle}" />
                                                 <ComboBox
                                                     x:Name="ModUpdateIntervalComboBox"
-                                                    MinHeight="42"
+                                                    MinHeight="36"
                                                     HorizontalAlignment="Stretch"
                                                     SelectionChanged="OnModUpdateIntervalSelectionChanged" />
                                             </StackPanel>
                                         </Grid>
                                     </Border>
-
-                                    <!-- The page scrolls; a nested fixed-height scroller made long lists awkward to read. -->
-                                    <ScrollViewer
-                                        x:Name="TrackedModsScrollViewer"
-                                        HorizontalScrollBarVisibility="Disabled"
-                                        HorizontalScrollMode="Disabled"
-                                        VerticalScrollBarVisibility="Disabled"
-                                        VerticalScrollMode="Disabled">
-                                        <Grid x:Name="TrackedModsListPanel" ColumnSpacing="10" RowSpacing="10" Margin="0,0,8,0">
-                                            <Grid.ColumnDefinitions>
-                                                <ColumnDefinition x:Name="TrackedModsPrimaryColumn" Width="*" />
-                                                <ColumnDefinition x:Name="TrackedModsSecondaryColumn" Width="0" />
-                                            </Grid.ColumnDefinitions>
-                                        </Grid>
-                                    </ScrollViewer>
-                                    </StackPanel>
+                                    <Grid Grid.Row="2" ColumnSpacing="12">
+                                        <Grid.ColumnDefinitions>
+                                            <ColumnDefinition Width="*" />
+                                            <ColumnDefinition Width="220" />
+                                        </Grid.ColumnDefinitions>
+                                        <StackPanel x:Name="TrackedModsFilterPanel" Orientation="Horizontal" Spacing="6" VerticalAlignment="Center" />
+                                        <TextBox x:Name="TrackedModsSearchBox" Grid.Column="1" MinWidth="0" TextChanged="OnTrackedModsSearchChanged" />
+                                    </Grid>
+                                    <Grid Grid.Row="3">
+                                        <ScrollViewer
+                                            x:Name="TrackedModsListScroll"
+                                            HorizontalScrollBarVisibility="Disabled"
+                                            HorizontalScrollMode="Disabled"
+                                            VerticalScrollBarVisibility="Auto">
+                                            <ItemsRepeater x:Name="TrackedModsRepeater" Margin="0,0,10,0">
+                                                <ItemsRepeater.Layout>
+                                                    <StackLayout Spacing="8" />
+                                                </ItemsRepeater.Layout>
+                                            </ItemsRepeater>
+                                        </ScrollViewer>
+                                        <ContentControl x:Name="TrackedModsEmptyHost" HorizontalContentAlignment="Stretch" VerticalAlignment="Top" IsTabStop="False" />
+                                    </Grid>
+                                    </Grid>
                                 </Border>
                             </StackPanel>
 
-                            <StackPanel x:Name="UpdatesSupportPanel" Grid.Column="1" Spacing="16">
+                            <!-- The support column scrolls on its own when the columns fill the window. -->
+                            <ScrollViewer
+                                x:Name="UpdatesSupportScroll"
+                                Grid.Column="1"
+                                HorizontalScrollBarVisibility="Disabled"
+                                HorizontalScrollMode="Disabled"
+                                VerticalScrollBarVisibility="Auto">
+                            <StackPanel x:Name="UpdatesSupportPanel" Spacing="16" Margin="0,0,6,0">
                                 <!-- On very wide pages this card moves into its own middle column. -->
                                 <Border x:Name="UpdatesDownloadsCard" Style="{StaticResource CardBorderStyle}">
-                                    <StackPanel Spacing="12">
+                                    <!-- Finished, failed and canceled downloads; the list scrolls inside the card. -->
+                                    <Grid RowSpacing="10">
+                                        <Grid.RowDefinitions>
+                                            <RowDefinition Height="Auto" />
+                                            <RowDefinition Height="Auto" />
+                                            <RowDefinition Height="Auto" />
+                                            <RowDefinition Height="*" />
+                                        </Grid.RowDefinitions>
                                         <Grid ColumnSpacing="12">
                                             <Grid.ColumnDefinitions>
                                                 <ColumnDefinition Width="*" />
@@ -1510,8 +1538,23 @@
                                             </StackPanel>
                                             <Button x:Name="ClearDownloadTasksButton" Grid.Column="1" Click="OnClearDownloadTasksClicked" Style="{StaticResource SecondaryButtonStyle}" />
                                         </Grid>
-                                        <StackPanel x:Name="DownloadTaskListPanel" Spacing="10" />
-                                    </StackPanel>
+                                        <StackPanel x:Name="DownloadHistoryFilterPanel" Grid.Row="1" Orientation="Horizontal" Spacing="6" />
+                                        <TextBlock x:Name="DownloadHistoryRunningTextBlock" Grid.Row="2" Style="{StaticResource CaptionTextStyle}" TextWrapping="Wrap" Visibility="Collapsed" />
+                                        <Grid Grid.Row="3">
+                                            <ScrollViewer
+                                                x:Name="DownloadHistoryListScroll"
+                                                HorizontalScrollBarVisibility="Disabled"
+                                                HorizontalScrollMode="Disabled"
+                                                VerticalScrollBarVisibility="Auto">
+                                                <ItemsRepeater x:Name="DownloadHistoryRepeater" Margin="0,0,10,0">
+                                                    <ItemsRepeater.Layout>
+                                                        <StackLayout Spacing="6" />
+                                                    </ItemsRepeater.Layout>
+                                                </ItemsRepeater>
+                                            </ScrollViewer>
+                                            <ContentControl x:Name="DownloadHistoryEmptyHost" HorizontalContentAlignment="Stretch" VerticalAlignment="Top" IsTabStop="False" />
+                                        </Grid>
+                                    </Grid>
                                 </Border>
 
                                 <Border x:Name="UpdatesSafetyCard" Style="{StaticResource CardBorderStyle}">
@@ -1610,6 +1653,7 @@
                                     </StackPanel>
                                 </Border>
                             </StackPanel>
+                            </ScrollViewer>
                         </Grid>
                     </StackPanel>
                 </ScrollViewer>

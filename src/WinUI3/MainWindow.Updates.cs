@@ -5,7 +5,9 @@ using IntegratedModManager.Core.Configuration;
 using IntegratedModManager.Core.Online;
 using IntegratedModManager.Core.Updates;
 using Microsoft.UI.Xaml;
+using Microsoft.UI.Xaml.Automation;
 using Microsoft.UI.Xaml.Controls;
+using Microsoft.UI.Xaml.Controls.Primitives;
 using Microsoft.UI.Xaml.Media;
 
 namespace ModFolderCopier.WinUI;
@@ -188,6 +190,7 @@ public sealed partial class MainWindow
         TrackedModSettingsHintTextBlock.Text = T("Updates.CheckOnStartupAtTheSelected");
         ModUpdateIntervalLabelTextBlock.Text = T("Updates.CheckInterval");
         ModUpdateIntervalHintTextBlock.Text = T("Updates.OnlyOnlineInstalledModsWithA");
+        ToolTipService.SetToolTip(ModUpdateIntervalComboBox, TrackedModSettingsHintTextBlock.Text + "\n" + ModUpdateIntervalHintTextBlock.Text);
         CheckModUpdatesButton.Content = _isCheckingModUpdates ? T("Common.Checking") : T("Updates.CheckNow");
         TrackedModsTitleTextBlock.Text = T("Updates.TrackedMods");
 
@@ -208,260 +211,258 @@ public sealed partial class MainWindow
         TrackedModsSummaryTextBlock.Text = T("Updates.TrackedModsLastCheckedUpdatesAvailable", trackedCount, lastCheckedText, updateCount);
 
         PopulateModUpdateIntervalOptions();
-        TrackedModsListPanel.Children.Clear();
-        TrackedModsListPanel.RowDefinitions.Clear();
-
-        IEnumerable<TrackedModUpdateResult> orderedResults = _trackedModUpdateResults
-            .OrderByDescending(item => item.HasUpdate)
-            .ThenBy(item => item.Title, StringComparer.CurrentCultureIgnoreCase);
-
-        if (!orderedResults.Any())
-        {
-            if (_trackedModOrigins.Count == 0)
-            {
-                // Mods are tracked once they come from the online page, so the empty state leads there.
-                var empty = new StackPanel { Spacing = 10 };
-                empty.Children.Add(CreateInfoCard(
-                    T("Updates.NoTrackedOnlineModsYet"),
-                    T("Updates.AfterDownloadingAndExtractingFromThe")));
-                var browse = new Button
-                {
-                    Content = T("Dashboard.BrowseOnline"),
-                    Style = (Style)Application.Current.Resources["PrimaryButtonStyle"]
-                };
-                browse.Click += OnOnlineNavClicked;
-                empty.Children.Add(browse);
-                TrackedModsListPanel.Children.Add(empty);
-            }
-            else
-            {
-                foreach (TrackedModOrigin origin in _trackedModOrigins.Values.OrderBy(item => item.Title, StringComparer.CurrentCultureIgnoreCase))
-                {
-                    TrackedModsListPanel.Children.Add(CreateTrackedModUpdateCard(new TrackedModUpdateResult
-                    {
-                        Path = origin.Path,
-                        Title = origin.Title,
-                        ProfileUrl = origin.ProfileUrl,
-                        PreviewUrl = origin.PreviewUrl,
-                        ItemId = origin.ItemId,
-                        LastKnownUpdatedAt = origin.LastKnownUpdatedAt,
-                        LatestUpdatedAt = origin.LastKnownUpdatedAt,
-                        HasUpdate = false,
-                        StatusTextZh = string.Empty,
-                        StatusTextEn = string.Empty
-                    }, isChecked: false));
-                }
-            }
-
-            ApplyTrackedModsListLayout();
-            return;
-        }
-
-        foreach (TrackedModUpdateResult result in orderedResults)
-        {
-            TrackedModsListPanel.Children.Add(CreateTrackedModUpdateCard(result));
-        }
-
-        ApplyTrackedModsListLayout();
+        RefreshTrackedModsList();
     }
 
-    private void ApplyTrackedModsListLayout()
+    // One row of the tracked Mods list: the check result, or the bare origin before any check.
+    private sealed record TrackedModEntry(TrackedModUpdateResult Result, bool IsChecked, TrackedModStatus Status);
+
+    private TrackedModFilter _trackedModFilter;
+    private ToggleButton[] _trackedModChips = [];
+
+    // Filters, search and order come from UpdatesListPolicy; the repeater only builds visible rows.
+    private void RefreshTrackedModsList()
     {
-        if (TrackedModsListPanel is null
-            || TrackedModsScrollViewer is null
-            || TrackedModsPrimaryColumn is null
-            || TrackedModsSecondaryColumn is null)
-        {
-            return;
-        }
-
-        int columnCount = _useWideTrackedModsLayout ? 2 : 1;
-        TrackedModsPrimaryColumn.Width = new GridLength(1, GridUnitType.Star);
-        TrackedModsSecondaryColumn.Width = _useWideTrackedModsLayout
-            ? new GridLength(1, GridUnitType.Star)
-            : new GridLength(0);
-
-        TrackedModsListPanel.RowDefinitions.Clear();
-        int childCount = TrackedModsListPanel.Children.Count;
-        int rowCount = Math.Max(1, (int)Math.Ceiling(childCount / (double)columnCount));
-        // The list grows with the page scroll instead of a nested fixed-height scroller.
-        TrackedModsScrollViewer.MaxHeight = double.PositiveInfinity;
-        TrackedModsScrollViewer.Height = double.NaN;
-        for (int row = 0; row < rowCount; row++)
-        {
-            TrackedModsListPanel.RowDefinitions.Add(new RowDefinition { Height = GridLength.Auto });
-        }
-
-        for (int index = 0; index < childCount; index++)
-        {
-            FrameworkElement child = (FrameworkElement)TrackedModsListPanel.Children[index];
-            Grid.SetRow(child, index / columnCount);
-            Grid.SetColumn(child, index % columnCount);
-            Grid.SetColumnSpan(child, childCount == 1 && columnCount == 2 ? 2 : 1);
-            child.HorizontalAlignment = HorizontalAlignment.Stretch;
-        }
-    }
-
-    private UIElement CreateTrackedModUpdateCard(TrackedModUpdateResult result, bool isChecked = true)
-    {
-        Border border = new()
-        {
-            Style = (Style)Application.Current.Resources["InsetBorderStyle"],
-            Padding = new Thickness(14)
-        };
-
-        Grid grid = new() { ColumnSpacing = 14 };
-        grid.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(92) });
-        grid.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(1, GridUnitType.Star) });
-
-        Border previewHost = new()
-        {
-            Style = (Style)Application.Current.Resources["InsetBorderStyle"],
-            MinHeight = 72,
-            Height = 72
-        };
-        if (!string.IsNullOrWhiteSpace(result.PreviewUrl))
-        {
-            var previewImage = new Image
+        if (TrackedModsRepeater is null) return;
+        TrackedModEntry[] entries = _trackedModUpdateResults.Count > 0
+            ? [.. _trackedModUpdateResults.Select(result => new TrackedModEntry(result, true,
+                UpdatesListPolicy.Status(true, result.CheckFailed, result.HasUpdate)))]
+            : [.. _trackedModOrigins.Values.Select(origin => new TrackedModEntry(new TrackedModUpdateResult
             {
-                Stretch = Stretch.UniformToFill
+                Path = origin.Path,
+                Title = origin.Title,
+                ProfileUrl = origin.ProfileUrl,
+                PreviewUrl = origin.PreviewUrl,
+                ItemId = origin.ItemId,
+                LastKnownUpdatedAt = origin.LastKnownUpdatedAt,
+                LatestUpdatedAt = origin.LastKnownUpdatedAt,
+                StatusTextZh = string.Empty,
+                StatusTextEn = string.Empty
+            }, false, TrackedModStatus.NotChecked))];
+
+        if (_trackedModChips.Length == 0)
+            _trackedModChips = CreateFilterChips(TrackedModsFilterPanel, _trackedModFilter, filter =>
+            {
+                _trackedModFilter = filter;
+                RefreshTrackedModsList();
+            });
+        foreach (ToggleButton chip in _trackedModChips)
+        {
+            var filter = (TrackedModFilter)chip.Tag;
+            int count = entries.Count(entry => UpdatesListPolicy.Matches(entry.Status, filter));
+            chip.Content = filter switch
+            {
+                TrackedModFilter.Updates => T("Updates.FilterUpdates", count),
+                TrackedModFilter.Failed => T("Updates.FilterFailed", count),
+                TrackedModFilter.UpToDate => T("Updates.FilterUpToDate", count),
+                _ => T("Updates.FilterAll", count)
             };
-            previewHost.Child = previewImage;
-            _ = SetCachedOnlineImageAsync(previewImage, result.PreviewUrl);
+            chip.IsChecked = filter == _trackedModFilter;
+        }
+        TrackedModsSearchBox.PlaceholderText = T("Updates.SearchTrackedMods");
+        TrackedModsFilterPanel.Visibility = TrackedModsSearchBox.Visibility = entries.Length > 0 ? Visibility.Visible : Visibility.Collapsed;
+
+        List<TrackedModEntry> visible = UpdatesListPolicy.Order(
+                entries.Where(entry => UpdatesListPolicy.Matches(entry.Status, _trackedModFilter)
+                    && UpdatesListPolicy.MatchesSearch(entry.Result.Title, entry.Result.Path, TrackedModsSearchBox.Text)),
+                entry => entry.Status, entry => entry.Result.Title)
+            .ToList();
+        if (TrackedModsSearchBox.Parent is Grid toolbar && toolbar.Tag is null)
+        {
+            toolbar.Tag = true;
+            toolbar.SizeChanged += (_, _) => LayoutTrackedModsToolbar();
+        }
+        LayoutTrackedModsToolbar();
+        TrackedModsRepeater.ItemTemplate ??= new DelegateElementFactory(item => CreateTrackedModRow((TrackedModEntry)item));
+        TrackedModsRepeater.ItemsSource = visible;
+
+        if (entries.Length == 0)
+        {
+            // Mods are tracked once they come from the online page, so the empty state leads there.
+            var empty = new StackPanel { Spacing = 10 };
+            empty.Children.Add(CreateInfoCard(T("Updates.NoTrackedOnlineModsYet"), T("Updates.AfterDownloadingAndExtractingFromThe")));
+            var browse = new Button { Content = T("Dashboard.BrowseOnline"), Style = (Style)Application.Current.Resources["PrimaryButtonStyle"] };
+            browse.Click += OnOnlineNavClicked;
+            empty.Children.Add(browse);
+            TrackedModsEmptyHost.Content = empty;
         }
         else
         {
-            previewHost.Child = new TextBlock
-            {
-                Text = T("Updates.NoPreview"),
-                HorizontalAlignment = HorizontalAlignment.Center,
-                VerticalAlignment = VerticalAlignment.Center,
-                Style = (Style)Application.Current.Resources["CaptionTextStyle"]
-            };
+            TrackedModsEmptyHost.Content = visible.Count == 0
+                ? new EmptyState { Glyph = "\uE721", Title = T("Updates.NoMatchingTrackedMods") }
+                : null;
         }
+    }
 
-        Grid.SetColumn(previewHost, 0);
-        grid.Children.Add(previewHost);
+    private void OnTrackedModsSearchChanged(object sender, TextChangedEventArgs e) => RefreshTrackedModsList();
 
-        StackPanel content = new() { Spacing = 6 };
-        // Title and status badge share a row; the badge never squeezes the title off the card.
-        Grid heading = new() { ColumnSpacing = 10 };
-        heading.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(1, GridUnitType.Star) });
-        heading.ColumnDefinitions.Add(new ColumnDefinition { Width = GridLength.Auto });
-        heading.Children.Add(new TextBlock
+    // The search box sits beside the chips while they fit, and drops to its own row when they don't.
+    private void LayoutTrackedModsToolbar()
+    {
+        if (TrackedModsSearchBox.Parent is not Grid toolbar || toolbar.ActualWidth <= 0) return;
+        TrackedModsFilterPanel.Measure(new Windows.Foundation.Size(double.PositiveInfinity, double.PositiveInfinity));
+        bool besideChips = toolbar.ActualWidth >= TrackedModsFilterPanel.DesiredSize.Width + 12 + 220;
+        if (toolbar.RowDefinitions.Count == 0)
         {
-            Text = result.Title,
-            FontSize = 18,
-            FontWeight = Microsoft.UI.Text.FontWeights.SemiBold,
-            TextWrapping = TextWrapping.Wrap
-        });
-        Brush statusBrush = !isChecked || result.CheckFailed ? (Brush)Application.Current.Resources["TextFillColorSecondaryBrush"] : result.HasUpdate ? MissingBrush : CopiedBrush;
-        Border badge = new()
+            toolbar.RowDefinitions.Add(new RowDefinition { Height = GridLength.Auto });
+            toolbar.RowDefinitions.Add(new RowDefinition { Height = GridLength.Auto });
+            toolbar.RowSpacing = 8;
+        }
+        toolbar.ColumnDefinitions[1].Width = besideChips ? new GridLength(220) : new GridLength(0);
+        toolbar.ColumnSpacing = besideChips ? 12 : 0;
+        Grid.SetRow(TrackedModsSearchBox, besideChips ? 0 : 1);
+        Grid.SetColumn(TrackedModsSearchBox, besideChips ? 1 : 0);
+        toolbar.RowDefinitions[1].Height = besideChips ? new GridLength(0) : GridLength.Auto;
+    }
+
+    // A row of single-choice chips; the caller keeps the choice and rebuilds its list.
+    private ToggleButton[] CreateFilterChips<TFilter>(Panel host, TFilter selected, Action<TFilter> choose) where TFilter : struct, Enum
+    {
+        host.Children.Clear();
+        return Enum.GetValues<TFilter>().Select(filter =>
         {
-            CornerRadius = new CornerRadius(6), Padding = new Thickness(8, 3, 8, 3), VerticalAlignment = VerticalAlignment.Top,
-            BorderBrush = statusBrush, BorderThickness = new Thickness(1),
-            Child = new TextBlock
+            var chip = new ToggleButton
             {
-                Text = !isChecked ? T("Updates.NotChecked") : result.CheckFailed ? T("Updates.CheckFailed")
-                    : result.HasUpdate ? T("Updates.Update") : T("Updates.UpToDate"),
-                Foreground = statusBrush, FontSize = 12, FontWeight = Microsoft.UI.Text.FontWeights.SemiBold
+                MinHeight = 28, Padding = new Thickness(10, 2, 10, 2), CornerRadius = new CornerRadius(14),
+                Tag = filter, IsChecked = EqualityComparer<TFilter>.Default.Equals(filter, selected)
+            };
+            foreach (string state in new[] { "Checked", "CheckedPointerOver", "CheckedPressed" })
+            {
+                chip.Resources["ToggleButtonBackground" + state] = GetAppThemeBrush("AppSecondarySelectedBrush");
+                chip.Resources["ToggleButtonForeground" + state] = GetAppThemeBrush("AppSecondarySelectedForegroundBrush");
+                chip.Resources["ToggleButtonBorderBrush" + state] = GetAppThemeBrush("AppNavSelectedBorderBrush");
             }
-        };
-        Grid.SetColumn(badge, 1);
-        heading.Children.Add(badge);
-        content.Children.Add(heading);
-        var pathText = new TextBlock
-        {
-            Text = $"{T("Updates.LocalPath")}: {TrimPreviewPath(result.Path)}",
-            Style = (Style)Application.Current.Resources["CaptionTextStyle"],
-            TextTrimming = TextTrimming.CharacterEllipsis, MaxLines = 1
-        };
-        ToolTipService.SetToolTip(pathText, result.Path);
-        content.Children.Add(pathText);
-        content.Children.Add(new TextBlock
-        {
-            Text = $"{T("Updates.Recorded")}: {FormatDateForDisplay(result.LastKnownUpdatedAt)}    {T("Updates.Latest")}: {FormatDateForDisplay(result.LatestUpdatedAt)}",
-            Style = (Style)Application.Current.Resources["MutedTextStyle"],
-            TextWrapping = TextWrapping.Wrap
-        });
-        // The badge already says "not checked"; only real results get a status line.
-        if (!string.IsNullOrWhiteSpace(result.StatusTextZh)) content.Children.Add(new TextBlock
-        {
-            Text = L(result.StatusTextZh, result.StatusTextEn),
-            Foreground = statusBrush,
-            FontWeight = Microsoft.UI.Text.FontWeights.Medium,
-            TextWrapping = TextWrapping.Wrap
-        });
+            chip.Click += (_, _) => choose(filter);
+            host.Children.Add(chip);
+            return chip;
+        }).ToArray();
+    }
 
-        // At most three controls per row, so narrow or two-column layouts never clip buttons;
-        // folder, backup and removal live in the "More" menu.
-        StackPanel actions = new() { Orientation = Orientation.Horizontal, Spacing = 8 };
+    // Compact row: thumbnail, title with recorded and latest dates, a status pill and the actions.
+    private UIElement CreateTrackedModRow(TrackedModEntry entry)
+    {
+        TrackedModUpdateResult result = entry.Result;
+        var grid = new Grid { ColumnSpacing = 12 };
+        grid.ColumnDefinitions.Add(new ColumnDefinition { Width = GridLength.Auto });
+        grid.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(1, GridUnitType.Star) });
+        grid.ColumnDefinitions.Add(new ColumnDefinition { Width = GridLength.Auto });
+        grid.ColumnDefinitions.Add(new ColumnDefinition { Width = GridLength.Auto });
+
+        var thumb = new Border
+        {
+            Width = 48, Height = 48, CornerRadius = new CornerRadius(6),
+            Background = GetAppThemeBrush("AppPreviewBackgroundBrush")
+        };
+        if (!string.IsNullOrWhiteSpace(result.PreviewUrl))
+        {
+            var image = new Image { Stretch = Stretch.UniformToFill };
+            thumb.Child = image;
+            _ = SetCachedOnlineImageAsync(image, result.PreviewUrl);
+        }
+        else thumb.Child = new FontIcon { Glyph = "\uE8B9", FontSize = 16, Opacity = 0.6 };
+        grid.Children.Add(thumb);
+
+        var text = new StackPanel { Spacing = 2, VerticalAlignment = VerticalAlignment.Center };
+        var title = new TextBlock
+        {
+            Text = result.Title, FontWeight = Microsoft.UI.Text.FontWeights.SemiBold,
+            MaxLines = 1, TextTrimming = TextTrimming.CharacterEllipsis
+        };
+        ToolTipService.SetToolTip(title, $"{result.Title}\n{T("Updates.LocalPath")}: {result.Path}");
+        text.Children.Add(title);
+        text.Children.Add(new TextBlock
+        {
+            Text = $"{T("Updates.Recorded")}: {FormatDateForDisplay(result.LastKnownUpdatedAt)}  ·  {T("Updates.Latest")}: {FormatDateForDisplay(result.LatestUpdatedAt)}",
+            Style = (Style)Application.Current.Resources["CaptionTextStyle"], MaxLines = 1, TextTrimming = TextTrimming.CharacterEllipsis
+        });
+        // Only a failed check needs its message on the row; other results are said by the pill.
+        if (entry.Status == TrackedModStatus.Failed && !string.IsNullOrWhiteSpace(result.StatusTextZh))
+        {
+            var message = new TextBlock
+            {
+                Text = L(result.StatusTextZh, result.StatusTextEn), FontSize = 12, Foreground = GetAppThemeBrush("AppDangerBrush"),
+                MaxLines = 1, TextTrimming = TextTrimming.CharacterEllipsis
+            };
+            ToolTipService.SetToolTip(message, message.Text);
+            text.Children.Add(message);
+        }
+        Grid.SetColumn(text, 1);
+        grid.Children.Add(text);
+
+        (string Label, string Background, string Foreground) pill = entry.Status switch
+        {
+            TrackedModStatus.Update => (T("Updates.Update"), "AppAccentSoftBrush", "AppAccentBrush"),
+            TrackedModStatus.Failed => (T("Updates.CheckFailed"), "AppDangerSoftBrush", "AppDangerBrush"),
+            TrackedModStatus.UpToDate => (T("Updates.UpToDate"), "AppSuccessSoftBrush", "AppSuccessBrush"),
+            _ => (T("Updates.NotChecked"), "AppSecondaryDefaultBrush", "AppSecondaryDefaultForegroundBrush")
+        };
+        var badge = new Border
+        {
+            CornerRadius = new CornerRadius(4), Padding = new Thickness(8, 2, 8, 2), VerticalAlignment = VerticalAlignment.Center,
+            Background = GetAppThemeBrush(pill.Background),
+            Child = new TextBlock { Text = pill.Label, FontSize = 12, Foreground = GetAppThemeBrush(pill.Foreground) }
+        };
+        Grid.SetColumn(badge, 2);
+        grid.Children.Add(badge);
+
+        var actions = new StackPanel { Orientation = Orientation.Horizontal, Spacing = 6, VerticalAlignment = VerticalAlignment.Center };
         if (result.HasUpdate)
         {
             var replaceButton = new Button
             {
-                Content = T("Common.DownloadAndReplace"),
-                Style = (Style)Application.Current.Resources["PrimaryButtonStyle"], MinHeight = 36,
+                Content = T("Common.DownloadAndReplace"), Style = (Style)Application.Current.Resources["PrimaryButtonStyle"], MinHeight = 32,
                 IsEnabled = !_modUpdatesInProgress.Contains(result.Path) && Directory.Exists(result.Path)
             };
             replaceButton.Click += async (_, _) => await RunUiActionAsync("Download and replace Mod", () => DownloadAndReplaceTrackedModAsync(result));
             actions.Children.Add(replaceButton);
         }
-        Button openPageButton = new()
+        var openPageButton = new Button
         {
-            Content = T("Updates.OpenPage"),
-            Style = (Style)Application.Current.Resources["SecondaryButtonStyle"],
-            MinHeight = 36,
-            IsEnabled = !string.IsNullOrWhiteSpace(result.ProfileUrl)
+            Content = new FontIcon { Glyph = "\uE774", FontSize = 14 }, Width = 32, Height = 32, MinWidth = 32, MinHeight = 32, Padding = new Thickness(0),
+            Style = (Style)Application.Current.Resources["SecondaryButtonStyle"], IsEnabled = !string.IsNullOrWhiteSpace(result.ProfileUrl)
         };
+        ToolTipService.SetToolTip(openPageButton, T("Updates.OpenPage"));
+        AutomationProperties.SetName(openPageButton, T("Updates.OpenPage"));
         openPageButton.Click += async (_, _) => await RunUiActionAsync("OpenExternalUrlAsync", () => OpenExternalUrlAsync(result.ProfileUrl, T("Common.OpenPageFailed")));
         actions.Children.Add(openPageButton);
 
-        var more = new MenuFlyout { Placement = Microsoft.UI.Xaml.Controls.Primitives.FlyoutPlacementMode.BottomEdgeAlignedLeft };
+        // Folder, old backup and removal live in the "More" menu.
+        var more = new MenuFlyout { Placement = Microsoft.UI.Xaml.Controls.Primitives.FlyoutPlacementMode.BottomEdgeAlignedRight };
         var openFolderItem = new MenuFlyoutItem
         {
-            Text = T("Updates.OpenFolder"), Icon = new FontIcon { Glyph = "" },
-            IsEnabled = Directory.Exists(result.Path)
+            Text = T("Updates.OpenFolder"), Icon = new FontIcon { Glyph = "\uE838" }, IsEnabled = Directory.Exists(result.Path)
         };
         openFolderItem.Click += (_, _) =>
         {
             if (Directory.Exists(result.Path))
-            {
-                Process.Start(new ProcessStartInfo
-                {
-                    FileName = "explorer.exe",
-                    Arguments = $"\"{result.Path}\"",
-                    UseShellExecute = true
-                });
-            }
+                Process.Start(new ProcessStartInfo { FileName = "explorer.exe", Arguments = $"\"{result.Path}\"", UseShellExecute = true });
         };
         more.Items.Add(openFolderItem);
         if (!string.IsNullOrWhiteSpace(result.BackupPath))
         {
-            var backupItem = new MenuFlyoutItem { Text = T("Updates.OpenOldBackup"), Icon = new FontIcon { Glyph = "" } };
+            var backupItem = new MenuFlyoutItem { Text = T("Updates.OpenOldBackup"), Icon = new FontIcon { Glyph = "\uE81C" } };
             backupItem.Click += (_, _) => OpenDirectory(result.BackupPath, T("Updates.OldBackup"));
             more.Items.Add(backupItem);
         }
         more.Items.Add(new MenuFlyoutSeparator());
         var removeTrackingItem = new MenuFlyoutItem
         {
-            Text = T("Updates.RemoveTracking"), Icon = new FontIcon { Glyph = "" },
-            IsEnabled = !_modUpdatesInProgress.Contains(result.Path)
+            Text = T("Updates.RemoveTracking"), Icon = new FontIcon { Glyph = "\uE74D" }, IsEnabled = !_modUpdatesInProgress.Contains(result.Path)
         };
         removeTrackingItem.Click += async (_, _) => await RunUiActionAsync("RemoveTrackedModRecordAsync", () => RemoveTrackedModRecordAsync(result));
         more.Items.Add(removeTrackingItem);
-        actions.Children.Add(new DropDownButton
+        var moreButton = new Button
         {
-            // No Button style here: it would replace the template and drop the chevron.
-            Content = T("Updates.More"), Flyout = more, MinHeight = 36
-        });
+            Content = new FontIcon { Glyph = "\uE712", FontSize = 14 }, Width = 32, Height = 32, MinWidth = 32, MinHeight = 32, Padding = new Thickness(0),
+            Style = (Style)Application.Current.Resources["SecondaryButtonStyle"], Flyout = more
+        };
+        ToolTipService.SetToolTip(moreButton, T("Updates.More"));
+        AutomationProperties.SetName(moreButton, T("Updates.More"));
+        actions.Children.Add(moreButton);
+        Grid.SetColumn(actions, 3);
+        grid.Children.Add(actions);
 
-        content.Children.Add(actions);
-        Grid.SetColumn(content, 1);
-        grid.Children.Add(content);
-
-        border.Child = grid;
-        return border;
+        return new Border { Style = (Style)Application.Current.Resources["InsetBorderStyle"], Padding = new Thickness(10), Child = grid };
     }
 
     private static string FormatDateForDisplay(DateTimeOffset? value)
