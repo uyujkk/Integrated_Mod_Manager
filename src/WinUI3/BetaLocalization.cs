@@ -63,7 +63,6 @@ internal static class BetaLocalization
         ["Source mapping"] = "来源映射",
         ["Configured"] = "已配置",
         ["List fetching"] = "列表抓取",
-        ["Next"] = "下一步",
         ["Install flow"] = "安装流程",
         ["Planned"] = "待实现",
         ["Current repository mapping"] = "当前仓库映射",

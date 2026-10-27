@@ -43,6 +43,7 @@ public sealed partial class MainWindow
     {
         TraceOnlineUiState("Details requested", mod.ItemId);
         _activeOnlineDetailMod = mod;
+        RefreshOnlineDetailNavigation();
         string contextKey = GetOnlineDetailContextKey();
         await _onlineDetailState.RunLatestAsync(
             OpenOnlineDetailPaneAsync,
@@ -350,6 +351,12 @@ public sealed partial class MainWindow
             .Replace("Arrow", string.Empty, StringComparison.OrdinalIgnoreCase)
             .Replace("Key", string.Empty, StringComparison.OrdinalIgnoreCase)
             .Trim();
+        // A description part that was only "Key" or "Arrow" is not a key. Without this the
+        // fallback read token[0] and the whole details pane failed to load.
+        if (token.Length == 0)
+        {
+            return string.Empty;
+        }
 
         return token.ToLowerInvariant() switch
         {
@@ -446,8 +453,8 @@ public sealed partial class MainWindow
     {
         TraceOnlineUiState("Pane opening");
         int animationVersion = ++_onlineDetailAnimationVersion;
-        bool wasOpen = OnlineDetailsSplitView.IsPaneOpen;
-        OnlineDetailsSplitView.IsPaneOpen = true;
+        bool wasOpen = IsOnlineDetailOpen;
+        OnlineDetailDrawer.Visibility = Visibility.Visible;
         await Task.Delay(1);
         if (_onlineWindowClosed || animationVersion != _onlineDetailAnimationVersion) return;
         UpdateOnlineResponsiveLayout(Bounds.Width);
@@ -457,12 +464,18 @@ public sealed partial class MainWindow
             if (_onlineWindowClosed || animationVersion != _onlineDetailAnimationVersion) return;
             UpdateOnlineResponsiveLayout(Bounds.Width);
             UpdateOnlineWorkspaceWidthConstraint();
+            // The cards re-flowed around the drawer; bring the one being shown back into view.
+            int index = GetActiveOnlineDetailIndex();
+            if (index >= 0 && GetOnlineResultsElement() is ListViewBase results)
+                results.ScrollIntoView(_onlineVisibleMods[index]);
         });
         if (animationVersion != _onlineDetailAnimationVersion)
         {
             return;
         }
 
+        // Animate the panel inside the drawer: the drawer itself is placed by layout through
+        // its visual Offset, so animating that would pull it to the left edge.
         var visual = ElementCompositionPreview.GetElementVisual(OnlineDetailPaneBorder);
         visual.StopAnimation("Opacity");
         visual.StopAnimation("Offset");
@@ -925,9 +938,55 @@ public sealed partial class MainWindow
         }
     }
 
+    // ‹ › in the drawer header step through the Mods on this page, in the order shown.
+    // A refreshed card can replace the active one, so match by item id as well.
+    private int GetActiveOnlineDetailIndex()
+    {
+        if (_activeOnlineDetailMod is not { } active) return -1;
+        for (int index = 0; index < _onlineVisibleMods.Count; index++)
+        {
+            OnlineModCard candidate = _onlineVisibleMods[index];
+            if (ReferenceEquals(candidate, active) || (active.ItemId > 0 && candidate.ItemId == active.ItemId)) return index;
+        }
+        return -1;
+    }
+
+    private void RefreshOnlineDetailNavigation()
+    {
+        int index = GetActiveOnlineDetailIndex();
+        OnlineDetailPreviousButton.IsEnabled = index > 0;
+        OnlineDetailNextButton.IsEnabled = index >= 0 && index < _onlineVisibleMods.Count - 1;
+        foreach ((Button button, string label) in new[]
+        {
+            (OnlineDetailPreviousButton, T("OnlineDetails.PreviousMod")),
+            (OnlineDetailNextButton, T("OnlineDetails.NextMod"))
+        })
+        {
+            ToolTipService.SetToolTip(button, label);
+            Microsoft.UI.Xaml.Automation.AutomationProperties.SetName(button, label);
+        }
+    }
+
+    private async void OnOnlineDetailPreviousClicked(object sender, RoutedEventArgs e) => await ShowAdjacentOnlineDetailAsync(-1);
+
+    private async void OnOnlineDetailNextClicked(object sender, RoutedEventArgs e) => await ShowAdjacentOnlineDetailAsync(1);
+
+    private async Task ShowAdjacentOnlineDetailAsync(int step)
+    {
+        int index = GetActiveOnlineDetailIndex();
+        int target = index + step;
+        if (index < 0 || target < 0 || target >= _onlineVisibleMods.Count) return;
+        OnlineModCard mod = _onlineVisibleMods[target];
+        if (GetOnlineResultsElement() is ListViewBase results) results.ScrollIntoView(mod);
+        await RunUiActionAsync("ShowOnlineModDetailsAsync", () => ShowOnlineModDetailsAsync(mod));
+    }
+
     private async Task CloseOnlineDetailPaneAsync()
     {
         if (_onlineWindowClosed) return;
+        // The cards re-flow to more columns on close; keep the one just viewed on screen.
+        int lastShownIndex = GetActiveOnlineDetailIndex();
+        OnlineModCard? lastShown = lastShownIndex >= 0 ? _onlineVisibleMods[lastShownIndex] : null;
         // Close takes effect before the animation awaits, not 165ms later.
         InvalidateOnlineDetailRequest();
         _activeOnlineDetailMod = null;
@@ -938,7 +997,7 @@ public sealed partial class MainWindow
         visual.StopAnimation("Opacity");
         visual.StopAnimation("Offset");
 
-        if (!ShouldReduceAnimations && OnlineDetailsSplitView.IsPaneOpen)
+        if (!ShouldReduceAnimations && IsOnlineDetailOpen)
         {
             var compositor = visual.Compositor;
             var easing = compositor.CreateCubicBezierEasingFunction(new Vector2(0.4f, 0f), new Vector2(1f, 1f));
@@ -959,9 +1018,17 @@ public sealed partial class MainWindow
         }
 
         _activeOnlineDetailMod = null;
-        OnlineDetailsSplitView.IsPaneOpen = false;
+        OnlineDetailDrawer.Visibility = Visibility.Collapsed;
         UpdateOnlineResponsiveLayout(Bounds.Width);
         UpdateOnlineWorkspaceWidthConstraint();
+        if (lastShown is not null)
+        {
+            DispatcherQueue.TryEnqueue(() =>
+            {
+                if (!_onlineWindowClosed && _onlineVisibleMods.Contains(lastShown) && GetOnlineResultsElement() is ListViewBase results)
+                    results.ScrollIntoView(lastShown);
+            });
+        }
         ResetOnlineDetailPaneToPlaceholder();
         visual.StopAnimation("Opacity");
         visual.StopAnimation("Offset");

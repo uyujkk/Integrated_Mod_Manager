@@ -663,8 +663,10 @@ public sealed partial class MainWindow
                     "GameBanana is rate limiting requests; local cache is being shown.",
                     InfoBarSeverity.Warning);
             }
-            else
+            else if (forceReload)
             {
+                // Paging and character switches already show their result in the status chip;
+                // only an explicit refresh gets a notification.
                 ShowAppNotification("在线 Mod 列表已更新。", "The online mod list has been refreshed.");
             }
         }
