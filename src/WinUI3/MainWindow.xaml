@@ -72,39 +72,6 @@
                 <Image Width="20" Height="20" Source="Assets/AppIcon.png" Stretch="Uniform" VerticalAlignment="Center" />
                 <TextBlock x:Name="HeaderTitleTextBlock" Grid.Column="1" FontSize="13" FontWeight="SemiBold" VerticalAlignment="Center" />
                 <TextBlock x:Name="HeaderVersionBadgeTextBlock" Grid.Column="2" Style="{StaticResource CaptionTextStyle}" VerticalAlignment="Center" />
-                <!-- Background downloads; its rectangle is excluded from the title bar drag region in code. -->
-                <Button x:Name="TitleBarTasksButton" Grid.Column="3" HorizontalAlignment="Right" VerticalAlignment="Center"
-                        Height="32" Padding="10,0" Visibility="Collapsed" Style="{StaticResource SecondaryButtonStyle}">
-                    <StackPanel Orientation="Horizontal" Spacing="8">
-                        <FontIcon Glyph="&#xE896;" FontSize="14" />
-                        <TextBlock x:Name="TitleBarTasksCountTextBlock" FontSize="12" VerticalAlignment="Center" />
-                        <ProgressBar x:Name="TitleBarTasksProgressBar" Width="44" Minimum="0" Maximum="100" VerticalAlignment="Center" />
-                    </StackPanel>
-                    <Button.Flyout>
-                        <Flyout x:Name="TitleBarTasksFlyout" Placement="BottomEdgeAlignedRight"
-                                Opening="OnTitleBarTasksFlyoutOpening" Closed="OnTitleBarTasksFlyoutClosed">
-                            <Grid Width="380" RowSpacing="10">
-                                <Grid.RowDefinitions>
-                                    <RowDefinition Height="Auto" />
-                                    <RowDefinition Height="Auto" />
-                                </Grid.RowDefinitions>
-                                <Grid ColumnSpacing="8">
-                                    <Grid.ColumnDefinitions>
-                                        <ColumnDefinition Width="*" />
-                                        <ColumnDefinition Width="Auto" />
-                                        <ColumnDefinition Width="Auto" />
-                                    </Grid.ColumnDefinitions>
-                                    <TextBlock x:Name="TitleBarTasksTitleTextBlock" Style="{StaticResource SectionTitleTextStyle}" VerticalAlignment="Center" />
-                                    <Button x:Name="TitleBarTasksClearButton" Grid.Column="1" Click="OnClearDownloadTasksClicked" Style="{StaticResource SecondaryButtonStyle}" />
-                                    <Button x:Name="TitleBarTasksAllButton" Grid.Column="2" Click="OnTitleBarTasksAllClicked" Style="{StaticResource SecondaryButtonStyle}" />
-                                </Grid>
-                                <ScrollViewer Grid.Row="1" MaxHeight="420" VerticalScrollBarVisibility="Auto">
-                                    <StackPanel x:Name="TitleBarTasksPanel" Spacing="8" />
-                                </ScrollViewer>
-                            </Grid>
-                        </Flyout>
-                    </Button.Flyout>
-                </Button>
                 <TextBlock x:Name="HeaderSubtitleTextBlock" Visibility="Collapsed" />
                 <TextBlock x:Name="HeaderCaptionTextBlock" Visibility="Collapsed" />
             </Grid>
@@ -128,14 +95,58 @@
                         <TextBlock x:Name="BetaTitleTextBlock" FontSize="15" FontWeight="SemiBold" TextWrapping="Wrap" />
                         <TextBlock x:Name="BetaCaptionTextBlock" Style="{StaticResource CaptionTextStyle}" TextWrapping="Wrap" />
                     </StackPanel>
+                    <!-- Search opens the Ctrl+K palette; it heads the navigation like the search box of Windows Settings. -->
+                    <Button x:Name="NavSearchButton" Click="OnNavSearchClicked" Style="{StaticResource NavigationIconButtonStyle}" />
+                    <Border x:Name="NavSearchDivider" Height="1" Margin="10,2" Background="{ThemeResource AppCardBorderBrush}" />
                     <Button x:Name="DashboardNavButton" Click="OnDashboardNavClicked" Style="{StaticResource NavigationIconButtonStyle}" />
                     <Button x:Name="RepositoryNavButton" Click="OnRepositoryNavClicked" Style="{StaticResource NavigationIconButtonStyle}" />
                     <Button x:Name="OnlineNavButton" Click="OnOnlineNavClicked" Style="{StaticResource NavigationIconButtonStyle}" />
                     <Button x:Name="UpdatesNavButton" Click="OnUpdatesNavClicked" Style="{StaticResource NavigationIconButtonStyle}" />
                     <Button x:Name="ShortcutsNavButton" Click="OnShortcutsNavClicked" Style="{StaticResource NavigationIconButtonStyle}" />
                 </StackPanel>
-                    <Button x:Name="NavCollapseButton" Grid.Row="1" VerticalAlignment="Bottom" Opacity="0.8"
+                    <!-- Downloads sit at the foot of the navigation, above Settings: the count and bar follow
+                         running downloads, and the flyout opens to the right with every task. -->
+                    <StackPanel Grid.Row="1" VerticalAlignment="Bottom" Spacing="6">
+                    <Button x:Name="NavTasksButton" Style="{StaticResource NavigationIconButtonStyle}">
+                        <Grid x:Name="NavTasksContent" ColumnSpacing="12" RowSpacing="5">
+                            <Grid x:Name="NavTasksIconHost" HorizontalAlignment="Center" VerticalAlignment="Center">
+                                <FontIcon Glyph="&#xE896;" FontSize="16" Opacity="0.88" />
+                                <Border x:Name="NavTasksBadge" Margin="0,-8,-14,0" Padding="5,0" MinWidth="16" CornerRadius="8"
+                                        HorizontalAlignment="Right" VerticalAlignment="Top" Background="{ThemeResource AppAccentBrush}" Visibility="Collapsed">
+                                    <TextBlock x:Name="NavTasksCountTextBlock" FontSize="10" FontWeight="SemiBold" Foreground="White" HorizontalAlignment="Center" />
+                                </Border>
+                            </Grid>
+                            <TextBlock x:Name="NavTasksLabelTextBlock" VerticalAlignment="Center" HorizontalAlignment="Center" />
+                            <ProgressBar x:Name="NavTasksProgressBar" Height="3" MinHeight="3" Minimum="0" Maximum="100" Visibility="Collapsed" />
+                        </Grid>
+                    <Button.Flyout>
+                        <Flyout x:Name="NavTasksFlyout" Placement="RightEdgeAlignedBottom"
+                                Opening="OnNavTasksFlyoutOpening" Closed="OnNavTasksFlyoutClosed">
+                            <Grid Width="380" RowSpacing="10">
+                                <Grid.RowDefinitions>
+                                    <RowDefinition Height="Auto" />
+                                    <RowDefinition Height="Auto" />
+                                </Grid.RowDefinitions>
+                                <Grid ColumnSpacing="8">
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="*" />
+                                        <ColumnDefinition Width="Auto" />
+                                        <ColumnDefinition Width="Auto" />
+                                    </Grid.ColumnDefinitions>
+                                    <TextBlock x:Name="NavTasksTitleTextBlock" Style="{StaticResource SectionTitleTextStyle}" VerticalAlignment="Center" />
+                                    <Button x:Name="NavTasksClearButton" Grid.Column="1" Click="OnClearDownloadTasksClicked" Style="{StaticResource SecondaryButtonStyle}" />
+                                    <Button x:Name="NavTasksAllButton" Grid.Column="2" Click="OnNavTasksAllClicked" Style="{StaticResource SecondaryButtonStyle}" />
+                                </Grid>
+                                <ScrollViewer Grid.Row="1" MaxHeight="420" VerticalScrollBarVisibility="Auto">
+                                    <StackPanel x:Name="NavTasksPanel" Spacing="8" />
+                                </ScrollViewer>
+                            </Grid>
+                        </Flyout>
+                    </Button.Flyout>
+                    </Button>
+                    <Button x:Name="NavCollapseButton" Opacity="0.8"
                             Click="OnNavCollapseClicked" Style="{StaticResource NavigationIconButtonStyle}" />
+                    </StackPanel>
                     <Button x:Name="SettingsNavButton" Grid.Row="2" Click="OnSettingsNavClicked" Style="{StaticResource NavigationIconButtonStyle}" />
                 </Grid>
             </Border>

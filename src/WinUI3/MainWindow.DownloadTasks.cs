@@ -75,7 +75,7 @@ public sealed partial class MainWindow
             return;
         }
 
-        RefreshTitleBarTasks();
+        RefreshNavTasks();
         DownloadTaskListPanel.Children.Clear();
         _downloadTaskCards.Clear();
 
@@ -87,7 +87,7 @@ public sealed partial class MainWindow
         {
             DownloadTaskListPanel.Children.Add(new TextBlock
             {
-                Text = T("DownloadTasks.RunningInTitleBar", running),
+                Text = T("DownloadTasks.RunningInNavigation", running),
                 Style = (Style)Application.Current.Resources["CaptionTextStyle"],
                 TextWrapping = TextWrapping.Wrap
             });
@@ -103,7 +103,7 @@ public sealed partial class MainWindow
         {
             DownloadTaskListPanel.Children.Add(CreateDownloadTaskCard(task, _downloadTaskCards));
         }
-        if (TitleBarTasksFlyout.IsOpen) FillTitleBarTasksPanel();
+        if (NavTasksFlyout.IsOpen) FillNavTasksPanel();
     }
 
     private UIElement CreateDownloadTaskCard(DownloadTaskItem task, Dictionary<string, DownloadTaskCardView> cards)
@@ -182,12 +182,12 @@ public sealed partial class MainWindow
         {
             RefreshDownloadTaskCenter();
         }
-        RefreshTitleBarTasks();
-        foreach (Dictionary<string, DownloadTaskCardView> cards in new[] { _downloadTaskCards, _titleBarTaskCards })
+        RefreshNavTasks();
+        foreach (Dictionary<string, DownloadTaskCardView> cards in new[] { _downloadTaskCards, _navTaskCards })
         {
             if (cards.TryGetValue(task.Id, out DownloadTaskCardView? view)) RefreshDownloadTaskCardView(task, view);
         }
-        ClearDownloadTasksButton.IsEnabled = TitleBarTasksClearButton.IsEnabled
+        ClearDownloadTasksButton.IsEnabled = NavTasksClearButton.IsEnabled
             = _downloadTasks.Any(item => DownloadProgressPolicy.IsTerminal(item.State));
     }
 
@@ -205,53 +205,50 @@ public sealed partial class MainWindow
             : retry ? !task.RetryInProgress && !_onlineDownloadActions.IsPreparing : Directory.Exists(task.DestinationPath);
     }
 
-    // Title bar summary: shown while any task is listed; the count and bar follow the active ones.
-    private void RefreshTitleBarTasks()
+    // Navigation summary: always present so the history stays one click away; the badge and
+    // bar follow the running downloads.
+    private void RefreshNavTasks()
     {
-        if (TitleBarTasksButton is null) return;
+        if (NavTasksButton is null) return;
         DownloadTaskItem[] active = _downloadTasks.Where(item => DownloadProgressPolicy.IsActive(item.State)).ToArray();
-        bool wasVisible = TitleBarTasksButton.Visibility == Visibility.Visible;
-        TitleBarTasksButton.Visibility = _downloadTasks.Count > 0 ? Visibility.Visible : Visibility.Collapsed;
-        TitleBarTasksCountTextBlock.Text = active.Length > 0 ? active.Length.ToString() : string.Empty;
-        TitleBarTasksCountTextBlock.Visibility = active.Length > 0 ? Visibility.Visible : Visibility.Collapsed;
-        TitleBarTasksProgressBar.Visibility = active.Length > 0 ? Visibility.Visible : Visibility.Collapsed;
-        TitleBarTasksProgressBar.IsIndeterminate = active.Any(item => item.State is not DownloadTaskState.Downloading || !item.HasKnownTotalLength);
-        TitleBarTasksProgressBar.Value = active.Length > 0 ? active.Average(item => item.Progress) : 0;
+        NavTasksCountTextBlock.Text = active.Length > 0 ? active.Length.ToString() : string.Empty;
+        NavTasksBadge.Visibility = active.Length > 0 ? Visibility.Visible : Visibility.Collapsed;
+        NavTasksProgressBar.Visibility = active.Length > 0 ? Visibility.Visible : Visibility.Collapsed;
+        NavTasksProgressBar.IsIndeterminate = active.Any(item => item.State is not DownloadTaskState.Downloading || !item.HasKnownTotalLength);
+        NavTasksProgressBar.Value = active.Length > 0 ? active.Average(item => item.Progress) : 0;
         string tip = active.Length > 0 ? T("Shell.TasksActive", active.Length) : T("Shell.NoActiveTasks");
-        ToolTipService.SetToolTip(TitleBarTasksButton, tip);
-        Microsoft.UI.Xaml.Automation.AutomationProperties.SetName(TitleBarTasksButton, T("Shell.BackgroundTasks") + " · " + tip);
-        if (wasVisible != (TitleBarTasksButton.Visibility == Visibility.Visible))
-            DispatcherQueue.TryEnqueue(UpdateTitleBarPassthrough);
+        ToolTipService.SetToolTip(NavTasksButton, tip);
+        Microsoft.UI.Xaml.Automation.AutomationProperties.SetName(NavTasksButton, T("Shell.Downloads") + " · " + tip);
     }
 
-    private void OnTitleBarTasksFlyoutOpening(object? sender, object e)
+    private void OnNavTasksFlyoutOpening(object? sender, object e)
     {
-        TitleBarTasksTitleTextBlock.Text = T("Shell.BackgroundTasks");
-        TitleBarTasksClearButton.Content = T("Updates.ClearFinished");
-        TitleBarTasksAllButton.Content = T("Shell.ViewAllTasks");
-        FillTitleBarTasksPanel();
+        NavTasksTitleTextBlock.Text = T("Shell.BackgroundTasks");
+        NavTasksClearButton.Content = T("Updates.ClearFinished");
+        NavTasksAllButton.Content = T("Shell.ViewAllTasks");
+        FillNavTasksPanel();
     }
 
-    private void FillTitleBarTasksPanel()
+    private void FillNavTasksPanel()
     {
-        TitleBarTasksPanel.Children.Clear();
-        _titleBarTaskCards.Clear();
+        NavTasksPanel.Children.Clear();
+        _navTaskCards.Clear();
         foreach (DownloadTaskItem task in _downloadTasks.Take(12))
-            TitleBarTasksPanel.Children.Add(CreateDownloadTaskCard(task, _titleBarTaskCards));
+            NavTasksPanel.Children.Add(CreateDownloadTaskCard(task, _navTaskCards));
         if (_downloadTasks.Count == 0)
-            TitleBarTasksPanel.Children.Add(new TextBlock { Text = T("DownloadTasks.NoDownloadTasks"), Opacity = 0.75 });
-        TitleBarTasksClearButton.IsEnabled = _downloadTasks.Any(item => DownloadProgressPolicy.IsTerminal(item.State));
+            NavTasksPanel.Children.Add(new TextBlock { Text = T("DownloadTasks.NoDownloadTasks"), Opacity = 0.75 });
+        NavTasksClearButton.IsEnabled = _downloadTasks.Any(item => DownloadProgressPolicy.IsTerminal(item.State));
     }
 
-    private void OnTitleBarTasksFlyoutClosed(object? sender, object e)
+    private void OnNavTasksFlyoutClosed(object? sender, object e)
     {
-        TitleBarTasksPanel.Children.Clear();
-        _titleBarTaskCards.Clear();
+        NavTasksPanel.Children.Clear();
+        _navTaskCards.Clear();
     }
 
-    private void OnTitleBarTasksAllClicked(object sender, RoutedEventArgs e)
+    private void OnNavTasksAllClicked(object sender, RoutedEventArgs e)
     {
-        TitleBarTasksFlyout.Hide();
+        NavTasksFlyout.Hide();
         OnUpdatesNavClicked(UpdatesNavButton, e);
     }
 

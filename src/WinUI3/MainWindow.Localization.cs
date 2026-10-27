@@ -167,7 +167,7 @@ public sealed partial class MainWindow
 
         FirstLevelSectionTitleTextBlock.Text = T("Localization.Categories");
         FirstLevelSectionSubtitleTextBlock.Text = T("Localization.ChooseACategoryFolderFirst");
-        FirstLevelSearchTextBox.PlaceholderText = T("Localization.SearchFirstLevelFolders");
+        FirstLevelSearchTextBox.PlaceholderText = T("RepositoryWorkspace.SearchCharacters");
         CreateFirstLevelButton.Content = T("Localization.NewFolder");
         RenameFirstLevelButton.Content = T("Localization.Rename");
         SecondLevelSectionTitleTextBlock.Text = T("Localization.ModLibrary");
