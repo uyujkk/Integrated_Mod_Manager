@@ -256,7 +256,7 @@ public sealed partial class MainWindow
         PrimaryNavColumn.Width = new GridLength(expanded ? 220 : 84);
         SecondaryNavColumn.Width = new GridLength(0);
         SecondaryNavBorder.Visibility = Visibility.Collapsed;
-        foreach (Button button in new[] { DashboardNavButton, RepositoryNavButton, OnlineNavButton, UpdatesNavButton, ShortcutsNavButton, SettingsNavButton })
+        foreach (Button button in new[] { NavSearchButton, DashboardNavButton, RepositoryNavButton, OnlineNavButton, UpdatesNavButton, ShortcutsNavButton, NavTasksButton, SettingsNavButton })
         {
             button.Width = expanded ? 202 : 66;
             button.Height = expanded ? 46 : 60;
@@ -264,6 +264,10 @@ public sealed partial class MainWindow
             button.HorizontalContentAlignment = expanded ? HorizontalAlignment.Left : HorizontalAlignment.Center;
             button.Padding = expanded ? new Thickness(14, 0, 12, 0) : new Thickness(0);
         }
+        // The search entry reads as a search box when labelled, and as one more icon in the rail.
+        NavSearchButton.Height = NavSearchButton.MinHeight = expanded ? 38 : 52;
+        NavSearchButton.HorizontalContentAlignment = expanded ? HorizontalAlignment.Stretch : HorizontalAlignment.Center;
+        NavSearchButton.Padding = expanded ? new Thickness(12, 0, 10, 0) : new Thickness(0);
 
         ApplyPrimaryNavigationContent();
     }
@@ -279,6 +283,12 @@ public sealed partial class MainWindow
         ToolTipService.SetToolTip(ShortcutsNavButton, T("Common.ModShortcuts"));
         AutomationProperties.SetName(ShortcutsNavButton, T("Common.ModShortcuts"));
         SettingsNavButton.Content = CreatePrimaryNavContent("\uE713", T("Shell.Settings"));
+        NavSearchButton.Content = CreateNavSearchContent();
+        string searchName = T("CommandPalette.Placeholder") + " (Ctrl+K)";
+        ToolTipService.SetToolTip(NavSearchButton, searchName);
+        AutomationProperties.SetName(NavSearchButton, searchName);
+        LayoutNavTasksContent();
+        RefreshNavTasks();
 
         ToolTipService.SetToolTip(DashboardNavButton, T("Shell.Dashboard"));
         ToolTipService.SetToolTip(RepositoryNavButton, T("Shell.Repositories"));
@@ -320,6 +330,66 @@ public sealed partial class MainWindow
         return panel;
     }
 
+    private object CreateNavSearchContent()
+    {
+        if (!_primaryNavExpanded)
+        {
+            return CreatePrimaryNavContent("", T("Shell.Search"));
+        }
+
+        var grid = new Grid { ColumnSpacing = 10, VerticalAlignment = VerticalAlignment.Center };
+        grid.ColumnDefinitions.Add(new ColumnDefinition { Width = GridLength.Auto });
+        grid.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(1, GridUnitType.Star) });
+        grid.ColumnDefinitions.Add(new ColumnDefinition { Width = GridLength.Auto });
+        grid.Children.Add(new FontIcon { Glyph = "", FontSize = 14, Opacity = 0.75 });
+        var label = new TextBlock { Text = T("Shell.Search"), FontSize = 13, Opacity = 0.75, VerticalAlignment = VerticalAlignment.Center };
+        Grid.SetColumn(label, 1);
+        grid.Children.Add(label);
+        var key = new Border
+        {
+            Padding = new Thickness(5, 0, 5, 1), CornerRadius = new CornerRadius(4), BorderThickness = new Thickness(1),
+            BorderBrush = GetAppThemeBrush("AppCardBorderBrush"), VerticalAlignment = VerticalAlignment.Center,
+            Child = new TextBlock { Text = "Ctrl K", FontSize = 11, Opacity = 0.75 }
+        };
+        Grid.SetColumn(key, 2);
+        grid.Children.Add(key);
+        return grid;
+    }
+
+    // The download entry keeps its named badge and bar (RefreshNavTasks updates them); only their
+    // arrangement follows the navigation: a row when labelled, a stack in the icon rail.
+    private void LayoutNavTasksContent()
+    {
+        bool expanded = _primaryNavExpanded;
+        NavTasksLabelTextBlock.Text = T("Shell.Downloads");
+        NavTasksLabelTextBlock.FontSize = expanded ? 14 : 11;
+        NavTasksContent.ColumnDefinitions.Clear();
+        NavTasksContent.RowDefinitions.Clear();
+        NavTasksContent.RowDefinitions.Add(new RowDefinition { Height = GridLength.Auto });
+        NavTasksContent.RowDefinitions.Add(new RowDefinition { Height = GridLength.Auto });
+        if (expanded)
+        {
+            NavTasksContent.ColumnDefinitions.Add(new ColumnDefinition { Width = GridLength.Auto });
+            NavTasksContent.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(1, GridUnitType.Star) });
+            Place(NavTasksIconHost, 0, 0);
+            Place(NavTasksLabelTextBlock, 0, 1);
+            Place(NavTasksProgressBar, 1, 0, 2);
+            NavTasksContent.Width = 170;
+            NavTasksProgressBar.Margin = new Thickness(0);
+            NavTasksLabelTextBlock.HorizontalAlignment = HorizontalAlignment.Left;
+        }
+        else
+        {
+            NavTasksContent.RowDefinitions.Add(new RowDefinition { Height = GridLength.Auto });
+            Place(NavTasksIconHost, 0, 0);
+            Place(NavTasksLabelTextBlock, 1, 0);
+            Place(NavTasksProgressBar, 2, 0);
+            NavTasksContent.Width = 62;
+            NavTasksProgressBar.Margin = new Thickness(10, 0, 10, 0);
+            NavTasksLabelTextBlock.HorizontalAlignment = HorizontalAlignment.Center;
+        }
+    }
+
     private void OnNavCollapseClicked(object sender, RoutedEventArgs e)
     {
         _navigationCollapsed = !_navigationCollapsed;
@@ -351,6 +421,10 @@ public sealed partial class MainWindow
         ApplyPrimaryButtonVisual(ShortcutsNavButton, _currentPrimarySection == PrimarySection.Shortcuts);
         ApplyPrimaryButtonVisual(SettingsNavButton, _currentPrimarySection == PrimarySection.Settings);
         ApplyPrimaryButtonVisual(NavCollapseButton, false);
+        ApplyPrimaryButtonVisual(NavTasksButton, false);
+        ApplyPrimaryButtonVisual(NavSearchButton, false);
+        // Outlined like a text box, so the search entry is told apart from the pages below it.
+        NavSearchButton.BorderBrush = GetAppThemeBrush("AppCardBorderBrush");
     }
 
     private void ApplyPrimaryButtonVisual(Button button, bool isSelected)
@@ -526,6 +600,10 @@ public sealed partial class MainWindow
                 || IsModifierDown(VirtualKey.LeftWindows) || IsModifierDown(VirtualKey.RightWindows)
                 || (altDown && e.Key is VirtualKey.Escape or VirtualKey.F4)) return;
 
+            // Ctrl+K is a keyboard accelerator (InitializeCommandPaletteShortcut); while the
+            // palette is open its search box owns the keys.
+            if (IsCommandPaletteOpen) return;
+
             if (controlDown && e.Key == VirtualKey.F)
             {
                 (_currentPrimarySection == PrimarySection.Online ? OnlineSearchTextBox : FirstLevelSearchTextBox).Focus(FocusState.Keyboard);
@@ -685,39 +763,10 @@ public sealed partial class MainWindow
         {
             TraceStartupStage("Title bar height could not be applied: " + ex.Message);
         }
-        AppTitleBar.SizeChanged += (_, _) => UpdateTitleBarPassthrough();
-        TitleBarTasksButton.SizeChanged += (_, _) => UpdateTitleBarPassthrough();
+        // The title bar holds no controls: search and downloads live in the side navigation.
     }
 
-    // Controls in the title bar must be passthrough regions, or the drag region swallows their clicks.
-    // The task button also keeps clear of the system caption buttons on the right.
-    private void UpdateTitleBarPassthrough()
-    {
-        try
-        {
-            if (AppTitleBar.XamlRoot is null) return;
-            double scale = AppTitleBar.XamlRoot.RasterizationScale;
-            TitleBarTasksButton.Margin = new Thickness(0, 0, AppWindow.TitleBar.RightInset / scale + 8, 0);
-            var source = Microsoft.UI.Input.InputNonClientPointerSource.GetForWindowId(AppWindow.Id);
-            if (TitleBarTasksButton.Visibility != Visibility.Visible || TitleBarTasksButton.ActualWidth <= 0)
-            {
-                source.ClearRegionRects(Microsoft.UI.Input.NonClientRegionKind.Passthrough);
-                return;
-            }
-            Windows.Foundation.Rect bounds = TitleBarTasksButton.TransformToVisual(null)
-                .TransformBounds(new Windows.Foundation.Rect(0, 0, TitleBarTasksButton.ActualWidth, TitleBarTasksButton.ActualHeight));
-            source.SetRegionRects(Microsoft.UI.Input.NonClientRegionKind.Passthrough,
-            [
-                new Windows.Graphics.RectInt32(
-                    (int)Math.Round(bounds.X * scale), (int)Math.Round(bounds.Y * scale),
-                    (int)Math.Round(bounds.Width * scale), (int)Math.Round(bounds.Height * scale))
-            ]);
-        }
-        catch (Exception ex)
-        {
-            LogApplicationIssue("Title bar passthrough", ex);
-        }
-    }
+    private void OnNavSearchClicked(object sender, RoutedEventArgs e) => OpenCommandPalette();
 
     private void ApplyWindowChrome(bool dark)
     {

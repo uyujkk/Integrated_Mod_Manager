@@ -141,7 +141,7 @@ public sealed partial class MainWindow : Window
     private readonly List<ModPersistentSlot> _modPersistentSlots = [];
     private readonly ObservableCollection<DownloadTaskItem> _downloadTasks = [];
     private readonly Dictionary<string, DownloadTaskCardView> _downloadTaskCards = new(StringComparer.Ordinal);
-    private readonly Dictionary<string, DownloadTaskCardView> _titleBarTaskCards = new(StringComparer.Ordinal);
+    private readonly Dictionary<string, DownloadTaskCardView> _navTaskCards = new(StringComparer.Ordinal);
 
     private bool _isDarkTheme;
     private ThemePreference _themePreference = ThemePreference.System;
@@ -245,6 +245,7 @@ public sealed partial class MainWindow : Window
         InitializePersistentDataStore();
         TraceStartupStage("Persistent data store initialized");
         InitializeAppTitleBar();
+        InitializeCommandPaletteShortcut();
         EditOnlineRepositoryButton.Click -= OnEditRepositoryDetailsClicked;
         EditOnlineRepositoryButton.Click += OnEditOnlineRepositoryClicked;
         FirstLevelListView.ItemsSource = _firstLevelItems;
