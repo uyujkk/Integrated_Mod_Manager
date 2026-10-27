@@ -665,9 +665,7 @@ public sealed partial class MainWindow
         RefreshPersistentSlotControls();
         FirstCountTextBlock.Text = "0";
         SecondCountTextBlock.Text = "0";
-        CurrentFolderTextBlock.Text = StateNotSelectedText;
-        CurrentStateTextBlock.Text = StateNotSelectedText;
-        SetStateColor(CurrentStateTextBlock.Text);
+        ShowModSummary(null);
         LoadDefaultShortcutTemplate();
         LoadLinkForCurrentMod(null);
         ClearPreview();
@@ -740,9 +738,7 @@ public sealed partial class MainWindow
         using var timing = MeasureRepositoryUi(RepositoryPerformanceOperation.Populate, firstItem?.Children.Count ?? 0);
         _modList.SelectedMod = null;
         ClearPreview();
-        CurrentFolderTextBlock.Text = StateNotSelectedText;
-        CurrentStateTextBlock.Text = StateNotSelectedText;
-        SetStateColor(CurrentStateTextBlock.Text);
+        ShowModSummary(null);
         _currentSecondLevelPath = null;
         LoadDefaultShortcutTemplate();
         LoadLinkForCurrentMod(null);
@@ -774,17 +770,13 @@ public sealed partial class MainWindow
     {
         if (item is null)
         {
-            CurrentFolderTextBlock.Text = StateNotSelectedText;
-            CurrentStateTextBlock.Text = StateNotSelectedText;
-            SetStateColor(CurrentStateTextBlock.Text);
+            ShowModSummary(null);
             ClearPreview();
             LoadLinkForCurrentMod(null);
             return;
         }
 
-        CurrentFolderTextBlock.Text = item.Name;
-        CurrentStateTextBlock.Text = item.State;
-        SetStateColor(item.State);
+        ShowModSummary(item);
         UpdatePreviewForDirectory(item.Path, item.Files);
 
         if (!preserveStatus)
@@ -803,21 +795,24 @@ public sealed partial class MainWindow
         SyncRepositorySelectionV4(item);
     }
 
-    private void SetStateColor(string? state)
+    // The details summary: the Mod's name and its deployment state, coloured by state.
+    private void ShowModSummary(SecondLevelFolderItem? item)
     {
-        if (string.Equals(state, StateCopiedText, StringComparison.CurrentCultureIgnoreCase)
-            || string.Equals(state, StateLinkedText, StringComparison.CurrentCultureIgnoreCase))
+        _modDetails.Show(item, StateNotSelectedText, item is null ? ModStateTone.Neutral
+            : RepositoryWorkspacePolicy.StateTone(item.State, StateMissingText, StateCopiedText, StateLinkedText));
+        RenderModSummary();
+    }
+
+    private void RenderModSummary()
+    {
+        CurrentFolderTextBlock.Text = _modDetails.Name;
+        CurrentStateTextBlock.Text = _modDetails.State;
+        CurrentStateTextBlock.Foreground = _modDetails.Tone switch
         {
-            CurrentStateTextBlock.Foreground = CopiedBrush;
-        }
-        else if (string.Equals(state, StateMissingText, StringComparison.CurrentCultureIgnoreCase))
-        {
-            CurrentStateTextBlock.Foreground = MissingBrush;
-        }
-        else
-        {
-            CurrentStateTextBlock.Foreground = _isDarkTheme ? new SolidColorBrush(Colors.WhiteSmoke) : NeutralBrush;
-        }
+            ModStateTone.Deployed => CopiedBrush,
+            ModStateTone.NotDeployed => MissingBrush,
+            _ => _isDarkTheme ? new SolidColorBrush(Colors.WhiteSmoke) : NeutralBrush
+        };
     }
 
     private async Task ToggleDirectoryCopyAsync(SecondLevelFolderItem item)

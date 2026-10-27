@@ -211,9 +211,7 @@ public sealed partial class MainWindow
         }
         else
         {
-            CurrentFolderTextBlock.Text = StateNotSelectedText;
-            CurrentStateTextBlock.Text = StateNotSelectedText;
-            SetStateColor(CurrentStateTextBlock.Text);
+            ShowModSummary(null);
             ClearPreview();
             SetDefaultStatus();
         }

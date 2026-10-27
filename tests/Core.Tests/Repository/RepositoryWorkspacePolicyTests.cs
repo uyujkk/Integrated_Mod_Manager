@@ -104,4 +104,28 @@ public sealed class RepositoryWorkspacePolicyTests
     [InlineData("zz", "")]
     public void FilterByName_KeepsOrderAndIgnoresCaseAndSpaces(string? keyword, string expected)
         => Assert.Equal(expected, string.Join('|', RepositoryWorkspacePolicy.FilterByName(new[] { "Ann", "bob", "Carol" }, name => name, keyword)));
+
+    [Theory]
+    [InlineData("已复制", ModStateTone.Deployed)]
+    [InlineData("已链接", ModStateTone.Deployed)]
+    [InlineData("未部署", ModStateTone.NotDeployed)]
+    [InlineData("未选择", ModStateTone.Neutral)]
+    [InlineData("", ModStateTone.Neutral)]
+    [InlineData(null, ModStateTone.Neutral)]
+    public void StateTone_ReadsTheCurrentLanguagesLabels(string? state, ModStateTone expected)
+        => Assert.Equal(expected, RepositoryWorkspacePolicy.StateTone(state, "未部署", "已复制", "已链接"));
+
+    [Fact]
+    public void StateTone_IgnoresCase()
+        => Assert.Equal(ModStateTone.Deployed, RepositoryWorkspacePolicy.StateTone("LINKED", "Not deployed", "Copied", "Linked"));
+
+    [Theory]
+    [InlineData(@"C:\Repo", @"C:\Repo\Ann\Outfit", @"…\Ann\Outfit")]
+    [InlineData(@"C:\Repo\", @"C:\Repo\Ann\Outfit", @"…\Ann\Outfit")]
+    [InlineData(@"C:\Repo", @"D:\Other\Outfit", @"D:\Other\Outfit")]
+    [InlineData(@"C:\Repo", @"C:\Elsewhere\Outfit", @"C:\Elsewhere\Outfit")]
+    [InlineData("  ", @"C:\Repo\Ann\Outfit", @"C:\Repo\Ann\Outfit")]
+    [InlineData(null, @"C:\Repo\Ann\Outfit", @"C:\Repo\Ann\Outfit")]
+    public void DisplayPath_ShortensOnlyPathsInsideTheRepository(string? root, string path, string expected)
+        => Assert.Equal(expected, RepositoryWorkspacePolicy.DisplayPath(root, path));
 }

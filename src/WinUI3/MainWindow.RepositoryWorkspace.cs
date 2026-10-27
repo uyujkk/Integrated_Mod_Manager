@@ -19,6 +19,7 @@ public sealed partial class MainWindow
     private bool _repositoryDetailDialogOpen;
     private bool _repositoryWorkspaceBusy;
     private readonly ModListViewModel _modList = new();
+    private readonly ModDetailsViewModel _modDetails = new();
     private readonly HashSet<SecondLevelFolderItem> _repositoryCoversLoading = [];
     private Grid? _repositoryToolbar;
     private Grid? _repositoryHeader;
@@ -779,7 +780,7 @@ public sealed partial class MainWindow
     {
         if (_repositorySelectedPath is null) return;
         var mod = GetSelectedSecondLevelItem();
-        _repositorySelectedPath.Text = mod is null ? T("RepositoryWorkspace.SelectAMod") : RepositoryDisplayPath(mod.Path) + LocalModTagSummary(mod.Path);
+        _repositorySelectedPath.Text = mod is null ? T("RepositoryWorkspace.SelectAMod") : RepositoryWorkspacePolicy.DisplayPath(SourceTextBox.Text, mod.Path) + LocalModTagSummary(mod.Path);
         ToolTipService.SetToolTip(_repositorySelectedPath, mod?.Path);
         _repositoryOpenModFolder!.IsEnabled = mod is not null && !_repositoryWorkspaceBusy;
         _repositoryCopyModPath!.IsEnabled = mod is not null;
@@ -787,17 +788,6 @@ public sealed partial class MainWindow
         _repositoryDeploymentHint!.Text = GetSelectedRepository()?.UseDirectoryLinks == true
             ? T("RepositoryWorkspace.LinkDeploymentReplacesTheSameCharacter")
             : T("RepositoryWorkspace.CopyDeploymentKeepsARecoverableBackup");
-    }
-
-    // Show the part inside the repository, so the Mod name survives the end ellipsis; the tooltip has the full path.
-    private string RepositoryDisplayPath(string path)
-    {
-        string root = (SourceTextBox.Text ?? string.Empty).Trim();
-        if (root.Length == 0) return path;
-        string relative = Path.GetRelativePath(root, path);
-        return relative.StartsWith("..", StringComparison.Ordinal) || Path.IsPathRooted(relative)
-            ? path
-            : "…" + Path.DirectorySeparatorChar + relative;
     }
 
     private void CopySelectedModPath()

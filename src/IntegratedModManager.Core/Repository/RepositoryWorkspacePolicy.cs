@@ -9,6 +9,9 @@ public readonly record struct RepositoryWorkspaceLayout(
 public readonly record struct RepositoryCoverGrid(
     double GalleryWidth, int Columns, double MinItemWidth, double ItemHeight, double PreviewHeight);
 
+/// <summary>How the details colour a Mod's deployment state.</summary>
+public enum ModStateTone { Neutral, Deployed, NotDeployed }
+
 /// <summary>Why the Mod list shows nothing, which decides its message and whether it offers an import.</summary>
 public enum ModListEmptyKind { None, NoMatches, NoMods, NoCharacter }
 
@@ -34,6 +37,30 @@ public static class RepositoryWorkspacePolicy
         int columns = Math.Clamp((int)Math.Floor((gallery + 12) / 236), 1, 8);
         double cover = Math.Max(140, (gallery - (columns - 1) * 12) / columns);
         return new(category, detail, inline, columns, cover);
+    }
+
+    /// <summary>
+    /// The state labels are localized text, so the caller passes the labels of the current
+    /// language: copied or linked reads as deployed, the missing label as not deployed.
+    /// </summary>
+    public static ModStateTone StateTone(string? state, string notDeployedLabel, params string[] deployedLabels)
+        => string.IsNullOrEmpty(state) ? ModStateTone.Neutral
+            : deployedLabels.Any(label => string.Equals(state, label, StringComparison.CurrentCultureIgnoreCase)) ? ModStateTone.Deployed
+            : string.Equals(state, notDeployedLabel, StringComparison.CurrentCultureIgnoreCase) ? ModStateTone.NotDeployed
+            : ModStateTone.Neutral;
+
+    /// <summary>
+    /// A Mod path shown from inside the repository ("…\Character\Mod"), so the Mod name survives
+    /// an end ellipsis; paths outside the repository, or without one, stay whole.
+    /// </summary>
+    public static string DisplayPath(string? repositoryRoot, string path)
+    {
+        string root = (repositoryRoot ?? string.Empty).Trim();
+        if (root.Length == 0) return path;
+        string relative = Path.GetRelativePath(root, path);
+        return relative.StartsWith("..", StringComparison.Ordinal) || Path.IsPathRooted(relative)
+            ? path
+            : "…" + Path.DirectorySeparatorChar + relative;
     }
 
     /// <summary>Items whose name contains the trimmed keyword, ignoring case, in their original order.</summary>
