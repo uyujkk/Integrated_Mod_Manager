@@ -85,7 +85,8 @@ public sealed partial class MainWindow
         _characterMoreButton = RepositoryButton("\uE712", (sender, _) =>
         {
             if (FirstLevelListView.SelectedItem is FirstLevelFolderItem item)
-                CreateFirstLevelMenu(item).ShowAt((FrameworkElement)sender);
+                CreateFirstLevelMenu(item).ShowAt((FrameworkElement)sender,
+                    new FlyoutShowOptions { Placement = FlyoutPlacementMode.BottomEdgeAlignedLeft });
         });
         Grid.SetColumn(_characterMoreButton, 2); categoryHeading.Children.Add(_characterMoreButton);
         // Every header control must be moved out: this heading replaces the XAML one.

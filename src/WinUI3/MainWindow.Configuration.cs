@@ -81,6 +81,7 @@ public sealed partial class MainWindow
             foreach (var library in _localLibraries.Values) library.Normalize();
             _onlineDownloadScheduler.Limit = _onlinePreferences.ConcurrentDownloads;
             _updateCheckInterval = AppSelfUpdateEnabled ? ParseUpdateCheckInterval(config?.UpdateCheckInterval) : UpdateCheckInterval.Manual;
+            _navigationCollapsed = config?.NavigationCollapsed ?? false;
             _repositoryWorkspaceView = config?.RepositoryWorkspaceView switch
             {
                 "covers" => RepositoryWorkspaceView.Covers,
@@ -254,6 +255,7 @@ public sealed partial class MainWindow
                 InstallBackupLimitGb = _installBackupLimitGb,
                 ReduceMotion = _reduceMotion,
                 MinimizeToTray = _minimizeToTray,
+                NavigationCollapsed = _navigationCollapsed,
                 InterfaceDensity = _interfaceDensity == InterfaceDensity.Compact ? "compact" : "comfortable",
                 OnlineCardLayout = _onlineCardLayoutMode == OnlineCardLayoutMode.Grid ? "grid" : "list",
                 RepositoryWorkspaceView = _repositoryWorkspaceView.ToString().ToLowerInvariant(),
