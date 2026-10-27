@@ -6,6 +6,12 @@
 
 This document records version changes in Integrated Mod Manager. Unpublished versions are marked separately.
 
+## v4.6.0 — 2026-10-27（正式版 / Stable）
+
+Updated dashboard, Mod workspace, online browsing, shortcuts, settings, update/download lists, Ctrl+K search and collapsible navigation. Retains the 4.5.2 features and restores stable application-update policy. See [v4.6.0](v4.6.0.md).
+
+更新首页、Mod 工作区、在线浏览、快捷键、设置、更新下载列表、Ctrl+K 搜索与可折叠导航；保留 4.5.2 功能，恢复正式版软件更新策略。见 [v4.6.0](v4.6.0.md)。
+
 ## v4.6.0-preview.1 — 2026-10-27（本地预览，未发布 / Local preview, unpublished）
 
 Collects the merged dashboard, Mod workspace, online browsing, shortcuts, settings, navigation and updates UI work after v4.5.2. Supports stable local-update package naming while retaining preview product metadata and disabling self-update. See [v4.6.0-preview.1](v4.6.0-preview.1.md).

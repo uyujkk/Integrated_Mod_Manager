@@ -1,6 +1,6 @@
 # Integrated Mod Manager User Guide
 
-> For 4.5.2 on Windows 10/11 x64. Tool author: uyujkk.
+> For 4.6.0 on Windows 10/11 x64. Tool author: uyujkk.
 >
 > This is an unofficial fan-made tool. It is not affiliated with, authorized, endorsed, or sponsored by XXMI, any game publisher, or related developers.
 
@@ -223,6 +223,6 @@ Configuration writes are atomic with rotated backups; a damaged main configurati
 - Detection, translation and automatic extraction are aids; the original author page is authoritative. Inspect and scan unknown Mods first.
 - Review screenshots, configuration and diagnostics for personal paths, accounts or credentials before sharing.
 
-**Feature status (4.5.2):** directory-link deployment, loader state restore and combination presets are verified, stable features; variant file import still needs a real exported file; F10 hot apply and online auto-translation remain experimental.
+**Feature status (4.6.0):** directory-link deployment, loader state restore and combination presets are verified, stable features; variant file import still needs a real exported file; F10 hot apply and online auto-translation remain experimental.
 
 Source code, issues and full release history: <https://github.com/uyujkk/Integrated_Mod_Manager>

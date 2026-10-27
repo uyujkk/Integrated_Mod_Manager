@@ -1359,7 +1359,7 @@
   "Updates.UpdateProfile": "Update Profile",
   "Updates.UpdateUnavailable": "Update unavailable",
   "Updates.VersionIsAvailableDownloadInstallAnd": "Version {0} is available.\n\nDownload, install, and restart automatically? Local repositories, paths, and interface settings will be preserved.",
-  "WhatsNew.Body": "Local preview 4.6.0-preview.1\n\n• Reworked dashboard and Mod workspace, with repository cards, character and Mod lists, and a detail summary.\n\n• Updated online cards and details drawer, shortcuts, settings, update lists and download history.\n\n• Ctrl+K searches pages, commands, characters and Mods; the side navigation can collapse.\n\n• Upgraded from stable 4.5.2 using the existing local updater. Application self-update is disabled in this preview.\n\nReal-game input and the XXMI/EFMI launch chain remain unverified. See the packaged release notes for details.",
+  "WhatsNew.Body": "New in 4.6\n\n• Updated dashboard, repository cards, character and Mod lists, and the details panel.\n\n• Reorganized online browsing, shortcuts, settings, update lists and download history.\n\n• Ctrl+K searches pages, commands, characters and Mods. The side navigation can collapse and includes search and downloads.\n\n• Application update checks follow your saved preference. Existing repositories, presets, state slots and user data are preserved during an update.\n\nReal-game input and the complete XXMI/EFMI launch chain remain unverified. See the full release notes for details.",
   "WhatsNew.Close": "Got it",
   "WhatsNew.OpenDetails": "Read the full feature notes",
   "WhatsNew.Title": "New in {0}",

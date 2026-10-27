@@ -1359,7 +1359,7 @@
   "Updates.UpdateProfile": "更新方案",
   "Updates.UpdateUnavailable": "暂不能更新",
   "Updates.VersionIsAvailableDownloadInstallAnd": "发现新版本 {0}。\n\n是否自动下载、安装并重启软件？本地仓库、路径和界面设置会保留。",
-  "WhatsNew.Body": "本地预览 4.6.0-preview.1\n\n• 整理首页和 Mod 工作区，更新仓库卡片、角色与 Mod 列表和详情摘要。\n\n• 更新在线卡片与详情抽屉、快捷键、设置、更新列表和下载历史。\n\n• Ctrl+K 可以搜索页面、命令、角色和 Mod；侧栏支持折叠。\n\n• 支持通过现有本地更新器从正式版 4.5.2 升级；本预览关闭软件自更新。\n\n真实游戏输入和 XXMI／EFMI 启动链仍未验证，详见随包发布说明。",
+  "WhatsNew.Body": "4.6 更新内容\n\n• 更新首页、仓库卡片、角色与 Mod 列表和详情面板。\n\n• 整理在线浏览、快捷键、设置、更新列表和下载历史。\n\n• Ctrl+K 搜索页面、命令、角色和 Mod；侧栏支持折叠，并提供搜索与下载入口。\n\n• 软件更新检查遵循已保存的偏好；升级时保留仓库、预设、状态槽位和用户数据。\n\n真实游戏输入及 XXMI／EFMI 完整启动链仍未验证，详见完整发布说明。",
   "WhatsNew.Close": "知道了",
   "WhatsNew.OpenDetails": "查看新功能详细介绍",
   "WhatsNew.Title": "{0} 新功能",

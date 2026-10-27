@@ -1,6 +1,6 @@
 # Quick Start
 
-> For 4.5.2. [中文](../zh-CN/快速上手.md) · [Full user guide](./User-Guide.md) · [Documentation index](../../README.md)
+> For 4.6.0. [中文](../zh-CN/快速上手.md) · [Full user guide](./User-Guide.md) · [Documentation index](../../README.md)
 
 ## Install and set up
 
@@ -31,7 +31,7 @@ Recommended structure: `Mod Storage\Character\Specific Mod\files…`. The first 
 | Action | How |
 | --- | --- |
 | Deploy or remove a Mod | Double-click it, or use the deployment button in Details |
-| Change an avatar, allow several Mods | Select a character, then use the avatar button and multi-select toggle above the list |
+| Change an avatar, allow several Mods | Select a character, then open its context menu or the character-list menu |
 | Save a state slot | Select a Mod → State Slots tab |
 | Save or restore a combination | Presets at the top of Repositories |
 | Work in game | Press Ctrl + Alt + K for the overlay |
@@ -40,6 +40,7 @@ Recommended structure: `Mod Storage\Character\Specific Mod\files…`. The first 
 | Refresh the page | `F5` |
 | Switch sections | `Alt+1` – `Alt+5` |
 | Focus search / check app updates | `Ctrl+F` / `Ctrl+U` |
+| Search pages, commands, characters and Mods | `Ctrl+K` |
 
 ## Important notes
 
