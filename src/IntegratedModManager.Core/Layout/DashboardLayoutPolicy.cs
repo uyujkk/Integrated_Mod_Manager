@@ -3,19 +3,9 @@ namespace IntegratedModManager.Core.Layout;
 /// <summary>Breakpoints of the dashboard page, measured on the page's own width.</summary>
 public static class DashboardLayoutPolicy
 {
-    /// <summary>2: two columns (summary and main area side by side); 1: one column; 0: narrow one column.</summary>
-    public static int Mode(double pageWidth)
-        => pageWidth >= 1460 ? 2 : pageWidth >= 860 ? 1 : 0;
+    /// <summary>Paths and the repository list side by side; below this they stack.</summary>
+    public static bool UsesTwoColumns(double pageWidth) => pageWidth >= 1100;
 
-    public static int MetricColumns(double pageWidth)
-        => pageWidth < 620 ? 1 : 3;
-
-    // In the two-column mode the presets fill a narrow side column, one per row.
-    public static int PresetColumns(double pageWidth)
-        => Mode(pageWidth) switch
-        {
-            2 => 1,
-            1 => 3,
-            _ => pageWidth < 680 ? 1 : 2
-        };
+    /// <summary>The current-repository strip keeps one row; below this its status and buttons wrap under the picker.</summary>
+    public static bool StripFitsOneRow(double pageWidth) => pageWidth >= 860;
 }

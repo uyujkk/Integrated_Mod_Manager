@@ -23,7 +23,16 @@ public sealed partial class MainWindow
         return library;
     }
 
-    private string LocalModRelativePath(string path) => WorkspaceIdentity.Relative(GetSelectedRepository()!.SourcePath, path);
+    // Right after switching repositories the lists can still hold Mods of the previous one.
+    // Those are not part of this repository's library, so they get null instead of a throw.
+    private string? LocalModRelativePath(string path)
+    {
+        string? source = GetSelectedRepository()?.SourcePath;
+        return string.IsNullOrWhiteSpace(source) || string.IsNullOrWhiteSpace(path)
+            || !IntegratedModManager.Core.Infrastructure.PathSafety.IsStrictlyInside(path, source)
+                ? null
+                : WorkspaceIdentity.Relative(source, path);
+    }
 
     private void InitializeLocalTagControls(Grid modGrid)
     {
@@ -45,14 +54,16 @@ public sealed partial class MainWindow
     private bool MatchesLocalLibraryFilter(SecondLevelFolderItem mod)
     {
         var library = SelectedLocalLibrary();
-        if (library is null) return RepositoryWorkspacePolicy.MatchesQuery(mod.Name,
+        string? relativePath = LocalModRelativePath(mod.Path);
+        if (library is null || relativePath is null) return RepositoryWorkspacePolicy.MatchesQuery(mod.Name,
             Path.GetFileName(Path.GetDirectoryName(mod.Path)) ?? "", _repositoryModSearch!.Text);
-        return library.Matches(LocalModRelativePath(mod.Path), mod.Name + " " + Path.GetFileName(Path.GetDirectoryName(mod.Path)), _repositoryModSearch!.Text, _localTagFilter);
+        return library.Matches(relativePath, mod.Name + " " + Path.GetFileName(Path.GetDirectoryName(mod.Path)), _repositoryModSearch!.Text, _localTagFilter);
     }
 
     private string LocalModTagSummary(string path)
     {
-        string[] tags = SelectedLocalLibrary()?.TagsFor(LocalModRelativePath(path)) ?? [];
+        string? relativePath = LocalModRelativePath(path);
+        string[] tags = relativePath is null ? [] : SelectedLocalLibrary()?.TagsFor(relativePath) ?? [];
         return tags.Length == 0 ? "" : "\n" + T("LocalTags.Tags") + string.Join(" · ", tags);
     }
 
@@ -101,7 +112,8 @@ public sealed partial class MainWindow
         if (GetSelectedRepository() is not { } current
             || WorkspaceIdentity.Library(current.Id, current.SourcePath) != repoKey) return;
         var tags = input.Text.Split([',', '，', ';', '；', '\n'], StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries);
-        library.EditTags(checks.Where(item => item.Check.IsChecked == true).Select(item => LocalModRelativePath(item.Mod.Path)), tags, (TagEditMode)mode.SelectedIndex);
+        library.EditTags(checks.Where(item => item.Check.IsChecked == true)
+            .Select(item => LocalModRelativePath(item.Mod.Path)).OfType<string>(), tags, (TagEditMode)mode.SelectedIndex);
         SaveShellConfig(); RefreshRepositoryModView();
     }
 

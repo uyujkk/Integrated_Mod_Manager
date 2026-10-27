@@ -71,6 +71,9 @@ public sealed partial class MainWindow
     {
         ProjectResourcesTitleTextBlock.Text = T("Settings.ProjectAndOpenSourceComponents");
         ProjectResourcesHintTextBlock.Text = T("Settings.MajorOpenSourceProjectsUsedOr");
+        // The button names say what the card holds; its explanation is the title's tooltip.
+        ProjectResourcesHintTextBlock.Visibility = Visibility.Collapsed;
+        ToolTipService.SetToolTip(ProjectResourcesTitleTextBlock, ProjectResourcesHintTextBlock.Text);
 
         foreach (Button resourceButton in ProjectResourcesGrid.Children.OfType<Button>())
         {
@@ -83,6 +86,19 @@ public sealed partial class MainWindow
             string resourceName = resourceButton.Content is StackPanel panel
                 ? panel.Children.OfType<TextBlock>().FirstOrDefault()?.Text ?? url
                 : url;
+            // Name only, so the list takes two short rows; the address is in the tooltip.
+            if (resourceButton.Content is StackPanel compact)
+            {
+                foreach (TextBlock address in compact.Children.OfType<TextBlock>().Skip(1))
+                {
+                    address.Visibility = Visibility.Collapsed;
+                }
+                if (compact.Children.OfType<TextBlock>().FirstOrDefault() is { } name)
+                {
+                    name.TextTrimming = TextTrimming.CharacterEllipsis;
+                }
+                resourceButton.MinHeight = 36;
+            }
             AutomationProperties.SetName(resourceButton, $"{resourceName} · {url}");
         }
     }
@@ -203,6 +219,7 @@ public sealed partial class MainWindow
         {
             SettingsPlaceholderTextBlock.Text = T("Settings.SelectARepositoryFromTheDashboard");
             SettingsOnlineInfoList.ItemsSource = null;
+            SettingsOnlineInfoList2.ItemsSource = null;
             return;
         }
 
@@ -213,7 +230,7 @@ public sealed partial class MainWindow
         string OrNotSet(string? value) => string.IsNullOrWhiteSpace(value) ? T("Settings.NotSet") : value;
 
         SettingsPlaceholderTextBlock.Text = T("Settings.OnlinePageReadsThisRepository");
-        SettingsOnlineInfoList.ItemsSource = new List<SettingInfoItem>
+        var items = new List<SettingInfoItem>
         {
             new(T("Common.Repository"), repository.Name),
             new(T("Common.OnlineSource"), OrNotSet(source)),
@@ -224,6 +241,9 @@ public sealed partial class MainWindow
             new(T("Common.Readiness"), ready ? T("Common.Ready") : T("Common.NeedsSetup")),
             new(T("Common.Notes"), string.IsNullOrWhiteSpace(repository.Notes) ? T("Settings.None") : NormalizeUiText(repository.Notes))
         };
+        int half = (items.Count + 1) / 2;
+        SettingsOnlineInfoList.ItemsSource = items.Take(half).ToList();
+        SettingsOnlineInfoList2.ItemsSource = items.Skip(half).ToList();
     }
 
     private void OnConflictDetectionToggled(object sender, RoutedEventArgs e)

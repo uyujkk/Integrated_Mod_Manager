@@ -137,6 +137,10 @@ public sealed partial class MainWindow
         UpdateNotesTextBlock.Text = string.IsNullOrWhiteSpace(_latestReleaseBody)
             ? T("Updates.GitHubReleaseNotesWillAppearHere")
             : NormalizeUiText(_latestReleaseBody);
+        // Before the first check there is nothing but placeholders, so the box stays one line.
+        Visibility details = string.IsNullOrWhiteSpace(_latestReleaseTag) ? Visibility.Collapsed : Visibility.Visible;
+        LatestReleaseMetaTextBlock.Visibility = details;
+        UpdateNotesScrollViewer.Visibility = details;
     }
 
     private void PopulateModUpdateIntervalOptions()

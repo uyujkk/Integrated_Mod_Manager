@@ -207,12 +207,8 @@ public sealed partial class MainWindow
 
     private void RefreshRepositoryActionButtons()
     {
-        bool hasSelectedRepository = GetSelectedRepository() is not null;
-        bool canModifySelectedRepository = hasSelectedRepository && _selectedRepositoryId is not null;
-        bool canDeleteSelectedRepository = canModifySelectedRepository && _repositories.Count > 1;
-
-        RenameRepositoryButton.IsEnabled = canModifySelectedRepository;
-        DeleteRepositoryButton.IsEnabled = canDeleteSelectedRepository;
+        // Deleting lives in each repository card's menu, which disables it for the last repository.
+        RenameRepositoryButton.IsEnabled = GetSelectedRepository() is not null && _selectedRepositoryId is not null;
     }
 
     private void OnWindowSizeChanged(object sender, Microsoft.UI.Xaml.WindowSizeChangedEventArgs args)

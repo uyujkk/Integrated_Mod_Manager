@@ -15,7 +15,8 @@
             <FontIcon Glyph="{x:Bind Glyph, Mode=OneWay}" FontSize="20" HorizontalAlignment="Center" VerticalAlignment="Center" />
             <StackPanel Grid.Column="1" Spacing="3" VerticalAlignment="Center">
                 <TextBlock Text="{x:Bind Title, Mode=OneWay}" FontWeight="SemiBold" TextWrapping="Wrap" />
-                <TextBlock Text="{x:Bind Description, Mode=OneWay}" Style="{StaticResource CaptionTextStyle}" TextWrapping="Wrap" />
+                <!-- One line keeps rows short enough for the overview to fit a windowed page; the tooltip has the rest. -->
+                <TextBlock Text="{x:Bind Description, Mode=OneWay}" Style="{StaticResource CaptionTextStyle}" MaxLines="1" TextTrimming="CharacterEllipsis" ToolTipService.ToolTip="{x:Bind Description, Mode=OneWay}" />
             </StackPanel>
             <ContentPresenter Grid.Column="2" Content="{x:Bind Action, Mode=OneWay}" VerticalAlignment="Center" />
         </Grid>

@@ -1,4 +1,5 @@
 using System.Runtime.InteropServices;
+using IntegratedModManager.Core.Repository;
 using Microsoft.UI.Windowing;
 using Microsoft.UI.Xaml;
 
@@ -251,7 +252,8 @@ public sealed partial class MainWindow
             return T("Tray.Mods0NeedsSetup");
         }
 
-        RepositorySnapshot snapshot = BuildRepositorySnapshot(repository);
+        RepositoryContentSummary snapshot = GetKnownRepositorySummary(repository)
+            ?? RepositoryContentSummary.Scan(repository.SourcePath, repository.TargetPath);
         string state = snapshot.IsReady ? T("Common.Ready") : T("Common.NeedsSetup");
         return T("Tray.Mods", snapshot.ModCount, state);
     }

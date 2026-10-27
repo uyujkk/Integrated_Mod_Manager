@@ -7,7 +7,7 @@ namespace ModFolderCopier.WinUI;
 
 public sealed partial class MainWindow
 {
-    private Expander? _workspacePathsExpander;
+    private Grid? _workspacePathsHost;
     private Grid? _workspaceActions;
     private Grid? _workspacePageHost;
     private Grid? _workspaceContentGrid;
@@ -27,16 +27,6 @@ public sealed partial class MainWindow
     private TextBlock? _modernStateText;
     private TextBlock? _categoriesBadgeLabel;
     private TextBlock? _modsBadgeLabel;
-    private TextBlock? _dashboardPathTitleText;
-    private TextBlock? _dashboardPathHintText;
-    private StackPanel? _dashboardRootPanel;
-    private Grid? _dashboardSummaryGrid;
-    private Grid? _dashboardMainGrid;
-    private Border? _dashboardRepositorySelectorCard;
-    private Grid? _dashboardMetricsGrid;
-    private Border? _dashboardPathCard;
-    private Border? _dashboardPresetsCard;
-    private Grid? _dashboardPresetsGrid;
     private Grid? _settingsResponsiveGrid;
     private StackPanel? _settingsRootPanel;
     private Grid? _settingsNavigationGrid;
@@ -94,43 +84,18 @@ public sealed partial class MainWindow
         _workspacePathRows = pathsGrid.Children.OfType<Grid>()
             .Where(grid => grid.ColumnDefinitions.Count == 4).ToArray();
         pathsCard.Child = null;
-        pathsGrid.Padding = new Thickness(4, 8, 4, 4);
+        pathsGrid.Padding = new Thickness(0);
         pathsGrid.VerticalAlignment = VerticalAlignment.Top;
-        _workspacePathsExpander = new Expander
+        // The dashboard's paths card hosts the original path controls directly; its own
+        // title already names the repository, so there is no expander header repeating it.
+        DashboardPathsHost.Content = pathsGrid;
+        _workspacePathsHost = pathsGrid;
+        foreach (StackPanel pathHeading in pathsGrid.Children.OfType<StackPanel>()
+            .Where(panel => panel.Children.Contains(PathSectionTitleTextBlock)))
         {
-            HorizontalAlignment = HorizontalAlignment.Stretch,
-            HorizontalContentAlignment = HorizontalAlignment.Stretch,
-            VerticalAlignment = VerticalAlignment.Top,
-            IsExpanded = true,
-            Content = pathsGrid
-        };
-
-        if (DashboardScrollViewer.Content is StackPanel dashboardPanel)
-        {
-            _dashboardPathTitleText = new TextBlock
-            {
-                Style = (Style)Application.Current.Resources["SectionTitleTextStyle"]
-            };
-            _dashboardPathHintText = new TextBlock
-            {
-                Style = (Style)Application.Current.Resources["CaptionTextStyle"],
-                TextWrapping = TextWrapping.Wrap
-            };
-            var dashboardPathHeading = new StackPanel { Spacing = 4 };
-            dashboardPathHeading.Children.Add(_dashboardPathTitleText);
-            dashboardPathHeading.Children.Add(_dashboardPathHintText);
-            var dashboardPathContent = new StackPanel { Spacing = 10 };
-            dashboardPathContent.Children.Add(dashboardPathHeading);
-            dashboardPathContent.Children.Add(_workspacePathsExpander);
-            _dashboardPathCard = new Border
-            {
-                Style = (Style)Application.Current.Resources["CardBorderStyle"],
-                HorizontalAlignment = HorizontalAlignment.Stretch,
-                VerticalAlignment = VerticalAlignment.Stretch,
-                Child = dashboardPathContent
-            };
-            InitializeDashboardLayout(dashboardPanel);
+            pathHeading.Visibility = Visibility.Collapsed;
         }
+        InitializePathStatusIcons();
 
         Border statusCard = WorkspaceStatusCard;
         oldWorkspace.Children.Remove(statusCard);
@@ -336,11 +301,10 @@ public sealed partial class MainWindow
 
     private void UpdateRefinedWorkspaceLanguage()
     {
-        if (_workspacePathsExpander is null)
+        if (_workspacePathsHost is null)
         {
             return;
         }
-        _workspacePathsExpander.Header = T("RefinedWorkspace.PathsLauncherAndDeploymentMode");
         _workspaceTitleText!.Text = T("Common.ModWorkspace");
         _selectionEyebrowText!.Text = T("RefinedWorkspace.CURRENTSELECTION");
         _modernStateLabel!.Text = T("RefinedWorkspace.DEPLOYMENTSTATUS");
@@ -368,61 +332,22 @@ public sealed partial class MainWindow
         UpdateRepositoryWorkspaceLanguageV4();
     }
 
-    private void InitializeDashboardLayout(StackPanel dashboardPanel)
-    {
-        if (_dashboardPathCard is null)
-        {
-            return;
-        }
-
-        // The cards are found by name, so reordering them in XAML cannot break this layout.
-        Border repositorySelector = DashboardRepositorySelectorCard;
-        Grid metrics = DashboardMetricsGrid;
-        Border presets = DashboardPresetsCard;
-        _dashboardRootPanel = dashboardPanel;
-        _dashboardRepositorySelectorCard = repositorySelector;
-        _dashboardMetricsGrid = metrics;
-        _dashboardPresetsCard = presets;
-        _dashboardRepositorySelectorCard.VerticalAlignment = VerticalAlignment.Stretch;
-        _dashboardMetricsGrid.VerticalAlignment = VerticalAlignment.Stretch;
-        _dashboardPresetsCard.HorizontalAlignment = HorizontalAlignment.Stretch;
-        _dashboardPresetsCard.VerticalAlignment = VerticalAlignment.Stretch;
-        _dashboardPresetsGrid = DashboardPresetsGrid;
-
-        dashboardPanel.Children.Clear();
-        dashboardPanel.Margin = new Thickness(2, 2, 8, 20);
-        dashboardPanel.Spacing = 12;
-
-        _dashboardSummaryGrid = new Grid
-        {
-            ColumnSpacing = 12,
-            RowSpacing = 12,
-            VerticalAlignment = VerticalAlignment.Top
-        };
-        _dashboardSummaryGrid.Children.Add(repositorySelector);
-        _dashboardSummaryGrid.Children.Add(metrics);
-
-        _dashboardMainGrid = new Grid
-        {
-            ColumnSpacing = 12,
-            RowSpacing = 12,
-            VerticalAlignment = VerticalAlignment.Top
-        };
-        _dashboardMainGrid.Children.Add(_dashboardPathCard);
-        _dashboardMainGrid.Children.Add(presets);
-
-        dashboardPanel.Children.Add(DashboardPageHeader);
-        dashboardPanel.Children.Add(_dashboardSummaryGrid);
-        dashboardPanel.Children.Add(_dashboardMainGrid);
-        dashboardPanel.Children.Add(DashboardRepositoriesCard);
-        DashboardScrollViewer.HorizontalScrollBarVisibility = ScrollBarVisibility.Disabled;
-    }
-
     private void InitializeResponsiveSettingsLayout()
     {
         if (SettingsScrollViewer.Content is not StackPanel settingsPanel)
         {
             return;
+        }
+
+        // Status lines take no room until there is something to report.
+        foreach (TextBlock status in new[] { DiagnosticsStatusTextBlock, UpdateStatusTextBlock })
+        {
+            status.Visibility = string.IsNullOrWhiteSpace(status.Text) ? Visibility.Collapsed : Visibility.Visible;
+            status.RegisterPropertyChangedCallback(TextBlock.TextProperty, (sender, _) =>
+            {
+                var block = (TextBlock)sender;
+                block.Visibility = string.IsNullOrWhiteSpace(block.Text) ? Visibility.Collapsed : Visibility.Visible;
+            });
         }
 
         // Cards are found by name; the header stays and the cards move into the responsive grid.
@@ -533,6 +458,7 @@ public sealed partial class MainWindow
         };
         column.RowDefinitions.Add(new RowDefinition { Height = GridLength.Auto });
         column.RowDefinitions.Add(new RowDefinition { Height = GridLength.Auto });
+        column.RowDefinitions.Add(new RowDefinition { Height = GridLength.Auto });
         return column;
     }
 
@@ -570,16 +496,10 @@ public sealed partial class MainWindow
 
     private void RefreshRefinedDashboardPathHeader()
     {
-        if (_dashboardPathTitleText is null || _dashboardPathHintText is null || _workspacePathsExpander is null)
-        {
-            return;
-        }
-
         WorkspaceRepository? repository = GetSelectedRepository();
         string repositoryName = repository?.Name ?? T("Common.NoRepositorySelected");
-        _dashboardPathTitleText.Text = T("RefinedWorkspace.CurrentRepositoryPaths");
-        _dashboardPathHintText.Text = T("RefinedWorkspace.ThesePathsBelongOnlyToSwitching", repositoryName);
-        _workspacePathsExpander.Header = T("RefinedWorkspace.Configure", repositoryName);
+        DashboardPathsTitleTextBlock.Text = T("RefinedWorkspace.CurrentRepositoryPaths");
+        DashboardPathsHintTextBlock.Text = T("RefinedWorkspace.ThesePathsBelongOnlyToSwitching", repositoryName);
     }
 
     private void RefreshRefinedActionIcons()
@@ -666,7 +586,7 @@ public sealed partial class MainWindow
             Grid.SetColumnSpan((FrameworkElement)_workspaceActions.Children[0], actionColumns);
         }
 
-        double pathAvailable = _workspacePathsExpander?.ActualWidth ?? available;
+        double pathAvailable = _workspacePathsHost?.ActualWidth ?? available;
         if (pathAvailable <= 0)
         {
             pathAvailable = available;
@@ -711,84 +631,51 @@ public sealed partial class MainWindow
 
     private void UpdateDashboardLayout()
     {
-        if (_dashboardSummaryGrid is null
-            || _dashboardMainGrid is null
-            || _dashboardRepositorySelectorCard is null
-            || _dashboardMetricsGrid is null
-            || _dashboardPathCard is null
-            || _dashboardPresetsCard is null)
-        {
-            return;
-        }
-
         double available = PageWidth(DashboardScrollViewer);
-        int mode = DashboardLayoutPolicy.Mode(available);
+        bool twoColumns = DashboardLayoutPolicy.UsesTwoColumns(available);
+        bool oneRowStrip = DashboardLayoutPolicy.StripFitsOneRow(available);
+
+        // Two columns reach the bottom of the window: the character overview and the repository
+        // list take the height left after the header and the strip, instead of leaving it empty.
+        double above = DashboardPageHeader.ActualHeight + DashboardRepositorySelectorCard.ActualHeight
+            + 2 * DashboardRootPanel.Spacing + DashboardRootPanel.Margin.Top + DashboardRootPanel.Margin.Bottom;
+        DashboardMainGrid.MinHeight = twoColumns && DashboardScrollViewer.ActualHeight > 0
+            ? Math.Max(0, DashboardScrollViewer.ActualHeight - above)
+            : 0;
+
+        int mode = (twoColumns ? 2 : 0) + (oneRowStrip ? 1 : 0);
         if (_dashboardLayoutMode == mode)
         {
             return;
         }
         _dashboardLayoutMode = mode;
-        _dashboardRepositorySelectorCard.VerticalAlignment = mode == 2
-            ? VerticalAlignment.Stretch
-            : VerticalAlignment.Top;
-        _dashboardMetricsGrid.VerticalAlignment = mode == 2
-            ? VerticalAlignment.Stretch
-            : VerticalAlignment.Top;
-        _dashboardPathCard.VerticalAlignment = mode == 2
-            ? VerticalAlignment.Stretch
-            : VerticalAlignment.Top;
-        _dashboardPresetsCard.VerticalAlignment = mode == 2
-            ? VerticalAlignment.Stretch
-            : VerticalAlignment.Top;
 
-        _dashboardSummaryGrid.ColumnDefinitions.Clear();
-        _dashboardSummaryGrid.RowDefinitions.Clear();
-        _dashboardMainGrid.ColumnDefinitions.Clear();
-        _dashboardMainGrid.RowDefinitions.Clear();
-
-        if (mode == 2)
+        // Paths and characters beside the repository list on wide pages, stacked above it otherwise.
+        DashboardMainGrid.ColumnDefinitions.Clear();
+        DashboardMainGrid.RowDefinitions.Clear();
+        if (twoColumns)
         {
-            _dashboardSummaryGrid.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(1.1, GridUnitType.Star) });
-            _dashboardSummaryGrid.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(1.9, GridUnitType.Star) });
-            _dashboardSummaryGrid.RowDefinitions.Add(new RowDefinition { Height = GridLength.Auto });
-            Place(_dashboardRepositorySelectorCard, 0, 0);
-            Place(_dashboardMetricsGrid, 0, 1);
-
-            _dashboardMainGrid.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(1.55, GridUnitType.Star) });
-            _dashboardMainGrid.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(0.85, GridUnitType.Star) });
-            _dashboardMainGrid.RowDefinitions.Add(new RowDefinition { Height = GridLength.Auto });
-            Place(_dashboardPathCard, 0, 0);
-            Place(_dashboardPresetsCard, 0, 1);
+            DashboardMainGrid.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(1.3, GridUnitType.Star) });
+            DashboardMainGrid.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(1, GridUnitType.Star) });
+            Place(DashboardLeftColumn, 0, 0);
+            Place(DashboardRightColumn, 0, 1);
         }
         else
         {
-            _dashboardSummaryGrid.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(1, GridUnitType.Star) });
-            _dashboardSummaryGrid.RowDefinitions.Add(new RowDefinition { Height = GridLength.Auto });
-            _dashboardSummaryGrid.RowDefinitions.Add(new RowDefinition { Height = GridLength.Auto });
-            Place(_dashboardRepositorySelectorCard, 0, 0);
-            Place(_dashboardMetricsGrid, 1, 0);
-
-            _dashboardMainGrid.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(1, GridUnitType.Star) });
-            _dashboardMainGrid.RowDefinitions.Add(new RowDefinition { Height = GridLength.Auto });
-            _dashboardMainGrid.RowDefinitions.Add(new RowDefinition { Height = GridLength.Auto });
-            Place(_dashboardPathCard, 0, 0);
-            Place(_dashboardPresetsCard, 1, 0);
+            DashboardMainGrid.RowDefinitions.Add(new RowDefinition { Height = GridLength.Auto });
+            DashboardMainGrid.RowDefinitions.Add(new RowDefinition { Height = GridLength.Auto });
+            Place(DashboardLeftColumn, 0, 0);
+            Place(DashboardRightColumn, 1, 0);
         }
 
-        ReflowCards(_dashboardMetricsGrid, DashboardLayoutPolicy.MetricColumns(available));
-        if (_dashboardPresetsGrid is not null)
-        {
-            ReflowCards(_dashboardPresetsGrid, DashboardLayoutPolicy.PresetColumns(available));
-            if (mode == 2)
-            {
-                foreach (RowDefinition row in _dashboardPresetsGrid.RowDefinitions)
-                {
-                    row.Height = new GridLength(1, GridUnitType.Star);
-                }
-            }
-        }
+        // On narrow pages the status and buttons wrap under the repository picker.
+        DashboardStripGrid.RowSpacing = oneRowStrip ? 0 : 10;
+        Grid.SetRow(DashboardStripStatus, oneRowStrip ? 0 : 1);
+        Grid.SetColumn(DashboardStripStatus, oneRowStrip ? 2 : 1);
+        Grid.SetRow(DashboardStripActions, oneRowStrip ? 0 : 1);
+        Grid.SetColumn(DashboardStripActions, oneRowStrip ? 3 : 2);
+        Grid.SetColumnSpan(DashboardStripActions, oneRowStrip ? 1 : 2);
     }
-
     private void UpdateSettingsLayout()
     {
         if (_settingsResponsiveGrid is null
@@ -925,8 +812,10 @@ public sealed partial class MainWindow
         _settingsOverviewGrid.Children.Add(_settingsOverviewLeftColumn);
         Place(_settingsOverviewRightColumn, 0, 1);
         _settingsOverviewGrid.Children.Add(_settingsOverviewRightColumn);
-        Place(_settingsCards[4], 1, 0, 2);
-        _settingsOverviewGrid.Children.Add(_settingsCards[4]);
+        // The resources card sits under the right column rather than across the bottom, which
+        // balances the two columns and keeps a windowed overview within one screen.
+        Place(_settingsCards[4], 2, 0);
+        _settingsOverviewRightColumn.Children.Add(_settingsCards[4]);
         _settingsContentHost.Children.Add(_settingsOverviewGrid);
     }
 
