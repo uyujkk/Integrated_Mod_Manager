@@ -495,7 +495,7 @@ public sealed partial class MainWindow
         _settingsOverviewGrid = new Grid { ColumnSpacing = 10, RowSpacing = 10, VerticalAlignment = VerticalAlignment.Top };
         _settingsOverviewGrid.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(1, GridUnitType.Star) });
         _settingsOverviewGrid.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(1, GridUnitType.Star) });
-        _settingsOverviewGrid.RowDefinitions.Add(new RowDefinition { Height = new GridLength(1, GridUnitType.Star) });
+        _settingsOverviewGrid.RowDefinitions.Add(new RowDefinition { Height = GridLength.Auto });
         _settingsOverviewGrid.RowDefinitions.Add(new RowDefinition { Height = GridLength.Auto });
         _settingsOverviewGrid.Children.Add(_settingsOverviewLeftColumn);
         Grid.SetColumn(_settingsOverviewRightColumn, 1);
@@ -532,7 +532,7 @@ public sealed partial class MainWindow
             VerticalAlignment = VerticalAlignment.Stretch
         };
         column.RowDefinitions.Add(new RowDefinition { Height = GridLength.Auto });
-        column.RowDefinitions.Add(new RowDefinition { Height = new GridLength(1, GridUnitType.Star) });
+        column.RowDefinitions.Add(new RowDefinition { Height = GridLength.Auto });
         return column;
     }
 
@@ -805,25 +805,7 @@ public sealed partial class MainWindow
         {
             _settingsRootPanel.Width = Math.Max(420, Math.Min(3200, available - 12));
         }
-        int mode = IntegratedModManager.Core.Layout.SettingsLayoutPolicy.Mode(available, SettingsScrollViewer.ActualHeight);
-        bool shortViewport = SettingsScrollViewer.ActualHeight < 650;
-        TextBlock[] settingDescriptions = [LanguageSettingDescriptionTextBlock, ThemeSettingDescriptionTextBlock,
-            MotionSettingDescriptionTextBlock, DensitySettingDescriptionTextBlock, TraySettingDescriptionTextBlock];
-        TextBlock[] settingTitles = [LanguageSettingTitleTextBlock, ThemeSettingTitleTextBlock,
-            MotionSettingTitleTextBlock, DensitySettingTitleTextBlock, TraySettingTitleTextBlock];
-        for (int index = 0; index < settingDescriptions.Length; index++)
-        {
-            settingDescriptions[index].Visibility = shortViewport ? Visibility.Collapsed : Visibility.Visible;
-            ToolTipService.SetToolTip(settingTitles[index], settingDescriptions[index].Text);
-            AutomationProperties.SetHelpText(settingTitles[index], settingDescriptions[index].Text);
-        }
-        if (_settingsCards[0].Child is StackPanel appearance)
-        {
-            foreach (Border row in appearance.Children.OfType<StackPanel>().SelectMany(panel => panel.Children.OfType<Border>()))
-            {
-                row.Padding = new Thickness(14, shortViewport ? 8 : 10, 14, shortViewport ? 8 : 10);
-            }
-        }
+        int mode = SettingsLayoutPolicy.Mode(available);
         foreach (TextBlock label in _settingsSectionLabels)
         {
             label.MaxWidth = mode == 2 ? 120 : Math.Max(50, available / 4 - 80);
@@ -896,36 +878,20 @@ public sealed partial class MainWindow
         UpdateNotesScrollViewer.MinHeight = 0;
         UpdateNotesScrollViewer.MaxHeight = 150;
 
+        // The overview keeps every card at its own height and lets the whole page scroll;
+        // the narrower modes show one card that scrolls inside the viewport.
+        bool overview = mode == 3;
+        SettingsScrollViewer.VerticalScrollMode = overview ? ScrollMode.Auto : ScrollMode.Disabled;
+        SettingsScrollViewer.VerticalScrollBarVisibility = overview ? ScrollBarVisibility.Auto : ScrollBarVisibility.Disabled;
         if (_settingsSectionScrollViewer is not null)
         {
-            double header = SettingsHeaderHeight();
             double navigation = mode == 1 ? Math.Max(130, _settingsNavigationCard?.ActualHeight ?? 0) : 0;
-            _settingsSectionScrollViewer.MaxHeight = IntegratedModManager.Core.Layout.SettingsLayoutPolicy.FocusHeight(
-                SettingsScrollViewer.ActualHeight, header, navigation);
-            _settingsSectionScrollViewer.VerticalScrollMode = mode == 3 ? ScrollMode.Disabled : ScrollMode.Auto;
-            _settingsSectionScrollViewer.VerticalScrollBarVisibility = mode == 3
+            _settingsSectionScrollViewer.MaxHeight = overview
+                ? double.PositiveInfinity
+                : SettingsLayoutPolicy.FocusHeight(SettingsScrollViewer.ActualHeight, SettingsHeaderHeight(), navigation);
+            _settingsSectionScrollViewer.VerticalScrollMode = overview ? ScrollMode.Disabled : ScrollMode.Auto;
+            _settingsSectionScrollViewer.VerticalScrollBarVisibility = overview
                 ? ScrollBarVisibility.Disabled : ScrollBarVisibility.Auto;
-        }
-
-        if (mode != 3 || SettingsScrollViewer.ActualHeight <= 0)
-        {
-            return;
-        }
-
-        double headerHeight = SettingsHeaderHeight();
-        double usableHeight = Math.Max(0, SettingsScrollViewer.ActualHeight - headerHeight - 20);
-        _settingsOverviewGrid.Height = usableHeight;
-        if (_settingsSectionScrollViewer is not null)
-        {
-            _settingsSectionScrollViewer.MaxHeight = usableHeight;
-        }
-        if (_settingsCards[0].Child is StackPanel appearancePanel)
-        {
-            appearancePanel.VerticalAlignment = VerticalAlignment.Center;
-        }
-        if (_settingsCards[3].Child is StackPanel diagnosticsPanel)
-        {
-            diagnosticsPanel.VerticalAlignment = VerticalAlignment.Center;
         }
     }
 
@@ -945,7 +911,7 @@ public sealed partial class MainWindow
         _settingsOverviewRightColumn.Children.Clear();
         foreach (Border card in _settingsCards)
         {
-            card.VerticalAlignment = VerticalAlignment.Stretch;
+            card.VerticalAlignment = VerticalAlignment.Top;
         }
         Place(_settingsCards[0], 0, 0);
         _settingsOverviewLeftColumn.Children.Add(_settingsCards[0]);
@@ -960,7 +926,6 @@ public sealed partial class MainWindow
         Place(_settingsOverviewRightColumn, 0, 1);
         _settingsOverviewGrid.Children.Add(_settingsOverviewRightColumn);
         Place(_settingsCards[4], 1, 0, 2);
-        _settingsCards[4].VerticalAlignment = VerticalAlignment.Top;
         _settingsOverviewGrid.Children.Add(_settingsCards[4]);
         _settingsContentHost.Children.Add(_settingsOverviewGrid);
     }

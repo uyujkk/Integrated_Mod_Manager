@@ -16,6 +16,9 @@ namespace ModFolderCopier.WinUI;
 public sealed partial class MainWindow : Window
 {
     private const string AppVersion = ApplicationReleasePolicy.VersionLabel;
+
+    /// <summary>The Settings page binds its appearance choices to this view model.</summary>
+    public AppearanceSettingsViewModel AppearanceSettings { get; } = new();
     private static bool AppSelfUpdateEnabled => ApplicationReleasePolicy.ApplicationSelfUpdateEnabled;
     private const string GitHubRepositoryUrl = "https://github.com/uyujkk/Integrated_Mod_Manager";
     private const string GitHubLatestReleaseApiUrl = "https://api.github.com/repos/uyujkk/Integrated_Mod_Manager/releases/latest";
@@ -138,6 +141,11 @@ public sealed partial class MainWindow : Window
     private readonly Dictionary<string, DownloadTaskCardView> _titleBarTaskCards = new(StringComparer.Ordinal);
 
     private bool _isDarkTheme;
+    private ThemePreference _themePreference = ThemePreference.System;
+    // Kept alive for its ColorValuesChanged event, which follows the Windows app theme.
+    private readonly Windows.UI.ViewManagement.UISettings _uiSettings = new();
+    private string? _storedThemePreference;
+    private bool? _legacyDarkTheme;
     private bool _isCheckingUpdates;
     private bool _isCheckingModUpdates;
     private bool _isLoadingOnlineMods;
@@ -149,8 +157,6 @@ public sealed partial class MainWindow : Window
     private bool _isApplyingDashboardRepositorySelection;
     private bool _isApplyingUpdateCheckIntervalSelection;
     private bool _isApplyingModUpdateIntervalSelection;
-    private bool _isApplyingAppearanceSettings;
-    private bool _isApplyingDensitySelection;
     private bool _isApplyingConfigurationProfileSelection;
     private bool _isApplyingRepositoryDeploymentMode;
     private bool _enableConflictDetection = true;
@@ -262,7 +268,7 @@ public sealed partial class MainWindow : Window
         }
         TraceStartupStage("Configuration loaded");
         LoadDownloadTasks();
-        ApplyTheme(_isDarkTheme);
+        InitializeAppearanceSettings();
         ApplyLanguage();
         TraceStartupStage("Theme and language applied");
         InitializeOnlineControls();

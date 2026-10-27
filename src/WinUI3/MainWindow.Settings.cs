@@ -1,4 +1,5 @@
 using System.Diagnostics;
+using IntegratedModManager.Core.Configuration;
 using IntegratedModManager.Core.Online;
 using Microsoft.UI.Xaml;
 using Microsoft.UI.Xaml.Automation;
@@ -46,9 +47,7 @@ public sealed partial class MainWindow
 
     private void RefreshSettingsButtonLabels()
     {
-        LanguageToggleButton.Content = _currentLanguage == AppLanguage.ZhCn ? "English" : "中文";
-        ThemeToggleButton.Content = _isDarkTheme ? T("Common.LightTheme") : T("Common.DarkTheme");
-        EditOnlineRepositoryButton.Content = T("Settings.EditCurrentRepositoryCategory");
+        EditOnlineRepositoryButton.Content = T("Localization.EditCurrentRepositoryOnlineCategory");
         EditCharacterMappingsButton.Content = T("Common.CharacterCategoryMapping");
         OpenGitHubButton.Content = T("Common.OpenGitHubRepository");
         CheckUpdatesButton.Content = _isCheckingUpdates ? T("Common.Checking") : T("Common.CheckAppUpdates");
@@ -90,32 +89,100 @@ public sealed partial class MainWindow
 
     private void RefreshAppearanceSettings()
     {
-        LanguageSettingTitleTextBlock.Text = T("Settings.DisplayLanguage");
-        LanguageSettingDescriptionTextBlock.Text = T("Settings.SwitchTheEntireAppBetweenChinese");
-        ThemeSettingTitleTextBlock.Text = T("Settings.AppTheme");
-        ThemeSettingDescriptionTextBlock.Text = T("Settings.SwitchBetweenLightAndDarkFluent");
-        MotionSettingTitleTextBlock.Text = T("Settings.ReduceMotion");
-        MotionSettingDescriptionTextBlock.Text = T("Settings.DisablePageSlideInAndImage");
-        DensitySettingTitleTextBlock.Text = T("Settings.InterfaceDensity");
-        DensitySettingDescriptionTextBlock.Text = T("Settings.CompactModeShowsMoreContentOn");
+        LanguageSettingRow.Title = T("Settings.DisplayLanguage");
+        LanguageSettingRow.Description = T("Settings.SwitchTheEntireAppBetweenChinese");
+        ThemeSettingRow.Title = T("Settings.AppTheme");
+        ThemeSettingRow.Description = T("Settings.SwitchBetweenLightAndDarkFluent");
+        MotionSettingRow.Title = T("Settings.ReduceMotion");
+        MotionSettingRow.Description = T("Settings.DisablePageSlideInAndImage");
+        DensitySettingRow.Title = T("Settings.InterfaceDensity");
+        DensitySettingRow.Description = T("Settings.CompactModeShowsMoreContentOn");
         RefreshTraySetting();
         UpdateTrayLanguage();
 
-        _isApplyingAppearanceSettings = true;
-        ReduceMotionToggleSwitch.IsOn = _reduceMotion;
         ReduceMotionToggleSwitch.OnContent = T("Common.On2");
         ReduceMotionToggleSwitch.OffContent = T("Common.Off2");
-        _isApplyingAppearanceSettings = false;
-
-        _isApplyingDensitySelection = true;
-        DensityComboBox.Items.Clear();
-        DensityComboBox.Items.Add(new ComboBoxItem { Content = T("Settings.Comfortable"), Tag = InterfaceDensity.Comfortable });
-        DensityComboBox.Items.Add(new ComboBoxItem { Content = T("Settings.Compact"), Tag = InterfaceDensity.Compact });
-        DensityComboBox.SelectedItem = DensityComboBox.Items
-            .OfType<ComboBoxItem>()
-            .First(item => item.Tag is InterfaceDensity density && density == _interfaceDensity);
-        _isApplyingDensitySelection = false;
+        AppearanceSettings.SetOptionLabels(
+            [T("Settings.FollowSystem"), T("Settings.Light"), T("Settings.Dark")],
+            [T("Settings.Comfortable"), T("Settings.Compact")]);
+        foreach (ComboBox comboBox in new[] { LanguageComboBox, ThemeComboBox, DensityComboBox })
+        {
+            AutomationProperties.SetName(comboBox, comboBox == LanguageComboBox
+                ? LanguageSettingRow.Title
+                : comboBox == ThemeComboBox ? ThemeSettingRow.Title : DensitySettingRow.Title);
+        }
         ApplyInterfaceDensity();
+    }
+
+    // Copies the loaded choices into the view model, then applies whatever the user changes there.
+    private void InitializeAppearanceSettings()
+    {
+        _themePreference = ThemePreferences.Parse(_storedThemePreference, _legacyDarkTheme);
+        AppearanceSettings.LanguageIndex = _currentLanguage == AppLanguage.EnUs ? 1 : 0;
+        AppearanceSettings.Theme = _themePreference;
+        AppearanceSettings.DensityIndex = _interfaceDensity == InterfaceDensity.Compact ? 1 : 0;
+        AppearanceSettings.ReduceMotion = _reduceMotion;
+        AppearanceSettings.PropertyChanged += OnAppearanceSettingChanged;
+        _uiSettings.ColorValuesChanged += (_, _) => DispatcherQueue.TryEnqueue(() =>
+        {
+            if (_themePreference == ThemePreference.System)
+            {
+                ApplyTheme(ThemePreferences.IsDark(_themePreference, IsSystemThemeDark()));
+            }
+        });
+        ApplyTheme(ThemePreferences.IsDark(_themePreference, IsSystemThemeDark()));
+    }
+
+    private bool IsSystemThemeDark()
+    {
+        try
+        {
+            return _uiSettings.GetColorValue(Windows.UI.ViewManagement.UIColorType.Background).R < 128;
+        }
+        catch (Exception)
+        {
+            return _isDarkTheme;
+        }
+    }
+
+    private void OnAppearanceSettingChanged(object? sender, System.ComponentModel.PropertyChangedEventArgs e)
+    {
+        switch (e.PropertyName)
+        {
+            case nameof(AppearanceSettingsViewModel.LanguageIndex):
+                AppLanguage language = AppearanceSettings.LanguageIndex == 1 ? AppLanguage.EnUs : AppLanguage.ZhCn;
+                if (language != _currentLanguage)
+                {
+                    SwitchLanguage(language);
+                }
+                break;
+            case nameof(AppearanceSettingsViewModel.Theme):
+                _themePreference = AppearanceSettings.Theme;
+                ApplyTheme(ThemePreferences.IsDark(_themePreference, IsSystemThemeDark()));
+                SaveConfig();
+                SaveShellConfig();
+                break;
+            case nameof(AppearanceSettingsViewModel.DensityIndex):
+                InterfaceDensity density = AppearanceSettings.DensityIndex == 1 ? InterfaceDensity.Compact : InterfaceDensity.Comfortable;
+                if (density != _interfaceDensity)
+                {
+                    _interfaceDensity = density;
+                    ApplyInterfaceDensity();
+                    SaveShellConfig();
+                }
+                break;
+            case nameof(AppearanceSettingsViewModel.ReduceMotion):
+                if (AppearanceSettings.ReduceMotion != _reduceMotion)
+                {
+                    _reduceMotion = AppearanceSettings.ReduceMotion;
+                    SaveShellConfig();
+                    ShowAppNotification(
+                        _reduceMotion ? "已减少界面动态效果。" : "已恢复界面动态效果。",
+                        _reduceMotion ? "Interface motion has been reduced." : "Interface motion has been restored.",
+                        InfoBarSeverity.Informational);
+                }
+                break;
+        }
     }
 
     private void RefreshOnlineNavigationButtonLabels()
@@ -135,21 +202,28 @@ public sealed partial class MainWindow
         if (repository is null)
         {
             SettingsPlaceholderTextBlock.Text = T("Settings.SelectARepositoryFromTheDashboard");
+            SettingsOnlineInfoList.ItemsSource = null;
             return;
         }
 
         string source = GetEffectiveOnlineSource(repository);
         string gameName = GetEffectiveOnlineGameName(repository);
         string categoryId = GetEffectiveOnlineCategoryId(repository);
-        string notes = string.IsNullOrWhiteSpace(repository.Notes)
-            ? T("Settings.None")
-            : NormalizeUiText(repository.Notes);
-        string wiki = string.IsNullOrWhiteSpace(repository.WikiUrl)
-            ? T("Settings.NotSet")
-            : repository.WikiUrl;
-        int mappingCount = repository.CharacterCategoryMappings.Count;
+        bool ready = IsGameBananaSource(source) && !string.IsNullOrWhiteSpace(categoryId);
+        string OrNotSet(string? value) => string.IsNullOrWhiteSpace(value) ? T("Settings.NotSet") : value;
 
-        SettingsPlaceholderTextBlock.Text = T("Settings.RepositorySourceGameSkinCategoryID", repository.Name, source, (string.IsNullOrWhiteSpace(gameName) ? "未填写" : gameName), categoryId, wiki, mappingCount, notes, (string.IsNullOrWhiteSpace(gameName) ? "Not set" : gameName));
+        SettingsPlaceholderTextBlock.Text = T("Settings.OnlinePageReadsThisRepository");
+        SettingsOnlineInfoList.ItemsSource = new List<SettingInfoItem>
+        {
+            new(T("Common.Repository"), repository.Name),
+            new(T("Common.OnlineSource"), OrNotSet(source)),
+            new(T("Dialogs.TargetGame"), OrNotSet(gameName)),
+            new(T("Common.CategoryID"), OrNotSet(categoryId)),
+            new(T("Dialogs.GameWiki"), OrNotSet(repository.WikiUrl)),
+            new(T("Common.CharacterCategoryMapping"), T("Settings.MappingCount", repository.CharacterCategoryMappings.Count)),
+            new(T("Common.Readiness"), ready ? T("Common.Ready") : T("Common.NeedsSetup")),
+            new(T("Common.Notes"), string.IsNullOrWhiteSpace(repository.Notes) ? T("Settings.None") : NormalizeUiText(repository.Notes))
+        };
     }
 
     private void OnConflictDetectionToggled(object sender, RoutedEventArgs e)
@@ -182,39 +256,6 @@ public sealed partial class MainWindow
         ApplySecondLevelSelectionState(GetSelectedSecondLevelItem(), preserveStatus: true);
     }
 
-    private void OnThemeToggleClicked(object sender, RoutedEventArgs e)
-    {
-        ApplyTheme(!_isDarkTheme);
-        SaveConfig();
-    }
-
-    private void OnReduceMotionToggled(object sender, RoutedEventArgs e)
-    {
-        if (_isApplyingAppearanceSettings)
-        {
-            return;
-        }
-
-        _reduceMotion = ReduceMotionToggleSwitch.IsOn;
-        SaveShellConfig();
-        ShowAppNotification(
-            _reduceMotion ? "已减少界面动态效果。" : "已恢复界面动态效果。",
-            _reduceMotion ? "Interface motion has been reduced." : "Interface motion has been restored.",
-            InfoBarSeverity.Informational);
-    }
-
-    private void OnDensitySelectionChanged(object sender, SelectionChangedEventArgs e)
-    {
-        if (_isApplyingDensitySelection || DensityComboBox.SelectedItem is not ComboBoxItem { Tag: InterfaceDensity density })
-        {
-            return;
-        }
-
-        _interfaceDensity = density;
-        ApplyInterfaceDensity();
-        SaveShellConfig();
-    }
-
     private void ApplyInterfaceDensity()
     {
         bool compact = _interfaceDensity == InterfaceDensity.Compact;
@@ -231,10 +272,10 @@ public sealed partial class MainWindow
         ShortcutRowsPanel.Spacing = compact ? 6 : 10;
     }
 
-    private void OnLanguageToggleClicked(object sender, RoutedEventArgs e)
+    private void SwitchLanguage(AppLanguage language)
     {
         SaveCurrentModBindings();
-        _currentLanguage = _currentLanguage == AppLanguage.ZhCn ? AppLanguage.EnUs : AppLanguage.ZhCn;
+        _currentLanguage = language;
         ApplyLanguage();
         RefreshVisibleShortcutDescriptionsForLanguage();
         RebuildShortcutPaneForLanguage();

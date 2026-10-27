@@ -28,8 +28,13 @@ public sealed partial class MainWindow
         foreach (ComboBoxItem item in combo.Items.OfType<ComboBoxItem>())
         {
             var choice = choices.First(option => Equals(option.Value, item.Tag));
-            if (!Equals(item.Content, choice.Label)) item.Content = choice.Label;
-            if (choice.Value == selected && !ReferenceEquals(combo.SelectedItem, item)) combo.SelectedItem = item;
+            bool relabeled = !Equals(item.Content, choice.Label);
+            if (relabeled) item.Content = choice.Label;
+            if (choice.Value != selected) continue;
+            // A closed combo box keeps showing the old text of a relabeled selection
+            // (after a language switch) until the item is selected again.
+            if (relabeled && ReferenceEquals(combo.SelectedItem, item) && !combo.IsDropDownOpen) combo.SelectedItem = null;
+            if (!ReferenceEquals(combo.SelectedItem, item)) combo.SelectedItem = item;
         }
     }
 

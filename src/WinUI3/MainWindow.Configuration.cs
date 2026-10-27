@@ -110,6 +110,7 @@ public sealed partial class MainWindow
             _checkAppUpdatesOnStartup = ApplicationReleasePolicy.CanCheckApplicationUpdates(config?.CheckAppUpdatesOnStartup ?? false);
             _installBackupLimitGb = Math.Clamp(config?.InstallBackupLimitGb ?? DefaultInstallBackupLimitGb, 0.5, 100);
             _reduceMotion = config?.ReduceMotion ?? false;
+            _storedThemePreference = config?.ThemePreference;
             _minimizeToTray = config?.MinimizeToTray ?? false;
             _interfaceDensity = string.Equals(config?.InterfaceDensity, "compact", StringComparison.OrdinalIgnoreCase)
                 ? InterfaceDensity.Compact
@@ -166,6 +167,7 @@ public sealed partial class MainWindow
             _checkAppUpdatesOnStartup = false;
             _installBackupLimitGb = DefaultInstallBackupLimitGb;
             _reduceMotion = false;
+            _storedThemePreference = null;
             _minimizeToTray = false;
             _interfaceDensity = InterfaceDensity.Comfortable;
             _onlineCardLayoutMode = OnlineCardLayoutMode.List;
@@ -254,6 +256,7 @@ public sealed partial class MainWindow
                 CheckAppUpdatesOnStartup = _checkAppUpdatesOnStartup,
                 InstallBackupLimitGb = _installBackupLimitGb,
                 ReduceMotion = _reduceMotion,
+                ThemePreference = ThemePreferences.Format(_themePreference),
                 MinimizeToTray = _minimizeToTray,
                 NavigationCollapsed = _navigationCollapsed,
                 InterfaceDensity = _interfaceDensity == InterfaceDensity.Compact ? "compact" : "comfortable",
@@ -370,7 +373,7 @@ public sealed partial class MainWindow
             if (config.SourceDirectory is not null) SourceTextBox.Text = config.SourceDirectory;
             if (config.TargetDirectory is not null) TargetTextBox.Text = config.TargetDirectory;
             if (config.LauncherPath is not null) LauncherTextBox.Text = config.LauncherPath;
-            if (config.DarkTheme is bool darkTheme) _isDarkTheme = darkTheme;
+            _legacyDarkTheme = config.DarkTheme;
             if (config.Language is not null)
             {
                 _currentLanguage = string.Equals(config.Language, "en", StringComparison.OrdinalIgnoreCase)

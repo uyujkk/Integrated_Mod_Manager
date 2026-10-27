@@ -48,6 +48,9 @@ public sealed class BetaShellConfig
 
     public bool ReduceMotion { get; set; }
 
+    /// <summary>"system", "light" or "dark"; missing in older configs, which use config.ini's DarkTheme.</summary>
+    public string? ThemePreference { get; set; }
+
     public bool MinimizeToTray { get; set; }
 
     public bool NavigationCollapsed { get; set; }

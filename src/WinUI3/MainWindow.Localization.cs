@@ -113,13 +113,6 @@ public sealed partial class MainWindow
 
         OnlineTitleTextBlock.Text = T("Common.OnlineModBrowser");
         OnlineSubtitleTextBlock.Text = T("Localization.ThisPageKeepsTheOnlineMod");
-        OnlineRepositoryLabelTextBlock.Text = T("Common.Repository");
-        OnlineSourceLabelTextBlock.Text = T("Common.OnlineSource");
-        OnlineReadyLabelTextBlock.Text = T("Common.Readiness");
-        OnlineConfigTitleTextBlock.Text = T("Common.CurrentRepositoryMapping");
-        OnlineConfigHintTextBlock.Text = T("Localization.TheOnlinePageReadsTheCurrent");
-        OnlineCategoryLabelTextBlock.Text = T("Common.CategoryID");
-        OnlineNotesLabelTextBlock.Text = T("Common.Notes");
         OnlinePreviewTitleTextBlock.Text = T("Common.OnlineModList");
         OnlinePreviewHintTextBlock.Text = T("Localization.ThisPageLoadsDataFromAn");
         EditOnlineRepositoryButton.Content = T("Localization.EditCurrentRepositoryOnlineCategory");
@@ -131,8 +124,7 @@ public sealed partial class MainWindow
         SettingsProjectTitleTextBlock.Text = T("Common.ProjectLinksAndAppVersion");
         SettingsProjectHintTextBlock.Text = T("Common.ThisSectionKeepsTheGitHubRepository");
         RefreshProjectResourceText();
-        SettingsPlaceholderTitleTextBlock.Text = T("Localization.RepositoryOnlineConfig");
-        SettingsPlaceholderTextBlock.Text = T("Localization.ManageTheSourceSiteCategoryID");
+        RefreshSettingsOnlineConfigSummary();
         OpenGitHubButton.Content = T("Common.OpenGitHubRepository");
         CheckUpdatesButton.Content = _isCheckingUpdates ? T("Common.Checking") : T("Common.CheckAppUpdates");
         UpdateStatusTextBlock.Text = string.IsNullOrWhiteSpace(UpdateStatusTextBlock.Text)
@@ -144,9 +136,6 @@ public sealed partial class MainWindow
         HeaderSubtitleTextBlock.Text = string.Empty;
         HeaderCaptionTextBlock.Text = T("Localization.SelectAFirstLevelCategoryFirst");
 
-        LanguageToggleButton.Content = _currentLanguage == AppLanguage.ZhCn ? "English" : "中文";
-        LanguageToggleButton.IsEnabled = true;
-        ThemeToggleButton.Content = _isDarkTheme ? T("Common.LightTheme") : T("Common.DarkTheme");
 
         PathSectionTitleTextBlock.Text = T("Localization.PathsAndLauncher");
         PathSectionSubtitleTextBlock.Text = T("Localization.KeepTheSourceFolderTargetFolder");

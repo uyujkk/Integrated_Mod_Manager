@@ -137,8 +137,8 @@ flowchart TD
 | `Online*Adapter.cs` | 在线页状态与图片加载的适配层。Adapters for online page state and image loading. |
 | `UiCrashDiagnostics.cs` | 界面崩溃的本地诊断。Local diagnostics for UI crashes. |
 | `Models/` | 窗口使用的记录与配置类型，每个类型一个文件（如 `BetaShellConfig`、`WorkspaceRepository`、`ModPersistentSlot`）。Records and configuration types used by the window, one per file. |
-| `Controls/` | XAML 控件：通用页头 `PageHeader`、在线卡片 `OnlineModTile`。XAML controls: the shared `PageHeader` and the online `OnlineModTile`. |
-| `ViewModels/` | 可绑定的 ViewModel（如 `OnlineModTileViewModel`），写法见 5.3。Bindable view models such as `OnlineModTileViewModel`; see 5.3. |
+| `Controls/` | XAML 控件：通用页头 `PageHeader`、设置行 `SettingRow`、在线卡片 `OnlineModTile`。XAML controls: the shared `PageHeader` and `SettingRow`, and the online `OnlineModTile`. |
+| `ViewModels/` | 可绑定的 ViewModel（`OnlineModTileViewModel`、设置页外观选项 `AppearanceSettingsViewModel`），写法见 5.3。Bindable view models such as `OnlineModTileViewModel` and the Settings page's `AppearanceSettingsViewModel`; see 5.3. |
 
 ### 5.3 页面、控件与 ViewModel / Pages, controls and view models
 
