@@ -740,7 +740,7 @@ public sealed partial class MainWindow
             ? ElementTheme.Default
             : dark ? ElementTheme.Dark : ElementTheme.Light;
         ApplyWindowChrome(dark);
-        SetStateColor(CurrentStateTextBlock.Text);
+        RenderModSummary();
         RefreshPrimaryNavigationVisuals();
         RefreshSecondaryNavigation();
         UpdateShortcutKeyFocusVisuals();
