@@ -1,6 +1,8 @@
 using IntegratedModManager.Core.Online;
+using IntegratedModManager.Core.Updates;
 using Microsoft.UI.Xaml;
 using Microsoft.UI.Xaml.Controls;
+using Microsoft.UI.Xaml.Controls.Primitives;
 using Windows.System;
 
 namespace ModFolderCopier.WinUI;
@@ -68,42 +70,135 @@ public sealed partial class MainWindow
         });
     }
 
+    private DownloadHistoryFilter _downloadHistoryFilter;
+    private ToggleButton[] _downloadHistoryChips = [];
+    // The finished tasks the page last listed; a task that finishes later rebuilds the list.
+    private readonly HashSet<string> _downloadHistoryIds = [];
+
     private void RefreshDownloadTaskCenter()
     {
-        if (DownloadTaskListPanel is null)
+        if (DownloadHistoryRepeater is null)
         {
             return;
         }
 
         RefreshNavTasks();
-        DownloadTaskListPanel.Children.Clear();
         _downloadTaskCards.Clear();
 
         // The updates page keeps the history: finished, failed and canceled downloads. Running ones
-        // are followed in the title bar's task flyout, so the page only points there.
+        // are followed in the navigation's task flyout, so the page only points there.
         DownloadTaskItem[] finished = [.. _downloadTasks.Where(item => DownloadProgressPolicy.IsTerminal(item.State))];
+        _downloadHistoryIds.Clear();
+        foreach (DownloadTaskItem task in finished) _downloadHistoryIds.Add(task.Id);
         int running = _downloadTasks.Count - finished.Length;
-        if (running > 0)
-        {
-            DownloadTaskListPanel.Children.Add(new TextBlock
-            {
-                Text = T("DownloadTasks.RunningInNavigation", running),
-                Style = (Style)Application.Current.Resources["CaptionTextStyle"],
-                TextWrapping = TextWrapping.Wrap
-            });
-        }
+        DownloadHistoryRunningTextBlock.Text = running > 0 ? T("DownloadTasks.RunningInNavigation", running) : string.Empty;
+        DownloadHistoryRunningTextBlock.Visibility = running > 0 ? Visibility.Visible : Visibility.Collapsed;
         ClearDownloadTasksButton.IsEnabled = finished.Length > 0;
-        if (finished.Length == 0)
+
+        if (_downloadHistoryChips.Length == 0)
+            _downloadHistoryChips = CreateFilterChips(DownloadHistoryFilterPanel, _downloadHistoryFilter, filter =>
+            {
+                _downloadHistoryFilter = filter;
+                RefreshDownloadTaskCenter();
+            });
+        foreach (ToggleButton chip in _downloadHistoryChips)
         {
-            DownloadTaskListPanel.Children.Add(CreateInfoCard(
-                T("DownloadTasks.NoDownloadTasks"),
-                T("DownloadTasks.DownloadsStartedFromTheOnlineBrowser")));
+            var filter = (DownloadHistoryFilter)chip.Tag;
+            int count = finished.Count(task => UpdatesListPolicy.Matches(task.State, filter));
+            chip.Content = filter switch
+            {
+                DownloadHistoryFilter.Completed => T("DownloadTasks.FilterCompleted", count),
+                DownloadHistoryFilter.Failed => T("DownloadTasks.FilterFailed", count),
+                DownloadHistoryFilter.Canceled => T("DownloadTasks.FilterCanceled", count),
+                _ => T("DownloadTasks.FilterAll", count)
+            };
+            chip.IsChecked = filter == _downloadHistoryFilter;
         }
-        foreach (DownloadTaskItem task in finished)
-        {
-            DownloadTaskListPanel.Children.Add(CreateDownloadTaskCard(task, _downloadTaskCards));
-        }
+        DownloadHistoryFilterPanel.Visibility = finished.Length > 0 ? Visibility.Visible : Visibility.Collapsed;
+
+        List<DownloadTaskItem> visible = [.. finished.Where(task => UpdatesListPolicy.Matches(task.State, _downloadHistoryFilter))];
+        DownloadHistoryRepeater.ItemTemplate ??= new DelegateElementFactory(item => CreateDownloadHistoryRow((DownloadTaskItem)item));
+        DownloadHistoryRepeater.ItemsSource = visible;
+        DownloadHistoryEmptyHost.Content = finished.Length == 0
+            ? CreateInfoCard(T("DownloadTasks.NoDownloadTasks"), T("DownloadTasks.DownloadsStartedFromTheOnlineBrowser"))
+            : visible.Count == 0 ? new EmptyState { Glyph = "\uE721", Title = T("DownloadTasks.NoMatchingHistory") } : null;
         if (NavTasksFlyout.IsOpen) FillNavTasksPanel();
+    }
+
+    // Compact history row: outcome icon, title with its last status, and open folder or retry.
+    private UIElement CreateDownloadHistoryRow(DownloadTaskItem task)
+    {
+        var grid = new Grid { ColumnSpacing = 12 };
+        grid.ColumnDefinitions.Add(new ColumnDefinition { Width = GridLength.Auto });
+        grid.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(1, GridUnitType.Star) });
+        grid.ColumnDefinitions.Add(new ColumnDefinition { Width = GridLength.Auto });
+        (string Glyph, string Brush) outcome = task.State switch
+        {
+            DownloadTaskState.Completed => ("\uE73E", "AppSuccessBrush"),
+            DownloadTaskState.Failed => ("\uE783", "AppDangerBrush"),
+            _ => ("\uE711", "AppSecondaryDefaultForegroundBrush")
+        };
+        grid.Children.Add(new FontIcon
+        {
+            Glyph = outcome.Glyph, FontSize = 16, Foreground = GetAppThemeBrush(outcome.Brush), VerticalAlignment = VerticalAlignment.Center
+        });
+        var text = new StackPanel { Spacing = 2, VerticalAlignment = VerticalAlignment.Center };
+        text.Children.Add(new TextBlock
+        {
+            Text = task.Title, FontWeight = Microsoft.UI.Text.FontWeights.SemiBold, MaxLines = 1, TextTrimming = TextTrimming.CharacterEllipsis
+        });
+        var status = new TextBlock
+        {
+            Style = (Style)Application.Current.Resources["CaptionTextStyle"], MaxLines = 2, TextWrapping = TextWrapping.Wrap,
+            TextTrimming = TextTrimming.CharacterEllipsis
+        };
+        text.Children.Add(status);
+        // Finished tasks show no bar; the card view still owns one so it refreshes like the flyout's cards.
+        var progress = new ProgressBar { Visibility = Visibility.Collapsed };
+        Grid.SetColumn(text, 1);
+        grid.Children.Add(text);
+        Button action = CreateDownloadTaskActionButton(task);
+        action.MinWidth = 88;
+        action.MinHeight = 32;
+        Grid.SetColumn(action, 2);
+        grid.Children.Add(action);
+        _downloadTaskCards[task.Id] = new DownloadTaskCardView(status, progress, action);
+        RefreshDownloadTaskCardView(task, _downloadTaskCards[task.Id]);
+        ToolTipService.SetToolTip(status, L(task.StatusZh, task.StatusEn));
+        return new Border { Style = (Style)Application.Current.Resources["InsetBorderStyle"], Padding = new Thickness(10), Child = grid };
+    }
+
+    // Cancel while running, retry after a failure or cancel, otherwise open the download folder.
+    private Button CreateDownloadTaskActionButton(DownloadTaskItem task)
+    {
+        var actionButton = new Button
+        {
+            MinWidth = 104,
+            Style = (Style)Application.Current.Resources["SecondaryButtonStyle"],
+            VerticalAlignment = VerticalAlignment.Center
+        };
+        actionButton.Click += async (_, _) =>
+        {
+            try
+            {
+                if (DownloadProgressPolicy.IsActive(task.State))
+                {
+                    if (task.Session?.CanCancel == false || task.ReplacementCommitting) return;
+                    task.Cancellation.Cancel();
+                    UpdateDownloadTask(task, DownloadTaskState.Canceling, task.Progress, "正在取消...", "Canceling...", forceRefresh: true);
+                    return;
+                }
+
+                if (task.State is DownloadTaskState.Failed or DownloadTaskState.Canceled && task.RetryRequest is not null)
+                    await RetryOnlineDownloadAsync(task);
+                else OpenDirectory(task.DestinationPath, T("DownloadTasks.DownloadFolder"));
+            }
+            catch (Exception ex)
+            {
+                ReportUiActionFailure("actionButton.Click", ex);
+            }
+        };
+        return actionButton;
     }
 
     private UIElement CreateDownloadTaskCard(DownloadTaskItem task, Dictionary<string, DownloadTaskCardView> cards)
@@ -139,33 +234,7 @@ public sealed partial class MainWindow
         content.Children.Add(progressBar);
         grid.Children.Add(content);
 
-        var actionButton = new Button
-        {
-            MinWidth = 104,
-            Style = (Style)Application.Current.Resources["SecondaryButtonStyle"],
-            VerticalAlignment = VerticalAlignment.Center
-        };
-        actionButton.Click += async (_, _) =>
-        {
-            try
-            {
-                if (DownloadProgressPolicy.IsActive(task.State))
-                {
-                    if (task.Session?.CanCancel == false || task.ReplacementCommitting) return;
-                    task.Cancellation.Cancel();
-                    UpdateDownloadTask(task, DownloadTaskState.Canceling, task.Progress, "正在取消...", "Canceling...", forceRefresh: true);
-                    return;
-                }
-
-                if (task.State is DownloadTaskState.Failed or DownloadTaskState.Canceled && task.RetryRequest is not null)
-                    await RetryOnlineDownloadAsync(task);
-                else OpenDirectory(task.DestinationPath, T("DownloadTasks.DownloadFolder"));
-            }
-            catch (Exception ex)
-            {
-                ReportUiActionFailure("actionButton.Click", ex);
-            }
-        };
+        Button actionButton = CreateDownloadTaskActionButton(task);
         Grid.SetColumn(actionButton, 1);
         grid.Children.Add(actionButton);
         border.Child = grid;
@@ -178,7 +247,7 @@ public sealed partial class MainWindow
     private void RefreshDownloadTaskCard(DownloadTaskItem task)
     {
         // A download that just finished joins the history on the updates page.
-        if (DownloadProgressPolicy.IsTerminal(task.State) && !_downloadTaskCards.ContainsKey(task.Id))
+        if (DownloadProgressPolicy.IsTerminal(task.State) && !_downloadHistoryIds.Contains(task.Id))
         {
             RefreshDownloadTaskCenter();
         }
