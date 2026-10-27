@@ -73,7 +73,7 @@ public sealed partial class MainWindow
         var library = SelectedLocalLibrary();
         if (repo is null || library is null) return;
         string repoKey = WorkspaceIdentity.Library(repo.Id, repo.SourcePath);
-        var items = single is null ? _repositoryVisibleMods.ToArray() : [single];
+        var items = single is null ? _modList.VisibleMods.ToArray() : [single];
         if (items.Length == 0) { await ShowMessageAsync(T("LocalTags.NoModsInTheCurrentFilter"), T("Common.Tags")); return; }
         var body = new StackPanel { Spacing = 10, MinWidth = 300, MaxWidth = 580 };
         body.Children.Add(new TextBlock { Text = T("LocalTags.SelectModsToEditTagsAre"), TextWrapping = TextWrapping.Wrap });
@@ -89,7 +89,7 @@ public sealed partial class MainWindow
         body.Children.Add(selectAll);
         foreach (var mod in items)
         {
-            var check = new CheckBox { Content = mod.Name + LocalModTagSummary(mod.Path), IsChecked = ReferenceEquals(mod, single ?? _repositorySelectedMod) };
+            var check = new CheckBox { Content = mod.Name + LocalModTagSummary(mod.Path), IsChecked = ReferenceEquals(mod, single ?? _modList.SelectedMod) };
             checks.Add((mod, check)); body.Children.Add(check);
         }
         selectAll.Click += (_, _) => { foreach (var item in checks) item.Check.IsChecked = selectAll.IsChecked == true; };

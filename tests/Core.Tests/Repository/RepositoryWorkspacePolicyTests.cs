@@ -71,4 +71,28 @@ public sealed class RepositoryWorkspacePolicyTests
         Assert.Equal(paths[0], RepositoryWorkspacePolicy.PreserveSelection(paths, @"G:\Mods\missing"));
         Assert.Null(RepositoryWorkspacePolicy.PreserveSelection([], @"G:\Mods\B"));
     }
+
+    [Theory]
+    [InlineData(500, 600, 476, 1, 236, 240, 140)]
+    [InlineData(1000, 600, 976, 4, 236, 240, 140)]
+    [InlineData(3000, 600, 2976, 8, 236, 240, 140)]
+    [InlineData(200, 120, 176, 1, 176, 140, 54)]
+    [InlineData(100, 200, 140, 1, 140, 192, 106)]
+    public void CoverGrid_FillsRowsAndFollowsTheViewerHeight(double width, double height,
+        double gallery, int columns, double minWidth, double itemHeight, double preview)
+        => Assert.Equal(new RepositoryCoverGrid(gallery, columns, minWidth, itemHeight, preview),
+            RepositoryWorkspacePolicy.CoverGrid(width, height));
+
+    [Fact]
+    public void CoverGrid_ToleratesAnUnmeasuredViewer()
+        => Assert.Equal(new RepositoryCoverGrid(140, 1, 140, 140, 54), RepositoryWorkspacePolicy.CoverGrid(double.NaN, double.NaN));
+
+    [Theory]
+    [InlineData(5, 2, true, ModListEmptyKind.None)]
+    [InlineData(5, 0, true, ModListEmptyKind.NoMatches)]
+    [InlineData(5, 0, false, ModListEmptyKind.NoMatches)]
+    [InlineData(0, 0, true, ModListEmptyKind.NoMods)]
+    [InlineData(0, 0, false, ModListEmptyKind.NoCharacter)]
+    public void EmptyKind_SaysWhyTheListIsEmpty(int total, int visible, bool hasCharacter, ModListEmptyKind expected)
+        => Assert.Equal(expected, RepositoryWorkspacePolicy.EmptyKind(total, visible, hasCharacter));
 }

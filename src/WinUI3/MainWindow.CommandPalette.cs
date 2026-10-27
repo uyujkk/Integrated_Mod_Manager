@@ -247,7 +247,7 @@ public sealed partial class MainWindow
             _repositoryModSearch.Text = string.Empty;
             RefreshRepositoryModView();
         }
-        if (_repositoryWorkspaceView == RepositoryWorkspaceView.Presets) SetRepositoryWorkspaceViewV4(RepositoryWorkspaceView.List);
+        if (_modList.View == RepositoryWorkspaceView.Presets) SetRepositoryWorkspaceViewV4(RepositoryWorkspaceView.List);
         if (modPath is not null) SelectSecondLevelByPath(modPath);
         else SelectFirstLevelByPath(characterPath);
     }
