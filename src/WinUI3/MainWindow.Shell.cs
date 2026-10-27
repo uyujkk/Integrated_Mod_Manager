@@ -240,7 +240,7 @@ public sealed partial class MainWindow
         }
 
         UpdateOnlineResponsiveLayout(width);
-        UpdateProductivityResponsiveLayout(width);
+        UpdateUpdatesLayout();
         UpdateRefinedWorkspaceLayout();
 
         // Wide windows show labelled navigation unless the user collapsed it to the icon rail.

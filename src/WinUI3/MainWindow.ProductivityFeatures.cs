@@ -7,6 +7,7 @@ using System.Text.Json;
 using System.Text.RegularExpressions;
 using IntegratedModManager.Core.Deployment;
 using IntegratedModManager.Core.Infrastructure;
+using IntegratedModManager.Core.Layout;
 using IntegratedModManager.Core.Repository;
 using IntegratedModManager.Core.Updates;
 using IntegratedModManager.Data;
@@ -163,23 +164,56 @@ public sealed partial class MainWindow
         SaveShellConfig();
     }
 
-    private void UpdateProductivityResponsiveLayout(double width)
+    private int _updatesColumns = -1;
+
+    // Laid out from the page's own width (see AttachPageLayout), not the window's.
+    private void UpdateUpdatesLayout()
     {
-        bool narrow = width < 1180;
-        UpdatesPrimaryColumn.Width = new GridLength(1.35, GridUnitType.Star);
-        UpdatesSecondaryColumn.Width = narrow ? new GridLength(0) : new GridLength(0.85, GridUnitType.Star);
+        double width = PageWidth(UpdatesScrollViewer);
+        int columns = UpdatesLayoutPolicy.Columns(width);
 
-        Grid.SetColumn(UpdatesSupportPanel, narrow ? 0 : 1);
-        Grid.SetRow(UpdatesSupportPanel, narrow ? 1 : 0);
+        // With columns side by side the tracked Mods card reaches the bottom of the window.
+        double above = UpdatesPageHeader.ActualHeight + 16 + 12;
+        UpdatesTrackedModsCard.MinHeight = columns > 1 && UpdatesScrollViewer.ActualHeight > 0
+            ? Math.Max(0, UpdatesScrollViewer.ActualHeight - above)
+            : 0;
 
-        bool useWideTrackedModsLayout = !narrow && width >= 1720;
+        bool useWideTrackedModsLayout = UpdatesLayoutPolicy.TrackedModsInTwoColumns(width);
         if (_useWideTrackedModsLayout != useWideTrackedModsLayout)
         {
             _useWideTrackedModsLayout = useWideTrackedModsLayout;
             ApplyTrackedModsListLayout();
         }
 
-        UpdateAppUpdateActionsLayout();
+        if (_updatesColumns == columns)
+        {
+            return;
+        }
+        _updatesColumns = columns;
+
+        // Download history gets its own middle column on very wide pages; otherwise it heads the
+        // support column, which sits beside tracked Mods or below them.
+        UpdatesSupportPanel.Children.Remove(UpdatesDownloadsCard);
+        UpdatesTopGrid.Children.Remove(UpdatesDownloadsCard);
+        UpdatesPrimaryColumn.Width = new GridLength(columns == 3 ? 1.3 : columns == 2 ? 1.35 : 1, GridUnitType.Star);
+        UpdatesSecondaryColumn.Width = columns == 1 ? new GridLength(0) : new GridLength(columns == 3 ? 1 : 0.85, GridUnitType.Star);
+        UpdatesTertiaryColumn.Width = columns == 3 ? new GridLength(1, GridUnitType.Star) : new GridLength(0);
+        UpdatesTopGrid.ColumnSpacing = columns == 1 ? 0 : 16;
+        if (columns == 3)
+        {
+            UpdatesDownloadsCard.VerticalAlignment = VerticalAlignment.Top;
+            Grid.SetRow(UpdatesDownloadsCard, 0);
+            Grid.SetColumn(UpdatesDownloadsCard, 1);
+            UpdatesTopGrid.Children.Add(UpdatesDownloadsCard);
+            Grid.SetRow(UpdatesSupportPanel, 0);
+            Grid.SetColumn(UpdatesSupportPanel, 2);
+        }
+        else
+        {
+            UpdatesSupportPanel.Children.Insert(0, UpdatesDownloadsCard);
+            Grid.SetRow(UpdatesSupportPanel, columns == 2 ? 0 : 1);
+            Grid.SetColumn(UpdatesSupportPanel, columns == 2 ? 1 : 0);
+        }
     }
 
     private void UpdateAppUpdateActionsLayout()

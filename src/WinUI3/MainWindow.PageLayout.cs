@@ -11,6 +11,7 @@ public sealed partial class MainWindow
     {
         AttachPageLayout(DashboardScrollViewer, UpdateDashboardLayout);
         AttachPageLayout(SettingsScrollViewer, UpdateSettingsLayout);
+        AttachPageLayout(UpdatesScrollViewer, UpdateUpdatesLayout);
     }
 
     private static void AttachPageLayout(FrameworkElement page, Action layout)
