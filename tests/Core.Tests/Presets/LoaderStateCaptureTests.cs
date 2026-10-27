@@ -50,8 +50,17 @@ public sealed class LoaderStateCaptureTests : IDisposable
     public async Task DetectsSameLengthWriteEvenWithPreservedTimestamp()
     {
         DateTime stamp = File.GetLastWriteTimeUtc(Ini);
-        await LoaderStateCapture.FlushAsync(Ini, _ => { File.WriteAllText(Ini, "new"); File.SetLastWriteTimeUtc(Ini, stamp); return Task.CompletedTask; },
-            TimeSpan.FromSeconds(1), TimeSpan.FromMilliseconds(10));
+        await LoaderStateCapture.FlushAsync(Ini, async _ =>
+        {
+            // CI runners can briefly lock a fresh temp file (scanners, coverage); retry like a real loader would.
+            for (int attempt = 0; ; attempt++)
+            {
+                try { File.WriteAllText(Ini, "new"); File.SetLastWriteTimeUtc(Ini, stamp); break; }
+                catch (IOException) when (attempt < 50) { await Task.Delay(20); }
+            }
+        }, TimeSpan.FromSeconds(10), TimeSpan.FromMilliseconds(10)); // The bound includes this write; a loaded runner must not time out.
+        Assert.Equal("new", File.ReadAllText(Ini));
+        Assert.Equal(stamp, File.GetLastWriteTimeUtc(Ini));
     }
 
     [Fact]
