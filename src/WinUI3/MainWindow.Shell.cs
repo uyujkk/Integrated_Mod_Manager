@@ -247,14 +247,16 @@ public sealed partial class MainWindow
         UpdateProductivityResponsiveLayout(width);
         UpdateRefinedWorkspaceLayout();
 
-        if (_shellLayoutMode == nextMode)
+        // Wide windows show labelled navigation unless the user collapsed it to the icon rail.
+        bool expanded = nextMode == ShellLayoutMode.Expanded && !_navigationCollapsed;
+        if (_shellLayoutMode == nextMode && _primaryNavExpanded == expanded)
         {
             return;
         }
 
         _shellLayoutMode = nextMode;
-
-        bool expanded = _shellLayoutMode == ShellLayoutMode.Expanded;
+        _primaryNavExpanded = expanded;
+        RefreshNavCollapseButton();
         PrimaryNavColumn.Width = new GridLength(expanded ? 220 : 84);
         SecondaryNavColumn.Width = new GridLength(0);
         SecondaryNavBorder.Visibility = Visibility.Collapsed;
@@ -293,6 +295,7 @@ public sealed partial class MainWindow
         AutomationProperties.SetName(OnlineNavButton, T("Shell.OnlineMods"));
         AutomationProperties.SetName(UpdatesNavButton, T("Shell.Updates"));
         AutomationProperties.SetName(SettingsNavButton, T("Shell.Settings"));
+        RefreshNavCollapseButton();
     }
 
     private object CreatePrimaryNavContent(string glyph, string label)
@@ -303,7 +306,7 @@ public sealed partial class MainWindow
             FontSize = 16,
             Opacity = 0.88
         };
-        bool expanded = _shellLayoutMode == ShellLayoutMode.Expanded;
+        bool expanded = _primaryNavExpanded;
         var panel = new StackPanel
         {
             Orientation = expanded ? Orientation.Horizontal : Orientation.Vertical,
@@ -321,6 +324,28 @@ public sealed partial class MainWindow
         return panel;
     }
 
+    private void OnNavCollapseClicked(object sender, RoutedEventArgs e)
+    {
+        _navigationCollapsed = !_navigationCollapsed;
+        UpdateShellLayout();
+        SaveShellConfig();
+    }
+
+    // The collapse toggle only matters where the window is wide enough for labelled navigation.
+    private void RefreshNavCollapseButton()
+    {
+        if (NavCollapseButton is null) return;
+        NavCollapseButton.Visibility = _shellLayoutMode == ShellLayoutMode.Expanded ? Visibility.Visible : Visibility.Collapsed;
+        string label = _navigationCollapsed ? T("Shell.ExpandNavigation") : T("Shell.CollapseNavigation");
+        NavCollapseButton.Content = CreatePrimaryNavContent(_navigationCollapsed ? "" : "", label);
+        NavCollapseButton.Width = _primaryNavExpanded ? 202 : 66;
+        NavCollapseButton.Height = _primaryNavExpanded ? 40 : 52;
+        NavCollapseButton.HorizontalContentAlignment = _primaryNavExpanded ? HorizontalAlignment.Left : HorizontalAlignment.Center;
+        NavCollapseButton.Padding = _primaryNavExpanded ? new Thickness(14, 0, 12, 0) : new Thickness(0);
+        ToolTipService.SetToolTip(NavCollapseButton, label);
+        AutomationProperties.SetName(NavCollapseButton, label);
+    }
+
     private void RefreshPrimaryNavigationVisuals()
     {
         ApplyPrimaryButtonVisual(DashboardNavButton, _currentPrimarySection == PrimarySection.Dashboard);
@@ -329,6 +354,7 @@ public sealed partial class MainWindow
         ApplyPrimaryButtonVisual(UpdatesNavButton, _currentPrimarySection == PrimarySection.Updates);
         ApplyPrimaryButtonVisual(ShortcutsNavButton, _currentPrimarySection == PrimarySection.Shortcuts);
         ApplyPrimaryButtonVisual(SettingsNavButton, _currentPrimarySection == PrimarySection.Settings);
+        ApplyPrimaryButtonVisual(NavCollapseButton, false);
     }
 
     private void ApplyPrimaryButtonVisual(Button button, bool isSelected)
@@ -662,6 +688,38 @@ public sealed partial class MainWindow
         catch (Exception ex)
         {
             TraceStartupStage("Title bar height could not be applied: " + ex.Message);
+        }
+        AppTitleBar.SizeChanged += (_, _) => UpdateTitleBarPassthrough();
+        TitleBarTasksButton.SizeChanged += (_, _) => UpdateTitleBarPassthrough();
+    }
+
+    // Controls in the title bar must be passthrough regions, or the drag region swallows their clicks.
+    // The task button also keeps clear of the system caption buttons on the right.
+    private void UpdateTitleBarPassthrough()
+    {
+        try
+        {
+            if (AppTitleBar.XamlRoot is null) return;
+            double scale = AppTitleBar.XamlRoot.RasterizationScale;
+            TitleBarTasksButton.Margin = new Thickness(0, 0, AppWindow.TitleBar.RightInset / scale + 8, 0);
+            var source = Microsoft.UI.Input.InputNonClientPointerSource.GetForWindowId(AppWindow.Id);
+            if (TitleBarTasksButton.Visibility != Visibility.Visible || TitleBarTasksButton.ActualWidth <= 0)
+            {
+                source.ClearRegionRects(Microsoft.UI.Input.NonClientRegionKind.Passthrough);
+                return;
+            }
+            Windows.Foundation.Rect bounds = TitleBarTasksButton.TransformToVisual(null)
+                .TransformBounds(new Windows.Foundation.Rect(0, 0, TitleBarTasksButton.ActualWidth, TitleBarTasksButton.ActualHeight));
+            source.SetRegionRects(Microsoft.UI.Input.NonClientRegionKind.Passthrough,
+            [
+                new Windows.Graphics.RectInt32(
+                    (int)Math.Round(bounds.X * scale), (int)Math.Round(bounds.Y * scale),
+                    (int)Math.Round(bounds.Width * scale), (int)Math.Round(bounds.Height * scale))
+            ]);
+        }
+        catch (Exception ex)
+        {
+            LogApplicationIssue("Title bar passthrough", ex);
         }
     }
 

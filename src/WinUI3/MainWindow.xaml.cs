@@ -135,6 +135,7 @@ public sealed partial class MainWindow : Window
     private readonly List<ModPersistentSlot> _modPersistentSlots = [];
     private readonly ObservableCollection<DownloadTaskItem> _downloadTasks = [];
     private readonly Dictionary<string, DownloadTaskCardView> _downloadTaskCards = new(StringComparer.Ordinal);
+    private readonly Dictionary<string, DownloadTaskCardView> _titleBarTaskCards = new(StringComparer.Ordinal);
 
     private bool _isDarkTheme;
     private bool _isCheckingUpdates;
@@ -189,6 +190,8 @@ public sealed partial class MainWindow : Window
     private AppLanguage _currentLanguage = AppLanguage.ZhCn;
     private PrimarySection _currentPrimarySection = PrimarySection.Dashboard;
     private ShellLayoutMode _shellLayoutMode = (ShellLayoutMode)(-1);
+    private bool _primaryNavExpanded;
+    private bool _navigationCollapsed;
     private OnlineSortMode _onlineSortMode = OnlineSortMode.Hotness;
     private OnlineCardLayoutMode _onlineCardLayoutMode = OnlineCardLayoutMode.List;
     private UpdateCheckInterval _updateCheckInterval = UpdateCheckInterval.Manual;

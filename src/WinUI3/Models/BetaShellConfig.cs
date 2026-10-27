@@ -50,6 +50,8 @@ public sealed class BetaShellConfig
 
     public bool MinimizeToTray { get; set; }
 
+    public bool NavigationCollapsed { get; set; }
+
     public string? InterfaceDensity { get; set; }
 
     public string? OnlineCardLayout { get; set; }
