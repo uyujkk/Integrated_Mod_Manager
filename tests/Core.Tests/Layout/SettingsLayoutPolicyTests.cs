@@ -5,17 +5,15 @@ namespace IntegratedModManager.Core.Tests;
 public sealed class SettingsLayoutPolicyTests
 {
     [Theory]
-    [InlineData(1500, 620, 2)]
-    [InlineData(1500, 900, 2)]
-    [InlineData(1500, 1039, 2)]
-    [InlineData(1080, 1040, 3)]
-    [InlineData(1079, 1200, 2)]
-    [InlineData(845, 621, 2)]
-    [InlineData(760, 621, 2)]
-    [InlineData(759, 621, 1)]
-    [InlineData(600, 466, 1)]
-    public void OverviewNeedsBothWidthAndHeight(double width, double height, int expected)
-        => Assert.Equal(expected, SettingsLayoutPolicy.Mode(width, height));
+    [InlineData(2400, 3)]
+    [InlineData(1230, 3)]
+    [InlineData(1080, 3)]
+    [InlineData(1079, 2)]
+    [InlineData(760, 2)]
+    [InlineData(759, 1)]
+    [InlineData(600, 1)]
+    public void OverviewNeedsOnlyWidth(double width, int expected)
+        => Assert.Equal(expected, SettingsLayoutPolicy.Mode(width));
 
     [Theory]
     [InlineData(621, 88, 130, 375)]

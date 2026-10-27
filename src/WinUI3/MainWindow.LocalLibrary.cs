@@ -1103,8 +1103,8 @@ public sealed partial class MainWindow
 
     private void SetBusyState(bool busy)
     {
-        ThemeToggleButton.IsEnabled = !busy;
-        LanguageToggleButton.IsEnabled = !busy;
+        ThemeComboBox.IsEnabled = !busy;
+        LanguageComboBox.IsEnabled = !busy;
         LinkDeploymentToggleSwitch.IsEnabled = !busy;
         FirstLevelListView.IsEnabled = !busy;
         SecondLevelListView.IsEnabled = !busy;

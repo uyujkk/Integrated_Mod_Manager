@@ -204,8 +204,8 @@ public sealed partial class MainWindow
 
     private void RefreshTraySetting()
     {
-        TraySettingTitleTextBlock.Text = T("Tray.MinimizeToSystemTray");
-        TraySettingDescriptionTextBlock.Text = T("Tray.KeepTheAppRunningInThe");
+        TraySettingRow.Title = T("Tray.MinimizeToSystemTray");
+        TraySettingRow.Description = T("Tray.KeepTheAppRunningInThe");
         _isApplyingTraySetting = true;
         MinimizeToTrayToggleSwitch.IsOn = _minimizeToTray;
         MinimizeToTrayToggleSwitch.OnContent = T("Common.On2");

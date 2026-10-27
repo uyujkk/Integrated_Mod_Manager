@@ -25,13 +25,6 @@ public sealed partial class MainWindow
 
         OnlineTitleTextBlock.Text = T("Common.OnlineModBrowser");
         OnlineSubtitleTextBlock.Text = T("ShortcutBindings.ThisPageNowFocusesOnThe");
-        OnlineRepositoryLabelTextBlock.Text = T("Common.Repository");
-        OnlineSourceLabelTextBlock.Text = T("Common.OnlineSource");
-        OnlineReadyLabelTextBlock.Text = T("Common.Readiness");
-        OnlineConfigTitleTextBlock.Text = T("Common.CurrentRepositoryMapping");
-        OnlineConfigHintTextBlock.Text = T("ShortcutBindings.TheOnlinePageReadsTheCurrent");
-        OnlineCategoryLabelTextBlock.Text = T("Common.CategoryID");
-        OnlineNotesLabelTextBlock.Text = T("Common.Notes");
         OnlinePreviewTitleTextBlock.Text = T("Common.OnlineModList");
         OnlinePreviewHintTextBlock.Text = T("ShortcutBindings.ThisPageLoadsDataFromAn");
         RefreshSettingsButtonLabels();

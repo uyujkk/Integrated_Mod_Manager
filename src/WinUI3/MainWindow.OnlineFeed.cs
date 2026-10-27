@@ -60,24 +60,6 @@ public sealed partial class MainWindow
             _onlineMods.Clear();
         }
 
-        OnlineRepositoryValueTextBlock.Text = hasRepository ? repository!.Name : T("Common.NotSelected");
-        OnlineSourceValueTextBlock.Text = hasRepository ? effectiveSource : T("Common.NotSelected");
-        OnlineReadyValueTextBlock.Text = canLoadOnlineMods
-            ? (_isLoadingOnlineMods ? T("OnlineFeed.Loading") : T("Common.Ready"))
-            : T("Common.NeedsSetup");
-        OnlineCategoryValueTextBlock.Text = hasRepository
-            ? (string.IsNullOrWhiteSpace(effectiveGameName)
-                ? effectiveCategoryId
-                : $"{effectiveCategoryId} · {effectiveGameName}")
-            : T("OnlineFeed.SelectARepositoryFromTheLeft");
-        OnlineNotesValueTextBlock.Text = hasRepository
-            ? (string.IsNullOrWhiteSpace(repository!.Notes)
-                ? (string.IsNullOrWhiteSpace(effectiveGameName)
-                    ? T("OnlineFeed.NoNotesYetUseThisArea")
-                    : T("OnlineFeed.CurrentGame", effectiveGameName))
-                : NormalizeUiText(repository.Notes))
-            : T("OnlineFeed.TheOnlinePageWillLoadContent");
-
         RefreshOnlineButton.IsEnabled = canLoadOnlineMods && !_isLoadingOnlineMods;
         OnlineLoadingOverlay.Visibility = _isLoadingOnlineMods ? Visibility.Visible : Visibility.Collapsed;
         OnlineLoadingTextBlock.Text = T("OnlineFeed.LoadingOnlineModsPleaseWait");

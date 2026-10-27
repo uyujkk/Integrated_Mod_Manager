@@ -1460,85 +1460,45 @@
                             <StackPanel Spacing="12">
                                 <TextBlock x:Name="SettingsAppearanceTitleTextBlock" Style="{StaticResource SectionTitleTextStyle}" />
                                 <StackPanel Spacing="8">
-                                    <Border Style="{StaticResource SettingRowBorderStyle}">
-                                        <Grid ColumnSpacing="14">
-                                            <Grid.ColumnDefinitions>
-                                                <ColumnDefinition Width="42" />
-                                                <ColumnDefinition Width="*" />
-                                                <ColumnDefinition Width="Auto" />
-                                            </Grid.ColumnDefinitions>
-                                            <FontIcon Glyph="&#xE774;" FontSize="20" HorizontalAlignment="Center" VerticalAlignment="Center" />
-                                            <StackPanel Grid.Column="1" Spacing="3" VerticalAlignment="Center">
-                                                <TextBlock x:Name="LanguageSettingTitleTextBlock" FontWeight="SemiBold" />
-                                                <TextBlock x:Name="LanguageSettingDescriptionTextBlock" Style="{StaticResource CaptionTextStyle}" TextWrapping="Wrap" />
-                                            </StackPanel>
-                                            <Button x:Name="LanguageToggleButton" Grid.Column="2" Click="OnLanguageToggleClicked" MinWidth="128" Style="{StaticResource SecondaryButtonStyle}" />
-                                        </Grid>
-                                    </Border>
-
-                                    <Border Style="{StaticResource SettingRowBorderStyle}">
-                                        <Grid ColumnSpacing="14">
-                                            <Grid.ColumnDefinitions>
-                                                <ColumnDefinition Width="42" />
-                                                <ColumnDefinition Width="*" />
-                                                <ColumnDefinition Width="Auto" />
-                                            </Grid.ColumnDefinitions>
-                                            <FontIcon Glyph="&#xE790;" FontSize="20" HorizontalAlignment="Center" VerticalAlignment="Center" />
-                                            <StackPanel Grid.Column="1" Spacing="3" VerticalAlignment="Center">
-                                                <TextBlock x:Name="ThemeSettingTitleTextBlock" FontWeight="SemiBold" />
-                                                <TextBlock x:Name="ThemeSettingDescriptionTextBlock" Style="{StaticResource CaptionTextStyle}" TextWrapping="Wrap" />
-                                            </StackPanel>
-                                            <Button x:Name="ThemeToggleButton" Grid.Column="2" Click="OnThemeToggleClicked" MinWidth="128" Style="{StaticResource SecondaryButtonStyle}" />
-                                        </Grid>
-                                    </Border>
-
-                                    <Border Style="{StaticResource SettingRowBorderStyle}">
-                                        <Grid ColumnSpacing="14">
-                                            <Grid.ColumnDefinitions>
-                                                <ColumnDefinition Width="42" />
-                                                <ColumnDefinition Width="*" />
-                                                <ColumnDefinition Width="Auto" />
-                                            </Grid.ColumnDefinitions>
-                                            <FontIcon Glyph="&#xE786;" FontSize="20" HorizontalAlignment="Center" VerticalAlignment="Center" />
-                                            <StackPanel Grid.Column="1" Spacing="3" VerticalAlignment="Center">
-                                                <TextBlock x:Name="MotionSettingTitleTextBlock" FontWeight="SemiBold" />
-                                                <TextBlock x:Name="MotionSettingDescriptionTextBlock" Style="{StaticResource CaptionTextStyle}" TextWrapping="Wrap" />
-                                            </StackPanel>
-                                            <ToggleSwitch x:Name="ReduceMotionToggleSwitch" Grid.Column="2" VerticalAlignment="Center" Toggled="OnReduceMotionToggled" />
-                                        </Grid>
-                                    </Border>
-
-                                    <Border Style="{StaticResource SettingRowBorderStyle}">
-                                        <Grid ColumnSpacing="14">
-                                            <Grid.ColumnDefinitions>
-                                                <ColumnDefinition Width="42" />
-                                                <ColumnDefinition Width="*" />
-                                                <ColumnDefinition Width="Auto" />
-                                            </Grid.ColumnDefinitions>
-                                            <FontIcon Glyph="&#xE8A9;" FontSize="20" HorizontalAlignment="Center" VerticalAlignment="Center" />
-                                            <StackPanel Grid.Column="1" Spacing="3" VerticalAlignment="Center">
-                                                <TextBlock x:Name="DensitySettingTitleTextBlock" FontWeight="SemiBold" />
-                                                <TextBlock x:Name="DensitySettingDescriptionTextBlock" Style="{StaticResource CaptionTextStyle}" TextWrapping="Wrap" />
-                                            </StackPanel>
-                                            <ComboBox x:Name="DensityComboBox" Grid.Column="2" MinWidth="150" SelectionChanged="OnDensitySelectionChanged" />
-                                        </Grid>
-                                    </Border>
-
-                                    <Border Style="{StaticResource SettingRowBorderStyle}">
-                                        <Grid ColumnSpacing="14">
-                                            <Grid.ColumnDefinitions>
-                                                <ColumnDefinition Width="42" />
-                                                <ColumnDefinition Width="*" />
-                                                <ColumnDefinition Width="Auto" />
-                                            </Grid.ColumnDefinitions>
-                                            <FontIcon Glyph="&#xE8B7;" FontSize="20" HorizontalAlignment="Center" VerticalAlignment="Center" />
-                                            <StackPanel Grid.Column="1" Spacing="3" VerticalAlignment="Center">
-                                                <TextBlock x:Name="TraySettingTitleTextBlock" FontWeight="SemiBold" />
-                                                <TextBlock x:Name="TraySettingDescriptionTextBlock" Style="{StaticResource CaptionTextStyle}" TextWrapping="Wrap" />
-                                            </StackPanel>
-                                            <ToggleSwitch x:Name="MinimizeToTrayToggleSwitch" Grid.Column="2" VerticalAlignment="Center" Toggled="OnMinimizeToTrayToggled" />
-                                        </Grid>
-                                    </Border>
+                                    <local:SettingRow x:Name="LanguageSettingRow" Glyph="&#xE774;">
+                                        <local:SettingRow.Action>
+                                            <ComboBox
+                                                x:Name="LanguageComboBox"
+                                                MinWidth="160"
+                                                ItemsSource="{x:Bind AppearanceSettings.LanguageOptions, Mode=OneWay}"
+                                                SelectedIndex="{x:Bind AppearanceSettings.LanguageIndex, Mode=TwoWay}" />
+                                        </local:SettingRow.Action>
+                                    </local:SettingRow>
+                                    <local:SettingRow x:Name="ThemeSettingRow" Glyph="&#xE790;">
+                                        <local:SettingRow.Action>
+                                            <ComboBox
+                                                x:Name="ThemeComboBox"
+                                                MinWidth="160"
+                                                ItemsSource="{x:Bind AppearanceSettings.ThemeOptions, Mode=OneWay}"
+                                                SelectedIndex="{x:Bind AppearanceSettings.ThemeIndex, Mode=TwoWay}" />
+                                        </local:SettingRow.Action>
+                                    </local:SettingRow>
+                                    <local:SettingRow x:Name="DensitySettingRow" Glyph="&#xE8A9;">
+                                        <local:SettingRow.Action>
+                                            <ComboBox
+                                                x:Name="DensityComboBox"
+                                                MinWidth="160"
+                                                ItemsSource="{x:Bind AppearanceSettings.DensityOptions, Mode=OneWay}"
+                                                SelectedIndex="{x:Bind AppearanceSettings.DensityIndex, Mode=TwoWay}" />
+                                        </local:SettingRow.Action>
+                                    </local:SettingRow>
+                                    <local:SettingRow x:Name="MotionSettingRow" Glyph="&#xE786;">
+                                        <local:SettingRow.Action>
+                                            <ToggleSwitch
+                                                x:Name="ReduceMotionToggleSwitch"
+                                                IsOn="{x:Bind AppearanceSettings.ReduceMotion, Mode=TwoWay}" />
+                                        </local:SettingRow.Action>
+                                    </local:SettingRow>
+                                    <local:SettingRow x:Name="TraySettingRow" Glyph="&#xE8B7;">
+                                        <local:SettingRow.Action>
+                                            <ToggleSwitch x:Name="MinimizeToTrayToggleSwitch" Toggled="OnMinimizeToTrayToggled" />
+                                        </local:SettingRow.Action>
+                                    </local:SettingRow>
                                 </StackPanel>
                             </StackPanel>
                         </Border>
@@ -1632,58 +1592,22 @@
                         <Border x:Name="SettingsOnlineCard" Style="{StaticResource CardBorderStyle}">
                             <StackPanel Spacing="12">
                                 <TextBlock x:Name="SettingsPlaceholderTitleTextBlock" Style="{StaticResource SectionTitleTextStyle}" />
-                                <TextBlock x:Name="SettingsPlaceholderTextBlock" Style="{StaticResource MutedTextStyle}" TextWrapping="Wrap" />
-                                <Grid ColumnSpacing="12">
-                                    <Grid.ColumnDefinitions>
-                                        <ColumnDefinition Width="*" />
-                                        <ColumnDefinition Width="*" />
-                                        <ColumnDefinition Width="*" />
-                                    </Grid.ColumnDefinitions>
-
-                                    <Border Grid.Column="0" Style="{StaticResource MetricCardStyle}">
-                                        <StackPanel Spacing="8">
-                                            <TextBlock x:Name="OnlineRepositoryLabelTextBlock" Style="{StaticResource MutedTextStyle}" />
-                                            <TextBlock x:Name="OnlineRepositoryValueTextBlock" Style="{StaticResource MetricValueTextStyle}" />
-                                        </StackPanel>
-                                    </Border>
-
-                                    <Border Grid.Column="1" Style="{StaticResource MetricCardStyle}">
-                                        <StackPanel Spacing="8">
-                                            <TextBlock x:Name="OnlineSourceLabelTextBlock" Style="{StaticResource MutedTextStyle}" />
-                                            <TextBlock
-                                                x:Name="OnlineSourceValueTextBlock"
-                                                FontSize="26"
-                                                FontWeight="SemiBold"
-                                                MaxLines="2"
-                                                TextWrapping="WrapWholeWords" />
-                                        </StackPanel>
-                                    </Border>
-
-                                    <Border Grid.Column="2" Style="{StaticResource MetricCardStyle}">
-                                        <StackPanel Spacing="8">
-                                            <TextBlock x:Name="OnlineReadyLabelTextBlock" Style="{StaticResource MutedTextStyle}" />
-                                            <TextBlock x:Name="OnlineReadyValueTextBlock" Style="{StaticResource MetricValueTextStyle}" />
-                                        </StackPanel>
-                                    </Border>
-                                </Grid>
-                                <TextBlock x:Name="OnlineConfigTitleTextBlock" Style="{StaticResource SectionTitleTextStyle}" />
-                                <TextBlock x:Name="OnlineConfigHintTextBlock" Style="{StaticResource MutedTextStyle}" TextWrapping="Wrap" />
-                                <Grid ColumnSpacing="12">
-                                    <Grid.ColumnDefinitions>
-                                        <ColumnDefinition Width="140" />
-                                        <ColumnDefinition Width="*" />
-                                    </Grid.ColumnDefinitions>
-                                    <TextBlock x:Name="OnlineCategoryLabelTextBlock" VerticalAlignment="Center" />
-                                    <TextBlock x:Name="OnlineCategoryValueTextBlock" Grid.Column="1" Style="{StaticResource MutedTextStyle}" TextWrapping="Wrap" />
-                                </Grid>
-                                <Grid ColumnSpacing="12">
-                                    <Grid.ColumnDefinitions>
-                                        <ColumnDefinition Width="140" />
-                                        <ColumnDefinition Width="*" />
-                                    </Grid.ColumnDefinitions>
-                                    <TextBlock x:Name="OnlineNotesLabelTextBlock" VerticalAlignment="Top" />
-                                    <TextBlock x:Name="OnlineNotesValueTextBlock" Grid.Column="1" Style="{StaticResource MutedTextStyle}" TextWrapping="Wrap" />
-                                </Grid>
+                                <TextBlock x:Name="SettingsPlaceholderTextBlock" Style="{StaticResource CaptionTextStyle}" TextWrapping="Wrap" />
+                                <!-- One compact table instead of a text block, metric cards and a mapping section that repeated it. -->
+                                <ItemsControl x:Name="SettingsOnlineInfoList">
+                                    <ItemsControl.ItemTemplate>
+                                        <DataTemplate x:DataType="local:SettingInfoItem">
+                                            <Grid ColumnSpacing="16" Padding="0,5" BorderThickness="0,0,0,1" BorderBrush="{ThemeResource AppCardBorderBrush}">
+                                                <Grid.ColumnDefinitions>
+                                                    <ColumnDefinition Width="172" />
+                                                    <ColumnDefinition Width="*" />
+                                                </Grid.ColumnDefinitions>
+                                                <TextBlock Text="{x:Bind Label}" Style="{StaticResource CaptionTextStyle}" TextWrapping="Wrap" VerticalAlignment="Center" />
+                                                <TextBlock Grid.Column="1" Text="{x:Bind Value}" IsTextSelectionEnabled="True" TextWrapping="Wrap" />
+                                            </Grid>
+                                        </DataTemplate>
+                                    </ItemsControl.ItemTemplate>
+                                </ItemsControl>
                                 <StackPanel Orientation="Horizontal" Spacing="10">
                                     <Button
                                         x:Name="EditOnlineRepositoryButton"
