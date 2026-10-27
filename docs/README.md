@@ -45,7 +45,7 @@ This directory contains the usage, release, development, and research documentat
 
 ## 开发文档 / Development
 
-- [源码结构 / Source Layout](./development/Architecture.md)
+- [软件结构 / Software Structure](./development/Software-Structure.md)
 - [v4.5.2 正式版验证 / Stable Release Verification](./verification/v4.5.2.md)
 - [v4.5.1 正式版验证 / Stable Release Verification](./verification/v4.5.1.md)
 - [v4.5.0 正式版验证 / Stable Release Verification](./verification/v4.5.0.md)

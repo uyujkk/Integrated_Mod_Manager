@@ -163,6 +163,7 @@ Mod 存储文件夹
 | 旧版升级说明（归档） | [归档](./guides/archive/) | [Archive](./guides/archive/) |
 | 更新历史 | [双语更新日志](./releases/CHANGELOG.md) | [Bilingual Changelog](./releases/CHANGELOG.md) |
 | 跨 Mod 状态试验 | [试验路线与当前结论](./research/跨Mod状态保存试验结论.md) | [Current conclusions](./research/跨Mod状态保存试验结论.md) |
+| 软件结构 | [软件结构](./development/Software-Structure.md) | [Software Structure](./development/Software-Structure.md) |
 | 测试与构建 | [测试说明](./development/TESTING.md) | [Testing Guide](./development/TESTING.md) |
 | 4.1 源码优化 | [源码优化记录](./development/Source-Optimization-v4.1.md) | [Source Optimization Record](./development/Source-Optimization-v4.1.md) |
 | 参与项目 | [贡献指南](../.github/CONTRIBUTING.md) | [Contributing](../.github/CONTRIBUTING.md) |
