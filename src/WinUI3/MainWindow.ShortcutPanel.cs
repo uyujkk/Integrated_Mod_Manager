@@ -121,11 +121,10 @@ public sealed partial class MainWindow
     {
         if (_shortcutModPicker is not null) return;
         var pane = ShortcutPaneContent;
-        pane.Children.Add(new TextBlock { Text = T("Common.ModShortcuts"), FontSize = 26, FontWeight = Microsoft.UI.Text.FontWeights.SemiBold });
-        pane.Children.Add(new TextBlock
+        pane.Children.Add(new PageHeader
         {
-            Text = T("ShortcutPanel.SelectAModAndGameWindow"),
-            TextWrapping = TextWrapping.Wrap
+            Title = T("Common.ModShortcuts"),
+            Description = T("ShortcutPanel.SelectAModAndGameWindow")
         });
         _shortcutModPicker = new ComboBox { Header = T("ShortcutPanel.ModCurrentRepository"), HorizontalAlignment = HorizontalAlignment.Stretch };
         _shortcutModPicker.SelectionChanged += async (_, _) => await RunUiActionAsync("Select shortcut Mod", async () =>

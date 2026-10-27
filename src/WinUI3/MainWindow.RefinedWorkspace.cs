@@ -1,3 +1,4 @@
+using IntegratedModManager.Core.Layout;
 using Microsoft.UI.Xaml;
 using Microsoft.UI.Xaml.Automation;
 using Microsoft.UI.Xaml.Controls;
@@ -38,7 +39,6 @@ public sealed partial class MainWindow
     private Grid? _dashboardPresetsGrid;
     private Grid? _settingsResponsiveGrid;
     private StackPanel? _settingsRootPanel;
-    private Border? _settingsHeaderCard;
     private Grid? _settingsNavigationGrid;
     private Border? _settingsNavigationCard;
     private Grid? _settingsContentHost;
@@ -129,7 +129,6 @@ public sealed partial class MainWindow
                 VerticalAlignment = VerticalAlignment.Stretch,
                 Child = dashboardPathContent
             };
-            dashboardPanel.Children.Insert(2, _dashboardPathCard);
             InitializeDashboardLayout(dashboardPanel);
         }
 
@@ -292,6 +291,7 @@ public sealed partial class MainWindow
             : Visibility.Collapsed;
 
         InitializeResponsiveSettingsLayout();
+        InitializePageLayouts();
         CopyProgressBar.Height = 3;
         RootGrid.SizeChanged += (_, _) => UpdateRefinedWorkspaceLayout();
         UpdateRefinedWorkspaceLanguage();
@@ -370,17 +370,15 @@ public sealed partial class MainWindow
 
     private void InitializeDashboardLayout(StackPanel dashboardPanel)
     {
-        if (dashboardPanel.Children.Count < 6
-            || dashboardPanel.Children[0] is not Border header
-            || dashboardPanel.Children[1] is not Border repositorySelector
-            || dashboardPanel.Children[3] is not Grid metrics
-            || dashboardPanel.Children[4] is not Border presets
-            || dashboardPanel.Children[5] is not Border repositories
-            || _dashboardPathCard is null)
+        if (_dashboardPathCard is null)
         {
             return;
         }
 
+        // The cards are found by name, so reordering them in XAML cannot break this layout.
+        Border repositorySelector = DashboardRepositorySelectorCard;
+        Grid metrics = DashboardMetricsGrid;
+        Border presets = DashboardPresetsCard;
         _dashboardRootPanel = dashboardPanel;
         _dashboardRepositorySelectorCard = repositorySelector;
         _dashboardMetricsGrid = metrics;
@@ -413,37 +411,27 @@ public sealed partial class MainWindow
         _dashboardMainGrid.Children.Add(_dashboardPathCard);
         _dashboardMainGrid.Children.Add(presets);
 
-        dashboardPanel.Children.Add(header);
+        dashboardPanel.Children.Add(DashboardPageHeader);
         dashboardPanel.Children.Add(_dashboardSummaryGrid);
         dashboardPanel.Children.Add(_dashboardMainGrid);
-        dashboardPanel.Children.Add(repositories);
+        dashboardPanel.Children.Add(DashboardRepositoriesCard);
         DashboardScrollViewer.HorizontalScrollBarVisibility = ScrollBarVisibility.Disabled;
     }
 
     private void InitializeResponsiveSettingsLayout()
     {
-        if (SettingsScrollViewer.Content is not StackPanel settingsPanel || settingsPanel.Children.Count < 6)
+        if (SettingsScrollViewer.Content is not StackPanel settingsPanel)
         {
             return;
         }
 
-        if (settingsPanel.Children[1] is not Border appearance
-            || settingsPanel.Children[2] is not Border updates
-            || settingsPanel.Children[3] is not Border online
-            || settingsPanel.Children[4] is not Border diagnostics
-            || settingsPanel.Children[5] is not Border resources)
+        // Cards are found by name; the header stays and the cards move into the responsive grid.
+        _settingsCards = [SettingsAppearanceCard, SettingsAppUpdatesCard, SettingsOnlineCard, SettingsDiagnosticsCard, ProjectResourcesCard];
+        foreach (Border card in _settingsCards)
         {
-            return;
+            settingsPanel.Children.Remove(card);
         }
-
-        for (int index = 5; index >= 1; index--)
-        {
-            settingsPanel.Children.RemoveAt(index);
-        }
-
-        _settingsCards = [appearance, updates, online, diagnostics, resources];
         _settingsRootPanel = settingsPanel;
-        _settingsHeaderCard = settingsPanel.Children[0] as Border;
         foreach (Border card in _settingsCards)
         {
             card.HorizontalAlignment = HorizontalAlignment.Stretch;
@@ -733,12 +721,8 @@ public sealed partial class MainWindow
             return;
         }
 
-        double available = DashboardScrollViewer.ActualWidth;
-        if (available <= 0)
-        {
-            available = Math.Max(420, Bounds.Width - 240);
-        }
-        int mode = available >= 1460 ? 2 : available >= 860 ? 1 : 0;
+        double available = PageWidth(DashboardScrollViewer);
+        int mode = DashboardLayoutPolicy.Mode(available);
         if (_dashboardLayoutMode == mode)
         {
             return;
@@ -791,17 +775,10 @@ public sealed partial class MainWindow
             Place(_dashboardPresetsCard, 1, 0);
         }
 
-        ReflowCards(_dashboardMetricsGrid, mode == 0 && available < 620 ? 1 : 3);
+        ReflowCards(_dashboardMetricsGrid, DashboardLayoutPolicy.MetricColumns(available));
         if (_dashboardPresetsGrid is not null)
         {
-            int presetColumns = mode == 2
-                ? 1
-                : mode == 0 && available < 680
-                    ? 1
-                    : mode == 0
-                        ? 2
-                        : 3;
-            ReflowCards(_dashboardPresetsGrid, presetColumns);
+            ReflowCards(_dashboardPresetsGrid, DashboardLayoutPolicy.PresetColumns(available));
             if (mode == 2)
             {
                 foreach (RowDefinition row in _dashboardPresetsGrid.RowDefinitions)
@@ -823,11 +800,7 @@ public sealed partial class MainWindow
             return;
         }
 
-        double available = SettingsScrollViewer.ActualWidth;
-        if (available <= 0)
-        {
-            available = Math.Max(420, Bounds.Width - 240);
-        }
+        double available = PageWidth(SettingsScrollViewer);
         if (_settingsRootPanel is not null)
         {
             _settingsRootPanel.Width = Math.Max(420, Math.Min(3200, available - 12));
@@ -925,7 +898,7 @@ public sealed partial class MainWindow
 
         if (_settingsSectionScrollViewer is not null)
         {
-            double header = _settingsHeaderCard?.ActualHeight > 0 ? _settingsHeaderCard.ActualHeight : 88;
+            double header = SettingsHeaderHeight();
             double navigation = mode == 1 ? Math.Max(130, _settingsNavigationCard?.ActualHeight ?? 0) : 0;
             _settingsSectionScrollViewer.MaxHeight = IntegratedModManager.Core.Layout.SettingsLayoutPolicy.FocusHeight(
                 SettingsScrollViewer.ActualHeight, header, navigation);
@@ -939,9 +912,7 @@ public sealed partial class MainWindow
             return;
         }
 
-        double headerHeight = _settingsHeaderCard?.ActualHeight > 0
-            ? _settingsHeaderCard.ActualHeight
-            : 88;
+        double headerHeight = SettingsHeaderHeight();
         double usableHeight = Math.Max(0, SettingsScrollViewer.ActualHeight - headerHeight - 20);
         _settingsOverviewGrid.Height = usableHeight;
         if (_settingsSectionScrollViewer is not null)

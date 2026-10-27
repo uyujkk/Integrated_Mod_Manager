@@ -154,8 +154,8 @@ public sealed partial class MainWindow
 
     private void RefreshUpdatesPane()
     {
-        UpdatesTitleTextBlock.Text = T("Updates.ModUpdates");
-        UpdatesSubtitleTextBlock.Text = T("Updates.CheckInstalledModsForNewVersions");
+        UpdatesPageHeader.Title = T("Updates.ModUpdates");
+        UpdatesPageHeader.Description = T("Updates.CheckInstalledModsForNewVersions");
         ConfigurationProfilesTitleTextBlock.Text = T("Updates.ModCombinationPresets");
         ConfigurationProfilesHintTextBlock.Text = T("Updates.SaveEnabledModsAndPersistentState");
         CaptureCombinationStateCheckBox.Content = T("Updates.IncludeD3dxUserIniParametersWhen");
@@ -180,7 +180,7 @@ public sealed partial class MainWindow
         _ = RefreshInstallBackupListAsync();
         RefreshConfigurationProfiles();
         RefreshDownloadTaskCenter();
-        TrackedModSettingsTitleTextBlock.Text = T("Updates.CheckSettings");
+        TrackedModSettingsTitleTextBlock.Text =T("Updates.CheckSettings");
         TrackedModSettingsHintTextBlock.Text = T("Updates.CheckOnStartupAtTheSelected");
         ModUpdateIntervalLabelTextBlock.Text = T("Updates.CheckInterval");
         ModUpdateIntervalHintTextBlock.Text = T("Updates.OnlyOnlineInstalledModsWithA");
