@@ -219,9 +219,19 @@ public sealed partial class MainWindow
         {
             if (_trackedModOrigins.Count == 0)
             {
-                TrackedModsListPanel.Children.Add(CreateInfoCard(
+                // Mods are tracked once they come from the online page, so the empty state leads there.
+                var empty = new StackPanel { Spacing = 10 };
+                empty.Children.Add(CreateInfoCard(
                     T("Updates.NoTrackedOnlineModsYet"),
                     T("Updates.AfterDownloadingAndExtractingFromThe")));
+                var browse = new Button
+                {
+                    Content = T("Dashboard.BrowseOnline"),
+                    Style = (Style)Application.Current.Resources["PrimaryButtonStyle"]
+                };
+                browse.Click += OnOnlineNavClicked;
+                empty.Children.Add(browse);
+                TrackedModsListPanel.Children.Add(empty);
             }
             else
             {

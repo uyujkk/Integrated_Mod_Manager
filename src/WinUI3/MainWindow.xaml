@@ -1382,6 +1382,7 @@
                             <Grid.ColumnDefinitions>
                                 <ColumnDefinition x:Name="UpdatesPrimaryColumn" Width="1.35*" />
                                 <ColumnDefinition x:Name="UpdatesSecondaryColumn" Width="0.85*" />
+                                <ColumnDefinition x:Name="UpdatesTertiaryColumn" Width="0" />
                             </Grid.ColumnDefinitions>
                             <Grid.RowDefinitions>
                                 <RowDefinition Height="Auto" />
@@ -1458,7 +1459,8 @@
                             </StackPanel>
 
                             <StackPanel x:Name="UpdatesSupportPanel" Grid.Column="1" Spacing="16">
-                                <Border Style="{StaticResource CardBorderStyle}">
+                                <!-- On very wide pages this card moves into its own middle column. -->
+                                <Border x:Name="UpdatesDownloadsCard" Style="{StaticResource CardBorderStyle}">
                                     <StackPanel Spacing="12">
                                         <Grid ColumnSpacing="12">
                                             <Grid.ColumnDefinitions>

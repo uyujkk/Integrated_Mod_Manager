@@ -78,18 +78,28 @@ public sealed partial class MainWindow
         RefreshTitleBarTasks();
         DownloadTaskListPanel.Children.Clear();
         _downloadTaskCards.Clear();
-        if (_downloadTasks.Count == 0)
+
+        // The updates page keeps the history: finished, failed and canceled downloads. Running ones
+        // are followed in the title bar's task flyout, so the page only points there.
+        DownloadTaskItem[] finished = [.. _downloadTasks.Where(item => DownloadProgressPolicy.IsTerminal(item.State))];
+        int running = _downloadTasks.Count - finished.Length;
+        if (running > 0)
+        {
+            DownloadTaskListPanel.Children.Add(new TextBlock
+            {
+                Text = T("DownloadTasks.RunningInTitleBar", running),
+                Style = (Style)Application.Current.Resources["CaptionTextStyle"],
+                TextWrapping = TextWrapping.Wrap
+            });
+        }
+        ClearDownloadTasksButton.IsEnabled = finished.Length > 0;
+        if (finished.Length == 0)
         {
             DownloadTaskListPanel.Children.Add(CreateInfoCard(
                 T("DownloadTasks.NoDownloadTasks"),
                 T("DownloadTasks.DownloadsStartedFromTheOnlineBrowser")));
-            ClearDownloadTasksButton.IsEnabled = false;
-            return;
         }
-
-        ClearDownloadTasksButton.IsEnabled = _downloadTasks.Any(item =>
-            item.State is DownloadTaskState.Completed or DownloadTaskState.Failed or DownloadTaskState.Canceled);
-        foreach (DownloadTaskItem task in _downloadTasks)
+        foreach (DownloadTaskItem task in finished)
         {
             DownloadTaskListPanel.Children.Add(CreateDownloadTaskCard(task, _downloadTaskCards));
         }
@@ -167,6 +177,11 @@ public sealed partial class MainWindow
     // A task can be shown twice: in the Updates task center and in the title bar flyout.
     private void RefreshDownloadTaskCard(DownloadTaskItem task)
     {
+        // A download that just finished joins the history on the updates page.
+        if (DownloadProgressPolicy.IsTerminal(task.State) && !_downloadTaskCards.ContainsKey(task.Id))
+        {
+            RefreshDownloadTaskCenter();
+        }
         RefreshTitleBarTasks();
         foreach (Dictionary<string, DownloadTaskCardView> cards in new[] { _downloadTaskCards, _titleBarTaskCards })
         {
