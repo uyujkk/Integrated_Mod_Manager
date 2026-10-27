@@ -744,6 +744,10 @@ public sealed partial class MainWindow
         RefreshPrimaryNavigationVisuals();
         RefreshSecondaryNavigation();
         UpdateShortcutKeyFocusVisuals();
+        // Binding cards take their key-cap colours when created; drop them so they are rebuilt.
+        _mainShortcutControls.Clear();
+        _mainBindings = [];
+        RenderShortcutButtons();
         ApplyLanguage();
     }
 

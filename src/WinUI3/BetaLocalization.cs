@@ -142,7 +142,6 @@ internal static class BetaLocalization
         ["Category"] = "分类",
         ["Likes"] = "点赞",
         ["Views"] = "查看",
-        ["Downloads"] = "下载量",
         ["Hotness"] = "热度",
         ["Updated"] = "更新时间",
         ["Open Page"] = "打开页面",

@@ -1,6 +1,7 @@
 using System.ComponentModel;
 using System.Diagnostics;
 using IntegratedModManager.Core.Deployment;
+using IntegratedModManager.Core.Layout;
 using IntegratedModManager.Core.Shortcuts;
 using Microsoft.UI.Xaml;
 using Microsoft.UI.Xaml.Controls;
@@ -19,7 +20,7 @@ public sealed partial class MainWindow
     private readonly Dictionary<DetectedModShortcut, Button> _overlayShortcutControls = new();
     private ComboBox? _shortcutModPicker;
     private ComboBox? _shortcutTargetPicker;
-    private StackPanel? _shortcutButtons;
+    private Grid? _shortcutButtons;
     private TextBlock? _shortcutStatus;
     private ToggleSwitch? _shortcutEnabledToggle;
     private NumberBox? _shortcutHoldDuration;
@@ -117,15 +118,41 @@ public sealed partial class MainWindow
         return button;
     }
 
+    // The page is a toolbar (what to send to which window), the bindings, and a column of module
+    // rows: beside the bindings on wide pages, above them on narrow ones (UpdateShortcutsLayout).
+    private Grid? _shortcutToolbarGrid;
+    private FrameworkElement? _shortcutToolbarToggle;
+    private Grid? _shortcutBodyGrid;
+    private Border? _shortcutBindingsCard;
+    private StackPanel? _shortcutSettingsColumn;
+    private TextBlock? _shortcutOverlaySummary;
+    private TextBlock? _shortcutSendingSummary;
+    private readonly List<Expander> _shortcutModules = [];
+    private TextBlock? _shortcutHiddenNote;
+    private int _shortcutLayoutMode = -1;
+    private int _shortcutBindingColumns = -1;
+
     private void BuildShortcutPane()
     {
         if (_shortcutModPicker is not null) return;
         var pane = ShortcutPaneContent;
+        pane.Margin = new Thickness(6);
+        pane.Spacing = 12;
+        _shortcutLayoutMode = -1;
+        _shortcutBindingColumns = -1;
+        _shortcutModules.Clear();
+
+        var tools = new StackPanel { Orientation = Orientation.Horizontal, Spacing = 8 };
+        tools.Children.Add(ShortcutButton(T("ShortcutPanel.RefreshWindows"), RefreshShortcutTargets));
+        tools.Children.Add(ShortcutButton(T("ShortcutPanel.ReloadINI"), () => _ = RefreshOverlayFromDiskAsync()));
         pane.Children.Add(new PageHeader
         {
             Title = T("Common.ModShortcuts"),
-            Description = T("ShortcutPanel.SelectAModAndGameWindow")
+            Description = T("ShortcutPanel.SelectAModAndGameWindow"),
+            Actions = tools
         });
+
+        // Toolbar: the Mod, the game window and the switch that arms sending.
         _shortcutModPicker = new ComboBox { Header = T("ShortcutPanel.ModCurrentRepository"), HorizontalAlignment = HorizontalAlignment.Stretch };
         _shortcutModPicker.SelectionChanged += async (_, _) => await RunUiActionAsync("Select shortcut Mod", async () =>
         {
@@ -138,7 +165,6 @@ public sealed partial class MainWindow
             }
             await LoadShortcutSelectionAsync();
         });
-        pane.Children.Add(_shortcutModPicker);
         _shortcutTargetPicker = new ComboBox { Header = T("ShortcutPanel.TargetGameWindow"), PlaceholderText = T("ShortcutPanel.SelectAWindow"), HorizontalAlignment = HorizontalAlignment.Stretch };
         _shortcutTargetPicker.SelectionChanged += (_, _) =>
         {
@@ -148,18 +174,69 @@ public sealed partial class MainWindow
             UpdateShortcutPrivilegeNotice();
             RefreshShortcutOverlay();
         };
-        pane.Children.Add(_shortcutTargetPicker);
-        var tools = new StackPanel { Orientation = Orientation.Horizontal, Spacing = 8 };
-        tools.Children.Add(ShortcutButton(T("ShortcutPanel.RefreshWindows"), RefreshShortcutTargets));
-        tools.Children.Add(ShortcutButton(T("ShortcutPanel.ReloadINI"), () => _ = RefreshOverlayFromDiskAsync()));
-        tools.Children.Add(ShortcutButton(T("ShortcutPanel.FloatingPanel"), OpenShortcutOverlay));
-        pane.Children.Add(tools);
-        _shortcutPrivilegeNotice = new TextBlock { TextWrapping = TextWrapping.Wrap };
-        pane.Children.Add(_shortcutPrivilegeNotice);
+        _shortcutEnabledToggle = LocalizedToggle(T("ShortcutPanel.EnableInputToSelectedWindow"));
+        _shortcutEnabledToggle.Toggled += (_, _) =>
+        {
+            _shortcutInputEnabled = _shortcutEnabledToggle.IsOn && _shortcutTargetPicker.SelectedItem is ShortcutTarget;
+            if (!_shortcutInputEnabled) _shortcutEnabledToggle.IsOn = false;
+            RefreshShortcutOverlay();
+        };
+        _shortcutToolbarToggle = _shortcutEnabledToggle;
+        _shortcutToolbarGrid = new Grid { ColumnSpacing = 16, RowSpacing = 10 };
+        _shortcutToolbarGrid.Children.Add(_shortcutModPicker);
+        _shortcutToolbarGrid.Children.Add(_shortcutTargetPicker);
+        _shortcutToolbarGrid.Children.Add(_shortcutEnabledToggle);
+        _shortcutPrivilegeNotice = new TextBlock { TextWrapping = TextWrapping.Wrap, Style = (Style)Application.Current.Resources["CaptionTextStyle"], VerticalAlignment = VerticalAlignment.Center };
         _shortcutElevateButton = ShortcutButton(T("ShortcutPanel.RestartManagerAsAdministrator"), RestartManagerElevated);
-        pane.Children.Add(_shortcutElevateButton);
+        var privilege = new Grid { ColumnSpacing = 12 };
+        privilege.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(1, GridUnitType.Star) });
+        privilege.ColumnDefinitions.Add(new ColumnDefinition { Width = GridLength.Auto });
+        privilege.Children.Add(_shortcutPrivilegeNotice);
+        Grid.SetColumn(_shortcutElevateButton, 1);
+        privilege.Children.Add(_shortcutElevateButton);
         UpdateShortcutPrivilegeNotice();
-        var hotkeySettings = new StackPanel { Orientation = Orientation.Horizontal, Spacing = 8 };
+        var toolbar = new StackPanel { Spacing = 10 };
+        toolbar.Children.Add(_shortcutToolbarGrid);
+        toolbar.Children.Add(privilege);
+        pane.Children.Add(new Border { Style = (Style)Application.Current.Resources["CardBorderStyle"], Child = toolbar });
+
+        // Bindings: the status of the last read or send, then one card per key binding.
+        // Fixed height: status changes must not move the bindings below it.
+        _shortcutStatus = FixedStatusText(lines: 2, fontSize: 13);
+        _shortcutHiddenNote = new TextBlock { Opacity = .65, TextWrapping = TextWrapping.Wrap, Visibility = Visibility.Collapsed };
+        _shortcutButtons = new Grid();
+        _shortcutButtons.SizeChanged += (_, _) => ReflowShortcutButtons();
+        // Hiding unsendable bindings filters this list, so the switch sits on its title row.
+        var hideUnsupported = new CheckBox
+        {
+            Content = new TextBlock { Text = T("ShortcutPanel.HideBindingsThatCannotBeSent"), TextWrapping = TextWrapping.Wrap },
+            IsChecked = _shortcutHideUnsupported, HorizontalAlignment = HorizontalAlignment.Right
+        };
+        hideUnsupported.Click += (_, _) =>
+        {
+            _shortcutHideUnsupported = hideUnsupported.IsChecked == true;
+            SaveShellConfig();
+            RenderShortcutButtons();
+        };
+        var bindingsTitle = new Grid { ColumnSpacing = 12 };
+        bindingsTitle.ColumnDefinitions.Add(new ColumnDefinition { Width = GridLength.Auto });
+        bindingsTitle.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(1, GridUnitType.Star) });
+        bindingsTitle.Children.Add(new TextBlock { Text = T("ShortcutPanel.KeyBindings"), Style = (Style)Application.Current.Resources["SectionTitleTextStyle"], VerticalAlignment = VerticalAlignment.Center });
+        Grid.SetColumn(hideUnsupported, 1);
+        bindingsTitle.Children.Add(hideUnsupported);
+        var bindings = new StackPanel { Spacing = 10 };
+        bindings.Children.Add(bindingsTitle);
+        bindings.Children.Add(_shortcutStatus);
+        bindings.Children.Add(_shortcutHiddenNote);
+        bindings.Children.Add(_shortcutButtons);
+        _shortcutBindingsCard = new Border { Style = (Style)Application.Current.Resources["CardBorderStyle"], Child = bindings, VerticalAlignment = VerticalAlignment.Top };
+
+        // Settings column: one collapsible row per module, most used first.
+        _shortcutSettingsColumn = new StackPanel { Spacing = 8 };
+        _shortcutOverlaySummary = new TextBlock();
+        var openOverlay = ShortcutButton(T("ShortcutPanel.OpenOverlay"), OpenShortcutOverlay);
+        StackPanel overlay = AddShortcutModule("", T("ShortcutPanel.OverlaySettings"), _shortcutOverlaySummary, openOverlay);
+        overlay.Children.Add(ShortcutGroupLabel(T("ShortcutPanel.HotkeyGroup")));
         var modifiers = new ComboBox { Header = T("ShortcutPanel.ShowHideOverlay") };
         foreach (var item in new[] { ("Ctrl+Alt", 3u), ("Ctrl+Shift", 6u), ("Alt+Shift", 5u) })
             modifiers.Items.Add(new ComboBoxItem { Content = item.Item1, Tag = item.Item2 });
@@ -168,9 +245,12 @@ public sealed partial class MainWindow
         foreach (uint key in Enumerable.Range('A', 26).Concat(Enumerable.Range(0x70, 12)).Select(k => (uint)k))
             keyPicker.Items.Add(new ComboBoxItem { Content = key >= 0x70 ? "F" + (key - 0x6F) : ((char)key).ToString(), Tag = key });
         keyPicker.SelectedItem = keyPicker.Items.Cast<ComboBoxItem>().First(i => (uint)i.Tag == _shortcutPanelHotkeyKey);
+        var hotkeySettings = new StackPanel { Orientation = Orientation.Horizontal, Spacing = 8 };
         hotkeySettings.Children.Add(modifiers);
         hotkeySettings.Children.Add(keyPicker);
-        hotkeySettings.Children.Add(ShortcutButton(T("Common.Apply"), () =>
+        overlay.Children.Add(hotkeySettings);
+        var hotkeyActions = new StackPanel { Orientation = Orientation.Horizontal, Spacing = 8 };
+        hotkeyActions.Children.Add(ShortcutButton(T("Common.Apply"), () =>
         {
             uint mod = (uint)((ComboBoxItem)modifiers.SelectedItem).Tag;
             uint key = (uint)((ComboBoxItem)keyPicker.SelectedItem).Tag;
@@ -184,9 +264,13 @@ public sealed partial class MainWindow
                 SaveShellConfig();
                 UpdateShortcutHotkeyStatus();
             }
-            else _shortcutHotkeyStatus!.Text = T("ShortcutPanel.HotkeyUnavailablePreviousSettingsRetainedChoose");
+            else
+            {
+                _shortcutHotkeyStatus!.Text = T("ShortcutPanel.HotkeyUnavailablePreviousSettingsRetainedChoose");
+                _shortcutHotkeyStatus.Visibility = Visibility.Visible;
+            }
         }));
-        hotkeySettings.Children.Add(ShortcutButton(T("ShortcutPanel.Disable"), () =>
+        hotkeyActions.Children.Add(ShortcutButton(T("ShortcutPanel.Disable"), () =>
         {
             _shortcutPanelHotkey?.Disable();
             _shortcutPanelHotkeyEnabled = false;
@@ -194,76 +278,203 @@ public sealed partial class MainWindow
             SaveShellConfig();
             UpdateShortcutHotkeyStatus();
         }));
-        pane.Children.Add(hotkeySettings);
-        _shortcutHotkeyStatus = new TextBlock { TextWrapping = TextWrapping.Wrap };
-        pane.Children.Add(_shortcutHotkeyStatus);
+        overlay.Children.Add(hotkeyActions);
+        _shortcutHotkeyStatus = new TextBlock { TextWrapping = TextWrapping.Wrap, Style = (Style)Application.Current.Resources["CaptionTextStyle"] };
+        overlay.Children.Add(_shortcutHotkeyStatus);
         UpdateShortcutHotkeyStatus();
-        _shortcutEnabledToggle = LocalizedToggle(T("ShortcutPanel.EnableInputToSelectedWindow"));
-        _shortcutEnabledToggle.Toggled += (_, _) =>
+        overlay.Children.Add(ShortcutGroupLabel(T("ShortcutPanel.AppearanceGroup")));
+        _shortcutOpacitySlider = CreateOverlayOpacitySlider(T("ShortcutPanel.OverlayOpacity"));
+        overlay.Children.Add(_shortcutOpacitySlider);
+        overlay.Children.Add(BuildOverlayTextColorButton());
+        overlay.Children.Add(ShortcutGroupLabel(T("ShortcutPanel.BehaviorGroup")));
+        AddOverlaySlotSwitchSetting(overlay);
+        overlay.Children.Add(new TextBlock
         {
-            _shortcutInputEnabled = _shortcutEnabledToggle.IsOn && _shortcutTargetPicker.SelectedItem is ShortcutTarget;
-            if (!_shortcutInputEnabled) _shortcutEnabledToggle.IsOn = false;
-            RefreshShortcutOverlay();
-        };
-        pane.Children.Add(_shortcutEnabledToggle);
-        _shortcutInputModePicker = new ComboBox { Header = T("ShortcutPanel.InputMethod"), HorizontalAlignment = HorizontalAlignment.Left };
+            Text = T("ShortcutPanel.TheOverlaySupportsWindowedBorderlessMode"),
+            TextWrapping = TextWrapping.Wrap, Style = (Style)Application.Current.Resources["CaptionTextStyle"]
+        });
+
+        _characterFollowSummary = new TextBlock();
+        var follow = new StackPanel { Spacing = 10 };
+        BuildCharacterFollowControls(follow);
+        AddShortcutModule("", T("CharacterFollow.Title"), _characterFollowSummary, _characterFollowToggle).Children.Add(follow);
+        UpdateCharacterFollowSummary();
+
+        _shortcutSendingSummary = new TextBlock();
+        StackPanel send = AddShortcutModule("", T("ShortcutPanel.SendingSettings"), _shortcutSendingSummary, null);
+        _shortcutInputModePicker = new ComboBox { Header = T("ShortcutPanel.InputMethod"), HorizontalAlignment = HorizontalAlignment.Stretch };
         _shortcutInputModePicker.Items.Add(new ComboBoxItem { Content = T("ShortcutPanel.ScanCodesPhysicalKeySimulation"), Tag = ShortcutInputMode.ScanCode });
         _shortcutInputModePicker.Items.Add(new ComboBoxItem { Content = T("ShortcutPanel.VirtualKeysLegacyCompatibility"), Tag = ShortcutInputMode.VirtualKey });
         _shortcutInputModePicker.SelectedIndex = _shortcutInputMode == ShortcutInputMode.VirtualKey ? 1 : 0;
         _shortcutInputModePicker.SelectionChanged += (_, _) =>
         {
             if (_shortcutInputModePicker.SelectedItem is ComboBoxItem { Tag: ShortcutInputMode mode })
-            { _shortcutInputMode = mode; SaveShellConfig(); }
+            { _shortcutInputMode = mode; SaveShellConfig(); UpdateShortcutSendingSummary(); }
         };
-        pane.Children.Add(_shortcutInputModePicker);
+        send.Children.Add(_shortcutInputModePicker);
         _shortcutTapDuration = new NumberBox
         {
             Header = T("ShortcutPanel.TapDurationMs"), Minimum = 100, Maximum = 2000, Value = 200,
-            SmallChange = 100, Width = 260, HorizontalAlignment = HorizontalAlignment.Left,
+            SmallChange = 100, HorizontalAlignment = HorizontalAlignment.Stretch,
             SpinButtonPlacementMode = NumberBoxSpinButtonPlacementMode.Compact
         };
-        pane.Children.Add(_shortcutTapDuration);
-        pane.Children.Add(ShortcutButton(T("ShortcutPanel.ToggleNumLock"), async () => await SendNumLockAsync()));
         _shortcutHoldDuration = new NumberBox
         {
             Header = T("ShortcutPanel.HoldTypeDurationMs"),
-            Minimum = 100, Maximum = 2000, Value = 300, SmallChange = 100, Width = 260,
-            HorizontalAlignment = HorizontalAlignment.Left, SpinButtonPlacementMode = NumberBoxSpinButtonPlacementMode.Compact
+            Minimum = 100, Maximum = 2000, Value = 300, SmallChange = 100,
+            HorizontalAlignment = HorizontalAlignment.Stretch, SpinButtonPlacementMode = NumberBoxSpinButtonPlacementMode.Compact
         };
-        pane.Children.Add(_shortcutHoldDuration);
-        _shortcutOpacitySlider = CreateOverlayOpacitySlider(T("ShortcutPanel.OverlayOpacity"));
-        _shortcutOpacitySlider.Width = 260;
-        _shortcutOpacitySlider.HorizontalAlignment = HorizontalAlignment.Left;
-        pane.Children.Add(_shortcutOpacitySlider);
-        pane.Children.Add(BuildOverlayTextColorButton());
-        var hideUnsupported = new ToggleSwitch
-        {
-            OnContent = T("Common.On2"), OffContent = T("Common.Off2"),
-            Header = T("ShortcutPanel.HideBindingsThatCannotBeSent"),
-            IsOn = _shortcutHideUnsupported
-        };
-        hideUnsupported.Toggled += (_, _) =>
-        {
-            _shortcutHideUnsupported = hideUnsupported.IsOn;
-            SaveShellConfig();
-            RenderShortcutButtons();
-        };
-        pane.Children.Add(hideUnsupported);
-        AddOverlaySlotSwitchSetting(pane);
-        BuildCharacterFollowControls(pane);
-        pane.Children.Add(new TextBlock
-        {
-            Text = T("ShortcutPanel.TheOverlaySupportsWindowedBorderlessMode"),
-            TextWrapping = TextWrapping.Wrap, Opacity = .7
-        });
-        // Fixed height: status changes must not move the shortcut list below it.
-        _shortcutStatus = FixedStatusText(lines: 3, fontSize: 14);
-        pane.Children.Add(_shortcutStatus);
-        _shortcutButtons = new StackPanel { Spacing = 8 };
-        pane.Children.Add(_shortcutButtons);
+        _shortcutTapDuration.ValueChanged += (_, _) => UpdateShortcutSendingSummary();
+        _shortcutHoldDuration.ValueChanged += (_, _) => UpdateShortcutSendingSummary();
+        var durations = new Grid { ColumnSpacing = 10 };
+        durations.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(1, GridUnitType.Star) });
+        durations.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(1, GridUnitType.Star) });
+        // Bottom-aligned so the boxes line up when one header wraps to two lines.
+        _shortcutTapDuration.VerticalAlignment = VerticalAlignment.Bottom;
+        _shortcutHoldDuration.VerticalAlignment = VerticalAlignment.Bottom;
+        durations.Children.Add(_shortcutTapDuration);
+        Grid.SetColumn(_shortcutHoldDuration, 1);
+        durations.Children.Add(_shortcutHoldDuration);
+        send.Children.Add(durations);
+        send.Children.Add(ShortcutButton(T("ShortcutPanel.ToggleNumLock"), async () => await SendNumLockAsync()));
+        UpdateShortcutSendingSummary();
+
+        _shortcutBodyGrid = new Grid { ColumnSpacing = 12, RowSpacing = 12 };
+        pane.Children.Add(_shortcutBodyGrid);
+        UpdateShortcutsLayout();
         RefreshShortcutTargets();
     }
 
+    // A settings row: icon, title and a one-line summary stay visible while collapsed, and the
+    // module's main control sits on the right of the header.
+    private StackPanel AddShortcutModule(string glyph, string title, TextBlock summary, FrameworkElement? control)
+    {
+        var header = new Grid { ColumnSpacing = 12, Padding = new Thickness(0, 8, 0, 8) };
+        header.ColumnDefinitions.Add(new ColumnDefinition { Width = GridLength.Auto });
+        header.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(1, GridUnitType.Star) });
+        header.ColumnDefinitions.Add(new ColumnDefinition { Width = GridLength.Auto });
+        header.Children.Add(new FontIcon { Glyph = glyph, FontSize = 18, VerticalAlignment = VerticalAlignment.Center });
+        summary.Style = (Style)Application.Current.Resources["CaptionTextStyle"];
+        summary.TextTrimming = TextTrimming.CharacterEllipsis;
+        var text = new StackPanel { Spacing = 2, VerticalAlignment = VerticalAlignment.Center };
+        text.Children.Add(new TextBlock { Text = title, FontWeight = Microsoft.UI.Text.FontWeights.SemiBold, TextTrimming = TextTrimming.CharacterEllipsis });
+        text.Children.Add(summary);
+        Grid.SetColumn(text, 1);
+        header.Children.Add(text);
+        if (control is not null)
+        {
+            control.VerticalAlignment = VerticalAlignment.Center;
+            Grid.SetColumn(control, 2);
+            header.Children.Add(control);
+        }
+        var body = new StackPanel { Spacing = 10 };
+        var row = new Expander
+        {
+            Header = header, Content = body,
+            HorizontalAlignment = HorizontalAlignment.Stretch, HorizontalContentAlignment = HorizontalAlignment.Stretch
+        };
+        _shortcutModules.Add(row);
+        _shortcutSettingsColumn!.Children.Add(row);
+        return body;
+    }
+
+    private static TextBlock ShortcutGroupLabel(string text) => new()
+    {
+        Text = text, Margin = new Thickness(0, 4, 0, 0),
+        FontWeight = Microsoft.UI.Text.FontWeights.SemiBold, Style = (Style)Application.Current.Resources["CaptionTextStyle"]
+    };
+
+    private void UpdateShortcutSendingSummary()
+    {
+        if (_shortcutSendingSummary is null || _shortcutTapDuration is null || _shortcutHoldDuration is null) return;
+        string mode = _shortcutInputMode == ShortcutInputMode.VirtualKey ? T("ShortcutPanel.VirtualKeys") : T("ShortcutPanel.ScanCodes");
+        // A cleared box reads NaN; sending then falls back to the defaults, so the summary does too.
+        double tap = double.IsFinite(_shortcutTapDuration.Value) ? _shortcutTapDuration.Value : 200;
+        double hold = double.IsFinite(_shortcutHoldDuration.Value) ? _shortcutHoldDuration.Value : 300;
+        _shortcutSendingSummary.Text = T("ShortcutPanel.SendingSummary", mode, tap, hold);
+    }
+
+    // Laid out from the page's own width (see AttachPageLayout).
+    private void UpdateShortcutsLayout()
+    {
+        if (_shortcutBodyGrid is null || _shortcutToolbarGrid is null || _shortcutBindingsCard is null
+            || _shortcutSettingsColumn is null || _shortcutToolbarToggle is null
+            || _shortcutModPicker is null || _shortcutTargetPicker is null)
+        {
+            return;
+        }
+
+        double width = PageWidth(ShortcutsScrollViewer) - 12;
+        bool beside = ShortcutsLayoutPolicy.SettingsBesideBindings(width);
+        bool oneRow = ShortcutsLayoutPolicy.ToolbarInOneRow(width);
+        int mode = (beside ? 2 : 0) + (oneRow ? 1 : 0);
+        if (mode == _shortcutLayoutMode)
+        {
+            return;
+        }
+        bool placementChanged = _shortcutLayoutMode < 0 || (_shortcutLayoutMode >= 2) != beside;
+        _shortcutLayoutMode = mode;
+
+        // Beside the bindings the overlay row starts open; above them every row folds so the
+        // bindings stay on the first screen.
+        if (placementChanged)
+        {
+            for (int i = 0; i < _shortcutModules.Count; i++) _shortcutModules[i].IsExpanded = beside && i == 0;
+        }
+
+        // Toolbar: pickers and the send switch in one row, or the pickers stacked above the switch.
+        _shortcutToolbarGrid.ColumnDefinitions.Clear();
+        _shortcutToolbarGrid.RowDefinitions.Clear();
+        if (oneRow)
+        {
+            _shortcutToolbarGrid.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(1, GridUnitType.Star) });
+            _shortcutToolbarGrid.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(1, GridUnitType.Star) });
+            _shortcutToolbarGrid.ColumnDefinitions.Add(new ColumnDefinition { Width = GridLength.Auto });
+            Place(_shortcutModPicker, 0, 0);
+            Place(_shortcutTargetPicker, 0, 1);
+            Place(_shortcutToolbarToggle, 0, 2);
+        }
+        else
+        {
+            for (int row = 0; row < 3; row++) _shortcutToolbarGrid.RowDefinitions.Add(new RowDefinition { Height = GridLength.Auto });
+            Place(_shortcutModPicker, 0, 0);
+            Place(_shortcutTargetPicker, 1, 0);
+            Place(_shortcutToolbarToggle, 2, 0);
+        }
+
+        // Body: module rows beside the bindings, or above them; collapsed rows are short enough
+        // that the bindings still start on the first screen.
+        _shortcutBodyGrid.Children.Clear();
+        _shortcutBodyGrid.ColumnDefinitions.Clear();
+        _shortcutBodyGrid.RowDefinitions.Clear();
+        if (beside)
+        {
+            _shortcutBodyGrid.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(1, GridUnitType.Star) });
+            _shortcutBodyGrid.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(ShortcutsLayoutPolicy.SettingsColumnWidth) });
+            Place(_shortcutBindingsCard, 0, 0);
+            Place(_shortcutSettingsColumn, 0, 1);
+            _shortcutBodyGrid.Children.Add(_shortcutBindingsCard);
+            _shortcutBodyGrid.Children.Add(_shortcutSettingsColumn);
+        }
+        else
+        {
+            _shortcutBodyGrid.RowDefinitions.Add(new RowDefinition { Height = GridLength.Auto });
+            _shortcutBodyGrid.RowDefinitions.Add(new RowDefinition { Height = GridLength.Auto });
+            Place(_shortcutSettingsColumn, 0, 0);
+            Place(_shortcutBindingsCard, 1, 0);
+            _shortcutBodyGrid.Children.Add(_shortcutSettingsColumn);
+            _shortcutBodyGrid.Children.Add(_shortcutBindingsCard);
+        }
+    }
+
+    private void ReflowShortcutButtons()
+    {
+        if (_shortcutButtons is null || _shortcutButtons.ActualWidth <= 0) return;
+        int columns = ShortcutsLayoutPolicy.BindingColumns(_shortcutButtons.ActualWidth);
+        if (columns == _shortcutBindingColumns && _shortcutButtons.RowDefinitions.Count > 0) return;
+        _shortcutBindingColumns = columns;
+        ReflowCards(_shortcutButtons, columns);
+    }
     private async Task RefreshShortcutModsAsync()
     {
         if (_shortcutModPicker is null) return;
@@ -362,12 +573,11 @@ public sealed partial class MainWindow
         _mainBindings = visible;
         _shortcutButtons.Children.Clear();
         int hidden = _shortcutDetected.Count - visible.Length;
-        if (hidden > 0)
-            _shortcutButtons.Children.Add(new TextBlock
-            {
-                Text = T("ShortcutPanel.BindingsThatCannotBeSentAre", hidden),
-                Opacity = .65, TextWrapping = TextWrapping.Wrap
-            });
+        if (_shortcutHiddenNote is not null)
+        {
+            _shortcutHiddenNote.Text = hidden > 0 ? T("ShortcutPanel.BindingsThatCannotBeSentAre", hidden) : string.Empty;
+            _shortcutHiddenNote.Visibility = hidden > 0 ? Visibility.Visible : Visibility.Collapsed;
+        }
         foreach (var shortcut in visible)
         {
             if (!_mainShortcutControls.TryGetValue(shortcut, out Button? control))
@@ -375,6 +585,9 @@ public sealed partial class MainWindow
             _shortcutButtons.Children.Add(control);
         }
         if (_mainShortcutControls.Count > 768) _mainShortcutControls.Clear();
+        // New cards need rows and columns even when the width did not change.
+        _shortcutBindingColumns = -1;
+        ReflowShortcutButtons();
     }
 
     private string UnsupportedReasonText(ShortcutUnsupportedReason reason) => reason switch
@@ -481,15 +694,29 @@ public sealed partial class MainWindow
     {
         ShortcutUnsupportedReason reason = ShortcutKeyPlan.Explain(shortcut.RawKey);
         bool supported = reason == ShortcutUnsupportedReason.None;
-        var content = new StackPanel { Spacing = 3 };
-        var title = new TextBlock { Text = shortcut.Shortcut, FontSize = 18, FontWeight = Microsoft.UI.Text.FontWeights.SemiBold, TextWrapping = TextWrapping.Wrap };
+        var content = new StackPanel { Spacing = floating ? 3 : 6 };
+        var title = new TextBlock { Text = shortcut.Shortcut, FontSize = floating ? 18 : 15, FontWeight = Microsoft.UI.Text.FontWeights.SemiBold, TextWrapping = TextWrapping.Wrap };
         var description = new TextBlock { Text = DescribeDetectedShortcut(shortcut), TextWrapping = TextWrapping.Wrap };
         string source = $"{shortcut.SourceFile} · [{shortcut.Section}]";
         if (shortcut.Condition.Length > 0) source += " · " + T("ShortcutPanel.Condition") + shortcut.Condition;
         if (shortcut.Behavior.Equals("hold", StringComparison.OrdinalIgnoreCase)) source += " · " + T("ShortcutPanel.HoldForConfiguredDuration");
         var sourceText = new TextBlock { Text = source, FontSize = 11, Opacity = .65, TextWrapping = TextWrapping.Wrap };
-        if (floating) title.Foreground = description.Foreground = sourceText.Foreground = _overlayTextBrush;
-        content.Children.Add(title); content.Children.Add(description); content.Children.Add(sourceText);
+        if (floating)
+        {
+            title.Foreground = description.Foreground = sourceText.Foreground = _overlayTextBrush;
+            content.Children.Add(title);
+        }
+        else
+        {
+            // On the page the key reads as a key cap above what it does.
+            content.Children.Add(new Border
+            {
+                Child = title, HorizontalAlignment = HorizontalAlignment.Left, Padding = new Thickness(10, 3, 10, 4),
+                CornerRadius = new CornerRadius(6), BorderThickness = new Thickness(1, 1, 1, 2),
+                Background = GetAppThemeBrush("AppInsetBackgroundBrush"), BorderBrush = GetAppThemeBrush("AppStrongBorderBrush")
+            });
+        }
+        content.Children.Add(description); content.Children.Add(sourceText);
         if (!supported)
             content.Children.Add(new TextBlock
             {
@@ -497,7 +724,17 @@ public sealed partial class MainWindow
                 FontSize = 11, TextWrapping = TextWrapping.Wrap,
                 Foreground = new SolidColorBrush(Color.FromArgb(255, 230, 150, 60))
             });
-        var button = new Button { Content = content, IsEnabled = supported, HorizontalAlignment = HorizontalAlignment.Stretch, HorizontalContentAlignment = HorizontalAlignment.Left, Padding = new Thickness(14, 10, 14, 10) };
+        var button = new Button
+        {
+            Content = content, IsEnabled = supported, HorizontalAlignment = HorizontalAlignment.Stretch,
+            HorizontalContentAlignment = HorizontalAlignment.Left, Padding = new Thickness(14, 10, 14, 10)
+        };
+        if (!floating)
+        {
+            // Cards in one grid row share its height and keep their text at the top.
+            button.VerticalAlignment = VerticalAlignment.Stretch;
+            button.VerticalContentAlignment = VerticalAlignment.Top;
+        }
         if (floating) button.AllowFocusOnInteraction = false;
         button.Click += async (_, _) => await RunUiActionAsync("Send shortcut", () => SendShortcutFromPanelAsync(shortcut));
         return button;
@@ -911,8 +1148,14 @@ public sealed partial class MainWindow
         if (_shortcutHotkeyStatus is null) return;
         string mod = _shortcutPanelHotkeyModifiers switch { 6 => "Ctrl+Shift", 5 => "Alt+Shift", _ => "Ctrl+Alt" };
         string key = _shortcutPanelHotkeyKey >= 0x70 ? "F" + (_shortcutPanelHotkeyKey - 0x6F) : ((char)_shortcutPanelHotkeyKey).ToString();
+        // A working hotkey is already on the module row's summary; the line below explains only problems.
         _shortcutHotkeyStatus.Text = _shortcutHotkeyRegistered
-            ? T("ShortcutPanel.GlobalHotkeyShowHideOverlay", mod, key)
+            ? string.Empty
             : T("ShortcutPanel.GlobalHotkeyDisabledOrUnavailableChoose");
+        _shortcutHotkeyStatus.Visibility = _shortcutHotkeyRegistered ? Visibility.Collapsed : Visibility.Visible;
+        if (_shortcutOverlaySummary is not null)
+            _shortcutOverlaySummary.Text = _shortcutHotkeyRegistered
+                ? T("ShortcutPanel.OverlayHotkeySummary", mod, key)
+                : T("ShortcutPanel.OverlayHotkeyOff");
     }
 }
