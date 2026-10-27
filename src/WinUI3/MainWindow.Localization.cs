@@ -199,7 +199,7 @@ public sealed partial class MainWindow
         ApplyTextOverrides();
         ApplyActionButtonPresentation();
 
-        if (FirstLevelListView.SelectedItem is FirstLevelFolderItem firstItem)
+        if (_characters.Selected is { } firstItem)
         {
             string? selectedPath = _currentSecondLevelPath;
             PopulateSecondLevelList(firstItem, preserveStatus: true);
@@ -277,7 +277,7 @@ public sealed partial class MainWindow
     private void RefreshLocalizedStates()
     {
         string targetDir = (TargetTextBox.Text ?? string.Empty).Trim();
-        foreach (FirstLevelFolderItem first in _firstLevelItems)
+        foreach (FirstLevelFolderItem first in _characters.Visible)
         {
             foreach (SecondLevelFolderItem second in first.Children)
             {

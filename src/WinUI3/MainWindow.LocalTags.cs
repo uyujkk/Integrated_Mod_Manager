@@ -171,7 +171,7 @@ public sealed partial class MainWindow
     {
         var repo = GetSelectedRepository();
         var library = SelectedLocalLibrary();
-        if (repo is null || library is null || FirstLevelListView.SelectedItem is not FirstLevelFolderItem role) return;
+        if (repo is null || library is null || _characters.Selected is not { } role) return;
         var snapshot = new LocalModFilter { Character = WorkspaceIdentity.Relative(repo.SourcePath, role.Path), Search = _repositoryModSearch!.Text, Tag = _localTagFilter };
         string? name = await PromptForTextAsync(T("LocalTags.NameThisFilterUpTo64"), T("LocalTags.SaveFilter"), "");
         if (string.IsNullOrWhiteSpace(name)) return;

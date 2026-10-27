@@ -106,9 +106,8 @@ public sealed partial class MainWindow : Window
     private readonly HttpClient _httpClient = CreateHttpClient();
     private readonly RequestCooldown _onlineRateLimit = new();
     private readonly SemaphoreSlim _onlineCharacterAvatarDownloadGate = new(3, 3);
-    private readonly BatchObservableCollection<FirstLevelFolderItem> _firstLevelItems = [];
+    private readonly CharacterListViewModel _characters = new();
     private readonly BatchObservableCollection<SecondLevelFolderItem> _secondLevelItems = [];
-    private readonly List<FirstLevelFolderItem> _allFirstLevelItems = [];
     private readonly List<Border> _shortcutKeyBorders = [];
     private readonly List<TextBox> _shortcutKeyBoxes = [];
     private readonly List<TextBox> _shortcutActionBoxes = [];
@@ -218,7 +217,7 @@ public sealed partial class MainWindow : Window
         InitializeCommandPaletteShortcut();
         EditOnlineRepositoryButton.Click -= OnEditRepositoryDetailsClicked;
         EditOnlineRepositoryButton.Click += OnEditOnlineRepositoryClicked;
-        FirstLevelListView.ItemsSource = _firstLevelItems;
+        FirstLevelListView.ItemsSource = _characters.Visible;
         SecondLevelListView.ItemsSource = _secondLevelItems;
         OnlineVirtualizedListView.ItemsSource = _onlinePage.VisibleMods;
         OnlineVirtualizedGridView.ItemsSource = _onlinePage.VisibleMods;

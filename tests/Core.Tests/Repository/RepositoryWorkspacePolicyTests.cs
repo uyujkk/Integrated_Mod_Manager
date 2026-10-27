@@ -95,4 +95,13 @@ public sealed class RepositoryWorkspacePolicyTests
     [InlineData(0, 0, false, ModListEmptyKind.NoCharacter)]
     public void EmptyKind_SaysWhyTheListIsEmpty(int total, int visible, bool hasCharacter, ModListEmptyKind expected)
         => Assert.Equal(expected, RepositoryWorkspacePolicy.EmptyKind(total, visible, hasCharacter));
+
+    [Theory]
+    [InlineData(null, "Ann|bob|Carol")]
+    [InlineData("  ", "Ann|bob|Carol")]
+    [InlineData("o", "bob|Carol")]
+    [InlineData(" B ", "bob")]
+    [InlineData("zz", "")]
+    public void FilterByName_KeepsOrderAndIgnoresCaseAndSpaces(string? keyword, string expected)
+        => Assert.Equal(expected, string.Join('|', RepositoryWorkspacePolicy.FilterByName(new[] { "Ann", "bob", "Carol" }, name => name, keyword)));
 }

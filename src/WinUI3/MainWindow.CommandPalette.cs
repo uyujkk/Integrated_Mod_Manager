@@ -120,10 +120,10 @@ public sealed partial class MainWindow
             new(CommandPaletteKind.Command, T("Localization.ImportMod"), command, "cmd:import"),
             new(CommandPaletteKind.Command, T("CommandPalette.RefreshRepository"), command, "cmd:refresh")
         };
-        foreach (FirstLevelFolderItem character in _allFirstLevelItems)
+        foreach (FirstLevelFolderItem character in _characters.All)
             entries.Add(new(CommandPaletteKind.Character, character.Name,
                 T("CommandPalette.CharacterMods", character.Children.Count), "char:" + character.Path));
-        foreach (FirstLevelFolderItem character in _allFirstLevelItems)
+        foreach (FirstLevelFolderItem character in _characters.All)
             foreach (SecondLevelFolderItem mod in character.Children)
                 entries.Add(new(CommandPaletteKind.Mod, mod.Name,
                     string.IsNullOrWhiteSpace(mod.State) ? character.Name : character.Name + " · " + mod.State, "mod:" + mod.Path));

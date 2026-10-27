@@ -209,7 +209,7 @@ public sealed partial class MainWindow
     }
 
     private FirstLevelFolderItem? FindLoadedCharacter(string path)
-        => _allFirstLevelItems.FirstOrDefault(item => string.Equals(item.Path, path, StringComparison.OrdinalIgnoreCase));
+        => _characters.Find(path);
 
     // Avatars load after the workspace lists; a chip already on the dashboard picks its image up here.
     private void ApplyDashboardCharacterAvatar(FirstLevelFolderItem item)

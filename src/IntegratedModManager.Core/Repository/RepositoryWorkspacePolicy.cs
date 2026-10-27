@@ -36,6 +36,13 @@ public static class RepositoryWorkspacePolicy
         return new(category, detail, inline, columns, cover);
     }
 
+    /// <summary>Items whose name contains the trimmed keyword, ignoring case, in their original order.</summary>
+    public static IEnumerable<T> FilterByName<T>(IEnumerable<T> items, Func<T, string> name, string? keyword)
+    {
+        string term = (keyword ?? string.Empty).Trim();
+        return term.Length == 0 ? items : items.Where(item => name(item).Contains(term, StringComparison.CurrentCultureIgnoreCase));
+    }
+
     public static bool MatchesQuery(string name, string category, string? query)
     {
         string[] terms = (query ?? "").Split((char[]?)null, StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries);

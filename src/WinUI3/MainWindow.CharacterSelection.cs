@@ -57,7 +57,7 @@ public sealed partial class MainWindow
     {
         if (CharacterMultipleModsToggle is null || CharacterAvatarButton is null) return;
         WorkspaceRepository? repository = GetSelectedRepository();
-        var item = FirstLevelListView.SelectedItem as FirstLevelFolderItem;
+        var item = _characters.Selected;
         bool allows = repository is not null && item is not null
             && CharacterSelectionPolicy.AllowsMultiple(item.Name, repository.AllowMultipleModsPerCharacter, repository.CharacterSelectionOverrides);
         CharacterMultipleModsToggle.IsEnabled = item is not null && repository is not null;
@@ -82,7 +82,7 @@ public sealed partial class MainWindow
 
     private void OnCharacterMultipleModsToggleClicked(object sender, RoutedEventArgs e)
     {
-        if (GetSelectedRepository() is { } repository && FirstLevelListView.SelectedItem is FirstLevelFolderItem item)
+        if (GetSelectedRepository() is { } repository && _characters.Selected is { } item)
         {
             SetCharacterAllowsMultiple(repository, item, CharacterMultipleModsToggle.IsChecked == true);
         }
