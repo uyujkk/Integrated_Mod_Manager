@@ -6,8 +6,9 @@ namespace IntegratedModManager.Core.Tests;
 
 public sealed class ArchiveProcessRunnerTests
 {
-    // Windows CI can take several seconds to launch two nested PowerShell processes.
-    // Leave enough time for both PID markers to be written before exercising timeout cleanup.
+    // Windows CI can take several seconds to start PowerShell. Only the parent is PowerShell:
+    // it records its own PID and the PID of a lightweight child it starts, so both markers
+    // exist once one PowerShell has started instead of waiting for a second nested one.
     private static readonly TimeSpan ProcessTreeTimeout = TimeSpan.FromSeconds(20);
 
     [Theory]
@@ -42,9 +43,9 @@ public sealed class ArchiveProcessRunnerTests
         }
 
         using var processes = new TemporaryProcesses();
-        string childScript = $"[IO.File]::WriteAllText('{processes.ChildIdPath}', [string]$PID); Start-Sleep -Seconds 600";
         string script = "$ErrorActionPreference = 'Stop'; " + $"[IO.File]::WriteAllText('{processes.ParentIdPath}', [string]$PID); " +
-            $"$child = Start-Process -FilePath '{PowerShellPath}' -ArgumentList '-NoProfile','-NonInteractive','-EncodedCommand','{Encode(childScript)}' -WindowStyle Hidden -PassThru; " +
+            $"$child = Start-Process -FilePath '{HangingChildPath}' -ArgumentList {HangingChildArguments} -WindowStyle Hidden -PassThru; " +
+            $"[IO.File]::WriteAllText('{processes.ChildIdPath}', [string]$child.Id); " +
             "Start-Sleep -Seconds 600";
         ProcessStartInfo startInfo = CreatePowerShellStartInfo(script);
         var stopwatch = Stopwatch.StartNew();
@@ -70,14 +71,14 @@ public sealed class ArchiveProcessRunnerTests
         }
 
         using var processes = new TemporaryProcesses();
-        string childScript = $"[IO.File]::WriteAllText('{processes.ChildIdPath}', [string]$PID); Start-Sleep -Seconds 600";
         // Redirecting stdin makes CreateProcess inherit the parent's stdout/stderr handles.
         string script = "$ErrorActionPreference = 'Stop'; " + $"[IO.File]::WriteAllText('{processes.ParentIdPath}', [string]$PID); " +
             "$info = New-Object Diagnostics.ProcessStartInfo; " +
-            $"$info.FileName = '{PowerShellPath}'; " +
-            $"$info.Arguments = '-NoProfile -NonInteractive -EncodedCommand {Encode(childScript)}'; " +
+            $"$info.FileName = '{HangingChildPath}'; " +
+            "$info.Arguments = '-n 600 127.0.0.1'; " +
             "$info.UseShellExecute = $false; $info.CreateNoWindow = $true; $info.RedirectStandardInput = $true; " +
-            "$child = [Diagnostics.Process]::Start($info); $child.StandardInput.Close(); exit 0";
+            "$child = [Diagnostics.Process]::Start($info); $child.StandardInput.Close(); " +
+            $"[IO.File]::WriteAllText('{processes.ChildIdPath}', [string]$child.Id); exit 0";
         var stopwatch = Stopwatch.StartNew();
 
         var exception = Assert.Throws<TimeoutException>(() =>
@@ -105,6 +106,11 @@ public sealed class ArchiveProcessRunnerTests
 
     private static string PowerShellPath => Path.Combine(
         Environment.SystemDirectory, "WindowsPowerShell", "v1.0", "powershell.exe");
+
+    // A console program that starts quickly, needs no input and keeps running for ten minutes.
+    private static string HangingChildPath => Path.Combine(Environment.SystemDirectory, "PING.EXE");
+
+    private const string HangingChildArguments = "'-n','600','127.0.0.1'";
 
     private static string Encode(string script) => Convert.ToBase64String(Encoding.Unicode.GetBytes(script));
 
