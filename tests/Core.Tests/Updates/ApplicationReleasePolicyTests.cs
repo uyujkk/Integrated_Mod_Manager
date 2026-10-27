@@ -17,8 +17,8 @@ public sealed class ApplicationReleasePolicyTests
     [Fact]
     public void StableUsesConsistentVersionAndRetainsPublicReferenceLink()
     {
-        Assert.Equal("v4.5.2", ApplicationReleasePolicy.VersionLabel);
-        Assert.Equal(new Version(4, 5, 2, 0), Version.Parse(ApplicationReleasePolicy.FileVersion));
+        Assert.Equal("v4.6.0", ApplicationReleasePolicy.VersionLabel);
+        Assert.Equal(new Version(4, 6, 0, 0), Version.Parse(ApplicationReleasePolicy.FileVersion));
         Assert.Equal("https://github.com/uyujkk/Integrated_Mod_Manager/releases/latest", ApplicationReleasePolicy.ReleasePageUrl);
     }
 }

@@ -1,4 +1,4 @@
-> **v4.5.2 stable release.** The overlay sends F10 before saving a preset, gains a Refresh button and responds faster for Mods with many bindings; directory links, loader state restore and combination presets are no longer experimental. See the [release notes](docs/releases/v4.5.2.md).
+> **v4.6.0 stable release.** Updated dashboard, Mod workspace, online browser, shortcuts, settings and update lists, with Ctrl+K search and collapsible navigation. See the [release notes](docs/releases/v4.6.0.md).
 
 <div align="center">
   <img src="./src/WinUI3/Assets/AppIcon.png" width="96" alt="Integrated Mod Manager icon">
@@ -26,11 +26,11 @@
 
 ## Overview
 
-**Current stable version: [v4.5.2](https://github.com/uyujkk/Integrated_Mod_Manager/releases/tag/v4.5.2).** Characters in a repository show avatars, a character can keep several Mods enabled, each Mod can keep named state slots, and the always-on-top overlay can save presets (sending F10 first), switch slots in game and refresh after Mod changes. The shortcut panel, integrated Endfield launch, browsing and downloading, library tools and combination presets remain. See the [4.5.2 release notes](./docs/releases/v4.5.2.md), the [shortcut panel guide](./docs/guides/en/Shortcut-Panel.md) and the [launch and risk guide](./docs/guides/en/Endfield-Launch.md).
+**Current stable version: [v4.6.0](https://github.com/uyujkk/Integrated_Mod_Manager/releases/tag/v4.6.0).** Characters in a repository show avatars, a character can keep several Mods enabled, each Mod can keep named state slots, and the always-on-top overlay can save presets (sending F10 first), switch slots in game and refresh after Mod changes. The shortcut panel, integrated Endfield launch, browsing and downloading, library tools and combination presets remain. See the [4.6.0 release notes](./docs/releases/v4.6.0.md), the [shortcut panel guide](./docs/guides/en/Shortcut-Panel.md) and the [launch and risk guide](./docs/guides/en/Endfield-Launch.md).
 
 Integrated Mod Manager organizes different games or mod environments into independent repositories. It copies or removes complete mod folders between a local library and the target directory read by the game, while keeping preview images, source links, shortcut notes, online downloads, update records, profiles, and installation backups in one application.
 
-The application, launcher, and updater use version **4.5.2** (`4.5.2.0`). The tool is maintained by `uyujkk`. The Bandizip extraction fallback was contributed by [CaramelizedCUDA](https://github.com/CaramelizedCUDA). The earlier [4.0-beta](https://github.com/uyujkk/Integrated_Mod_Manager/releases/tag/v4.0-beta) remains archived separately.
+The application, launcher, and updater use version **4.6.0** (`4.6.0.0`). The tool is maintained by `uyujkk`. The Bandizip extraction fallback was contributed by [CaramelizedCUDA](https://github.com/CaramelizedCUDA). The earlier [4.0-beta](https://github.com/uyujkk/Integrated_Mod_Manager/releases/tag/v4.0-beta) remains archived separately.
 
 ## Interface Preview
 
@@ -67,7 +67,14 @@ When the full overview cannot fit, Settings switches to sections. Language, them
 
 Guides: [shortcut panel and overlay](./docs/guides/en/Shortcut-Panel.md) · [state slots](./docs/guides/en/State-Slots.md) · [combination presets](./docs/guides/en/Combination-Presets.md)
 
-## What's New in 4.5
+## What's New in 4.6
+
+- Updated dashboard and Mod workspace, consistent online cards and details drawer, reorganized shortcuts/settings, and compact update and download lists.
+- Ctrl+K searches pages, commands, characters and Mods; collapsible navigation keeps search and downloads accessible.
+
+See the [4.6.0 notes](./docs/releases/v4.6.0.md). The 4.5 features below remain available.
+
+## Features introduced in 4.5
 
 - **Character avatars:** an `.imm_avatar.*` or `avatar.*` image in the character folder, a bound character, or the catalog character with the same name. New characters reach the list within a day.
 - **Several Mods per character:** one Mod per character by default; turn on multi-select per character.
@@ -77,7 +84,7 @@ Guides: [shortcut panel and overlay](./docs/guides/en/Shortcut-Panel.md) · [sta
 - **4.5.2:** the overlay sends F10 before saving and saves only once the loader has written; a Refresh button and automatic refresh after Mod changes; faster Mods with many bindings; directory links, loader state restore and combination presets are no longer experimental.
 - The game window is selected automatically; restoring a maximized window shrinks it to 80% of the screen.
 
-[4.5.2 release notes](./docs/releases/v4.5.2.md) · [4.5.1](./docs/releases/v4.5.1.md) · [4.5.0](./docs/releases/v4.5.0.md) · [Verification scope](./docs/verification/v4.5.2.md)
+[4.6.0 release notes](./docs/releases/v4.6.0.md) · [4.5.1](./docs/releases/v4.5.1.md) · [4.5.0](./docs/releases/v4.5.0.md) · [Verification scope](./docs/verification/v4.6.0.md)
 
 ## Earlier Versions
 
@@ -191,7 +198,7 @@ Run the complete test, coverage, WinUI x64 build, and package verification flow:
 powershell -NoProfile -ExecutionPolicy Bypass -File .\scripts\test-all.ps1
 ```
 
-GitHub Actions runs the same four-suite verification flow on pushes to `main`, pull requests, and manual dispatches. Test dependencies are centralized without removing safety cases. See the [Testing Guide](./docs/development/TESTING.md) and [4.5.2 verification record](./docs/verification/v4.5.2.md) for current results and testing boundaries.
+GitHub Actions runs the same four-suite verification flow on pushes to `main`, pull requests, and manual dispatches. Test dependencies are centralized without removing safety cases. See the [Testing Guide](./docs/development/TESTING.md) and [4.6.0 verification record](./docs/verification/v4.6.0.md) for current results and testing boundaries.
 
 ## Data and Security
 

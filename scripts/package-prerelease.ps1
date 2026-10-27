@@ -1,8 +1,10 @@
 ﻿[CmdletBinding()]
 param(
-    [string]$Version = '4.5.2-preview.1',
-    [string]$BaseTag = 'v4.5.1',
-    [string]$VerificationDirectory = 'artifacts\verification\v4.5.2-preview.1',
+    [string]$Version = '4.6.0-preview.1',
+    [string]$BaseTag = 'v4.5.2',
+    [string]$VerificationDirectory = 'artifacts\verification\v4.6.0-preview.1',
+    # Stable apps only detect numeric package names; the product version stays a preview.
+    [switch]$ForStableLocalUpdate,
     [switch]$ForGitHubPrerelease,
     [string]$CiUrl = '',
     # Only for machines without git: JSON exported by git elsewhere from this same
@@ -15,6 +17,7 @@ param(
 # tested runtime plus 7-Zip, user documentation, license files and PACKAGE-INFO.json.
 
 $ErrorActionPreference = 'Stop'
+if ($ForStableLocalUpdate -and $ForGitHubPrerelease) { throw 'Choose local stable upgrade or GitHub prerelease packaging, not both.' }
 if ($Version -notmatch '^(?<core>\d+\.\d+\.\d+)-(?:preview|rc)\.\d+$') { throw 'Version must look like 4.3.0-preview.1.' }
 $taskCoreVersion = $Matches.core
 $taskFileVersion = $taskCoreVersion + '.0'
@@ -98,6 +101,7 @@ foreach ($relative in @('IntegratedModManager.exe','ModFolderCopier.exe','LocalU
 }
 
 $taskPackageName = "Integrated_Mod_Manager-v$Version-win-x64.zip"
+if ($ForStableLocalUpdate) { $taskPackageName = "Integrated_Mod_Manager-v$taskCoreVersion.zip" }
 $taskOutput = Resolve-TaskPath ('artifacts\prerelease\' + (Get-Date -Format 'yyyyMMdd-HHmmss') + '-' + [Guid]::NewGuid().ToString('N').Substring(0,6))
 $taskApp = Join-Path $taskOutput "IntegratedModManager-$Version"
 New-Item -ItemType Directory -Path $taskApp | Out-Null
@@ -158,7 +162,7 @@ $taskInfo = [ordered]@{
     BaseTag=$BaseTag;BaseCommit=$taskBaseCommit;SourceCommit=$taskSourceCommit;SourceBranch=$taskSourceBranch;SourceHasUncommittedChanges=$taskSourceDirty;SourceInfoOrigin=$taskSourceInfoOrigin
     SourceFingerprint=(Get-FileHash -LiteralPath $taskSourceManifest -Algorithm SHA256).Hash
     RuntimeSha256=(Get-FileHash -LiteralPath (Join-Path $taskApp 'WinUI3\ModFolderCopier.WinUI.dll') -Algorithm SHA256).Hash
-    BuiltAt=[DateTimeOffset]::Now.ToString('O');Tests=@($taskResults);AppSelfUpdateEnabled=$false
+    BuiltAt=[DateTimeOffset]::Now.ToString('O');Tests=@($taskResults);AppSelfUpdateEnabled=$false;StableLocalUpdateCompatible=[bool]$ForStableLocalUpdate
     RealGameAndLoaderValidated=$false;CIForThisPrerelease=$(if ($ForGitHubPrerelease) {$CiUrl} else {'not-run'});PublishedAtBuildTime=$false
 }
 $taskInfo | ConvertTo-Json -Depth 6 | Set-Content (Join-Path $taskApp 'PACKAGE-INFO.json') -Encoding utf8
@@ -174,7 +178,7 @@ $taskStatus = @"
 - 本地完整测试：$taskTotal 项通过，0 失败，0 跳过；Core、数据存储、更新器和终末地启动组件的覆盖率均达到项目门槛。
 - Release/x64 主程序、启动器和更新器已构建，文件版本统一为 $taskFileVersion，产品版本为 $Version。
 - 打包时检查必需运行文件、许可证文件、用户状态排除、文件清单及 ZIP SHA-256。
-- 尚未在真实游戏和 XXMI / EFMI 上走完整启动链；失效联接清理和压缩包导入的界面流程未在真实 Mod 库上实机点击验证。该包是开发预览，不是正式版。
+- 尚未在真实游戏和 XXMI / EFMI 上走完整启动链；真实 Mod 库的导入与部署未包含在本次验收中。该包是开发预览，不是正式版。
 - 本预览版关闭软件自身的自动更新，稳定通道不受影响。
 - 许可证：包含终末地启动组件（AGPL-3.0-only），整个发布包按 AGPL-3.0-only 分发；见 LICENSING.md。
 $taskValidationScope

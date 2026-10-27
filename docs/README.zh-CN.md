@@ -1,4 +1,4 @@
-> **v4.5.2 正式版。** 浮窗保存预设前自动发送 F10，新增刷新按钮，多按键 Mod 响应更快；目录联接、恢复到加载器和组合预设不再标为实验功能。见 [4.5.2 发布说明](releases/v4.5.2.md)。
+> **v4.6.0 正式版。** 更新首页、Mod 工作区、在线浏览、快捷键、设置与更新列表，新增 Ctrl+K 搜索和可折叠导航。见 [4.6.0 发布说明](releases/v4.6.0.md)。
 
 <div align="center">
   <img src="../src/WinUI3/Assets/AppIcon.png" width="96" alt="集成化 Mod 管理器图标">
@@ -26,11 +26,11 @@
 
 ## 项目简介
 
-**当前正式版：[v4.5.2](https://github.com/uyujkk/Integrated_Mod_Manager/releases/tag/v4.5.2)。**仓库里的角色显示头像，一个角色可以同时启用多个 Mod，每个 Mod 可以保存多个命名状态槽位，置顶浮窗可以保存预设（先发送 F10）、在游戏中切换槽位，并在 Mod 变化后刷新。快捷键面板、内置终末地启动、浏览下载、旧库整理和组合预设继续保留。使用前请阅读 [4.5.2 发布说明](./releases/v4.5.2.md)、[快捷键面板说明](./guides/zh-CN/快捷键与浮窗.md)及[内置启动与账号风险说明](./guides/zh-CN/终末地启动.md)。
+**当前正式版：[v4.6.0](https://github.com/uyujkk/Integrated_Mod_Manager/releases/tag/v4.6.0)。**仓库里的角色显示头像，一个角色可以同时启用多个 Mod，每个 Mod 可以保存多个命名状态槽位，置顶浮窗可以保存预设（先发送 F10）、在游戏中切换槽位，并在 Mod 变化后刷新。快捷键面板、内置终末地启动、浏览下载、旧库整理和组合预设继续保留。使用前请阅读 [4.6.0 发布说明](./releases/v4.6.0.md)、[快捷键面板说明](./guides/zh-CN/快捷键与浮窗.md)及[内置启动与账号风险说明](./guides/zh-CN/终末地启动.md)。
 
 集成化 Mod 管理器以独立“仓库”管理不同游戏或不同 Mod 环境。它可以在本地仓库和游戏实际读取的目标目录之间复制或移除完整 Mod 文件夹，并集中管理预览图、来源链接、快捷键说明、在线下载、更新记录、配置方案和安装备份。
 
-主程序、启动器和更新器统一为 **4.5.2**（`4.5.2.0`）。工具维护者为 `uyujkk`，既有 Bandizip 备用解压功能由 [CaramelizedCUDA](https://github.com/CaramelizedCUDA) 贡献；此前的 [4.0-beta](https://github.com/uyujkk/Integrated_Mod_Manager/releases/tag/v4.0-beta) 继续独立保留。
+主程序、启动器和更新器统一为 **4.6.0**（`4.6.0.0`）。工具维护者为 `uyujkk`，既有 Bandizip 备用解压功能由 [CaramelizedCUDA](https://github.com/CaramelizedCUDA) 贡献；此前的 [4.0-beta](https://github.com/uyujkk/Integrated_Mod_Manager/releases/tag/v4.0-beta) 继续独立保留。
 
 ## 界面预览
 
@@ -67,7 +67,14 @@
 
 使用说明：[快捷键面板与置顶浮窗](./guides/zh-CN/快捷键与浮窗.md) · [状态槽位](./guides/zh-CN/状态槽位.md) · [组合预设](./guides/zh-CN/组合预设.md)
 
-## 4.5 更新
+## 4.6 更新内容
+
+- 更新首页、Mod 工作区、在线卡片与详情抽屉、快捷键和设置，整理紧凑更新及下载列表。
+- Ctrl+K 搜索页面、命令、角色和 Mod；侧栏支持折叠，并集中保留搜索与下载入口。
+
+详见 [4.6.0 发布说明](./releases/v4.6.0.md)。以下 4.5 功能继续保留。
+
+## 4.5 引入的功能
 
 - **角色头像**：依次使用角色文件夹里的 `.imm_avatar.*` 或 `avatar.*` 图片、手动绑定的角色、与文件夹同名的目录角色。新角色一天内进入角色列表。
 - **每个角色启用多个 Mod**：默认每个角色只启用一个，可按角色打开多选。
@@ -77,7 +84,7 @@
 - **4.5.2**：浮窗保存前发送 F10，等加载器写入后再保存；新增刷新按钮，Mod 变化后自动刷新；多按键 Mod 更快；目录联接、恢复到加载器和组合预设不再标为实验功能。
 - 自动识别游戏窗口；最大化后还原时窗口缩到屏幕的 80%。
 
-[4.5.2 发布说明](./releases/v4.5.2.md) · [4.5.1](./releases/v4.5.1.md) · [4.5.0](./releases/v4.5.0.md) · [验证范围](./verification/v4.5.2.md)
+[4.6.0 发布说明](./releases/v4.6.0.md) · [4.5.1](./releases/v4.5.1.md) · [4.5.0](./releases/v4.5.0.md) · [验证范围](./verification/v4.6.0.md)
 
 ## 早期版本
 
@@ -191,7 +198,7 @@ cmd /c scripts\build_winui.bat
 powershell -NoProfile -ExecutionPolicy Bypass -File .\scripts\test-all.ps1
 ```
 
-GitHub Actions 会在推送到 `main`、Pull Request 和手动触发时执行统一四组验证。测试依赖集中管理，未删除安全用例。当前结果及验证边界见[测试说明](./development/TESTING.md)与[4.5.2 验证记录](./verification/v4.5.2.md)。
+GitHub Actions 会在推送到 `main`、Pull Request 和手动触发时执行统一四组验证。测试依赖集中管理，未删除安全用例。当前结果及验证边界见[测试说明](./development/TESTING.md)与[4.6.0 验证记录](./verification/v4.6.0.md)。
 
 ## 数据与安全
 
