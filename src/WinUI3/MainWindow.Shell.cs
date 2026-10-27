@@ -216,6 +216,8 @@ public sealed partial class MainWindow
         UpdateShellLayout();
     }
 
+    private bool _primaryNavShort;
+
     private void UpdateShellLayout()
     {
         double width = Bounds.Width;
@@ -245,13 +247,17 @@ public sealed partial class MainWindow
 
         // Wide windows show labelled navigation unless the user collapsed it to the icon rail.
         bool expanded = nextMode == ShellLayoutMode.Expanded && !_navigationCollapsed;
-        if (_shellLayoutMode == nextMode && _primaryNavExpanded == expanded)
+        // On a short window the full-height buttons overran the bottom group, hiding the Downloads
+        // icon behind Shortcuts; shorter buttons keep every entry visible.
+        bool shortNav = Bounds.Height > 0 && Bounds.Height < 720;
+        if (_shellLayoutMode == nextMode && _primaryNavExpanded == expanded && _primaryNavShort == shortNav)
         {
             return;
         }
 
         _shellLayoutMode = nextMode;
         _primaryNavExpanded = expanded;
+        _primaryNavShort = shortNav;
         RefreshNavCollapseButton();
         PrimaryNavColumn.Width = new GridLength(expanded ? 220 : 84);
         SecondaryNavColumn.Width = new GridLength(0);
@@ -259,13 +265,13 @@ public sealed partial class MainWindow
         foreach (Button button in new[] { NavSearchButton, DashboardNavButton, RepositoryNavButton, OnlineNavButton, UpdatesNavButton, ShortcutsNavButton, NavTasksButton, SettingsNavButton })
         {
             button.Width = expanded ? 202 : 66;
-            button.Height = expanded ? 46 : 60;
+            button.Height = expanded ? (shortNav ? 38 : 46) : (shortNav ? 50 : 60);
             button.MinHeight = button.Height;
             button.HorizontalContentAlignment = expanded ? HorizontalAlignment.Left : HorizontalAlignment.Center;
             button.Padding = expanded ? new Thickness(14, 0, 12, 0) : new Thickness(0);
         }
         // The search entry reads as a search box when labelled, and as one more icon in the rail.
-        NavSearchButton.Height = NavSearchButton.MinHeight = expanded ? 38 : 52;
+        NavSearchButton.Height = NavSearchButton.MinHeight = expanded ? 38 : (shortNav ? 44 : 52);
         NavSearchButton.HorizontalContentAlignment = expanded ? HorizontalAlignment.Stretch : HorizontalAlignment.Center;
         NavSearchButton.Padding = expanded ? new Thickness(12, 0, 10, 0) : new Thickness(0);
 
@@ -278,7 +284,7 @@ public sealed partial class MainWindow
         DashboardNavButton.Content = CreatePrimaryNavContent("\uE80F", T("Shell.Dashboard"));
         RepositoryNavButton.Content = CreatePrimaryNavContent("\uE8B7", T("Shell.Repositories"));
         OnlineNavButton.Content = CreatePrimaryNavContent("\uE774", T("Shell.Online"));
-        UpdatesNavButton.Content = CreatePrimaryNavContent("\uE895", T("Shell.Updates"));
+        UpdatesNavButton.Content = CreatePrimaryNavContent("\uE895", T("Shell.Updates"), UpdatesNavBadge());
         ShortcutsNavButton.Content = CreatePrimaryNavContent("\uE765", T("Common.Shortcuts"));
         ToolTipService.SetToolTip(ShortcutsNavButton, T("Common.ModShortcuts"));
         AutomationProperties.SetName(ShortcutsNavButton, T("Common.ModShortcuts"));
@@ -304,7 +310,19 @@ public sealed partial class MainWindow
         RefreshNavCollapseButton();
     }
 
-    private object CreatePrimaryNavContent(string glyph, string label)
+    // Updates carries a badge with the number of Mods that have a new version.
+    private string? UpdatesNavBadge()
+    {
+        int count = _trackedModUpdateResults.Count(item => item.HasUpdate);
+        return count > 0 ? count.ToString(System.Globalization.CultureInfo.CurrentCulture) : null;
+    }
+
+    private void RefreshUpdatesNavBadge()
+    {
+        if (UpdatesNavButton is not null) UpdatesNavButton.Content = CreatePrimaryNavContent("\uE895", T("Shell.Updates"), UpdatesNavBadge());
+    }
+
+    private object CreatePrimaryNavContent(string glyph, string label, string? badge = null)
     {
         var icon = new FontIcon
         {
@@ -312,6 +330,24 @@ public sealed partial class MainWindow
             FontSize = 16,
             Opacity = 0.88
         };
+        FrameworkElement iconHost = icon;
+        if (!string.IsNullOrEmpty(badge))
+        {
+            var host = new Grid { HorizontalAlignment = HorizontalAlignment.Center, VerticalAlignment = VerticalAlignment.Center };
+            host.Children.Add(icon);
+            host.Children.Add(new Border
+            {
+                Margin = new Thickness(0, -8, -14, 0), Padding = new Thickness(5, 0, 5, 0), MinWidth = 16, CornerRadius = new CornerRadius(8),
+                HorizontalAlignment = HorizontalAlignment.Right, VerticalAlignment = VerticalAlignment.Top,
+                Background = GetAppThemeBrush("AppAccentBrush"),
+                Child = new TextBlock
+                {
+                    Text = badge, FontSize = 10, FontWeight = Microsoft.UI.Text.FontWeights.SemiBold,
+                    Foreground = new SolidColorBrush(Colors.White), HorizontalAlignment = HorizontalAlignment.Center
+                }
+            });
+            iconHost = host;
+        }
         bool expanded = _primaryNavExpanded;
         var panel = new StackPanel
         {
@@ -320,7 +356,7 @@ public sealed partial class MainWindow
             VerticalAlignment = VerticalAlignment.Center,
             HorizontalAlignment = expanded ? HorizontalAlignment.Left : HorizontalAlignment.Center
         };
-        panel.Children.Add(icon);
+        panel.Children.Add(iconHost);
         panel.Children.Add(new TextBlock
         {
             Text = label, FontSize = expanded ? 14 : 11,

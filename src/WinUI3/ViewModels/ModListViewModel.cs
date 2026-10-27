@@ -13,6 +13,7 @@ public sealed partial class ModListViewModel : ObservableObject
     private SecondLevelFolderItem? _selectedMod;
     private RepositoryWorkspaceView _view;
     private ModListEmptyKind _emptyKind = ModListEmptyKind.NoCharacter;
+    private ModStateFilter _stateFilter;
 
     /// <summary>The selected character's Mods that pass the search and tag filters.</summary>
     public BatchObservableCollection<SecondLevelFolderItem> VisibleMods { get; } = [];
@@ -20,6 +21,9 @@ public sealed partial class ModListViewModel : ObservableObject
     public SecondLevelFolderItem? SelectedMod { get => _selectedMod; set => SetProperty(ref _selectedMod, value); }
 
     public RepositoryWorkspaceView View { get => _view; set => SetProperty(ref _view, value); }
+
+    /// <summary>The state chips above the list: all Mods, the deployed ones, or the rest.</summary>
+    public ModStateFilter StateFilter { get => _stateFilter; set => SetProperty(ref _stateFilter, value); }
 
     public ModListEmptyKind EmptyKind { get => _emptyKind; private set => SetProperty(ref _emptyKind, value); }
 

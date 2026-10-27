@@ -35,7 +35,7 @@ public sealed class RepositoryWorkspacePolicyTests
     {
         var layout = RepositoryWorkspacePolicy.Layout(width);
         Assert.Equal(inline, layout.InlineDetails);
-        Assert.InRange(layout.CategoryWidth, 156, 208);
+        Assert.InRange(layout.CategoryWidth, 176, 220);
         Assert.InRange(layout.CoverColumns, 1, 8);
         Assert.True(layout.CoverWidth >= 140);
         if (inline) Assert.True(width - layout.CategoryWidth - layout.DetailWidth - 24 >= 240);
@@ -128,4 +128,41 @@ public sealed class RepositoryWorkspacePolicyTests
     [InlineData(null, @"C:\Repo\Ann\Outfit", @"C:\Repo\Ann\Outfit")]
     public void DisplayPath_ShortensOnlyPathsInsideTheRepository(string? root, string path, string expected)
         => Assert.Equal(expected, RepositoryWorkspacePolicy.DisplayPath(root, path));
+
+    [Theory]
+    [InlineData(ModStateTone.Deployed, ModStateFilter.All, true)]
+    [InlineData(ModStateTone.NotDeployed, ModStateFilter.All, true)]
+    [InlineData(ModStateTone.Deployed, ModStateFilter.Deployed, true)]
+    [InlineData(ModStateTone.NotDeployed, ModStateFilter.Deployed, false)]
+    [InlineData(ModStateTone.Neutral, ModStateFilter.Deployed, false)]
+    [InlineData(ModStateTone.Deployed, ModStateFilter.NotDeployed, false)]
+    [InlineData(ModStateTone.NotDeployed, ModStateFilter.NotDeployed, true)]
+    [InlineData(ModStateTone.Neutral, ModStateFilter.NotDeployed, true)]
+    public void MatchesStateFilter_SplitsDeployedFromTheRest(ModStateTone tone, ModStateFilter filter, bool expected)
+        => Assert.Equal(expected, RepositoryWorkspacePolicy.MatchesStateFilter(tone, filter));
+
+    [Fact]
+    public void ReplacedByDeploy_NamesTheOtherDeployedMod()
+        => Assert.Equal("Outfit-Casual", RepositoryWorkspacePolicy.ReplacedByDeploy(
+            [("Outfit-Casual", ModStateTone.Deployed), ("Weapon-Glow", ModStateTone.NotDeployed)], "Weapon-Glow"));
+
+    [Fact]
+    public void ReplacedByDeploy_IgnoresTheModItself()
+        => Assert.Null(RepositoryWorkspacePolicy.ReplacedByDeploy(
+            [("Outfit-Casual", ModStateTone.Deployed), ("Weapon-Glow", ModStateTone.NotDeployed)], "outfit-casual"));
+
+    [Fact]
+    public void ReplacedByDeploy_IsNullWhenNothingIsDeployed()
+        => Assert.Null(RepositoryWorkspacePolicy.ReplacedByDeploy([("Hair-Pack", ModStateTone.NotDeployed)], "Other"));
+
+    [Theory]
+    [InlineData(false, false, false, 0, false)]
+    [InlineData(true, true, false, 2, false)]
+    [InlineData(true, true, true, 3, true)]
+    public void RepositorySetup_CountsTheDoneSteps(bool game, bool folder, bool target, int done, bool complete)
+    {
+        var setup = new RepositorySetup(game, folder, target);
+        Assert.Equal(done, setup.Done);
+        Assert.Equal(complete, setup.IsComplete);
+    }
 }

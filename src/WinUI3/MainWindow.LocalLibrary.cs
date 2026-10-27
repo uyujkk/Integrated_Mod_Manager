@@ -353,6 +353,9 @@ public sealed partial class MainWindow
                     && string.Equals(_currentSecondLevelPath, item.Path, StringComparison.CurrentCultureIgnoreCase))
                 {
                     LoadBindingsForCurrentMod(item);
+                    // The row's shortcut count and the tab header read the bindings just imported.
+                    ApplyModRowState(item);
+                    UpdateRepositorySelectedMetadataV4();
                     StatusTextBlock.Text = T("LocalLibrary.ShortcutsWereDetectedFromTheMod");
                 }
             }
