@@ -117,7 +117,7 @@ flowchart TD
 
 | 分组 / Group | 文件 / Files |
 | --- | --- |
-| 外壳与通用 / Shell | `Shell`, `Localization`, `Settings`, `Configuration`, `Dialogs`, `Tray`, `SingleInstance`, `UiActionGuard`, `UiDiagnostics`, `BuiltInData`, `WhatsNew` |
+| 外壳与通用 / Shell | `Shell`, `PageLayout`, `Localization`, `Settings`, `Configuration`, `Dialogs`, `Tray`, `SingleInstance`, `UiActionGuard`, `UiDiagnostics`, `BuiltInData`, `WhatsNew` |
 | 仓库与本地库 / Repositories | `Dashboard`, `Repositories`, `LocalLibrary`, `RepositoryWorkspace`, `RefinedWorkspace`, `RepositoryPerformance`, `LocalTags`, `ExistingModImport`, `CharacterAvatars`, `CharacterSelection` |
 | 安装、部署与预设 / Install and presets | `Archives`, `InstallTransactions`, `IniConflicts`, `ConfigurationProfiles`, `CombinationPresets`, `CombinationBundles`, `PersistentSlots`, `PersistentVariants` |
 | 在线浏览 / Online | `OnlineFeed`, `OnlineCharacters`, `OnlineCards`, `OnlineDetails`, `OnlineImageCache`, `OnlineImages`, `OnlineBrowse`, `OnlineState`, `OnlineLibrary`, `BrowseSessions`, `AuthorWorkspace` |
@@ -137,6 +137,32 @@ flowchart TD
 | `Online*Adapter.cs` | 在线页状态与图片加载的适配层。Adapters for online page state and image loading. |
 | `UiCrashDiagnostics.cs` | 界面崩溃的本地诊断。Local diagnostics for UI crashes. |
 | `Models/` | 窗口使用的记录与配置类型，每个类型一个文件（如 `BetaShellConfig`、`WorkspaceRepository`、`ModPersistentSlot`）。Records and configuration types used by the window, one per file. |
+| `Controls/` | XAML 控件：通用页头 `PageHeader`、在线卡片 `OnlineModTile`。XAML controls: the shared `PageHeader` and the online `OnlineModTile`. |
+| `ViewModels/` | 可绑定的 ViewModel（如 `OnlineModTileViewModel`），写法见 5.3。Bindable view models such as `OnlineModTileViewModel`; see 5.3. |
+
+### 5.3 页面、控件与 ViewModel / Pages, controls and view models
+
+界面按页面逐个迁移到“控件 + ViewModel + Core 布局策略”，每次只迁移一个页面，部署和数据逻辑不跟着改。
+Pages move one at a time to "control + view model + Core layout policy"; deployment and data logic stay as they are.
+
+- **控件**放在 `src/WinUI3/Controls`，是 XAML `UserControl`，用 `x:Bind` 绑定。通用控件（如 `PageHeader`）用依赖属性对外暴露；页面控件只绑定自己的 ViewModel。
+  **Controls** live in `src/WinUI3/Controls` as XAML `UserControl`s bound with `x:Bind`. Shared controls such as `PageHeader` expose dependency properties; page controls bind only to their own view model.
+- 每个页面用 `PageHeader`：一行标题，说明放在 ⓘ 提示里，右侧放操作按钮（`Actions`）。不要再写两行的大标题横幅。
+  Every page uses `PageHeader`: a one-line title, the description in the ⓘ tooltip and actions on the right (`Actions`). No two-line banner headers.
+- **ViewModel** 放在 `src/WinUI3/ViewModels`，命名 `<名称>ViewModel`，`public sealed partial class`，继承 CommunityToolkit.Mvvm 的 `ObservableObject`。
+  **View models** live in `src/WinUI3/ViewModels`, are named `<Name>ViewModel`, and are `public sealed partial class`es deriving from CommunityToolkit.Mvvm's `ObservableObject`.
+  - 属性写成字段加 `SetProperty`。不用字段上的 `[ObservableProperty]`（MVVMTK0045，WinRT/AOT 不安全）；partial 属性需要预览版语言，也不用。
+    Properties are a field plus `SetProperty`. No field-based `[ObservableProperty]` (MVVMTK0045, not WinRT/AOT-safe); partial properties need a preview language version, so not those either.
+  - 操作用 `[RelayCommand]`；能否执行由 `CanExecute = nameof(...)` 的属性决定，该属性变化时调用 `XxxCommand.NotifyCanExecuteChanged()`。
+    Actions are `[RelayCommand]`s; availability comes from a `CanExecute = nameof(...)` property that calls `XxxCommand.NotifyCanExecuteChanged()` when it changes.
+  - ViewModel 不引用控件、不调用 `T()`。需要窗口做的事（打开对话框、部署、下载）通过构造函数传入 `Func<Task>` 或接口；显示用的文本由窗口本地化后赋值，或者由 ViewModel 暴露状态、在 XAML 里转换。
+    View models reference no controls and do not call `T()`. Work only the window can do (dialogs, deployment, downloads) comes in through constructor `Func<Task>`s or interfaces; display text is localized by the window and assigned, or the view model exposes state that XAML converts.
+  - 判断逻辑尽量放在 Core，ViewModel 只组合结果。参考 `OnlineModTileViewModel`。
+    Decisions belong in Core where possible; the view model only combines results. See `OnlineModTileViewModel`.
+- **布局**：页面在自己的 `SizeChanged` 里重新排版（`MainWindow.PageLayout.cs` 的 `AttachPageLayout`），用页面自身宽度而不是窗口宽度。窗口的 `SizeChanged` 触发时页面还没重新测量，读到的是旧宽度。断点和列数写成 `Core/Layout` 里的策略并补测试（如 `DashboardLayoutPolicy`）。
+  **Layout**: a page lays itself out in its own `SizeChanged` (`AttachPageLayout` in `MainWindow.PageLayout.cs`) from its own width, not the window's; when the window's `SizeChanged` fires the pages still report their previous size. Breakpoints and column counts are policies in `Core/Layout` with tests (for example `DashboardLayoutPolicy`).
+- 用名字（`x:Name`）找控件，不用 `Children[n]` 这样的位置序号；调整 XAML 顺序不应让布局失效。
+  Find elements by `x:Name`, never by position such as `Children[n]`; reordering XAML must not break a layout.
 
 ## 6. Core 模块 / Core modules
 
@@ -153,7 +179,7 @@ flowchart TD
 | `Updates` | 版本与发布策略（`ApplicationReleasePolicy`）、更新包与校验文件、Mod 更新替换与恢复。Release policy, update packages and checksums, Mod update replacement. |
 | `Repository` | 仓库扫描、角色文件夹头像（`CharacterFolderAvatars`）、工作区策略、批量集合、性能记录。Repository scanning, character avatars, workspace policies, performance. |
 | `Endfield` | 桥接迁移与资格判断、干员目录解析、内置干员表 `endfield-characters.json`（嵌入资源）。Bridge integration, operator catalog, embedded operator list. |
-| `Layout` | 与控件无关的窗口、弹窗、在线页和设置页布局策略（如最大化还原到 80%）。Control-free layout policies, such as restoring to 80% of the work area. |
+| `Layout` | 与控件无关的窗口、弹窗、仪表板、在线页和设置页布局策略（如最大化还原到 80%、页面断点和列数）。Control-free layout policies, such as restoring to 80% of the work area and page breakpoints and column counts. |
 | `Infrastructure` | 路径安全（`PathSafety`）、不跟随链接的目录操作（`SafeDirectoryTree`）、错误标记（`ErrorTags`）、恢复用 JSON、日志轮换、单实例策略。Path safety, link-safe tree operations, error tags, recovery JSON, log rotation, single instance. |
 
 ## 7. 数据与状态 / Data and state

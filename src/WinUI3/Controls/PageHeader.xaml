@@ -1,0 +1,42 @@
+<UserControl
+    x:Class="ModFolderCopier.WinUI.PageHeader"
+    xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+    xmlns:local="using:ModFolderCopier.WinUI"
+    HorizontalAlignment="Stretch">
+
+    <!-- One row like the workspace and online headers: the description lives in the tooltip. -->
+    <Border Style="{StaticResource PageHeaderBorderStyle}" MinHeight="56">
+        <Grid ColumnSpacing="12">
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="*" />
+                <ColumnDefinition Width="Auto" />
+            </Grid.ColumnDefinitions>
+            <StackPanel Orientation="Horizontal" Spacing="8" VerticalAlignment="Center">
+                <TextBlock
+                    Text="{x:Bind Title, Mode=OneWay}"
+                    FontSize="20"
+                    FontWeight="SemiBold"
+                    TextTrimming="CharacterEllipsis"
+                    VerticalAlignment="Center" />
+                <FontIcon
+                    x:Name="InfoIcon"
+                    Glyph="&#xE946;"
+                    FontSize="14"
+                    Opacity="0.7"
+                    VerticalAlignment="Center"
+                    Visibility="{x:Bind local:PageHeader.VisibleWhenText(Description), Mode=OneWay}">
+                    <ToolTipService.ToolTip>
+                        <ToolTip MaxWidth="420">
+                            <TextBlock Text="{x:Bind Description, Mode=OneWay}" TextWrapping="Wrap" />
+                        </ToolTip>
+                    </ToolTipService.ToolTip>
+                </FontIcon>
+            </StackPanel>
+            <ContentPresenter
+                Grid.Column="1"
+                Content="{x:Bind Actions, Mode=OneWay}"
+                VerticalAlignment="Center" />
+        </Grid>
+    </Border>
+</UserControl>

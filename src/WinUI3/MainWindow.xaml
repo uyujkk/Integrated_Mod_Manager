@@ -163,17 +163,9 @@
             <Grid x:Name="PagesHostGrid" Grid.Column="2">
                 <ScrollViewer x:Name="DashboardScrollViewer" VerticalScrollBarVisibility="Auto" Visibility="Collapsed">
                     <StackPanel Margin="2" Spacing="14">
-                        <Border Style="{StaticResource PageHeaderBorderStyle}">
-                            <Grid ColumnSpacing="20">
-                                <Grid.ColumnDefinitions>
-                                    <ColumnDefinition Width="*" />
-                                    <ColumnDefinition Width="Auto" />
-                                </Grid.ColumnDefinitions>
-                                <StackPanel Spacing="8">
-                                    <TextBlock x:Name="DashboardTitleTextBlock" FontSize="30" FontWeight="SemiBold" />
-                                    <TextBlock x:Name="DashboardSubtitleTextBlock" Style="{StaticResource MutedTextStyle}" TextWrapping="Wrap" />
-                                </StackPanel>
-                                <StackPanel Grid.Column="1" Orientation="Horizontal" Spacing="8" VerticalAlignment="Center">
+                        <local:PageHeader x:Name="DashboardPageHeader">
+                            <local:PageHeader.Actions>
+                                <StackPanel Orientation="Horizontal" Spacing="8">
                                     <Button
                                         x:Name="AddRepositoryButton"
                                         Click="OnAddRepositoryDetailsClicked"
@@ -199,10 +191,10 @@
                                         <FontIcon Glyph="&#xE74D;" FontSize="16" />
                                     </Button>
                                 </StackPanel>
-                            </Grid>
-                        </Border>
+                            </local:PageHeader.Actions>
+                        </local:PageHeader>
 
-                        <Border Style="{StaticResource CardBorderStyle}">
+                        <Border x:Name="DashboardRepositorySelectorCard" Style="{StaticResource CardBorderStyle}">
                             <Grid ColumnSpacing="16">
                                 <Grid.ColumnDefinitions>
                                     <ColumnDefinition Width="Auto" />
@@ -229,7 +221,7 @@
                             </Grid>
                         </Border>
 
-                        <Grid ColumnSpacing="12">
+                        <Grid x:Name="DashboardMetricsGrid" ColumnSpacing="12">
                             <Grid.ColumnDefinitions>
                                 <ColumnDefinition Width="*" />
                                 <ColumnDefinition Width="*" />
@@ -258,7 +250,7 @@
                             </Border>
                         </Grid>
 
-                        <Border Style="{StaticResource CardBorderStyle}">
+                        <Border x:Name="DashboardPresetsCard" Style="{StaticResource CardBorderStyle}">
                             <Grid RowSpacing="12">
                                 <Grid.RowDefinitions>
                                     <RowDefinition Height="Auto" />
@@ -307,7 +299,7 @@
                             </Grid>
                         </Border>
 
-                        <Border Style="{StaticResource CardBorderStyle}">
+                        <Border x:Name="DashboardRepositoriesCard" Style="{StaticResource CardBorderStyle}">
                             <StackPanel Spacing="12">
                                 <StackPanel Spacing="4">
                                     <TextBlock x:Name="DashboardRepositoriesTitleTextBlock" Style="{StaticResource SectionTitleTextStyle}" />
@@ -1255,12 +1247,7 @@
                 </ScrollViewer>
                 <ScrollViewer x:Name="UpdatesScrollViewer" VerticalScrollBarVisibility="Auto" Visibility="Collapsed">
                     <StackPanel Margin="6" Spacing="16">
-                        <Border Style="{StaticResource PageHeaderBorderStyle}">
-                            <StackPanel Spacing="10">
-                                <TextBlock x:Name="UpdatesTitleTextBlock" FontSize="30" FontWeight="SemiBold" />
-                                <TextBlock x:Name="UpdatesSubtitleTextBlock" Style="{StaticResource MutedTextStyle}" TextWrapping="Wrap" />
-                            </StackPanel>
-                        </Border>
+                        <local:PageHeader x:Name="UpdatesPageHeader" />
 
                         <Grid x:Name="UpdatesTopGrid" ColumnSpacing="16" RowSpacing="16">
                             <Grid.ColumnDefinitions>
@@ -1467,14 +1454,9 @@
                     VerticalScrollMode="Disabled"
                     Visibility="Collapsed">
                     <StackPanel Margin="6" Spacing="16">
-                        <Border Style="{StaticResource PageHeaderBorderStyle}">
-                            <StackPanel Spacing="10">
-                                <TextBlock x:Name="SettingsTitleTextBlock" FontSize="30" FontWeight="SemiBold" />
-                                <TextBlock x:Name="SettingsSubtitleTextBlock" Style="{StaticResource MutedTextStyle}" TextWrapping="Wrap" />
-                            </StackPanel>
-                        </Border>
+                        <local:PageHeader x:Name="SettingsPageHeader" />
 
-                        <Border Style="{StaticResource CardBorderStyle}">
+                        <Border x:Name="SettingsAppearanceCard" Style="{StaticResource CardBorderStyle}">
                             <StackPanel Spacing="12">
                                 <TextBlock x:Name="SettingsAppearanceTitleTextBlock" Style="{StaticResource SectionTitleTextStyle}" />
                                 <StackPanel Spacing="8">
@@ -1561,7 +1543,7 @@
                             </StackPanel>
                         </Border>
 
-                        <Border Style="{StaticResource CardBorderStyle}">
+                        <Border x:Name="SettingsAppUpdatesCard" Style="{StaticResource CardBorderStyle}">
                             <StackPanel Spacing="12">
                                 <TextBlock x:Name="SettingsProjectTitleTextBlock" Style="{StaticResource SectionTitleTextStyle}" />
                                 <TextBlock x:Name="SettingsProjectHintTextBlock" Style="{StaticResource MutedTextStyle}" TextWrapping="Wrap" />
@@ -1647,7 +1629,7 @@
                             </StackPanel>
                         </Border>
 
-                        <Border Style="{StaticResource CardBorderStyle}">
+                        <Border x:Name="SettingsOnlineCard" Style="{StaticResource CardBorderStyle}">
                             <StackPanel Spacing="12">
                                 <TextBlock x:Name="SettingsPlaceholderTitleTextBlock" Style="{StaticResource SectionTitleTextStyle}" />
                                 <TextBlock x:Name="SettingsPlaceholderTextBlock" Style="{StaticResource MutedTextStyle}" TextWrapping="Wrap" />
@@ -1717,7 +1699,7 @@
                             </StackPanel>
                         </Border>
 
-                        <Border Style="{StaticResource CardBorderStyle}">
+                        <Border x:Name="SettingsDiagnosticsCard" Style="{StaticResource CardBorderStyle}">
                             <StackPanel Spacing="12">
                                 <TextBlock x:Name="DiagnosticsTitleTextBlock" Style="{StaticResource SectionTitleTextStyle}" />
                                 <TextBlock x:Name="DiagnosticsHintTextBlock" Style="{StaticResource MutedTextStyle}" TextWrapping="Wrap" />
@@ -1800,6 +1782,20 @@
                                         <StackPanel Spacing="2">
                                             <TextBlock Text="libarchive / Windows tar" FontWeight="SemiBold" />
                                             <TextBlock Text="https://github.com/libarchive/libarchive" Style="{StaticResource CaptionTextStyle}" TextTrimming="CharacterEllipsis" />
+                                        </StackPanel>
+                                    </Button>
+
+                                    <Button
+                                        Grid.Row="1"
+                                        Tag="https://github.com/CommunityToolkit/dotnet"
+                                        Click="OnExternalResourceClicked"
+                                        MinHeight="54"
+                                        Padding="12,7"
+                                        HorizontalContentAlignment="Stretch"
+                                        Style="{StaticResource SecondaryButtonStyle}">
+                                        <StackPanel Spacing="2">
+                                            <TextBlock Text="CommunityToolkit.Mvvm" FontWeight="SemiBold" />
+                                            <TextBlock Text="https://github.com/CommunityToolkit/dotnet" Style="{StaticResource CaptionTextStyle}" TextTrimming="CharacterEllipsis" />
                                         </StackPanel>
                                     </Button>
 

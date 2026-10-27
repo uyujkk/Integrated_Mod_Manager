@@ -10,8 +10,8 @@ public sealed partial class MainWindow
 {
     private void RefreshSettingsPane()
     {
-        SettingsTitleTextBlock.Text = T("Common.ApplicationSettings");
-        SettingsSubtitleTextBlock.Text = T("Settings.LanguageThemeRepositoryEntryPointsAnd");
+        SettingsPageHeader.Title = T("Common.ApplicationSettings");
+        SettingsPageHeader.Description = T("Settings.LanguageThemeRepositoryEntryPointsAnd");
         SettingsAppearanceTitleTextBlock.Text = T("Common.AppearanceAndLanguage");
         RefreshAppearanceSettings();
         RefreshProductivitySettingsText();

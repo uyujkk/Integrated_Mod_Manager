@@ -91,8 +91,8 @@ public sealed partial class MainWindow
         AutomationProperties.SetName(OnlineDetailHeroImage, T("Localization.OpenFullSizeOnlineModImage"));
         InitializeOnlineControls();
 
-        DashboardTitleTextBlock.Text = T("Localization.RepositoryDashboard");
-        DashboardSubtitleTextBlock.Text = T("Localization.SwitchRepositoriesCreatePresetsReviewPath");
+        DashboardPageHeader.Title = T("Localization.RepositoryDashboard");
+        DashboardPageHeader.Description = T("Localization.SwitchRepositoriesCreatePresetsReviewPath");
         DashboardAddRepositoryTextBlock.Text = T("Localization.NewRepository");
         DashboardEditRepositoryTextBlock.Text = T("Localization.EditCurrent");
         DashboardCurrentRepositoryLabelTextBlock.Text = T("Localization.ActiveRepository");
@@ -124,8 +124,8 @@ public sealed partial class MainWindow
         OnlinePreviewHintTextBlock.Text = T("Localization.ThisPageLoadsDataFromAn");
         EditOnlineRepositoryButton.Content = T("Localization.EditCurrentRepositoryOnlineCategory");
 
-        SettingsTitleTextBlock.Text = T("Common.ApplicationSettings");
-        SettingsSubtitleTextBlock.Text = T("Localization.ConfigureLanguageThemeUpdateChecksAnd");
+        SettingsPageHeader.Title = T("Common.ApplicationSettings");
+        SettingsPageHeader.Description = T("Localization.ConfigureLanguageThemeUpdateChecksAnd");
         SettingsAppearanceTitleTextBlock.Text = T("Common.AppearanceAndLanguage");
         RefreshAppearanceSettings();
         SettingsProjectTitleTextBlock.Text = T("Common.ProjectLinksAndAppVersion");
