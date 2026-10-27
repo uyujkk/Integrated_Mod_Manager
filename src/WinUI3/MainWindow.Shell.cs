@@ -647,6 +647,24 @@ public sealed partial class MainWindow
         ApplyLanguage();
     }
 
+    // The app header row doubles as the title bar, so the window has one top row instead of two.
+    private void InitializeAppTitleBar()
+    {
+        ExtendsContentIntoTitleBar = true;
+        SetTitleBar(AppTitleBar);
+        try
+        {
+            if (Microsoft.UI.Windowing.AppWindowTitleBar.IsCustomizationSupported())
+            {
+                AppWindow.TitleBar.PreferredHeightOption = Microsoft.UI.Windowing.TitleBarHeightOption.Tall;
+            }
+        }
+        catch (Exception ex)
+        {
+            TraceStartupStage("Title bar height could not be applied: " + ex.Message);
+        }
+    }
+
     private void ApplyWindowChrome(bool dark)
     {
         try
@@ -661,19 +679,16 @@ public sealed partial class MainWindow
             var inactiveForeground = dark
                 ? ColorHelper.FromArgb(160, 255, 255, 255)
                 : ColorHelper.FromArgb(150, 0, 0, 0);
-            var background = dark
-                ? ColorHelper.FromArgb(255, 18, 23, 30)
-                : ColorHelper.FromArgb(255, 244, 247, 251);
-            var inactiveBackground = dark
-                ? ColorHelper.FromArgb(255, 24, 29, 37)
-                : ColorHelper.FromArgb(255, 248, 250, 253);
+            var hoverBackground = dark
+                ? ColorHelper.FromArgb(28, 255, 255, 255)
+                : ColorHelper.FromArgb(20, 0, 0, 0);
 
-            titleBar.BackgroundColor = background;
-            titleBar.InactiveBackgroundColor = inactiveBackground;
-            titleBar.ForegroundColor = foreground;
-            titleBar.InactiveForegroundColor = inactiveForeground;
-            titleBar.ButtonBackgroundColor = background;
-            titleBar.ButtonInactiveBackgroundColor = inactiveBackground;
+            // Content extends under the caption buttons; keep them transparent over the app background.
+            titleBar.ButtonBackgroundColor = Colors.Transparent;
+            titleBar.ButtonInactiveBackgroundColor = Colors.Transparent;
+            titleBar.ButtonHoverBackgroundColor = hoverBackground;
+            titleBar.ButtonHoverForegroundColor = foreground;
+            titleBar.ButtonPressedBackgroundColor = hoverBackground;
             titleBar.ButtonForegroundColor = foreground;
             titleBar.ButtonInactiveForegroundColor = inactiveForeground;
         }

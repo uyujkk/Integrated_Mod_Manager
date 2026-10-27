@@ -71,6 +71,13 @@ public sealed partial class MainWindow
         CharacterAvatarButton.IsEnabled = item is not null;
         ToolTipService.SetToolTip(CharacterAvatarButton, avatarTip);
         Microsoft.UI.Xaml.Automation.AutomationProperties.SetName(CharacterAvatarButton, avatarTip);
+        if (_characterMoreButton is not null)
+        {
+            string moreTip = item is null ? T("CharacterAvatars.SelectACharacterFirst") : T("RepositoryWorkspace.MoreCharacterActions");
+            _characterMoreButton.IsEnabled = item is not null;
+            ToolTipService.SetToolTip(_characterMoreButton, moreTip);
+            Microsoft.UI.Xaml.Automation.AutomationProperties.SetName(_characterMoreButton, moreTip);
+        }
     }
 
     private void OnCharacterMultipleModsToggleClicked(object sender, RoutedEventArgs e)

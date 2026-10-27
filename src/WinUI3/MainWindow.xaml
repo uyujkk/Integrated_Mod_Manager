@@ -55,38 +55,26 @@
                 </Button>
             </DataTemplate>
         </Grid.Resources>
-        <Grid x:Name="AppShellGrid" Padding="10" RowSpacing="10">
+        <Grid x:Name="AppShellGrid" Padding="12,0,12,12" RowSpacing="4">
             <Grid.RowDefinitions>
                 <RowDefinition Height="Auto" />
                 <RowDefinition Height="*" />
             </Grid.RowDefinitions>
 
-            <Border Grid.Row="0" Style="{StaticResource PageHeaderBorderStyle}">
-                <Grid ColumnSpacing="24">
-                    <Grid.ColumnDefinitions>
-                        <ColumnDefinition Width="*" />
-                        <ColumnDefinition Width="Auto" />
-                    </Grid.ColumnDefinitions>
-
-                    <StackPanel Orientation="Horizontal" Spacing="12" VerticalAlignment="Center">
-                        <Image Width="38" Height="38" Source="Assets/AppIcon.png" Stretch="Uniform" />
-                        <StackPanel VerticalAlignment="Center">
-                            <TextBlock x:Name="HeaderTitleTextBlock" FontSize="21" FontWeight="SemiBold" />
-                            <TextBlock x:Name="HeaderSubtitleTextBlock" Visibility="Collapsed" />
-                            <TextBlock x:Name="HeaderCaptionTextBlock" Visibility="Collapsed" />
-                        </StackPanel>
-                    </StackPanel>
-
-                    <StackPanel Grid.Column="1" Orientation="Horizontal" Spacing="8" VerticalAlignment="Top">
-                        <Border Style="{StaticResource SoftBadgeBorderStyle}">
-                            <TextBlock x:Name="HeaderFrameworkBadgeTextBlock" FontWeight="SemiBold" />
-                        </Border>
-                        <Border Style="{StaticResource SoftBadgeBorderStyle}">
-                            <TextBlock x:Name="HeaderVersionBadgeTextBlock" FontWeight="SemiBold" />
-                        </Border>
-                    </StackPanel>
-                </Grid>
-            </Border>
+            <!-- The app header is the window title bar; the system draws the caption buttons on the right. -->
+            <Grid x:Name="AppTitleBar" Grid.Row="0" Height="48" Margin="-12,0,-12,0" Padding="16,0,0,0" ColumnSpacing="10" Background="Transparent">
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="Auto" />
+                    <ColumnDefinition Width="Auto" />
+                    <ColumnDefinition Width="Auto" />
+                    <ColumnDefinition Width="*" />
+                </Grid.ColumnDefinitions>
+                <Image Width="20" Height="20" Source="Assets/AppIcon.png" Stretch="Uniform" VerticalAlignment="Center" />
+                <TextBlock x:Name="HeaderTitleTextBlock" Grid.Column="1" FontSize="13" FontWeight="SemiBold" VerticalAlignment="Center" />
+                <TextBlock x:Name="HeaderVersionBadgeTextBlock" Grid.Column="2" Style="{StaticResource CaptionTextStyle}" VerticalAlignment="Center" />
+                <TextBlock x:Name="HeaderSubtitleTextBlock" Visibility="Collapsed" />
+                <TextBlock x:Name="HeaderCaptionTextBlock" Visibility="Collapsed" />
+            </Grid>
 
             <Grid Grid.Row="1" ColumnSpacing="12">
                 <Grid.ColumnDefinitions>

@@ -140,7 +140,6 @@ public sealed partial class MainWindow
             : UpdateStatusTextBlock.Text;
 
         HeaderTitleTextBlock.Text = T("Localization.IntegratedModManager");
-        HeaderFrameworkBadgeTextBlock.Text = "WinUI 3";
         HeaderVersionBadgeTextBlock.Text = AppVersion;
         HeaderSubtitleTextBlock.Text = string.Empty;
         HeaderCaptionTextBlock.Text = T("Localization.SelectAFirstLevelCategoryFirst");
