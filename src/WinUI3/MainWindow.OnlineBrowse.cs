@@ -80,6 +80,51 @@ public sealed partial class MainWindow
         return link;
     }
 
+    // What a card shows for its download: shared by list cards (controls) and grid tiles (view model).
+    private readonly record struct OnlineCardStatus(bool CanDownload, string Text, string ToolTip, string Action, string Glyph);
+
+    private OnlineCardStatus GetOnlineCardStatus(OnlineModCard mod, TrackedModOrigin? installed, string defaultStatus)
+    {
+        bool active = _onlineDownloadActions.IsActive(CaptureOnlineDownloadContext(GetSelectedRepository()),
+            GetOnlineDownloadIdentity(mod));
+        DownloadTaskItem? task = _downloadTasks.FirstOrDefault(item =>
+            item.Session is not null && item.SourceIdentity == GetOnlineDownloadIdentity(mod)
+            && string.Equals(item.Session.Context.RepositoryId, GetSelectedRepository()?.Id, StringComparison.OrdinalIgnoreCase)
+            && string.Equals(item.Session.Context.RepositoryPath, GetSelectedRepository()?.SourcePath, StringComparison.OrdinalIgnoreCase));
+        // A retry can be preparing while its previous terminal task is still in history.
+        if (active && task is not null && DownloadProgressPolicy.IsTerminal(task.State)) task = null;
+        string text = task?.State switch
+        {
+            DownloadTaskState.Queued => T("OnlineBrowse.Queued"),
+            DownloadTaskState.Preparing => T("OnlineBrowse.Preparing"),
+            DownloadTaskState.Downloading => T("OnlineBrowse.Downloading", task.Progress),
+            DownloadTaskState.Extracting => T("OnlineBrowse.Extracting"),
+            DownloadTaskState.Canceling => T("OnlineBrowse.Canceling"),
+            DownloadTaskState.Completed => T("OnlineBrowse.DownloadCompleted"),
+            DownloadTaskState.Failed => T("OnlineBrowse.DownloadFailedRetryAvailable"),
+            DownloadTaskState.Canceled => T("OnlineBrowse.DownloadCanceled"),
+            _ => active ? T("OnlineBrowse.Preparing") : defaultStatus
+        };
+        string action = active ? text : installed is null
+            ? T("Common.DownloadAndExtract")
+            : T("Common.DownloadAndExtractAgain");
+        return new(
+            !string.IsNullOrWhiteSpace(mod.DownloadUrl) && !IsOnlineDownloadActionBlocked(mod),
+            text,
+            task is null ? text : L(task.StatusZh, task.StatusEn),
+            action,
+            active ? "\uE895" : task?.State == DownloadTaskState.Failed ? "\uE72C" : "\uE896");
+    }
+
+    // The installed badge is rebuilt only when the installed path changes.
+    private void ApplyOnlineInstalledIndicator(ContentControl installedHost, TrackedModOrigin? installed)
+    {
+        string path = installed?.Path ?? string.Empty;
+        if (string.Equals(installedHost.Tag as string, path, StringComparison.OrdinalIgnoreCase)) return;
+        installedHost.Tag = path;
+        installedHost.Content = installed is null ? null : CreateOnlineInstalledIndicator(path);
+    }
+
     private void TrackOnlineCardState(OnlineModCard mod, Button button, ContentControl installedHost,
         TextBlock status, string defaultStatus)
     {
@@ -88,45 +133,37 @@ public sealed partial class MainWindow
         {
             // Byte-progress callbacks must not probe every tracked directory on disk.
             if (refreshInstalled) installed = FindInstalledOnlineMod(mod);
-            string path = installed?.Path ?? string.Empty;
-            if (!string.Equals(installedHost.Tag as string, path, StringComparison.OrdinalIgnoreCase))
-            {
-                installedHost.Tag = path;
-                installedHost.Content = installed is null ? null : CreateOnlineInstalledIndicator(path);
-            }
-            bool active = _onlineDownloadActions.IsActive(CaptureOnlineDownloadContext(GetSelectedRepository()),
-                GetOnlineDownloadIdentity(mod));
-            button.IsEnabled = !string.IsNullOrWhiteSpace(mod.DownloadUrl) && !IsOnlineDownloadActionBlocked(mod);
-            DownloadTaskItem? task = _downloadTasks.FirstOrDefault(item =>
-                item.Session is not null && item.SourceIdentity == GetOnlineDownloadIdentity(mod)
-                && string.Equals(item.Session.Context.RepositoryId, GetSelectedRepository()?.Id, StringComparison.OrdinalIgnoreCase)
-                && string.Equals(item.Session.Context.RepositoryPath, GetSelectedRepository()?.SourcePath, StringComparison.OrdinalIgnoreCase));
-            // A retry can be preparing while its previous terminal task is still in history.
-            if (active && task is not null && DownloadProgressPolicy.IsTerminal(task.State)) task = null;
-            string text = task?.State switch
-            {
-                DownloadTaskState.Queued => T("OnlineBrowse.Queued"),
-                DownloadTaskState.Preparing => T("OnlineBrowse.Preparing"),
-                DownloadTaskState.Downloading => T("OnlineBrowse.Downloading", task.Progress),
-                DownloadTaskState.Extracting => T("OnlineBrowse.Extracting"),
-                DownloadTaskState.Canceling => T("OnlineBrowse.Canceling"),
-                DownloadTaskState.Completed => T("OnlineBrowse.DownloadCompleted"),
-                DownloadTaskState.Failed => T("OnlineBrowse.DownloadFailedRetryAvailable"),
-                DownloadTaskState.Canceled => T("OnlineBrowse.DownloadCanceled"),
-                _ => active ? T("OnlineBrowse.Preparing") : defaultStatus
-            };
-            status.Text = text;
-            ToolTipService.SetToolTip(status, task is null ? text : L(task.StatusZh, task.StatusEn));
-            string action = active ? text : installed is null
-                ? T("Common.DownloadAndExtract")
-                : T("Common.DownloadAndExtractAgain");
-            ToolTipService.SetToolTip(button, action);
-            AutomationProperties.SetName(button, action);
-            if (button.Content is FontIcon icon)
-                icon.Glyph = active ? "\uE895" : task?.State == DownloadTaskState.Failed ? "\uE72C" : "\uE896";
+            ApplyOnlineInstalledIndicator(installedHost, installed);
+            OnlineCardStatus state = GetOnlineCardStatus(mod, installed, defaultStatus);
+            button.IsEnabled = state.CanDownload;
+            status.Text = state.Text;
+            ToolTipService.SetToolTip(status, state.ToolTip);
+            ToolTipService.SetToolTip(button, state.Action);
+            AutomationProperties.SetName(button, state.Action);
+            if (button.Content is FontIcon icon) icon.Glyph = state.Glyph;
         }
         button.Loaded += (_, _) => { _onlineCardRefreshers.Add(Refresh); Refresh(true); };
         button.Unloaded += (_, _) => _onlineCardRefreshers.Remove(Refresh);
+        Refresh(true);
+    }
+
+    private void TrackOnlineTileState(OnlineModTile tile, string defaultStatus)
+    {
+        OnlineModTileViewModel model = tile.ViewModel;
+        TrackedModOrigin? installed = null;
+        void Refresh(bool refreshInstalled)
+        {
+            if (refreshInstalled) installed = FindInstalledOnlineMod(model.Mod);
+            ApplyOnlineInstalledIndicator(tile.Installed, installed);
+            OnlineCardStatus state = GetOnlineCardStatus(model.Mod, installed, defaultStatus);
+            model.CanDownload = state.CanDownload;
+            model.StatusText = state.Text;
+            model.StatusToolTip = state.ToolTip;
+            model.DownloadToolTip = state.Action;
+            model.DownloadGlyph = state.Glyph;
+        }
+        tile.Loaded += (_, _) => { _onlineCardRefreshers.Add(Refresh); Refresh(true); };
+        tile.Unloaded += (_, _) => _onlineCardRefreshers.Remove(Refresh);
         Refresh(true);
     }
 

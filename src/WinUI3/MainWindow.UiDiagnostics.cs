@@ -12,8 +12,8 @@ public sealed partial class MainWindow
             if (!UiCrashDiagnostics.Enabled) return;
             UiCrashDiagnostics.Write(stage,
             $"item={itemId} root={RootGrid?.ActualWidth:F2}x{RootGrid?.ActualHeight:F2} " +
-            $"split={OnlineDetailsSplitView?.ActualWidth:F2} pane={OnlineDetailsSplitView?.IsPaneOpen} " +
-            $"mode={OnlineDetailsSplitView?.DisplayMode} paneWidth={OnlineDetailsSplitView?.OpenPaneLength:F2} " +
+            $"host={OnlineDetailsHost?.ActualWidth:F2} drawer={OnlineDetailDrawer?.Visibility} " +
+            $"drawerWidth={OnlineDetailDrawer?.Width:F2} " +
             $"workspace={OnlineWorkspaceGrid?.ActualWidth:F2}x{OnlineWorkspaceGrid?.ActualHeight:F2} " +
             $"results={OnlineResultsHost?.ActualWidth:F2}x{OnlineResultsHost?.ActualHeight:F2} " +
             $"cards={_onlineCardLayoutMode} closed={_onlineWindowClosed}");

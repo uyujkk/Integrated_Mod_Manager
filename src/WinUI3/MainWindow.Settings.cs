@@ -242,7 +242,7 @@ public sealed partial class MainWindow
         RefreshUpdatesPane();
         SaveConfig();
         // Re-project the same raw cache in the new language; reject the older translation.
-        if (OnlineDetailsSplitView.IsPaneOpen && _activeOnlineDetailMod is OnlineModCard mod)
+        if (IsOnlineDetailOpen && _activeOnlineDetailMod is OnlineModCard mod)
             _ = ShowOnlineModDetailsAsync(mod);
     }
 

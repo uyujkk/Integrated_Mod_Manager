@@ -1,0 +1,152 @@
+<UserControl
+    x:Class="ModFolderCopier.WinUI.OnlineModTile"
+    xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+    xmlns:local="using:ModFolderCopier.WinUI"
+    HorizontalAlignment="Stretch"
+    VerticalAlignment="Stretch">
+
+    <!-- Margin and body height match OnlineLayoutPolicy.TileMargin / TileBodyHeight; the image row takes the rest. -->
+    <Border
+        x:Name="CardBorder"
+        Margin="5"
+        CornerRadius="12"
+        BorderThickness="1"
+        BorderBrush="{ThemeResource AppCardBorderBrush}"
+        Background="{ThemeResource AppInsetBackgroundBrush}">
+        <Grid>
+            <Grid.RowDefinitions>
+                <RowDefinition Height="*" />
+                <RowDefinition Height="128" />
+            </Grid.RowDefinitions>
+
+            <Grid CornerRadius="11,11,0,0" Background="{ThemeResource AppPreviewBackgroundBrush}">
+                <Image x:Name="PreviewImage" Stretch="UniformToFill" HorizontalAlignment="Center" VerticalAlignment="Center" />
+                <TextBlock
+                    Text="{x:Bind ViewModel.PreviewPlaceholder, Mode=OneWay}"
+                    Visibility="{x:Bind local:OnlineModTile.CollapsedWhen(ViewModel.HasPreview)}"
+                    HorizontalAlignment="Center"
+                    VerticalAlignment="Center"
+                    Style="{StaticResource CaptionTextStyle}" />
+
+                <!-- A short scrim keeps the character name readable on any preview. -->
+                <Border Height="48" VerticalAlignment="Bottom" IsHitTestVisible="False">
+                    <Border.Background>
+                        <LinearGradientBrush StartPoint="0,0" EndPoint="0,1">
+                            <GradientStop Offset="0" Color="#00000000" />
+                            <GradientStop Offset="1" Color="#B8000000" />
+                        </LinearGradientBrush>
+                    </Border.Background>
+                    <TextBlock
+                        Text="{x:Bind ViewModel.CharacterLabel, Mode=OneWay}"
+                        Margin="12,0,12,8"
+                        VerticalAlignment="Bottom"
+                        FontSize="12"
+                        FontWeight="SemiBold"
+                        Foreground="White"
+                        MaxLines="1"
+                        TextTrimming="CharacterEllipsis" />
+                </Border>
+
+                <ContentControl x:Name="InstalledHost" Margin="8" HorizontalAlignment="Left" VerticalAlignment="Top" IsTabStop="False" />
+
+                <Border
+                    Margin="8"
+                    Padding="7,3"
+                    HorizontalAlignment="Right"
+                    VerticalAlignment="Top"
+                    CornerRadius="6"
+                    Background="#C0141C28"
+                    ToolTipService.ToolTip="{x:Bind ViewModel.HotnessToolTip, Mode=OneWay}">
+                    <StackPanel Orientation="Horizontal" Spacing="5">
+                        <TextBlock Text="{x:Bind ViewModel.HeatLabel, Mode=OneWay}" FontSize="10" Foreground="#D2FFFFFF" VerticalAlignment="Center" />
+                        <TextBlock Text="{x:Bind ViewModel.HotnessText, Mode=OneWay}" FontSize="12" FontWeight="SemiBold" Foreground="White" VerticalAlignment="Center" />
+                    </StackPanel>
+                </Border>
+            </Grid>
+
+            <Grid Grid.Row="1" Padding="12,10,10,10" RowSpacing="4">
+                <Grid.RowDefinitions>
+                    <RowDefinition Height="40" />
+                    <RowDefinition Height="24" />
+                    <RowDefinition Height="*" />
+                </Grid.RowDefinitions>
+
+                <TextBlock
+                    Text="{x:Bind ViewModel.Title}"
+                    FontSize="14"
+                    LineHeight="20"
+                    FontWeight="SemiBold"
+                    MaxLines="2"
+                    TextWrapping="Wrap"
+                    TextTrimming="CharacterEllipsis"
+                    ToolTipService.ToolTip="{x:Bind ViewModel.Title}" />
+
+                <Grid Grid.Row="1" ColumnSpacing="8">
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="*" />
+                        <ColumnDefinition Width="Auto" />
+                    </Grid.ColumnDefinitions>
+                    <ContentControl x:Name="AuthorHost" HorizontalContentAlignment="Stretch" VerticalAlignment="Center" IsTabStop="False" />
+                    <TextBlock
+                        Grid.Column="1"
+                        MaxWidth="150"
+                        VerticalAlignment="Center"
+                        Text="{x:Bind ViewModel.StatusText, Mode=OneWay}"
+                        ToolTipService.ToolTip="{x:Bind ViewModel.StatusToolTip, Mode=OneWay}"
+                        Style="{StaticResource CaptionTextStyle}"
+                        TextTrimming="CharacterEllipsis" />
+                </Grid>
+
+                <Grid Grid.Row="2" ColumnSpacing="6">
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="*" />
+                        <ColumnDefinition Width="Auto" />
+                        <ColumnDefinition Width="Auto" />
+                    </Grid.ColumnDefinitions>
+                    <StackPanel
+                        Orientation="Horizontal"
+                        Spacing="12"
+                        VerticalAlignment="Center"
+                        Opacity="0.85"
+                        ToolTipService.ToolTip="{x:Bind ViewModel.StatsToolTip, Mode=OneWay}">
+                        <StackPanel Orientation="Horizontal" Spacing="4">
+                            <FontIcon Glyph="&#xEB51;" FontSize="12" />
+                            <TextBlock Text="{x:Bind ViewModel.LikesText, Mode=OneWay}" FontSize="12" />
+                        </StackPanel>
+                        <StackPanel Orientation="Horizontal" Spacing="4">
+                            <FontIcon Glyph="&#xE890;" FontSize="12" />
+                            <TextBlock Text="{x:Bind ViewModel.ViewsText, Mode=OneWay}" FontSize="12" />
+                        </StackPanel>
+                        <StackPanel Orientation="Horizontal" Spacing="4">
+                            <FontIcon Glyph="&#xE896;" FontSize="12" />
+                            <TextBlock Text="{x:Bind ViewModel.DownloadsText, Mode=OneWay}" FontSize="12" />
+                        </StackPanel>
+                    </StackPanel>
+                    <Button
+                        Grid.Column="1"
+                        Width="34"
+                        Height="32"
+                        Padding="0"
+                        Command="{x:Bind ViewModel.OpenPageCommand}"
+                        ToolTipService.ToolTip="{x:Bind ViewModel.OpenPageToolTip, Mode=OneWay}"
+                        AutomationProperties.Name="{x:Bind ViewModel.OpenPageToolTip, Mode=OneWay}"
+                        Style="{StaticResource SecondaryButtonStyle}">
+                        <FontIcon Glyph="&#xE774;" FontSize="14" />
+                    </Button>
+                    <Button
+                        Grid.Column="2"
+                        Width="34"
+                        Height="32"
+                        Padding="0"
+                        Command="{x:Bind ViewModel.DownloadCommand}"
+                        ToolTipService.ToolTip="{x:Bind ViewModel.DownloadToolTip, Mode=OneWay}"
+                        AutomationProperties.Name="{x:Bind ViewModel.DownloadToolTip, Mode=OneWay}"
+                        Style="{StaticResource SecondaryButtonStyle}">
+                        <FontIcon Glyph="{x:Bind ViewModel.DownloadGlyph, Mode=OneWay}" FontSize="14" />
+                    </Button>
+                </Grid>
+            </Grid>
+        </Grid>
+    </Border>
+</UserControl>

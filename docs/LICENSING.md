@@ -28,9 +28,10 @@ Integrated Mod Manager uses two licenses. This file explains which applies where
 
 ## Third-party components / 第三方组件
 
-The release package includes the Windows App SDK (MIT), Microsoft.Data.Sqlite (MIT) and,
+The release package includes the Windows App SDK (MIT), Microsoft.Data.Sqlite (MIT),
+CommunityToolkit.Mvvm (MIT) and,
 when present, 7-Zip with its own license text. Bandizip and XXMI are run as separate
 programs and are not distributed with the manager. The upstream projects credited by
 the Endfield launch component are listed in its [NOTICE](../src/IntegratedModManager.EndfieldLaunch/NOTICE.md).
 
-发布包包含 Windows App SDK（MIT）、Microsoft.Data.Sqlite（MIT），以及附带自身许可证的 7-Zip（如有）。Bandizip 和 XXMI 作为独立程序调用，不随管理器分发。终末地启动组件致谢的上游项目见其 [NOTICE](../src/IntegratedModManager.EndfieldLaunch/NOTICE.md)。
+发布包包含 Windows App SDK（MIT）、Microsoft.Data.Sqlite（MIT）、CommunityToolkit.Mvvm（MIT），以及附带自身许可证的 7-Zip（如有）。Bandizip 和 XXMI 作为独立程序调用，不随管理器分发。终末地启动组件致谢的上游项目见其 [NOTICE](../src/IntegratedModManager.EndfieldLaunch/NOTICE.md)。

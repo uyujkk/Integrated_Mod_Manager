@@ -551,7 +551,7 @@ public sealed partial class MainWindow
                 return;
             }
 
-            if (e.Key == VirtualKey.Escape && OnlineDetailsSplitView.IsPaneOpen)
+            if (e.Key == VirtualKey.Escape && OnlineDetailDrawer.Visibility == Visibility.Visible)
             {
                 await CloseOnlineDetailPaneAsync();
                 e.Handled = true;

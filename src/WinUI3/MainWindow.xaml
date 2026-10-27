@@ -774,94 +774,48 @@
                 </ScrollViewer>
 
                 <Grid x:Name="OnlineScrollViewer" Visibility="Collapsed" Margin="6">
-                    <Grid.RowDefinitions>
-                        <RowDefinition Height="Auto" />
-                        <RowDefinition Height="*" />
-                    </Grid.RowDefinitions>
-
-                    <Border Grid.Row="0" Style="{StaticResource PageHeaderBorderStyle}" Padding="20,14">
-                        <Grid ColumnSpacing="18">
-                            <Grid.ColumnDefinitions>
-                                <ColumnDefinition Width="Auto" />
-                                <ColumnDefinition Width="*" />
-                            </Grid.ColumnDefinitions>
-                            <TextBlock x:Name="OnlineTitleTextBlock" FontSize="26" FontWeight="SemiBold" VerticalAlignment="Center" />
-                            <TextBlock
-                                x:Name="OnlineSubtitleTextBlock"
-                                Grid.Column="1"
-                                Style="{StaticResource MutedTextStyle}"
-                                TextTrimming="CharacterEllipsis"
-                                VerticalAlignment="Center" />
-                        </Grid>
-                    </Border>
-
-                    <SplitView
-                        Grid.Row="1"
-                        x:Name="OnlineDetailsSplitView"
-                        Margin="0,10,0,0"
-                        DisplayMode="Inline"
-                        IsPaneOpen="False"
-                        OpenPaneLength="600"
-                        CompactPaneLength="0"
-                        PanePlacement="Right">
-                        <SplitView.Content>
-                            <Border Style="{StaticResource CardBorderStyle}" Padding="16">
-                                <Grid RowSpacing="10">
+                    <!-- One card: header row, then character rail beside the results. Details open in a
+                         drawer floating over the right side, so the page never shrinks while it is open. -->
+                    <Grid x:Name="OnlineDetailsHost" SizeChanged="OnOnlineDetailsHostSizeChanged">
+                            <Border Style="{StaticResource CardBorderStyle}" Padding="16,12,16,12">
+                                <Grid RowSpacing="12">
                                     <Grid.RowDefinitions>
-                                        <RowDefinition Height="Auto" />
                                         <RowDefinition Height="Auto" />
                                         <RowDefinition Height="*" />
                                     </Grid.RowDefinitions>
 
-                                    <Grid ColumnSpacing="16">
+                                    <Grid ColumnSpacing="10">
                                         <Grid.ColumnDefinitions>
+                                            <ColumnDefinition Width="Auto" />
+                                            <ColumnDefinition Width="Auto" />
                                             <ColumnDefinition Width="*" />
                                             <ColumnDefinition Width="Auto" />
-                                        </Grid.ColumnDefinitions>
-                                        <StackPanel Spacing="3">
-                                            <TextBlock x:Name="OnlinePreviewTitleTextBlock" Style="{StaticResource SectionTitleTextStyle}" />
-                                            <TextBlock x:Name="OnlinePreviewHintTextBlock" Style="{StaticResource MutedTextStyle}" TextTrimming="CharacterEllipsis" />
-                                        </StackPanel>
-                                        <StackPanel Grid.Column="1" Orientation="Horizontal" Spacing="8" HorizontalAlignment="Right">
-                                            <Button
-                                                x:Name="OnlineListLayoutButton"
-                                                Width="40"
-                                                Height="40"
-                                                Padding="0"
-                                                Click="OnOnlineListLayoutClicked"
-                                                Style="{StaticResource SecondaryButtonStyle}">
-                                                <FontIcon FontSize="16" Glyph="&#xEA37;" />
-                                            </Button>
-                                            <Button
-                                                x:Name="OnlineGridLayoutButton"
-                                                Width="40"
-                                                Height="40"
-                                                Padding="0"
-                                                Click="OnOnlineGridLayoutClicked"
-                                                Style="{StaticResource SecondaryButtonStyle}">
-                                                <FontIcon FontSize="16" Glyph="&#xECA5;" />
-                                            </Button>
-                                            <Button
-                                                x:Name="RefreshOnlineButton"
-                                                Click="OnRefreshOnlineModsClicked"
-                                                MinHeight="40"
-                                                HorizontalAlignment="Right"
-                                                Style="{StaticResource SecondaryButtonStyle}" />
-                                        </StackPanel>
-                                    </Grid>
-                                    <Grid Grid.Row="1" ColumnSpacing="12">
-                                        <Grid.ColumnDefinitions>
-                                            <ColumnDefinition Width="*" />
                                             <ColumnDefinition Width="Auto" />
                                         </Grid.ColumnDefinitions>
-                                        <StackPanel HorizontalAlignment="Left" Orientation="Horizontal" Spacing="8">
+                                        <StackPanel Orientation="Horizontal" Spacing="8" VerticalAlignment="Center">
+                                            <TextBlock x:Name="OnlineTitleTextBlock" FontSize="20" FontWeight="SemiBold" VerticalAlignment="Center" />
+                                            <!-- The page descriptions live in this tooltip instead of two header lines. -->
+                                            <FontIcon Glyph="&#xE946;" FontSize="14" Opacity="0.7" VerticalAlignment="Center">
+                                                <ToolTipService.ToolTip>
+                                                    <ToolTip MaxWidth="420">
+                                                        <StackPanel Spacing="6">
+                                                            <TextBlock x:Name="OnlinePreviewTitleTextBlock" FontWeight="SemiBold" />
+                                                            <TextBlock x:Name="OnlinePreviewHintTextBlock" TextWrapping="Wrap" />
+                                                            <TextBlock x:Name="OnlineSubtitleTextBlock" TextWrapping="Wrap" />
+                                                        </StackPanel>
+                                                    </ToolTip>
+                                                </ToolTipService.ToolTip>
+                                            </FontIcon>
+                                        </StackPanel>
+                                        <StackPanel Grid.Column="1" Orientation="Horizontal" Spacing="8" VerticalAlignment="Center">
                                             <Border
                                                 Background="{ThemeResource AppAccentSoftBrush}"
-                                                CornerRadius="8"
-                                                Padding="10,5">
+                                                CornerRadius="6"
+                                                Padding="10,4">
                                                 <TextBlock
                                                     x:Name="OnlineStatusTextBlock"
                                                     MaxLines="1"
+                                                    MaxWidth="460"
                                                     Style="{StaticResource CaptionTextStyle}"
                                                     TextTrimming="CharacterEllipsis"
                                                     TextWrapping="NoWrap" />
@@ -871,8 +825,8 @@
                                                 Background="{ThemeResource AppInsetBackgroundBrush}"
                                                 BorderBrush="{ThemeResource AppCardBorderBrush}"
                                                 BorderThickness="1"
-                                                CornerRadius="8"
-                                                Padding="10,5"
+                                                CornerRadius="6"
+                                                Padding="10,4"
                                                 Visibility="Collapsed">
                                                 <TextBlock
                                                     x:Name="OnlineCacheStatusTextBlock"
@@ -882,15 +836,42 @@
                                                     TextWrapping="NoWrap" />
                                             </Border>
                                         </StackPanel>
-                                        <StackPanel Grid.Column="1" x:Name="OnlineDownloadProgressPanel" Width="280" Spacing="5" Visibility="Collapsed">
+                                        <StackPanel Grid.Column="3" x:Name="OnlineDownloadProgressPanel" Width="240" Spacing="4" VerticalAlignment="Center" Visibility="Collapsed">
                                             <TextBlock x:Name="OnlineDownloadProgressTextBlock" Style="{StaticResource CaptionTextStyle}" TextTrimming="CharacterEllipsis" />
-                                            <ProgressBar x:Name="OnlineDownloadProgressBar" Minimum="0" Maximum="100" Height="6" />
+                                            <ProgressBar x:Name="OnlineDownloadProgressBar" Minimum="0" Maximum="100" Height="4" />
+                                        </StackPanel>
+                                        <StackPanel Grid.Column="4" Orientation="Horizontal" Spacing="8" VerticalAlignment="Center">
+                                            <StackPanel Orientation="Horizontal" Spacing="2" Padding="2" CornerRadius="8" Background="{ThemeResource AppInsetBackgroundBrush}">
+                                                <Button
+                                                    x:Name="OnlineListLayoutButton"
+                                                    Width="36"
+                                                    Height="32"
+                                                    Padding="0"
+                                                    Click="OnOnlineListLayoutClicked"
+                                                    Style="{StaticResource SecondaryButtonStyle}">
+                                                    <FontIcon FontSize="15" Glyph="&#xEA37;" />
+                                                </Button>
+                                                <Button
+                                                    x:Name="OnlineGridLayoutButton"
+                                                    Width="36"
+                                                    Height="32"
+                                                    Padding="0"
+                                                    Click="OnOnlineGridLayoutClicked"
+                                                    Style="{StaticResource SecondaryButtonStyle}">
+                                                    <FontIcon FontSize="15" Glyph="&#xECA5;" />
+                                                </Button>
+                                            </StackPanel>
+                                            <Button
+                                                x:Name="RefreshOnlineButton"
+                                                Click="OnRefreshOnlineModsClicked"
+                                                MinHeight="36"
+                                                Style="{StaticResource SecondaryButtonStyle}" />
                                         </StackPanel>
                                     </Grid>
 
                                     <Grid
                                         x:Name="OnlineWorkspaceGrid"
-                                        Grid.Row="2"
+                                        Grid.Row="1"
                                         HorizontalAlignment="Stretch"
                                         ColumnSpacing="12"
                                         RowSpacing="12"
@@ -953,81 +934,45 @@
                                             RowSpacing="8"
                                             SizeChanged="OnOnlineResultsHostSizeChanged">
                                             <Grid.RowDefinitions>
-                                                <RowDefinition Height="40" />
                                                 <RowDefinition Height="Auto" />
-                                                <RowDefinition Height="34" />
                                                 <RowDefinition Height="*" />
+                                                <RowDefinition Height="Auto" />
                                             </Grid.RowDefinitions>
+                                            <!-- One toolbar row: search, sort, then the page filters and options. -->
                                             <Grid ColumnSpacing="8" Canvas.ZIndex="1">
                                                 <Grid.ColumnDefinitions>
                                                     <ColumnDefinition Width="*" />
                                                     <ColumnDefinition Width="176" />
+                                                    <ColumnDefinition Width="Auto" />
                                                 </Grid.ColumnDefinitions>
                                                 <TextBox
                                                     x:Name="OnlineSearchTextBox"
-                                                    MinHeight="40"
-                                                    Padding="14,8"
+                                                    MinHeight="36"
+                                                    Padding="12,7"
                                                     PlaceholderText="Search this page: character, mod or author"
                                                     TextChanged="OnOnlineSearchTextChanged" />
                                                 <ComboBox
                                                     x:Name="OnlineCharacterComboBox"
                                                     Visibility="Collapsed"
-                                                    MinHeight="40"
+                                                    MinHeight="36"
                                                     HorizontalAlignment="Stretch"
                                                     SelectionChanged="OnOnlineCharacterSelectionChanged" />
                                                 <ComboBox
                                                     x:Name="OnlineSortComboBox"
                                                     Grid.Column="1"
-                                                    MinHeight="40"
+                                                    MinHeight="36"
                                                     HorizontalAlignment="Stretch"
                                                     SelectionChanged="OnOnlineSortSelectionChanged" />
-                                            </Grid>
-                                            <Grid Grid.Row="1" ColumnSpacing="8" Canvas.ZIndex="1">
-                                                <Grid.ColumnDefinitions>
-                                                    <ColumnDefinition Width="*" />
-                                                    <ColumnDefinition Width="Auto" />
-                                                </Grid.ColumnDefinitions>
-                                                <TextBlock x:Name="OnlineFilterSummaryTextBlock" VerticalAlignment="Center" TextTrimming="CharacterEllipsis" Style="{StaticResource CaptionTextStyle}" />
-                                                <StackPanel Grid.Column="1" Orientation="Horizontal" Spacing="6">
-                                                    <Button x:Name="OnlineWorkFilterButton" MinHeight="28" Padding="8,2" Click="OnOnlineWorkFilterClicked" Style="{StaticResource SecondaryButtonStyle}" />
-                                                    <Button x:Name="ClearOnlineFiltersButton" MinHeight="28" Padding="8,2" Click="OnClearOnlineFiltersClicked" Style="{StaticResource SecondaryButtonStyle}" />
-                                                    <Button x:Name="OnlineSavedItemsButton" Width="30" Height="28" Padding="0" Click="OnOnlineSavedItemsClicked" Style="{StaticResource SecondaryButtonStyle}"><FontIcon FontSize="14" Glyph="&#xE734;" /></Button>
-                                                    <Button x:Name="OnlineDownloadOptionsButton" Width="30" Height="28" Padding="0" Click="OnOnlineDownloadOptionsClicked" Style="{StaticResource SecondaryButtonStyle}"><FontIcon FontSize="14" Glyph="&#xE713;" /></Button>
+                                                <StackPanel Grid.Column="2" Orientation="Horizontal" Spacing="6">
+                                                    <Button x:Name="OnlineWorkFilterButton" MinHeight="36" Padding="10,2" Click="OnOnlineWorkFilterClicked" Style="{StaticResource SecondaryButtonStyle}" />
+                                                    <Button x:Name="ClearOnlineFiltersButton" MinHeight="36" Padding="10,2" Click="OnClearOnlineFiltersClicked" Style="{StaticResource SecondaryButtonStyle}" />
+                                                    <Button x:Name="OnlineSavedItemsButton" Width="36" Height="36" Padding="0" Click="OnOnlineSavedItemsClicked" Style="{StaticResource SecondaryButtonStyle}"><FontIcon FontSize="14" Glyph="&#xE734;" /></Button>
+                                                    <Button x:Name="OnlineDownloadOptionsButton" Width="36" Height="36" Padding="0" Click="OnOnlineDownloadOptionsClicked" Style="{StaticResource SecondaryButtonStyle}"><FontIcon FontSize="14" Glyph="&#xE713;" /></Button>
                                                 </StackPanel>
-                                            </Grid>
-                                            <Grid Grid.Row="2" ColumnSpacing="8" Canvas.ZIndex="1">
-                                                <Grid.ColumnDefinitions>
-                                                    <ColumnDefinition Width="Auto" />
-                                                    <ColumnDefinition Width="*" />
-                                                    <ColumnDefinition Width="Auto" />
-                                                </Grid.ColumnDefinitions>
-                                                <Button
-                                                    x:Name="OnlinePrevPageButton"
-                                                    Click="OnOnlinePrevPageClicked"
-                                                    MinHeight="34"
-                                                    Width="96"
-                                                    Padding="16,6"
-                                                    HorizontalContentAlignment="Center"
-                                                    Style="{StaticResource SecondaryButtonStyle}" />
-                                                <TextBlock
-                                                    x:Name="OnlinePaginationTextBlock"
-                                                    Grid.Column="1"
-                                                    HorizontalAlignment="Center"
-                                                    VerticalAlignment="Center"
-                                                    Style="{StaticResource CaptionTextStyle}" />
-                                                <Button
-                                                    x:Name="OnlineNextPageButton"
-                                                    Grid.Column="2"
-                                                    Click="OnOnlineNextPageClicked"
-                                                    MinHeight="34"
-                                                    Width="96"
-                                                    Padding="16,6"
-                                                    HorizontalContentAlignment="Center"
-                                                    Style="{StaticResource SecondaryButtonStyle}" />
                                             </Grid>
                                             <ListView
                                                 x:Name="OnlineVirtualizedListView"
-                                                Grid.Row="3"
+                                                Grid.Row="1"
                                                 HorizontalContentAlignment="Stretch"
                                                 MinHeight="0"
                                                 Canvas.ZIndex="0"
@@ -1057,12 +1002,15 @@
                                                     </ItemsPanelTemplate>
                                                 </ListView.ItemsPanel>
                                             </ListView>
+                                            <!-- Item size comes from OnlineLayoutPolicy.GridTiles; clicking a tile (or Enter) opens its details. -->
                                             <GridView
                                                 x:Name="OnlineVirtualizedGridView"
-                                                Grid.Row="3"
+                                                Grid.Row="1"
                                                 HorizontalContentAlignment="Stretch"
                                                 MinHeight="0"
                                                 Canvas.ZIndex="0"
+                                                IsItemClickEnabled="True"
+                                                ItemClick="OnOnlineGridItemClick"
                                                 ScrollViewer.HorizontalScrollBarVisibility="Disabled"
                                                 ScrollViewer.HorizontalScrollMode="Disabled"
                                                 ScrollViewer.VerticalScrollBarVisibility="Auto"
@@ -1082,26 +1030,27 @@
                                                         <ContentControl
                                                             HorizontalContentAlignment="Stretch"
                                                             VerticalContentAlignment="Stretch"
+                                                            IsTabStop="False"
                                                             Tag="OnlineGridCardPresenter"
                                                             DataContextChanged="OnOnlineGridCardPresenterDataContextChanged" />
                                                     </DataTemplate>
                                                 </GridView.ItemTemplate>
                                                 <GridView.ItemsPanel>
                                                     <ItemsPanelTemplate>
-                                                        <ItemsWrapGrid ItemWidth="300" ItemHeight="360" Orientation="Horizontal" />
+                                                        <ItemsWrapGrid ItemWidth="300" ItemHeight="307" Orientation="Horizontal" />
                                                     </ItemsPanelTemplate>
                                                 </GridView.ItemsPanel>
                                             </GridView>
                                             <ContentControl
                                                 x:Name="OnlineEmptyResultsContentControl"
-                                                Grid.Row="3"
+                                                Grid.Row="1"
                                                 HorizontalContentAlignment="Stretch"
                                                 VerticalContentAlignment="Top"
                                                 Margin="0,0,12,0"
                                                 Visibility="Collapsed" />
                                             <Border
                                                 x:Name="OnlineLoadingOverlay"
-                                                Grid.Row="2"
+                                                Grid.Row="1"
                                                 Background="{ThemeResource AppCardBackgroundBrush}"
                                                 CornerRadius="12"
                                                 Visibility="Collapsed">
@@ -1115,13 +1064,23 @@
                                                     </StackPanel>
                                                 </StackPanel>
                                             </Border>
-                                        </Grid>
-                                    </Grid>
-                                </Grid>
+                        <Grid
+                            x:Name="OnlineDetailDrawer"
+                            Grid.Row="1"
+                            Width="600"
+                            HorizontalAlignment="Right"
+                            Visibility="Collapsed"
+                            Canvas.ZIndex="10">
+                            <!-- A soft edge shadow separates the drawer from the cards underneath. -->
+                            <Border Width="24" Margin="-24,12,0,12" HorizontalAlignment="Left" IsHitTestVisible="False">
+                                <Border.Background>
+                                    <LinearGradientBrush StartPoint="0,0" EndPoint="1,0">
+                                        <GradientStop Offset="0" Color="#00000000" />
+                                        <GradientStop Offset="1" Color="#38000000" />
+                                    </LinearGradientBrush>
+                                </Border.Background>
                             </Border>
-                        </SplitView.Content>
-                        <SplitView.Pane>
-                            <Border x:Name="OnlineDetailPaneBorder" Style="{StaticResource DetailPaneBorderStyle}" Margin="12,0,0,0">
+                            <Border x:Name="OnlineDetailPaneBorder" Style="{StaticResource DetailPaneBorderStyle}">
                                 <Grid RowSpacing="12">
                                     <Grid.RowDefinitions>
                                         <RowDefinition Height="Auto" />
@@ -1131,15 +1090,38 @@
 
                                     <Border Grid.Row="0" Style="{StaticResource InsetBorderStyle}" Padding="14">
                                         <StackPanel Spacing="10">
-                                            <Grid ColumnSpacing="8">
+                                            <Grid ColumnSpacing="6">
                                                 <Grid.ColumnDefinitions>
                                                     <ColumnDefinition Width="*" />
                                                     <ColumnDefinition Width="Auto" />
+                                                    <ColumnDefinition Width="Auto" />
+                                                    <ColumnDefinition Width="Auto" />
                                                 </Grid.ColumnDefinitions>
                                                 <TextBlock x:Name="OnlineDetailPaneTitleTextBlock" Style="{StaticResource SectionTitleTextStyle}" TextWrapping="Wrap" />
+                                                <!-- Step through the Mods shown on this page without closing the drawer. -->
+                                                <Button
+                                                    x:Name="OnlineDetailPreviousButton"
+                                                    Grid.Column="1"
+                                                    Width="40"
+                                                    Height="40"
+                                                    Padding="0"
+                                                    Click="OnOnlineDetailPreviousClicked"
+                                                    Style="{StaticResource SecondaryButtonStyle}">
+                                                    <FontIcon FontSize="14" Glyph="&#xE76B;" />
+                                                </Button>
+                                                <Button
+                                                    x:Name="OnlineDetailNextButton"
+                                                    Grid.Column="2"
+                                                    Width="40"
+                                                    Height="40"
+                                                    Padding="0"
+                                                    Click="OnOnlineDetailNextClicked"
+                                                    Style="{StaticResource SecondaryButtonStyle}">
+                                                    <FontIcon FontSize="14" Glyph="&#xE76C;" />
+                                                </Button>
                                                 <Button
                                                     x:Name="CloseOnlineDetailButton"
-                                                    Grid.Column="1"
+                                                    Grid.Column="3"
                                                     Width="40"
                                                     Height="40"
                                                     Padding="0"
@@ -1156,7 +1138,7 @@
 
                                     <ScrollViewer Grid.Row="1" VerticalScrollBarVisibility="Auto">
                                         <StackPanel Margin="0,0,14,0" Spacing="12">
-                                            <Border Background="{ThemeResource AppPreviewBackgroundBrush}" CornerRadius="12" Height="360">
+                                            <Border x:Name="OnlineDetailHeroBorder" Background="{ThemeResource AppPreviewBackgroundBrush}" CornerRadius="12" Height="360">
                                                 <Grid>
                                                     <Image x:Name="OnlineDetailHeroImage" HorizontalAlignment="Center" VerticalAlignment="Center" Stretch="Uniform" Visibility="Collapsed" ImageOpened="OnOnlineDetailHeroImageOpened" Tapped="OnOnlineDetailHeroImageTapped" />
                                                     <TextBlock
@@ -1226,8 +1208,46 @@
                                     </Border>
                                 </Grid>
                             </Border>
-                        </SplitView.Pane>
-                    </SplitView>
+                        </Grid>
+                                            <!-- Footer: what this page shows, then paging. -->
+                                            <Grid Grid.Row="2" ColumnSpacing="8" Canvas.ZIndex="1">
+                                                <Grid.ColumnDefinitions>
+                                                    <ColumnDefinition Width="*" />
+                                                    <ColumnDefinition Width="Auto" />
+                                                    <ColumnDefinition Width="Auto" />
+                                                    <ColumnDefinition Width="Auto" />
+                                                </Grid.ColumnDefinitions>
+                                                <TextBlock x:Name="OnlineFilterSummaryTextBlock" VerticalAlignment="Center" TextTrimming="CharacterEllipsis" Style="{StaticResource CaptionTextStyle}" />
+                                                <Button
+                                                    x:Name="OnlinePrevPageButton"
+                                                    Grid.Column="1"
+                                                    Click="OnOnlinePrevPageClicked"
+                                                    MinHeight="32"
+                                                    MinWidth="84"
+                                                    Padding="12,4"
+                                                    HorizontalContentAlignment="Center"
+                                                    Style="{StaticResource SecondaryButtonStyle}" />
+                                                <TextBlock
+                                                    x:Name="OnlinePaginationTextBlock"
+                                                    Grid.Column="2"
+                                                    Margin="6,0"
+                                                    VerticalAlignment="Center"
+                                                    Style="{StaticResource CaptionTextStyle}" />
+                                                <Button
+                                                    x:Name="OnlineNextPageButton"
+                                                    Grid.Column="3"
+                                                    Click="OnOnlineNextPageClicked"
+                                                    MinHeight="32"
+                                                    MinWidth="84"
+                                                    Padding="12,4"
+                                                    HorizontalContentAlignment="Center"
+                                                    Style="{StaticResource SecondaryButtonStyle}" />
+                                            </Grid>
+                                        </Grid>
+                                    </Grid>
+                                </Grid>
+                            </Border>
+                    </Grid>
                 </Grid>
 
                 <ScrollViewer x:Name="ShortcutsScrollViewer" VerticalScrollBarVisibility="Auto" Visibility="Collapsed">
@@ -1820,11 +1840,12 @@
             </Grid>
         </Grid>
         </Grid>
+        <!-- Bottom centre, above the page footers: the corner held paging and Deploy buttons. -->
         <InfoBar
             x:Name="AppInfoBar"
             MaxWidth="520"
-            Margin="24"
-            HorizontalAlignment="Right"
+            Margin="24,0,24,72"
+            HorizontalAlignment="Center"
             VerticalAlignment="Bottom"
             IsClosable="True"
             IsOpen="False" />
