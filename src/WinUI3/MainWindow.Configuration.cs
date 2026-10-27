@@ -115,7 +115,7 @@ public sealed partial class MainWindow
             _interfaceDensity = string.Equals(config?.InterfaceDensity, "compact", StringComparison.OrdinalIgnoreCase)
                 ? InterfaceDensity.Compact
                 : InterfaceDensity.Comfortable;
-            _onlineCardLayoutMode = string.Equals(config?.OnlineCardLayout, "grid", StringComparison.OrdinalIgnoreCase)
+            _onlinePage.CardLayoutMode = string.Equals(config?.OnlineCardLayout, "grid", StringComparison.OrdinalIgnoreCase)
                 ? OnlineCardLayoutMode.Grid
                 : OnlineCardLayoutMode.List;
             if (config?.ConfigurationProfiles is { Count: > 0 })
@@ -170,7 +170,7 @@ public sealed partial class MainWindow
             _storedThemePreference = null;
             _minimizeToTray = false;
             _interfaceDensity = InterfaceDensity.Comfortable;
-            _onlineCardLayoutMode = OnlineCardLayoutMode.List;
+            _onlinePage.CardLayoutMode = OnlineCardLayoutMode.List;
             _savedWindowX = null;
             _savedWindowY = null;
             _savedWindowWidth = null;
@@ -260,7 +260,7 @@ public sealed partial class MainWindow
                 MinimizeToTray = _minimizeToTray,
                 NavigationCollapsed = _navigationCollapsed,
                 InterfaceDensity = _interfaceDensity == InterfaceDensity.Compact ? "compact" : "comfortable",
-                OnlineCardLayout = _onlineCardLayoutMode == OnlineCardLayoutMode.Grid ? "grid" : "list",
+                OnlineCardLayout = _onlinePage.CardLayoutMode == OnlineCardLayoutMode.Grid ? "grid" : "list",
                 RepositoryWorkspaceView = _repositoryWorkspaceView.ToString().ToLowerInvariant(),
                 SelectedConfigurationProfileId = _selectedConfigurationProfileId,
                 EnableConflictDetection = _enableConflictDetection,

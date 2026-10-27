@@ -9,11 +9,9 @@ namespace ModFolderCopier.WinUI;
 public sealed partial class MainWindow
 {
     private OnlineWorkspacePreferences _onlinePreferences = new();
-    private int _onlineAuthorId;
-    private string _onlineAuthorName = string.Empty;
     private bool _resettingOnlineFilters;
 
-    private string OnlineAuthorKey => _onlineAuthorId > 0 ? $"|author={_onlineAuthorId}" : string.Empty;
+    private string OnlineAuthorKey => _onlinePage.AuthorId > 0 ? $"|author={_onlinePage.AuthorId}" : string.Empty;
 
     private async Task BrowseOnlineAuthorAsync(int id, string name)
     {
@@ -25,13 +23,13 @@ public sealed partial class MainWindow
         _onlinePreferences.RecentAuthors = _onlinePreferences.RecentAuthors.Take(100).ToList();
         ResetOnlineBrowsePosition();
         CancelOnlineModListRequest();
-        _onlineAuthorId = id;
-        _onlineAuthorName = name;
-        _onlineCurrentPage = 1;
+        _onlinePage.AuthorId = id;
+        _onlinePage.AuthorName = name;
+        _onlinePage.CurrentPage = 1;
         _lastLoadedOnlineConfigKey = null;
-        _onlineMods.Clear();
+        _onlinePage.Mods.Clear();
         _resettingOnlineFilters = true;
-        try { OnlineSearchTextBox.Text = string.Empty; _onlineSearchText = string.Empty; }
+        try { OnlineSearchTextBox.Text = string.Empty; _onlinePage.SearchText = string.Empty; }
         finally { _resettingOnlineFilters = false; }
         await CloseOnlineDetailPaneAsync();
         await LoadOnlineModsAsync(forceReload: false);
@@ -43,21 +41,21 @@ public sealed partial class MainWindow
         {
             UiCrashDiagnostics.RecordAction("Clear online filters");
             ResetOnlineBrowsePosition();
-            _onlineAuthorWorkFilter = 0;
-            bool reload = _onlineAuthorId > 0 || _onlineCharacterFilter.Length > 0;
-            _onlineAuthorId = 0;
-            _onlineAuthorName = string.Empty;
-            _onlineCharacterFilter = string.Empty;
+            _onlinePage.AuthorWorkFilter = 0;
+            bool reload = _onlinePage.AuthorId > 0 || _onlinePage.CharacterFilter.Length > 0;
+            _onlinePage.AuthorId = 0;
+            _onlinePage.AuthorName = string.Empty;
+            _onlinePage.CharacterFilter = string.Empty;
             _onlineCharacterStripSignature = null;
             PopulateOnlineCharacterOptions();
             _resettingOnlineFilters = true;
-            try { OnlineSearchTextBox.Text = string.Empty; _onlineSearchText = string.Empty; }
+            try { OnlineSearchTextBox.Text = string.Empty; _onlinePage.SearchText = string.Empty; }
             finally { _resettingOnlineFilters = false; }
             if (reload)
             {
-                _onlineCurrentPage = 1;
+                _onlinePage.CurrentPage = 1;
                 _lastLoadedOnlineConfigKey = null;
-                _onlineMods.Clear();
+                _onlinePage.Mods.Clear();
                 await LoadOnlineModsAsync(forceReload: false);
             }
             else RefreshOnlinePaneV2();
@@ -71,13 +69,13 @@ public sealed partial class MainWindow
     private void RefreshOnlineFilterSummary(int matches, int loaded)
     {
         OnlineFilterSummaryTextBlock.Text = T("OnlineLibrary.ThisPageMatches", matches, loaded)
-            + (_onlineAuthorId > 0 ? T("OnlineLibrary.AuthorAuthorPagesTextFiltersThis", _onlineAuthorName)
+            + (_onlinePage.AuthorId > 0 ? T("OnlineLibrary.AuthorAuthorPagesTextFiltersThis", _onlinePage.AuthorName)
                 : T("OnlineLibrary.SearchFiltersThisPageOnlyClick"));
         AutomationProperties.SetName(OnlineSearchTextBox, T("OnlineLibrary.SearchThisPageByCharacterMod"));
         ToolTipService.SetToolTip(OnlineFilterSummaryTextBlock, OnlineFilterSummaryTextBlock.Text);
         ClearOnlineFiltersButton.Content = T("OnlineLibrary.ClearFilters");
-        ClearOnlineFiltersButton.IsEnabled = _onlineAuthorId > 0 || _onlineSearchText.Length > 0 || _onlineCharacterFilter.Length > 0 || _onlineAuthorWorkFilter > 0;
-        OnlineWorkFilterButton.Content = _onlineAuthorWorkFilter switch { 1 => T("OnlineLibrary.InstalledOnPage"), 2 => T("OnlineLibrary.SavedOnPage"), _ => T("OnlineLibrary.AllOnPage") };
+        ClearOnlineFiltersButton.IsEnabled = _onlinePage.AuthorId > 0 || _onlinePage.SearchText.Length > 0 || _onlinePage.CharacterFilter.Length > 0 || _onlinePage.AuthorWorkFilter > 0;
+        OnlineWorkFilterButton.Content = _onlinePage.AuthorWorkFilter switch { 1 => T("OnlineLibrary.InstalledOnPage"), 2 => T("OnlineLibrary.SavedOnPage"), _ => T("OnlineLibrary.AllOnPage") };
         ToolTipService.SetToolTip(OnlineSavedItemsButton, T("OnlineLibrary.AuthorsAndSavedModsFindAuthors"));
         AutomationProperties.SetName(OnlineSavedItemsButton, T("OnlineLibrary.AuthorsAndSavedMods"));
         ToolTipService.SetToolTip(OnlineDownloadOptionsButton, T("Common.DownloadOptions"));

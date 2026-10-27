@@ -1,13 +1,14 @@
 using System.Globalization;
 using System.Net;
 using System.Security.Cryptography;
-using System.Text;
 using System.Text.Json;
+using System.Text;
 using IntegratedModManager.Core.Endfield;
+using IntegratedModManager.Core.Layout;
 using IntegratedModManager.Core.Online;
 using IntegratedModManager.Data;
-using Microsoft.UI.Xaml;
 using Microsoft.UI.Xaml.Controls;
+using Microsoft.UI.Xaml;
 using Windows.System;
 
 namespace ModFolderCopier.WinUI;
@@ -32,7 +33,7 @@ public sealed partial class MainWindow
         OnlineSortComboBox.Items.Add(new ComboBoxItem { Content = T("OnlineFeed.SortByUpdatedTime"), Tag = OnlineSortMode.Updated });
         OnlineSortComboBox.SelectedItem = OnlineSortComboBox.Items
             .OfType<ComboBoxItem>()
-            .FirstOrDefault(item => item.Tag is OnlineSortMode sortMode && sortMode == _onlineSortMode)
+            .FirstOrDefault(item => item.Tag is OnlineSortMode sortMode && sortMode == _onlinePage.SortMode)
             ?? OnlineSortComboBox.Items.OfType<ComboBoxItem>().FirstOrDefault();
         PopulateOnlineCharacterOptions();
     }
@@ -50,36 +51,35 @@ public sealed partial class MainWindow
         bool canLoadOnlineMods = hasRepository && isSupportedSource && !string.IsNullOrWhiteSpace(effectiveCategoryId);
         string requestCategoryId = GetOnlineRequestCategoryId(repository);
         string configKey = hasRepository
-            ? $"{repository!.Id}|{effectiveSource}|{requestCategoryId}|character={_onlineCharacterFilter}|page={_onlineCurrentPage}{OnlineAuthorKey}"
+            ? $"{repository!.Id}|{effectiveSource}|{requestCategoryId}|character={_onlinePage.CharacterFilter}|page={_onlinePage.CurrentPage}{OnlineAuthorKey}"
             : string.Empty;
 
         if (!string.IsNullOrEmpty(_lastLoadedOnlineConfigKey)
             && !string.Equals(_lastLoadedOnlineConfigKey, configKey, StringComparison.Ordinal)
             && !_isLoadingOnlineMods)
         {
-            _onlineMods.Clear();
+            _onlinePage.Mods.Clear();
         }
 
         RefreshOnlineButton.IsEnabled = canLoadOnlineMods && !_isLoadingOnlineMods;
         OnlineLoadingOverlay.Visibility = _isLoadingOnlineMods ? Visibility.Visible : Visibility.Collapsed;
         OnlineLoadingTextBlock.Text = T("OnlineFeed.LoadingOnlineModsPleaseWait");
-        OnlineStatusTextBlock.Text = string.IsNullOrWhiteSpace(_onlineStatusZh) || string.IsNullOrWhiteSpace(_onlineStatusEn)
-            ? T("OnlineFeed.ClickRefreshOnlineListToFetch")
-            : L(_onlineStatusZh!, _onlineStatusEn!);
-        bool hasCacheStatus = !string.IsNullOrWhiteSpace(_onlineCacheStatusZh)
-            && !string.IsNullOrWhiteSpace(_onlineCacheStatusEn);
+        OnlineStatusTextBlock.Text = _onlinePage.HasStatus
+            ? L(_onlinePage.StatusZh!, _onlinePage.StatusEn!)
+            : T("OnlineFeed.ClickRefreshOnlineListToFetch");
+        bool hasCacheStatus = _onlinePage.HasCacheStatus;
         OnlineCacheStatusBorder.Visibility = hasCacheStatus ? Visibility.Visible : Visibility.Collapsed;
         OnlineCacheStatusTextBlock.Text = hasCacheStatus
-            ? L(_onlineCacheStatusZh!, _onlineCacheStatusEn!)
+            ? L(_onlinePage.CacheStatusZh!, _onlinePage.CacheStatusEn!)
             : string.Empty;
         List<OnlineModCard> filteredMods = canLoadOnlineMods ? GetFilteredOnlineMods() : [];
         List<OnlineModCard> visibleMods = GetVisibleOnlineMods(filteredMods);
-        RefreshOnlineFilterSummary(visibleMods.Count, _onlineMods.Count);
+        RefreshOnlineFilterSummary(visibleMods.Count, _onlinePage.Mods.Count);
         OnlinePaginationTextBlock.Text = canLoadOnlineMods
-            ? T("OnlineFeed.PageModsTotal", _onlineCurrentPage, _onlineTotalPages, _onlineTotalCount)
+            ? T("OnlineFeed.PageModsTotal", _onlinePage.CurrentPage, _onlinePage.TotalPages, _onlinePage.TotalCount)
             : T("OnlineFeed.WaitingForOnlineConfig");
-        OnlinePrevPageButton.IsEnabled = canLoadOnlineMods && !_isLoadingOnlineMods && _onlineCurrentPage > 1;
-        OnlineNextPageButton.IsEnabled = canLoadOnlineMods && !_isLoadingOnlineMods && _onlineCurrentPage < _onlineTotalPages;
+        OnlinePrevPageButton.IsEnabled = canLoadOnlineMods && !_isLoadingOnlineMods && _onlinePage.HasPreviousPage;
+        OnlineNextPageButton.IsEnabled = canLoadOnlineMods && !_isLoadingOnlineMods && _onlinePage.HasNextPage;
         OnlineSearchTextBox.PlaceholderText = T("OnlineFeed.SearchThisPageCharacterModOr");
         OnlineSearchTextBox.IsEnabled = canLoadOnlineMods && !_isLoadingOnlineMods;
         OnlineCharacterComboBox.IsEnabled = canLoadOnlineMods && !_isLoadingOnlineMods;
@@ -89,7 +89,7 @@ public sealed partial class MainWindow
         UpdateOnlineCardLayoutControls();
 
         // Status-only refreshes must not reset either virtualized view's scroll position.
-        bool resultsChanged = OnlineBrowseStateAdapter.Synchronize(_onlineVisibleMods, visibleMods);
+        bool resultsChanged = OnlineBrowseStateAdapter.Synchronize(_onlinePage.VisibleMods, visibleMods);
         RefreshOnlineCardPresentation();
         RefreshOnlineCardStates();
         ToolTipService.SetToolTip(OnlineSearchTextBox, T("OnlineFeed.SearchThisPageByCharacterMod"));
@@ -116,7 +116,7 @@ public sealed partial class MainWindow
             return;
         }
 
-        if (_onlineMods.Count == 0)
+        if (_onlinePage.Mods.Count == 0)
         {
             ShowOnlineEmptyResults(CreateOnlinePreviewCard(
                 T("OnlineFeed.ReadyToLoadRealData"),
@@ -134,7 +134,7 @@ public sealed partial class MainWindow
             }
         }
 
-        if (_onlineCardLayoutMode == OnlineCardLayoutMode.Grid)
+        if (_onlinePage.CardLayoutMode == OnlineCardLayoutMode.Grid)
         {
             DispatcherQueue.TryEnqueue(() => UpdateOnlineGridCardMetrics(
                 GetOnlineGridAvailableWidth(OnlineVirtualizedGridView.ActualWidth)));
@@ -173,34 +173,25 @@ public sealed partial class MainWindow
 
     private List<OnlineModCard> GetFilteredOnlineMods()
     {
-        IEnumerable<OnlineModCard> query = _onlineMods
+        IEnumerable<OnlineModCard> query = _onlinePage.Mods
             .Where(mod => IsAllowedSkinCategory(mod.RootCategoryName));
 
-        if (!string.IsNullOrWhiteSpace(_onlineCharacterFilter))
+        if (!string.IsNullOrWhiteSpace(_onlinePage.CharacterFilter))
         {
             query = query.Where(mod => DoesOnlineModMatchCharacter(
-                _onlineCharacterFilter,
+                _onlinePage.CharacterFilter,
                 mod.CharacterName));
         }
 
-        if (!string.IsNullOrWhiteSpace(_onlineSearchText))
+        if (!string.IsNullOrWhiteSpace(_onlinePage.SearchText))
         {
-            query = query.Where(mod => MatchesOnlineSearch(mod, _onlineSearchText));
+            query = query.Where(mod => MatchesOnlineSearch(mod, _onlinePage.SearchText));
         }
 
-        if (_onlineAuthorWorkFilter == 1) query = query.Where(mod => FindInstalledOnlineMod(mod) is not null);
-        else if (_onlineAuthorWorkFilter == 2) query = query.Where(IsSavedOnlineMod);
+        if (_onlinePage.AuthorWorkFilter == 1) query = query.Where(mod => FindInstalledOnlineMod(mod) is not null);
+        else if (_onlinePage.AuthorWorkFilter == 2) query = query.Where(IsSavedOnlineMod);
 
-        query = _onlineSortMode switch
-        {
-            OnlineSortMode.Downloads => query.OrderByDescending(mod => mod.Downloads).ThenByDescending(mod => mod.HotnessScore),
-            OnlineSortMode.Likes => query.OrderByDescending(mod => mod.Likes).ThenByDescending(mod => mod.HotnessScore),
-            OnlineSortMode.Views => query.OrderByDescending(mod => mod.Views).ThenByDescending(mod => mod.HotnessScore),
-            OnlineSortMode.Updated => query.OrderByDescending(mod => mod.UpdatedAt).ThenByDescending(mod => mod.HotnessScore),
-            _ => query.OrderByDescending(mod => mod.HotnessScore).ThenByDescending(mod => mod.Downloads)
-        };
-
-        return query.ToList();
+        return OnlineBrowseOrder.Sort(query, _onlinePage.SortMode).ToList();
     }
 
     private List<OnlineModCard> GetVisibleOnlineMods(List<OnlineModCard> filteredMods)
@@ -248,8 +239,8 @@ public sealed partial class MainWindow
     private string GetOnlineRequestCategoryId(WorkspaceRepository? repository)
     {
         EnsureOnlineCharacterOptionsForRepository(repository);
-        OnlineCharacterOption? selectedCharacter = _onlineCharacterOptions.FirstOrDefault(character =>
-            string.Equals(character.Key, _onlineCharacterFilter, StringComparison.OrdinalIgnoreCase));
+        OnlineCharacterOption? selectedCharacter = _onlinePage.CharacterOptions.FirstOrDefault(character =>
+            string.Equals(character.Key, _onlinePage.CharacterFilter, StringComparison.OrdinalIgnoreCase));
         return selectedCharacter is not null && !string.IsNullOrWhiteSpace(selectedCharacter.CategoryId)
             ? selectedCharacter.CategoryId
             : GetEffectiveOnlineCategoryId(repository);
@@ -257,16 +248,14 @@ public sealed partial class MainWindow
 
     private void SetOnlineStatus(string zh, string en)
     {
-        _onlineStatusZh = zh;
-        _onlineStatusEn = en;
+        _onlinePage.SetStatus(zh, en);
         OnlineStatusTextBlock.Text = L(zh, en);
         ToolTipService.SetToolTip(OnlineStatusTextBlock, L(zh, en));
     }
 
     private void SetOnlineCacheStatus(string? zh, string? en)
     {
-        _onlineCacheStatusZh = zh;
-        _onlineCacheStatusEn = en;
+        _onlinePage.SetCacheStatus(zh, en);
         bool hasStatus = !string.IsNullOrWhiteSpace(zh) && !string.IsNullOrWhiteSpace(en);
         OnlineCacheStatusBorder.Visibility = hasStatus ? Visibility.Visible : Visibility.Collapsed;
         OnlineCacheStatusTextBlock.Text = hasStatus ? L(zh!, en!) : string.Empty;
@@ -397,8 +386,8 @@ public sealed partial class MainWindow
             return;
         }
 
-        int authorId = _onlineAuthorId;
-        string configKey = $"{repository.Id}|{source}|{categoryId}|character={_onlineCharacterFilter}|page={_onlineCurrentPage}{OnlineAuthorKey}";
+        int authorId = _onlinePage.AuthorId;
+        string configKey = $"{repository.Id}|{source}|{categoryId}|character={_onlinePage.CharacterFilter}|page={_onlinePage.CurrentPage}{OnlineAuthorKey}";
         if (forceReload)
         {
             _blockedOnlineAutoLoadConfigKey = null;
@@ -409,7 +398,7 @@ public sealed partial class MainWindow
             return;
         }
 
-        if (!forceReload && string.Equals(configKey, _lastLoadedOnlineConfigKey, StringComparison.Ordinal) && _onlineMods.Count > 0)
+        if (!forceReload && string.Equals(configKey, _lastLoadedOnlineConfigKey, StringComparison.Ordinal) && _onlinePage.Mods.Count > 0)
         {
             RefreshOnlinePaneV2();
             return;
@@ -437,14 +426,14 @@ public sealed partial class MainWindow
 
         try
         {
-            bool needsCharacterFallback = !string.IsNullOrWhiteSpace(_onlineCharacterFilter)
+            bool needsCharacterFallback = !string.IsNullOrWhiteSpace(_onlinePage.CharacterFilter)
                 && string.Equals(categoryId, baseCategoryId, StringComparison.OrdinalIgnoreCase);
             string cacheCategoryKey = (needsCharacterFallback
-                ? $"category-v3|{baseCategoryId}-character-{_onlineCharacterFilter}"
+                ? $"category-v3|{baseCategoryId}-character-{_onlinePage.CharacterFilter}"
                 : $"category-v3|{categoryId}") + (authorId > 0 ? $"|author={authorId}" : string.Empty);
             OnlineCategoryPageResult? cachedPage = forceReload
                 ? null
-                : await TryReadOnlineCategoryPageCacheAsync(cacheCategoryKey, _onlineCurrentPage);
+                : await TryReadOnlineCategoryPageCacheAsync(cacheCategoryKey, _onlinePage.CurrentPage);
             bool loadedFromCache = cachedPage is not null;
             bool loadedDuringRateLimit = false;
             bool loadedAfterTimeout = false;
@@ -453,7 +442,7 @@ public sealed partial class MainWindow
             {
                 OnlineCategoryPageResult? stalePage = await TryReadOnlineCategoryPageCacheAsync(
                     cacheCategoryKey,
-                    _onlineCurrentPage,
+                    _onlinePage.CurrentPage,
                     allowExpired: true);
                 if (stalePage is null)
                 {
@@ -478,14 +467,14 @@ public sealed partial class MainWindow
                         ?? (needsCharacterFallback && authorId == 0
                             ? await FetchGameBananaCharacterFallbackPageAsync(
                                 baseCategoryId,
-                                _onlineCharacterFilter,
-                                _onlineCurrentPage,
+                                _onlinePage.CharacterFilter,
+                                _onlinePage.CurrentPage,
                                 useEndfieldMetadata,
                                 cacheCategoryKey,
                                 linkedCancellation.Token)
                             : await FetchGameBananaCategoryPageAsync(
                                 categoryId,
-                                _onlineCurrentPage,
+                                _onlinePage.CurrentPage,
                                 useEndfieldMetadata: useEndfieldMetadata,
                                 cancellationToken: linkedCancellation.Token,
                                 authorId: authorId));
@@ -499,7 +488,7 @@ public sealed partial class MainWindow
                     RegisterOnlineRateLimit(ex.RetryAfter);
                     OnlineCategoryPageResult? stalePage = await TryReadOnlineCategoryPageCacheAsync(
                         cacheCategoryKey,
-                        _onlineCurrentPage,
+                        _onlinePage.CurrentPage,
                         allowExpired: true);
                     if (stalePage is null)
                     {
@@ -514,7 +503,7 @@ public sealed partial class MainWindow
                 {
                     OnlineCategoryPageResult? stalePage = await TryReadOnlineCategoryPageCacheAsync(
                         cacheCategoryKey,
-                        _onlineCurrentPage,
+                        _onlinePage.CurrentPage,
                         allowExpired: true);
                     if (stalePage is null)
                     {
@@ -559,28 +548,27 @@ public sealed partial class MainWindow
             }
 
             // A remembered author/category may have fewer pages after entries are removed.
-            if (_onlineCurrentPage > Math.Max(1, pageResult.TotalPages))
+            if (_onlinePage.CurrentPage > Math.Max(1, pageResult.TotalPages))
             {
-                _onlineCurrentPage = Math.Max(1, pageResult.TotalPages);
+                _onlinePage.CurrentPage = Math.Max(1, pageResult.TotalPages);
                 ResetOnlineBrowsePosition();
                 await LoadOnlineModsAsync(forceReload: false);
                 return;
             }
 
-            _onlineMods.Clear();
-            _onlineMods.AddRange(pageResult.Mods);
-            _onlineKnownCharacters.Clear();
-            foreach (string character in _onlineMods
+            _onlinePage.Mods.Clear();
+            _onlinePage.Mods.AddRange(pageResult.Mods);
+            _onlinePage.KnownCharacters.Clear();
+            foreach (string character in _onlinePage.Mods
                          .Select(mod => mod.CharacterName)
                          .Where(name => !string.IsNullOrWhiteSpace(name)))
             {
-                _onlineKnownCharacters.Add(character);
+                _onlinePage.KnownCharacters.Add(character);
             }
 
-            MergeOnlineCharacterOptionsFromMods(_onlineMods);
+            MergeOnlineCharacterOptionsFromMods(_onlinePage.Mods);
             PopulateOnlineCharacterOptions();
-            _onlineTotalCount = pageResult.TotalCount;
-            _onlineTotalPages = Math.Max(1, pageResult.TotalPages);
+            _onlinePage.ApplyPageResult(pageResult.TotalCount, pageResult.TotalPages);
 
             if (pageResult.Mods.Count == 0)
             {
@@ -603,13 +591,13 @@ public sealed partial class MainWindow
 
             // A character scan already cached every page; otherwise warm the next page (also after a
             // cache hit, so paging forward stays instant). Never while throttled or after a timeout.
-            if (!needsCharacterFallback && !loadedDuringRateLimit && !loadedAfterTimeout && _onlineCurrentPage < _onlineTotalPages)
+            if (!needsCharacterFallback && !loadedDuringRateLimit && !loadedAfterTimeout && _onlinePage.CurrentPage < _onlinePage.TotalPages)
             {
-                _ = PrefetchNextOnlinePageAsync(categoryId, _onlineCurrentPage + 1, useEndfieldMetadata, authorId, cacheCategoryKey, configKey);
+                _ = PrefetchNextOnlinePageAsync(categoryId, _onlinePage.CurrentPage + 1, useEndfieldMetadata, authorId, cacheCategoryKey, configKey);
             }
 
-            OnlineCharacterOption? selectedCharacter = _onlineCharacterOptions.FirstOrDefault(character =>
-                string.Equals(character.Key, _onlineCharacterFilter, StringComparison.OrdinalIgnoreCase));
+            OnlineCharacterOption? selectedCharacter = _onlinePage.CharacterOptions.FirstOrDefault(character =>
+                string.Equals(character.Key, _onlinePage.CharacterFilter, StringComparison.OrdinalIgnoreCase));
             string roleLabelZh = selectedCharacter?.DisplayNameZh ?? "全部分类";
             string roleLabelEn = selectedCharacter?.DisplayNameEn ?? "all categories";
             (string cacheZh, string cacheEn) = loadedFromCache
@@ -618,19 +606,19 @@ public sealed partial class MainWindow
             SetOnlineCacheStatus(cacheZh, cacheEn);
             SetOnlineStatus(
                 loadedAfterTimeout
-                    ? $"连接超过 5 秒，已停止访问并显示本地缓存 · {roleLabelZh} · 第 {_onlineCurrentPage} 页"
+                    ? $"连接超过 5 秒，已停止访问并显示本地缓存 · {roleLabelZh} · 第 {_onlinePage.CurrentPage} 页"
                     : loadedDuringRateLimit
-                    ? $"请求频率受限，已显示本地缓存 · {roleLabelZh} · 第 {_onlineCurrentPage} 页"
+                    ? $"请求频率受限，已显示本地缓存 · {roleLabelZh} · 第 {_onlinePage.CurrentPage} 页"
                     : loadedFromCache
-                    ? $"本地缓存 · {roleLabelZh} · 第 {_onlineCurrentPage} 页 · {_onlineTotalCount} 个 Mod"
-                    : $"已更新 · {roleLabelZh} · 第 {_onlineCurrentPage} 页 · {_onlineTotalCount} 个 Mod",
+                    ? $"本地缓存 · {roleLabelZh} · 第 {_onlinePage.CurrentPage} 页 · {_onlinePage.TotalCount} 个 Mod"
+                    : $"已更新 · {roleLabelZh} · 第 {_onlinePage.CurrentPage} 页 · {_onlinePage.TotalCount} 个 Mod",
                 loadedAfterTimeout
-                    ? $"Connection exceeded 5 seconds; stopped and showing local cache · {roleLabelEn} · Page {_onlineCurrentPage}"
+                    ? $"Connection exceeded 5 seconds; stopped and showing local cache · {roleLabelEn} · Page {_onlinePage.CurrentPage}"
                     : loadedDuringRateLimit
-                    ? $"Rate limited; showing local cache · {roleLabelEn} · Page {_onlineCurrentPage}"
+                    ? $"Rate limited; showing local cache · {roleLabelEn} · Page {_onlinePage.CurrentPage}"
                     : loadedFromCache
-                    ? $"Local cache · {roleLabelEn} · Page {_onlineCurrentPage} · {_onlineTotalCount} mods"
-                    : $"Updated · {roleLabelEn} · Page {_onlineCurrentPage} · {_onlineTotalCount} mods");
+                    ? $"Local cache · {roleLabelEn} · Page {_onlinePage.CurrentPage} · {_onlinePage.TotalCount} mods"
+                    : $"Updated · {roleLabelEn} · Page {_onlinePage.CurrentPage} · {_onlinePage.TotalCount} mods");
             if (loadedAfterTimeout)
             {
                 ShowAppNotification(
@@ -1036,13 +1024,13 @@ public sealed partial class MainWindow
     {
         try
         {
-            if (_onlineCurrentPage <= 1 || _isLoadingOnlineMods)
+            if (_onlinePage.CurrentPage <= 1 || _isLoadingOnlineMods)
             {
                 return;
             }
 
             ResetOnlineBrowsePosition();
-            _onlineCurrentPage--;
+            _onlinePage.CurrentPage--;
             await LoadOnlineModsAsync(forceReload: false);
         }
         catch (Exception ex)
@@ -1055,13 +1043,13 @@ public sealed partial class MainWindow
     {
         try
         {
-            if (_onlineCurrentPage >= _onlineTotalPages || _isLoadingOnlineMods)
+            if (_onlinePage.CurrentPage >= _onlinePage.TotalPages || _isLoadingOnlineMods)
             {
                 return;
             }
 
             ResetOnlineBrowsePosition();
-            _onlineCurrentPage++;
+            _onlinePage.CurrentPage++;
             await LoadOnlineModsAsync(forceReload: false);
         }
         catch (Exception ex)
@@ -1072,7 +1060,7 @@ public sealed partial class MainWindow
 
     private void OnOnlineSearchTextChanged(object sender, TextChangedEventArgs e)
     {
-        _onlineSearchText = OnlineSearchTextBox.Text?.Trim() ?? string.Empty;
+        _onlinePage.SearchText = OnlineSearchTextBox.Text?.Trim() ?? string.Empty;
         if (_resettingOnlineFilters) return;
         ResetOnlineBrowsePosition();
         RefreshOnlinePaneV2();

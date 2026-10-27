@@ -40,7 +40,7 @@ public sealed partial class MainWindow
 
             ComboBoxItem? selectedItem = OnlineCharacterComboBox.Items
                 .OfType<ComboBoxItem>()
-                .FirstOrDefault(item => string.Equals(item.Tag as string ?? string.Empty, _onlineCharacterFilter, StringComparison.OrdinalIgnoreCase));
+                .FirstOrDefault(item => string.Equals(item.Tag as string ?? string.Empty, _onlinePage.CharacterFilter, StringComparison.OrdinalIgnoreCase));
 
             OnlineCharacterComboBox.SelectedItem = selectedItem ?? OnlineCharacterComboBox.Items.OfType<ComboBoxItem>().FirstOrDefault();
         }
@@ -52,10 +52,10 @@ public sealed partial class MainWindow
 
     private IReadOnlyList<OnlineCharacterOption> GetVisibleOnlineCharacterOptions()
     {
-        List<OnlineCharacterOption> wikiCharacters = _onlineCharacterOptions
+        List<OnlineCharacterOption> wikiCharacters = _onlinePage.CharacterOptions
             .Where(character => character.IsWikiCharacter)
             .ToList();
-        IEnumerable<OnlineCharacterOption> source = wikiCharacters.Count > 0 ? wikiCharacters : _onlineCharacterOptions;
+        IEnumerable<OnlineCharacterOption> source = wikiCharacters.Count > 0 ? wikiCharacters : _onlinePage.CharacterOptions;
         return source
             .OrderByDescending(character => IsFavoriteCharacter(character.Key))
             .ThenBy(character => character.WikiOrder)
@@ -69,11 +69,10 @@ public sealed partial class MainWindow
         if (!string.Equals(_onlineCharacterCatalogKey, catalogKey, StringComparison.Ordinal))
         {
             _onlineCharacterCatalogKey = catalogKey;
-            _onlineCharacterOptions.Clear();
-            _onlineMods.Clear();
-            _onlineCharacterFilter = string.Empty;
-            _onlineTotalCount = 0;
-            _onlineTotalPages = 1;
+            _onlinePage.CharacterOptions.Clear();
+            _onlinePage.Mods.Clear();
+            _onlinePage.CharacterFilter = string.Empty;
+            _onlinePage.ClearTotals();
             _onlineCharacterStripSignature = null;
         }
 
@@ -84,9 +83,9 @@ public sealed partial class MainWindow
 
         if (IsEndfieldRepository(repository))
         {
-            if (_onlineCharacterOptions.Count == 0)
+            if (_onlinePage.CharacterOptions.Count == 0)
             {
-                _onlineCharacterOptions.AddRange(EndfieldCharacters.Select((character, index) => new OnlineCharacterOption
+                _onlinePage.CharacterOptions.AddRange(EndfieldCharacters.Select((character, index) => new OnlineCharacterOption
                 {
                     Key = character.EnglishName,
                     DisplayNameZh = character.ChineseName,
@@ -103,7 +102,7 @@ public sealed partial class MainWindow
             return;
         }
 
-        MergeOnlineCharacterOptionsFromMods(_onlineMods);
+        MergeOnlineCharacterOptionsFromMods(_onlinePage.Mods);
     }
 
     private void MergeOnlineCharacterOptionsFromMods(IEnumerable<OnlineModCard> mods)
@@ -117,7 +116,7 @@ public sealed partial class MainWindow
                 continue;
             }
 
-            OnlineCharacterOption? existing = _onlineCharacterOptions.FirstOrDefault(item =>
+            OnlineCharacterOption? existing = _onlinePage.CharacterOptions.FirstOrDefault(item =>
                 string.Equals(item.Key, name, StringComparison.OrdinalIgnoreCase)
                 || item.Aliases.Contains(name, StringComparer.OrdinalIgnoreCase));
             if (existing is null)
@@ -129,7 +128,7 @@ public sealed partial class MainWindow
                     DisplayNameEn = name,
                     Aliases = [name]
                 };
-                var rankedMatches = _onlineCharacterOptions
+                var rankedMatches = _onlinePage.CharacterOptions
                     .Where(item => item.IsWikiCharacter)
                     .Select(item => new
                     {
@@ -152,7 +151,7 @@ public sealed partial class MainWindow
 
             if (existing is null)
             {
-                _onlineCharacterOptions.Add(new OnlineCharacterOption
+                _onlinePage.CharacterOptions.Add(new OnlineCharacterOption
                 {
                     Key = name,
                     DisplayNameZh = name,
@@ -195,13 +194,13 @@ public sealed partial class MainWindow
 
         if (changed)
         {
-            OnlineCharacterCatalogMatcher.SortByWikiOrderThenNewest(_onlineCharacterOptions);
+            OnlineCharacterCatalogMatcher.SortByWikiOrderThenNewest(_onlinePage.CharacterOptions);
             _onlineCharacterStripSignature = null;
             if (!string.IsNullOrWhiteSpace(_onlineCharacterCatalogKey))
             {
                 _ = WriteOnlineCharacterCatalogCacheAsync(
                     _onlineCharacterCatalogKey,
-                    _onlineCharacterOptions,
+                    _onlinePage.CharacterOptions,
                     preserveWikiCheckedAt: true);
             }
         }
@@ -251,7 +250,7 @@ public sealed partial class MainWindow
         EnsureOnlineCharacterOptionsForRepository(GetSelectedRepository());
         IReadOnlyList<OnlineCharacterOption> visibleCharacters = GetVisibleOnlineCharacterOptions();
         string characterSignature = string.Join(";", visibleCharacters.Select(item => $"{item.Key}:{item.DisplayNameZh}:{item.DisplayNameEn}:{item.CategoryId}:{item.AvatarUrl}:{item.WikiOrder}"));
-        string signature = $"{_currentLanguage}|{_isDarkTheme}|{_isLoadingOnlineMods}|{_onlineCharacterFilter}|{_onlineTotalCount}|horizontal={_useHorizontalOnlineCharacterRail}|{characterSignature}";
+        string signature = $"{_currentLanguage}|{_isDarkTheme}|{_isLoadingOnlineMods}|{_onlinePage.CharacterFilter}|{_onlinePage.TotalCount}|horizontal={_useHorizontalOnlineCharacterRail}|{characterSignature}";
         if (string.Equals(signature, _onlineCharacterStripSignature, StringComparison.Ordinal))
         {
             return;
@@ -269,14 +268,14 @@ public sealed partial class MainWindow
             string.Empty,
             T("OnlineCharacters.All"),
             null,
-            string.IsNullOrWhiteSpace(_onlineCharacterFilter) ? _onlineTotalCount : null,
+            string.IsNullOrWhiteSpace(_onlinePage.CharacterFilter) ? _onlinePage.TotalCount : null,
             avatarRequestVersion,
             avatarCancellationToken));
 
         foreach (OnlineCharacterOption character in visibleCharacters)
         {
-            int? characterModCount = string.Equals(_onlineCharacterFilter, character.Key, StringComparison.OrdinalIgnoreCase)
-                ? _onlineTotalCount
+            int? characterModCount = string.Equals(_onlinePage.CharacterFilter, character.Key, StringComparison.OrdinalIgnoreCase)
+                ? _onlinePage.TotalCount
                 : null;
             OnlineCharacterAvatarPanel.Children.Add(CreateOnlineCharacterButton(
                 character.Key,
@@ -287,9 +286,9 @@ public sealed partial class MainWindow
                 avatarCancellationToken));
         }
 
-        string currentRole = string.IsNullOrWhiteSpace(_onlineCharacterFilter)
+        string currentRole = string.IsNullOrWhiteSpace(_onlinePage.CharacterFilter)
             ? T("OnlineCharacters.All")
-            : GetOnlineCharacterDisplayName(_onlineCharacterFilter);
+            : GetOnlineCharacterDisplayName(_onlinePage.CharacterFilter);
         OnlineCharacterRailHintTextBlock.Text = T("OnlineCharacters.CategoriesCurrent", visibleCharacters.Count, currentRole);
     }
 
@@ -301,7 +300,7 @@ public sealed partial class MainWindow
         int avatarRequestVersion,
         CancellationToken avatarCancellationToken)
     {
-        bool isSelected = string.Equals(character, _onlineCharacterFilter, StringComparison.OrdinalIgnoreCase);
+        bool isSelected = string.Equals(character, _onlinePage.CharacterFilter, StringComparison.OrdinalIgnoreCase);
         double avatarSize = _useHorizontalOnlineCharacterRail ? 46 : 42;
         var avatarHost = new Border
         {
@@ -445,7 +444,7 @@ public sealed partial class MainWindow
             BorderBrush = GetAppThemeBrush(isSelected ? "AppNavSelectedBorderBrush" : "AppCardBorderBrush"),
             Foreground = GetAppThemeBrush(isSelected ? "AppSecondarySelectedForegroundBrush" : "AppSecondaryDefaultForegroundBrush")
         };
-        OnlineCharacterOption? characterOption = _onlineCharacterOptions.FirstOrDefault(item =>
+        OnlineCharacterOption? characterOption = _onlinePage.CharacterOptions.FirstOrDefault(item =>
             string.Equals(item.Key, character, StringComparison.OrdinalIgnoreCase));
         string tooltip = characterOption is null
             ? label
@@ -463,7 +462,7 @@ public sealed partial class MainWindow
 
     private string GetOnlineCharacterDisplayName(string characterName)
     {
-        OnlineCharacterOption? option = _onlineCharacterOptions.FirstOrDefault(item =>
+        OnlineCharacterOption? option = _onlinePage.CharacterOptions.FirstOrDefault(item =>
             string.Equals(item.Key, characterName, StringComparison.OrdinalIgnoreCase));
         if (option is not null)
         {
@@ -486,7 +485,7 @@ public sealed partial class MainWindow
             return true;
         }
 
-        OnlineCharacterOption? character = _onlineCharacterOptions.FirstOrDefault(option =>
+        OnlineCharacterOption? character = _onlinePage.CharacterOptions.FirstOrDefault(option =>
             string.Equals(option.Key, characterKey, StringComparison.OrdinalIgnoreCase));
         if (character is null)
         {
@@ -583,7 +582,7 @@ public sealed partial class MainWindow
     private async Task SelectOnlineCharacterAsync(string character)
     {
         character ??= string.Empty;
-        if (string.Equals(character, _onlineCharacterFilter, StringComparison.OrdinalIgnoreCase))
+        if (string.Equals(character, _onlinePage.CharacterFilter, StringComparison.OrdinalIgnoreCase))
         {
             return;
         }
@@ -596,10 +595,8 @@ public sealed partial class MainWindow
         }
 
         ResetOnlineBrowsePosition();
-        _onlineCharacterFilter = character;
-        _onlineCurrentPage = 1;
-        _onlineTotalCount = 0;
-        _onlineTotalPages = 1;
+        _onlinePage.CharacterFilter = character;
+        _onlinePage.ResetPaging();
         _lastLoadedOnlineConfigKey = null;
         _activeOnlineDetailMod = null;
         _isApplyingOnlineCharacterSelection = true;
@@ -1295,18 +1292,18 @@ public sealed partial class MainWindow
         }
 
         OnlineCharacterCatalogMatcher.SortByWikiOrderThenNewest(characters);
-        _onlineCharacterOptions.Clear();
-        _onlineCharacterOptions.AddRange(characters);
+        _onlinePage.CharacterOptions.Clear();
+        _onlinePage.CharacterOptions.AddRange(characters);
         // Mod pages and the monthly Wiki catalog run independently; merge any page already on screen.
-        MergeOnlineCharacterOptionsFromMods(_onlineMods);
-        if (!string.IsNullOrWhiteSpace(_onlineCharacterFilter)
-            && !_onlineCharacterOptions.Any(character => string.Equals(
+        MergeOnlineCharacterOptionsFromMods(_onlinePage.Mods);
+        if (!string.IsNullOrWhiteSpace(_onlinePage.CharacterFilter)
+            && !_onlinePage.CharacterOptions.Any(character => string.Equals(
                 character.Key,
-                _onlineCharacterFilter,
+                _onlinePage.CharacterFilter,
                 StringComparison.OrdinalIgnoreCase)))
         {
-            _onlineCharacterFilter = string.Empty;
-            _onlineCurrentPage = 1;
+            _onlinePage.CharacterFilter = string.Empty;
+            _onlinePage.CurrentPage = 1;
             _lastLoadedOnlineConfigKey = null;
         }
 
@@ -1330,7 +1327,7 @@ public sealed partial class MainWindow
         AddAlias(mod.CharacterName);
 
         string normalizedCharacterName = OnlineCharacterCatalogMatcher.NormalizeLookup(mod.CharacterName);
-        OnlineCharacterOption? option = _onlineCharacterOptions.FirstOrDefault(item =>
+        OnlineCharacterOption? option = _onlinePage.CharacterOptions.FirstOrDefault(item =>
             (!string.IsNullOrWhiteSpace(mod.CategoryId)
                 && string.Equals(item.CategoryId, mod.CategoryId, StringComparison.OrdinalIgnoreCase))
             || string.Equals(OnlineCharacterCatalogMatcher.NormalizeLookup(item.Key), normalizedCharacterName, StringComparison.OrdinalIgnoreCase)
@@ -1370,7 +1367,7 @@ public sealed partial class MainWindow
     private (string? Chinese, string? English) GetCharacterFolderNames(OnlineModCard mod)
     {
         string normalized = OnlineCharacterCatalogMatcher.NormalizeLookup(mod.CharacterName);
-        OnlineCharacterOption? option = _onlineCharacterOptions.FirstOrDefault(item =>
+        OnlineCharacterOption? option = _onlinePage.CharacterOptions.FirstOrDefault(item =>
             (!string.IsNullOrWhiteSpace(mod.CategoryId) && string.Equals(item.CategoryId, mod.CategoryId, StringComparison.OrdinalIgnoreCase))
             || string.Equals(OnlineCharacterCatalogMatcher.NormalizeLookup(item.Key), normalized, StringComparison.OrdinalIgnoreCase));
         EndfieldCharacterInfo? endfield = FindEndfieldCharacter(mod.CharacterName)

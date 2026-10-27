@@ -4,7 +4,7 @@ using Microsoft.UI.Xaml.Controls;
 namespace ModFolderCopier.WinUI;
 
 /// <summary>One online Mod in the grid view, bound to <see cref="OnlineModTileViewModel"/>.</summary>
-public sealed partial class OnlineModTile : UserControl
+public sealed partial class OnlineModTile : UserControl, IOnlineModView
 {
     public OnlineModTile(OnlineModTileViewModel viewModel)
     {
@@ -25,4 +25,18 @@ public sealed partial class OnlineModTile : UserControl
     public Border Card => CardBorder;
 
     public static Visibility CollapsedWhen(bool value) => value ? Visibility.Collapsed : Visibility.Visible;
+}
+
+/// <summary>What the window fills in on a list row or grid tile; both bind to <see cref="OnlineModTileViewModel"/>.</summary>
+public interface IOnlineModView
+{
+    OnlineModTileViewModel ViewModel { get; }
+
+    Image Preview { get; }
+
+    ContentControl Author { get; }
+
+    ContentControl Installed { get; }
+
+    Border Card { get; }
 }

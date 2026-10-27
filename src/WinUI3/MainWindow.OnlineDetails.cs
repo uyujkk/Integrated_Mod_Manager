@@ -467,7 +467,7 @@ public sealed partial class MainWindow
             // The cards re-flowed around the drawer; bring the one being shown back into view.
             int index = GetActiveOnlineDetailIndex();
             if (index >= 0 && GetOnlineResultsElement() is ListViewBase results)
-                results.ScrollIntoView(_onlineVisibleMods[index]);
+                results.ScrollIntoView(_onlinePage.VisibleMods[index]);
         });
         if (animationVersion != _onlineDetailAnimationVersion)
         {
@@ -943,9 +943,9 @@ public sealed partial class MainWindow
     private int GetActiveOnlineDetailIndex()
     {
         if (_activeOnlineDetailMod is not { } active) return -1;
-        for (int index = 0; index < _onlineVisibleMods.Count; index++)
+        for (int index = 0; index < _onlinePage.VisibleMods.Count; index++)
         {
-            OnlineModCard candidate = _onlineVisibleMods[index];
+            OnlineModCard candidate = _onlinePage.VisibleMods[index];
             if (ReferenceEquals(candidate, active) || (active.ItemId > 0 && candidate.ItemId == active.ItemId)) return index;
         }
         return -1;
@@ -955,7 +955,7 @@ public sealed partial class MainWindow
     {
         int index = GetActiveOnlineDetailIndex();
         OnlineDetailPreviousButton.IsEnabled = index > 0;
-        OnlineDetailNextButton.IsEnabled = index >= 0 && index < _onlineVisibleMods.Count - 1;
+        OnlineDetailNextButton.IsEnabled = index >= 0 && index < _onlinePage.VisibleMods.Count - 1;
         foreach ((Button button, string label) in new[]
         {
             (OnlineDetailPreviousButton, T("OnlineDetails.PreviousMod")),
@@ -975,8 +975,8 @@ public sealed partial class MainWindow
     {
         int index = GetActiveOnlineDetailIndex();
         int target = index + step;
-        if (index < 0 || target < 0 || target >= _onlineVisibleMods.Count) return;
-        OnlineModCard mod = _onlineVisibleMods[target];
+        if (index < 0 || target < 0 || target >= _onlinePage.VisibleMods.Count) return;
+        OnlineModCard mod = _onlinePage.VisibleMods[target];
         if (GetOnlineResultsElement() is ListViewBase results) results.ScrollIntoView(mod);
         await RunUiActionAsync("ShowOnlineModDetailsAsync", () => ShowOnlineModDetailsAsync(mod));
     }
@@ -986,7 +986,7 @@ public sealed partial class MainWindow
         if (_onlineWindowClosed) return;
         // The cards re-flow to more columns on close; keep the one just viewed on screen.
         int lastShownIndex = GetActiveOnlineDetailIndex();
-        OnlineModCard? lastShown = lastShownIndex >= 0 ? _onlineVisibleMods[lastShownIndex] : null;
+        OnlineModCard? lastShown = lastShownIndex >= 0 ? _onlinePage.VisibleMods[lastShownIndex] : null;
         // Close takes effect before the animation awaits, not 165ms later.
         InvalidateOnlineDetailRequest();
         _activeOnlineDetailMod = null;
@@ -1025,7 +1025,7 @@ public sealed partial class MainWindow
         {
             DispatcherQueue.TryEnqueue(() =>
             {
-                if (!_onlineWindowClosed && _onlineVisibleMods.Contains(lastShown) && GetOnlineResultsElement() is ListViewBase results)
+                if (!_onlineWindowClosed && _onlinePage.VisibleMods.Contains(lastShown) && GetOnlineResultsElement() is ListViewBase results)
                     results.ScrollIntoView(lastShown);
             });
         }

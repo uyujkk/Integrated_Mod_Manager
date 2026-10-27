@@ -1,5 +1,12 @@
 namespace IntegratedModManager.Core.Layout;
 
+// The names are stored in browse sessions (OnlineBrowseSession.Layout), so they must not change.
+public enum OnlineCardLayoutMode
+{
+    List,
+    Grid
+}
+
 public readonly record struct OnlineCharacterRailLayout(bool Horizontal, double ColumnWidth);
 
 public readonly record struct OnlineGridTileLayout(int Columns, double ItemWidth, double ItemHeight, double ImageHeight);
