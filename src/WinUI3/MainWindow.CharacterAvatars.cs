@@ -25,7 +25,7 @@ public sealed partial class MainWindow
         CancellationToken cancellationToken = _characterAvatarCancellation.Token;
 
         WorkspaceRepository? repository = GetSelectedRepository();
-        FirstLevelFolderItem[] items = [.. _allFirstLevelItems];
+        FirstLevelFolderItem[] items = [.. _characters.All];
         if (repository is null || items.Length == 0)
         {
             return;
@@ -144,7 +144,7 @@ public sealed partial class MainWindow
     // The avatar button in the character list header: the same actions for the selected character.
     private void OnCharacterAvatarButtonClicked(object sender, RoutedEventArgs e)
     {
-        if (FirstLevelListView.SelectedItem is not FirstLevelFolderItem item)
+        if (_characters.Selected is not { } item)
         {
             StatusTextBlock.Text = T("CharacterAvatars.SelectACharacterFirst");
             return;

@@ -76,7 +76,7 @@ public sealed partial class MainWindow
         // menu as the character right-click menu. The original controls stay as the state holders.
         _characterMoreButton = RepositoryButton("\uE712", (sender, _) =>
         {
-            if (FirstLevelListView.SelectedItem is FirstLevelFolderItem item)
+            if (_characters.Selected is { } item)
                 CreateFirstLevelMenu(item).ShowAt((FrameworkElement)sender,
                     new FlyoutShowOptions { Placement = FlyoutPlacementMode.BottomEdgeAlignedLeft });
         });
@@ -524,7 +524,7 @@ public sealed partial class MainWindow
         if (!_repositoryV4Ready) return;
         _workspaceTitleText!.Text = _modList.View == RepositoryWorkspaceView.Presets ? T("RepositoryWorkspace.CombinationPresets") : T("Common.ModWorkspace");
         _repositoryCategoryTitle!.Text = T("RepositoryWorkspace.Characters");
-        _repositoryModTitle!.Text = FirstLevelListView.SelectedItem is FirstLevelFolderItem role ? role.Name : T("RepositoryWorkspace.ModFiles");
+        _repositoryModTitle!.Text = _characters.Selected is { } role ? role.Name : T("RepositoryWorkspace.ModFiles");
         _repositoryModSearch!.PlaceholderText = T("RepositoryWorkspace.SearchThisCharacterSMods");
         if (_localTagsButton is not null) _localTagsButton.Content = T("Common.Tags");
         AutomationProperties.SetName(_repositoryModSearch, T("RepositoryWorkspace.SearchMods"));
@@ -682,7 +682,7 @@ public sealed partial class MainWindow
             UpdateRepositoryCoverSelectionV4();
         }
         finally { _syncingRepositorySelection = false; }
-        _repositoryModTitle!.Text = FirstLevelListView.SelectedItem is FirstLevelFolderItem role ? role.Name : T("RepositoryWorkspace.ModFiles");
+        _repositoryModTitle!.Text = _characters.Selected is { } role ? role.Name : T("RepositoryWorkspace.ModFiles");
         _repositoryModCount!.Text = T("RepositoryWorkspace.Mods", visible.Length, _secondLevelItems.Count);
         if (_localFiltersButton is not null)
         {
@@ -711,7 +711,7 @@ public sealed partial class MainWindow
     private void UpdateRepositoryEmptyState()
     {
         if (_repositoryEmptyState is null) return;
-        _modList.UpdateEmptyKind(_secondLevelItems.Count, FirstLevelListView.SelectedItem is FirstLevelFolderItem);
+        _modList.UpdateEmptyKind(_secondLevelItems.Count, _characters.Selected is not null);
         ModListEmptyKind kind = _modList.EmptyKind;
         _repositoryEmptyState.Visibility = kind == ModListEmptyKind.None ? Visibility.Collapsed : Visibility.Visible;
         _repositoryEmptyState.Glyph = kind == ModListEmptyKind.NoMatches ? "\uE721" : "\uE8B5";

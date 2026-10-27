@@ -117,7 +117,7 @@ public sealed partial class MainWindow
     {
         try
         {
-            FirstLevelFolderItem? item = FirstLevelListView.SelectedItem as FirstLevelFolderItem;
+            FirstLevelFolderItem? item = _characters.Selected;
             if (item is null)
             {
                 await ShowMessageAsync(
@@ -174,7 +174,8 @@ public sealed partial class MainWindow
 
     private void OnFirstLevelSelectionChanged(object sender, SelectionChangedEventArgs e)
     {
-        PopulateSecondLevelList(FirstLevelListView.SelectedItem as FirstLevelFolderItem);
+        _characters.Selected = FirstLevelListView.SelectedItem as FirstLevelFolderItem;
+        PopulateSecondLevelList(_characters.Selected);
         UpdateCharacterHeaderActions();
     }
 
@@ -274,7 +275,7 @@ public sealed partial class MainWindow
     {
         try
         {
-            FirstLevelFolderItem? item = FirstLevelListView.SelectedItem as FirstLevelFolderItem;
+            FirstLevelFolderItem? item = _characters.Selected;
             if (item is null)
             {
                 await ShowMessageAsync(
@@ -465,7 +466,7 @@ public sealed partial class MainWindow
 
             try
             {
-                string selectedFirstLevelPath = (FirstLevelListView.SelectedItem as FirstLevelFolderItem)?.Path ?? string.Empty;
+                string selectedFirstLevelPath = (_characters.Selected)?.Path ?? string.Empty;
                 // Remove the deployment links first: deleting only the source would leave
                 // links that break conflict checks for every later installation.
                 foreach (string link in deployedLinks)
@@ -587,7 +588,7 @@ public sealed partial class MainWindow
             SetDropTargetHighlight(border, false);
         }
 
-        if (FirstLevelListView.SelectedItem is null)
+        if (_characters.Selected is null)
         {
             return;
         }
@@ -611,7 +612,7 @@ public sealed partial class MainWindow
                 SetDropTargetHighlight(border, false);
             }
 
-            FirstLevelFolderItem? item = FirstLevelListView.SelectedItem as FirstLevelFolderItem;
+            FirstLevelFolderItem? item = _characters.Selected;
             if (item is null)
             {
                 await ShowMessageAsync(
@@ -651,14 +652,14 @@ public sealed partial class MainWindow
 
     private async Task RefreshListsAsync()
     {
-        using var timing = MeasureRepositoryUi(RepositoryPerformanceOperation.Refresh, _allFirstLevelItems.Sum(first => first.Children.Count));
+        using var timing = MeasureRepositoryUi(RepositoryPerformanceOperation.Refresh, _characters.All.Sum(first => first.Children.Count));
         _folderRefreshCancellation?.Cancel();
         int generation = ++_folderRefreshGeneration;
         string? previousMod = _currentSecondLevelPath;
-        string? previousCategory = (FirstLevelListView.SelectedItem as FirstLevelFolderItem)?.Path;
-        _allFirstLevelItems.Clear();
+        string? previousCategory = (_characters.Selected)?.Path;
+        _characters.All.Clear();
         _modList.SelectedMod = null;
-        _firstLevelItems.Clear();
+        _characters.Visible.Clear();
         _secondLevelItems.Clear();
         _currentSecondLevelPath = null;
         RefreshPersistentSlotControls();
@@ -702,21 +703,20 @@ public sealed partial class MainWindow
             if (cancellation.IsCancellationRequested || generation != _folderRefreshGeneration
                 || !string.Equals(sourceDir, (SourceTextBox.Text ?? string.Empty).Trim(), StringComparison.OrdinalIgnoreCase)
                 || !string.Equals(targetDir, (TargetTextBox.Text ?? string.Empty).Trim(), StringComparison.OrdinalIgnoreCase)) return;
-            _allFirstLevelItems.Clear();
-            _allFirstLevelItems.AddRange(loaded.Items);
+            _characters.Load(loaded.Items);
             timing?.SetCounts(loaded.SecondCount);
             ApplyFirstLevelFilter();
             _ = RefreshCharacterFolderAvatarsAsync();
-            FirstCountTextBlock.Text = _allFirstLevelItems.Count.ToString();
+            FirstCountTextBlock.Text = _characters.All.Count.ToString();
             SecondCountTextBlock.Text = loaded.SecondCount.ToString();
             StatusTextBlock.Text = loaded.Warnings == 0
-                ? T("LocalLibrary.LoadedFirstLevelFoldersAndSecond", _allFirstLevelItems.Count, loaded.SecondCount)
-                : T("LocalLibrary.LoadedCategoriesAndModsScanCache", _allFirstLevelItems.Count, loaded.SecondCount, loaded.Warnings);
-            if (_firstLevelItems.Count > 0)
+                ? T("LocalLibrary.LoadedFirstLevelFoldersAndSecond", _characters.All.Count, loaded.SecondCount)
+                : T("LocalLibrary.LoadedCategoriesAndModsScanCache", _characters.All.Count, loaded.SecondCount, loaded.Warnings);
+            if (_characters.Visible.Count > 0)
             {
                 SelectFirstLevelByPath(previousCategory);
                 if (!string.IsNullOrEmpty(previousMod)) SelectSecondLevelByPath(previousMod);
-                if (FirstLevelListView.SelectedItem is null) FirstLevelListView.SelectedIndex = 0;
+                if (_characters.Selected is null) FirstLevelListView.SelectedIndex = 0;
             }
         }
         catch (OperationCanceledException) when (cancellation.IsCancellationRequested)
@@ -1119,9 +1119,9 @@ public sealed partial class MainWindow
             return;
         }
 
-        for (int firstIndex = 0; firstIndex < _firstLevelItems.Count; firstIndex++)
+        for (int firstIndex = 0; firstIndex < _characters.Visible.Count; firstIndex++)
         {
-            FirstLevelFolderItem first = _firstLevelItems[firstIndex];
+            FirstLevelFolderItem first = _characters.Visible[firstIndex];
             if (first.Children.Any(child => string.Equals(child.Path, path, StringComparison.CurrentCultureIgnoreCase)))
             {
                 FirstLevelListView.SelectedIndex = firstIndex;
@@ -1260,22 +1260,10 @@ public sealed partial class MainWindow
 
     private void ApplyFirstLevelFilter()
     {
-        string keyword = (FirstLevelSearchTextBox.Text ?? string.Empty).Trim();
-        string? selectedPath = FirstLevelListView.SelectedItem is FirstLevelFolderItem selected ? selected.Path : null;
-
-        IEnumerable<FirstLevelFolderItem> filtered = string.IsNullOrWhiteSpace(keyword)
-            ? _allFirstLevelItems
-            : _allFirstLevelItems.Where(item =>
-                item.Name.Contains(keyword, StringComparison.CurrentCultureIgnoreCase));
-
-        _firstLevelItems.ReplaceAll(filtered);
-
-        if (!string.IsNullOrEmpty(selectedPath))
-        {
-            SelectFirstLevelByPath(selectedPath);
-        }
-
-        if (FirstLevelListView.SelectedItem is null && _firstLevelItems.Count > 0)
+        string? selectedPath = _characters.Selected?.Path;
+        _characters.ApplyFilter(FirstLevelSearchTextBox.Text);
+        SelectFirstLevelByPath(selectedPath);
+        if (_characters.Selected is null && _characters.Visible.Count > 0)
         {
             FirstLevelListView.SelectedIndex = 0;
         }
@@ -1283,14 +1271,7 @@ public sealed partial class MainWindow
 
     private void SelectFirstLevelByPath(string? path)
     {
-        if (string.IsNullOrWhiteSpace(path))
-        {
-            return;
-        }
-
-        FirstLevelFolderItem? item = _firstLevelItems.FirstOrDefault(first =>
-            string.Equals(first.Path, path, StringComparison.CurrentCultureIgnoreCase));
-        if (item is not null)
+        if (_characters.FindVisible(path) is { } item)
         {
             FirstLevelListView.SelectedItem = item;
         }
