@@ -342,7 +342,7 @@ public sealed partial class MainWindow
         try
         {
             if (_syncingRepositorySelection) return;
-            _repositorySelectedMod = SecondLevelListView.SelectedItem as SecondLevelFolderItem;
+            _modList.SelectedMod = SecondLevelListView.SelectedItem as SecondLevelFolderItem;
             try
             {
                 SecondLevelFolderItem? item = GetSelectedSecondLevelItem();
@@ -657,7 +657,7 @@ public sealed partial class MainWindow
         string? previousMod = _currentSecondLevelPath;
         string? previousCategory = (FirstLevelListView.SelectedItem as FirstLevelFolderItem)?.Path;
         _allFirstLevelItems.Clear();
-        _repositorySelectedMod = null;
+        _modList.SelectedMod = null;
         _firstLevelItems.Clear();
         _secondLevelItems.Clear();
         _currentSecondLevelPath = null;
@@ -738,7 +738,7 @@ public sealed partial class MainWindow
     private void PopulateSecondLevelList(FirstLevelFolderItem? firstItem, bool preserveStatus = false)
     {
         using var timing = MeasureRepositoryUi(RepositoryPerformanceOperation.Populate, firstItem?.Children.Count ?? 0);
-        _repositorySelectedMod = null;
+        _modList.SelectedMod = null;
         ClearPreview();
         CurrentFolderTextBlock.Text = StateNotSelectedText;
         CurrentStateTextBlock.Text = StateNotSelectedText;
@@ -1131,7 +1131,7 @@ public sealed partial class MainWindow
                     {
                         SecondLevelFolderItem selected = _secondLevelItems[secondIndex];
                         SecondLevelListView.SelectedItem = selected;
-                        if (_repositoryVisibleMods.Contains(selected)) SecondLevelListView.ScrollIntoView(selected);
+                        if (_modList.VisibleMods.Contains(selected)) SecondLevelListView.ScrollIntoView(selected);
                         ApplySecondLevelSelectionState(_secondLevelItems[secondIndex], preserveStatus: true);
                         return;
                     }
@@ -1170,7 +1170,7 @@ public sealed partial class MainWindow
 
     private SecondLevelFolderItem? GetSelectedSecondLevelItem()
     {
-        return _repositorySelectedMod ?? SecondLevelListView.SelectedItem as SecondLevelFolderItem;
+        return _modList.SelectedMod ?? SecondLevelListView.SelectedItem as SecondLevelFolderItem;
     }
 
     private async void UpdatePreviewForDirectory(string directoryPath, List<string> files)

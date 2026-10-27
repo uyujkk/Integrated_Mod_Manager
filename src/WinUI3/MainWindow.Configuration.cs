@@ -82,7 +82,7 @@ public sealed partial class MainWindow
             _onlineDownloadScheduler.Limit = _onlinePreferences.ConcurrentDownloads;
             _updateCheckInterval = AppSelfUpdateEnabled ? ParseUpdateCheckInterval(config?.UpdateCheckInterval) : UpdateCheckInterval.Manual;
             _navigationCollapsed = config?.NavigationCollapsed ?? false;
-            _repositoryWorkspaceView = config?.RepositoryWorkspaceView switch
+            _modList.View = config?.RepositoryWorkspaceView switch
             {
                 "covers" => RepositoryWorkspaceView.Covers,
                 "presets" => RepositoryWorkspaceView.Presets,
@@ -261,7 +261,7 @@ public sealed partial class MainWindow
                 NavigationCollapsed = _navigationCollapsed,
                 InterfaceDensity = _interfaceDensity == InterfaceDensity.Compact ? "compact" : "comfortable",
                 OnlineCardLayout = _onlinePage.CardLayoutMode == OnlineCardLayoutMode.Grid ? "grid" : "list",
-                RepositoryWorkspaceView = _repositoryWorkspaceView.ToString().ToLowerInvariant(),
+                RepositoryWorkspaceView = _modList.View.ToString().ToLowerInvariant(),
                 SelectedConfigurationProfileId = _selectedConfigurationProfileId,
                 EnableConflictDetection = _enableConflictDetection,
                 LastInstallTransactionPath = _lastInstallTransactionPath,

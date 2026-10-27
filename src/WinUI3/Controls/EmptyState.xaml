@@ -1,0 +1,29 @@
+<UserControl
+    x:Class="ModFolderCopier.WinUI.EmptyState"
+    xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+    HorizontalAlignment="Center"
+    VerticalAlignment="Center">
+
+    <!-- No background, so drag-and-drop still reaches the list underneath. -->
+    <StackPanel MaxWidth="420" Margin="16" Spacing="12">
+        <FontIcon
+            x:Name="IconElement"
+            HorizontalAlignment="Center"
+            FontSize="28"
+            Opacity="0.75" />
+        <TextBlock
+            x:Name="TitleElement"
+            FontSize="16"
+            FontWeight="SemiBold"
+            TextAlignment="Center"
+            TextWrapping="Wrap" />
+        <TextBlock
+            x:Name="HintElement"
+            FontSize="13"
+            Opacity="0.75"
+            TextAlignment="Center"
+            TextWrapping="Wrap" />
+        <ContentPresenter x:Name="ActionsElement" HorizontalAlignment="Center" />
+    </StackPanel>
+</UserControl>
