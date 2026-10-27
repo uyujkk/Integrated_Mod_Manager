@@ -176,7 +176,6 @@ public sealed partial class MainWindow
         ConflictDetectionToggleSwitch.OffContent = T("Common.Off");
         ConflictDetectionToggleSwitch.IsOn = _enableConflictDetection;
         RollbackLastInstallButton.Content = T("Updates.UndoLastModChange");
-        // "Downloads" maps to the download-count label in the shared table; use a distinct key.
         DownloadTaskCenterTitleTextBlock.Text = T("Updates.DownloadTasks");
         DownloadTaskCenterHintTextBlock.Text = T("Updates.ShowsOnlineModDownloadAndExtraction");
         ClearDownloadTasksButton.Content = T("Updates.ClearFinished");

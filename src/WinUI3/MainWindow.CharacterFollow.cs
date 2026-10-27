@@ -26,24 +26,26 @@ public sealed partial class MainWindow
     private string? _characterProfilePath;
     private ToggleSwitch? _characterFollowToggle;
     private TextBlock? _characterFollowStatus;
+    private TextBlock? _characterFollowSummary;
     private System.Threading.Timer? _characterFollowTimer;
     private bool _characterCaptureBusy;
     private bool _characterAutoSelecting;
     private readonly Dictionary<string, string> _characterPreferredMods = new(StringComparer.OrdinalIgnoreCase);
 
+    // The on/off switch is left for the caller to place: it sits on the module row's header.
     private void BuildCharacterFollowControls(StackPanel pane)
     {
-        pane.Children.Add(new TextBlock { Text = T("CharacterFollow.FollowInGameCharacterLocalMatching"), FontSize = 18 });
         pane.Children.Add(new TextBlock
         {
             Text = T("CharacterFollow.SelectAHUDRegionThatChanges"),
-            TextWrapping = TextWrapping.Wrap
+            TextWrapping = TextWrapping.Wrap, Style = (Style)Application.Current.Resources["CaptionTextStyle"]
         });
         var buttons = new StackPanel { Orientation = Orientation.Horizontal, Spacing = 8 };
         buttons.Children.Add(ShortcutButton(T("CharacterFollow.SelectHUDRegion"), () => _ = SelectCharacterRegionAsync()));
         buttons.Children.Add(ShortcutButton(T("CharacterFollow.SaveCharacterReference"), () => _ = SaveCharacterReferenceAsync()));
         pane.Children.Add(buttons);
-        _characterFollowToggle = LocalizedToggle(T("CharacterFollow.AutomaticallyFollowCharacterShortcuts"));
+        _characterFollowToggle = new ToggleSwitch { OnContent = T("Common.On2"), OffContent = T("Common.Off2"), MinWidth = 0 };
+        ToolTipService.SetToolTip(_characterFollowToggle, T("CharacterFollow.AutomaticallyFollowCharacterShortcuts"));
         _characterFollowToggle.Toggled += (_, _) =>
         {
             _characterMatcher.Reset();
@@ -56,14 +58,25 @@ public sealed partial class MainWindow
             _characterFollowStatus!.Text = _characterFollowToggle.IsOn
                 ? T("CharacterFollow.WaitingForForegroundGameSwitchesAfter")
                 : T("CharacterFollow.AutomaticFollowingPaused");
+            UpdateCharacterFollowSummary();
         };
-        pane.Children.Add(_characterFollowToggle);
         // Updated every recognition tick; a fixed height keeps the shortcut list below it still.
         _characterFollowStatus = FixedStatusText(lines: 2, fontSize: 14);
         _characterFollowStatus.Text = T("CharacterFollow.NotConfiguredReferencesRemainLocal");
         pane.Children.Add(_characterFollowStatus);
         _characterFollowTimer = new System.Threading.Timer(_ =>
             DispatcherQueue.TryEnqueue(() => _ = ObserveCharacterAsync()), null, 700, 700);
+    }
+
+    // The one line shown on the collapsed module row.
+    private void UpdateCharacterFollowSummary()
+    {
+        if (_characterFollowSummary is null) return;
+        _characterFollowSummary.Text = _characterFollowToggle?.IsOn == true
+            ? T("CharacterFollow.SummaryFollowing")
+            : _characterProfile.Region?.IsValid == true && _characterProfile.Templates.Count > 0
+                ? T("CharacterFollow.SummaryReady", _characterProfile.Templates.Count)
+                : T("CharacterFollow.SummaryNotSetUp");
     }
 
     private string? SelectedShortcutRole()
@@ -91,6 +104,7 @@ public sealed partial class MainWindow
             _characterFollowStatus!.Text = T("CharacterFollow.LoadedCharacterReferencesAutoFollowStarts", _characterProfile.Templates.Count);
         }
         catch (Exception ex) { _characterFollowStatus!.Text = ex.Message; _characterProfile = new(); }
+        UpdateCharacterFollowSummary();
     }
 
     private void SaveCharacterFollowProfile()
@@ -101,6 +115,7 @@ public sealed partial class MainWindow
         _characterProfile.PreferredMods = new(_characterPreferredMods, StringComparer.OrdinalIgnoreCase);
         File.WriteAllText(temporary, JsonSerializer.Serialize(_characterProfile));
         File.Move(temporary, _characterProfilePath, true);
+        UpdateCharacterFollowSummary();
     }
 
     private async Task<CharacterFrame> CaptureCharacterReferenceAsync()
