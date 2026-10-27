@@ -88,6 +88,7 @@ public sealed partial class MainWindow
             if (!cancellationToken.IsCancellationRequested)
             {
                 item.AvatarImageSource = bitmap;
+                ApplyDashboardCharacterAvatar(item);
             }
         }
         catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)

@@ -63,7 +63,6 @@ public sealed partial class MainWindow
         };
         ToolTipService.SetToolTip(AddRepositoryButton, T("Localization.CreateRepository"));
         ToolTipService.SetToolTip(RenameRepositoryButton, T("Localization.EditCurrentRepository"));
-        ToolTipService.SetToolTip(DeleteRepositoryButton, T("Localization.DeleteCurrentRepository"));
         ToolTipService.SetToolTip(OpenGitHubButton, T("Localization.OpenGitHubRepository"));
         ToolTipService.SetToolTip(CheckUpdatesButton, T("Localization.CheckForAppUpdates"));
         ToolTipService.SetToolTip(CheckModUpdatesButton, T("Localization.CheckTrackedModUpdatesNow"));
@@ -77,7 +76,6 @@ public sealed partial class MainWindow
         ToolTipService.SetToolTip(OnlineDetailHeroImage, T("Localization.ClickToViewFullSize"));
         AutomationProperties.SetName(AddRepositoryButton, T("Localization.CreateRepository"));
         AutomationProperties.SetName(RenameRepositoryButton, T("Localization.EditCurrentRepository"));
-        AutomationProperties.SetName(DeleteRepositoryButton, T("Localization.DeleteCurrentRepository"));
         AutomationProperties.SetName(OpenGitHubButton, T("Localization.OpenGitHubRepository"));
         AutomationProperties.SetName(CheckUpdatesButton, T("Localization.CheckForAppUpdates"));
         AutomationProperties.SetName(CheckModUpdatesButton, T("Localization.CheckTrackedModUpdatesNow"));
@@ -97,19 +95,18 @@ public sealed partial class MainWindow
         DashboardEditRepositoryTextBlock.Text = T("Localization.EditCurrent");
         DashboardCurrentRepositoryLabelTextBlock.Text = T("Localization.ActiveRepository");
         DashboardOpenRepositoryButton.Content = T("Localization.OpenModManagement");
-        DashboardRepoCountLabelTextBlock.Text = T("Localization.Repositories");
-        DashboardModCountLabelTextBlock.Text = T("Localization.TotalMods");
-        DashboardReadyCountLabelTextBlock.Text = T("Localization.ReadyPaths");
-        DashboardPresetsTitleTextBlock.Text = T("Localization.GameRepositoryPresets");
-        DashboardPresetsHintTextBlock.Text = T("Localization.EachPresetIncludesItsGameBananaCategory");
-        DashboardZzzPresetTitleTextBlock.Text = T("Localization.ZenlessZoneZero");
-        DashboardGenshinPresetTitleTextBlock.Text = T("Localization.GenshinImpact");
-        DashboardHsrPresetTitleTextBlock.Text = T("Localization.HonkaiStarRail");
-        DashboardEndfieldPresetTitleTextBlock.Text = T("Localization.ArknightsEndfield");
         DashboardRepositoriesTitleTextBlock.Text = T("Common.AllRepositories");
         DashboardRepositoriesHintTextBlock.Text = T("Localization.CardsMarkTheActiveRepositoryAnd");
+        DashboardCharactersTitleTextBlock.Text = T("Dashboard.Characters");
+        DashboardCharactersHintTextBlock.Text = T("Dashboard.ClickACharacterToManage");
+        DashboardQuickActionsTitleTextBlock.Text = T("Dashboard.QuickActions");
+        DashboardBrowseOnlineTextBlock.Text = T("Dashboard.BrowseOnline");
+        DashboardCheckUpdatesTextBlock.Text = T("Dashboard.CheckModUpdates");
+        DashboardRunLauncherTextBlock.Text = T("Dashboard.RunLauncher");
+        ToolTipService.SetToolTip(DashboardRunLauncherButton, T("Dashboard.RunLauncherHint"));
         ToolTipService.SetToolTip(DashboardRepositoryComboBox, T("Localization.SwitchTheActiveRepository"));
         ToolTipService.SetToolTip(DashboardOpenRepositoryButton, T("Localization.OpenModManagementForTheActive"));
+        RefreshDashboard();
 
         OnlineTitleTextBlock.Text = T("Common.OnlineModBrowser");
         OnlineSubtitleTextBlock.Text = T("Localization.ThisPageKeepsTheOnlineMod");

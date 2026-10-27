@@ -99,7 +99,7 @@ public sealed partial class MainWindow
     {
         try
         {
-            if (sender is not Button { Tag: string presetId })
+            if (sender is not FrameworkElement { Tag: string presetId })
             {
                 return;
             }
@@ -331,48 +331,53 @@ public sealed partial class MainWindow
     {
         try
         {
-            WorkspaceRepository? repository = GetSelectedRepository();
-            if (repository is null || _selectedRepositoryId is null)
-            {
-                return;
-            }
-
-            SaveSelectedRepositoryFromInputs();
-
-            RepositoryEditorResult? result = await PromptForRepositoryAsync(
-                T("Repositories.EditTheCurrentRepositoryNamePaths"),
-                T("Repositories.EditRepository"),
-                repository);
-
-            if (result is null || string.IsNullOrWhiteSpace(result.Name))
-            {
-                return;
-            }
-
-            repository.Name = result.Name.Trim();
-            repository.SourcePath = result.SourcePath.Trim();
-            repository.TargetPath = result.TargetPath.Trim();
-            repository.UseDirectoryLinks = result.UseDirectoryLinks;
-            repository.AllowMultipleModsPerCharacter = result.AllowMultipleModsPerCharacter;
-            repository.LauncherPath = result.LauncherPath.Trim();
-            repository.OnlineSourceSite = result.OnlineSourceSite.Trim();
-            repository.OnlineGameName = result.OnlineGameName.Trim();
-            repository.OnlineCategoryId = result.OnlineCategoryId.Trim();
-            repository.WikiUrl = result.WikiUrl.Trim();
-            repository.Notes = result.Notes.Trim();
-            ResetOnlineRepositoryContext();
-
-            ApplySelectedRepositoryToInputs();
-            SaveShellConfig();
-            RefreshSecondaryNavigation();
-            RefreshDashboard();
-            RefreshRepositoryActionButtons();
-            StatusTextBlock.Text = T("Repositories.UpdatedRepository", repository.Name);
+            await EditSelectedRepositoryAsync();
         }
         catch (Exception ex)
         {
             ReportUiActionFailure("OnEditRepositoryDetailsClicked", ex);
         }
+    }
+
+    private async Task EditSelectedRepositoryAsync()
+    {
+        WorkspaceRepository? repository = GetSelectedRepository();
+        if (repository is null || _selectedRepositoryId is null)
+        {
+            return;
+        }
+
+        SaveSelectedRepositoryFromInputs();
+
+        RepositoryEditorResult? result = await PromptForRepositoryAsync(
+            T("Repositories.EditTheCurrentRepositoryNamePaths"),
+            T("Repositories.EditRepository"),
+            repository);
+
+        if (result is null || string.IsNullOrWhiteSpace(result.Name))
+        {
+            return;
+        }
+
+        repository.Name = result.Name.Trim();
+        repository.SourcePath = result.SourcePath.Trim();
+        repository.TargetPath = result.TargetPath.Trim();
+        repository.UseDirectoryLinks = result.UseDirectoryLinks;
+        repository.AllowMultipleModsPerCharacter = result.AllowMultipleModsPerCharacter;
+        repository.LauncherPath = result.LauncherPath.Trim();
+        repository.OnlineSourceSite = result.OnlineSourceSite.Trim();
+        repository.OnlineGameName = result.OnlineGameName.Trim();
+        repository.OnlineCategoryId = result.OnlineCategoryId.Trim();
+        repository.WikiUrl = result.WikiUrl.Trim();
+        repository.Notes = result.Notes.Trim();
+        ResetOnlineRepositoryContext();
+
+        ApplySelectedRepositoryToInputs();
+        SaveShellConfig();
+        RefreshSecondaryNavigation();
+        RefreshDashboard();
+        RefreshRepositoryActionButtons();
+        StatusTextBlock.Text = T("Repositories.UpdatedRepository", repository.Name);
     }
 
     private async void OnEditOnlineRepositoryClicked(object sender, RoutedEventArgs e)
@@ -596,16 +601,11 @@ public sealed partial class MainWindow
         }
     }
 
-    private async void OnDeleteRepositoryClicked(object sender, RoutedEventArgs e)
+    // Deleting asks twice; the last repository cannot be deleted.
+    private async Task DeleteRepositoryAsync(WorkspaceRepository repository)
     {
         try
         {
-            WorkspaceRepository? repository = GetSelectedRepository();
-            if (repository is null || _selectedRepositoryId is null)
-            {
-                return;
-            }
-
             if (_repositories.Count <= 1)
             {
                 await ShowMessageAsync(
@@ -630,25 +630,16 @@ public sealed partial class MainWindow
                 return;
             }
 
+            bool wasSelected = repository.Id == _selectedRepositoryId;
             int currentIndex = _repositories.FindIndex(item => item.Id == repository.Id);
             _repositories.RemoveAll(item => item.Id == repository.Id);
 
-            if (_repositories.Count > 0)
+            // Deleting another repository from its card keeps the current one selected.
+            if (wasSelected)
             {
-                int nextIndex = Math.Clamp(currentIndex, 0, _repositories.Count - 1);
-                _selectedRepositoryId = _repositories[nextIndex].Id;
-            }
-            else
-            {
-                _selectedRepositoryId = null;
-            }
-
-            if (_currentPrimarySection == PrimarySection.Dashboard)
-            {
-                _selectedRepositoryId = null;
-            }
-            else
-            {
+                _selectedRepositoryId = _repositories.Count > 0
+                    ? _repositories[Math.Clamp(currentIndex, 0, _repositories.Count - 1)].Id
+                    : null;
                 ApplySelectedRepositoryToInputs();
             }
 
@@ -658,7 +649,7 @@ public sealed partial class MainWindow
         }
         catch (Exception ex)
         {
-            ReportUiActionFailure("OnDeleteRepositoryClicked", ex);
+            ReportUiActionFailure("DeleteRepository", ex);
         }
     }
 }

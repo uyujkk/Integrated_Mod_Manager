@@ -19,6 +19,9 @@ public sealed partial class MainWindow : Window
 
     /// <summary>The Settings page binds its appearance choices to this view model.</summary>
     public AppearanceSettingsViewModel AppearanceSettings { get; } = new();
+
+    /// <summary>The dashboard's repository cards and current-repository status.</summary>
+    public DashboardViewModel Dashboard { get; } = new();
     private static bool AppSelfUpdateEnabled => ApplicationReleasePolicy.ApplicationSelfUpdateEnabled;
     private const string GitHubRepositoryUrl = "https://github.com/uyujkk/Integrated_Mod_Manager";
     private const string GitHubLatestReleaseApiUrl = "https://api.github.com/repos/uyujkk/Integrated_Mod_Manager/releases/latest";

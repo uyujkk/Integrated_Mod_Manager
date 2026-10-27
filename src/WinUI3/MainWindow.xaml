@@ -161,153 +161,282 @@
             </Border>
 
             <Grid x:Name="PagesHostGrid" Grid.Column="2">
-                <ScrollViewer x:Name="DashboardScrollViewer" VerticalScrollBarVisibility="Auto" Visibility="Collapsed">
-                    <StackPanel Margin="2" Spacing="14">
+                <ScrollViewer x:Name="DashboardScrollViewer" VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled" Visibility="Collapsed">
+                    <StackPanel x:Name="DashboardRootPanel" Margin="2,2,8,20" Spacing="12">
                         <local:PageHeader x:Name="DashboardPageHeader">
                             <local:PageHeader.Actions>
-                                <StackPanel Orientation="Horizontal" Spacing="8">
-                                    <Button
-                                        x:Name="AddRepositoryButton"
-                                        Click="OnAddRepositoryDetailsClicked"
-                                        Style="{StaticResource PrimaryButtonStyle}">
-                                        <StackPanel Orientation="Horizontal" Spacing="8">
-                                            <FontIcon Glyph="&#xE710;" FontSize="16" />
-                                            <TextBlock x:Name="DashboardAddRepositoryTextBlock" />
-                                        </StackPanel>
-                                    </Button>
-                                    <Button
-                                        x:Name="RenameRepositoryButton"
-                                        Click="OnEditRepositoryDetailsClicked"
-                                        Style="{StaticResource SecondaryButtonStyle}">
-                                        <StackPanel Orientation="Horizontal" Spacing="8">
-                                            <FontIcon Glyph="&#xE70F;" FontSize="16" />
-                                            <TextBlock x:Name="DashboardEditRepositoryTextBlock" />
-                                        </StackPanel>
-                                    </Button>
-                                    <Button
-                                        x:Name="DeleteRepositoryButton"
-                                        Click="OnDeleteRepositoryClicked"
-                                        Style="{StaticResource SecondaryButtonStyle}">
-                                        <FontIcon Glyph="&#xE74D;" FontSize="16" />
-                                    </Button>
-                                </StackPanel>
+                                <!-- New repository: blank, or from a game preset. Presets no longer take a card on the page. -->
+                                <DropDownButton x:Name="AddRepositoryButton" Padding="12,6">
+                                    <StackPanel Orientation="Horizontal" Spacing="8">
+                                        <FontIcon Glyph="&#xE710;" FontSize="14" />
+                                        <TextBlock x:Name="DashboardAddRepositoryTextBlock" />
+                                    </StackPanel>
+                                    <DropDownButton.Flyout>
+                                        <MenuFlyout x:Name="NewRepositoryMenu" Placement="BottomEdgeAlignedRight" />
+                                    </DropDownButton.Flyout>
+                                </DropDownButton>
                             </local:PageHeader.Actions>
                         </local:PageHeader>
 
-                        <Border x:Name="DashboardRepositorySelectorCard" Style="{StaticResource CardBorderStyle}">
-                            <Grid ColumnSpacing="16">
+                        <!-- The current repository in one strip: picker, status, counts and its actions. -->
+                        <Border x:Name="DashboardRepositorySelectorCard" Style="{StaticResource CardBorderStyle}" Padding="16,12">
+                            <Grid x:Name="DashboardStripGrid" ColumnSpacing="16" RowSpacing="10">
                                 <Grid.ColumnDefinitions>
                                     <ColumnDefinition Width="Auto" />
                                     <ColumnDefinition Width="*" />
                                     <ColumnDefinition Width="Auto" />
+                                    <ColumnDefinition Width="Auto" />
                                 </Grid.ColumnDefinitions>
-                                <Border Width="48" Height="48" CornerRadius="14" Background="{ThemeResource AppSecondarySelectedBrush}" VerticalAlignment="Center">
-                                    <FontIcon Glyph="&#xE8B7;" FontSize="21" Foreground="{ThemeResource AppSecondarySelectedForegroundBrush}" />
+                                <Grid.RowDefinitions>
+                                    <RowDefinition Height="Auto" />
+                                    <RowDefinition Height="Auto" />
+                                </Grid.RowDefinitions>
+                                <Border Width="44" Height="44" CornerRadius="12" Background="{ThemeResource AppSecondarySelectedBrush}" VerticalAlignment="Center">
+                                    <FontIcon Glyph="&#xE8B7;" FontSize="20" Foreground="{ThemeResource AppSecondarySelectedForegroundBrush}" />
                                 </Border>
-                                <StackPanel Grid.Column="1" Spacing="6">
+                                <StackPanel Grid.Column="1" Spacing="4" VerticalAlignment="Center">
                                     <TextBlock x:Name="DashboardCurrentRepositoryLabelTextBlock" Style="{StaticResource CaptionTextStyle}" />
                                     <ComboBox
                                         x:Name="DashboardRepositoryComboBox"
-                                        MinWidth="300"
-                                        HorizontalAlignment="Stretch"
+                                        MinWidth="220"
+                                        MaxWidth="560"
+                                        HorizontalAlignment="Left"
                                         SelectionChanged="OnDashboardRepositorySelectionChanged" />
                                 </StackPanel>
-                                <Button
-                                    x:Name="DashboardOpenRepositoryButton"
-                                    Grid.Column="2"
-                                    Click="OnDashboardOpenRepositoryClicked"
-                                    Style="{StaticResource PrimaryButtonStyle}"
-                                    VerticalAlignment="Bottom" />
+                                <StackPanel x:Name="DashboardStripStatus" Grid.Column="2" Spacing="4" VerticalAlignment="Center">
+                                    <Grid HorizontalAlignment="Left">
+                                        <Border Background="{ThemeResource AppSuccessSoftBrush}" CornerRadius="6" Padding="10,3" Visibility="{x:Bind Dashboard.CurrentIsReady, Mode=OneWay}">
+                                            <TextBlock Text="{x:Bind Dashboard.CurrentStatusText, Mode=OneWay}" Foreground="{ThemeResource AppSuccessBrush}" Style="{StaticResource CaptionTextStyle}" FontWeight="SemiBold" />
+                                        </Border>
+                                        <Border Background="{ThemeResource AppDangerSoftBrush}" CornerRadius="6" Padding="10,3" Visibility="{x:Bind Dashboard.CurrentNeedsSetup, Mode=OneWay}">
+                                            <TextBlock Text="{x:Bind Dashboard.CurrentStatusText, Mode=OneWay}" Foreground="{ThemeResource AppDangerBrush}" Style="{StaticResource CaptionTextStyle}" FontWeight="SemiBold" />
+                                        </Border>
+                                    </Grid>
+                                    <TextBlock Text="{x:Bind Dashboard.CurrentSummary, Mode=OneWay}" Style="{StaticResource CaptionTextStyle}" />
+                                </StackPanel>
+                                <StackPanel x:Name="DashboardStripActions" Grid.Column="3" Orientation="Horizontal" Spacing="8" VerticalAlignment="Center">
+                                    <Button x:Name="RenameRepositoryButton" Click="OnEditRepositoryDetailsClicked" Style="{StaticResource SecondaryButtonStyle}">
+                                        <StackPanel Orientation="Horizontal" Spacing="8">
+                                            <FontIcon Glyph="&#xE70F;" FontSize="14" />
+                                            <TextBlock x:Name="DashboardEditRepositoryTextBlock" />
+                                        </StackPanel>
+                                    </Button>
+                                    <Button x:Name="DashboardOpenRepositoryButton" Click="OnDashboardOpenRepositoryClicked" Style="{StaticResource PrimaryButtonStyle}" />
+                                </StackPanel>
                             </Grid>
                         </Border>
 
-                        <Grid x:Name="DashboardMetricsGrid" ColumnSpacing="12">
-                            <Grid.ColumnDefinitions>
-                                <ColumnDefinition Width="*" />
-                                <ColumnDefinition Width="*" />
-                                <ColumnDefinition Width="*" />
-                            </Grid.ColumnDefinitions>
-
-                            <Border Grid.Column="0" Style="{StaticResource MetricCardStyle}">
-                                <StackPanel Spacing="8">
-                                    <TextBlock x:Name="DashboardRepoCountLabelTextBlock" Style="{StaticResource MutedTextStyle}" />
-                                    <TextBlock x:Name="DashboardRepoCountTextBlock" Style="{StaticResource MetricValueTextStyle}" Text="0" />
+                        <Grid x:Name="DashboardMainGrid" ColumnSpacing="12" RowSpacing="12">
+                            <!-- Left: paths, then the character overview filling the rest of the page. -->
+                            <Grid x:Name="DashboardLeftColumn" RowSpacing="12">
+                            <Grid.RowDefinitions>
+                                <RowDefinition Height="Auto" />
+                                <RowDefinition Height="*" />
+                            </Grid.RowDefinitions>
+                            <!-- The path boxes are the window's existing path controls, moved here at startup. -->
+                            <Border x:Name="DashboardPathsCard" Style="{StaticResource CardBorderStyle}" VerticalAlignment="Top">
+                                <StackPanel Spacing="10">
+                                    <StackPanel Spacing="4">
+                                        <TextBlock x:Name="DashboardPathsTitleTextBlock" Style="{StaticResource SectionTitleTextStyle}" />
+                                        <TextBlock x:Name="DashboardPathsHintTextBlock" Style="{StaticResource CaptionTextStyle}" TextWrapping="Wrap" />
+                                    </StackPanel>
+                                    <ContentControl x:Name="DashboardPathsHost" HorizontalContentAlignment="Stretch" />
                                 </StackPanel>
                             </Border>
 
-                            <Border Grid.Column="1" Style="{StaticResource MetricCardStyle}">
-                                <StackPanel Spacing="8">
-                                    <TextBlock x:Name="DashboardModCountLabelTextBlock" Style="{StaticResource MutedTextStyle}" />
-                                    <TextBlock x:Name="DashboardModCountTextBlock" Style="{StaticResource MetricValueTextStyle}" Text="0" />
-                                </StackPanel>
-                            </Border>
-
-                            <Border Grid.Column="2" Style="{StaticResource MetricCardStyle}">
-                                <StackPanel Spacing="8">
-                                    <TextBlock x:Name="DashboardReadyCountLabelTextBlock" Style="{StaticResource MutedTextStyle}" />
-                                    <TextBlock x:Name="DashboardReadyCountTextBlock" Style="{StaticResource MetricValueTextStyle}" Text="0" />
-                                </StackPanel>
-                            </Border>
-                        </Grid>
-
-                        <Border x:Name="DashboardPresetsCard" Style="{StaticResource CardBorderStyle}">
-                            <Grid RowSpacing="12">
-                                <Grid.RowDefinitions>
-                                    <RowDefinition Height="Auto" />
-                                    <RowDefinition Height="*" />
-                                </Grid.RowDefinitions>
-                                <StackPanel Spacing="4">
-                                    <TextBlock x:Name="DashboardPresetsTitleTextBlock" Style="{StaticResource SectionTitleTextStyle}" />
-                                    <TextBlock x:Name="DashboardPresetsHintTextBlock" Style="{StaticResource CaptionTextStyle}" TextWrapping="Wrap" />
-                                </StackPanel>
-                                <Grid x:Name="DashboardPresetsGrid" Grid.Row="1" ColumnSpacing="12">
-                                    <Grid.ColumnDefinitions>
-                                        <ColumnDefinition Width="*" />
-                                        <ColumnDefinition Width="*" />
-                                        <ColumnDefinition Width="*" />
-                                        <ColumnDefinition Width="*" />
-                                    </Grid.ColumnDefinitions>
-                                    <Button Tag="zzz" Click="OnRepositoryPresetClicked" Style="{StaticResource SecondaryButtonStyle}" Padding="16" HorizontalContentAlignment="Stretch">
-                                        <StackPanel Spacing="6">
-                                            <TextBlock x:Name="DashboardZzzPresetTitleTextBlock" FontSize="18" FontWeight="SemiBold" />
-                                            <TextBlock Text="GameBanana · 30305" Style="{StaticResource CaptionTextStyle}" />
-                                            <TextBlock x:Name="DashboardZzzPresetStatusTextBlock" Style="{StaticResource MutedTextStyle}" TextWrapping="Wrap" />
-                                        </StackPanel>
-                                    </Button>
-                                    <Button Grid.Column="1" Tag="genshin" Click="OnRepositoryPresetClicked" Style="{StaticResource SecondaryButtonStyle}" Padding="16" HorizontalContentAlignment="Stretch">
-                                        <StackPanel Spacing="6">
-                                            <TextBlock x:Name="DashboardGenshinPresetTitleTextBlock" FontSize="18" FontWeight="SemiBold" />
-                                            <TextBlock Text="GameBanana · 18140" Style="{StaticResource CaptionTextStyle}" />
-                                            <TextBlock x:Name="DashboardGenshinPresetStatusTextBlock" Style="{StaticResource MutedTextStyle}" TextWrapping="Wrap" />
-                                        </StackPanel>
-                                    </Button>
-                                    <Button Grid.Column="2" Tag="hsr" Click="OnRepositoryPresetClicked" Style="{StaticResource SecondaryButtonStyle}" Padding="16" HorizontalContentAlignment="Stretch">
-                                        <StackPanel Spacing="6">
-                                            <TextBlock x:Name="DashboardHsrPresetTitleTextBlock" FontSize="18" FontWeight="SemiBold" />
-                                            <TextBlock Text="GameBanana · 22633" Style="{StaticResource CaptionTextStyle}" />
-                                            <TextBlock x:Name="DashboardHsrPresetStatusTextBlock" Style="{StaticResource MutedTextStyle}" TextWrapping="Wrap" />
-                                        </StackPanel>
-                                    </Button>
-                                    <Button Grid.Column="3" Tag="endfield" Click="OnRepositoryPresetClicked" Style="{StaticResource SecondaryButtonStyle}" Padding="16" HorizontalContentAlignment="Stretch">
-                                        <StackPanel Spacing="6">
-                                            <TextBlock x:Name="DashboardEndfieldPresetTitleTextBlock" FontSize="18" FontWeight="SemiBold" />
-                                            <TextBlock Text="GameBanana · 42770" Style="{StaticResource CaptionTextStyle}" />
-                                            <TextBlock x:Name="DashboardEndfieldPresetStatusTextBlock" Style="{StaticResource MutedTextStyle}" TextWrapping="Wrap" />
-                                        </StackPanel>
-                                    </Button>
+                            <Border x:Name="DashboardCharactersCard" Grid.Row="1" Style="{StaticResource CardBorderStyle}">
+                                <Grid RowSpacing="10">
+                                    <Grid.RowDefinitions>
+                                        <RowDefinition Height="Auto" />
+                                        <RowDefinition Height="*" />
+                                    </Grid.RowDefinitions>
+                                    <StackPanel Spacing="4">
+                                        <TextBlock x:Name="DashboardCharactersTitleTextBlock" Style="{StaticResource SectionTitleTextStyle}" />
+                                        <TextBlock x:Name="DashboardCharactersHintTextBlock" Style="{StaticResource CaptionTextStyle}" TextWrapping="Wrap" />
+                                    </StackPanel>
+                                    <TextBlock
+                                        Grid.Row="1"
+                                        Text="{x:Bind Dashboard.CharactersEmptyText, Mode=OneWay}"
+                                        Style="{StaticResource MutedTextStyle}"
+                                        TextWrapping="Wrap"
+                                        Visibility="{x:Bind Dashboard.HasCharactersEmptyText, Mode=OneWay}" />
+                                    <GridView
+                                        x:Name="DashboardCharactersGridView"
+                                        Grid.Row="1"
+                                        IsItemClickEnabled="True"
+                                        ItemClick="OnDashboardCharacterClicked"
+                                        ItemsSource="{x:Bind Dashboard.Characters}"
+                                        SelectionMode="None">
+                                        <GridView.ItemsPanel>
+                                            <ItemsPanelTemplate>
+                                                <ItemsWrapGrid Orientation="Horizontal" ItemWidth="196" ItemHeight="60" />
+                                            </ItemsPanelTemplate>
+                                        </GridView.ItemsPanel>
+                                        <GridView.ItemTemplate>
+                                            <DataTemplate x:DataType="local:CharacterChipViewModel">
+                                                <Grid Width="186" Height="52" Padding="8,6" ColumnSpacing="10" CornerRadius="10" Background="{ThemeResource AppInsetBackgroundBrush}">
+                                                    <Grid.ColumnDefinitions>
+                                                        <ColumnDefinition Width="Auto" />
+                                                        <ColumnDefinition Width="*" />
+                                                    </Grid.ColumnDefinitions>
+                                                    <Border Width="36" Height="36" CornerRadius="18" Background="{ThemeResource AppSecondarySelectedBrush}" VerticalAlignment="Center">
+                                                        <Grid>
+                                                            <TextBlock Text="{x:Bind Initial}" Foreground="{ThemeResource AppSecondarySelectedForegroundBrush}" FontWeight="SemiBold" HorizontalAlignment="Center" VerticalAlignment="Center" />
+                                                            <Ellipse Width="36" Height="36" Visibility="{x:Bind HasAvatar, Mode=OneWay}">
+                                                                <Ellipse.Fill>
+                                                                    <ImageBrush ImageSource="{x:Bind Avatar, Mode=OneWay}" Stretch="UniformToFill" />
+                                                                </Ellipse.Fill>
+                                                            </Ellipse>
+                                                        </Grid>
+                                                    </Border>
+                                                    <StackPanel Grid.Column="1" VerticalAlignment="Center" Spacing="1">
+                                                        <TextBlock Text="{x:Bind Name}" FontWeight="SemiBold" TextTrimming="CharacterEllipsis" ToolTipService.ToolTip="{x:Bind Name}" />
+                                                        <TextBlock Text="{x:Bind Detail}" Style="{StaticResource CaptionTextStyle}" />
+                                                    </StackPanel>
+                                                </Grid>
+                                            </DataTemplate>
+                                        </GridView.ItemTemplate>
+                                    </GridView>
                                 </Grid>
+                            </Border>
                             </Grid>
-                        </Border>
 
-                        <Border x:Name="DashboardRepositoriesCard" Style="{StaticResource CardBorderStyle}">
-                            <StackPanel Spacing="12">
-                                <StackPanel Spacing="4">
-                                    <TextBlock x:Name="DashboardRepositoriesTitleTextBlock" Style="{StaticResource SectionTitleTextStyle}" />
-                                    <TextBlock x:Name="DashboardRepositoriesHintTextBlock" Style="{StaticResource CaptionTextStyle}" TextWrapping="Wrap" />
+                            <!-- Right: every repository, then the actions people reach for most. -->
+                            <Grid x:Name="DashboardRightColumn" RowSpacing="12">
+                            <Grid.RowDefinitions>
+                                <RowDefinition Height="*" />
+                                <RowDefinition Height="Auto" />
+                            </Grid.RowDefinitions>
+                            <Border x:Name="DashboardRepositoriesCard" Style="{StaticResource CardBorderStyle}">
+                                <StackPanel Spacing="12">
+                                    <StackPanel Spacing="4">
+                                        <TextBlock x:Name="DashboardRepositoriesTitleTextBlock" Style="{StaticResource SectionTitleTextStyle}" />
+                                        <TextBlock x:Name="DashboardRepositoriesHintTextBlock" Style="{StaticResource CaptionTextStyle}" TextWrapping="Wrap" />
+                                    </StackPanel>
+                                    <ItemsRepeater x:Name="DashboardRepositoriesRepeater" ItemsSource="{x:Bind Dashboard.Repositories}">
+                                        <ItemsRepeater.Layout>
+                                            <!-- UniformGridLayout divides by zero when measured narrower than one item while the page re-lays out. -->
+                                            <StackLayout Spacing="10" />
+                                        </ItemsRepeater.Layout>
+                                        <ItemsRepeater.ItemTemplate>
+                                            <DataTemplate x:DataType="local:RepositoryCardViewModel">
+                                                <Grid>
+                                                    <Border Style="{StaticResource InsetBorderStyle}" Padding="14,12">
+                                                        <Grid RowSpacing="8">
+                                                            <Grid.RowDefinitions>
+                                                                <RowDefinition Height="Auto" />
+                                                                <RowDefinition Height="Auto" />
+                                                                <RowDefinition Height="Auto" />
+                                                            </Grid.RowDefinitions>
+                                                            <Grid ColumnSpacing="10">
+                                                                <Grid.ColumnDefinitions>
+                                                                    <ColumnDefinition Width="*" />
+                                                                    <ColumnDefinition Width="Auto" />
+                                                                </Grid.ColumnDefinitions>
+                                                                <StackPanel Spacing="2">
+                                                                    <TextBlock Text="{x:Bind Name, Mode=OneWay}" FontSize="16" FontWeight="SemiBold" TextTrimming="CharacterEllipsis" />
+                                                                    <TextBlock Text="{x:Bind Subtitle, Mode=OneWay}" Style="{StaticResource CaptionTextStyle}" TextTrimming="CharacterEllipsis" />
+                                                                </StackPanel>
+                                                                <Grid Grid.Column="1" VerticalAlignment="Top">
+                                                                    <Border Background="{ThemeResource AppSuccessSoftBrush}" CornerRadius="6" Padding="8,2" Visibility="{x:Bind IsReady, Mode=OneWay}">
+                                                                        <TextBlock Text="{x:Bind StatusText, Mode=OneWay}" Foreground="{ThemeResource AppSuccessBrush}" Style="{StaticResource CaptionTextStyle}" />
+                                                                    </Border>
+                                                                    <Border Background="{ThemeResource AppDangerSoftBrush}" CornerRadius="6" Padding="8,2" Visibility="{x:Bind NeedsSetup, Mode=OneWay}">
+                                                                        <TextBlock Text="{x:Bind StatusText, Mode=OneWay}" Foreground="{ThemeResource AppDangerBrush}" Style="{StaticResource CaptionTextStyle}" />
+                                                                    </Border>
+                                                                </Grid>
+                                                            </Grid>
+                                                            <TextBlock Grid.Row="1" Text="{x:Bind Summary, Mode=OneWay}" Style="{StaticResource MutedTextStyle}" />
+                                                            <Grid Grid.Row="2" ColumnSpacing="8">
+                                                                <Grid.ColumnDefinitions>
+                                                                    <ColumnDefinition Width="*" />
+                                                                    <ColumnDefinition Width="Auto" />
+                                                                    <ColumnDefinition Width="Auto" />
+                                                                </Grid.ColumnDefinitions>
+                                                                <Button
+                                                                    HorizontalAlignment="Stretch"
+                                                                    Command="{x:Bind SwitchToCommand}"
+                                                                    Content="{x:Bind Labels.SwitchTo, Mode=OneWay}"
+                                                                    Style="{StaticResource SecondaryButtonStyle}"
+                                                                    Visibility="{x:Bind IsOther, Mode=OneWay}" />
+                                                                <TextBlock
+                                                                    Text="{x:Bind Labels.Current, Mode=OneWay}"
+                                                                    VerticalAlignment="Center"
+                                                                    Foreground="{ThemeResource AppAccentBrush}"
+                                                                    FontWeight="SemiBold"
+                                                                    Visibility="{x:Bind IsCurrent, Mode=OneWay}" />
+                                                                <Button Grid.Column="1" Command="{x:Bind ManageCommand}" Content="{x:Bind Labels.Manage, Mode=OneWay}" Style="{StaticResource SecondaryButtonStyle}" />
+                                                                <Button
+                                                                    Grid.Column="2"
+                                                                    Width="40"
+                                                                    Padding="0"
+                                                                    AutomationProperties.Name="{x:Bind Labels.More, Mode=OneWay}"
+                                                                    ToolTipService.ToolTip="{x:Bind Labels.More, Mode=OneWay}"
+                                                                    Style="{StaticResource SecondaryButtonStyle}">
+                                                                    <FontIcon Glyph="&#xE712;" FontSize="14" />
+                                                                    <Button.Flyout>
+                                                                        <MenuFlyout Placement="BottomEdgeAlignedRight">
+                                                                            <MenuFlyoutItem Text="{x:Bind Labels.Edit, Mode=OneWay}" Command="{x:Bind EditCommand}">
+                                                                                <MenuFlyoutItem.Icon><FontIcon Glyph="&#xE70F;" /></MenuFlyoutItem.Icon>
+                                                                            </MenuFlyoutItem>
+                                                                            <MenuFlyoutItem Text="{x:Bind Labels.OpenWiki, Mode=OneWay}" Command="{x:Bind OpenWikiCommand}">
+                                                                                <MenuFlyoutItem.Icon><FontIcon Glyph="&#xE774;" /></MenuFlyoutItem.Icon>
+                                                                            </MenuFlyoutItem>
+                                                                            <MenuFlyoutSeparator />
+                                                                            <MenuFlyoutItem Text="{x:Bind Labels.Delete, Mode=OneWay}" Command="{x:Bind DeleteCommand}">
+                                                                                <MenuFlyoutItem.Icon><FontIcon Glyph="&#xE74D;" /></MenuFlyoutItem.Icon>
+                                                                            </MenuFlyoutItem>
+                                                                        </MenuFlyout>
+                                                                    </Button.Flyout>
+                                                                </Button>
+                                                            </Grid>
+                                                        </Grid>
+                                                    </Border>
+                                                    <!-- The current repository is outlined in the accent colour. -->
+                                                    <Border
+                                                        BorderBrush="{ThemeResource AppNavSelectedBorderBrush}"
+                                                        BorderThickness="2"
+                                                        CornerRadius="10"
+                                                        IsHitTestVisible="False"
+                                                        Visibility="{x:Bind IsCurrent, Mode=OneWay}" />
+                                                </Grid>
+                                            </DataTemplate>
+                                        </ItemsRepeater.ItemTemplate>
+                                    </ItemsRepeater>
                                 </StackPanel>
-                                <StackPanel x:Name="DashboardRepositoriesPanel" Spacing="10" />
-                            </StackPanel>
-                        </Border>
+                            </Border>
+                            <Border x:Name="DashboardQuickActionsCard" Grid.Row="1" Style="{StaticResource CardBorderStyle}">
+                                <StackPanel Spacing="10">
+                                    <TextBlock x:Name="DashboardQuickActionsTitleTextBlock" Style="{StaticResource SectionTitleTextStyle}" />
+                                    <Grid ColumnSpacing="8">
+                                        <Grid.ColumnDefinitions>
+                                            <ColumnDefinition Width="*" />
+                                            <ColumnDefinition Width="*" />
+                                            <ColumnDefinition Width="*" />
+                                        </Grid.ColumnDefinitions>
+                                        <Button x:Name="DashboardBrowseOnlineButton" HorizontalAlignment="Stretch" Click="OnDashboardBrowseOnlineClicked" Style="{StaticResource SecondaryButtonStyle}">
+                                            <StackPanel Orientation="Horizontal" Spacing="8">
+                                                <FontIcon Glyph="&#xE774;" FontSize="14" />
+                                                <TextBlock x:Name="DashboardBrowseOnlineTextBlock" TextTrimming="CharacterEllipsis" />
+                                            </StackPanel>
+                                        </Button>
+                                        <Button x:Name="DashboardCheckUpdatesButton" Grid.Column="1" HorizontalAlignment="Stretch" Click="OnDashboardCheckUpdatesClicked" Style="{StaticResource SecondaryButtonStyle}">
+                                            <StackPanel Orientation="Horizontal" Spacing="8">
+                                                <FontIcon Glyph="&#xE895;" FontSize="14" />
+                                                <TextBlock x:Name="DashboardCheckUpdatesTextBlock" TextTrimming="CharacterEllipsis" />
+                                            </StackPanel>
+                                        </Button>
+                                        <Button x:Name="DashboardRunLauncherButton" Grid.Column="2" HorizontalAlignment="Stretch" Click="OnRunLauncherClicked" Style="{StaticResource SecondaryButtonStyle}">
+                                            <StackPanel Orientation="Horizontal" Spacing="8">
+                                                <FontIcon Glyph="&#xE768;" FontSize="14" />
+                                                <TextBlock x:Name="DashboardRunLauncherTextBlock" TextTrimming="CharacterEllipsis" />
+                                            </StackPanel>
+                                        </Button>
+                                    </Grid>
+                                </StackPanel>
+                            </Border>
+                            </Grid>
+                        </Grid>
                     </StackPanel>
                 </ScrollViewer>
 
@@ -1506,7 +1635,7 @@
                         <Border x:Name="SettingsAppUpdatesCard" Style="{StaticResource CardBorderStyle}">
                             <StackPanel Spacing="12">
                                 <TextBlock x:Name="SettingsProjectTitleTextBlock" Style="{StaticResource SectionTitleTextStyle}" />
-                                <TextBlock x:Name="SettingsProjectHintTextBlock" Style="{StaticResource MutedTextStyle}" TextWrapping="Wrap" />
+                                <TextBlock x:Name="SettingsProjectHintTextBlock" Style="{StaticResource CaptionTextStyle}" MaxLines="1" TextTrimming="CharacterEllipsis" ToolTipService.ToolTip="{Binding Text, RelativeSource={RelativeSource Self}}" />
                                 <Border Style="{StaticResource SettingRowBorderStyle}">
                                     <Grid ColumnSpacing="14">
                                         <Grid.ColumnDefinitions>
@@ -1517,7 +1646,7 @@
                                         <FontIcon Glyph="&#xE895;" FontSize="20" HorizontalAlignment="Center" VerticalAlignment="Center" />
                                         <StackPanel Grid.Column="1" Spacing="3" VerticalAlignment="Center">
                                             <TextBlock x:Name="StartupUpdateTitleTextBlock" FontWeight="SemiBold" />
-                                            <TextBlock x:Name="StartupUpdateDescriptionTextBlock" Style="{StaticResource CaptionTextStyle}" TextWrapping="Wrap" />
+                                            <TextBlock x:Name="StartupUpdateDescriptionTextBlock" Style="{StaticResource CaptionTextStyle}" MaxLines="1" TextTrimming="CharacterEllipsis" ToolTipService.ToolTip="{Binding Text, RelativeSource={RelativeSource Self}}" />
                                         </StackPanel>
                                         <ToggleSwitch x:Name="StartupUpdateToggleSwitch" Grid.Column="2" VerticalAlignment="Center" Toggled="OnStartupUpdateToggled" />
                                     </Grid>
@@ -1539,7 +1668,7 @@
                                         SelectionChanged="OnUpdateCheckIntervalSelectionChanged"
                                         PlaceholderText="Select update check interval" />
                                 </Grid>
-                                <TextBlock x:Name="UpdateCheckIntervalHintTextBlock" Style="{StaticResource CaptionTextStyle}" TextWrapping="Wrap" />
+                                <TextBlock x:Name="UpdateCheckIntervalHintTextBlock" Style="{StaticResource CaptionTextStyle}" MaxLines="1" TextTrimming="CharacterEllipsis" ToolTipService.ToolTip="{Binding Text, RelativeSource={RelativeSource Self}}" />
                                 <Grid x:Name="AppUpdateActionsGrid" ColumnSpacing="12" RowSpacing="10">
                                     <Grid.ColumnDefinitions>
                                         <ColumnDefinition x:Name="AppUpdateActionColumn1" Width="*" />
@@ -1577,9 +1706,9 @@
                                     <TextBlock x:Name="AppUpdateProgressTextBlock" Style="{StaticResource CaptionTextStyle}" TextWrapping="Wrap" />
                                     <ProgressBar x:Name="AppUpdateProgressBar" Minimum="0" Maximum="100" Height="8" />
                                 </StackPanel>
-                                <Border Style="{StaticResource InsetBorderStyle}" Padding="14">
+                                <Border Style="{StaticResource InsetBorderStyle}" Padding="12,10">
                                     <StackPanel Spacing="8">
-                                        <TextBlock x:Name="LatestReleaseTitleTextBlock" Style="{StaticResource SectionTitleTextStyle}" TextWrapping="Wrap" />
+                                        <TextBlock x:Name="LatestReleaseTitleTextBlock" FontWeight="SemiBold" TextWrapping="Wrap" />
                                         <TextBlock x:Name="LatestReleaseMetaTextBlock" Style="{StaticResource CaptionTextStyle}" TextWrapping="Wrap" />
                                         <ScrollViewer x:Name="UpdateNotesScrollViewer" MaxHeight="150" VerticalScrollBarVisibility="Auto">
                                             <TextBlock x:Name="UpdateNotesTextBlock" TextWrapping="Wrap" />
@@ -1593,21 +1722,27 @@
                             <StackPanel Spacing="12">
                                 <TextBlock x:Name="SettingsPlaceholderTitleTextBlock" Style="{StaticResource SectionTitleTextStyle}" />
                                 <TextBlock x:Name="SettingsPlaceholderTextBlock" Style="{StaticResource CaptionTextStyle}" TextWrapping="Wrap" />
-                                <!-- One compact table instead of a text block, metric cards and a mapping section that repeated it. -->
-                                <ItemsControl x:Name="SettingsOnlineInfoList">
-                                    <ItemsControl.ItemTemplate>
-                                        <DataTemplate x:DataType="local:SettingInfoItem">
-                                            <Grid ColumnSpacing="16" Padding="0,5" BorderThickness="0,0,0,1" BorderBrush="{ThemeResource AppCardBorderBrush}">
+                                <!-- One compact table, split into two halves side by side so it stays short. -->
+                                <Grid x:Name="SettingsOnlineInfoGrid" ColumnSpacing="24">
+                                    <Grid.Resources>
+                                        <DataTemplate x:Key="SettingInfoItemTemplate" x:DataType="local:SettingInfoItem">
+                                            <Grid ColumnSpacing="12" Padding="0,5" BorderThickness="0,0,0,1" BorderBrush="{ThemeResource AppCardBorderBrush}">
                                                 <Grid.ColumnDefinitions>
-                                                    <ColumnDefinition Width="172" />
+                                                    <ColumnDefinition Width="104" />
                                                     <ColumnDefinition Width="*" />
                                                 </Grid.ColumnDefinitions>
                                                 <TextBlock Text="{x:Bind Label}" Style="{StaticResource CaptionTextStyle}" TextWrapping="Wrap" VerticalAlignment="Center" />
-                                                <TextBlock Grid.Column="1" Text="{x:Bind Value}" IsTextSelectionEnabled="True" TextWrapping="Wrap" />
+                                                <TextBlock Grid.Column="1" Text="{x:Bind Value}" IsTextSelectionEnabled="True" TextTrimming="CharacterEllipsis" ToolTipService.ToolTip="{x:Bind Value}" VerticalAlignment="Center" />
                                             </Grid>
                                         </DataTemplate>
-                                    </ItemsControl.ItemTemplate>
-                                </ItemsControl>
+                                    </Grid.Resources>
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="*" />
+                                        <ColumnDefinition Width="*" />
+                                    </Grid.ColumnDefinitions>
+                                    <ItemsControl x:Name="SettingsOnlineInfoList" ItemTemplate="{StaticResource SettingInfoItemTemplate}" />
+                                    <ItemsControl x:Name="SettingsOnlineInfoList2" Grid.Column="1" ItemTemplate="{StaticResource SettingInfoItemTemplate}" />
+                                </Grid>
                                 <StackPanel Orientation="Horizontal" Spacing="10">
                                     <Button
                                         x:Name="EditOnlineRepositoryButton"
@@ -1626,7 +1761,7 @@
                         <Border x:Name="SettingsDiagnosticsCard" Style="{StaticResource CardBorderStyle}">
                             <StackPanel Spacing="12">
                                 <TextBlock x:Name="DiagnosticsTitleTextBlock" Style="{StaticResource SectionTitleTextStyle}" />
-                                <TextBlock x:Name="DiagnosticsHintTextBlock" Style="{StaticResource MutedTextStyle}" TextWrapping="Wrap" />
+                                <TextBlock x:Name="DiagnosticsHintTextBlock" Style="{StaticResource CaptionTextStyle}" TextWrapping="Wrap" />
                                 <Grid ColumnSpacing="12">
                                     <Grid.ColumnDefinitions>
                                         <ColumnDefinition Width="*" />

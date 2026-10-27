@@ -138,7 +138,7 @@ flowchart TD
 | `UiCrashDiagnostics.cs` | 界面崩溃的本地诊断。Local diagnostics for UI crashes. |
 | `Models/` | 窗口使用的记录与配置类型，每个类型一个文件（如 `BetaShellConfig`、`WorkspaceRepository`、`ModPersistentSlot`）。Records and configuration types used by the window, one per file. |
 | `Controls/` | XAML 控件：通用页头 `PageHeader`、设置行 `SettingRow`、在线卡片 `OnlineModTile`。XAML controls: the shared `PageHeader` and `SettingRow`, and the online `OnlineModTile`. |
-| `ViewModels/` | 可绑定的 ViewModel（`OnlineModTileViewModel`、设置页外观选项 `AppearanceSettingsViewModel`），写法见 5.3。Bindable view models such as `OnlineModTileViewModel` and the Settings page's `AppearanceSettingsViewModel`; see 5.3. |
+| `ViewModels/` | 可绑定的 ViewModel（`OnlineModTileViewModel`、设置页外观选项 `AppearanceSettingsViewModel`、仪表板 `DashboardViewModel`、仓库卡片 `RepositoryCardViewModel` 与角色一览 `CharacterChipViewModel`），写法见 5.3。Bindable view models: `OnlineModTileViewModel`, the Settings page's `AppearanceSettingsViewModel`, and the dashboard's `DashboardViewModel`, `RepositoryCardViewModel` and `CharacterChipViewModel`; see 5.3. |
 
 ### 5.3 页面、控件与 ViewModel / Pages, controls and view models
 
@@ -177,7 +177,7 @@ Pages move one at a time to "control + view model + Core layout policy"; deploym
 | `Online` | GameBanana 列表与元数据解析、下载数、角色目录匹配、下载调度与会话、下载日志、浏览与预览策略、请求冷却。GameBanana parsing, character catalog matching, download scheduling and sessions, journal, browse policies, cooldown. |
 | `Shortcuts` | INI 按键扫描与缓存（`ModShortcutScanner`、`ModShortcutScanCache`）、按键计划、描述格式化、游戏窗口识别、权限策略。Key binding scanning and cache, key plans, descriptions, game window detection, privilege policy. |
 | `Updates` | 版本与发布策略（`ApplicationReleasePolicy`）、更新包与校验文件、Mod 更新替换与恢复。Release policy, update packages and checksums, Mod update replacement. |
-| `Repository` | 仓库扫描、角色文件夹头像（`CharacterFolderAvatars`）、工作区策略、批量集合、性能记录。Repository scanning, character avatars, workspace policies, performance. |
+| `Repository` | 仓库扫描、仪表板的角色与 Mod 计数及路径状态（`RepositoryContentSummary`、`PathFieldStatuses`）、角色文件夹头像（`CharacterFolderAvatars`）、工作区策略、批量集合、性能记录。Repository scanning, dashboard counts and path status, character avatars, workspace policies, performance. |
 | `Endfield` | 桥接迁移与资格判断、干员目录解析、内置干员表 `endfield-characters.json`（嵌入资源）。Bridge integration, operator catalog, embedded operator list. |
 | `Layout` | 与控件无关的窗口、弹窗、仪表板、在线页和设置页布局策略（如最大化还原到 80%、页面断点和列数）。Control-free layout policies, such as restoring to 80% of the work area and page breakpoints and column counts. |
 | `Infrastructure` | 路径安全（`PathSafety`）、不跟随链接的目录操作（`SafeDirectoryTree`）、错误标记（`ErrorTags`）、恢复用 JSON、日志轮换、单实例策略。Path safety, link-safe tree operations, error tags, recovery JSON, log rotation, single instance. |
