@@ -6,6 +6,12 @@
 
 This document records version changes in Integrated Mod Manager. Unpublished versions are marked separately.
 
+## v4.6.0 — 2026-10-27（正式版 / Stable）
+
+重新设计全部页面：可折叠导航、Ctrl+K 命令面板与侧栏下载入口；总览、Mod 仓库、在线、快捷键、更新和设置页的新布局；更新页不再整体滚动，已追踪 Mod 与下载历史改为可筛选的紧凑列表。本地预览版不再把软件更新设置保存为关闭。见 [v4.6.0](v4.6.0.md)。
+
+Every page redesigned: collapsible navigation, a Ctrl+K command palette and downloads in the navigation; new layouts for the dashboard, Mod repository, online, shortcuts, updates and settings pages; the Updates page no longer scrolls, with filterable compact lists for tracked Mods and download history. Local preview builds no longer save the app update settings as off. See [v4.6.0](v4.6.0.md).
+
 ## v4.5.2 — 2026-10-26（正式版 / Stable）
 
 浮窗保存预设前自动发送 F10 并等待写入；新增浮窗刷新；多按键 Mod 提速；变体导入改为中性名称并标为待验证，链接部署、恢复到加载器和组合预设去掉实验标记；源码整理为 src/、tests/、tools/。取代本地预览 v4.5.2-preview.1。见 [v4.5.2](v4.5.2.md)。

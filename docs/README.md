@@ -17,12 +17,13 @@ This directory contains the usage, release, development, and research documentat
 | 组合预设 / Combination presets | [组合预设与组合包](./guides/zh-CN/组合预设.md) | [Combination Presets and Bundles](./guides/en/Combination-Presets.md) |
 | 浏览与下载 / Browse and download | [浏览与下载](./guides/zh-CN/浏览与下载.md) | [Browse and Download](./guides/en/Browse-and-Download.md) |
 | 终末地启动 / Endfield launch | [内置终末地启动](./guides/zh-CN/终末地启动.md) | [Integrated Endfield Launch](./guides/en/Endfield-Launch.md) |
-| 新功能与已知问题 / What's new | [4.5.2 发布说明](./releases/v4.5.2.md) | [4.5.2 release notes](./releases/v4.5.2.md) |
+| 新功能与已知问题 / What's new | [4.6.0 发布说明](./releases/v4.6.0.md) | [4.6.0 release notes](./releases/v4.6.0.md) |
 
 安装包根目录的 [开始使用](./guides/开始使用.md) 是解压后的启动说明。4.0、4.1、4.1.1 的升级说明和 4.0-beta 说明保留在 [归档](./guides/archive/) 中。The package start page is [开始使用](./guides/开始使用.md); upgrade notes for 4.0–4.1.1 and the 4.0-beta guide are kept in the [archive](./guides/archive/).
 
 ## 发布记录 / Releases
 
+- [v4.6.0 全部页面重新设计 / Every Page Redesigned](./releases/v4.6.0.md)
 - [v4.5.2 保存前发送 F10、浮窗刷新与提速 / F10 Before Saving, Overlay Refresh and Speed](./releases/v4.5.2.md)
 - [v4.5.1 浮窗保存单 Mod 预设 / Save Single-Mod Presets from the Overlay](./releases/v4.5.1.md)
 - [v4.5.0 角色头像、多选、状态槽位变体与热应用 / Avatars, Multi-select, Slot Variants and Hot Apply](./releases/v4.5.0.md)
@@ -46,6 +47,7 @@ This directory contains the usage, release, development, and research documentat
 ## 开发文档 / Development
 
 - [软件结构 / Software Structure](./development/Software-Structure.md)
+- [v4.6.0 正式版验证 / Stable Release Verification](./verification/v4.6.0.md)
 - [v4.5.2 正式版验证 / Stable Release Verification](./verification/v4.5.2.md)
 - [v4.5.1 正式版验证 / Stable Release Verification](./verification/v4.5.1.md)
 - [v4.5.0 正式版验证 / Stable Release Verification](./verification/v4.5.0.md)
