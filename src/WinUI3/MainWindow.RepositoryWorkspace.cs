@@ -1180,14 +1180,25 @@ public sealed partial class MainWindow
         UpdateRepositoryPreviewCaption(mod);
         int shortcuts = mod is null ? 0 : ModShortcutCount(mod);
         if (_shortcutTab is not null) _shortcutTab.Header = shortcuts > 0 ? T("Common.Shortcuts") + " · " + shortcuts : T("Common.Shortcuts");
-        // With links, deploying replaces the character's deployed Mod; say which one.
-        bool links = GetSelectedRepository()?.UseDirectoryLinks == true;
-        string? replaced = mod is null || !links || ModTone(mod) == ModStateTone.Deployed ? null
+        // With links, deploying replaces the character's deployed Mod (unless it keeps several); say which one.
+        WorkspaceRepository? repository = GetSelectedRepository();
+        bool links = repository?.UseDirectoryLinks == true;
+        string? replaced = mod is null || !links || ModTone(mod) == ModStateTone.Deployed || AllowsMultipleMods(repository!, mod.Path) ? null
             : RepositoryWorkspacePolicy.ReplacedByDeploy(_secondLevelItems.Select(item => (item.Name, ModTone(item))), mod.Name);
         _repositoryDeploymentHint!.Text = replaced is not null
             ? T("RepositoryWorkspace.DeployReplaces", _characters.Selected?.Name ?? string.Empty, replaced)
             : links ? T("RepositoryWorkspace.LinkDeploymentReplacesTheSameCharacter")
             : T("RepositoryWorkspace.CopyDeploymentKeepsARecoverableBackup");
+        UpdateDeployButtonLabel();
+    }
+
+    // The deploy button toggles: on a deployed Mod it removes it, so say so.
+    private void UpdateDeployButtonLabel()
+    {
+        SecondLevelFolderItem? mod = GetSelectedSecondLevelItem();
+        ToggleCopyButton.Content = mod is not null && ModTone(mod) == ModStateTone.Deployed
+            ? T("LocalLibrary.RemoveFromTarget")
+            : T("Localization.DeployMod");
     }
 
     private void UpdateRepositoryInfoSource()
