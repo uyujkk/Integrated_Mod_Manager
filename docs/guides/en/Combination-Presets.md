@@ -1,6 +1,6 @@
 # Combination Presets and Bundles
 
-> For 4.5.2. [中文](../zh-CN/组合预设.md) · [User guide](./User-Guide.md)
+> For 4.6.0. [中文](../zh-CN/组合预设.md) · [User guide](./User-Guide.md)
 
 A combination preset records **which Mods are enabled** in the current repository, optionally with those Mods' values from `d3dx_user.ini`. Restoring brings back the Mod set first, then writes the values. A bundle exports a preset together with its Mod files so it can be installed in another repository.
 
@@ -47,5 +47,5 @@ Format and testing details: [Combination bundles](../../development/Combination-
 - Only recognized numeric `global persist` values are supported, and they must already be in `d3dx_user.ini` when saved; Mod defaults never stand in for missing values.
 - Only recognized deployments in this repository are managed. Copy mode matches a unique folder name and can't tell a hand-made copy with the same name apart, so review removals; directory links are checked against their real targets.
 - Presets are stored in `WinUI3/beta-shell.json` under `ConfigurationProfiles`. Renaming folders, changing namespaces or updating Mods may require saving again.
-- Value writes create `d3dx_user.ini.imm-persist-*.bak` beside the file; deployment backups are on the Updates page. Undoing a deployment does not undo values; don't overwrite newer changes with an old whole-file backup.
+- Value writes create `d3dx_user.ini.imm-persist-*.bak` beside the file; deployment backups are in the **Install Backups** card on the Updates page. Undoing a deployment does not undo values; don't overwrite newer changes with an old whole-file backup.
 - A file check is not an in-game check. This feature doesn't guarantee compatibility with every Mod, loader or game, or account safety.

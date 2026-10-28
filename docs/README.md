@@ -4,7 +4,7 @@
 
 This directory contains the usage, release, development, and research documentation for Integrated Mod Manager. The repository root is reserved for GitHub-recognized files, build entry points, and source-code entry points.
 
-当前正式版 / Current stable: **[v4.5.2](https://github.com/uyujkk/Integrated_Mod_Manager/releases/tag/v4.5.2)**。最新公开版本请以 [GitHub Releases](https://github.com/uyujkk/Integrated_Mod_Manager/releases/latest) 为准。历史发布报告与实验记录保留原版本事实。Historical reports retain their original context; screenshot/documentation updates do not replace the published package.
+当前正式版 / Current stable: **[v4.6.0](https://github.com/uyujkk/Integrated_Mod_Manager/releases/tag/v4.6.0)**。最新公开版本请以 [GitHub Releases](https://github.com/uyujkk/Integrated_Mod_Manager/releases/latest) 为准。历史发布报告与实验记录保留原版本事实。Historical reports retain their original context; screenshot/documentation updates do not replace the published package.
 
 ## 使用指南 / Guides
 
@@ -17,6 +17,8 @@ This directory contains the usage, release, development, and research documentat
 | 组合预设 / Combination presets | [组合预设与组合包](./guides/zh-CN/组合预设.md) | [Combination Presets and Bundles](./guides/en/Combination-Presets.md) |
 | 浏览与下载 / Browse and download | [浏览与下载](./guides/zh-CN/浏览与下载.md) | [Browse and Download](./guides/en/Browse-and-Download.md) |
 | 终末地启动 / Endfield launch | [内置终末地启动](./guides/zh-CN/终末地启动.md) | [Integrated Endfield Launch](./guides/en/Endfield-Launch.md) |
+| 软件结构 / Software structure | [软件结构](./development/Software-Structure.md) | [Software Structure](./development/Software-Structure.md) |
+| Wiki | [项目 Wiki](https://github.com/uyujkk/Integrated_Mod_Manager/wiki) | [Project Wiki](https://github.com/uyujkk/Integrated_Mod_Manager/wiki) |
 | 新功能与已知问题 / What's new | [4.6.0 发布说明](./releases/v4.6.0.md) | [4.6.0 release notes](./releases/v4.6.0.md) |
 
 安装包根目录的 [开始使用](./guides/开始使用.md) 是解压后的启动说明。4.0、4.1、4.1.1 的升级说明和 4.0-beta 说明保留在 [归档](./guides/archive/) 中。The package start page is [开始使用](./guides/开始使用.md); upgrade notes for 4.0–4.1.1 and the 4.0-beta guide are kept in the [archive](./guides/archive/).

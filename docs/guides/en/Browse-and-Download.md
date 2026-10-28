@@ -1,6 +1,6 @@
 # Browse and Download
 
-> For 4.5.2. [中文](../zh-CN/浏览与下载.md) · [User guide](./User-Guide.md)
+> For 4.6.0. [中文](../zh-CN/浏览与下载.md) · [User guide](./User-Guide.md)
 
 The Online page browses GameBanana Mods by character; downloads are extracted and installed into the repository with their source recorded, so updates can be tracked. This page also covers the download task center, importing an old library, and local tags.
 
@@ -14,14 +14,14 @@ Online data comes from external sites; a proxy may be needed if loading is slow 
 
 - **Characters:** browse by character with avatars and names in the app language; the star button pins a favorite character (stored per repository). **All** shows the whole category.
 - **Search and sort:** search matches character and Mod names; sort by heat, downloads, likes, views or update time. Heat is capped at 10 and uses log-weighted downloads, likes and views.
-- **Layout:** list view for details, grid view for images; paging loads the full next page.
+- **Layout:** the top row holds the title, states and view switch, the second row search, sort and filters, and paging sits at the bottom. List and grid use one card style: the list for details, the grid for images.
 - **Authors:** click an author to browse their work across pages in the current category; right-click a card to favorite the author. `author:name` searches only the current page.
-- **Page filters:** the count of matches on the current page appears under the search box; **All on page** toggles showing only installed or saved-for-later items.
+- **Page filters:** the filter button shows only the items on this page that are **Installed on page** or **Saved on page**, with the number of matches.
 - **Browsing position:** author, character, page, search, sort, layout and scroll position are kept per repository and restored after restarting, without downloading anything. Changing a filter or page starts at the top.
 
 ## Details and images
 
-**Details** opens a side panel with author, character, category, update date, images, description and actions. Click the main image for the full-size viewer; use Left/Right and `Esc` to close. Descriptions can be translated automatically (experimental) and may be inaccurate.
+Click a card (or press `Enter` on it) to open a drawer on the right with author, character, category, update date, images, description and actions. The cards re-flow beside the drawer and the one you're viewing stays in view; the drawer's previous and next buttons move between the Mods on the page, and `Esc` closes it. Click the main image for the full-size viewer; use Left/Right and `Esc` to close. Descriptions can be translated automatically (experimental) and may be inaccurate.
 
 The app tries to detect Patreon, subscriptions, payment, like-to-unlock, delayed free releases and dependencies and shows a hint; the author's page is authoritative. It never bypasses logins, captchas, payments, subscriptions or permissions.
 
@@ -32,12 +32,12 @@ The app tries to detect Patreon, subscriptions, payment, like-to-unlock, delayed
 3. The archive is extracted and installed, its source link and preview are recorded, and it is marked installed.
 
 - **Duplicate hints:** you are told when the same file is already installed, when another variant of the same item is installed, or when an old record can't be matched.
-- **Save for later:** right-click a card and choose **Save for later** (stored per repository, up to 100 items); in **Authors and saved Mods** (star button) select several, review files, folders and duplicates once, then queue them.
-- **Concurrency:** **Concurrent download tasks** can be 1–4 (default 2), set with the gear button on the Online page.
+- **Save for later:** right-click a card and choose **Save for later** (stored per repository, up to 100 items); in the **Authors and saved Mods** panel select several, review files, folders and duplicates once, then queue them.
+- **Concurrency:** **Concurrent download tasks** can be 1–4 (default 2), set in **Download options** on the Online page.
 
 ## Download task center
 
-On the Updates page, watch download and extraction progress and results, cancel, open output folders or clear entries. **Retry** a failed task with its original repository, folder and file; you are told if the folder no longer exists or the file has been removed from the site. Tasks unfinished at exit are marked interrupted; after restarting, confirm the folder to download again. Nothing resumes automatically, and partial downloads are not continued.
+Running tasks appear under **Downloads** at the foot of the navigation; click it to watch progress, cancel, or clear finished entries. **Download history** on the Updates page lists every result with **All / Completed / Failed / Canceled** filters, and completed tasks open their output folder. **Retry** a failed task with its original repository, folder and file; you are told if the folder no longer exists or the file has been removed from the site. Tasks unfinished at exit are marked interrupted; after restarting, confirm the folder to download again. Nothing resumes automatically, and partial downloads are not continued.
 
 ## Importing an old library
 
@@ -55,4 +55,4 @@ Characters are never guessed. After an unexpected exit, use **Check interrupted 
 
 ## Update tracking
 
-Online installs are tracked. The Updates page checks manually or on a schedule, tells you when a new version exists, and can **Download and replace** (old files are backed up first and the preview is kept). Deleting a tracking record never deletes the local Mod.
+Online installs are tracked. The Updates page checks manually or on a schedule, filters by **Updates / Check failed / Up to date** with a search box, tells you when a new version exists, and can **Download and replace** (old files are backed up first and the preview is kept). Deleting a tracking record never deletes the local Mod.
