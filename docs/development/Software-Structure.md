@@ -1,8 +1,8 @@
 # 软件结构 / Software Structure
 
-本文说明 Integrated Mod Manager 由哪些部分组成、各部分如何协作、数据存放在哪里，以及代码如何构建、测试和发布。适用于 4.5.2 之后的 `main`。
+本文说明 Integrated Mod Manager 由哪些部分组成、各部分如何协作、数据存放在哪里，以及代码如何构建、测试和发布。适用于 4.6.0。
 
-This document describes how Integrated Mod Manager is put together: its parts, how they work together, where data lives, and how the code is built, tested and released. It reflects `main` after 4.5.2.
+This document describes how Integrated Mod Manager is put together: its parts, how they work together, where data lives, and how the code is built, tested and released. It reflects 4.6.0.
 
 相关文档 / Related: [测试与构建 / Testing](./TESTING.md) · [组合包格式 / Combination bundles](./Combination-Bundles.md) · [用户手册 / User guide](../guides/zh-CN/用户手册.md) · [许可证 / Licensing](../LICENSING.md)
 
@@ -117,7 +117,7 @@ flowchart TD
 
 | 分组 / Group | 文件 / Files |
 | --- | --- |
-| 外壳与通用 / Shell | `Shell`, `PageLayout`, `Localization`, `Settings`, `Configuration`, `Dialogs`, `Tray`, `SingleInstance`, `UiActionGuard`, `UiDiagnostics`, `BuiltInData`, `WhatsNew` |
+| 外壳与通用 / Shell | `Shell`, `CommandPalette`, `PageLayout`, `Localization`, `Settings`, `Configuration`, `Dialogs`, `Tray`, `SingleInstance`, `UiActionGuard`, `UiDiagnostics`, `BuiltInData`, `WhatsNew` |
 | 仓库与本地库 / Repositories | `Dashboard`, `Repositories`, `LocalLibrary`, `RepositoryWorkspace`, `RefinedWorkspace`, `RepositoryPerformance`, `LocalTags`, `ExistingModImport`, `CharacterAvatars`, `CharacterSelection` |
 | 安装、部署与预设 / Install and presets | `Archives`, `InstallTransactions`, `IniConflicts`, `ConfigurationProfiles`, `CombinationPresets`, `CombinationBundles`, `PersistentSlots`, `PersistentVariants` |
 | 在线浏览 / Online | `OnlineFeed`, `OnlineCharacters`, `OnlineCards`, `OnlineDetails`, `OnlineImageCache`, `OnlineImages`, `OnlineBrowse`, `OnlineState`, `OnlineLibrary`, `BrowseSessions`, `AuthorWorkspace` |
@@ -137,13 +137,13 @@ flowchart TD
 | `Online*Adapter.cs` | 在线页状态与图片加载的适配层。Adapters for online page state and image loading. |
 | `UiCrashDiagnostics.cs` | 界面崩溃的本地诊断。Local diagnostics for UI crashes. |
 | `Models/` | 窗口使用的记录与配置类型，每个类型一个文件（如 `BetaShellConfig`、`WorkspaceRepository`、`ModPersistentSlot`）。Records and configuration types used by the window, one per file. |
-| `Controls/` | XAML 控件：通用页头 `PageHeader`、设置行 `SettingRow`、在线卡片 `OnlineModTile`。XAML controls: the shared `PageHeader` and `SettingRow`, and the online `OnlineModTile`. |
-| `ViewModels/` | 可绑定的 ViewModel（`OnlineModTileViewModel`、设置页外观选项 `AppearanceSettingsViewModel`、仪表板 `DashboardViewModel`、仓库卡片 `RepositoryCardViewModel` 与角色一览 `CharacterChipViewModel`），写法见 5.3。Bindable view models: `OnlineModTileViewModel`, the Settings page's `AppearanceSettingsViewModel`, and the dashboard's `DashboardViewModel`, `RepositoryCardViewModel` and `CharacterChipViewModel`; see 5.3. |
+| `Controls/` | XAML 控件：通用页头 `PageHeader`、设置行 `SettingRow`、空状态 `EmptyState`，在线卡片 `OnlineModRow`（列表与网格共用）和 `OnlineModTile`；`DelegateElementFactory` 让代码构建的 `ItemsRepeater` 只创建可见行（更新页列表）。XAML controls: the shared `PageHeader`, `SettingRow` and `EmptyState`, the online `OnlineModRow` (one card for list and grid) and `OnlineModTile`; `DelegateElementFactory` lets code-built `ItemsRepeater`s create only visible rows (the Updates lists). |
+| `ViewModels/` | 可绑定的 ViewModel，写法见 5.3：设置页 `AppearanceSettingsViewModel`；仪表板 `DashboardViewModel`、`RepositoryCardViewModel`、`CharacterChipViewModel`；在线页 `OnlinePageViewModel`（分页、筛选、搜索、排序、布局）与 `OnlineModTileViewModel`；仓库页 `CharacterListViewModel`、`ModListViewModel`（可见 Mod、选中项、视图、空状态、状态筛选）、`ModDetailsViewModel`。Bindable view models, see 5.3: `AppearanceSettingsViewModel` for Settings; `DashboardViewModel`, `RepositoryCardViewModel` and `CharacterChipViewModel` for the dashboard; `OnlinePageViewModel` (paging, filters, search, sort, layout) and `OnlineModTileViewModel` for Online; `CharacterListViewModel`, `ModListViewModel` (visible Mods, selection, view, empty state, state filter) and `ModDetailsViewModel` for the repository page. |
 
 ### 5.3 页面、控件与 ViewModel / Pages, controls and view models
 
-界面按页面逐个迁移到“控件 + ViewModel + Core 布局策略”，每次只迁移一个页面，部署和数据逻辑不跟着改。
-Pages move one at a time to "control + view model + Core layout policy"; deployment and data logic stay as they are.
+4.6 把各页面迁移到“控件 + ViewModel + Core 布局策略”，部署和数据逻辑没有跟着改。快捷键页目前只有布局策略，还没有 ViewModel。
+In 4.6 the pages moved to "control + view model + Core layout policy" without changing deployment or data logic. The Shortcuts page has a layout policy but no view model yet.
 
 - **控件**放在 `src/WinUI3/Controls`，是 XAML `UserControl`，用 `x:Bind` 绑定。通用控件（如 `PageHeader`）用依赖属性对外暴露；页面控件只绑定自己的 ViewModel。
   **Controls** live in `src/WinUI3/Controls` as XAML `UserControl`s bound with `x:Bind`. Shared controls such as `PageHeader` expose dependency properties; page controls bind only to their own view model.
@@ -171,15 +171,15 @@ Pages move one at a time to "control + view model + Core layout policy"; deploym
 | 目录 / Folder | 内容 / Contents |
 | --- | --- |
 | `Archives` | `ArchiveExtractor`（ZIP、7-Zip、Bandizip、Windows tar）、RAR5 与 7-Zip 清单校验、错误分类、导入布局。Extraction, RAR5 and 7-Zip listing checks, error kinds, import layout. |
-| `Configuration` | `config.ini` 读写（`LegacyConfigFile`）、原子写入与损坏恢复（`ConfigurationFileStore`）。config.ini format, atomic writes and recovery. |
+| `Configuration` | `config.ini` 读写（`LegacyConfigFile`）、原子写入与损坏恢复（`ConfigurationFileStore`）、主题偏好（`ThemePreference`，含跟随系统）。config.ini format, atomic writes and recovery, theme preference (including follow-system). |
 | `Deployment` | 部署布局与按角色单选/多选（`ModDeploymentLayout`、`CharacterSelectionPolicy`）、目录联接、安装事务与回滚、文件与 INI 冲突检测、组合部署、旧库整理导入、角色文件夹规划。Layout and per-character selection, junctions, transactions and rollback, file and INI conflicts, combination deployment, library import. |
 | `Presets` | 组合预设与恢复预览、组合包、持久参数引擎（含写入 Mod 默认值）、变体文件导入、整份 `d3dx_user.ini` 快照、热重载（`LoaderHotReload`）、保存前刷新加载器状态（`LoaderStateCapture`）。Presets, restore preview, bundles, persistent state engine, variant import, snapshots, hot reload, flush-before-capture. |
-| `Online` | GameBanana 列表与元数据解析、下载数、角色目录匹配、下载调度与会话、下载日志、浏览与预览策略、请求冷却。GameBanana parsing, character catalog matching, download scheduling and sessions, journal, browse policies, cooldown. |
+| `Online` | GameBanana 列表与元数据解析、下载数、角色目录匹配、下载调度与会话、下载日志、浏览与预览策略、排序与分页（`OnlineBrowseOrder`）、请求冷却。GameBanana parsing, character catalog matching, download scheduling and sessions, journal, browse policies, sorting and paging, cooldown. |
 | `Shortcuts` | INI 按键扫描与缓存（`ModShortcutScanner`、`ModShortcutScanCache`）、按键计划、描述格式化、游戏窗口识别、权限策略。Key binding scanning and cache, key plans, descriptions, game window detection, privilege policy. |
-| `Updates` | 版本与发布策略（`ApplicationReleasePolicy`）、更新包与校验文件、Mod 更新替换与恢复。Release policy, update packages and checksums, Mod update replacement. |
-| `Repository` | 仓库扫描、仪表板的角色与 Mod 计数及路径状态（`RepositoryContentSummary`、`PathFieldStatuses`）、角色文件夹头像（`CharacterFolderAvatars`）、工作区策略、批量集合、性能记录。Repository scanning, dashboard counts and path status, character avatars, workspace policies, performance. |
+| `Updates` | 版本与发布策略（`ApplicationReleasePolicy`，含预览版不改写更新设置）、更新包与校验文件、Mod 更新替换与恢复、更新页列表的状态、筛选、搜索与排序（`UpdatesListPolicy`）。Release policy (including previews leaving update settings unchanged), update packages and checksums, Mod update replacement, and the Updates lists' statuses, filters, search and order. |
+| `Repository` | 仓库扫描、仪表板的角色与 Mod 计数及路径状态（`RepositoryContentSummary`、`PathFieldStatuses`）、角色文件夹头像（`CharacterFolderAvatars`）、命令面板搜索（`CommandPaletteSearch`）、工作区策略（Mod 状态筛选、设置步骤、空状态，`RepositoryWorkspacePolicy`）、批量集合、性能记录。Repository scanning, dashboard counts and path status, character avatars, command palette search, workspace policies (state filters, setup steps, empty states), batch collections, performance. |
 | `Endfield` | 桥接迁移与资格判断、干员目录解析、内置干员表 `endfield-characters.json`（嵌入资源）。Bridge integration, operator catalog, embedded operator list. |
-| `Layout` | 与控件无关的窗口、弹窗、仪表板、在线页和设置页布局策略（如最大化还原到 80%、页面断点和列数）。Control-free layout policies, such as restoring to 80% of the work area and page breakpoints and column counts. |
+| `Layout` | 与控件无关的窗口、弹窗和页面布局策略：仪表板、在线、设置、快捷键、更新（如最大化还原到 80%、页面断点、列数和更新页固定列高）。Control-free window, dialog and page layout policies for the dashboard, online, settings, shortcuts and updates pages, such as restoring to 80% of the work area, breakpoints, column counts and the Updates page's fixed column height. |
 | `Infrastructure` | 路径安全（`PathSafety`）、不跟随链接的目录操作（`SafeDirectoryTree`）、错误标记（`ErrorTags`）、恢复用 JSON、日志轮换、单实例策略。Path safety, link-safe tree operations, error tags, recovery JSON, log rotation, single instance. |
 
 ## 7. 数据与状态 / Data and state
@@ -242,12 +242,12 @@ Pick the ZIP from GitHub `releases/latest`, download and verify against `.sha256
 | 代码风格 / Code style | `scripts\check-code-style.ps1` |
 | 完整验证 / Full verification | `scripts\test-all.ps1`：四个测试套件与覆盖率门槛、WinUI x64 Release 构建、启动器与更新器编译、组装 `ReleaseSource` 与验证包。Four suites with coverage gates, WinUI x64 Release build, launcher/updater compile, staged release source and verification package. |
 | 正式版打包 / Stable package | `scripts\package-stable-release.ps1 -ForGitHubRelease -CiUrl …`：要求干净源码和对应 CI，写入 `PACKAGE-INFO.json`（版本、源码提交、运行程序集哈希、测试结果）。Requires clean source and its CI run; writes `PACKAGE-INFO.json`. |
-| 预览包 / Preview package | `scripts\package-prerelease.ps1`（关闭软件自身更新 / self-update off） |
+| 预览包 / Preview package | `scripts\package-prerelease.ps1`（关闭软件自身更新，且不改写已保存的更新设置 / self-update off, saved update settings left unchanged） |
 | 测试夹具 / Fixtures | `scripts\new-*-fixture.ps1`、`scripts\fake-3dmigoto-loader.ps1`（模拟加载器 / simulated loader） |
 | CI | `.github/workflows/build-and-test.yml`：每次推送和 PR 运行代码风格检查、`test-all.ps1` 和开发者工具打包，上传测试结果与验证包。Runs style check, test-all and the developer tools package on every push and PR. |
 
-发布前还会用上一版公开安装包自带的更新器做隔离升级与回退测试，并在发布后重新下载公开附件核对 SHA-256。验证记录在 [`docs/verification`](../verification/)。
-Before each release, the previous public package's own updater upgrades an isolated copy and rolls it back; after publishing, the public assets are downloaded again and their SHA-256 checked. Records are in `docs/verification`.
+发布前还会用上一版公开安装包自带的更新器做隔离升级与回退测试（`scripts\test-preview-upgrade.ps1`，路径请用绝对路径），并在发布后重新下载公开附件核对 SHA-256。验证记录在 [`docs/verification`](../verification/)。
+Before each release, the previous public package's own updater upgrades an isolated copy and rolls it back (`scripts\test-preview-upgrade.ps1`, with absolute paths); after publishing, the public assets are downloaded again and their SHA-256 checked. Records are in `docs/verification`.
 
 ## 10. 约定 / Conventions
 

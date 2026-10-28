@@ -1,4 +1,4 @@
-> **v4.5.2 stable release.** The overlay sends F10 before saving a preset, gains a Refresh button and responds faster for Mods with many bindings; directory links, loader state restore and combination presets are no longer experimental. See the [release notes](docs/releases/v4.5.2.md).
+> **v4.6.0 stable release.** Every page is redesigned: a collapsible navigation with a Ctrl+K command palette, a richer Mod list and details, a details drawer online, and an Updates page that fills the window. Local preview builds no longer turn off update checks. See the [release notes](docs/releases/v4.6.0.md).
 
 <div align="center">
   <img src="./src/WinUI3/Assets/AppIcon.png" width="96" alt="Integrated Mod Manager icon">
@@ -26,19 +26,19 @@
 
 ## Overview
 
-**Current stable version: [v4.5.2](https://github.com/uyujkk/Integrated_Mod_Manager/releases/tag/v4.5.2).** Characters in a repository show avatars, a character can keep several Mods enabled, each Mod can keep named state slots, and the always-on-top overlay can save presets (sending F10 first), switch slots in game and refresh after Mod changes. The shortcut panel, integrated Endfield launch, browsing and downloading, library tools and combination presets remain. See the [4.5.2 release notes](./docs/releases/v4.5.2.md), the [shortcut panel guide](./docs/guides/en/Shortcut-Panel.md) and the [launch and risk guide](./docs/guides/en/Endfield-Launch.md).
+**Current stable version: [v4.6.0](https://github.com/uyujkk/Integrated_Mod_Manager/releases/tag/v4.6.0).** 4.6 redesigns every page; the features below work as in 4.5. Characters in a repository show avatars, a character can keep several Mods enabled, each Mod can keep named state slots, and the always-on-top overlay can save presets (sending F10 first), switch slots in game and refresh after Mod changes. The shortcut panel, integrated Endfield launch, browsing and downloading, library tools and combination presets remain. See the [4.6.0 release notes](./docs/releases/v4.6.0.md), the [shortcut panel guide](./docs/guides/en/Shortcut-Panel.md) and the [launch and risk guide](./docs/guides/en/Endfield-Launch.md).
 
 Integrated Mod Manager organizes different games or mod environments into independent repositories. It copies or removes complete mod folders between a local library and the target directory read by the game, while keeping preview images, source links, shortcut notes, online downloads, update records, profiles, and installation backups in one application.
 
-The application, launcher, and updater use version **4.5.2** (`4.5.2.0`). The tool is maintained by `uyujkk`. The Bandizip extraction fallback was contributed by [CaramelizedCUDA](https://github.com/CaramelizedCUDA). The earlier [4.0-beta](https://github.com/uyujkk/Integrated_Mod_Manager/releases/tag/v4.0-beta) remains archived separately.
+The application, launcher, and updater use version **4.6.0** (`4.6.0.0`). The tool is maintained by `uyujkk`. The Bandizip extraction fallback was contributed by [CaramelizedCUDA](https://github.com/CaramelizedCUDA). The earlier [4.0-beta](https://github.com/uyujkk/Integrated_Mod_Manager/releases/tag/v4.0-beta) remains archived separately.
 
 ## Interface Preview
 
 Screenshots come from an isolated copy of the app with a synthetic demo repository: placeholder characters with generated avatars and demonstration Mods. No game, loader, real Mod or online content is shown. See [how they were captured](./docs/assets/screenshots/README.md).
 
-**Character avatars and several Mods per character (4.5)** — every character shows an avatar from its folder or a bound character. The two buttons above the list change the avatar and let the selected character keep several Mods enabled; here Demo A has two linked Mods.
+**Character avatars and several Mods per character (4.5)** — every character shows an avatar from its folder or a bound character. The character menu (More above the list, or right-click) changes the avatar and lets the selected character keep several Mods enabled; here Demo A has two linked Mods. The screenshots show the 4.5 layout.
 
-![Repository page: characters with avatars, the avatar and multi-select buttons, and two linked Mods for one character](./docs/assets/screenshots/repository-avatars-v4.5.png)
+![Repository page (4.5 layout): characters with avatars, the avatar and multi-select buttons, and two linked Mods for one character](./docs/assets/screenshots/repository-avatars-v4.5.png)
 
 <p align="center">
   <img src="./docs/assets/screenshots/state-slots-v4.5.png" width="430" alt="State Slots tab: a selected slot marked current with its saved values">
@@ -103,6 +103,7 @@ Full history: [Changelog](./docs/releases/CHANGELOG.md).
 
 | Feature | Description |
 | --- | --- |
+| Navigation and command palette | A collapsible navigation; Ctrl+K searches the pages and the current repository's characters and Mods; download progress at the foot of the navigation |
 | Multiple repositories | Keep separate paths and online categories for different games or XXMI setups |
 | Local mod switching | Browse, search, copy, remove, create, rename, and delete two-level mod folders |
 | Character avatars | Show an avatar for each character folder; use your own image or bind the folder to a catalog character |
@@ -112,15 +113,15 @@ Full history: [Changelog](./docs/releases/CHANGELOG.md).
 | Directory junctions | Let the loader and library share one mod directory; with single selection, enabling a Mod replaces the previous link for that character |
 | Archive import | Import ZIP, 7Z, RAR, ZIPX, CAB, TAR, and common compressed stream formats |
 | Previews and notes | Store an image, source link, shortcut keys, and action descriptions for each mod |
-| Repository workspace | Switch between a compact file list and cover gallery; keep selection and actions together |
+| Repository workspace | Switch between a file list and cover gallery; rows show thumbnails, tags, key counts, size and deploy state, with state filters, an editable details table and setup steps for a new repository |
 | Combination and state presets | Save enabled Mod sets with numeric persistent values; restore the set, then matching `d3dx_user.ini` values |
 | Portable combination bundles | Export selected saved presets with Mod files; validate, preview, install and optionally restore them in another repository |
 | Online mod browser | Browse GameBanana entries, filter by character, view details, and download and extract mods |
 | Configuration profiles | Save and apply complete enabled-mod setups without touching unknown target folders |
 | Installation safety | Detect file conflicts and create restorable backups for copy, remove, and profile operations |
-| Download task center | Monitor download and extraction progress, cancel work, and open output folders |
-| Updates and diagnostics | Check mod and app updates, roll back failed updates, and export sanitized diagnostics |
-| Accessibility | Chinese/English, light/dark, high contrast, keyboard navigation, and display scaling |
+| Download task center | Monitor downloads from the navigation; filter the download history by outcome, retry failures and open output folders |
+| Updates and diagnostics | Check mod and app updates (tracked Mods filter by status), roll back failed updates, and export sanitized diagnostics |
+| Accessibility | Chinese/English, light/dark or follow Windows, high contrast, keyboard navigation, and display scaling |
 
 ## Download and Run
 
@@ -141,7 +142,7 @@ The executable is not signed with a commercial code-signing certificate, so Wind
 1. Create or select a repository on the Dashboard.
 2. Set the Mod Storage Folder on the Dashboard to the root of a two-level mod directory.
 3. Set the Target Folder to the Mods directory read by the game or mod loader.
-4. Select a first-level category, then select a second-level mod.
+4. Open the Repositories page (a **Get started** card lists any setup step still missing), select a first-level category, then select a second-level mod.
 5. Double-click the mod or use the deployment action in Details to toggle it. Selecting a Mod or switching views does not deploy it.
 
 If the target does not contain a folder with the same name, the app copies the complete mod. If it already exists, running the action again removes it from the target. Deleting the source mod from the repository is a separate action and requires confirmation.

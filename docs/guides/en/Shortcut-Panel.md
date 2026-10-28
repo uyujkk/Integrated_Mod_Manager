@@ -1,6 +1,6 @@
 # Shortcut Panel and Overlay
 
-> For 4.5.2. [中文](../zh-CN/快捷键与浮窗.md) · [User guide](./User-Guide.md)
+> For 4.6.0. [中文](../zh-CN/快捷键与浮窗.md) · [User guide](./User-Guide.md)
 
 The Shortcuts page reads the `[Key…]` bindings in a Mod's INI files and sends the matching key to the game when you click a button, so you don't have to remember shortcuts or own a numeric keypad. The always-on-top overlay works over the game: switch Mods, save presets, hot-switch state slots, and follow the character currently on the field.
 
@@ -8,8 +8,10 @@ The Shortcuts page reads the `[Key…]` bindings in a Mod's INI files and sends 
 
 ## Getting started
 
-1. Open Shortcuts in the left navigation and pick a Mod from the current repository. The page lists each binding's key, action, source section and conditions.
-2. Pick the target game window and turn on "Enable input to selected window". When the game is already running, the manager selects its window automatically (Endfield `Endfield.exe`, plus Genshin Impact, Star Rail and Zenless Zone Zero; the current repository's game comes first). Opening the overlay, or turning input on from it, looks again, so the game may start after the manager. Turning input on stays a manual step.
+The toolbar at the top holds the Mod picker, the target game window and the sending switch. Below it, the key bindings are on the left, each key drawn as a key cap with its action, source section and conditions. On the right are three collapsible modules: **In-game overlay**, **Character follow** and **Sending**. A collapsed module shows its current state in the header; the overlay's **Open** button and the character follow switch sit in the header row.
+
+1. Open Shortcuts in the left navigation and pick a Mod from the current repository in the toolbar.
+2. Pick the target game window in the toolbar and turn on sending. When the game is already running, the manager selects its window automatically (Endfield `Endfield.exe`, plus Genshin Impact, Star Rail and Zenless Zone Zero; the current repository's game comes first). Opening the overlay, or turning input on from it, looks again, so the game may start after the manager. Turning input on stays a manual step.
 3. Click a key button to send it. Num5 sends numeric keypad 5, which is different from 5 on the number row.
 
 **Endfield requires running the manager as administrator.** `Endfield.exe` always runs elevated, and Windows silently drops simulated keys sent to it from a non-elevated program. The manager detects this before sending and shows a notice; click "Restart manager as administrator" (one UAC prompt). While elevated, Windows blocks drag-and-drop from File Explorer into the manager, so use the file picker to import Mods.
@@ -18,7 +20,7 @@ The Shortcuts page reads the `[Key…]` bindings in a Mod's INI files and sends 
 
 <img src="../../assets/screenshots/shortcut-overlay-v4.5.png" width="320" alt="Overlay with a picker for enabled Mods, save and refresh buttons, state slot buttons and key bindings">
 
-- Open it with the Floating panel button, or with the global hotkey **Ctrl + Alt + K** (default). The hotkey can be changed or disabled on the Shortcuts page.
+- Click **Open** in the header of the **In-game overlay** module, or use the global hotkey **Ctrl + Alt + K** (default). The hotkey can be changed or disabled in the same module.
 - The overlay never takes focus, so the game stays in the foreground after you click. Drag it and resize it as needed.
 - Background opacity is adjustable (10%–100%) and affects only the background; text and buttons stay fully opaque. The font colour can be customised.
 - Available in the overlay:
@@ -29,7 +31,7 @@ The Shortcuts page reads the `[Key…]` bindings in a Mod's INI files and sends 
   - **Save single-Mod preset**: click this button and enter a name in the overlay. Only the Mod selected when you clicked is saved, as one of its state slots; blank names and names that Mod already uses are rejected, and Cancel saves nothing. The overlay takes keyboard focus while you type, then gives it back to the game. After naming it, saving sends F10 and waits for a changed, stable loader file; a five-second timeout cancels the save. Saving never changes file attributes and waits for an active hot apply to finish. Undeployed Mods, missing values and save failures are reported in the overlay.
   - If F10 can't be sent before saving (no window chosen, input off, or not enough permission), you can cancel to set it up, or explicitly read the existing file, which may hold old values.
   - **Hot switching state slots (experimental, off by default)**:
-    - Turn on "Switch state slots in the overlay" on the Shortcuts page, and the overlay lists the current Mod's state slots; ● marks the current one.
+    - Turn on "Switch state slots in the overlay" in the **In-game overlay** module, and the overlay lists the current Mod's state slots; ● marks the current one.
     - Clicking a slot writes its values into `d3dx_user.ini` and sends **F10** to the chosen game window.
     - For a few seconds around F10 the manager keeps `d3dx_user.ini` read-only, so the loader's reload cannot overwrite it with the old in-memory values.
     - It needs the game window chosen and sending on. The file is backed up before writing, and the result appears in the overlay status line.
@@ -44,7 +46,7 @@ The overlay supports windowed and borderless full-screen modes; whether it shows
 
 1. Pick the game window and click "Select HUD region". Drag a box around the portrait or name that **changes only with the active character**, not a list that always shows the whole team.
 2. Switch to a character in the game, select that character's Mod in the manager and click "Save character reference". Repeat for each character you want to follow.
-3. Turn on "Automatically follow character shortcuts". The manager compares about every 700 ms and switches only after 3 consecutive matches; it doesn't switch on low or ambiguous matches or when the game isn't in the foreground.
+3. Turn on the switch in the **Character follow** module header. The manager compares about every 700 ms and switches only after 3 consecutive matches; it doesn't switch on low or ambiguous matches or when the game isn't in the foreground.
 
 Selecting a Mod by hand pauses following. References are stored only in the app's `character-references` folder, per repository, as cropped 24×24 pixel features. Full screenshots are never saved or uploaded. Recalibrate after changing resolution, HUD scale or the game's UI.
 
@@ -63,7 +65,7 @@ Bindings that can't be sent show the reason and the original text. You can also 
 
 - Parsed with 3DMigoto rules: the last key triggers and earlier keys must be held (for example `VK_RETURN VK_UP`); `no_` can exclude any key. Letters, digits, F1–F24, the numeric keypad, navigation keys, common punctuation keys and Ctrl/Alt/Shift combinations are supported.
 - Reads enabled INI files and skips `DISABLED` files and folders. Read-only; Mod INI files are never changed.
-- Sends scan codes by default, with a virtual-key mode as an alternative. Tap duration is 200 ms by default and can be set from 100 to 2000 ms; hold-type bindings use a separate duration. In scan-code mode the keypad digits need Num Lock on; use Toggle Num Lock on the page.
+- Set in the **Sending** module: sends scan codes by default, with a virtual-key mode as an alternative. Tap duration is 200 ms by default and can be set from 100 to 2000 ms; hold-type bindings use a separate duration. In scan-code mode the keypad digits need Num Lock on; use Toggle Num Lock on the page.
 - Before sending, the target process and window are checked, and the manager makes sure no other key is held. Keys pressed by the panel are released when it finishes, loses focus or closes. Keys are sent only when you click; character detection never triggers a shortcut by itself.
 - One key may trigger several Mods; the panel can't work around key conflicts in the loader. INI conditions are shown for reference and are not assumed to hold in the game.
 
