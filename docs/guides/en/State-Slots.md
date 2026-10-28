@@ -4,7 +4,7 @@
 
 Many Mods keep their look (outfit, hair, accessories) in `global persist` variables, and the loader stores the current values in `d3dx_user.ini`. State slots save those values for **one Mod** as named sets you can switch back to.
 
-<img src="../../assets/screenshots/state-slots-v4.5.png" width="430" alt="State Slots tab: a selected slot marked current with its saved values">
+<img src="../../assets/screenshots/state-slots-v4.6.png" width="300" alt="State Slots tab: a selected slot marked current with its saved values">
 
 ## Saving a slot
 

@@ -34,38 +34,52 @@
 
 ## 界面预览
 
-截图来自独立的应用副本和模拟演示仓库：占位角色、生成的头像和演示 Mod，不含游戏、加载器、真实 Mod 或在线内容。截图方法见[截图说明](./assets/screenshots/README.md)。截图为英文界面，应用也支持中文。
+截图来自 4.6.0 发布包的独立副本和模拟演示仓库：占位角色、生成的头像和预览图、演示 Mod，不含游戏、加载器、真实 Mod 或在线内容。截图方法见[截图说明](./assets/screenshots/README.md)。截图为英文界面，应用也支持中文。
 
-**角色头像与每个角色多个 Mod（4.5）**：每个角色显示来自角色文件夹或绑定角色的头像。角色菜单（列表上方的“更多”或右键）用于更换头像，以及允许当前角色同时启用多个 Mod；图中 Demo A 有两个已链接的 Mod。截图为 4.5 界面。
+**Mod 仓库工作台**：左侧是带头像的角色；Mod 列表显示缩略图、标签、大小和部署状态，可按“全部 / 已部署 / 未部署”筛选；右侧详情显示预览图，以及来源链接、文件夹、标签和大小的信息表。
 
-![仓库页（4.5 界面）：带头像的角色列表、头像按钮和多选开关，一个角色下两个已链接的 Mod](./assets/screenshots/repository-avatars-v4.5.png)
+![仓库页：四个演示角色，Demo A 的三个 Mod（缩略图、标签、部署状态），以及 Outfit-Casual 的详情](./assets/screenshots/repository-v4.6.png)
+
+**仪表板**：当前仓库的状态和数量、路径、可直接打开角色 Mod 的角色一览、仓库卡片和常用操作。
+
+![仪表板：演示仓库一栏、路径、四个角色、仓库卡片和常用操作](./assets/screenshots/dashboard-v4.6.png)
 
 <p align="center">
-  <img src="./assets/screenshots/state-slots-v4.5.png" width="430" alt="状态槽位页：标记为当前的槽位及其保存的参数">
+  <img src="./assets/screenshots/command-palette-v4.6.png" width="560" alt="命令面板搜索 out：三个匹配的 Mod 及其角色和部署状态">
   &nbsp;
+  <img src="./assets/screenshots/state-slots-v4.6.png" width="260" alt="状态槽位页：当前槽位 Battle 及其三个已保存的值">
+</p>
+
+**命令面板（Ctrl+K）**：一个搜索框覆盖各页面、命令和当前仓库的角色与 Mod。**状态槽位（4.5）**：把 Mod 的持久参数保存为命名槽位；“更多…”里可以更新、重命名、写入 Mod 默认值（自动备份）、导入变体文件，以及保存整份 `d3dx_user.ini` 快照。
+
+**Mod 快捷键面板**：选择 Mod 后，INI 中的按键绑定以键帽样式列出，点击即可发送到游戏；游戏内浮窗、角色跟随和发送方式是右侧可折叠的模块。
+
+![快捷键页：Mod 与窗口工具栏、三个键帽样式的绑定，以及折叠的浮窗、角色跟随和发送方式模块](./assets/screenshots/shortcut-panel-v4.6.png)
+
+<p align="center">
   <img src="./assets/screenshots/shortcut-overlay-v4.5.png" width="290" alt="置顶浮窗：保存按钮、状态槽位按钮和按键绑定">
 </p>
 
-**状态槽位（4.5）**：把 Mod 的持久参数保存为命名槽位；“更多…”里可以更新、重命名、写入 Mod 默认值（自动备份）、导入变体文件，以及保存整份 `d3dx_user.ini` 快照。**置顶浮窗（4.5.1）**：在游戏画面上切换已启用的 Mod、热切换槽位（实验）、保存组合预设或命名的单 Mod 预设（保存前先发送 F10），Mod 变化后可刷新（4.5.2）。
+**置顶浮窗**：在游戏画面上切换已启用的 Mod、热切换槽位（实验）、保存组合预设或命名的单 Mod 预设（保存前先发送 F10），Mod 变化后可刷新。
 
-**Mod 快捷键面板（4.4）**：选择 Mod 后列出其 INI 中的按键绑定，点击即可发送到游戏；鼠标、手柄等无法发送的绑定会说明原因。
+<details>
+<summary>更新页与设置页</summary>
 
-![快捷键模块：列出 Mod INI 中的按键绑定，并说明鼠标和手柄绑定无法发送的原因](./assets/screenshots/shortcut-panel-v4.4.png)
+更新页铺满窗口：已追踪 Mod 和下载历史是可筛选的紧凑列表，旁边是安装安全和安装备份。
 
-**组合预设与组合包（4.1）**：保存 Mod 组合及持久参数，查看预设成员，导出或安装组合包。恢复前另有预览和确认步骤。
+![更新页：六个已追踪的演示 Mod、可筛选的下载历史和安装安全](./assets/screenshots/updates-v4.6.png)
+
+设置页为两栏总览：界面与语言、软件更新、仓库在线分类、诊断和开源组件。
+
+![设置页：界面与语言、项目链接与软件版本、在线分类和诊断](./assets/screenshots/settings-v4.6.png)
+
+组合预设（4.1 截图）：保存 Mod 组合及持久参数，查看预设成员，导出或安装组合包。
 
 ![组合预设工作区：模拟成员及已保存参数数量](./assets/screenshots/combination-presets-v4.1.png)
 
-<details>
-<summary>非最大化窗口中的设置页（4.1）</summary>
-
-总览放不下时自动改为分区设置，语言、主题、密度和托盘选项保持可见，不再挤压下方模块。
-
-![非最大化窗口：设置页分区显示](./assets/screenshots/settings-sections-v4.1.jpg)
-
 </details>
 
-使用说明：[快捷键面板与置顶浮窗](./guides/zh-CN/快捷键与浮窗.md) · [状态槽位](./guides/zh-CN/状态槽位.md) · [组合预设](./guides/zh-CN/组合预设.md)
+使用说明：[用户手册](./guides/zh-CN/用户手册.md) · [快捷键面板与置顶浮窗](./guides/zh-CN/快捷键与浮窗.md) · [状态槽位](./guides/zh-CN/状态槽位.md) · [组合预设](./guides/zh-CN/组合预设.md)
 
 ## 4.6 更新
 
