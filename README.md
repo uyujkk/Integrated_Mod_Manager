@@ -67,6 +67,16 @@ When the full overview cannot fit, Settings switches to sections. Language, them
 
 Guides: [shortcut panel and overlay](./docs/guides/en/Shortcut-Panel.md) · [state slots](./docs/guides/en/State-Slots.md) · [combination presets](./docs/guides/en/Combination-Presets.md)
 
+## What's New in 4.6
+
+- **Every page redesigned:** a collapsible navigation, a Ctrl+K command palette over pages, characters and Mods, and downloads at the foot of the navigation.
+- **Mod repository:** rows with thumbnails, tags, key counts, size and deploy state, state filters, an editable details table, and setup steps for a new repository.
+- **Online, shortcuts and settings:** one card style with a details drawer; key-cap bindings with collapsible modules; a two-column settings overview with a follow-Windows theme.
+- **Updates:** the page fills the window; tracked Mods and download history are compact lists with filters and search.
+- Local preview builds no longer turn off app update checks. Coming from one? See [getting update checks back](./docs/releases/v4.6.0.md#getting-update-checks-back-after-a-local-preview).
+
+[4.6.0 release notes](./docs/releases/v4.6.0.md) · [Verification scope](./docs/verification/v4.6.0.md)
+
 ## What's New in 4.5
 
 - **Character avatars:** an `.imm_avatar.*` or `avatar.*` image in the character folder, a bound character, or the catalog character with the same name. New characters reach the list within a day.
@@ -77,7 +87,7 @@ Guides: [shortcut panel and overlay](./docs/guides/en/Shortcut-Panel.md) · [sta
 - **4.5.2:** the overlay sends F10 before saving and saves only once the loader has written; a Refresh button and automatic refresh after Mod changes; faster Mods with many bindings; directory links, loader state restore and combination presets are no longer experimental.
 - The game window is selected automatically; restoring a maximized window shrinks it to 80% of the screen.
 
-[4.5.2 release notes](./docs/releases/v4.5.2.md) · [4.5.1](./docs/releases/v4.5.1.md) · [4.5.0](./docs/releases/v4.5.0.md) · [Verification scope](./docs/verification/v4.5.2.md)
+[4.5.2 release notes](./docs/releases/v4.5.2.md) · [4.5.1](./docs/releases/v4.5.1.md) · [4.5.0](./docs/releases/v4.5.0.md)
 
 ## Earlier Versions
 

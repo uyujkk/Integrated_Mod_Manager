@@ -27,6 +27,9 @@ public sealed partial class MainWindow
     private bool _systemHighContrast;
     private bool _systemAnimationsEnabled = true;
     private bool _checkAppUpdatesOnStartup = false;
+    // As read from the config; a build without self-update writes these back unchanged.
+    private bool? _loadedCheckAppUpdatesOnStartup;
+    private string? _loadedUpdateCheckInterval;
     private bool _isApplyingStartupUpdateSetting;
     private bool _isApplyingBackupLimitSetting;
     private double _installBackupLimitGb = DefaultInstallBackupLimitGb;

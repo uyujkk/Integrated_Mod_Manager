@@ -80,7 +80,8 @@ public sealed partial class MainWindow
             _localLibraries = config?.LocalLibraries ?? new(StringComparer.OrdinalIgnoreCase);
             foreach (var library in _localLibraries.Values) library.Normalize();
             _onlineDownloadScheduler.Limit = _onlinePreferences.ConcurrentDownloads;
-            _updateCheckInterval = AppSelfUpdateEnabled ? ParseUpdateCheckInterval(config?.UpdateCheckInterval) : UpdateCheckInterval.Manual;
+            _loadedUpdateCheckInterval = config?.UpdateCheckInterval;
+            _updateCheckInterval = AppSelfUpdateEnabled ? ParseUpdateCheckInterval(_loadedUpdateCheckInterval) : UpdateCheckInterval.Manual;
             _navigationCollapsed = config?.NavigationCollapsed ?? false;
             _modList.View = config?.RepositoryWorkspaceView switch
             {
@@ -107,7 +108,8 @@ public sealed partial class MainWindow
             _latestReleaseUrl = config?.LatestReleaseUrl;
             _latestReleasePackageUrl = config?.LatestReleasePackageUrl;
             _latestReleaseSha256Url = config?.LatestReleaseSha256Url;
-            _checkAppUpdatesOnStartup = ApplicationReleasePolicy.CanCheckApplicationUpdates(config?.CheckAppUpdatesOnStartup ?? false);
+            _loadedCheckAppUpdatesOnStartup = config?.CheckAppUpdatesOnStartup;
+            _checkAppUpdatesOnStartup = ApplicationReleasePolicy.CanCheckApplicationUpdates(_loadedCheckAppUpdatesOnStartup ?? false);
             _installBackupLimitGb = Math.Clamp(config?.InstallBackupLimitGb ?? DefaultInstallBackupLimitGb, 0.5, 100);
             _reduceMotion = config?.ReduceMotion ?? false;
             _storedThemePreference = config?.ThemePreference;
@@ -234,7 +236,7 @@ public sealed partial class MainWindow
                 OnlinePreferences = _onlinePreferences,
                 LocalLibraries = _localLibraries,
                 SelectedRepositoryId = _selectedRepositoryId,
-                UpdateCheckInterval = _updateCheckInterval.ToString(),
+                UpdateCheckInterval = ApplicationReleasePolicy.UpdateSettingToSave(_updateCheckInterval.ToString(), _loadedUpdateCheckInterval),
                 LastUpdateCheckUtc = _lastUpdateCheckUtc?.ToString("O"),
                 ModUpdateCheckInterval = _modUpdateCheckInterval.ToString(),
                 ShortcutPanelHotkeyModifiers = _shortcutPanelHotkeyModifiers,
@@ -253,7 +255,7 @@ public sealed partial class MainWindow
                 LatestReleaseUrl = _latestReleaseUrl,
                 LatestReleasePackageUrl = _latestReleasePackageUrl,
                 LatestReleaseSha256Url = _latestReleaseSha256Url,
-                CheckAppUpdatesOnStartup = _checkAppUpdatesOnStartup,
+                CheckAppUpdatesOnStartup = ApplicationReleasePolicy.UpdateSettingToSave<bool?>(_checkAppUpdatesOnStartup, _loadedCheckAppUpdatesOnStartup),
                 InstallBackupLimitGb = _installBackupLimitGb,
                 ReduceMotion = _reduceMotion,
                 ThemePreference = ThemePreferences.Format(_themePreference),
