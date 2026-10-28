@@ -154,7 +154,7 @@ public sealed partial class MainWindow
         ImportZipButton.Content = T("Localization.ImportMod");
         ToolTipService.SetToolTip(ImportZipButton, T("Localization.ImportIntoTheSelectedFolder"));
         RunLauncherButton.Content = T("Localization.RunLauncher");
-        ToggleCopyButton.Content = T("Localization.DeployMod");
+        UpdateDeployButtonLabel();
 
         FirstCountLabelTextBlock.Text = T("Localization.FirstLevelFolders");
         FirstCountHintTextBlock.Text = T("Localization.NumberOfCategoriesInTheSource");
