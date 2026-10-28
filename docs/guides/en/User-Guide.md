@@ -25,6 +25,8 @@ The left navigation contains, from top to bottom:
 | Downloads | At the foot of the navigation: the running count and progress; click to open the task list |
 | Settings | Language, theme, density, motion, repository online categories, app updates and diagnostics |
 
+![Dashboard: the demo repository strip, paths, characters, the repository card and quick actions](../../assets/screenshots/dashboard-v4.6.png)
+
 On wide windows, **Collapse** at the foot of the navigation turns it into an icon rail, and the choice is saved; narrow windows use the rail automatically.
 
 ## 2. Installation, startup and upgrades
@@ -93,6 +95,8 @@ While a repository isn't set up, the Repositories page shows a **Get started** c
 
 ### 4.3 Deploying and removing
 
+![Repository page: characters with avatars, a character's Mods with thumbnails, tags and deploy state, and the selected Mod's details](../../assets/screenshots/repository-v4.6.png)
+
 - Switch between Files, Covers and Presets at the top; switching views never deploys Mods.
 - Each Mod row shows a thumbnail, the name, tags, the number of key bindings, size and deploy state. **All Mods / Deployed only / Not deployed** above the list filter by deploy state; the search box filters by name.
 - Single-click only selects a Mod and refreshes its preview, information, shortcuts and deployment state. Wide windows show details inline; narrow windows use Details. When a search or filter hides the selected Mod, the first visible Mod is selected instead.
@@ -160,6 +164,8 @@ The app never bypasses logins, captchas, payments, subscriptions, permission che
 
 On wide windows the Updates page fills the window in two or three columns and doesn't scroll as a whole: tracked Mods, download history, and install safety with install backups. Each list scrolls inside its card and only builds the rows on screen, so it stays smooth with many entries. Below about 900 px the cards stack and the page scrolls.
 
+![Updates page: tracked Mods, a filtered download history and install safety](../../assets/screenshots/updates-v4.6.png)
+
 ### 9.1 Tracked Mod updates
 
 Online installs record the remote ID, source link, preview and update time. Check manually or every day, three days or week (the check settings are one row at the top of the card).
@@ -218,6 +224,8 @@ Configuration writes are atomic with rotated backups; a damaged main configurati
 **Export Diagnostic Report** in Settings → **Diagnostics and Issue Report** collects the app version, a system summary, error logs and a sanitized configuration summary, excluding private paths and credentials. The GitHub option opens a pre-filled issue; nothing is submitted automatically, so review it first.
 
 ## 12. Keyboard
+
+<img src="../../assets/screenshots/command-palette-v4.6.png" width="560" alt="Command palette searching for out: matching Mods with their character and deploy state">
 
 | Key | Action |
 | --- | --- |

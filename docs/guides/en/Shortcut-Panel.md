@@ -4,7 +4,7 @@
 
 The Shortcuts page reads the `[Key…]` bindings in a Mod's INI files and sends the matching key to the game when you click a button, so you don't have to remember shortcuts or own a numeric keypad. The always-on-top overlay works over the game: switch Mods, save presets, hot-switch state slots, and follow the character currently on the field.
 
-![Shortcuts page listing the INI key bindings of a Mod](../../assets/screenshots/shortcut-panel-v4.4.png)
+![Shortcuts page: the Mod and window toolbar, key-cap bindings and the collapsed overlay, character follow and sending modules](../../assets/screenshots/shortcut-panel-v4.6.png)
 
 ## Getting started
 

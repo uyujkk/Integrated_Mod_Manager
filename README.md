@@ -34,38 +34,52 @@ The application, launcher, and updater use version **4.6.0** (`4.6.0.0`). The to
 
 ## Interface Preview
 
-Screenshots come from an isolated copy of the app with a synthetic demo repository: placeholder characters with generated avatars and demonstration Mods. No game, loader, real Mod or online content is shown. See [how they were captured](./docs/assets/screenshots/README.md).
+Screenshots come from an isolated copy of the 4.6.0 release with a synthetic demo repository: placeholder characters with generated avatars, generated preview images and demonstration Mods. No game, loader, real Mod or online content is shown. See [how they were captured](./docs/assets/screenshots/README.md).
 
-**Character avatars and several Mods per character (4.5)** — every character shows an avatar from its folder or a bound character. The character menu (More above the list, or right-click) changes the avatar and lets the selected character keep several Mods enabled; here Demo A has two linked Mods. The screenshots show the 4.5 layout.
+**Repository workspace** — characters with avatars on the left; Mod rows with thumbnails, tags, size and deploy state, filtered by All Mods / Deployed only / Not deployed; the details show the preview and an information table with the source link, folder, tags and size.
 
-![Repository page (4.5 layout): characters with avatars, the avatar and multi-select buttons, and two linked Mods for one character](./docs/assets/screenshots/repository-avatars-v4.5.png)
+![Repository page: four demo characters, Demo A's three Mods with thumbnails, tags and deploy state, and the details of Outfit-Casual](./docs/assets/screenshots/repository-v4.6.png)
+
+**Dashboard** — the current repository's status and counts, its paths, a character overview that opens a character's Mods, repository cards and quick actions.
+
+![Dashboard: the demo repository strip, paths, four characters, the repository card and quick actions](./docs/assets/screenshots/dashboard-v4.6.png)
 
 <p align="center">
-  <img src="./docs/assets/screenshots/state-slots-v4.5.png" width="430" alt="State Slots tab: a selected slot marked current with its saved values">
+  <img src="./docs/assets/screenshots/command-palette-v4.6.png" width="560" alt="Command palette searching for out: three matching Mods with their character and deploy state">
   &nbsp;
+  <img src="./docs/assets/screenshots/state-slots-v4.6.png" width="260" alt="State Slots tab: the current slot Battle with its three saved values">
+</p>
+
+**Command palette (Ctrl+K)** — one search over the pages, commands and the current repository's characters and Mods. **State slots (4.5)** — save a Mod's persistent values as named slots; More… updates or renames a slot, writes it as the Mod's defaults (with backups), imports a variant file and snapshots the whole `d3dx_user.ini`.
+
+**Mod shortcut panel** — pick a Mod and the bindings from its INI files appear as key caps; click one to send it to the game. The in-game overlay, character follow and sending settings are collapsible modules on the right.
+
+![Shortcuts page: the Mod and window toolbar, three key-cap bindings and the collapsed overlay, character follow and sending modules](./docs/assets/screenshots/shortcut-panel-v4.6.png)
+
+<p align="center">
   <img src="./docs/assets/screenshots/shortcut-overlay-v4.5.png" width="290" alt="Overlay with save buttons, state slot buttons and key bindings">
 </p>
 
-**State slots (4.5)** — save a Mod's persistent values as named slots; More… updates or renames a slot, writes it as the Mod's defaults (with backups), imports a variant file and snapshots the whole `d3dx_user.ini`. **Overlay (4.5.1)** — over the game, switch enabled Mods, hot-switch slots (experimental), save a combination or a named single-Mod preset (F10 is sent first), and Refresh after Mod changes (4.5.2).
+**Overlay** — over the game, switch enabled Mods, hot-switch slots (experimental), save a combination or a named single-Mod preset (F10 is sent first), and refresh after Mod changes.
 
-**Mod shortcut panel (4.4)** — pick a Mod and the page lists the key bindings from its INI files. Click one to send the key to the game; bindings that can't be sent (mouse, controller) show the reason.
+<details>
+<summary>Updates and Settings</summary>
 
-![Shortcuts page listing a Mod's INI key bindings, with unsupported mouse and controller bindings explained](./docs/assets/screenshots/shortcut-panel-v4.4.png)
+The Updates page fills the window: tracked Mods and download history are compact lists with filters, beside install safety and backups.
 
-**Combination presets and portable bundles (4.1)** — save a Mod set with persistent values, review its members, and export or install a combination bundle. Restore uses a separate preview and confirmation step.
+![Updates page: six tracked demo Mods, a filtered download history and install safety](./docs/assets/screenshots/updates-v4.6.png)
+
+Settings shows a two-column overview: appearance and language, app updates, the repository's online category, diagnostics and open-source components.
+
+![Settings page: appearance and language, project links and app version, online category and diagnostics](./docs/assets/screenshots/settings-v4.6.png)
+
+Combination presets (4.1 screenshot): save a Mod set with persistent values, review its members, and export or install a combination bundle.
 
 ![Combination preset workspace with synthetic members and saved-value counts](./docs/assets/screenshots/combination-presets-v4.1.png)
 
-<details>
-<summary>Settings in a restored window (4.1)</summary>
-
-When the full overview cannot fit, Settings switches to sections. Language, theme, density and tray controls stay accessible without squeezing the lower cards out of view.
-
-![Section-based Settings in a non-maximized window](./docs/assets/screenshots/settings-sections-v4.1.jpg)
-
 </details>
 
-Guides: [shortcut panel and overlay](./docs/guides/en/Shortcut-Panel.md) · [state slots](./docs/guides/en/State-Slots.md) · [combination presets](./docs/guides/en/Combination-Presets.md)
+Guides: [user guide](./docs/guides/en/User-Guide.md) · [shortcut panel and overlay](./docs/guides/en/Shortcut-Panel.md) · [state slots](./docs/guides/en/State-Slots.md) · [combination presets](./docs/guides/en/Combination-Presets.md)
 
 ## What's New in 4.6
 
