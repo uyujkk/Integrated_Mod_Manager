@@ -368,11 +368,13 @@ public sealed partial class MainWindow
             Text = result.Title, FontWeight = Microsoft.UI.Text.FontWeights.SemiBold,
             MaxLines = 1, TextTrimming = TextTrimming.CharacterEllipsis
         };
-        ToolTipService.SetToolTip(title, $"{result.Title}\n{T("Updates.LocalPath")}: {result.Path}");
+        ToolTipService.SetToolTip(title, result.Title + "\n" + T("Common.LabelValue", T("Updates.LocalPath"), result.Path));
         text.Children.Add(title);
         text.Children.Add(new TextBlock
         {
-            Text = $"{T("Updates.Recorded")}: {FormatDateForDisplay(result.LastKnownUpdatedAt)}  ·  {T("Updates.Latest")}: {FormatDateForDisplay(result.LatestUpdatedAt)}",
+            // Common.LabelValue puts a full-width colon after a Chinese label.
+            Text = T("Common.LabelValue", T("Updates.Recorded"), FormatDateForDisplay(result.LastKnownUpdatedAt)) + "  ·  "
+                + T("Common.LabelValue", T("Updates.Latest"), FormatDateForDisplay(result.LatestUpdatedAt)),
             Style = (Style)Application.Current.Resources["CaptionTextStyle"], MaxLines = 1, TextTrimming = TextTrimming.CharacterEllipsis
         });
         // Only a failed check needs its message on the row; other results are said by the pill.
