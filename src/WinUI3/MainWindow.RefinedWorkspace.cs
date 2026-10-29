@@ -378,6 +378,9 @@ public sealed partial class MainWindow
             {
                 FontWeight = Microsoft.UI.Text.FontWeights.SemiBold,
                 VerticalAlignment = VerticalAlignment.Center,
+                // Narrow windows give each section a quarter of the width; long names take a second line.
+                TextWrapping = TextWrapping.WrapWholeWords,
+                MaxLines = 2,
                 TextTrimming = TextTrimming.CharacterEllipsis
             };
             _settingsSectionLabels[index] = label;
@@ -391,6 +394,7 @@ public sealed partial class MainWindow
                 MinHeight = 48,
                 Padding = new Thickness(14, 10, 14, 10),
                 HorizontalAlignment = HorizontalAlignment.Stretch,
+                VerticalAlignment = VerticalAlignment.Stretch,
                 HorizontalContentAlignment = HorizontalAlignment.Left,
                 Style = (Style)Application.Current.Resources["SecondaryButtonStyle"]
             };

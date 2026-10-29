@@ -167,6 +167,25 @@ public sealed partial class MainWindow
     }
 
     private int _updatesColumns = -1;
+    // The history card height the layout chose; FitDownloadHistoryToWholeRows trims below it.
+    private double? _downloadsCardHeight;
+    private const double DownloadHistoryRowSpacing = 6; // StackLayout.Spacing of DownloadHistoryRepeater
+
+    private void QueueFitDownloadHistory()
+        => DispatcherQueue.TryEnqueue(Microsoft.UI.Dispatching.DispatcherQueuePriority.Low, FitDownloadHistoryToWholeRows);
+
+    // A fixed-height history card ends its list on a whole row instead of cutting the last one in half.
+    private void FitDownloadHistoryToWholeRows()
+    {
+        if (_downloadsCardHeight is not double full || DownloadHistoryRepeater.TryGetElement(0) is not FrameworkElement first
+            || first.ActualHeight <= 0 || DownloadHistoryListScroll.ActualHeight <= 0) return;
+        double viewport = DownloadHistoryListScroll.ActualHeight + (full - UpdatesDownloadsCard.Height);
+        double pitch = first.ActualHeight + DownloadHistoryRowSpacing;
+        int count = DownloadHistoryRepeater.ItemsSourceView?.Count ?? 0;
+        double whole = Math.Floor((viewport + DownloadHistoryRowSpacing) / pitch) * pitch - DownloadHistoryRowSpacing;
+        double target = count * pitch - DownloadHistoryRowSpacing <= viewport || whole <= 0 ? full : full - (viewport - whole);
+        if (Math.Abs(UpdatesDownloadsCard.Height - target) > 0.5) UpdatesDownloadsCard.Height = target;
+    }
 
     // Laid out from the page's own width (see AttachPageLayout), not the window's.
     private void UpdateUpdatesLayout()
@@ -190,12 +209,15 @@ public sealed partial class MainWindow
         {
             UpdatesTrackedModsCard.Height = height;
             UpdatesDownloadsCard.Height = columns == 3 ? height : Math.Max(360, Math.Round(height * 0.65));
+            _downloadsCardHeight = UpdatesDownloadsCard.Height;
             UpdatesSupportScroll.Height = height;
             TrackedModsListScroll.MaxHeight = double.PositiveInfinity;
             DownloadHistoryListScroll.MaxHeight = double.PositiveInfinity;
+            QueueFitDownloadHistory();
         }
         else
         {
+            _downloadsCardHeight = null;
             UpdatesTrackedModsCard.Height = double.NaN;
             UpdatesDownloadsCard.Height = double.NaN;
             UpdatesSupportScroll.Height = double.NaN;

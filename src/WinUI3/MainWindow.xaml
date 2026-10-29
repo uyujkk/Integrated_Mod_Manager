@@ -1721,7 +1721,7 @@
                         <Border x:Name="SettingsAppUpdatesCard" Style="{StaticResource CardBorderStyle}">
                             <StackPanel Spacing="12">
                                 <TextBlock x:Name="SettingsProjectTitleTextBlock" Style="{StaticResource SectionTitleTextStyle}" />
-                                <TextBlock x:Name="SettingsProjectHintTextBlock" Style="{StaticResource CaptionTextStyle}" MaxLines="1" TextTrimming="CharacterEllipsis" ToolTipService.ToolTip="{Binding Text, RelativeSource={RelativeSource Self}}" />
+                                <TextBlock x:Name="SettingsProjectHintTextBlock" Style="{StaticResource CaptionTextStyle}" MaxLines="2" TextWrapping="WrapWholeWords" TextTrimming="CharacterEllipsis" ToolTipService.ToolTip="{Binding Text, RelativeSource={RelativeSource Self}}" />
                                 <Border Style="{StaticResource SettingRowBorderStyle}">
                                     <Grid ColumnSpacing="14">
                                         <Grid.ColumnDefinitions>
@@ -1732,7 +1732,7 @@
                                         <FontIcon Glyph="&#xE895;" FontSize="20" HorizontalAlignment="Center" VerticalAlignment="Center" />
                                         <StackPanel Grid.Column="1" Spacing="3" VerticalAlignment="Center">
                                             <TextBlock x:Name="StartupUpdateTitleTextBlock" FontWeight="SemiBold" />
-                                            <TextBlock x:Name="StartupUpdateDescriptionTextBlock" Style="{StaticResource CaptionTextStyle}" MaxLines="1" TextTrimming="CharacterEllipsis" ToolTipService.ToolTip="{Binding Text, RelativeSource={RelativeSource Self}}" />
+                                            <TextBlock x:Name="StartupUpdateDescriptionTextBlock" Style="{StaticResource CaptionTextStyle}" MaxLines="2" TextWrapping="WrapWholeWords" TextTrimming="CharacterEllipsis" ToolTipService.ToolTip="{Binding Text, RelativeSource={RelativeSource Self}}" />
                                         </StackPanel>
                                         <ToggleSwitch x:Name="StartupUpdateToggleSwitch" Grid.Column="2" VerticalAlignment="Center" Toggled="OnStartupUpdateToggled" />
                                     </Grid>
@@ -1754,7 +1754,7 @@
                                         SelectionChanged="OnUpdateCheckIntervalSelectionChanged"
                                         PlaceholderText="Select update check interval" />
                                 </Grid>
-                                <TextBlock x:Name="UpdateCheckIntervalHintTextBlock" Style="{StaticResource CaptionTextStyle}" MaxLines="1" TextTrimming="CharacterEllipsis" ToolTipService.ToolTip="{Binding Text, RelativeSource={RelativeSource Self}}" />
+                                <TextBlock x:Name="UpdateCheckIntervalHintTextBlock" Style="{StaticResource CaptionTextStyle}" MaxLines="2" TextWrapping="WrapWholeWords" TextTrimming="CharacterEllipsis" ToolTipService.ToolTip="{Binding Text, RelativeSource={RelativeSource Self}}" />
                                 <Grid x:Name="AppUpdateActionsGrid" ColumnSpacing="12" RowSpacing="10">
                                     <Grid.ColumnDefinitions>
                                         <ColumnDefinition x:Name="AppUpdateActionColumn1" Width="*" />
@@ -1769,12 +1769,14 @@
 
                                     <Button
                                         x:Name="OpenGitHubButton"
+                                        HorizontalAlignment="Stretch"
                                         Click="OnOpenGitHubClicked"
                                         MinHeight="42"
                                         Style="{StaticResource SecondaryButtonStyle}" />
 
                                     <Button
                                         x:Name="CheckUpdatesButton"
+                                        HorizontalAlignment="Stretch"
                                         Grid.Column="1"
                                         Click="OnCheckUpdatesClicked"
                                         MinHeight="42"
@@ -1782,6 +1784,7 @@
 
                                     <Button
                                         x:Name="InstallUpdateButton"
+                                        HorizontalAlignment="Stretch"
                                         Grid.Column="2"
                                         Click="OnInstallUpdateClicked"
                                         MinHeight="42"
@@ -1853,8 +1856,8 @@
                                         <ColumnDefinition Width="*" />
                                         <ColumnDefinition Width="*" />
                                     </Grid.ColumnDefinitions>
-                                    <Button x:Name="ExportDiagnosticsButton" Click="OnExportDiagnosticsClicked" MinHeight="42" Style="{StaticResource SecondaryButtonStyle}" />
-                                    <Button x:Name="SubmitDiagnosticsButton" Grid.Column="1" Click="OnSubmitDiagnosticsClicked" MinHeight="42" Style="{StaticResource PrimaryButtonStyle}" />
+                                    <Button x:Name="ExportDiagnosticsButton" HorizontalAlignment="Stretch" Click="OnExportDiagnosticsClicked" MinHeight="42" Style="{StaticResource SecondaryButtonStyle}" />
+                                    <Button x:Name="SubmitDiagnosticsButton" HorizontalAlignment="Stretch" Grid.Column="1" Click="OnSubmitDiagnosticsClicked" MinHeight="42" Style="{StaticResource PrimaryButtonStyle}" />
                                 </Grid>
                                 <TextBlock x:Name="DiagnosticsStatusTextBlock" Style="{StaticResource CaptionTextStyle}" TextWrapping="Wrap" />
                             </StackPanel>
@@ -1897,7 +1900,7 @@
                                         HorizontalContentAlignment="Stretch"
                                         Style="{StaticResource SecondaryButtonStyle}">
                                         <StackPanel Spacing="2">
-                                            <TextBlock Text="Windows App SDK / WinUI 3" FontWeight="SemiBold" />
+                                            <TextBlock Text="Windows App SDK / WinUI&#160;3" FontWeight="SemiBold" />
                                             <TextBlock Text="https://github.com/microsoft/WindowsAppSDK" Style="{StaticResource CaptionTextStyle}" TextTrimming="CharacterEllipsis" />
                                         </StackPanel>
                                     </Button>

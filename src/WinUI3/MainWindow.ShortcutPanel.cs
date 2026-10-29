@@ -4,6 +4,7 @@ using IntegratedModManager.Core.Deployment;
 using IntegratedModManager.Core.Layout;
 using IntegratedModManager.Core.Shortcuts;
 using Microsoft.UI.Xaml;
+using Microsoft.UI.Xaml.Automation;
 using Microsoft.UI.Xaml.Controls;
 using Microsoft.UI.Xaml.Controls.Primitives;
 using Microsoft.UI.Xaml.Media;
@@ -109,7 +110,13 @@ public sealed partial class MainWindow
     }
 
     // ToggleSwitch otherwise shows On/Off in the Windows display language, not the app language.
-    private ToggleSwitch LocalizedToggle(string header) => new() { Header = header, OnContent = T("Common.On2"), OffContent = T("Common.Off2") };
+    // The header doubles as the automation name: the toolbar may show the label in its own text block.
+    private ToggleSwitch LocalizedToggle(string header)
+    {
+        var toggle = new ToggleSwitch { Header = header, OnContent = T("Common.On2"), OffContent = T("Common.Off2") };
+        AutomationProperties.SetName(toggle, header);
+        return toggle;
+    }
 
     private Button ShortcutButton(string label, Action action)
     {
@@ -355,6 +362,9 @@ public sealed partial class MainWindow
         header.ColumnDefinitions.Add(new ColumnDefinition { Width = GridLength.Auto });
         header.Children.Add(new FontIcon { Glyph = glyph, FontSize = 18, VerticalAlignment = VerticalAlignment.Center });
         summary.Style = (Style)Application.Current.Resources["CaptionTextStyle"];
+        // The state may need two lines next to a header control ("Not set up · select a HUD region first").
+        summary.TextWrapping = TextWrapping.WrapWholeWords;
+        summary.MaxLines = 2;
         summary.TextTrimming = TextTrimming.CharacterEllipsis;
         var text = new StackPanel { Spacing = 2, VerticalAlignment = VerticalAlignment.Center };
         text.Children.Add(new TextBlock { Text = title, FontWeight = Microsoft.UI.Text.FontWeights.SemiBold, TextTrimming = TextTrimming.CharacterEllipsis });
@@ -1113,7 +1123,10 @@ public sealed partial class MainWindow
         }
         if (_shortcutTargetPicker?.SelectedItem is not ShortcutTarget target)
         {
-            _shortcutPrivilegeNotice.Text = T("ShortcutPanel.EndfieldRunsAsAdministratorInputFrom");
+            // Only an Endfield repository gets the Endfield-specific explanation.
+            _shortcutPrivilegeNotice.Text = CanUseEndfieldBridge(GetSelectedRepository())
+                ? T("ShortcutPanel.EndfieldRunsAsAdministratorInputFrom")
+                : T("ShortcutPanel.ElevatedGameNeedsElevatedManager");
             return;
         }
         ShortcutSecurity destination = ShortcutProcessSecurity.Read(target.ProcessId);

@@ -93,11 +93,15 @@ public sealed partial class MainWindow
                 {
                     address.Visibility = Visibility.Collapsed;
                 }
+                // Long names ("SQLite / Microsoft.Data.Sqlite") wrap to a second line; a row's buttons share its height.
                 if (compact.Children.OfType<TextBlock>().FirstOrDefault() is { } name)
                 {
+                    name.TextWrapping = TextWrapping.WrapWholeWords;
+                    name.MaxLines = 2;
                     name.TextTrimming = TextTrimming.CharacterEllipsis;
                 }
                 resourceButton.MinHeight = 36;
+                resourceButton.VerticalAlignment = VerticalAlignment.Stretch;
             }
             AutomationProperties.SetName(resourceButton, $"{resourceName} · {url}");
         }
@@ -237,7 +241,7 @@ public sealed partial class MainWindow
             new(T("Dialogs.TargetGame"), OrNotSet(gameName)),
             new(T("Common.CategoryID"), OrNotSet(categoryId)),
             new(T("Dialogs.GameWiki"), OrNotSet(repository.WikiUrl)),
-            new(T("Common.CharacterCategoryMapping"), T("Settings.MappingCount", repository.CharacterCategoryMappings.Count)),
+            new(T("Settings.MappingLabel"), T("Settings.MappingCount", repository.CharacterCategoryMappings.Count)),
             new(T("Common.Readiness"), ready ? T("Common.Ready") : T("Common.NeedsSetup")),
             new(T("Common.Notes"), string.IsNullOrWhiteSpace(repository.Notes) ? T("Settings.None") : NormalizeUiText(repository.Notes))
         };

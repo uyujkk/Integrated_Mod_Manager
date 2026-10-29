@@ -1,6 +1,7 @@
 using System.Collections.Specialized;
 using IntegratedModManager.Core.Configuration;
 using IntegratedModManager.Core.Repository;
+using IntegratedModManager.Core.Shortcuts;
 using Microsoft.UI.Xaml;
 using Microsoft.UI.Xaml.Automation;
 using Microsoft.UI.Xaml.Controls;
@@ -219,6 +220,7 @@ public sealed partial class MainWindow
             if (args.InRecycleQueue || args.Item is not SecondLevelFolderItem mod) return;
             LoadRepositoryCoverV4(mod);
             _ = EnsureModSizeAsync(mod);
+            _ = EnsureModShortcutCountAsync(mod);
         };
         var modViews = new Grid();
         RepositoryMove(SecondLevelListView, modViews);
@@ -673,12 +675,16 @@ public sealed partial class MainWindow
         if (oldCard is not null) UpdatesSupportPanel.Children.Remove(oldCard);
         var shortcut = RepositoryButton("\uE8F1", (_, _) => OnOpenCombinationPresetsClicked(this, new RoutedEventArgs()));
         shortcut.Content = RepositoryIconLabel("\uE8F1", T("Common.OpenCombinationWorkspace"));
+        _updatesCombinationShortcut = shortcut;
         // Restoring a preset is a recovery action: keep it beside "Undo last change" instead of a lone card.
         shortcut.HorizontalAlignment = HorizontalAlignment.Stretch;
         Grid.SetColumn(shortcut, 1);
         UpdatesRecoveryActionsGrid.Children.Add(shortcut);
         _workspaceContentGrid!.Children.Add(_combinationWorkspace);
     }
+
+    // The Updates page's shortcut to the combination workspace; its label follows the language.
+    private Button? _updatesCombinationShortcut;
 
     private void SetRepositoryWorkspaceViewV4(RepositoryWorkspaceView view, bool save = true)
     {
@@ -703,6 +709,8 @@ public sealed partial class MainWindow
         _repositoryModTitle!.Text = _characters.Selected is { } role ? role.Name : T("RepositoryWorkspace.ModFiles");
         _repositoryModSearch!.PlaceholderText = T("RepositoryWorkspace.SearchThisCharacterSMods");
         if (_localTagsButton is not null) _localTagsButton.Content = T("Common.Tags");
+        if (_updatesCombinationShortcut is not null)
+            _updatesCombinationShortcut.Content = RepositoryIconLabel("", T("Common.OpenCombinationWorkspace"));
         AutomationProperties.SetName(_repositoryModSearch, T("RepositoryWorkspace.SearchMods"));
         FirstLevelSearchTextBox.PlaceholderText = T("RepositoryWorkspace.SearchCharacters");
         string[] labels = [T("RepositoryWorkspace.Files"), T("RepositoryWorkspace.Covers"), T("RepositoryWorkspace.Presets")];
@@ -911,13 +919,40 @@ public sealed partial class MainWindow
         mod.Tone = ModTone(mod);
         mod.Tags = LocalModTags(mod.Path);
         int shortcuts = ModShortcutCount(mod);
-        mod.KeysText = shortcuts > 0 ? T("RepositoryWorkspace.ShortcutCount", shortcuts) : string.Empty;
+        mod.KeysText = shortcuts switch
+        {
+            0 => string.Empty,
+            1 => T("RepositoryWorkspace.ShortcutCountOne"),
+            _ => T("RepositoryWorkspace.ShortcutCount", shortcuts)
+        };
     }
 
+    // Saved bindings when the Mod has them (they may be edited), otherwise the INI scan of its key sections.
     private int ModShortcutCount(SecondLevelFolderItem mod)
         => _modBindings.TryGetValue(mod.Path, out List<ShortcutBinding>? bindings)
             ? bindings.Count(binding => !string.IsNullOrWhiteSpace(binding.Shortcut))
-            : 0;
+            : _scannedShortcutCounts.TryGetValue(mod.Path, out int scanned) ? scanned : 0;
+
+    private readonly Dictionary<string, int> _scannedShortcutCounts = new(StringComparer.OrdinalIgnoreCase);
+    private readonly HashSet<string> _shortcutCountScans = new(StringComparer.OrdinalIgnoreCase);
+
+    // Rows of Mods without saved bindings count their INI key sections once, off the UI thread.
+    private async Task EnsureModShortcutCountAsync(SecondLevelFolderItem mod)
+    {
+        if (_modBindings.ContainsKey(mod.Path) || _scannedShortcutCounts.ContainsKey(mod.Path) || !_shortcutCountScans.Add(mod.Path)) return;
+        try
+        {
+            int count = await Task.Run(() => ModShortcutScanner.ScanDirectory(mod.Path, activeOnly: true)
+                .Take(ShortcutScanSafetyLimit).Count(shortcut => !string.IsNullOrWhiteSpace(shortcut.Shortcut)));
+            _scannedShortcutCounts[mod.Path] = count;
+            ApplyModRowState(mod);
+        }
+        catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
+        {
+            LogApplicationIssue("Count Mod shortcuts", ex);
+        }
+        finally { _shortcutCountScans.Remove(mod.Path); }
+    }
 
     // Summed once per scanned Mod, off the UI thread; rows and the details show the cached value.
     private async Task<long?> EnsureModSizeAsync(SecondLevelFolderItem mod)
@@ -1183,10 +1218,12 @@ public sealed partial class MainWindow
         // With links, deploying replaces the character's deployed Mod (unless it keeps several); say which one.
         WorkspaceRepository? repository = GetSelectedRepository();
         bool links = repository?.UseDirectoryLinks == true;
-        string? replaced = mod is null || !links || ModTone(mod) == ModStateTone.Deployed || AllowsMultipleMods(repository!, mod.Path) ? null
+        bool several = links && mod is not null && AllowsMultipleMods(repository!, mod.Path);
+        string? replaced = mod is null || !links || ModTone(mod) == ModStateTone.Deployed || several ? null
             : RepositoryWorkspacePolicy.ReplacedByDeploy(_secondLevelItems.Select(item => (item.Name, ModTone(item))), mod.Name);
         _repositoryDeploymentHint!.Text = replaced is not null
             ? T("RepositoryWorkspace.DeployReplaces", _characters.Selected?.Name ?? string.Empty, replaced)
+            : several ? T("RepositoryWorkspace.LinkDeploymentKeepsOtherMods")
             : links ? T("RepositoryWorkspace.LinkDeploymentReplacesTheSameCharacter")
             : T("RepositoryWorkspace.CopyDeploymentKeepsARecoverableBackup");
         UpdateDeployButtonLabel();

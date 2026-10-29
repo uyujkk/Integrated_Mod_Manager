@@ -117,8 +117,14 @@ public sealed partial class MainWindow
         DownloadHistoryFilterPanel.Visibility = finished.Length > 0 ? Visibility.Visible : Visibility.Collapsed;
 
         List<DownloadTaskItem> visible = [.. finished.Where(task => UpdatesListPolicy.Matches(task.State, _downloadHistoryFilter))];
-        DownloadHistoryRepeater.ItemTemplate ??= new DelegateElementFactory(item => CreateDownloadHistoryRow((DownloadTaskItem)item));
+        if (DownloadHistoryRepeater.ItemTemplate is null)
+        {
+            DownloadHistoryRepeater.ItemTemplate = new DelegateElementFactory(item => CreateDownloadHistoryRow((DownloadTaskItem)item));
+            // Row heights are known once the first row is built; fit the card to whole rows then.
+            DownloadHistoryRepeater.ElementPrepared += (_, args) => { if (args.Index == 0) QueueFitDownloadHistory(); };
+        }
         DownloadHistoryRepeater.ItemsSource = visible;
+        QueueFitDownloadHistory();
         DownloadHistoryEmptyHost.Content = finished.Length == 0
             ? CreateInfoCard(T("DownloadTasks.NoDownloadTasks"), T("DownloadTasks.DownloadsStartedFromTheOnlineBrowser"))
             : visible.Count == 0 ? new EmptyState { Glyph = "\uE721", Title = T("DownloadTasks.NoMatchingHistory") } : null;
