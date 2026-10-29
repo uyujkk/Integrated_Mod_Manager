@@ -1,6 +1,6 @@
 # Integrated Mod Manager User Guide
 
-> For 4.6.0 on Windows 10/11 x64. Tool author: uyujkk.
+> For 4.6.1 on Windows 10/11 x64. Tool author: uyujkk.
 >
 > This is an unofficial fan-made tool. It is not affiliated with, authorized, endorsed, or sponsored by XXMI, any game publisher, or related developers.
 
@@ -221,7 +221,7 @@ Configuration writes are atomic with rotated backups; a damaged main configurati
 
 ### 11.3 Diagnostic report
 
-**Export Diagnostic Report** in Settings → **Diagnostics and Issue Report** collects the app version, a system summary, error logs and a sanitized configuration summary, excluding private paths and credentials. The GitHub option opens a pre-filled issue; nothing is submitted automatically, so review it first.
+**Export Diagnostic Report** in Settings → **Diagnostics and Issue Report** collects the app version, a system summary, error logs and a sanitized configuration summary, excluding private paths and credentials. The GitHub option opens a pre-filled issue; nothing is submitted automatically, so review it first. The same card lists the feedback QQ group 1041384622, with a button to copy the number, for reporting problems and chat.
 
 ## 12. Keyboard
 
@@ -256,6 +256,6 @@ Configuration writes are atomic with rotated backups; a damaged main configurati
 - Detection, translation and automatic extraction are aids; the original author page is authoritative. Inspect and scan unknown Mods first.
 - Review screenshots, configuration and diagnostics for personal paths, accounts or credentials before sharing.
 
-**Feature status (4.6.0):** directory-link deployment, loader state restore and combination presets are verified, stable features; variant file import still needs a real exported file; F10 hot apply and online auto-translation remain experimental.
+**Feature status (4.6.1):** directory-link deployment, loader state restore and combination presets are verified, stable features; variant file import still needs a real exported file; F10 hot apply and online auto-translation remain experimental.
 
 Source code, issues and full release history: <https://github.com/uyujkk/Integrated_Mod_Manager>

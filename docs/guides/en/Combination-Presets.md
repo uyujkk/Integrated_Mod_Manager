@@ -1,6 +1,6 @@
 # Combination Presets and Bundles
 
-> For 4.6.0. [中文](../zh-CN/组合预设.md) · [User guide](./User-Guide.md)
+> For 4.6.1. [中文](../zh-CN/组合预设.md) · [User guide](./User-Guide.md)
 
 A combination preset records **which Mods are enabled** in the current repository, optionally with those Mods' values from `d3dx_user.ini`. Restoring brings back the Mod set first, then writes the values. A bundle exports a preset together with its Mod files so it can be installed in another repository.
 

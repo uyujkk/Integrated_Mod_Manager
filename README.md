@@ -1,4 +1,4 @@
-> **v4.6.0 stable release.** Every page is redesigned: a collapsible navigation with a Ctrl+K command palette, a richer Mod list and details, a details drawer online, and an Updates page that fills the window. Local preview builds no longer turn off update checks. See the [release notes](docs/releases/v4.6.0.md).
+> **v4.6.1 stable release.** New Mods get a Default slot, overlay saves can read an unchanged file, and layout fixes; see the [4.6.1 notes](docs/releases/v4.6.1.md). **4.6:** Every page is redesigned: a collapsible navigation with a Ctrl+K command palette, a richer Mod list and details, a details drawer online, and an Updates page that fills the window. Local preview builds no longer turn off update checks. See the [release notes](docs/releases/v4.6.0.md).
 
 <div align="center">
   <img src="./src/WinUI3/Assets/AppIcon.png" width="96" alt="Integrated Mod Manager icon">
@@ -26,11 +26,11 @@
 
 ## Overview
 
-**Current stable version: [v4.6.0](https://github.com/uyujkk/Integrated_Mod_Manager/releases/tag/v4.6.0).** 4.6 redesigns every page; the features below work as in 4.5. Characters in a repository show avatars, a character can keep several Mods enabled, each Mod can keep named state slots, and the always-on-top overlay can save presets (sending F10 first), switch slots in game and refresh after Mod changes. The shortcut panel, integrated Endfield launch, browsing and downloading, library tools and combination presets remain. See the [4.6.0 release notes](./docs/releases/v4.6.0.md), the [shortcut panel guide](./docs/guides/en/Shortcut-Panel.md) and the [launch and risk guide](./docs/guides/en/Endfield-Launch.md).
+**Current stable version: [v4.6.1](https://github.com/uyujkk/Integrated_Mod_Manager/releases/tag/v4.6.1).** 4.6 redesigns every page; the features below work as in 4.5. Characters in a repository show avatars, a character can keep several Mods enabled, each Mod can keep named state slots, and the always-on-top overlay can save presets (sending F10 first), switch slots in game and refresh after Mod changes. The shortcut panel, integrated Endfield launch, browsing and downloading, library tools and combination presets remain. See the [4.6.0 release notes](./docs/releases/v4.6.0.md), the [shortcut panel guide](./docs/guides/en/Shortcut-Panel.md) and the [launch and risk guide](./docs/guides/en/Endfield-Launch.md).
 
 Integrated Mod Manager organizes different games or mod environments into independent repositories. It copies or removes complete mod folders between a local library and the target directory read by the game, while keeping preview images, source links, shortcut notes, online downloads, update records, profiles, and installation backups in one application.
 
-The application, launcher, and updater use version **4.6.0** (`4.6.0.0`). The tool is maintained by `uyujkk`. The Bandizip extraction fallback was contributed by [CaramelizedCUDA](https://github.com/CaramelizedCUDA). The earlier [4.0-beta](https://github.com/uyujkk/Integrated_Mod_Manager/releases/tag/v4.0-beta) remains archived separately.
+The application, launcher, and updater use version **4.6.1** (`4.6.1.0`). The tool is maintained by `uyujkk`. The Bandizip extraction fallback was contributed by [CaramelizedCUDA](https://github.com/CaramelizedCUDA). The earlier [4.0-beta](https://github.com/uyujkk/Integrated_Mod_Manager/releases/tag/v4.0-beta) remains archived separately.
 
 ## Interface Preview
 
@@ -87,9 +87,10 @@ Guides: [user guide](./docs/guides/en/User-Guide.md) · [shortcut panel and over
 - **Mod repository:** rows with thumbnails, tags, key counts, size and deploy state, state filters, an editable details table, and setup steps for a new repository.
 - **Online, shortcuts and settings:** one card style with a details drawer; key-cap bindings with collapsible modules; a two-column settings overview with a follow-Windows theme.
 - **Updates:** the page fills the window; tracked Mods and download history are compact lists with filters and search.
+- **4.6.1:** new Mods get a Default slot; the overlay can save from an unchanged file; Settings lists the feedback QQ group 1041384622; layout fixes.
 - Local preview builds no longer turn off app update checks. Coming from one? See [getting update checks back](./docs/releases/v4.6.0.md#getting-update-checks-back-after-a-local-preview).
 
-[4.6.0 release notes](./docs/releases/v4.6.0.md) · [Verification scope](./docs/verification/v4.6.0.md)
+[4.6.1 release notes](./docs/releases/v4.6.1.md) · [4.6.0](./docs/releases/v4.6.0.md) · [Verification scope](./docs/verification/v4.6.1.md)
 
 ## What's New in 4.5
 

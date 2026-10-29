@@ -1,6 +1,6 @@
 # Browse and Download
 
-> For 4.6.0. [中文](../zh-CN/浏览与下载.md) · [User guide](./User-Guide.md)
+> For 4.6.1. [中文](../zh-CN/浏览与下载.md) · [User guide](./User-Guide.md)
 
 The Online page browses GameBanana Mods by character; downloads are extracted and installed into the repository with their source recorded, so updates can be tracked. This page also covers the download task center, importing an old library, and local tags.
 

@@ -1,6 +1,6 @@
 # Shortcut Panel and Overlay
 
-> For 4.6.0. [中文](../zh-CN/快捷键与浮窗.md) · [User guide](./User-Guide.md)
+> For 4.6.1. [中文](../zh-CN/快捷键与浮窗.md) · [User guide](./User-Guide.md)
 
 The Shortcuts page reads the `[Key…]` bindings in a Mod's INI files and sends the matching key to the game when you click a button, so you don't have to remember shortcuts or own a numeric keypad. The always-on-top overlay works over the game: switch Mods, save presets, hot-switch state slots, and follow the character currently on the field.
 

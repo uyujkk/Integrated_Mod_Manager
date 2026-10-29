@@ -559,6 +559,29 @@ public sealed partial class MainWindow
         SubmitDiagnosticsButton.Content = T("ProductivityFeatures.ReportOnGitHub");
         AutomationProperties.SetName(ExportDiagnosticsButton, ExportDiagnosticsButton.Content?.ToString() ?? string.Empty);
         AutomationProperties.SetName(SubmitDiagnosticsButton, SubmitDiagnosticsButton.Content?.ToString() ?? string.Empty);
+        FeedbackGroupTitleTextBlock.Text = T("Settings.FeedbackGroup");
+        FeedbackGroupNumberTextBlock.Text = T("Settings.FeedbackGroupNumber", FeedbackQqGroup);
+        CopyFeedbackGroupButton.Content = T("Settings.CopyGroupNumber");
+        AutomationProperties.SetName(CopyFeedbackGroupButton, T("Settings.CopyGroupNumber") + " " + FeedbackQqGroup);
+    }
+
+    // The QQ group users join to report problems and talk about the app.
+    private const string FeedbackQqGroup = "1041384622";
+
+    private void OnCopyFeedbackGroupClicked(object sender, RoutedEventArgs e)
+    {
+        try
+        {
+            var package = new Windows.ApplicationModel.DataTransfer.DataPackage();
+            package.SetText(FeedbackQqGroup);
+            Windows.ApplicationModel.DataTransfer.Clipboard.SetContent(package);
+            DiagnosticsStatusTextBlock.Text = T("Settings.GroupNumberCopied", FeedbackQqGroup);
+        }
+        catch (Exception ex)
+        {
+            LogApplicationIssue("Copy feedback group number", ex);
+            DiagnosticsStatusTextBlock.Text = T("Settings.GroupNumberNotCopied", FeedbackQqGroup);
+        }
     }
 
     private void RefreshBackupManagerText()
