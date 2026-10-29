@@ -221,7 +221,7 @@ Configuration writes are atomic with rotated backups; a damaged main configurati
 
 ### 11.3 Diagnostic report
 
-**Export Diagnostic Report** in Settings → **Diagnostics and Issue Report** collects the app version, a system summary, error logs and a sanitized configuration summary, excluding private paths and credentials. The GitHub option opens a pre-filled issue; nothing is submitted automatically, so review it first. The same card lists the feedback QQ group 1041384622, with a button to copy the number: report problems and share tips there, and Arknights and Arknights: Endfield players are welcome for everyday game chat and meetups at offline events such as Ambience Synesthesia.
+**Export Diagnostic Report** in Settings → **Diagnostics and Issue Report** collects the app version, a system summary, error logs and a sanitized configuration summary, excluding private paths and credentials. The GitHub option opens a pre-filled issue; nothing is submitted automatically, so review it first. The same card lists the feedback QQ group 1041384622, with a button to copy the number: report problems and share tips there, and Arknights and Arknights: Endfield players are welcome for everyday game chat and joining offline events such as Ambience Synesthesia.
 
 ## 12. Keyboard
 
