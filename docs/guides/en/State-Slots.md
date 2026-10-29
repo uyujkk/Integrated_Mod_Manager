@@ -15,6 +15,7 @@ Many Mods keep their look (outfit, hair, accessories) in `global persist` variab
 - Only the numeric `global persist` values declared by this Mod are saved; other Mods are untouched.
 - The values must already be in `d3dx_user.ini`; missing ones are never replaced by the Mod's defaults.
 - Each Mod can have several slots; the one saved, updated or restored last is marked current.
+- A Mod newly added to the repository that declares `global persist` values gets a slot named "Default" when the repository is scanned, holding the defaults from its own INI files (0 where none is written). In the Chinese UI it shows as "默认"; once renamed, the name no longer follows the language. Deleting it does not bring it back, and Mods already in the repository do not get one.
 - In game you can also use the overlay's **Save single-Mod preset**, which sends F10 for you; see [Shortcut panel and overlay](./Shortcut-Panel.md).
 
 ## Restoring a slot

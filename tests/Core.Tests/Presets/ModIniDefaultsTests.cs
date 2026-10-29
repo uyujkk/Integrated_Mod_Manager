@@ -27,6 +27,51 @@ public sealed class ModIniDefaultsTests : IDisposable
     }
 
     [Fact]
+    public void DeclaredDefaults_ReadsEachDefaultAndZeroForAMissingOne()
+    {
+        File.WriteAllText(Ini, "[Constants]\nglobal persist $x = 2\nglobal persist $w = -1.5\nglobal $temp = 1\n[KeyX]\n$x = 0,1,2\n");
+        File.WriteAllText(Path.Combine(Mod, "sub", "b.ini"), "namespace = Shared\\Outfit\n[Constants]\nglobal persist $y\n");
+
+        IReadOnlyList<ModPersistentValue> values = ModPersistentPresetEngine.DeclaredDefaults(Mod, "Mod");
+
+        Assert.Equal(
+            [new ModPersistentValue("a.ini", "$w", "$\\mods\\mod\\a.ini\\w", "-1.5"),
+             new ModPersistentValue("a.ini", "$x", "$\\mods\\mod\\a.ini\\x", "2"),
+             new ModPersistentValue("sub\\b.ini", "$y", "$\\shared\\outfit\\y", "0")],
+            values);
+    }
+
+    [Fact]
+    public void DeclaredDefaults_LeavesOutAVariableDeclaredTwiceAndAModWithoutPersistentValues()
+    {
+        File.WriteAllText(Ini, "[Constants]\nglobal persist $x = 1\nglobal persist $x = 2\nglobal persist $z = 3\n");
+        Assert.Equal(["$z"], ModPersistentPresetEngine.DeclaredDefaults(Mod, "Mod").Select(value => value.Variable));
+
+        File.WriteAllText(Ini, "[Constants]\nglobal $temp = 1\n");
+        Assert.Empty(ModPersistentPresetEngine.DeclaredDefaults(Mod, "Mod"));
+    }
+
+    [Fact]
+    public void DefaultSlotPolicy_FirstScanOnlyRecordsThenOnlyUnseenModsAreNew()
+    {
+        Assert.Empty(DefaultSlotPolicy.NewMods(["A\\One", "A\\Two"], known: null));
+        Assert.Equal(["B\\Three"], DefaultSlotPolicy.NewMods(["A\\One", "a\\two", "B\\Three", "B\\Three"], ["A\\One", "A\\Two"]));
+        Assert.Empty(DefaultSlotPolicy.NewMods(["A\\One"], ["A\\One", "Deleted\\Mod"]));
+    }
+
+    [Theory]
+    [InlineData("默认", "Default", "Default")]
+    [InlineData("Default", "默认", "默认")]
+    [InlineData("Default", "Default", null)]
+    [InlineData("My look", "Default", null)]
+    public void DefaultSlotPolicy_RelabelsOnlyAnUntouchedDefaultName(string name, string wanted, string? expected)
+        => Assert.Equal(expected, DefaultSlotPolicy.Relabel(name, ["默认", "Default"], wanted, ["Battle"]));
+
+    [Fact]
+    public void DefaultSlotPolicy_KeepsTheNameWhenAnotherSlotAlreadyUsesTheTarget()
+        => Assert.Null(DefaultSlotPolicy.Relabel("默认", ["默认", "Default"], "Default", ["default"]));
+
+    [Fact]
     public void PlanAndApply_ChangeOnlyTheDefaultNumbersAndKeepBackups()
     {
         const string original = "; header\r\n[Constants]\r\n  global persist $x = 0\r\nglobal persist $y\r\nglobal persist $z = 7\r\n[Present]\r\nrun = x\r\n";

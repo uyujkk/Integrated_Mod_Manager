@@ -300,6 +300,7 @@ public sealed partial class MainWindow
     {
         SaveCurrentModBindings();
         _currentLanguage = language;
+        RelabelDefaultSlots();
         ApplyLanguage();
         RefreshVisibleShortcutDescriptionsForLanguage();
         RebuildShortcutPaneForLanguage();
