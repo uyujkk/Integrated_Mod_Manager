@@ -1,6 +1,6 @@
 # Quick Start
 
-> For 4.6.0. [中文](../zh-CN/快速上手.md) · [Full user guide](./User-Guide.md) · [Documentation index](../../README.md)
+> For 4.6.1. [中文](../zh-CN/快速上手.md) · [Full user guide](./User-Guide.md) · [Documentation index](../../README.md)
 
 ## Install and set up
 

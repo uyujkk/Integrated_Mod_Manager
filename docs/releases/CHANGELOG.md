@@ -6,6 +6,12 @@
 
 This document records version changes in Integrated Mod Manager. Unpublished versions are marked separately.
 
+## v4.6.1 — 2026-10-29（正式版 / Stable）
+
+新 Mod 自动获得“默认”槽位；浮窗保存时加载器没有新写入，可以选择读取现有文件；设置页新增反馈 QQ 群；修复快捷操作、部署按钮、按键数量、设置页、快捷键页和更新页的排版与显示问题。见 [v4.6.1](v4.6.1.md)。
+
+New Mods get a "Default" slot; when the loader writes nothing new, the overlay lets you save from the existing file; Settings lists the feedback QQ group; layout and display fixes for quick actions, the deploy button, key counts, Settings, Shortcuts and Updates. See [v4.6.1](v4.6.1.md).
+
 ## v4.6.0 — 2026-10-27（正式版 / Stable）
 
 重新设计全部页面：可折叠导航、Ctrl+K 命令面板与侧栏下载入口；总览、Mod 仓库、在线、快捷键、更新和设置页的新布局；更新页不再整体滚动，已追踪 Mod 与下载历史改为可筛选的紧凑列表。本地预览版不再把软件更新设置保存为关闭。见 [v4.6.0](v4.6.0.md)。
