@@ -69,6 +69,9 @@ public sealed class BetaShellConfig
 
     public List<ModPersistentSlot> ModPersistentSlots { get; set; } = [];
 
+    /// <summary>Per repository id, the Mods (relative paths) already offered a default slot. Missing for a repository not scanned yet.</summary>
+    public Dictionary<string, List<string>>? DefaultSlotSeeds { get; set; }
+
     public int? WindowX { get; set; }
 
     public int? WindowY { get; set; }

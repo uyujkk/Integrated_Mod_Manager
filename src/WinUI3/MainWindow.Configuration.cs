@@ -134,6 +134,11 @@ public sealed partial class MainWindow
                     && !string.IsNullOrWhiteSpace(slot.ModRelativePath)
                     && slot.Values is { Count: > 0 }));
             }
+            _defaultSlotSeeds.Clear();
+            foreach ((string repositoryId, List<string> mods) in config?.DefaultSlotSeeds ?? [])
+            {
+                _defaultSlotSeeds[repositoryId] = new HashSet<string>(mods ?? [], StringComparer.OrdinalIgnoreCase);
+            }
 
             _selectedConfigurationProfileId = _configurationProfiles.Any(profile => profile.Id == config?.SelectedConfigurationProfileId)
                 ? config?.SelectedConfigurationProfileId
@@ -269,6 +274,7 @@ public sealed partial class MainWindow
                 LastInstallTransactionPath = _lastInstallTransactionPath,
                 ConfigurationProfiles = [.. _configurationProfiles],
                 ModPersistentSlots = [.. _modPersistentSlots],
+                DefaultSlotSeeds = _defaultSlotSeeds.ToDictionary(pair => pair.Key, pair => pair.Value.Order(StringComparer.OrdinalIgnoreCase).ToList()),
                 WindowX = _savedWindowX,
                 WindowY = _savedWindowY,
                 WindowWidth = _savedWindowWidth,

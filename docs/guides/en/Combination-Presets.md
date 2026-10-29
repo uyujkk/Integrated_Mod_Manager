@@ -19,7 +19,7 @@ Switch to **Presets** at the top of Repositories.
 
 Turn state capture off to save only the enabled set. The left panel lists this repository's presets; the middle shows members and value counts.
 
-**Saving in game:** the overlay's **Save preset** sends F10 to the game window first and saves only after the loader has written (two matching reads); if nothing is written within 5 seconds, nothing is saved. Without a `d3dx_user.ini`, it saves the Mod set alone. See [Shortcut panel and overlay](./Shortcut-Panel.md).
+**Saving in game:** the overlay's **Save preset** sends F10 to the game window first and saves only after the loader has written (two matching reads); if nothing is written within 5 seconds, it asks whether to save from the existing file or cancel. Without a `d3dx_user.ini`, it saves the Mod set alone. See [Shortcut panel and overlay](./Shortcut-Panel.md).
 
 ## Restoring a combination
 

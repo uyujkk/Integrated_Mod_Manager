@@ -467,7 +467,8 @@ public static partial class ModPersistentPresetEngine
                 {
                     string variable = declaration.Groups["name"].Value;
                     yield return new DeclarationInfo(index, variable,
-                        NormalizeRuntimeKey("$\\" + effectiveNamespace + "\\" + variable[1..]));
+                        NormalizeRuntimeKey("$\\" + effectiveNamespace + "\\" + variable[1..]),
+                        declaration.Groups["default"].Success ? declaration.Groups["default"].Value : null);
                 }
             }
         }
@@ -551,5 +552,5 @@ public static partial class ModPersistentPresetEngine
         return [.. preamble, .. body];
     }
 
-    private sealed record DeclarationInfo(int Line, string Variable, string RuntimeKey);
+    private sealed record DeclarationInfo(int Line, string Variable, string RuntimeKey, string? Default);
 }

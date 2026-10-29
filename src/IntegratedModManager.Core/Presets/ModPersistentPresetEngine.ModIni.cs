@@ -31,6 +31,32 @@ public static partial class ModPersistentPresetEngine
         return declarations;
     }
 
+    // The Mod's own defaults as slot values: each "global persist $x = value" as declared, and 0 for a
+    // declaration without a value (as 3DMigoto starts it). Does not read d3dx_user.ini, so a Mod the
+    // loader has never written still gets one. Variables declared twice in one INI are left out, as in Capture.
+    public static IReadOnlyList<ModPersistentValue> DeclaredDefaults(string modDirectory, string deployedRelativePath)
+    {
+        string deployed = NormalizeRelative(deployedRelativePath);
+        var values = new List<ModPersistentValue>();
+        foreach (string ini in EnumerateSafeIniFiles(modDirectory))
+        {
+            string relative = Path.GetRelativePath(modDirectory, ini).Replace('/', '\\');
+            string defaultNamespace = "Mods\\" + deployed + "\\" + relative;
+            foreach (DeclarationInfo declaration in ParseDeclarations(Decode(File.ReadAllBytes(ini), out _), defaultNamespace))
+            {
+                values.Add(new ModPersistentValue(relative, declaration.Variable, declaration.RuntimeKey, declaration.Default ?? "0"));
+            }
+        }
+
+        return values
+            .GroupBy(value => value.RelativeIniPath + "|" + value.Variable, StringComparer.OrdinalIgnoreCase)
+            .Where(group => group.Count() == 1)
+            .Select(group => group.Single())
+            .OrderBy(value => value.RelativeIniPath, StringComparer.OrdinalIgnoreCase)
+            .ThenBy(value => value.Variable, StringComparer.OrdinalIgnoreCase)
+            .ToArray();
+    }
+
     // Plans rewriting "global persist $x = default" so each saved value becomes the default. Only the
     // number changes; indentation, keywords, other lines, line endings and the file encoding are kept.
     // A declaration without a default gains " = value".

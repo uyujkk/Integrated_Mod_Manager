@@ -708,6 +708,9 @@ public sealed partial class MainWindow
             timing?.SetCounts(loaded.SecondCount);
             ApplyFirstLevelFilter();
             _ = RefreshCharacterFolderAvatarsAsync();
+            if (GetSelectedRepository() is { SourcePath: { Length: > 0 } scannedSource } scanned
+                && string.Equals(Path.GetFullPath(scannedSource).TrimEnd('\\'), Path.GetFullPath(sourceDir).TrimEnd('\\'), StringComparison.OrdinalIgnoreCase))
+                _ = SeedDefaultSlotsAsync(scanned, loaded.Items);
             FirstCountTextBlock.Text = _characters.All.Count.ToString();
             SecondCountTextBlock.Text = loaded.SecondCount.ToString();
             StatusTextBlock.Text = loaded.Warnings == 0
