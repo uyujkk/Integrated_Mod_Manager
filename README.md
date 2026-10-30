@@ -18,7 +18,8 @@
   [Full Guide](./docs/guides/en/User-Guide.md) ·
   [Changelog](./docs/releases/CHANGELOG.md) ·
   [Screenshots](#interface-preview) ·
-  [Report an Issue](https://github.com/uyujkk/Integrated_Mod_Manager/issues/new/choose)
+  [Report an Issue](https://github.com/uyujkk/Integrated_Mod_Manager/issues/new/choose) ·
+  [Discord](https://discord.gg/G9nszEQgrV)
 </div>
 
 > [!IMPORTANT]
