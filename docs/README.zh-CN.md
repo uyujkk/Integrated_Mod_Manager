@@ -18,7 +18,8 @@
   [完整手册](./guides/zh-CN/用户手册.md) ·
   [更新日志](./releases/CHANGELOG.md) ·
   [界面预览](#界面预览) ·
-  [提交问题](https://github.com/uyujkk/Integrated_Mod_Manager/issues/new/choose)
+  [提交问题](https://github.com/uyujkk/Integrated_Mod_Manager/issues/new/choose) ·
+  [Discord 社区](https://discord.gg/G9nszEQgrV)
 </div>
 
 > [!IMPORTANT]
