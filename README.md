@@ -10,6 +10,7 @@
   [![License](https://img.shields.io/github/license/uyujkk/Integrated_Mod_Manager)](./LICENSE)
   [![Platform](https://img.shields.io/badge/platform-Windows%20x64-0078D4)](#requirements)
   [![Ko-fi](https://img.shields.io/badge/Ko--fi-Support%20Development-FF5E5B?logo=ko-fi&logoColor=white)](https://ko-fi.com/uyujkk)
+  [![Discord](https://img.shields.io/badge/Discord-Join%20the%20Community-5865F2?logo=discord&logoColor=white)](https://discord.gg/G9nszEQgrV)
 
   [中文](./docs/README.zh-CN.md) · **English**
 

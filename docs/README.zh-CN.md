@@ -10,6 +10,7 @@
   [![许可证](https://img.shields.io/github/license/uyujkk/Integrated_Mod_Manager)](../LICENSE)
   [![平台](https://img.shields.io/badge/platform-Windows%20x64-0078D4)](#系统要求)
   [![Ko-fi 赞助](https://img.shields.io/badge/Ko--fi-Support%20Development-FF5E5B?logo=ko-fi&logoColor=white)](https://ko-fi.com/uyujkk)
+  [![Discord](https://img.shields.io/badge/Discord-%E5%8A%A0%E5%85%A5%E7%A4%BE%E5%8C%BA-5865F2?logo=discord&logoColor=white)](https://discord.gg/G9nszEQgrV)
 
   **中文** · [English](../README.md)
 
