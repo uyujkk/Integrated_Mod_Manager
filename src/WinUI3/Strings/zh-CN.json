@@ -1242,6 +1242,7 @@
   "ShortcutPanel.Opacity": "不透明",
   "ShortcutPanel.OverlayBackgroundOpacity": "浮窗背景不透明度",
   "ShortcutPanel.OverlayOpacity": "浮窗不透明度（%）",
+  "ShortcutPanel.OverlayElementOpacity": "按钮和标签底板不透明度（%）",
   "ShortcutPanel.OverlaySettings": "游戏内浮窗",
   "ShortcutPanel.OpenOverlay": "打开",
   "ShortcutPanel.OverlayHotkeyOff": "快捷键未启用",

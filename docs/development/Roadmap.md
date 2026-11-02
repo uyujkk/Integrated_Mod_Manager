@@ -43,9 +43,9 @@ Updated 2026-11-02 against main after v4.6.1. This brings the earlier plans and 
 
 `ArchiveProcessRunnerTests.Run_TimeoutTerminatesHangingProcessAndItsChild` 在 CI 上偶发失败，#53 和 #56 都要重跑。之前已改过一次夹具（`bc44ca7`），问题仍在。失败日志（2026-10-27 至 10-29 的三次）都是 20 秒内没等到进程标记文件，也就是启动慢，不是子进程没有结束。做法：超时改为在夹具就绪后才开始计时，时长改为 1 秒；不靠加大超时掩盖。同一批日志里 `LoaderStateCaptureTests` 的一次失败发生在 2 秒上限下，现在的测试已是 10 秒并带重试，未再改动。
 
-### A3. Discord 入口（S）
+### A3. Discord 入口（S，已完成）
 
-两个主页已有邀请链接（#59、#60），Wiki 首页和软件设置页还没有。在设置页的 QQ 群旁边加一行“Discord”并打开链接，Wiki 首页的“反馈与交流”加同一链接。
+两个主页已有邀请链接（#59、#60）。设置页的 QQ 群旁边已加一行“Discord”（#61），Wiki 首页的“反馈与交流”已加同一链接（2026-11-02）。
 
 ### A4. 按键相关的界面问题（S）
 
@@ -71,7 +71,9 @@ Updated 2026-11-02 against main after v4.6.1. This brings the earlier plans and 
 | 画面截取 | 角色跟随用 GDI `BitBlt` 截目标窗口客户区；要求游戏在前台、窗口完整在屏幕内；带 `CAPTUREBLT`，会截到覆盖在上面的浮窗 | `CharacterScreenCapture.Capture` |
 | 预设数据 | 组合预设 `ConfigurationProfiles`、单 Mod 槽位 `ModPersistentSlots` 都在 `beta-shell.json`，没有图片字段 | `Models/ModPersistentSlot.cs` 等 |
 
-### B1. 透明模式：元素底板和文字阴影（S）
+### B1. 透明模式：元素底板和文字阴影（S，已实现）
+
+已实现并用测试图案截图核对过 20% 和 100% 背景；真实游戏画面和屏幕阅读器仍待核对。按钮文字本身没有阴影，靠底板保证可读。
 
 **问题**：不透明度调低后，浅色或花哨的游戏画面上文字难以辨认；整块背景要么挡画面，要么太透。
 

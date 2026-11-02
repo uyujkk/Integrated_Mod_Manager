@@ -20,16 +20,18 @@ internal sealed class ShortcutOverlayWindow : Window
     // Only the background carries the opacity; text and buttons stay fully opaque.
     private readonly SolidColorBrush background = new(Color.FromArgb(255, 28, 31, 38));
 
-    public ShortcutOverlayWindow(UIElement content, Brush textBrush, string title)
+    public ShortcutOverlayWindow(UIElement content, Brush textBrush, Brush elementBrush, string title)
     {
         // Keep the "IMM · " prefix in every language: it identifies the overlay in window lists.
         Title = "IMM · " + title;
         SystemBackdrop = new TransparentBackdrop();
         ExtendsContentIntoTitleBar = true;
         var titleBar = new Grid { Height = 32, Padding = new Thickness(12, 0, 140, 0) };
-        titleBar.Children.Add(new TextBlock
+        titleBar.Children.Add(new Border
         {
-            Text = Title, FontSize = 12, VerticalAlignment = VerticalAlignment.Center, Foreground = textBrush, Opacity = .8
+            Background = elementBrush, CornerRadius = new CornerRadius(4), Padding = new Thickness(6, 1, 6, 2),
+            HorizontalAlignment = HorizontalAlignment.Left, VerticalAlignment = VerticalAlignment.Center,
+            Child = new TextBlock { Text = Title, FontSize = 12, Foreground = textBrush }
         });
         var root = new Grid { Background = background, RequestedTheme = ElementTheme.Dark };
         root.RowDefinitions.Add(new RowDefinition { Height = GridLength.Auto });

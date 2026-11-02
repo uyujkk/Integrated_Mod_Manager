@@ -1242,6 +1242,7 @@
   "ShortcutPanel.Opacity": "Opacity",
   "ShortcutPanel.OverlayBackgroundOpacity": "Overlay background opacity",
   "ShortcutPanel.OverlayOpacity": "Overlay opacity (%)",
+  "ShortcutPanel.OverlayElementOpacity": "Button and label backing opacity (%)",
   "ShortcutPanel.OverlaySettings": "In-game overlay",
   "ShortcutPanel.OpenOverlay": "Open",
   "ShortcutPanel.OverlayHotkeyOff": "Hotkey off",

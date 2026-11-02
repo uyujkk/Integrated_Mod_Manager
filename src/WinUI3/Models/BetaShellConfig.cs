@@ -9,6 +9,7 @@ public sealed class BetaShellConfig
     public bool ShortcutPanelHotkeyEnabled { get; set; } = true;
     public string? ShortcutInputMode { get; set; }
     public int? ShortcutOverlayOpacity { get; set; }
+    public int? ShortcutOverlayElementOpacity { get; set; }
     public bool? ShortcutHideUnsupported { get; set; }
     public string? ShortcutOverlayTextColor { get; set; }
     public bool? OverlaySlotSwitchEnabled { get; set; }

@@ -314,6 +314,7 @@ public sealed partial class MainWindow
         overlay.Children.Add(ShortcutGroupLabel(T("ShortcutPanel.AppearanceGroup")));
         _shortcutOpacitySlider = CreateOverlayOpacitySlider(T("ShortcutPanel.OverlayOpacity"));
         overlay.Children.Add(_shortcutOpacitySlider);
+        overlay.Children.Add(CreateOverlayElementOpacitySlider());
         overlay.Children.Add(BuildOverlayTextColorButton());
         overlay.Children.Add(ShortcutGroupLabel(T("ShortcutPanel.BehaviorGroup")));
         AddOverlaySlotSwitchSetting(overlay);
@@ -681,7 +682,11 @@ public sealed partial class MainWindow
             Color = _overlayTextBrush.Color, IsAlphaEnabled = false, IsMoreButtonVisible = false,
             IsColorChannelTextInputVisible = false, IsHexInputVisible = true
         };
-        picker.ColorChanged += (_, e) => _overlayTextBrush.Color = e.NewColor;
+        picker.ColorChanged += (_, e) =>
+        {
+            _overlayTextBrush.Color = e.NewColor;
+            ApplyOverlayAppearance();
+        };
         var presets = new StackPanel { Orientation = Orientation.Horizontal, Spacing = 6 };
         foreach (string hex in new[] { "#FFFFFF", "#FFE8A3", "#B8F5C0", "#A8D8FF", "#FFC0DA", "#202020" })
         {
@@ -739,6 +744,7 @@ public sealed partial class MainWindow
             }
             finally { _shortcutOpacitySyncing = false; }
             _shortcutOverlay?.SetBackgroundOpacity(_shortcutOverlayOpacity);
+            ApplyOverlayAppearance();
             SaveShellConfig();
         };
         return slider;
@@ -758,7 +764,8 @@ public sealed partial class MainWindow
         if (floating)
         {
             title.Foreground = description.Foreground = sourceText.Foreground = _overlayTextBrush;
-            content.Children.Add(title);
+            content.Children.Add(WithOverlayTextShadow(title));
+            content.Children.Add(WithOverlayTextShadow(description));
         }
         else
         {
@@ -769,8 +776,9 @@ public sealed partial class MainWindow
                 CornerRadius = new CornerRadius(6), BorderThickness = new Thickness(1, 1, 1, 2),
                 Background = GetAppThemeBrush("AppInsetBackgroundBrush"), BorderBrush = GetAppThemeBrush("AppStrongBorderBrush")
             });
+            content.Children.Add(description);
         }
-        content.Children.Add(description); content.Children.Add(sourceText);
+        content.Children.Add(sourceText);
         if (!supported)
             content.Children.Add(new TextBlock
             {
@@ -825,7 +833,7 @@ public sealed partial class MainWindow
         {
             if (_shortcutOverlay is null)
             {
-                var overlay = new ShortcutOverlayWindow(BuildShortcutOverlayContent(), _overlayTextBrush, T("Common.ModShortcuts"));
+                var overlay = new ShortcutOverlayWindow(BuildShortcutOverlayContent(), _overlayTextBrush, _overlayElementBrush, T("Common.ModShortcuts"));
                 _shortcutOverlay = overlay;
                 _shortcutOverlay.Closed += (_, _) =>
                 {
@@ -851,8 +859,11 @@ public sealed partial class MainWindow
     {
         // A closed window still owns its controls. Never reparent cached buttons into a new XamlRoot.
         _overlayShortcutControls.Clear();
+        _overlayTextShadows.Clear();
         // The overlay window draws the (translucent) background; this content stays transparent.
         var root = new Grid { Padding = new Thickness(14, 4, 14, 14), RowSpacing = 10, RequestedTheme = ElementTheme.Dark };
+        ApplyOverlayElementResources(root);
+        ApplyOverlayAppearance();
         root.RowDefinitions.Add(new RowDefinition { Height = GridLength.Auto });
         root.RowDefinitions.Add(new RowDefinition { Height = new GridLength(1, GridUnitType.Star) });
         var panel = new StackPanel { Spacing = 6 };
@@ -871,7 +882,7 @@ public sealed partial class MainWindow
         _overlayTargetText = FixedStatusText(lines: 1, fontSize: 11);
         _overlayStatusText = FixedStatusText(lines: 2, fontSize: 11);
         _overlayTargetText.Foreground = _overlayStatusText.Foreground = _overlayTextBrush;
-        panel.Children.Add(_overlayModPicker); panel.Children.Add(_overlayTargetText);
+        panel.Children.Add(_overlayModPicker); panel.Children.Add(OverlayLabel(_overlayTargetText));
         var actions = new Grid { ColumnSpacing = 6 };
         for (int i = 0; i < 3; i++) actions.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(1, GridUnitType.Star) });
         _overlayInputToggle = new ToggleButton { HorizontalAlignment = HorizontalAlignment.Stretch, Foreground = _overlayTextBrush };
@@ -910,10 +921,10 @@ public sealed partial class MainWindow
         _overlayOpacitySlider.VerticalAlignment = VerticalAlignment.Center;
         ToolTipService.SetToolTip(_overlayOpacitySlider, T("ShortcutPanel.OverlayBackgroundOpacity"));
         Grid.SetColumn(_overlayOpacitySlider, 1);
-        opacityRow.Children.Add(opacityLabel); opacityRow.Children.Add(_overlayOpacitySlider);
+        opacityRow.Children.Add(OverlayLabel(opacityLabel)); opacityRow.Children.Add(_overlayOpacitySlider);
         panel.Children.Add(opacityRow);
         AddOverlaySlotSection(panel);
-        panel.Children.Add(_overlayStatusText);
+        panel.Children.Add(OverlayLabel(_overlayStatusText));
         _overlayButtonList = new StackPanel { Spacing = 8 };
         _overlayScroll = new ScrollViewer { Content = _overlayButtonList, VerticalScrollBarVisibility = ScrollBarVisibility.Auto,
             HorizontalScrollBarVisibility = ScrollBarVisibility.Disabled };
