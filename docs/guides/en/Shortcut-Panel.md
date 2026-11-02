@@ -22,7 +22,7 @@ The toolbar at the top holds the Mod picker, the target game window and the send
 
 - Click **Open** in the header of the **In-game overlay** module, or use the global hotkey **Ctrl + Alt + K** (default). The hotkey can be changed or disabled in the same module.
 - The overlay never takes focus, so the game stays in the foreground after you click. Drag it and resize it as needed.
-- Background opacity is adjustable (10%–100%) and affects only the background; text and buttons stay fully opaque. The font colour can be customised.
+- Background opacity is adjustable (10%–100%) and affects only the background; text stays fully opaque. Buttons and labels have their own backing, set separately (0%–100%, default 70%), so the overlay can be very transparent and text still has a colour behind it. Below 60% background opacity, text outside button captions also gets a thin shadow. The font colour can be customised; dark text gets a light backing and shadow.
 - Available in the overlay:
   - **Switch Mod**: lists only enabled Mods (deployed to the loader's Mods folder).
   - **Sending on/off**: pause or resume sending.

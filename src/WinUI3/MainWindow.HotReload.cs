@@ -17,6 +17,7 @@ public sealed partial class MainWindow
     private StackPanel? _overlaySlotList;
     private ScrollViewer? _overlaySlotScroll;
     private TextBlock? _overlaySlotHeader;
+    private Border? _overlaySlotHeaderLabel;
     private string _overlaySlotSignature = string.Empty;
 
     private bool CanHotReloadLoader => _shortcutInputEnabled && _shortcutTargetPicker?.SelectedItem is ShortcutTarget;
@@ -83,7 +84,8 @@ public sealed partial class MainWindow
             HorizontalScrollBarVisibility = ScrollBarVisibility.Auto, HorizontalScrollMode = ScrollMode.Enabled,
             VerticalScrollBarVisibility = ScrollBarVisibility.Disabled, VerticalScrollMode = ScrollMode.Disabled
         };
-        panel.Children.Add(_overlaySlotHeader);
+        _overlaySlotHeaderLabel = OverlayLabel(_overlaySlotHeader);
+        panel.Children.Add(_overlaySlotHeaderLabel);
         panel.Children.Add(_overlaySlotScroll);
         _overlaySlotSignature = string.Empty;
     }
@@ -104,7 +106,7 @@ public sealed partial class MainWindow
         _overlaySlotSignature = signature;
 
         Visibility visibility = _overlaySlotSwitchEnabled ? Visibility.Visible : Visibility.Collapsed;
-        _overlaySlotHeader.Visibility = visibility;
+        _overlaySlotHeaderLabel!.Visibility = visibility;
         _overlaySlotScroll.Visibility = visibility;
         _overlaySlotHeader.Text = slots.Length == 0 ? T("HotReload.NoSlotsForThisMod") : T("HotReload.StateSlotsHotSwitch");
         _overlaySlotList.Children.Clear();

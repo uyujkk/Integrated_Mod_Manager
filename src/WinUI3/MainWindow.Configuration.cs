@@ -97,6 +97,7 @@ public sealed partial class MainWindow
             _shortcutInputMode = Enum.TryParse(config?.ShortcutInputMode, out ShortcutInputMode inputMode) ? inputMode : ShortcutInputMode.ScanCode;
             if (!Enum.IsDefined(_shortcutInputMode)) _shortcutInputMode = ShortcutInputMode.ScanCode;
             _shortcutOverlayOpacity = Math.Clamp(config?.ShortcutOverlayOpacity ?? 100, ShortcutOverlayWindow.MinimumOpacity, 100);
+            _overlayElementOpacity = OverlayAppearancePolicy.ClampElementOpacity(config?.ShortcutOverlayElementOpacity);
             _shortcutHideUnsupported = config?.ShortcutHideUnsupported ?? false;
             _overlaySlotSwitchEnabled = config?.OverlaySlotSwitchEnabled ?? false;
             _overlayTextBrush.Color = ParseOverlayTextColor(config?.ShortcutOverlayTextColor);
@@ -249,6 +250,7 @@ public sealed partial class MainWindow
                 ShortcutPanelHotkeyEnabled = _shortcutPanelHotkeyEnabled,
                 ShortcutInputMode = _shortcutInputMode.ToString(),
                 ShortcutOverlayOpacity = _shortcutOverlayOpacity,
+                ShortcutOverlayElementOpacity = _overlayElementOpacity,
                 ShortcutHideUnsupported = _shortcutHideUnsupported,
                 OverlaySlotSwitchEnabled = _overlaySlotSwitchEnabled,
                 ShortcutOverlayTextColor = OverlayTextColorValue,
