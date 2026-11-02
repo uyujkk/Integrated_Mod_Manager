@@ -47,6 +47,8 @@ public sealed partial class MainWindow
         {
             string shellJson = ReadConfigurationTextWithRecovery(_shellConfigPath, ConfigurationFileStore.IsJsonObject);
             BetaShellConfig? config = JsonSerializer.Deserialize<BetaShellConfig>(shellJson);
+            _shellConfigExtensionData = config?.ExtensionData;
+            if (config is not null) RemoveOrphanPresetPreviews(config);
             if (config?.Repositories is { Count: > 0 })
             {
                 _repositories.AddRange(config.Repositories.Where(repository => !string.IsNullOrWhiteSpace(repository.Id)));
@@ -100,6 +102,7 @@ public sealed partial class MainWindow
             _overlayElementOpacity = OverlayAppearancePolicy.ClampElementOpacity(config?.ShortcutOverlayElementOpacity);
             _shortcutHideUnsupported = config?.ShortcutHideUnsupported ?? false;
             _overlaySlotSwitchEnabled = config?.OverlaySlotSwitchEnabled ?? false;
+            _capturePresetPreviews = config?.CapturePresetPreviews ?? false;
             _overlayTextBrush.Color = ParseOverlayTextColor(config?.ShortcutOverlayTextColor);
             _lastModUpdateCheckUtc = TryParseDateTimeOffset(config?.LastModUpdateCheckUtc);
             _latestReleaseTag = config?.LatestReleaseTag;
@@ -253,6 +256,7 @@ public sealed partial class MainWindow
                 ShortcutOverlayElementOpacity = _overlayElementOpacity,
                 ShortcutHideUnsupported = _shortcutHideUnsupported,
                 OverlaySlotSwitchEnabled = _overlaySlotSwitchEnabled,
+                CapturePresetPreviews = _capturePresetPreviews,
                 ShortcutOverlayTextColor = OverlayTextColorValue,
                 LastModUpdateCheckUtc = _lastModUpdateCheckUtc?.ToString("O"),
                 LatestReleaseTag = _latestReleaseTag,
@@ -283,7 +287,8 @@ public sealed partial class MainWindow
                 WindowHeight = _savedWindowHeight,
                 WindowMaximized = _savedWindowMaximized,
                 WhatsNewSeenVersion = _whatsNewSeenVersion,
-                Repositories = [.. _repositories]
+                Repositories = [.. _repositories],
+                ExtensionData = _shellConfigExtensionData
             };
 
             string json = JsonSerializer.Serialize(config, new JsonSerializerOptions { WriteIndented = true });

@@ -73,6 +73,7 @@ public sealed partial class MainWindow
             }
             if (result != ContentDialogResult.Primary || _onlineWindowClosed) return;
 
+            CharacterFrame? preview = await CapturePresetPreviewAsync();
             if (!await PrepareOverlayCaptureAsync(userIni)) return;
             string name = nameBox.Text.Trim();
             _shortcutStatus!.Text = T("ShortcutPanel.SavingSinglePreset");
@@ -90,11 +91,12 @@ public sealed partial class MainWindow
                 RepositoryId = repository.Id, ModRelativePath = relative, Name = name,
                 Values = [.. values], ActivatedAtUtc = DateTimeOffset.UtcNow
             };
+            slot.PreviewFile = await StorePresetPreviewAsync(repository.Id, slot.Id, preview);
             _modPersistentSlots.Add(slot);
             try { SaveShellConfig(throwOnError: true); }
-            catch { _modPersistentSlots.Remove(slot); throw; }
+            catch { _modPersistentSlots.Remove(slot); DeletePresetPreview(slot.PreviewFile); throw; }
             _selectedModPersistentSlotId = slot.Id;
-            _shortcutStatus.Text = T("ShortcutPanel.SinglePresetSaved", name, values.Count);
+            _shortcutStatus.Text = T("ShortcutPanel.SinglePresetSaved", name, values.Count) + PresetPreviewNote(slot.PreviewFile);
         }
         catch (Exception ex)
         {

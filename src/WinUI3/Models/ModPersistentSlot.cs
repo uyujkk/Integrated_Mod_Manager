@@ -1,3 +1,5 @@
+using System.Text.Json;
+using System.Text.Json.Serialization;
 using IntegratedModManager.Core.Presets;
 
 namespace ModFolderCopier.WinUI;
@@ -15,4 +17,9 @@ public sealed class ModPersistentSlot
     // Created automatically from the Mod's declared defaults; its name follows the UI language until renamed.
     public bool IsModDefault { get; set; }
     public List<ModPersistentValue> Values { get; set; } = [];
+    // Relative to the preview folder (PresetPreviewStore); missing when the slot has no screenshot.
+    public string? PreviewFile { get; set; }
+
+    [JsonExtensionData]
+    public Dictionary<string, JsonElement>? ExtensionData { get; set; }
 }

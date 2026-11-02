@@ -123,7 +123,7 @@ public sealed partial class MainWindow
             CombinationRestorePreview preview = await Task.Run(() => CombinationRestorePreviewService.Prepare(request));
             foreach (var issue in preview.Issues.Where(issue => issue.Error is not null))
                 LogApplicationIssue("Combination preview: " + issue.Code, issue.Error!);
-            if (!await ConfirmCombinationRestoreAsync(profile.Name, preview)) return;
+            if (!await ConfirmCombinationRestoreAsync(profile.Name, preview, profile.PreviewFile)) return;
             if (repository.UseDirectoryLinks
                 && !await ConfirmSingleSelectionViolationsAsync(repository, preview.Deployment!.DesiredSources)) return;
             ModCombinationDeploymentPlan deployment = preview.Deployment!;
@@ -207,7 +207,7 @@ public sealed partial class MainWindow
 
     public sealed record CombinationPreviewRow(string Title, string Detail, string ValueText);
 
-    private async Task<bool> ConfirmCombinationRestoreAsync(string name, CombinationRestorePreview preview)
+    private async Task<bool> ConfirmCombinationRestoreAsync(string name, CombinationRestorePreview preview, string? previewFile)
     {
         var closed = new CheckBox { Content = T("Common.IHaveFullyClosedTheGame") };
         var panel = new Grid { RowSpacing = 12, MinWidth = 320,
@@ -221,7 +221,10 @@ public sealed partial class MainWindow
             : T("CombinationPresets.IssuesMustBeResolvedRestoreHas", name, preview.Issues.Count);
         summary += runtime is null ? T("CombinationPresets.NoParameterWritePlan")
             : T("CombinationPresets.ParametersChangeAddUnchanged", runtime.ChangedCount, runtime.AddedCount, runtime.UnchangedCount);
-        panel.Children.Add(new TextBlock { Text = summary, TextWrapping = TextWrapping.Wrap });
+        var heading = new StackPanel { Spacing = 8 };
+        if (CreatePresetPreviewImage(previewFile, 240, 135) is { } savedLook) heading.Children.Add(savedLook);
+        heading.Children.Add(new TextBlock { Text = summary, TextWrapping = TextWrapping.Wrap });
+        panel.Children.Add(heading);
         var tabs = new TabView { IsAddTabButtonVisible = false, CanReorderTabs = false, CanDragTabs = false };
         Grid.SetRow(tabs, 1);
         panel.Children.Add(tabs);

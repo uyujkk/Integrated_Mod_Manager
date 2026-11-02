@@ -1,0 +1,108 @@
+{
+  "ShortcutPanelHotkeyModifiers": 5,
+  "ShortcutPanelHotkeyKey": 120,
+  "ShortcutPanelHotkeyEnabled": false,
+  "ShortcutInputMode": "ScanCode",
+  "ShortcutOverlayOpacity": 40,
+  "ShortcutHideUnsupported": true,
+  "ShortcutOverlayTextColor": "#FFEEDD",
+  "OverlaySlotSwitchEnabled": true,
+  "LocalLibraries": {
+    "repo-1": {
+      "ModTags": { "Alpha\\Skin": [ "favourite" ] },
+      "Filters": [ { "Name": "Saved", "Character": "Alpha", "Search": "skin", "Tag": "favourite" } ]
+    }
+  },
+  "OnlinePreferences": {
+    "BrowseSessions": { "repo-1": { "Page": 3, "Character": "Alpha", "AuthorId": 7, "AuthorName": "Author", "Search": "skin", "Sort": "Likes", "Layout": "Grid", "WorkFilter": 1, "Offset": 120.5, "Anchor": "11", "AnchorOffset": 4.5 } },
+    "RecentAuthors": [ { "Id": 7, "Name": "Author", "CategoryId": "10", "VisitedAt": "2026-08-01T10:00:00+00:00" } ],
+    "ConcurrentDownloads": 3,
+    "RememberDownloadFolders": true,
+    "DownloadFolders": { "Alpha": "D:\\Mods\\Alpha" },
+    "Authors": [ { "Id": 7, "Name": "Author", "CategoryId": "10" } ],
+    "SavedMods": [],
+    "LastImportManifest": "D:\\Imports\\list.json"
+  },
+  "RepositoryWorkspaceView": "covers",
+  "CurrentPrimarySection": "shortcuts",
+  "SelectedRepositoryId": "repo-1",
+  "UpdateCheckInterval": "Weekly",
+  "LastUpdateCheckUtc": "2026-08-01T10:00:00.0000000+00:00",
+  "ModUpdateCheckInterval": "Manual",
+  "LastModUpdateCheckUtc": "2026-08-02T10:00:00.0000000+00:00",
+  "LatestReleaseTag": "v4.5.2",
+  "LatestReleaseTitle": "4.5.2",
+  "LatestReleaseBody": "Notes",
+  "LatestReleasePublishedAt": "2026-08-01T00:00:00Z",
+  "LatestReleaseUrl": "https://example.invalid/release",
+  "LatestReleasePackageUrl": "https://example.invalid/package.zip",
+  "LatestReleaseSha256Url": "https://example.invalid/package.zip.sha256",
+  "CheckAppUpdatesOnStartup": false,
+  "InstallBackupLimitGb": 2.5,
+  "ReduceMotion": true,
+  "MinimizeToTray": true,
+  "InterfaceDensity": "compact",
+  "OnlineCardLayout": "grid",
+  "SelectedConfigurationProfileId": "profile-1",
+  "EnableConflictDetection": false,
+  "LastInstallTransactionPath": "D:\\Transactions\\last.json",
+  "ConfigurationProfiles": [
+    {
+      "Id": "profile-1",
+      "RepositoryId": "repo-1",
+      "Name": "Evening",
+      "ModRelativePaths": [ "Alpha\\Skin" ],
+      "IncludesPersistentState": true,
+      "PersistentStates": [
+        {
+          "ModRelativePath": "Alpha\\Skin",
+          "Values": [ { "RelativeIniPath": "mod.ini", "Variable": "$swap", "RuntimeKey": "$\\mods\\alpha\\skin\\mod.ini\\swap", "Value": "2" } ]
+        }
+      ],
+      "UpdatedAtUtc": "2026-08-01T10:00:00+00:00"
+    }
+  ],
+  "ModPersistentSlots": [
+    {
+      "Id": "slot-1",
+      "RepositoryId": "repo-1",
+      "ModRelativePath": "Alpha\\Skin",
+      "Name": "Red",
+      "SavedAtUtc": "2026-08-01T10:00:00+00:00",
+      "ActivatedAtUtc": "2026-08-01T11:00:00+00:00",
+      "Values": [ { "RelativeIniPath": "mod.ini", "Variable": "$swap", "RuntimeKey": "$\\mods\\alpha\\skin\\mod.ini\\swap", "Value": "1" } ]
+    }
+  ],
+  "WindowX": 10,
+  "WindowY": 20,
+  "WindowWidth": 1200,
+  "WindowMaximized": false,
+  "WhatsNewSeenVersion": "4.5.2",
+  "WindowHeight": 800,
+  "Repositories": [
+    {
+      "Id": "repo-1",
+      "Name": "Sample",
+      "SourcePath": "D:\\Mods",
+      "TargetPath": "D:\\Game\\Mods",
+      "UseDirectoryLinks": true,
+      "LauncherPath": "D:\\Game\\launcher.exe",
+      "UseEndfieldBridge": false,
+      "EndfieldRiskAccepted": false,
+      "EndfieldGamePath": "",
+      "EndfieldParentPath": "",
+      "EndfieldGameArguments": "-force-d3d11",
+      "EndfieldUseMods": false,
+      "PersistentUserIniPath": "D:\\Game\\d3dx_user.ini",
+      "OnlineSourceSite": "GameBanana",
+      "OnlineGameName": "Sample",
+      "OnlineCategoryId": "10",
+      "WikiUrl": "https://example.invalid/wiki",
+      "Notes": "Note",
+      "CharacterCategoryMappings": { "Alpha": "11" },
+      "AllowMultipleModsPerCharacter": true,
+      "CharacterSelectionOverrides": { "Alpha": false },
+      "CharacterAvatarBindings": { "Alpha": "alpha" }
+    }
+  ]
+}

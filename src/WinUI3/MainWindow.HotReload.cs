@@ -2,6 +2,7 @@ using IntegratedModManager.Core.Deployment;
 using IntegratedModManager.Core.Presets;
 using IntegratedModManager.Core.Shortcuts;
 using Microsoft.UI.Xaml;
+using Microsoft.UI.Xaml.Automation;
 using Microsoft.UI.Xaml.Controls;
 
 namespace ModFolderCopier.WinUI;
@@ -101,7 +102,7 @@ public sealed partial class MainWindow
             .Where(slot => slot.RepositoryId == repository.Id && string.Equals(slot.ModRelativePath, relative, StringComparison.OrdinalIgnoreCase))
             .OrderBy(slot => slot.Name, StringComparer.CurrentCultureIgnoreCase).ToArray();
         ModPersistentSlot? current = CurrentPersistentSlot(slots);
-        string signature = $"{_overlaySlotSwitchEnabled}|{relative}|{current?.Id}|" + string.Join(",", slots.Select(slot => slot.Id + slot.Name));
+        string signature = $"{_overlaySlotSwitchEnabled}|{relative}|{current?.Id}|" + string.Join(",", slots.Select(slot => slot.Id + slot.Name + slot.PreviewFile));
         if (signature == _overlaySlotSignature) return;
         _overlaySlotSignature = signature;
 
@@ -110,16 +111,30 @@ public sealed partial class MainWindow
         _overlaySlotScroll.Visibility = visibility;
         _overlaySlotHeader.Text = slots.Length == 0 ? T("HotReload.NoSlotsForThisMod") : T("HotReload.StateSlotsHotSwitch");
         _overlaySlotList.Children.Clear();
+        bool anyPreview = false;
         foreach (ModPersistentSlot slot in slots)
         {
+            string label = ReferenceEquals(slot, current) ? "● " + slot.Name : slot.Name;
             var button = new Button
             {
-                Content = ReferenceEquals(slot, current) ? "● " + slot.Name : slot.Name,
-                Foreground = _overlayTextBrush, AllowFocusOnInteraction = false, Padding = new Thickness(10, 4, 10, 5), FontSize = 13
+                Content = label,
+                Foreground = _overlayTextBrush, AllowFocusOnInteraction = false, Padding = new Thickness(10, 4, 10, 5), FontSize = 13,
+                VerticalAlignment = VerticalAlignment.Top
             };
+            if (CreatePresetPreviewImage(slot.PreviewFile, 120, 68) is { } thumbnail)
+            {
+                anyPreview = true;
+                var card = new StackPanel { Spacing = 3 };
+                card.Children.Add(thumbnail);
+                card.Children.Add(new TextBlock { Text = label, MaxWidth = 120, TextTrimming = TextTrimming.CharacterEllipsis });
+                button.Content = card;
+                AutomationProperties.SetName(button, slot.Name);
+                ToolTipService.SetToolTip(button, CreatePresetPreviewImage(slot.PreviewFile, 400, 225));
+            }
             button.Click += async (_, _) => await RunUiActionAsync("Overlay slot switch", () => SwitchSlotFromOverlayAsync(slot.Id, modPath!));
             _overlaySlotList.Children.Add(button);
         }
+        _overlaySlotScroll.Height = anyPreview ? 128 : 40;
     }
 
     // In game, without dialogs: write the slot's keys into d3dx_user.ini, then reload with F10.

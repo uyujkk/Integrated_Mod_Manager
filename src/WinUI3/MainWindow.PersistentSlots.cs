@@ -302,6 +302,7 @@ public sealed partial class MainWindow
                     Content = T("Common.IHaveFullyClosedTheGame")
                 };
                 var content = new StackPanel { Spacing = 12 };
+                if (CreatePresetPreviewImage(slot.PreviewFile, 320, 180) is { } savedLook) content.Children.Add(savedLook);
                 content.Children.Add(new TextBlock
                 {
                     Text = T("PersistentSlots.SlotFileChangeAddAlreadyEqual", slot.Name, plan.Edit.Path, plan.ChangedCount, plan.AddedCount, plan.UnchangedCount),
@@ -370,6 +371,7 @@ public sealed partial class MainWindow
             _modPersistentSlots.Remove(slot);
             _selectedModPersistentSlotId = null;
             SaveShellConfig();
+            DeletePresetPreview(slot.PreviewFile);
             RefreshPersistentSlotControls();
         }
         catch (Exception ex)

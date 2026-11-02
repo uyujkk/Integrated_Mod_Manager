@@ -171,6 +171,7 @@ public sealed partial class MainWindow
             _configurationProfiles.Remove(profile);
             _selectedConfigurationProfileId = null;
             SaveShellConfig();
+            DeletePresetPreview(profile.PreviewFile);
             RefreshConfigurationProfiles();
         }
         catch (Exception ex)

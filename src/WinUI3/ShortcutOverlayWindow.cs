@@ -17,6 +17,7 @@ internal sealed class ShortcutOverlayWindow : Window
     private readonly nint handle;
     private readonly SubclassProc callback;
     private bool keyboardInputEnabled;
+    private bool hiddenForCapture;
     // Only the background carries the opacity; text and buttons stay fully opaque.
     private readonly SolidColorBrush background = new(Color.FromArgb(255, 28, 31, 38));
 
@@ -76,6 +77,21 @@ internal sealed class ShortcutOverlayWindow : Window
 
     public void ShowPanel() => AppWindow.Show(false);
 
+    // Only for the moment of a capture: a lasting exclusion would also hide the overlay from recordings and streams.
+    public void BeginCaptureExclusion()
+    {
+        if (OperatingSystem.IsWindowsVersionAtLeast(10, 0, 19041) && SetWindowDisplayAffinity(handle, 0x11)) return; // WDA_EXCLUDEFROMCAPTURE
+        hiddenForCapture = true;
+        AppWindow.Hide();
+    }
+
+    public void EndCaptureExclusion()
+    {
+        if (!hiddenForCapture) { SetWindowDisplayAffinity(handle, 0); return; }
+        hiddenForCapture = false;
+        ShowPanel();
+    }
+
     // Naming a preset needs real keyboard/IME focus; ordinary shortcut clicks must not take it.
     public void SetKeyboardInputEnabled(bool enabled)
     {
@@ -126,6 +142,7 @@ internal sealed class ShortcutOverlayWindow : Window
     [DllImport("CoreMessaging.dll")] private static extern int CreateDispatcherQueueController(DispatcherQueueOptions options, out nint controller);
     private delegate nint SubclassProc(nint hwnd, uint message, nuint wParam, nint lParam, nuint id, nuint data);
     [DllImport("user32.dll")] private static extern uint GetDpiForWindow(nint hwnd);
+    [DllImport("user32.dll")] private static extern bool SetWindowDisplayAffinity(nint hwnd, uint affinity);
     [DllImport("user32.dll", EntryPoint = "GetWindowLongPtrW")] private static extern nint GetWindowLongPtr(nint hwnd, int index);
     [DllImport("user32.dll", EntryPoint = "SetWindowLongPtrW")] private static extern nint SetWindowLongPtr(nint hwnd, int index, nint value);
     [DllImport("comctl32.dll")] private static extern bool SetWindowSubclass(nint hwnd, SubclassProc proc, nuint id, nuint data);
