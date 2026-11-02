@@ -3,6 +3,7 @@
     <TargetFramework>net8.0</TargetFramework>
   </PropertyGroup>
   <ItemGroup>
+    <InternalsVisibleTo Include="IntegratedModManager.Core.Tests" />
     <EmbeddedResource Include="Endfield\endfield-characters.json" LogicalName="IntegratedModManager.Core.Endfield.endfield-characters.json" />
   </ItemGroup>
 </Project>

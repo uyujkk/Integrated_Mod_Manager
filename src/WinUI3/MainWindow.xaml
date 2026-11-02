@@ -1874,6 +1874,21 @@
                                         <Button x:Name="CopyFeedbackGroupButton" Grid.Column="2" Click="OnCopyFeedbackGroupClicked" MinHeight="36" Style="{StaticResource SecondaryButtonStyle}" />
                                     </Grid>
                                 </Border>
+                                <Border Style="{StaticResource InsetBorderStyle}" Padding="12,10">
+                                    <Grid ColumnSpacing="12">
+                                        <Grid.ColumnDefinitions>
+                                            <ColumnDefinition Width="Auto" />
+                                            <ColumnDefinition Width="*" />
+                                            <ColumnDefinition Width="Auto" />
+                                        </Grid.ColumnDefinitions>
+                                        <FontIcon Glyph="&#xE8BD;" FontSize="18" VerticalAlignment="Center" />
+                                        <StackPanel Grid.Column="1" Spacing="2" VerticalAlignment="Center">
+                                            <TextBlock x:Name="FeedbackDiscordTitleTextBlock" FontWeight="SemiBold" TextWrapping="WrapWholeWords" />
+                                            <TextBlock x:Name="FeedbackDiscordHintTextBlock" Style="{StaticResource CaptionTextStyle}" TextWrapping="Wrap" />
+                                        </StackPanel>
+                                        <Button x:Name="OpenFeedbackDiscordButton" Grid.Column="2" Click="OnOpenFeedbackDiscordClicked" MinHeight="36" Style="{StaticResource SecondaryButtonStyle}" />
+                                    </Grid>
+                                </Border>
                                 <TextBlock x:Name="DiagnosticsStatusTextBlock" Style="{StaticResource CaptionTextStyle}" TextWrapping="Wrap" />
                             </StackPanel>
                         </Border>

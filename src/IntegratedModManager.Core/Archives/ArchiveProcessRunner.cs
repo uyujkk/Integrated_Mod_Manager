@@ -10,7 +10,12 @@ public static class ArchiveProcessRunner
     private const int CleanupTimeoutMilliseconds = 2000;
 
     public static (int ExitCode, string Output, string Error) Run(
-        ProcessStartInfo startInfo, TimeSpan timeout)
+        ProcessStartInfo startInfo, TimeSpan timeout) => Run(startInfo, timeout, Task.CompletedTask);
+
+    // The deadline starts counting once deadlineStart completes. Tests use this so a slow
+    // process start cannot use up a timeout that is meant to cover an already running tool.
+    internal static (int ExitCode, string Output, string Error) Run(
+        ProcessStartInfo startInfo, TimeSpan timeout, Task deadlineStart)
     {
         ArgumentNullException.ThrowIfNull(startInfo);
         if (timeout <= TimeSpan.Zero || timeout.TotalMilliseconds > uint.MaxValue - 1)
@@ -39,7 +44,7 @@ public static class ArchiveProcessRunner
         {
             // A child can keep a pipe open even after the original tool has exited.
             // Applying the deadline to the whole operation also bounds that case.
-            completion.WaitAsync(timeout).GetAwaiter().GetResult();
+            WaitWithDeadlineAsync(completion, timeout, deadlineStart).GetAwaiter().GetResult();
             return (process.ExitCode, output.GetAwaiter().GetResult(), error.GetAwaiter().GetResult());
         }
         catch (TimeoutException)
@@ -77,5 +82,11 @@ public static class ArchiveProcessRunner
                 $"Archive tool '{startInfo.FileName}' exceeded its timeout of {timeout.TotalSeconds:g} seconds.{cleanupDetails}",
                 cleanupFailure);
         }
+    }
+
+    private static async Task WaitWithDeadlineAsync(Task completion, TimeSpan timeout, Task deadlineStart)
+    {
+        await Task.WhenAny(completion, deadlineStart).ConfigureAwait(false);
+        await completion.WaitAsync(timeout).ConfigureAwait(false);
     }
 }

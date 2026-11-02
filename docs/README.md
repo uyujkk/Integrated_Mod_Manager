@@ -67,6 +67,7 @@ This directory contains the usage, release, development, and research documentat
 - [v4.1.0 验证记录 / Verification Record](./verification/v4.1.0.md)
 - [v4.0.0 验证记录 / Verification Record](./verification/v4.0.0.md)
 - [测试与构建说明 / Testing and Build Guide](./development/TESTING.md)
+- [后续路线图 / Roadmap](./development/Roadmap.md)
 - [分步优化路线 / Incremental Optimization](./development/Optimization-Roadmap.md)
 - [回归检查清单 / Regression Checklist](./development/Regression-Checklist.md)
 - [仓库扫描优化本地验证 / Local Repository Scan Verification](./verification/repository-scan-opt1-20261005.md)
