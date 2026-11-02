@@ -1,3 +1,6 @@
+using System.Text.Json;
+using System.Text.Json.Serialization;
+
 namespace ModFolderCopier.WinUI;
 
 public sealed class WorkspaceRepository
@@ -51,4 +54,7 @@ public sealed class WorkspaceRepository
 
     // Character folder name -> catalog character key, for folders whose name does not match a character.
     public Dictionary<string, string> CharacterAvatarBindings { get; set; } = new(StringComparer.OrdinalIgnoreCase);
+
+    [JsonExtensionData]
+    public Dictionary<string, JsonElement>? ExtensionData { get; set; }
 }

@@ -97,6 +97,7 @@ public sealed partial class MainWindow : Window
 
     private readonly string _configPath = Path.Combine(AppContext.BaseDirectory, "config.ini");
     private readonly string _shellConfigPath = Path.Combine(AppContext.BaseDirectory, "beta-shell.json");
+    private Dictionary<string, System.Text.Json.JsonElement>? _shellConfigExtensionData;
     private readonly string _onlineImageCachePath = Path.Combine(AppContext.BaseDirectory, "cache", "online-images");
     private readonly string _onlinePageCachePath = Path.Combine(AppContext.BaseDirectory, "cache", "online-pages");
     private readonly string _onlineDetailsCachePath = Path.Combine(AppContext.BaseDirectory, "cache", "online-details");

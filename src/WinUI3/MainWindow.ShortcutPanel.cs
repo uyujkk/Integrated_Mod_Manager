@@ -318,6 +318,7 @@ public sealed partial class MainWindow
         overlay.Children.Add(BuildOverlayTextColorButton());
         overlay.Children.Add(ShortcutGroupLabel(T("ShortcutPanel.BehaviorGroup")));
         AddOverlaySlotSwitchSetting(overlay);
+        AddPresetPreviewSetting(overlay);
         overlay.Children.Add(new TextBlock
         {
             Text = T("ShortcutPanel.TheOverlaySupportsWindowedBorderlessMode"),
@@ -1034,12 +1035,20 @@ public sealed partial class MainWindow
         SetCombinationBusy(true);
         try
         {
+            CharacterFrame? preview = await CapturePresetPreviewAsync();
             // Without a d3dx_user.ini there is no loader state to flush: save the Mod combination alone, as before.
             if (includeState && !await PrepareOverlayCaptureAsync(userIni!)) return;
             (int Mods, int Parameters)? saved = await CaptureCombinationProfileAsync(repository, name, null, includeState, userIni ?? string.Empty,
                 () => Task.FromResult(false));
+            string previewNote = string.Empty;
+            if (saved is not null && _configurationProfiles.FirstOrDefault(item => item.Id == _selectedConfigurationProfileId) is { } profile)
+            {
+                profile.PreviewFile = await StorePresetPreviewAsync(repository.Id, profile.Id, preview);
+                if (profile.PreviewFile is not null) SaveShellConfig();
+                previewNote = PresetPreviewNote(profile.PreviewFile);
+            }
             _shortcutStatus.Text = saved is (int mods, int parameters)
-                ? T("ShortcutPanel.SavedPresetModsParameters", name, mods, parameters)
+                ? T("ShortcutPanel.SavedPresetModsParameters", name, mods, parameters) + previewNote
                 : T("ShortcutPanel.NoEnabledModsThePresetWas");
         }
         catch (Exception ex)

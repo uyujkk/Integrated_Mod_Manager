@@ -1,3 +1,5 @@
+using System.Text.Json;
+using System.Text.Json.Serialization;
 using IntegratedModManager.Core.Repository;
 
 namespace ModFolderCopier.WinUI;
@@ -13,6 +15,7 @@ public sealed class BetaShellConfig
     public bool? ShortcutHideUnsupported { get; set; }
     public string? ShortcutOverlayTextColor { get; set; }
     public bool? OverlaySlotSwitchEnabled { get; set; }
+    public bool CapturePresetPreviews { get; set; }
     public Dictionary<string, LocalLibraryState>? LocalLibraries { get; set; }
     public OnlineWorkspacePreferences? OnlinePreferences { get; set; }
 
@@ -84,4 +87,8 @@ public sealed class BetaShellConfig
     public int? WindowHeight { get; set; }
 
     public List<WorkspaceRepository> Repositories { get; set; } = [];
+
+    // Fields written by a newer version survive being saved by this one, so going back and forth loses nothing.
+    [JsonExtensionData]
+    public Dictionary<string, JsonElement>? ExtensionData { get; set; }
 }
