@@ -6,10 +6,12 @@ namespace IntegratedModManager.Core.Tests;
 
 public sealed class ArchiveProcessRunnerTests
 {
-    // Windows CI can take several seconds to start PowerShell. Only the parent is PowerShell:
-    // it records its own PID and the PID of a lightweight child it starts, so both markers
-    // exist once one PowerShell has started instead of waiting for a second nested one.
-    private static readonly TimeSpan ProcessTreeTimeout = TimeSpan.FromSeconds(20);
+    // Windows CI has taken more than 20 s to start PowerShell and its child, so a deadline that
+    // includes the start fails at random. The timeout tests start the deadline only once the
+    // fixture is in the state under test, which also keeps them short.
+    private static readonly TimeSpan ProcessTreeTimeout = TimeSpan.FromSeconds(1);
+    private static readonly TimeSpan FixtureStartLimit = TimeSpan.FromMinutes(2);
+    private static readonly TimeSpan ProcessStartAllowance = TimeSpan.FromMinutes(1);
 
     [Theory]
     [InlineData(0)]
@@ -27,7 +29,7 @@ public sealed class ArchiveProcessRunnerTests
             "[Console]::Out.Write(('o' * 131072) + $inputText); " +
             $"[Console]::Error.Write('e' * 131072); exit {exitCode}");
 
-        var result = ArchiveProcessRunner.Run(startInfo, TimeSpan.FromSeconds(20));
+        var result = ArchiveProcessRunner.Run(startInfo, ProcessStartAllowance);
 
         Assert.Equal(exitCode, result.ExitCode);
         Assert.Equal(new string('o', 131072), result.Output);
@@ -48,17 +50,17 @@ public sealed class ArchiveProcessRunnerTests
             $"[IO.File]::WriteAllText('{processes.ChildIdPath}', [string]$child.Id); " +
             "Start-Sleep -Seconds 600";
         ProcessStartInfo startInfo = CreatePowerShellStartInfo(script);
-        var stopwatch = Stopwatch.StartNew();
+        var sinceDeadlineStart = new Stopwatch();
 
         var exception = Assert.Throws<TimeoutException>(() =>
         {
-            var result = ArchiveProcessRunner.Run(startInfo, ProcessTreeTimeout);
+            var result = ArchiveProcessRunner.Run(startInfo, ProcessTreeTimeout, processes.WaitForChildAsync(sinceDeadlineStart));
             Assert.Fail($"The timeout fixture exited early: {result.ExitCode}. {result.Error} {result.Output}");
         });
 
         Assert.Contains(startInfo.FileName, exception.Message);
         Assert.Null(exception.InnerException);
-        Assert.InRange(stopwatch.Elapsed, TimeSpan.FromSeconds(18), TimeSpan.FromSeconds(35));
+        AssertDeadlineHonored(sinceDeadlineStart);
         processes.AssertBothExited();
     }
 
@@ -79,15 +81,17 @@ public sealed class ArchiveProcessRunnerTests
             "$info.UseShellExecute = $false; $info.CreateNoWindow = $true; $info.RedirectStandardInput = $true; " +
             "$child = [Diagnostics.Process]::Start($info); $child.StandardInput.Close(); " +
             $"[IO.File]::WriteAllText('{processes.ChildIdPath}', [string]$child.Id); exit 0";
-        var stopwatch = Stopwatch.StartNew();
+        var sinceDeadlineStart = new Stopwatch();
 
         var exception = Assert.Throws<TimeoutException>(() =>
         {
-            var result = ArchiveProcessRunner.Run(CreatePowerShellStartInfo(script), ProcessTreeTimeout);
+            // The parent must be gone when the deadline passes: that is the case under test.
+            var result = ArchiveProcessRunner.Run(CreatePowerShellStartInfo(script), ProcessTreeTimeout,
+                processes.WaitForChildThenParentExitAsync(sinceDeadlineStart));
             Assert.Fail($"The timeout fixture exited early: {result.ExitCode}. {result.Error} {result.Output}");
         });
 
-        Assert.InRange(stopwatch.Elapsed, TimeSpan.FromSeconds(18), TimeSpan.FromSeconds(35));
+        AssertDeadlineHonored(sinceDeadlineStart);
         Assert.NotNull(exception.InnerException);
         Assert.Contains("descendant termination could not be confirmed", exception.Message);
         Assert.True(File.Exists(processes.ChildIdPath), "The child must start before the timeout test can be meaningful.");
@@ -102,6 +106,12 @@ public sealed class ArchiveProcessRunnerTests
     {
         Assert.Throws<ArgumentOutOfRangeException>(() => ArchiveProcessRunner.Run(
             new ProcessStartInfo("must-not-start"), TimeSpan.FromMilliseconds(milliseconds)));
+    }
+
+    private static void AssertDeadlineHonored(Stopwatch sinceDeadlineStart)
+    {
+        Assert.True(sinceDeadlineStart.IsRunning, "The deadline never started.");
+        Assert.InRange(sinceDeadlineStart.Elapsed, ProcessTreeTimeout - TimeSpan.FromMilliseconds(100), ProcessStartAllowance);
     }
 
     private static string PowerShellPath => Path.Combine(
@@ -140,13 +150,61 @@ public sealed class ArchiveProcessRunnerTests
         public string ParentIdPath => Path.Combine(_directory, "parent.pid");
         public string ChildIdPath => Path.Combine(_directory, "child.pid");
 
+        // If the marker never appears the deadline starts anyway and the test's own checks fail.
+        public async Task WaitForChildAsync(Stopwatch sinceDeadlineStart)
+        {
+            await WaitForChildMarkerAsync();
+            sinceDeadlineStart.Start();
+        }
+
+        public async Task WaitForChildThenParentExitAsync(Stopwatch sinceDeadlineStart)
+        {
+            await WaitForChildMarkerAsync();
+            using Process? parent = FindProcess(ParentIdPath);
+            if (parent is not null)
+            {
+                using var limit = new CancellationTokenSource(FixtureStartLimit);
+                try
+                {
+                    await parent.WaitForExitAsync(limit.Token);
+                }
+                catch (OperationCanceledException)
+                {
+                    // The test's message check reports a parent that did not exit.
+                }
+            }
+            sinceDeadlineStart.Start();
+        }
+
+        private async Task WaitForChildMarkerAsync()
+        {
+            var waited = Stopwatch.StartNew();
+            while (!HasPid(ChildIdPath) && waited.Elapsed < FixtureStartLimit)
+            {
+                await Task.Delay(50);
+            }
+        }
+
+        // WriteAllText creates the file before filling it, so an empty marker is not ready yet.
+        private static bool HasPid(string path)
+        {
+            try
+            {
+                return File.Exists(path) && int.TryParse(File.ReadAllText(path), out _);
+            }
+            catch (IOException)
+            {
+                return false;
+            }
+        }
+
         public void AssertBothExited()
         {
             foreach (string path in new[] { ParentIdPath, ChildIdPath })
             {
-                Assert.True(File.Exists(path), "Both test processes must start before the timeout.");
+                Assert.True(File.Exists(path), "Both test processes must start before the deadline.");
                 using Process? process = FindProcess(path);
-                Assert.True(process is null || process.WaitForExit(2000), $"Test process in {path} survived termination.");
+                Assert.True(process is null || process.WaitForExit(10000), $"Test process in {path} survived termination.");
             }
         }
 

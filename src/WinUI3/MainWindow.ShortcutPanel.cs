@@ -23,6 +23,7 @@ public sealed partial class MainWindow
     private ComboBox? _shortcutTargetPicker;
     private Grid? _shortcutButtons;
     private TextBlock? _shortcutStatus;
+    private Button? _shortcutOpenIniButton;
     private ToggleSwitch? _shortcutEnabledToggle;
     private NumberBox? _shortcutHoldDuration;
     private NumberBox? _shortcutTapDuration;
@@ -233,6 +234,16 @@ public sealed partial class MainWindow
         bindingsTitle.Children.Add(hideUnsupported);
         var bindings = new StackPanel { Spacing = 10 };
         bindings.Children.Add(bindingsTitle);
+        var readOnlyHint = new Grid { ColumnSpacing = 12 };
+        readOnlyHint.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(1, GridUnitType.Star) });
+        readOnlyHint.ColumnDefinitions.Add(new ColumnDefinition { Width = GridLength.Auto });
+        readOnlyHint.Children.Add(new TextBlock { Text = T("ShortcutPanel.BindingsReadOnlyHint"), TextWrapping = TextWrapping.Wrap, VerticalAlignment = VerticalAlignment.Center, Style = (Style)Application.Current.Resources["CaptionTextStyle"] });
+        _shortcutOpenIniButton = ShortcutButton(T("ShortcutPanel.OpenIni"), ShowShortcutIniFile);
+        _shortcutOpenIniButton.IsEnabled = false;
+        _shortcutOpenIniButton.VerticalAlignment = VerticalAlignment.Center;
+        Grid.SetColumn(_shortcutOpenIniButton, 1);
+        readOnlyHint.Children.Add(_shortcutOpenIniButton);
+        bindings.Children.Add(readOnlyHint);
         bindings.Children.Add(_shortcutStatus);
         bindings.Children.Add(_shortcutHiddenNote);
         bindings.Children.Add(_shortcutButtons);
@@ -256,9 +267,10 @@ public sealed partial class MainWindow
         hotkeySettings.Children.Add(modifiers);
         hotkeySettings.Children.Add(keyPicker);
         overlay.Children.Add(hotkeySettings);
-        var hotkeyActions = new StackPanel { Orientation = Orientation.Horizontal, Spacing = 8 };
-        hotkeyActions.Children.Add(ShortcutButton(T("Common.Apply"), () =>
+        bool revertingHotkeyChoice = false;
+        void ApplyHotkeyChoice()
         {
+            if (revertingHotkeyChoice) return;
             uint mod = (uint)((ComboBoxItem)modifiers.SelectedItem).Tag;
             uint key = (uint)((ComboBoxItem)keyPicker.SelectedItem).Tag;
             if (_shortcutHotkeyRegistered && mod == _shortcutPanelHotkeyModifiers && key == _shortcutPanelHotkeyKey) return;
@@ -273,10 +285,20 @@ public sealed partial class MainWindow
             }
             else
             {
+                // The pickers must show the hotkey that is still in effect.
+                revertingHotkeyChoice = true;
+                modifiers.SelectedItem = modifiers.Items.Cast<ComboBoxItem>().First(i => (uint)i.Tag == _shortcutPanelHotkeyModifiers);
+                keyPicker.SelectedItem = keyPicker.Items.Cast<ComboBoxItem>().First(i => (uint)i.Tag == _shortcutPanelHotkeyKey);
+                revertingHotkeyChoice = false;
                 _shortcutHotkeyStatus!.Text = T("ShortcutPanel.HotkeyUnavailablePreviousSettingsRetainedChoose");
                 _shortcutHotkeyStatus.Visibility = Visibility.Visible;
             }
-        }));
+        }
+        // A choice takes effect at once; Apply remains to turn the hotkey back on after Disable.
+        modifiers.SelectionChanged += (_, _) => ApplyHotkeyChoice();
+        keyPicker.SelectionChanged += (_, _) => ApplyHotkeyChoice();
+        var hotkeyActions = new StackPanel { Orientation = Orientation.Horizontal, Spacing = 8 };
+        hotkeyActions.Children.Add(ShortcutButton(T("Common.Apply"), ApplyHotkeyChoice));
         hotkeyActions.Children.Add(ShortcutButton(T("ShortcutPanel.Disable"), () =>
         {
             _shortcutPanelHotkey?.Disable();
@@ -574,8 +596,30 @@ public sealed partial class MainWindow
         ? _shortcutDetected.Where(s => ShortcutKeyPlan.TryCreate(s.RawKey, out _)).ToArray()
         : _shortcutDetected.ToArray();
 
+    // Selects the INI of the first binding in File Explorer; the panel itself never edits Mod files.
+    private void ShowShortcutIniFile()
+    {
+        if (_shortcutDetected.Count == 0 || string.IsNullOrEmpty(_shortcutLoadedPath)) return;
+        string sourceFile = _shortcutDetected[0].SourceFile;
+        try
+        {
+            string? path = Directory.EnumerateFiles(_shortcutLoadedPath, sourceFile, new EnumerationOptions
+            {
+                RecurseSubdirectories = true, IgnoreInaccessible = true, AttributesToSkip = FileAttributes.ReparsePoint,
+                MatchCasing = MatchCasing.CaseInsensitive
+            }).OrderBy(file => file, StringComparer.OrdinalIgnoreCase).FirstOrDefault();
+            OpenFileLocation(path, sourceFile);
+        }
+        catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
+        {
+            LogApplicationIssue("Show shortcut INI file", ex);
+            _shortcutStatus!.Text = ex.Message;
+        }
+    }
+
     private void RenderShortcutButtons()
     {
+        if (_shortcutOpenIniButton is not null) _shortcutOpenIniButton.IsEnabled = _shortcutDetected.Count > 0;
         RefreshShortcutOverlay(bindingsChanged: true);
         if (_shortcutButtons is null || _currentPrimarySection != PrimarySection.Shortcuts) return;
         DetectedModShortcut[] visible = VisibleShortcuts();

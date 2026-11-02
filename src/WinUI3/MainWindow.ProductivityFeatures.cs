@@ -563,10 +563,18 @@ public sealed partial class MainWindow
         FeedbackGroupNumberTextBlock.Text = T("Settings.FeedbackGroupNumber", FeedbackQqGroup);
         CopyFeedbackGroupButton.Content = T("Settings.CopyGroupNumber");
         AutomationProperties.SetName(CopyFeedbackGroupButton, T("Settings.CopyGroupNumber") + " " + FeedbackQqGroup);
+        FeedbackDiscordTitleTextBlock.Text = T("Settings.FeedbackDiscord");
+        FeedbackDiscordHintTextBlock.Text = T("Settings.FeedbackDiscordHint");
+        OpenFeedbackDiscordButton.Content = T("Settings.OpenDiscord");
+        AutomationProperties.SetName(OpenFeedbackDiscordButton, T("Settings.OpenDiscord"));
     }
 
     // The QQ group users join to report problems and talk about the app.
     private const string FeedbackQqGroup = "1041384622";
+    private const string FeedbackDiscordUrl = "https://discord.gg/G9nszEQgrV";
+
+    private async void OnOpenFeedbackDiscordClicked(object sender, RoutedEventArgs e) =>
+        await RunUiActionAsync("Open feedback Discord", () => OpenExternalUrlAsync(FeedbackDiscordUrl, T("Settings.FeedbackDiscord")));
 
     private void OnCopyFeedbackGroupClicked(object sender, RoutedEventArgs e)
     {

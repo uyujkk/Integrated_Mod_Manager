@@ -65,6 +65,7 @@ Bindings that can't be sent show the reason and the original text. You can also 
 
 - Parsed with 3DMigoto rules: the last key triggers and earlier keys must be held (for example `VK_RETURN VK_UP`); `no_` can exclude any key. Letters, digits, F1–F24, the numeric keypad, navigation keys, common punctuation keys and Ctrl/Alt/Shift combinations are supported.
 - Reads enabled INI files and skips `DISABLED` files and folders. Read-only; Mod INI files are never changed.
+- To change a Mod's key, click **Show INI file**, edit the `key =` line and press F10 in game. In copy mode, edit the deployed copy as well. Updating the Mod replaces the edit. State slots hold parameter values, so restoring one never changes keys, and the overlay hotkey (Ctrl + Alt + K) only shows and hides the overlay.
 - Set in the **Sending** module: sends scan codes by default, with a virtual-key mode as an alternative. Tap duration is 200 ms by default and can be set from 100 to 2000 ms; hold-type bindings use a separate duration. In scan-code mode the keypad digits need Num Lock on; use Toggle Num Lock on the page.
 - Before sending, the target process and window are checked, and the manager makes sure no other key is held. Keys pressed by the panel are released when it finishes, loses focus or closes. Keys are sent only when you click; character detection never triggers a shortcut by itself.
 - One key may trigger several Mods; the panel can't work around key conflicts in the loader. INI conditions are shown for reference and are not assumed to hold in the game.

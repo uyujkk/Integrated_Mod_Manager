@@ -71,6 +71,22 @@ Core tests verify 100-Mod/100-value plans, encoding preservation, strict matchin
 
 ## Real-environment checks / 真实环境检查
 
+### 4.6.2 maintainer checklist / 4.6.2 维护者清单
+
+Tick these while playing; tests and fixtures cannot prove the first four. Record results in the release's verification file.
+试玩时逐项核对；前四项无法用测试或夹具证明。结果写入对应版本的验证记录。
+
+| Check / 操作 | Expected / 预期 | Status / 状态 |
+| --- | --- | --- |
+| Overlay save in a real game, including the write timeout / 真实游戏中浮窗保存，包括写入超时 | F10 is sent, the save waits for the write; after a timeout, reading the existing file works / 发送 F10 并等待写入；超时后可以选择读取现有文件 | Pending / 待验证 |
+| Key sending and F10 hot apply in a real game / 真实游戏中的按键发送和 F10 热应用 | Slot values show in game; decides whether hot apply stays "experimental" / 槽位的值在游戏里生效；决定热应用是否继续标记“实验” | Pending / 待验证 |
+| Import a variant file really exported by another tool / 导入其他工具真实导出的变体文件 | Slots match the file; the "unverified" label can go / 槽位与文件一致，可以去掉“待验证”标记 | Pending / 待验证 |
+| "Default" slot against real Mod declarations / “默认”槽位与真实 Mod 声明 | Keys and values match the Mod's defaults / 键和值与 Mod 默认值一致 | Pending / 待验证 |
+| Updates navigation badge, Shortcuts privilege note / “更新”导航徽标、快捷键页权限说明 | Correct on a fixture screenshot / 用夹具截图确认 | Pending / 待验证 |
+| Dashboard chips to the workspace, English and light theme / 英文和浅色主题下仪表盘芯片跳转到工作区 | Correct on a fixture screenshot / 用夹具截图确认 | Pending / 待验证 |
+| Real preview installer through the update settings write-back / 真实预览版安装包走一遍更新设置写回 | Settings written back as designed / 设置按设计写回 | Pending / 待验证 |
+| Shortcuts hint and Show INI file; overlay hotkey applies on selection; Settings Discord button / 快捷键页提示和“显示 INI 文件”；浮窗快捷键选择后立即生效；设置页 Discord 按钮 | Each behaves as described, in both languages / 双语言下行为都符合说明 | Pending / 待验证 |
+
 ## Combination bundle native checks (opt9–opt11, partial) / 组合包窗口检查（部分完成）
 
 Use only the independently packaged app and its mock `TestData`. The demo ZIP has 8 Mods/16 values and no game assets. Set `ImportRepository`, `ImportLoader/Mods` and `ImportLoader/d3dx_user.ini` explicitly before import.
