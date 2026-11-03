@@ -35,7 +35,7 @@ internal sealed class ShortcutInputService : IDisposable
                 GetWindowText(hwnd, title, title.Capacity);
                 result.Add(new(hwnd, pid, process.StartTime.ToUniversalTime().Ticks, $"{title} · {process.ProcessName} ({pid})", process.ProcessName));
             }
-            catch (Exception ex) when (ex is ArgumentException or InvalidOperationException or System.ComponentModel.Win32Exception) { }
+            catch (Exception ex) when (ex is ArgumentException or InvalidOperationException or System.ComponentModel.Win32Exception) { } // The process ended or cannot be read: not a target.
             return result.Count < 200;
         }, 0);
         return result.OrderBy(t => t.Label, StringComparer.CurrentCultureIgnoreCase).ToArray();

@@ -237,6 +237,13 @@ internal sealed class ShortcutOverlayWindow : Window
         return done.Task;
     }
 
+    /// <summary>Whether the window can be left out of a capture without hiding it from the user.</summary>
+    public static bool CanExcludeFromCapture => OperatingSystem.IsWindowsVersionAtLeast(10, 0, 19041);
+
+    public bool ShowsLayer => activeLayer is not null;
+
+    public PixelRect? ClientArea => CharacterScreenCapture.ClientScreenRect(handle);
+
     // Only for the moment of a capture: a lasting exclusion would also hide the overlay from recordings and streams.
     public void BeginCaptureExclusion()
     {

@@ -19,6 +19,7 @@ public sealed class BetaShellConfig
     public bool CapturePresetPreviews { get; set; }
     public bool OverlayCompactSlots { get; set; }
     public bool OverlayCompactView { get; set; }
+    public bool OverlayAutoContrast { get; set; }
     /// <summary>Save menu-state variables in slots as well (see TransientVariablePolicy). Off by default.</summary>
     public bool KeepMenuStateVariables { get; set; }
     /// <summary>d3dx.ini path -> its settings_auto_save_interval before the manager first changed it.</summary>

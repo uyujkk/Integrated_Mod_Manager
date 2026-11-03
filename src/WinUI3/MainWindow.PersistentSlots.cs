@@ -335,10 +335,8 @@ public sealed partial class MainWindow
                 slot.ActivatedAtUtc = DateTimeOffset.UtcNow;
                 repository.PersistentUserIniPath = userIni;
                 SaveShellConfig();
-                resultText = L($"“{slot.Name}”已逐项核对：修改 {plan.ChangedCount}，补入 {plan.AddedCount}，已一致 {plan.UnchangedCount}。\n"
-                    + (backup is null ? "无需写入，没有创建新备份。" : $"备份：{backup}") + "\n请重新启动加载器和游戏验证效果。",
-                    $"'{slot.Name}' verified: changed {plan.ChangedCount}, added {plan.AddedCount}, already equal {plan.UnchangedCount}.\n"
-                    + (backup is null ? "No write was needed; no new backup created." : $"Backup: {backup}") + "\nRestart the loader and game to verify the result.");
+                resultText = T("PersistentSlots.RestoreVerified", slot.Name, plan.ChangedCount, plan.AddedCount, plan.UnchangedCount) + "\n"
+                    + (backup is null ? T("PersistentSlots.NoNewBackup") : T("PersistentSlots.BackupAt", backup)) + "\n" + T("PersistentSlots.RestartToVerify");
                 ShowAppNotification($"已恢复“{slot.Name}”的 {plan.Values.Count} 个加载器变量，并重新读取核对。请重启游戏验证效果。",
                     $"Restored and verified {plan.Values.Count} loader variables for '{slot.Name}'. Restart the game to verify.");
                 if (hotReload.IsChecked == true)

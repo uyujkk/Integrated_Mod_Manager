@@ -125,6 +125,7 @@ public sealed class EndfieldLaunchService
             }
             catch (Exception ex) when (ex is IOException or JsonException or UnauthorizedAccessException)
             {
+                // An unreadable or damaged bridge file has nothing to import; the manager's own settings stay as they are.
             }
         }
 

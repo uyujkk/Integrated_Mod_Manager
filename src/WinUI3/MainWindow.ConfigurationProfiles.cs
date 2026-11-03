@@ -73,9 +73,8 @@ public sealed partial class MainWindow
             ? userIni : TryGetDefaultPersistentIniPath(GetSelectedRepository()) ?? string.Empty;
         ConfigurationProfileSummaryTextBlock.Text = selected is null
             ? T("ConfigurationProfiles.ProfilesOnlyManageModsRecognizedIn")
-            : L(
-                $"{selected.Name}：{selected.ModRelativePaths.Count} 个 Mod · {selected.PersistentStates.Sum(state => state.Values.Count)} 个参数。" + (selected.IncludesPersistentState ? "恢复组合后回写参数；请先退出游戏/加载器。" : "旧方案/仅组合，不修改加载器参数。"),
-                $"{selected.Name}: {selected.ModRelativePaths.Count} mods · {selected.PersistentStates.Sum(state => state.Values.Count)} parameters. " + (selected.IncludesPersistentState ? "Restores deployment then state. Close game/loader first." : "Legacy/set-only profile; loader state is unchanged."));
+            : T("ConfigurationProfiles.Summary", selected.Name, selected.ModRelativePaths.Count, selected.PersistentStates.Sum(state => state.Values.Count))
+                + (selected.IncludesPersistentState ? T("ConfigurationProfiles.SummaryWithState") : T("ConfigurationProfiles.SummarySetOnly"));
 
         RollbackLastInstallButton.IsEnabled = !string.IsNullOrWhiteSpace(_lastInstallTransactionPath)
             && Directory.Exists(_lastInstallTransactionPath);

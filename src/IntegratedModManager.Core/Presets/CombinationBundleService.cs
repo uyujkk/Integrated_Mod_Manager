@@ -369,7 +369,7 @@ public static class CombinationBundleService
                     throw new InvalidDataException("Invalid or duplicated bundle state.");
         }
     }
-    private static void RejectDuplicateJson(JsonElement element)
+    internal static void RejectDuplicateJson(JsonElement element)
     {
         if (element.ValueKind == JsonValueKind.Object)
         {

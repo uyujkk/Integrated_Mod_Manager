@@ -967,9 +967,9 @@ public sealed partial class MainWindow
         }
     }
 
-    private async void OnOnlineDetailPreviousClicked(object sender, RoutedEventArgs e) => await ShowAdjacentOnlineDetailAsync(-1);
+    private async void OnOnlineDetailPreviousClicked(object sender, RoutedEventArgs e) => await RunUiActionAsync("Previous online detail", () => ShowAdjacentOnlineDetailAsync(-1));
 
-    private async void OnOnlineDetailNextClicked(object sender, RoutedEventArgs e) => await ShowAdjacentOnlineDetailAsync(1);
+    private async void OnOnlineDetailNextClicked(object sender, RoutedEventArgs e) => await RunUiActionAsync("Next online detail", () => ShowAdjacentOnlineDetailAsync(1));
 
     private async Task ShowAdjacentOnlineDetailAsync(int step)
     {

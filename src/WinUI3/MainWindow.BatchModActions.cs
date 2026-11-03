@@ -1,4 +1,5 @@
 using IntegratedModManager.Core.Deployment;
+using IntegratedModManager.Core.Presets;
 using Microsoft.UI.Xaml;
 using Microsoft.UI.Xaml.Controls;
 
@@ -21,6 +22,7 @@ public sealed partial class MainWindow
         action.Items.Add(T("BatchMods.AddToPreset"));
         action.Items.Add(T("BatchMods.CopyToFolder"));
         action.Items.Add(T("BatchMods.Delete"));
+        action.Items.Add(T("BatchMods.ExportBundle"));
         action.SelectedIndex = 0;
         ModConfigurationProfile[] profiles = [.. GetCurrentRepositoryProfiles()];
         var profile = new ComboBox { Header = T("BatchMods.Preset"), HorizontalAlignment = HorizontalAlignment.Stretch, PlaceholderText = T("ConfigurationProfiles.NoProfilesForThisRepository") };
@@ -58,8 +60,14 @@ public sealed partial class MainWindow
             case 1:
                 await CopyModsToFolderAsync(chosen);
                 break;
-            default:
+            case 2:
                 await DeleteModsAsync(repository, chosen);
+                break;
+            default:
+                // Files only: loader values belong to presets and are exported from there.
+                await ExportModsAsBundleAsync(repository.SourcePath, T("BatchMods.BundleName", chosen.Length), repository.OnlineGameName, false,
+                    chosen.Select(mod => new CombinationPresetState(Path.GetRelativePath(repository.SourcePath, mod.Path), [])).ToArray(),
+                    T("BatchMods.ExportBundleConfirm", chosen.Length));
                 break;
         }
     }

@@ -313,6 +313,7 @@ public sealed partial class MainWindow
         UpdateShortcutHotkeyStatus();
         overlay.Children.Add(ShortcutGroupLabel(T("ShortcutPanel.AppearanceGroup")));
         overlay.Children.Add(CreateOverlayAppearancePresetRow());
+        AddOverlayAutoContrastSetting(overlay);
         _shortcutOpacitySlider = CreateOverlayOpacitySlider(T("ShortcutPanel.OverlayOpacity"));
         overlay.Children.Add(_shortcutOpacitySlider);
         _overlayElementSlider = CreateOverlayElementOpacitySlider();
@@ -677,7 +678,15 @@ public sealed partial class MainWindow
             ? Color.FromArgb(255, (byte)(rgb >> 16), (byte)(rgb >> 8), (byte)rgb)
             : Color.FromArgb(255, 255, 255, 255);
 
-    private string OverlayTextColorValue => $"#{_overlayTextBrush.Color.R:X2}{_overlayTextBrush.Color.G:X2}{_overlayTextBrush.Color.B:X2}";
+    // Saves the user's colour, not one automatic contrast has put in its place for the moment.
+    private string OverlayTextColorValue
+    {
+        get
+        {
+            Color color = _overlayAutoTextColor is not null ? _overlayUserTextColor : _overlayTextBrush.Color;
+            return $"#{color.R:X2}{color.G:X2}{color.B:X2}";
+        }
+    }
 
     private Button BuildOverlayTextColorButton()
     {
@@ -688,6 +697,8 @@ public sealed partial class MainWindow
         };
         picker.ColorChanged += (_, e) =>
         {
+            _overlayUserTextColor = e.NewColor;
+            _overlayAutoTextColor = null;
             _overlayTextBrush.Color = e.NewColor;
             ApplyOverlayAppearance();
         };

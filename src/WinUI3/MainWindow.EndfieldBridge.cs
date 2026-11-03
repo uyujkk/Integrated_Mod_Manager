@@ -224,8 +224,7 @@ public sealed partial class MainWindow
             {
                 // Settings imported from a standalone EndfieldBridge (4.1.1–4.2.0) need EFMI set up again.
                 Text = T("EndfieldBridge.Repository", repository.Name) + (migrated
-                    ? L("\n已导入旧桥接器的设置；如果之前适配过 EFMI，请点击“备份并适配 EFMI”切换到内置命令，原始恢复点会保留。",
-                        "\nSettings from the old bridge were imported. If EFMI was set up before, use Back up and set up EFMI to switch to the integrated command; the original restore point is kept.")
+                    ? "\n" + T("EndfieldBridge.LegacySettingsImported")
                     : string.Empty),
                 TextWrapping = TextWrapping.Wrap,
                 Style = (Style)Application.Current.Resources["CaptionTextStyle"]

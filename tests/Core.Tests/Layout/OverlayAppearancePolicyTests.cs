@@ -2,6 +2,29 @@ using IntegratedModManager.Core.Layout;
 
 namespace IntegratedModManager.Core.Tests;
 
+public sealed class OverlayAutoContrastTests
+{
+    [Fact]
+    public void AverageLuminance_WeighsChannelsLikeTheEye()
+    {
+        byte[] white = Enumerable.Repeat((byte)255, 64 * 4).ToArray();
+        byte[] green = new byte[64 * 4];
+        for (int i = 1; i < green.Length; i += 4) green[i] = 255;
+
+        Assert.Equal(255, IntegratedModManager.Core.Layout.OverlayAppearancePolicy.AverageLuminance(white), 1);
+        Assert.Equal(0.587 * 255, IntegratedModManager.Core.Layout.OverlayAppearancePolicy.AverageLuminance(green), 1);
+        Assert.Equal(0, IntegratedModManager.Core.Layout.OverlayAppearancePolicy.AverageLuminance([]));
+    }
+
+    [Theory]
+    [InlineData(200, false, true)]
+    [InlineData(140, false, false)]
+    [InlineData(140, true, true)]
+    [InlineData(90, true, false)]
+    public void PrefersDarkText_HasAGapSoTheTextDoesNotFlicker(double luminance, bool darkNow, bool expected)
+        => Assert.Equal(expected, IntegratedModManager.Core.Layout.OverlayAppearancePolicy.PrefersDarkText(luminance, darkNow));
+}
+
 public sealed class OverlayAppearancePolicyTests
 {
     [Theory]

@@ -276,6 +276,7 @@ public sealed partial class MainWindow
         }
         catch (ObjectDisposedException)
         {
+            // The request already finished and released its token.
         }
     }
 
@@ -719,7 +720,7 @@ public sealed partial class MainWindow
             if (next.Mods.Count == 0) return;
             // Cache the page complete with download counts, so opening it needs no request at all.
             try { await FillOnlineDownloadCountsAsync(next.Mods, timeout.Token); }
-            catch (Exception ex) when (ex is HttpRequestException or JsonException or InvalidDataException or OperationCanceledException) { }
+            catch (Exception ex) when (ex is HttpRequestException or JsonException or InvalidDataException or OperationCanceledException) { } // Cached without counts; they load when the page opens.
             await WriteOnlineCategoryPageCacheAsync(cacheCategoryKey, next);
         }
         catch (OnlineRateLimitException ex)
@@ -777,55 +778,14 @@ public sealed partial class MainWindow
         int authorId = 0)
     {
         bool shouldUseEndfieldMetadata = useEndfieldMetadata ?? IsEndfieldCategoryId(categoryId);
-        pageSize = Math.Clamp(pageSize, 1, 50);
-        string requestUrl = OnlineBrowsePolicy.CategoryPageUrl(categoryId, page, pageSize, authorId);
-        using HttpResponseMessage response = await _httpClient.GetAsync(requestUrl, cancellationToken);
-        if (response.StatusCode == HttpStatusCode.TooManyRequests)
-        {
-            throw new OnlineRateLimitException(response.Headers.RetryAfter?.Delta);
-        }
-        response.EnsureSuccessStatusCode();
-
-        string json = await response.Content.ReadAsStringAsync(cancellationToken);
-        using JsonDocument document = JsonDocument.Parse(json);
-        JsonElement root = document.RootElement;
-
-        List<OnlineModCard> mods = [];
-        if (root.ValueKind != JsonValueKind.Object)
-        {
-            return new OnlineCategoryPageResult(mods, 0, page, pageSize);
-        }
-
-        JsonElement metadata = root.TryGetProperty("_aMetadata", out JsonElement metadataElement) ? metadataElement : default;
-        int totalCount = GameBananaJson.Int32(metadata, "_nRecordCount");
-        int responsePageSize = Math.Max(1, GameBananaJson.Int32(metadata, "_nPerpage"));
-
-        if (!root.TryGetProperty("_aRecords", out JsonElement recordsElement) || recordsElement.ValueKind != JsonValueKind.Array)
-        {
-            return new OnlineCategoryPageResult(mods, totalCount, page, responsePageSize);
-        }
-
-        foreach (JsonElement record in recordsElement.EnumerateArray())
-        {
-            cancellationToken.ThrowIfCancellationRequested();
-            OnlineModCard? mod = ParseGameBananaCategoryMod(record, shouldUseEndfieldMetadata);
-            if (mod is not null)
-            {
-                mods.Add(mod);
-            }
-        }
-
-        return new OnlineCategoryPageResult(mods, totalCount, page, responsePageSize);
+        OnlineCategoryPageResult result = await GameBananaCategoryClient.GetPageAsync(_httpClient, categoryId, page, pageSize, authorId, DateTimeOffset.Now, cancellationToken);
+        foreach (OnlineModCard card in result.Mods) AdaptGameBananaCategoryMod(card, shouldUseEndfieldMetadata);
+        return result;
     }
 
-    private OnlineModCard? ParseGameBananaCategoryMod(JsonElement record, bool useEndfieldMetadata)
+    // GameBanana names the category; the page shows the character it stands for.
+    private void AdaptGameBananaCategoryMod(OnlineModCard card, bool useEndfieldMetadata)
     {
-        OnlineModCard? card = GameBananaListingParser.ParseRecord(record, DateTimeOffset.Now);
-        if (card is null)
-        {
-            return null;
-        }
-
         string categoryName = card.CharacterName;
         card.CharacterName = ResolveOnlineCharacterName(categoryName, card.Title, useEndfieldMetadata);
         card.IsCharacterNameInferred = IsGenericOnlineCharacterName(categoryName)
@@ -834,8 +794,6 @@ public sealed partial class MainWindow
         {
             card.Author = T("OnlineFeed.UnknownAuthor");
         }
-
-        return card;
     }
 
 
