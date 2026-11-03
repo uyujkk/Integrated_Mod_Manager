@@ -43,6 +43,69 @@ public sealed class CharacterCatalogClientTests
     [InlineData("https://wiki.skland.com/endfield")]
     public void Describe_ReturnsNullForOtherLinks(string? url) => Assert.Null(CharacterCatalogClient.Describe(url));
 
+    [Theory]
+    [InlineData(null, "ys_obc")]
+    [InlineData("", "ys_obc")]
+    [InlineData("https://example.com/my-notes", "ys_obc")]
+    [InlineData("https://bbs.mihoyo.com/sr/wiki/channel/map/17/18", "sr_wiki")]
+    public void Describe_FallsBackToTheGameWikiOnlyWithoutAWikiOfItsOwn(string? repositoryWiki, string expected)
+        => Assert.Equal(expected, CharacterCatalogClient.Describe(repositoryWiki, "https://baike.mihoyo.com/ys/obc/channel/map/189/25")!.AppSn);
+
+    [Fact]
+    public void Describe_HasNoCatalogWithoutEitherWiki() => Assert.Null(CharacterCatalogClient.Describe(null, null));
+
+    [Fact]
+    public async Task WithRetry_TriesAgainAfterAStalledRequest()
+    {
+        int attempts = 0;
+        var retried = new List<Exception>();
+
+        int result = await CharacterCatalogClient.WithRetryAsync(async token =>
+        {
+            if (++attempts == 1) await Task.Delay(Timeout.Infinite, token);
+            return 42;
+        }, TimeSpan.FromMilliseconds(50), retried.Add);
+
+        Assert.Equal((42, 2), (result, attempts));
+        Assert.IsAssignableFrom<OperationCanceledException>(Assert.Single(retried));
+    }
+
+    [Fact]
+    public async Task WithRetry_TriesAgainAfterANetworkErrorAndThenGivesUp()
+    {
+        int attempts = 0;
+
+        await Assert.ThrowsAsync<HttpRequestException>(() => CharacterCatalogClient.WithRetryAsync<int>(_ =>
+        {
+            attempts++;
+            throw new HttpRequestException("offline");
+        }, TimeSpan.FromSeconds(5)));
+
+        Assert.Equal(2, attempts);
+    }
+
+    [Fact]
+    public async Task WithRetry_DoesNotRetryWhenTheCallerCancelsOrOnOtherErrors()
+    {
+        using var cancelled = new CancellationTokenSource();
+        cancelled.Cancel();
+        int attempts = 0;
+
+        await Assert.ThrowsAnyAsync<OperationCanceledException>(() => CharacterCatalogClient.WithRetryAsync<int>(token =>
+        {
+            attempts++;
+            token.ThrowIfCancellationRequested();
+            return Task.FromResult(1);
+        }, TimeSpan.FromSeconds(5), cancellationToken: cancelled.Token));
+        await Assert.ThrowsAsync<System.Text.Json.JsonException>(() => CharacterCatalogClient.WithRetryAsync<int>(_ =>
+        {
+            attempts++;
+            throw new System.Text.Json.JsonException("bad data");
+        }, TimeSpan.FromSeconds(5)));
+
+        Assert.Equal(2, attempts);
+    }
+
     [Fact]
     public async Task FetchWikiCharacters_ReadsTheCharacterChannelInOrder()
     {

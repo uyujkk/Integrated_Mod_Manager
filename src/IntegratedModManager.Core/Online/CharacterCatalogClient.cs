@@ -25,6 +25,35 @@ public static class CharacterCatalogClient
     public const string HoYoWikiApiBaseUrl = "https://sg-wiki-api-static.hoyolab.com/hoyowiki/wapi";
     public const string EndfieldOperatorCatalogUrl = "https://endfield.hypergryph.com/operator";
 
+    /// <summary>
+    /// The catalog behind a repository's wiki link, else behind its game's built-in wiki: a repository
+    /// set up by hand may have the game's category but no wiki link, and would otherwise get no catalog.
+    /// </summary>
+    public static WikiCatalogDescriptor? Describe(string? wikiUrl, string? gameWikiUrl) => Describe(wikiUrl) ?? Describe(gameWikiUrl);
+
+    /// <summary>
+    /// Runs one catalog request with its own time limit, and once more after a timeout or a network error.
+    /// A stalled request would otherwise hold the catalog for HttpClient's 100 seconds and then give up.
+    /// </summary>
+    public static async Task<T> WithRetryAsync<T>(Func<CancellationToken, Task<T>> request, TimeSpan timeout, Action<Exception>? retrying = null,
+        CancellationToken cancellationToken = default)
+    {
+        for (int attempt = 1; ; attempt++)
+        {
+            using var limit = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
+            limit.CancelAfter(timeout);
+            try
+            {
+                return await request(limit.Token);
+            }
+            catch (Exception ex) when (attempt < 2 && !cancellationToken.IsCancellationRequested
+                && ex is HttpRequestException or OperationCanceledException)
+            {
+                retrying?.Invoke(ex);
+            }
+        }
+    }
+
     /// <summary>The catalog behind a repository's wiki link, or null for a wiki without one.</summary>
     public static WikiCatalogDescriptor? Describe(string? wikiUrl)
     {
