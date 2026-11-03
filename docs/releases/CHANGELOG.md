@@ -6,6 +6,12 @@
 
 This document records version changes in Integrated Mod Manager. Unpublished versions are marked separately.
 
+## v4.7.0-preview.1 — 未发布（本地预览 / Local preview）
+
+预设图片、框选角色与图片切换；浮窗底板、紧凑布局、鼠标穿透和外观预设；首次安装按系统语言选语言并选择游戏，其他游戏通过 XXMI 启动；每个 Mod 的“默认”槽位；保存槽位略过菜单状态、调整自动保存间隔；批量操作；修复切换空源目录仓库时退出和管理员权限下无法选文件。见 [v4.7.0-preview.1](v4.7.0-preview.1.md)。
+
+Preset pictures, character framing and pick by picture; overlay backing, compact view, click-through and looks; first install picks the language and the game, and other games start through XXMI; a Default slot for every Mod; slot saves leave out menu state, and the loader auto-save interval can be set; batch actions; fixes for switching to a repository without a source folder and for elevated file dialogs. See [v4.7.0-preview.1](v4.7.0-preview.1.md).
+
 ## v4.6.1 — 2026-10-29（正式版 / Stable）
 
 新 Mod 自动获得“默认”槽位；浮窗保存时加载器没有新写入，可以选择读取现有文件；设置页新增反馈 QQ 群；修复快捷操作、部署按钮、按键数量、设置页、快捷键页和更新页的排版与显示问题。见 [v4.6.1](v4.6.1.md)。
