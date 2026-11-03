@@ -99,6 +99,8 @@ public sealed partial class MainWindow
         }
 
         context.Slot.Values = [.. values];
+        // It now holds captured values, so it no longer follows the Mod's declarations when restored.
+        context.Slot.IsModDefault = false;
         context.Slot.SavedAtUtc = DateTimeOffset.UtcNow;
         context.Slot.ActivatedAtUtc = DateTimeOffset.UtcNow;
         context.Repository.PersistentUserIniPath = userIni;
