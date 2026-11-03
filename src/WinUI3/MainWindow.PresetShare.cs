@@ -16,6 +16,11 @@ public sealed partial class MainWindow
             profile.IncludesPersistentState && states.TryGetValue(path, out var state) ? state.Values.ToArray() : [])).ToArray();
         string json;
         try { json = PresetShareService.Serialize(profile.Name, repository.OnlineGameName, profile.IncludesPersistentState, mods); }
+        catch (PresetShareTooLargeException)
+        {
+            await ShowMessageAsync(T("PresetShare.ExportTooLarge", PresetShareService.MaxBytes / 1024 / 1024), T("PresetShare.Export"));
+            return;
+        }
         catch (InvalidDataException ex)
         {
             await ShowMessageAsync(ex.Message, T("PresetShare.Export"));
@@ -36,7 +41,7 @@ public sealed partial class MainWindow
         PresetShareFile file;
         try
         {
-            if (new FileInfo(path).Length > 4 * 1024 * 1024) throw new InvalidDataException(T("PresetShare.TooLarge"));
+            if (new FileInfo(path).Length > PresetShareService.MaxBytes) throw new InvalidDataException(T("PresetShare.TooLarge"));
             file = PresetShareService.Parse(await File.ReadAllTextAsync(path));
         }
         catch (Exception ex) when (ex is InvalidDataException or IOException or UnauthorizedAccessException)

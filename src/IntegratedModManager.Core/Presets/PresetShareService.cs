@@ -13,6 +13,9 @@ public sealed record PresetSharePreview(IReadOnlyList<PresetShareMod> Matched, I
     public int MatchPercent(int total) => total == 0 ? 0 : (int)Math.Round(Matched.Count * 100.0 / total);
 }
 
+/// <summary>A shared preset above <see cref="PresetShareService.MaxBytes"/>, on export or on import.</summary>
+public sealed class PresetShareTooLargeException() : IOException("The shared preset file is too large.");
+
 /// <summary>
 /// A combination preset without Mod files: which Mods it uses and, optionally, their saved values. The
 /// receiver must already have the Mods. Its own format and version, separate from combination bundles,
@@ -22,19 +25,23 @@ public static class PresetShareService
 {
     public const string Format = "imm-preset-share";
     public const string FileExtension = ".imm-share.json";
-    private const int MaxBytes = 4 * 1024 * 1024, MaxMods = 2048, MaxValues = 100000;
+    /// <summary>The largest file, in UTF-8 bytes, that import reads; export refuses to write a larger one.</summary>
+    public const int MaxBytes = 4 * 1024 * 1024;
+    private const int MaxMods = 2048, MaxValues = 100000;
 
     public static string Serialize(string name, string game, bool includesState, IReadOnlyList<CombinationPresetState> mods)
     {
         var file = new PresetShareFile(Format, 1, name, game ?? string.Empty, includesState,
             mods.Select(mod => new PresetShareMod(mod.ModRelativePath.Replace('\\', '/'), includesState ? mod.Values.ToArray() : [])).ToArray());
         Validate(file);
-        return JsonSerializer.Serialize(file, CombinationBundleService.Json);
+        string json = JsonSerializer.Serialize(file, CombinationBundleService.Json);
+        if (Encoding.UTF8.GetByteCount(json) > MaxBytes) throw new PresetShareTooLargeException();
+        return json;
     }
 
     public static PresetShareFile Parse(string json)
     {
-        if (Encoding.UTF8.GetByteCount(json) > MaxBytes) throw new InvalidDataException("The shared preset file is too large.");
+        if (Encoding.UTF8.GetByteCount(json) > MaxBytes) throw new PresetShareTooLargeException();
         try
         {
             using (JsonDocument document = JsonDocument.Parse(json, new JsonDocumentOptions { MaxDepth = 32 }))

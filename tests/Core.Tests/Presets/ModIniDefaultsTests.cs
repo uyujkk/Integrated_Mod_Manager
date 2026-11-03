@@ -67,6 +67,17 @@ public sealed class ModIniDefaultsTests : IDisposable
         Assert.Empty(DefaultSlotPolicy.ModsNeedingDefault(["A\\One"], ["A\\One"], backfilled: true, []));
     }
 
+    [Fact]
+    public void DefaultSlotPolicy_AModThatCouldNotBeReadIsTriedAgain()
+    {
+        // First scan: A\Two's defaults could not be read, so only A\One is marked as offered.
+        string[] seen = DefaultSlotPolicy.Seen(["A\\One", "A\\Two"], unreadable: ["a\\two"]);
+        Assert.Equal(["A\\One"], seen);
+
+        // The next scan, after the back-fill, still offers A\Two a default slot.
+        Assert.Equal(["A\\Two"], DefaultSlotPolicy.ModsNeedingDefault(["A\\One", "A\\Two"], seen, backfilled: true, []));
+    }
+
     [Theory]
     [InlineData("默认", "Default", "Default")]
     [InlineData("Default", "默认", "默认")]

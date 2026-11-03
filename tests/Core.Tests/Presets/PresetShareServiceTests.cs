@@ -19,6 +19,29 @@ public sealed class PresetShareServiceTests
         Assert.Equal(Swap, Assert.Single(file.Mods[0].Values));
     }
 
+    // One Mod with this many saved values; names and game in Chinese so the limit counts multi-byte text.
+    private static string Large(int values) => PresetShareService.Serialize("夜晚方案", "原神", true,
+        [new CombinationPresetState("角色\\皮肤", Enumerable.Range(0, values)
+            .Select(index => new ModPersistentValue("mod.ini", $"$v{index}", $"$\\mods\\skin\\mod.ini\\v{index}", "1")).ToArray())]);
+
+    [Fact]
+    public void Serialize_RefusesWhatImportWouldRefuseAndKeepsWhatItAccepts()
+    {
+        // The largest preset that still exports, found by halving the range.
+        int low = 1, high = 80_000;
+        while (low < high)
+        {
+            int middle = (low + high + 1) / 2;
+            try { Large(middle); low = middle; }
+            catch (PresetShareTooLargeException) { high = middle - 1; }
+        }
+
+        string largest = Large(low);
+        Assert.InRange(System.Text.Encoding.UTF8.GetByteCount(largest), PresetShareService.MaxBytes - 200, PresetShareService.MaxBytes);
+        Assert.Equal(low, PresetShareService.Parse(largest).Mods[0].Values.Count);
+        Assert.Throws<PresetShareTooLargeException>(() => Large(low + 1));
+    }
+
     [Fact]
     public void Serialize_SetOnlyDropsValues() => Assert.All(PresetShareService.Parse(Shared(false)).Mods, mod => Assert.Empty(mod.Values));
 

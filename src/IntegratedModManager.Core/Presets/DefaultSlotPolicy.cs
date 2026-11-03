@@ -18,6 +18,14 @@ public static class DefaultSlotPolicy
             .Distinct(StringComparer.OrdinalIgnoreCase).ToArray();
     }
 
+    // Mods a scan may mark as offered a default slot. One whose defaults could not be read stays unmarked,
+    // so a later scan tries it again once the file is readable.
+    public static string[] Seen(IEnumerable<string> scanned, IEnumerable<string> unreadable)
+    {
+        var skip = new HashSet<string>(unreadable, StringComparer.OrdinalIgnoreCase);
+        return scanned.Where(mod => !skip.Contains(mod)).ToArray();
+    }
+
     // An automatic default slot follows the UI language while it still has one of the default names;
     // returns the new name, or null to keep it (renamed by the user, already right, or taken by another slot).
     public static string? Relabel(string name, IReadOnlyCollection<string> defaultNames, string wanted, IEnumerable<string> otherNames)

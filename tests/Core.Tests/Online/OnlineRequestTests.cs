@@ -78,6 +78,21 @@ public sealed class OnlineRequestTests
         Assert.Null(download.FailedStatus);
     }
 
+    [Theory]
+    [InlineData(0, true)]
+    [InlineData(1, false)]
+    public async Task ImageDownload_CountsTheLimitWhenNoLengthIsGiven(int overLimit, bool kept)
+    {
+        byte[] body = new byte[OnlineImageDownloader.MaxImageBytes + overLimit];
+        // A stream that cannot seek has no length, like a chunked response.
+        HttpClient client = Client((_, _) => new HttpResponseMessage(HttpStatusCode.OK) { Content = new StreamContent(new UnseekableStream(body)) });
+
+        OnlineImageDownload download = await OnlineImageDownloader.DownloadAsync(client, new Uri("https://img/x.png"), default);
+
+        Assert.Equal(kept ? body.Length : null, download.Bytes?.Length);
+        Assert.Null(download.FailedStatus);
+    }
+
     [Fact]
     public async Task ImageDownload_SkipsOversizedImages()
     {
@@ -164,6 +179,11 @@ public sealed class OnlineRequestTests
 
         OnlineRateLimitException limit = await Assert.ThrowsAsync<OnlineRateLimitException>(() => GameBananaDownloadCounts.FetchAsync(client, [1]));
         Assert.Equal(TimeSpan.FromSeconds(30), limit.RetryAfter);
+    }
+
+    private sealed class UnseekableStream(byte[] body) : MemoryStream(body)
+    {
+        public override bool CanSeek => false;
     }
 
     private sealed class Handler(Func<HttpRequestMessage, HttpResponseMessage> reply) : HttpMessageHandler
