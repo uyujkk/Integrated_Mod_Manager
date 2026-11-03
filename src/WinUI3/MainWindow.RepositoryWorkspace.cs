@@ -25,6 +25,7 @@ public sealed partial class MainWindow
     private readonly ModDetailsViewModel _modDetails = new();
     private readonly HashSet<SecondLevelFolderItem> _repositoryCoversLoading = [];
     private Grid? _repositoryToolbar;
+    private TextBlock? _workspaceTitleText;
     private Grid? _repositoryHeader;
     private Grid? _repositoryToolbarCommands;
     private StackPanel? _repositoryViewButtons;
@@ -88,9 +89,6 @@ public sealed partial class MainWindow
     // Reuse the real controls and handlers. No parallel deployment or persistence implementation.
     private void InitializeRepositoryWorkspaceV4()
     {
-        if (_workspacePageHost is null || _workspaceWorkbench is null || _workspaceDetailHost is null
-            || _workspaceContentGrid is null || _categoryCard is null || _modCard is null) return;
-
         _repositoryCategoryTitle = RepositoryText(15, true);
         _repositoryModTitle = RepositoryText(16, true);
         _repositoryModCount = RepositoryText(12);
@@ -137,9 +135,9 @@ public sealed partial class MainWindow
         _characterFolderHint.Margin = new Thickness(2, 8, 2, 0);
         _characterFolderHint.Visibility = Visibility.Collapsed;
         Grid.SetRow(_characterFolderHint, 3); categoryGrid.Children.Add(_characterFolderHint);
-        _categoryCard.Child = categoryGrid;
-        _categoryCard.Padding = new Thickness(12);
-        _categoryCard.CornerRadius = new CornerRadius(6);
+        CategoryCard.Child = categoryGrid;
+        CategoryCard.Padding = new Thickness(12);
+        CategoryCard.CornerRadius = new CornerRadius(6);
 
         var modGrid = RepositoryRows(GridLength.Auto, GridLength.Auto, GridLength.Auto, new GridLength(1, GridUnitType.Star), GridLength.Auto);
         var modHeading = RepositoryColumns(new GridLength(1, GridUnitType.Star), GridLength.Auto, GridLength.Auto);
@@ -235,17 +233,15 @@ public sealed partial class MainWindow
         // The same entry is always available in the top view switcher.
         _repositoryOpenPresets.Visibility = Visibility.Collapsed;
         modGrid.Children.Add(_repositoryOpenPresets);
-        _modCard.Child = modGrid;
-        _modCard.Padding = new Thickness(12);
-        _modCard.CornerRadius = new CornerRadius(6);
+        ModCard.Child = modGrid;
+        ModCard.Padding = new Thickness(12);
+        ModCard.CornerRadius = new CornerRadius(6);
 
         InitializeRepositoryInspectorV4();
         InitializeCombinationWorkspaceV4();
         InitializeRepositoryToolbarV4();
         // The repository is initially hidden on a clean install. Its first real
         // viewport is measured only when the user opens it, not when RootGrid loads.
-        WorkspaceScrollViewer.HorizontalContentAlignment = HorizontalAlignment.Stretch;
-        WorkspaceScrollViewer.VerticalContentAlignment = VerticalAlignment.Stretch;
         WorkspaceScrollViewer.SizeChanged += (_, _) => UpdateRepositoryWorkspaceLayoutV4();
         _secondLevelItems.CollectionChanged += OnRepositoryCatalogChanged;
         _repositoryV4Ready = true;
@@ -260,8 +256,7 @@ public sealed partial class MainWindow
         _repositoryToolbar = RepositoryRows(GridLength.Auto, GridLength.Auto);
         _repositoryHeader = RepositoryColumns(new GridLength(1, GridUnitType.Star), GridLength.Auto);
         var title = new StackPanel { Spacing = 12, Orientation = Orientation.Horizontal, VerticalAlignment = VerticalAlignment.Center };
-        RepositoryDetach(_workspaceTitleText!);
-        _workspaceTitleText!.FontSize = 22;
+        _workspaceTitleText = new TextBlock { FontSize = 22, FontWeight = Microsoft.UI.Text.FontWeights.SemiBold };
         title.Children.Add(_workspaceTitleText);
         _repositoryWorkspacePicker = new ComboBox { MinWidth = 190, MaxWidth = 300, MinHeight = 32, HorizontalAlignment = HorizontalAlignment.Left };
         _repositoryWorkspacePicker.SelectionChanged += (_, _) =>
@@ -292,6 +287,7 @@ public sealed partial class MainWindow
         _repositoryModeButtons = Enumerable.Range(0, 3).Select(index =>
         {
             var button = new ToggleButton { MinHeight = 34, Padding = new Thickness(10, 6, 10, 6), CornerRadius = new CornerRadius(4), Tag = (RepositoryWorkspaceView)index };
+            AutomationProperties.SetAutomationId(button, "RepositoryView" + (RepositoryWorkspaceView)index);
             button.Click += (_, _) => SetRepositoryWorkspaceViewV4((RepositoryWorkspaceView)button.Tag);
             _repositoryViewButtons.Children.Add(button);
             return button;
@@ -306,8 +302,7 @@ public sealed partial class MainWindow
         var toolbar = RepositoryCard(_repositoryToolbar);
         toolbar.Style = (Style)Application.Current.Resources["CommandSurfaceBorderStyle"];
         toolbar.Padding = new Thickness(14, 10, 14, 10);
-        _workspacePageHost!.Children.RemoveAt(0);
-        _workspacePageHost.Children.Insert(0, toolbar);
+        WorkspacePageHost.Children.Insert(0, toolbar);
 
         InitializeRepositoryStatusV4();
         FirstCountTextBlock.RegisterPropertyChangedCallback(TextBlock.TextProperty, (_, _) => RefreshRepositoryCountsV4());
@@ -397,16 +392,9 @@ public sealed partial class MainWindow
 
     private void InitializeRepositoryInspectorV4()
     {
-        _workspaceDetailHost!.RowDefinitions.Add(new RowDefinition { Height = GridLength.Auto });
-        _workspaceDetailHost.RowSpacing = 8;
-        if (_workspaceDetailHost.Children[0] is Border summary)
-        {
-            summary.Style = (Style)Application.Current.Resources["CardBorderStyle"];
-            summary.CornerRadius = new CornerRadius(6); summary.Padding = new Thickness(12);
-            _modernFolderText!.FontSize = 18;
-            _modernStateText!.FontSize = 12;
-        }
-        _previewCard!.Padding = new Thickness(12);
+        WorkspaceDetailHost.RowDefinitions.Add(new RowDefinition { Height = GridLength.Auto });
+        WorkspaceDetailHost.RowSpacing = 8;
+        PreviewCard.Padding = new Thickness(12);
         PreviewSectionTitleTextBlock.Visibility = Visibility.Collapsed;
         PreviewSectionSubtitleTextBlock.Visibility = Visibility.Collapsed;
         ModLinkSectionSubtitleTextBlock.Visibility = Visibility.Collapsed;
@@ -416,7 +404,7 @@ public sealed partial class MainWindow
         // and the overflow clipped the centred hint. A short area drops the icon instead (below).
         PreviewDropBorder.MinHeight = 64;
         PreviewDropBorder.CornerRadius = new CornerRadius(4);
-        if (_previewCard.Child is Grid previewGrid) previewGrid.RowSpacing = 8;
+        if (PreviewCard.Child is Grid previewGrid) previewGrid.RowSpacing = 8;
 
         // An empty preview shows an image icon above the existing hint, and hides with it.
         // Parent is not reliable before load; go through the owning controls instead.
@@ -444,7 +432,7 @@ public sealed partial class MainWindow
         // The preview keeps a fixed frame (16:9 of the column, within limits) instead of taking all
         // spare height; under it, a table says where the Mod came from, where it is, its tags and size.
         // The tab scrolls, so a short window never clips the table.
-        if (_previewCard.Child is Grid preview
+        if (PreviewCard.Child is Grid preview
             && preview.Children.OfType<Border>().FirstOrDefault(border => ReferenceEquals(border.Child, ModLinkTextBox)) is { } linkBorder)
         {
             preview.RowDefinitions[2].Height = GridLength.Auto;
@@ -464,8 +452,8 @@ public sealed partial class MainWindow
             Grid.SetRow(info, 4); preview.Children.Add(info);
         }
         RepositoryDecorateButton(OpenModLinkButton, "\uE774", true);
-        _previewCard.SizeChanged += (_, _) => UpdatePreviewFrameHeight();
-        _workspaceDetailHost.SizeChanged += (_, _) => UpdatePreviewFrameHeight();
+        PreviewCard.SizeChanged += (_, _) => UpdatePreviewFrameHeight();
+        WorkspaceDetailHost.SizeChanged += (_, _) => UpdatePreviewFrameHeight();
         PreviewDropBorder.Height = 198;
         if (PreviewDropBorder.Child is Grid previewFrame)
         {
@@ -479,10 +467,10 @@ public sealed partial class MainWindow
             };
             previewFrame.Children.Add(_repositoryPreviewCaptionHost);
         }
-        if (_previewTab!.Content is UIElement previewContent)
+        if (PreviewTab.Content is UIElement previewContent)
         {
-            _previewTab.Content = null;
-            _previewTab.Content = new ScrollViewer
+            PreviewTab.Content = null;
+            PreviewTab.Content = new ScrollViewer
             {
                 Content = previewContent, VerticalScrollBarVisibility = ScrollBarVisibility.Auto,
                 HorizontalScrollMode = ScrollMode.Disabled, HorizontalScrollBarVisibility = ScrollBarVisibility.Disabled
@@ -510,18 +498,18 @@ public sealed partial class MainWindow
         RepositoryDecorateButton(ToggleCopyButton, "\uE71B");
         var footerCard = RepositoryCard(footer);
         footerCard.Padding = new Thickness(12);
-        Grid.SetRow(footerCard, 2); _workspaceDetailHost.Children.Add(footerCard);
-        _shortcutCard!.Padding = new Thickness(12);
+        Grid.SetRow(footerCard, 2); WorkspaceDetailHost.Children.Add(footerCard);
+        ShortcutCard.Padding = new Thickness(12);
         ShortcutSectionSubtitleTextBlock.Visibility = Visibility.Collapsed;
         ShortcutHintTextBlock.Visibility = Visibility.Collapsed;
-        _previewTab!.Header = T("RepositoryWorkspace.Preview");
+        PreviewTab.Header = T("RepositoryWorkspace.Preview");
     }
 
     // A 16:9 frame at the column width, but never more than about a quarter of the workspace
     // height, so the table under it stays in view on medium windows.
     private void UpdatePreviewFrameHeight()
     {
-        double width = _previewCard?.ActualWidth ?? 0;
+        double width = PreviewCard?.ActualWidth ?? 0;
         if (width <= 0) return;
         double byHeight = WorkspaceScrollViewer.ActualHeight > 0 ? WorkspaceScrollViewer.ActualHeight * 0.28 : 240;
         PreviewDropBorder.Height = Math.Clamp(Math.Round(Math.Min((width - 24) * 9 / 16, byHeight)), 120, 240);
@@ -680,7 +668,7 @@ public sealed partial class MainWindow
         shortcut.HorizontalAlignment = HorizontalAlignment.Stretch;
         Grid.SetColumn(shortcut, 1);
         UpdatesRecoveryActionsGrid.Children.Add(shortcut);
-        _workspaceContentGrid!.Children.Add(_combinationWorkspace);
+        WorkspaceContentGrid.Children.Add(_combinationWorkspace);
     }
 
     // The Updates page's shortcut to the combination workspace; its label follows the language.
@@ -690,7 +678,7 @@ public sealed partial class MainWindow
     {
         if (!_repositoryV4Ready || _repositoryWorkspaceBusy || _repositoryDetailDialogOpen) return;
         _modList.View = view;
-        _workspaceWorkbench!.Visibility = view == RepositoryWorkspaceView.Presets ? Visibility.Collapsed : Visibility.Visible;
+        WorkspaceWorkbench.Visibility = view == RepositoryWorkspaceView.Presets ? Visibility.Collapsed : Visibility.Visible;
         _combinationWorkspace!.Visibility = view == RepositoryWorkspaceView.Presets ? Visibility.Visible : Visibility.Collapsed;
         SecondLevelListView.Visibility = view == RepositoryWorkspaceView.Covers ? Visibility.Collapsed : Visibility.Visible;
         _repositoryCoverGrid!.Visibility = view == RepositoryWorkspaceView.Covers ? Visibility.Visible : Visibility.Collapsed;
@@ -733,10 +721,10 @@ public sealed partial class MainWindow
         AutomationProperties.SetName(_repositoryOpenModFolder, T("RepositoryWorkspace.OpenModFolder"));
         ToolTipService.SetToolTip(_repositoryCopyModPath!, T("RepositoryWorkspace.CopyPath"));
         AutomationProperties.SetName(_repositoryCopyModPath, T("RepositoryWorkspace.CopyPath"));
-        _previewTab!.Header = T("RepositoryWorkspace.Preview");
-        _selectionEyebrowText!.Text = T("RepositoryWorkspace.CURRENTMOD");
-        _modernFolderText!.Foreground = GetAppThemeBrush("AppNavDefaultForegroundBrush");
-        _modernStateLabel!.Visibility = Visibility.Collapsed;
+        PreviewTab.Header = T("RepositoryWorkspace.Preview");
+        SelectionEyebrowTextBlock.Text = T("RepositoryWorkspace.CURRENTMOD");
+        CurrentFolderTextBlock.Foreground = GetAppThemeBrush("AppNavDefaultForegroundBrush");
+        DeploymentStateLabelTextBlock.Visibility = Visibility.Collapsed;
         _combinationWorkspaceTitle!.Text = T("RepositoryWorkspace.MyPresets");
         AutomationProperties.SetName(DeleteConfigurationProfileButton, T("RepositoryWorkspace.DeletePreset"));
         ToolTipService.SetToolTip(DeleteConfigurationProfileButton, T("RepositoryWorkspace.DeletePreset"));
@@ -780,21 +768,21 @@ public sealed partial class MainWindow
         if (width <= 0) width = Math.Max(320, Bounds.Width - 220);
         RefreshRepositoryStatusV4();
         var layout = RepositoryWorkspacePolicy.Layout(width);
-        _workspaceWorkbench!.ColumnDefinitions.Clear();
-        _workspaceWorkbench.RowDefinitions.Clear();
-        _workspaceWorkbench.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(layout.CategoryWidth) });
-        _workspaceWorkbench.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(1, GridUnitType.Star) });
-        _workspaceWorkbench.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(layout.DetailWidth) });
-        _workspaceWorkbench.RowDefinitions.Add(new RowDefinition { Height = new GridLength(1, GridUnitType.Star) });
-        Place(_categoryCard!, 0, 0); Place(_modCard!, 0, 1); Place(_workspaceDetailHost!, 0, 2);
-        if (!_repositoryDetailDialogOpen) _workspaceDetailHost!.Visibility = layout.InlineDetails ? Visibility.Visible : Visibility.Collapsed;
+        WorkspaceWorkbench.ColumnDefinitions.Clear();
+        WorkspaceWorkbench.RowDefinitions.Clear();
+        WorkspaceWorkbench.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(layout.CategoryWidth) });
+        WorkspaceWorkbench.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(1, GridUnitType.Star) });
+        WorkspaceWorkbench.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(layout.DetailWidth) });
+        WorkspaceWorkbench.RowDefinitions.Add(new RowDefinition { Height = new GridLength(1, GridUnitType.Star) });
+        Place(CategoryCard, 0, 0); Place(ModCard, 0, 1); Place(WorkspaceDetailHost, 0, 2);
+        if (!_repositoryDetailDialogOpen) WorkspaceDetailHost.Visibility = layout.InlineDetails ? Visibility.Visible : Visibility.Collapsed;
         _repositoryOpenDetails!.Visibility = layout.InlineDetails || _modList.View == RepositoryWorkspaceView.Presets ? Visibility.Collapsed : Visibility.Visible;
-        _workspaceContentGrid!.VerticalAlignment = VerticalAlignment.Stretch;
+        WorkspaceContentGrid.VerticalAlignment = VerticalAlignment.Stretch;
         double height = WorkspaceScrollViewer.ActualHeight;
-        if (height > 0) _workspaceContentGrid.Height = height;
-        _workspaceWorkbench.Height = double.NaN;
+        if (height > 0) WorkspaceContentGrid.Height = height;
+        WorkspaceWorkbench.Height = double.NaN;
         FirstLevelListView.Height = double.NaN; SecondLevelListView.Height = double.NaN;
-        _previewCard!.MinHeight = 0; _shortcutCard!.MinHeight = 0;
+        PreviewCard.MinHeight = 0; ShortcutCard.MinHeight = 0;
         UpdateRepositoryCoverLayoutV4();
         _repositoryHeader!.RowDefinitions.Clear();
         _repositoryHeader.RowDefinitions.Add(new RowDefinition { Height = GridLength.Auto });
@@ -1214,7 +1202,7 @@ public sealed partial class MainWindow
         _ = UpdateRepositoryInfoSizeAsync(mod);
         UpdateRepositoryPreviewCaption(mod);
         int shortcuts = mod is null ? 0 : ModShortcutCount(mod);
-        if (_shortcutTab is not null) _shortcutTab.Header = shortcuts > 0 ? T("Common.Shortcuts") + " · " + shortcuts : T("Common.Shortcuts");
+        if (ShortcutTab is not null) ShortcutTab.Header = shortcuts > 0 ? T("Common.Shortcuts") + " · " + shortcuts : T("Common.Shortcuts");
         // With links, deploying replaces the character's deployed Mod (unless it keeps several); say which one.
         WorkspaceRepository? repository = GetSelectedRepository();
         bool links = repository?.UseDirectoryLinks == true;
@@ -1385,12 +1373,12 @@ public sealed partial class MainWindow
     {
         if (_repositoryDetailDialogOpen || _repositoryWorkspaceBusy || GetSelectedSecondLevelItem() is null) return;
         _repositoryDetailDialogOpen = true;
-        RepositoryDetach(_workspaceDetailHost!);
-        _workspaceDetailHost!.Visibility = Visibility.Visible;
-        _workspaceDetailHost.Height = Math.Clamp(RootGrid.ActualHeight - 150, 320, 600);
+        RepositoryDetach(WorkspaceDetailHost);
+        WorkspaceDetailHost.Visibility = Visibility.Visible;
+        WorkspaceDetailHost.Height = Math.Clamp(RootGrid.ActualHeight - 150, 320, 600);
         // The dialog can be short; scroll only its preview body, not the pinned deploy action.
-        var previewContent = _previewCard!.Child;
-        _previewCard.Child = null;
+        var previewContent = PreviewCard.Child;
+        PreviewCard.Child = null;
         var previewScroll = new ScrollViewer
         {
             Content = previewContent,
@@ -1398,16 +1386,16 @@ public sealed partial class MainWindow
             HorizontalScrollBarVisibility = ScrollBarVisibility.Disabled,
             VerticalScrollBarVisibility = ScrollBarVisibility.Auto
         };
-        _previewCard.Child = previewScroll;
-        var dialog = new ContentDialog { XamlRoot = RootGrid.XamlRoot, Content = _workspaceDetailHost, CloseButtonText = T("Common.Close"), RequestedTheme = RootGrid.ActualTheme };
+        PreviewCard.Child = previewScroll;
+        var dialog = new ContentDialog { XamlRoot = RootGrid.XamlRoot, Content = WorkspaceDetailHost, CloseButtonText = T("Common.Close"), RequestedTheme = RootGrid.ActualTheme };
         try { await dialog.ShowAsync(); }
         finally
         {
             dialog.Content = null;
             previewScroll.Content = null;
-            _previewCard.Child = previewContent;
-            _workspaceDetailHost.Height = double.NaN;
-            _workspaceWorkbench!.Children.Add(_workspaceDetailHost);
+            PreviewCard.Child = previewContent;
+            WorkspaceDetailHost.Height = double.NaN;
+            WorkspaceWorkbench.Children.Add(WorkspaceDetailHost);
             _repositoryDetailDialogOpen = false;
             UpdateRepositoryWorkspaceLayoutV4();
         }
@@ -1480,8 +1468,8 @@ public sealed partial class MainWindow
         }
         // During construction, WinUI may not expose Parent for an unloaded subtree.
         // Detach through the owned logical children, before assigning a second parent.
-        foreach (var root in new FrameworkElement?[] { RootGrid, _categoryCard, _modCard, _workspaceActions,
-            _workspaceDetailHost, _previewCard, _shortcutCard, UpdatesSupportPanel, WorkspaceStatusCard })
+        foreach (var root in new FrameworkElement?[] { RootGrid, CategoryCard, ModCard, WorkspaceActionsGrid,
+            WorkspaceDetailHost, PreviewCard, ShortcutCard, UpdatesSupportPanel, WorkspaceStatusCard })
             if (root is not null && RepositoryRemoveOwnedChild(root, element)) return;
     }
 
