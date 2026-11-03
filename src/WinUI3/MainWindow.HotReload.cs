@@ -19,12 +19,16 @@ public sealed partial class MainWindow
     private ScrollViewer? _overlaySlotScroll;
     private TextBlock? _overlaySlotHeader;
     private Border? _overlaySlotHeaderLabel;
+    private Button? _overlayFrameButton;
+    private Button? _overlayGalleryButton;
+    private Grid? _overlaySlotActions;
+    private string? _overlayCurrentSlotId;
     private string _overlaySlotSignature = string.Empty;
 
     private bool CanHotReloadLoader => _shortcutInputEnabled && _shortcutTargetPicker?.SelectedItem is ShortcutTarget;
 
     // Sends F10 with d3dx_user.ini kept read-only and describes the outcome.
-    private async Task<string> HotReloadLoaderAsync(string userIni)
+    private async Task<string> HotReloadLoaderAsync(string userIni, Action? keySent = null)
     {
         if (!CanHotReloadLoader || _shortcutTargetPicker?.SelectedItem is not ShortcutTarget target)
         {
@@ -33,7 +37,11 @@ public sealed partial class MainWindow
 
         var plan = new ShortcutKeyPlan([LoaderReloadKey], []);
         LoaderHotReloadResult result = await LoaderHotReload.ReloadAsync(userIni,
-            _ => _shortcutInput.SendAsync(target, plan, 120, _shortcutInputMode, IsEnglishUi),
+            async _ =>
+            {
+                await _shortcutInput.SendAsync(target, plan, 120, _shortcutInputMode, IsEnglishUi);
+                keySent?.Invoke();
+            },
             LoaderHotReload.DefaultHold);
         return result switch
         {
@@ -88,6 +96,20 @@ public sealed partial class MainWindow
         _overlaySlotHeaderLabel = OverlayLabel(_overlaySlotHeader);
         panel.Children.Add(_overlaySlotHeaderLabel);
         panel.Children.Add(_overlaySlotScroll);
+        _overlayGalleryButton = ShortcutButton(T("PresetPreview.PickByPicture"), () => _ = RunUiActionAsync("Overlay slot gallery", ShowOverlaySlotGalleryAsync));
+        _overlayFrameButton = ShortcutButton(T("PresetPreview.FrameCharacter"), () => _ = RunUiActionAsync("Frame slot preview", FrameCurrentSlotPreviewAsync));
+        ToolTipService.SetToolTip(_overlayFrameButton, T("PresetPreview.FrameCharacterHint"));
+        _overlaySlotActions = new Grid { ColumnSpacing = 6 };
+        _overlaySlotActions.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(1, GridUnitType.Star) });
+        _overlaySlotActions.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(1, GridUnitType.Star) });
+        Grid.SetColumn(_overlayFrameButton, 1);
+        foreach (Button action in new[] { _overlayGalleryButton, _overlayFrameButton })
+        {
+            action.Foreground = _overlayTextBrush;
+            action.HorizontalAlignment = HorizontalAlignment.Stretch;
+            _overlaySlotActions.Children.Add(action);
+        }
+        panel.Children.Add(_overlaySlotActions);
         _overlaySlotSignature = string.Empty;
     }
 
@@ -95,20 +117,20 @@ public sealed partial class MainWindow
     private void UpdateOverlaySlotSection()
     {
         if (_overlaySlotList is null || _overlaySlotHeader is null || _overlaySlotScroll is null) return;
-        WorkspaceRepository? repository = GetSelectedRepository();
-        string? modPath = (_shortcutModPicker?.SelectedItem as ShortcutModOption)?.Path;
-        string? relative = TryGetCurrentModRelativePath(repository, modPath);
-        ModPersistentSlot[] slots = !_overlaySlotSwitchEnabled || repository is null || relative is null ? [] : _modPersistentSlots
-            .Where(slot => slot.RepositoryId == repository.Id && string.Equals(slot.ModRelativePath, relative, StringComparison.OrdinalIgnoreCase))
-            .OrderBy(slot => slot.Name, StringComparer.CurrentCultureIgnoreCase).ToArray();
+        ModPersistentSlot[] slots = OverlaySlots(out string? modPath);
+        string? relative = TryGetCurrentModRelativePath(GetSelectedRepository(), modPath);
         ModPersistentSlot? current = CurrentPersistentSlot(slots);
-        string signature = $"{_overlaySlotSwitchEnabled}|{relative}|{current?.Id}|" + string.Join(",", slots.Select(slot => slot.Id + slot.Name + slot.PreviewFile));
+        string signature = $"{_overlaySlotSwitchEnabled}|{_overlayCompactSlots}|{relative}|{current?.Id}|" + string.Join(",", slots.Select(slot => slot.Id + slot.Name + slot.PreviewFile));
         if (signature == _overlaySlotSignature) return;
         _overlaySlotSignature = signature;
+        _overlayCurrentSlotId = current?.Id;
 
         Visibility visibility = _overlaySlotSwitchEnabled ? Visibility.Visible : Visibility.Collapsed;
         _overlaySlotHeaderLabel!.Visibility = visibility;
         _overlaySlotScroll.Visibility = visibility;
+        _overlaySlotActions!.Visibility = visibility;
+        _overlayGalleryButton!.IsEnabled = slots.Length > 0;
+        _overlayFrameButton!.IsEnabled = current is not null;
         _overlaySlotHeader.Text = slots.Length == 0 ? T("HotReload.NoSlotsForThisMod") : T("HotReload.StateSlotsHotSwitch");
         _overlaySlotList.Children.Clear();
         bool anyPreview = false;
@@ -121,26 +143,43 @@ public sealed partial class MainWindow
                 Foreground = _overlayTextBrush, AllowFocusOnInteraction = false, Padding = new Thickness(10, 4, 10, 5), FontSize = 13,
                 VerticalAlignment = VerticalAlignment.Top
             };
-            if (CreatePresetPreviewImage(slot.PreviewFile, 120, 68) is { } thumbnail)
+            if (!_overlayCompactSlots && CreatePresetPreviewImage(slot.PreviewFile, 120, 96) is { } thumbnail)
             {
                 anyPreview = true;
+                thumbnail.HorizontalAlignment = HorizontalAlignment.Center;
                 var card = new StackPanel { Spacing = 3 };
                 card.Children.Add(thumbnail);
                 card.Children.Add(new TextBlock { Text = label, MaxWidth = 120, TextTrimming = TextTrimming.CharacterEllipsis });
                 button.Content = card;
                 AutomationProperties.SetName(button, slot.Name);
-                ToolTipService.SetToolTip(button, CreatePresetPreviewImage(slot.PreviewFile, 400, 225));
+                ToolTipService.SetToolTip(button, CreatePresetPreviewImage(slot.PreviewFile, 320, 320));
             }
             button.Click += async (_, _) => await RunUiActionAsync("Overlay slot switch", () => SwitchSlotFromOverlayAsync(slot.Id, modPath!));
             _overlaySlotList.Children.Add(button);
         }
-        _overlaySlotScroll.Height = anyPreview ? 128 : 40;
+        _overlaySlotScroll.Height = anyPreview ? 156 : 40;
+    }
+
+    private ModPersistentSlot[] OverlaySlots(out string? modPath)
+    {
+        WorkspaceRepository? repository = GetSelectedRepository();
+        modPath = (_shortcutModPicker?.SelectedItem as ShortcutModOption)?.Path;
+        string? relative = TryGetCurrentModRelativePath(repository, modPath);
+        return !_overlaySlotSwitchEnabled || repository is null || relative is null ? [] : _modPersistentSlots
+            .Where(slot => slot.RepositoryId == repository.Id && string.Equals(slot.ModRelativePath, relative, StringComparison.OrdinalIgnoreCase))
+            .OrderBy(slot => slot.Name, StringComparer.CurrentCultureIgnoreCase).ToArray();
     }
 
     // In game, without dialogs: write the slot's keys into d3dx_user.ini, then reload with F10.
     private async Task SwitchSlotFromOverlayAsync(string slotId, string modPath)
     {
-        if (_savingOverlaySinglePreset || _restoringPersistentRuntime || _applyingCombinationProfile || _shortcutSendInProgress) return;
+        if (_savingOverlaySinglePreset || _applyingCombinationProfile) return;
+        if (_restoringPersistentRuntime || _shortcutSendInProgress)
+        {
+            _shortcutStatus!.Text = T("HotReload.StillApplying");
+            RefreshShortcutOverlay(bindingsChanged: true);
+            return;
+        }
         WorkspaceRepository? repository = GetSelectedRepository();
         ModPersistentSlot? slot = _modPersistentSlots.FirstOrDefault(item => item.Id == slotId);
         string? userIni = repository?.PersistentUserIniPath is { Length: > 0 } configured ? configured : TryGetDefaultPersistentIniPath(repository);
@@ -161,6 +200,7 @@ public sealed partial class MainWindow
         _shortcutSendInProgress = true;
         try
         {
+            var clock = System.Diagnostics.Stopwatch.StartNew();
             string deployedName = ModDeploymentLayout.DeployedName(modPath);
             if (string.IsNullOrWhiteSpace(repository.TargetPath) || !Directory.Exists(ModDeploymentLayout.DeployedPath(repository.TargetPath, modPath)))
                 throw new InvalidDataException(T("PersistentSlots.DeployThisModUnderItsMatching"));
@@ -168,7 +208,15 @@ public sealed partial class MainWindow
             await Task.Run(() => ModPersistentPresetEngine.ApplyRuntimeRestore(plan));
             slot.ActivatedAtUtc = DateTimeOffset.UtcNow;
             SaveShellConfig();
-            _shortcutStatus!.Text = $"{slot.Name} · " + await HotReloadLoaderAsync(userIni);
+            long written = clock.ElapsedMilliseconds;
+            // The file stays read-only for a few seconds after the key, so report the switch as soon as the key is out.
+            _shortcutStatus!.Text = $"{slot.Name} · " + await HotReloadLoaderAsync(userIni, () =>
+            {
+                TraceStartupStage($"Slot switch: values written {written} ms, reload key sent {clock.ElapsedMilliseconds} ms");
+                _shortcutStatus!.Text = $"{slot.Name} · " + T("HotReload.Applying");
+                _overlaySlotSignature = string.Empty;
+                RefreshShortcutOverlay(bindingsChanged: true);
+            });
         }
         catch (Exception ex)
         {

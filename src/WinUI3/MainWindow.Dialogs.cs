@@ -6,8 +6,6 @@ using Microsoft.UI.Xaml.Automation;
 using Microsoft.UI.Xaml.Controls;
 using Microsoft.UI.Xaml.Media;
 using Microsoft.UI.Xaml.Media.Imaging;
-using Windows.Storage;
-using Windows.Storage.Pickers;
 using Windows.System;
 using WinRT.Interop;
 
@@ -301,29 +299,11 @@ public sealed partial class MainWindow
         };
     }
 
-    private async Task<string?> PickFolderAsync(string? preferredPath = null)
-    {
-        var picker = new FolderPicker();
-        picker.SuggestedStartLocation = PickerLocationId.Desktop;
-        picker.FileTypeFilter.Add("*");
-        InitializeWithWindow.Initialize(picker, WindowNative.GetWindowHandle(this));
-        StorageFolder? folder = await picker.PickSingleFolderAsync();
-        return folder?.Path;
-    }
+    private Task<string?> PickFolderAsync(string? preferredPath = null) =>
+        Task.FromResult(NativeFileDialog.PickFolder(WindowNative.GetWindowHandle(this)));
 
-    private async Task<string?> PickFileAsync(string[] extensions)
-    {
-        var picker = new FileOpenPicker();
-        picker.SuggestedStartLocation = PickerLocationId.Desktop;
-        foreach (string extension in extensions)
-        {
-            picker.FileTypeFilter.Add(extension);
-        }
-
-        InitializeWithWindow.Initialize(picker, WindowNative.GetWindowHandle(this));
-        StorageFile? file = await picker.PickSingleFileAsync();
-        return file?.Path;
-    }
+    private Task<string?> PickFileAsync(string[] extensions) =>
+        Task.FromResult(NativeFileDialog.PickFile(WindowNative.GetWindowHandle(this), extensions));
 
     private void OpenDirectory(string? directory, string title)
     {

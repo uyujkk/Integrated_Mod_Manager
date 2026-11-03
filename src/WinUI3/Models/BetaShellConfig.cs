@@ -1,5 +1,6 @@
 using System.Text.Json;
 using System.Text.Json.Serialization;
+using IntegratedModManager.Core.Online;
 using IntegratedModManager.Core.Repository;
 
 namespace ModFolderCopier.WinUI;
@@ -16,6 +17,9 @@ public sealed class BetaShellConfig
     public string? ShortcutOverlayTextColor { get; set; }
     public bool? OverlaySlotSwitchEnabled { get; set; }
     public bool CapturePresetPreviews { get; set; }
+    public bool OverlayCompactSlots { get; set; }
+    public bool PresetPreviewFrameLocked { get; set; }
+    public CharacterScreenRegion? PresetPreviewDefaultRegion { get; set; }
     public Dictionary<string, LocalLibraryState>? LocalLibraries { get; set; }
     public OnlineWorkspacePreferences? OnlinePreferences { get; set; }
 

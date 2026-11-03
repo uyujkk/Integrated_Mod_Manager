@@ -15,9 +15,27 @@ Updated 2026-11-02 against main after v4.6.1. This brings the earlier plans and 
 | **C. 4.8 功能** | 批量操作 → 预设截图第二阶段；瞬态变量过滤、轻量方案分享、自动保存间隔 | L | 无 |
 | **D. 工程清理（穿插）** | 语言文件合并、快捷键页 ViewModel、`async void`、空 `catch` 等 | 每项 S–M | 无，不单独发版 |
 | **F. 测试整合与兼容** | 整合压缩测试；补配置和格式的兼容测试；明确支持范围 | M–L | 建议排在 B 之前，详见 F 节 |
+| **G. 适配其他游戏** | 按系统语言选界面语言（G1 已实现）；首次安装弹窗选择默认仓库预设；其他游戏通过 XXMI 一键启动 | M | G3 需要实机核对；建议在面向其他游戏发布前完成 |
 | **搁置** | #15 原生闪退（等转储）、C3 终末地修复器集成（#8）、#9 角色定向修复（等 #8）、E Linux 尝试 | — | 见下 |
 
-**建议下一步**：先做 A，再做 B1（元素底板和文字阴影）。B1 工作量小、用户直接可见；A 里的 F10 核对决定了预设截图的保存流程是否可靠。
+## 未完成内容 / Open work（2026-11-02 整理）
+
+已完成：A2、A3、A4（#61）；B1（#62）；F3 的配置样本和未知字段（#63）。B2 的自动截图和框选已由维护者实测可用。
+
+**已写好、待合并**（分支 `feature/preset-previews-main`）：主窗口预览图、框选角色、图片切换、锁定大小和默认区域、管理员权限下的文件选择、G1 系统语言。
+
+| 优先级 | 项目 | 状态或缺口 |
+| --- | --- | --- |
+| 1 | 合并上述分支 | 管理员权限选文件、点图切换和动画流畅度尚待确认 |
+| 2 | 切换耗时 | 用 `startup.log` 的 `Slot switch` 记录分清管理器和游戏各占多少；3 秒只读保持是否能缩短，取决于 A1 的 F10 核对 |
+| 3 | A1 实机核对 | F10 热应用、变体导入、默认槽位、更新设置写回等未逐项勾选 |
+| 4 | G2、G3 | 首次预设弹窗、其他游戏 XXMI 启动，发布到其他游戏页面前完成 |
+| 5 | B3、B4 | 背景模式、鼠标穿透、HUD、外观预设；待生效队列 |
+| 6 | F 其余 | F1 压缩、F2 跳过机制和键名测试、F4 Windows 版本实测；Endfield 测试开着游戏运行会失败，要与真实启动会话隔离 |
+| 7 | C、D | C1、C2、C4–C6；语言文件合并、快捷键页 ViewModel、`async void` 等清理 |
+| 搁置 | #15、C3、#9、E | 等转储或依赖项 |
+
+B2 第二阶段的取景框差异已在 B2 节说明；待确认的小项：图片切换列表是否改用固定深色背景；组合预设不进图片切换。
 
 ---
 
@@ -80,15 +98,23 @@ Updated 2026-11-02 against main after v4.6.1. This brings the earlier plans and 
 1. **元素底板**：每个按钮、标签和槽位卡片保留一层独立的半透明圆角底板，透明度和整体背景分开设置（新增“元素底板不透明度”）。整体可以很透，文字下面仍有底色。
 2. **文字阴影**：WinUI 的 `TextBlock` 没有描边属性。可以用 Composition `DropShadow` 给文字加 1–2 像素的深色阴影（`TextBlock.GetAlphaMask()`），只在不透明度低于 60% 时启用，避免影响性能。
 
-### B2. 预设截图预览，第一阶段（M，部分实现）
+### B2. 预设截图预览，第一阶段（M，已实现）
 
-**已实现**：`PresetPreviewStore` 及其测试；可选字段 `PreviewFile`；默认关闭的“在浮窗保存预设时截图”和隐私提示；浮窗保存时在 F10 之前截图，近乎纯黑的画面不保存；浮窗状态槽位的缩略图和悬停放大；状态槽位和组合预设恢复确认框里的“保存时”图片；删除预设时删图，启动时清理孤立文件。
+**已实现**：`PresetPreviewStore` 及其测试；可选字段 `PreviewFile`；默认关闭的“在浮窗保存预设时截图”和隐私提示；浮窗保存时在 F10 之前截图，近乎纯黑的画面不保存；浮窗状态槽位的缩略图、悬停放大和只显示文字的开关；主窗口状态槽位下拉框和组合预设列表的缩略图；选中预设后可从游戏截取、选择本地图片或清除；恢复确认框里的“保存时”图片；删除预设时删图，启动时清理孤立文件。
 
-**未实现**：主窗口的“设置预览图”、列表和卡片里的缩略图、切换紧凑文字列表。主窗口保存的预设还没有截图。
+**与下面设计的差异**：只在截图的一瞬间设置 `WDA_EXCLUDEFROMCAPTURE`，然后恢复；一直设置会让浮窗从录屏和直播画面里消失。主窗口保存预设时不自动截图，要在保存后用“设置预览图”。
 
-**与下面设计的差异**：只在截图的一瞬间设置 `WDA_EXCLUDEFROMCAPTURE`，然后恢复；一直设置会让浮窗从录屏和直播画面里消失。
+**框选角色（2026-11-02 新增）**：浮窗开启槽位切换后，“框选角色”把浮窗动画变成带边框的透明取景框，用户框住角色并截取，图片归当前槽位；之后点图片就切换到该槽位。框选结果只取落在游戏窗口内的部分。
 
-**未验证**：真实游戏里的截图；窗口化、无边框、独占全屏三种模式；排除浮窗自身的效果。
+**图片切换（2026-11-02 新增）**：浮窗的“图片切换”以动画移到屏幕中央，横向列出当前 Mod 各状态槽位的图片，选择后切换到对应槽位并恢复浮窗。组合预设要关游戏才能恢复，所以不在列表里。
+
+**锁定大小和默认区域（2026-11-02 新增）**：取景框可以锁定大小，并设为默认区域（按游戏窗口的比例保存）。设好后，保存单 Mod 预设时自动截取这个区域；组合预设仍截整个窗口。
+
+**切换耗时**：F10 发送后文件固定保持 3 秒只读（`LoaderHotReload.DefaultHold`），期间不能再次切换。这段时间不会推迟游戏生效，但原来界面要等它结束才更新；现在按键发出就更新。图片切换也不再等退出动画才开始切换。游戏重载 Mod 的时间不受管理器控制。
+
+**已验证**：维护者实测自动截图和框选可用（2026-11-02）。
+
+**未验证**：窗口化、无边框、独占全屏三种模式逐一核对。
 
 **目标**：保存组合预设或单 Mod 槽位时附带一张游戏画面缩略图；浮窗和主窗口的预设列表用缩略图辨认；恢复前可以对照“保存时的样子”。
 
@@ -340,6 +366,49 @@ E 搁置期间，只做下面“顺序和完成标准”里列出的跳过机制
 
 ---
 
+## G. 适配其他游戏 / Other games
+
+**目的**：软件要在其他游戏的发布页上架，第一次打开不能默认是中文和终末地，其他游戏也要能一键启动。2026-11-02 提出，尚未实现。
+
+**现状**
+
+| 部分 | 现状 | 代码 |
+| --- | --- | --- |
+| 界面语言 | 固定默认中文，不读取系统语言；只能在设置页手动切换 | `MainWindow.xaml.cs` 的 `_currentLanguage`，`LoadConfig` |
+| 默认仓库 | 没有配置时自动建一个“默认仓库”，在线来源和 Wiki 都指向终末地 | `LoadShellConfig` |
+| 其他默认值 | 新建仓库、编辑对话框和在线页都回退到 `DefaultOnlineGameName` | `MainWindow.Repositories.cs`、`MainWindow.Dialogs.cs`、`MainWindow.OnlineFeed.cs` |
+
+### G1. 按系统语言选择界面语言（S，已实现）
+
+系统界面语言是中文（含繁体）时用中文，其他语言一律用英文。规则在 Core 的 `UiLanguagePolicy`，有测试。结果写入 `config.ini`，之后不再跟随系统变化。中文系统的首次启动已实测；英文系统未实测，该分支只有单元测试。
+
+### G2. 选择默认仓库预设（S–M）
+
+1. 主窗口显示后弹窗，列出 `BuiltInRepositoryPresets` 中的预设，并提供“自定义 / 稍后设置”。弹窗文字使用 G1 选出的语言。
+2. 选择预设后按所选游戏建立仓库；选择“稍后设置”或关闭弹窗时，建立不绑定任何游戏的空仓库，下次不再弹出。
+3. 去掉回退到终末地的默认值：逐处核对 `DefaultOnlineGameName`、`DefaultOnlineCategoryId` 和 `EndfieldOfficialWikiUrl`。已有仓库的配置不能因此改变，字段为空的旧仓库如何处理要先确认。
+
+### G3. 其他游戏的一键启动（M）
+
+**现状**：XXMI 集成只支持终末地。启动时固定调用 `--nogui --xxmi EFMI`（`EndfieldLauncher.cs`），配置读写也只认 `Importers.EFMI`（`XxmiIntegration.cs`），入口只对终末地仓库显示（`CanUseEndfieldBridge`）。其他游戏的仓库只能直接运行填写的启动器程序，不会指定游戏。
+
+**做法**
+
+1. 内置预设增加对应的 XXMI 导入器：原神 `GIMI`、崩坏：星穹铁道 `SRMI`、绝区零 `ZZMI`。名称和命令行参数要先对照当前版本的 XXMI 确认。
+2. 其他游戏直接调用 `XXMI Launcher.exe --nogui --xxmi <导入器>`，由 XXMI 自己启动游戏，不改写 XXMI 配置。终末地的适配、回调和恢复点是它特有的启动方式需要的，不推广到其他游戏。
+3. 复用现有的 XXMI 路径查找。XXMI 没有这个导入器或未配置游戏目录时，提示用户到 XXMI 里设置，不静默失败。
+4. 自定义仓库可以手动选择导入器，或继续直接运行自己填写的程序。没有选择时行为不变。
+
+**验证**：Core 测试预设到导入器的对应关系和命令行参数；三个游戏的实机启动需要维护者或用户配合，要确认 Mod 确实加载，并核对账号风险提示是否也要显示。
+
+### 只在第一次安装时生效
+
+G1 和 G2 用同一个判断：`config.ini` 和 `beta-shell.json` 都不存在。升级不会触发，因为这两个文件会保留。两个文件分开加载，判断要在加载之前算好，不能在其中一个已写入后再算。
+
+**验证**：Core 测试语言规则和首次安装判断；用空目录分别以中文和英文系统语言启动；从 4.6.1 升级，确认语言、仓库都不变且不弹窗；关闭弹窗后重启，确认不再弹出。
+
+---
+
 ## 搁置 / On hold
 
 - **#15 在线详情页原生闪退（`0xc000027b`）**：未再复现，没有转储，根因未确认。等到能捕获 stowed exception 转储再处理；不把其他崩溃的修复算作解决了它。
@@ -367,5 +436,6 @@ E 搁置期间，只做下面“顺序和完成标准”里列出的跳过机制
 - **D. Cleanup (woven in):** fold `BetaLocalization` into `zh-CN.json`, add a shortcuts page ViewModel, guard the 67 `async void` handlers, finish string and empty `catch` leftovers, move online fetching to Core, remove merged branches after confirmation.
 - **E. Linux experiment (1–2 weeks, on hold since 2026-11-02; the parts of F2 that depend on it wait too):** Ubuntu VM, basic features only, no game connection. VM setup, platform abstraction (symlinks, archive-tool lookup, XDG, OS-specific tests), an `ubuntu-latest` CI job, a small separate Avalonia prototype, and an unreleased `linux-x64` tar.gz. The Windows build is unaffected.
 - **F. Tests and compatibility (M–L):** the suite is neither slow nor visibly duplicated: 67 s in total, 40 s of it in two timeout tests, one of them the flaky one. Consolidate in low-risk batches (fix those two, merge into `[Theory]`, shared fixtures, smaller data matrices), then delete only reviewed candidates, keeping safety, rollback, config and updater tests and all coverage gates. The real gaps are compatibility: `beta-shell.json` has no tests and drops unknown fields, bundles reject other versions and unknown fields, 18 tests pass silently off Windows, and Windows 10 is claimed but has no recorded test.
+- **G. Other games (M, before publishing for other games):** on a first install only, pick the UI language from the system language (Chinese or English), and ask for the default repository preset instead of assuming Endfield; upgrades are unaffected. One-click launch for Genshin Impact, Honkai: Star Rail and Zenless Zone Zero through XXMI's own importers, without rewriting XXMI's configuration. Needs real-game checks.
 - **On hold:** #15 (needs a crash dump), C3 the optional Endfield repair tool (#8, set aside 2026-11-02), #9 (needs #8), E the Linux experiment, and one-shot `[Present]` injection, a fallback to evaluate only if A1 shows the read-only method is unreliable.
 - **Suggested next step:** A, then B1.

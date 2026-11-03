@@ -1332,6 +1332,7 @@ public sealed partial class MainWindow
                 name.Children.Add(new FontIcon { Glyph = "\uE8F1", FontSize = 15, VerticalAlignment = VerticalAlignment.Center });
                 var nameText = new TextBlock { Text = profile.Name, TextWrapping = TextWrapping.Wrap, MaxLines = 2, TextTrimming = TextTrimming.CharacterEllipsis };
                 Grid.SetColumn(nameText, 1); name.Children.Add(nameText);
+                if (CreatePresetPreviewImage(profile.PreviewFile, 160, 90) is { } thumbnail) label.Children.Add(thumbnail);
                 label.Children.Add(name);
                 label.Children.Add(new TextBlock { Text = T("RepositoryWorkspace.Mods2", profile.ModRelativePaths.Count, (profile.IncludesPersistentState ? "组合 + 状态" : "仅组合"), (profile.IncludesPersistentState ? "set + state" : "set only")), FontSize = 12 });
                 _combinationPresetList.Items.Add(new ListViewItem { Content = label, Tag = profile.Id, HorizontalContentAlignment = HorizontalAlignment.Stretch });
@@ -1340,6 +1341,9 @@ public sealed partial class MainWindow
             var selected = GetSelectedConfigurationProfile();
             _combinationMemberTitle!.Text = selected?.Name ?? T("RepositoryWorkspace.ModsInPreset");
             _combinationMemberPanel!.Children.Clear();
+            if (selected is not null)
+                _combinationMemberPanel.Children.Add(CreatePresetPreviewEditor(selected.RepositoryId, selected.Id, selected.PreviewFile,
+                    file => selected.PreviewFile = file, RefreshConfigurationProfiles));
             if (selected is null)
             {
                 var empty = new TextBlock { Text = T("RepositoryWorkspace.NoCombinationPresetsYetDeployYour"), TextWrapping = TextWrapping.Wrap, Margin = new Thickness(8, 20, 8, 8) };

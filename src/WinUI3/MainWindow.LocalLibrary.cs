@@ -9,8 +9,6 @@ using Microsoft.UI.Xaml.Media;
 using Microsoft.UI.Xaml.Media.Imaging;
 using Windows.ApplicationModel.DataTransfer;
 using Windows.Storage;
-using Windows.Storage.Pickers;
-using WinRT.Interop;
 
 namespace ModFolderCopier.WinUI;
 
@@ -126,20 +124,13 @@ public sealed partial class MainWindow
                 return;
             }
 
-            var picker = new FileOpenPicker();
-            foreach (string extension in SupportedArchiveExtensions
+            string? archive = await PickFileAsync(SupportedArchiveExtensions
                 .Select(value => Path.GetExtension(value)!)
                 .Where(extension => !string.IsNullOrWhiteSpace(extension))
-                .Distinct(StringComparer.OrdinalIgnoreCase))
+                .Distinct(StringComparer.OrdinalIgnoreCase).ToArray());
+            if (archive is not null)
             {
-                picker.FileTypeFilter.Add(extension!);
-            }
-            picker.SuggestedStartLocation = PickerLocationId.Downloads;
-            InitializeWithWindow.Initialize(picker, WindowNative.GetWindowHandle(this));
-            StorageFile? file = await picker.PickSingleFileAsync();
-            if (file is not null)
-            {
-                await ImportArchiveToSecondLevelFolderAsync(file.Path, item);
+                await ImportArchiveToSecondLevelFolderAsync(archive, item);
             }
         }
         catch (Exception ex)

@@ -67,9 +67,9 @@ public sealed partial class MainWindow
             {
                 PersistentSlotComboBox.Items.Add(new ComboBoxItem
                 {
-                    Content = ReferenceEquals(slot, current)
+                    Content = PresetPreviewLabel(ReferenceEquals(slot, current)
                         ? T("PersistentVariants.SlotLabelCurrent", slot.Name, slot.Values.Count)
-                        : $"{slot.Name} · {slot.Values.Count}",
+                        : $"{slot.Name} · {slot.Values.Count}", slot.PreviewFile),
                     Tag = slot.Id
                 });
             }
@@ -140,6 +140,8 @@ public sealed partial class MainWindow
     {
         if (PersistentSlotValuesTextBlock is null) return;
         ModPersistentSlot? slot = GetSelectedPersistentSlot();
+        PersistentSlotPreviewHost.Content = slot is null ? null : CreatePresetPreviewEditor(slot.RepositoryId, slot.Id, slot.PreviewFile,
+            file => slot.PreviewFile = file, RefreshPersistentSlotControls);
         PersistentSlotValuesTextBlock.Text = slot is null
             ? T("PersistentSlots.SavedINIPathsVariablesAndValues")
             : string.Join(Environment.NewLine, slot.Values.Select(value => $"{value.RelativeIniPath}  ·  {value.Variable} = {value.Value}"));
