@@ -94,6 +94,40 @@ public sealed class BetaShellConfigCompatibilityTests
         Assert.Null(JsonNode.Parse(saved)!["ExtensionData"]);
     }
 
+    [Fact]
+    public void Migration_WritesOutTheFormerGameForEmptyFieldsOnly()
+    {
+        var config = new BetaShellConfig
+        {
+            Repositories =
+            [
+                new WorkspaceRepository { Id = "empty" },
+                new WorkspaceRepository { Id = "named", OnlineGameName = "Genshin Impact", OnlineCategoryId = "18140" },
+                new WorkspaceRepository { Id = "partial", OnlineGameName = "Custom" }
+            ]
+        };
+
+        Assert.True(RepositoryGameMigration.Apply(config, "Former", "1"));
+
+        Assert.Equal(("Former", "1"), (config.Repositories[0].OnlineGameName, config.Repositories[0].OnlineCategoryId));
+        Assert.Equal(("Genshin Impact", "18140"), (config.Repositories[1].OnlineGameName, config.Repositories[1].OnlineCategoryId));
+        Assert.Equal(("Custom", "1"), (config.Repositories[2].OnlineGameName, config.Repositories[2].OnlineCategoryId));
+    }
+
+    [Fact]
+    public void Migration_RunsOnceSoALaterEmptyRepositoryStaysWithoutAGame()
+    {
+        BetaShellConfig config = JsonSerializer.Deserialize<BetaShellConfig>(Sample("v4.6.1"))!;
+        Assert.False(config.RepositoryGamesExplicit);
+        Assert.True(RepositoryGameMigration.Apply(config, "Former", "1"));
+        config.Repositories.Add(new WorkspaceRepository { Id = "new" });
+
+        BetaShellConfig saved = JsonSerializer.Deserialize<BetaShellConfig>(JsonSerializer.Serialize(config))!;
+
+        Assert.False(RepositoryGameMigration.Apply(saved, "Former", "1"));
+        Assert.Equal(string.Empty, saved.Repositories[^1].OnlineGameName);
+    }
+
     private static void AssertContains(JsonNode expected, JsonNode? actual, string path)
     {
         Assert.True(actual is not null, $"{path} was dropped.");

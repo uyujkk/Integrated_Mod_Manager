@@ -17,6 +17,7 @@
     <Compile Include="..\..\src\WinUI3\Models\ModPersistentSlot.cs" Link="WindowAdapters\ModPersistentSlot.cs" />
     <Compile Include="..\..\src\WinUI3\Models\OnlineWorkspacePreferences.cs" Link="WindowAdapters\OnlineWorkspacePreferences.cs" />
     <Compile Include="..\..\src\WinUI3\Models\WorkspaceRepository.cs" Link="WindowAdapters\WorkspaceRepository.cs" />
+    <Compile Include="..\..\src\WinUI3\Models\RepositoryGameMigration.cs" Link="WindowAdapters\RepositoryGameMigration.cs" />
     <None Update="Configuration\Samples\*.json" CopyToOutputDirectory="PreserveNewest" />
   </ItemGroup>
 

@@ -26,6 +26,8 @@ public static class ModDeploymentLayout
     // <repository>/<character>/<Mod>.
     public static string? CharacterFolder(string repositoryRoot, string modSourcePath)
     {
+        // A repository can exist before its source folder is chosen.
+        if (string.IsNullOrWhiteSpace(repositoryRoot) || string.IsNullOrWhiteSpace(modSourcePath)) return null;
         string mod = Path.TrimEndingDirectorySeparator(Path.GetFullPath(modSourcePath));
         string? character = Path.GetDirectoryName(mod);
         string root = Path.TrimEndingDirectorySeparator(Path.GetFullPath(repositoryRoot));

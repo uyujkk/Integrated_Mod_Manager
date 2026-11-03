@@ -578,6 +578,7 @@ public sealed partial class MainWindow
             if (_restoredInterruptedDownloads > 0)
                 ShowAppNotification($"已恢复 {_restoredInterruptedDownloads} 个中断任务，请到更新页检查后手动重试。", $"Restored {_restoredInterruptedDownloads} interrupted tasks. Review them in Updates and retry manually.");
             await NotifyInterruptedImportsAsync();
+            await ChooseFirstInstallGameAsync();
             // Waits for any startup dialog (including the update prompt below) before showing.
             _ = RunUiActionAsync("Show what's new", ShowWhatsNewOnceAsync);
 

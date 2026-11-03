@@ -455,13 +455,13 @@ public sealed partial class MainWindow
 
         TextBox gameBox = new()
         {
-            Text = string.IsNullOrWhiteSpace(initial.OnlineGameName) ? DefaultOnlineGameName : initial.OnlineGameName,
+            Text = initial.OnlineGameName,
             PlaceholderText = T("Dialogs.TargetGameNameForExampleArknights")
         };
 
         TextBox categoryBox = new()
         {
-            Text = string.IsNullOrWhiteSpace(initial.OnlineCategoryId) ? DefaultOnlineCategoryId : initial.OnlineCategoryId,
+            Text = initial.OnlineCategoryId,
             PlaceholderText = T("Dialogs.CategoryIDForExample21842")
         };
 
@@ -541,13 +541,13 @@ public sealed partial class MainWindow
 
         TextBox gameBox = new()
         {
-            Text = string.IsNullOrWhiteSpace(initial.OnlineGameName) ? DefaultOnlineGameName : initial.OnlineGameName,
+            Text = initial.OnlineGameName,
             PlaceholderText = T("Dialogs.TargetGameNameForExampleArknights")
         };
 
         TextBox categoryBox = new()
         {
-            Text = string.IsNullOrWhiteSpace(initial.OnlineCategoryId) ? DefaultOnlineCategoryId : initial.OnlineCategoryId,
+            Text = initial.OnlineCategoryId,
             PlaceholderText = T("Dialogs.SkinCategoryIDForExample42770")
         };
 
