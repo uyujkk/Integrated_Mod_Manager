@@ -1,0 +1,19 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <TargetFramework>net8.0-windows</TargetFramework>
+  </PropertyGroup>
+
+  <!-- Drives the built application through Windows UI Automation. Needs an interactive desktop, so
+       scripts\test-ui.ps1 runs it on its own rather than as part of test-all. -->
+  <Import Project="..\TestDependencies.props" />
+
+  <ItemGroup>
+    <Using Include="Xunit" />
+    <PackageReference Include="FlaUI.UIA3" Version="4.0.0" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <!-- One application at a time: they share the desktop, the hotkey and the focus. -->
+    <None Include="xunit.runner.json" CopyToOutputDirectory="PreserveNewest" />
+  </ItemGroup>
+</Project>

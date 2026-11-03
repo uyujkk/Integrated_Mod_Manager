@@ -15,6 +15,8 @@ namespace ModFolderCopier.WinUI;
 public sealed partial class MainWindow
 {
     private readonly ShortcutInputService _shortcutInput = new();
+    /// <summary>The Shortcuts page and overlay state; see ShortcutPageViewModel.</summary>
+    private readonly ShortcutPageViewModel _shortcuts = new();
     private readonly ModShortcutScanCache _shortcutScanCache = new();
     private DetectedModShortcut[] _mainBindings = [];
     private readonly Dictionary<DetectedModShortcut, Button> _mainShortcutControls = new();
@@ -28,24 +30,11 @@ public sealed partial class MainWindow
     private NumberBox? _shortcutHoldDuration;
     private NumberBox? _shortcutTapDuration;
     private ComboBox? _shortcutInputModePicker;
-    private ShortcutInputMode _shortcutInputMode = ShortcutInputMode.ScanCode;
     private ShortcutOverlayWindow? _shortcutOverlay;
-    private IReadOnlyList<DetectedModShortcut> _shortcutDetected = [];
-    private int _shortcutScanRevision;
-    private bool _shortcutInputEnabled;
-    private bool _shortcutSendInProgress;
-    private string _shortcutLoadedPath = string.Empty;
     private ShortcutPanelHotkey? _shortcutPanelHotkey;
-    private uint _shortcutPanelHotkeyModifiers = 3; // Ctrl + Alt
-    private uint _shortcutPanelHotkeyKey = 0x4B; // K
-    private bool _shortcutPanelHotkeyEnabled = true;
-    private bool _shortcutOverlayVisible;
-    private bool _shortcutHotkeyRegistered;
     private TextBlock? _shortcutHotkeyStatus;
     private TextBlock? _shortcutPrivilegeNotice;
     private Button? _shortcutElevateButton;
-    private int _shortcutOverlayOpacity = 100;
-    private bool _shortcutHideUnsupported;
     private Slider? _shortcutOpacitySlider, _overlayOpacitySlider;
     private bool _shortcutOpacitySyncing;
     // One shared brush: changing its colour recolours every overlay text at once.
@@ -89,12 +78,12 @@ public sealed partial class MainWindow
         _shortcutRestoreModPath = (_shortcutModPicker.SelectedItem as ShortcutModOption)?.Path;
         var target = _shortcutTargetPicker?.SelectedItem as ShortcutTarget;
         double tap = _shortcutTapDuration?.Value ?? 200, hold = _shortcutHoldDuration?.Value ?? 300;
-        bool overlayVisible = _shortcutOverlayVisible;
-        ++_shortcutScanRevision;
+        bool overlayVisible = _shortcuts.OverlayVisible;
+        ++_shortcuts.ScanRevision;
         _characterFollowTimer?.Dispose();
         _characterFollowTimer = null;
         ShortcutOverlayWindow? oldOverlay = _shortcutOverlay;
-        _shortcutOverlay = null; _shortcutOverlayVisible = false;
+        _shortcutOverlay = null; _shortcuts.OverlayVisible = false;
         _overlayButtonList = null; _overlayScroll = null; _overlayBindings = []; _overlayOpacitySlider = null;
         oldOverlay?.Close();
         ShortcutPaneContent.Children.Clear();
@@ -177,7 +166,7 @@ public sealed partial class MainWindow
         _shortcutTargetPicker.SelectionChanged += (_, _) =>
         {
             // A newly selected target always requires deliberate re-arming.
-            _shortcutInputEnabled = false;
+            _shortcuts.InputEnabled = false;
             if (_shortcutEnabledToggle is not null) _shortcutEnabledToggle.IsOn = false;
             UpdateShortcutPrivilegeNotice();
             RefreshShortcutOverlay();
@@ -185,8 +174,8 @@ public sealed partial class MainWindow
         _shortcutEnabledToggle = LocalizedToggle(T("ShortcutPanel.EnableInputToSelectedWindow"));
         _shortcutEnabledToggle.Toggled += (_, _) =>
         {
-            _shortcutInputEnabled = _shortcutEnabledToggle.IsOn && _shortcutTargetPicker.SelectedItem is ShortcutTarget;
-            if (!_shortcutInputEnabled) _shortcutEnabledToggle.IsOn = false;
+            _shortcuts.InputEnabled = _shortcutEnabledToggle.IsOn && _shortcutTargetPicker.SelectedItem is ShortcutTarget;
+            if (!_shortcuts.InputEnabled) _shortcutEnabledToggle.IsOn = false;
             RefreshShortcutOverlay();
         };
         _shortcutToolbarToggle = _shortcutEnabledToggle;
@@ -218,11 +207,11 @@ public sealed partial class MainWindow
         var hideUnsupported = new CheckBox
         {
             Content = new TextBlock { Text = T("ShortcutPanel.HideBindingsThatCannotBeSent"), TextWrapping = TextWrapping.Wrap },
-            IsChecked = _shortcutHideUnsupported, HorizontalAlignment = HorizontalAlignment.Right
+            IsChecked = _shortcuts.HideUnsupported, HorizontalAlignment = HorizontalAlignment.Right
         };
         hideUnsupported.Click += (_, _) =>
         {
-            _shortcutHideUnsupported = hideUnsupported.IsChecked == true;
+            _shortcuts.HideUnsupported = hideUnsupported.IsChecked == true;
             SaveShellConfig();
             RenderShortcutButtons();
         };
@@ -258,11 +247,11 @@ public sealed partial class MainWindow
         var modifiers = new ComboBox { Header = T("ShortcutPanel.ShowHideOverlay") };
         foreach (var item in new[] { ("Ctrl+Alt", 3u), ("Ctrl+Shift", 6u), ("Alt+Shift", 5u) })
             modifiers.Items.Add(new ComboBoxItem { Content = item.Item1, Tag = item.Item2 });
-        modifiers.SelectedItem = modifiers.Items.Cast<ComboBoxItem>().First(i => (uint)i.Tag == _shortcutPanelHotkeyModifiers);
+        modifiers.SelectedItem = modifiers.Items.Cast<ComboBoxItem>().First(i => (uint)i.Tag == _shortcuts.HotkeyModifiers);
         var keyPicker = new ComboBox { Header = T("ShortcutPanel.Key2") };
         foreach (uint key in Enumerable.Range('A', 26).Concat(Enumerable.Range(0x70, 12)).Select(k => (uint)k))
             keyPicker.Items.Add(new ComboBoxItem { Content = key >= 0x70 ? "F" + (key - 0x6F) : ((char)key).ToString(), Tag = key });
-        keyPicker.SelectedItem = keyPicker.Items.Cast<ComboBoxItem>().First(i => (uint)i.Tag == _shortcutPanelHotkeyKey);
+        keyPicker.SelectedItem = keyPicker.Items.Cast<ComboBoxItem>().First(i => (uint)i.Tag == _shortcuts.HotkeyKey);
         var hotkeySettings = new StackPanel { Orientation = Orientation.Horizontal, Spacing = 8 };
         hotkeySettings.Children.Add(modifiers);
         hotkeySettings.Children.Add(keyPicker);
@@ -273,13 +262,13 @@ public sealed partial class MainWindow
             if (revertingHotkeyChoice) return;
             uint mod = (uint)((ComboBoxItem)modifiers.SelectedItem).Tag;
             uint key = (uint)((ComboBoxItem)keyPicker.SelectedItem).Tag;
-            if (_shortcutHotkeyRegistered && mod == _shortcutPanelHotkeyModifiers && key == _shortcutPanelHotkeyKey) return;
+            if (_shortcuts.HotkeyRegistered && mod == _shortcuts.HotkeyModifiers && key == _shortcuts.HotkeyKey) return;
             if (_shortcutPanelHotkey?.TrySet(mod, key) == true)
             {
-                _shortcutPanelHotkeyModifiers = mod;
-                _shortcutPanelHotkeyKey = key;
-                _shortcutPanelHotkeyEnabled = true;
-                _shortcutHotkeyRegistered = true;
+                _shortcuts.HotkeyModifiers = mod;
+                _shortcuts.HotkeyKey = key;
+                _shortcuts.HotkeyEnabled = true;
+                _shortcuts.HotkeyRegistered = true;
                 SaveShellConfig();
                 UpdateShortcutHotkeyStatus();
             }
@@ -287,8 +276,8 @@ public sealed partial class MainWindow
             {
                 // The pickers must show the hotkey that is still in effect.
                 revertingHotkeyChoice = true;
-                modifiers.SelectedItem = modifiers.Items.Cast<ComboBoxItem>().First(i => (uint)i.Tag == _shortcutPanelHotkeyModifiers);
-                keyPicker.SelectedItem = keyPicker.Items.Cast<ComboBoxItem>().First(i => (uint)i.Tag == _shortcutPanelHotkeyKey);
+                modifiers.SelectedItem = modifiers.Items.Cast<ComboBoxItem>().First(i => (uint)i.Tag == _shortcuts.HotkeyModifiers);
+                keyPicker.SelectedItem = keyPicker.Items.Cast<ComboBoxItem>().First(i => (uint)i.Tag == _shortcuts.HotkeyKey);
                 revertingHotkeyChoice = false;
                 _shortcutHotkeyStatus!.Text = T("ShortcutPanel.HotkeyUnavailablePreviousSettingsRetainedChoose");
                 _shortcutHotkeyStatus.Visibility = Visibility.Visible;
@@ -302,8 +291,8 @@ public sealed partial class MainWindow
         hotkeyActions.Children.Add(ShortcutButton(T("ShortcutPanel.Disable"), () =>
         {
             _shortcutPanelHotkey?.Disable();
-            _shortcutPanelHotkeyEnabled = false;
-            _shortcutHotkeyRegistered = false;
+            _shortcuts.HotkeyEnabled = false;
+            _shortcuts.HotkeyRegistered = false;
             SaveShellConfig();
             UpdateShortcutHotkeyStatus();
         }));
@@ -338,13 +327,14 @@ public sealed partial class MainWindow
         _shortcutSendingSummary = new TextBlock();
         StackPanel send = AddShortcutModule("", T("ShortcutPanel.SendingSettings"), _shortcutSendingSummary, null);
         _shortcutInputModePicker = new ComboBox { Header = T("ShortcutPanel.InputMethod"), HorizontalAlignment = HorizontalAlignment.Stretch };
+        AutomationProperties.SetAutomationId(_shortcutInputModePicker, "ShortcutInputModePicker");
         _shortcutInputModePicker.Items.Add(new ComboBoxItem { Content = T("ShortcutPanel.ScanCodesPhysicalKeySimulation"), Tag = ShortcutInputMode.ScanCode });
         _shortcutInputModePicker.Items.Add(new ComboBoxItem { Content = T("ShortcutPanel.VirtualKeysLegacyCompatibility"), Tag = ShortcutInputMode.VirtualKey });
-        _shortcutInputModePicker.SelectedIndex = _shortcutInputMode == ShortcutInputMode.VirtualKey ? 1 : 0;
+        _shortcutInputModePicker.SelectedIndex = _shortcuts.InputMode == ShortcutInputMode.VirtualKey ? 1 : 0;
         _shortcutInputModePicker.SelectionChanged += (_, _) =>
         {
             if (_shortcutInputModePicker.SelectedItem is ComboBoxItem { Tag: ShortcutInputMode mode })
-            { _shortcutInputMode = mode; SaveShellConfig(); UpdateShortcutSendingSummary(); }
+            { _shortcuts.InputMode = mode; SaveShellConfig(); UpdateShortcutSendingSummary(); }
         };
         send.Children.Add(_shortcutInputModePicker);
         _shortcutTapDuration = new NumberBox
@@ -425,7 +415,7 @@ public sealed partial class MainWindow
     private void UpdateShortcutSendingSummary()
     {
         if (_shortcutSendingSummary is null || _shortcutTapDuration is null || _shortcutHoldDuration is null) return;
-        string mode = _shortcutInputMode == ShortcutInputMode.VirtualKey ? T("ShortcutPanel.VirtualKeys") : T("ShortcutPanel.ScanCodes");
+        string mode = _shortcuts.InputMode == ShortcutInputMode.VirtualKey ? T("ShortcutPanel.VirtualKeys") : T("ShortcutPanel.ScanCodes");
         // A cleared box reads NaN; sending then falls back to the defaults, so the summary does too.
         double tap = double.IsFinite(_shortcutTapDuration.Value) ? _shortcutTapDuration.Value : 200;
         double hold = double.IsFinite(_shortcutHoldDuration.Value) ? _shortcutHoldDuration.Value : 300;
@@ -519,15 +509,15 @@ public sealed partial class MainWindow
         string repository = GetSelectedRepository()?.SourcePath ?? string.Empty;
         string? previous = (_shortcutModPicker.SelectedItem as ShortcutModOption)?.Path ?? _shortcutRestoreModPath ?? _currentSecondLevelPath;
         _shortcutRestoreModPath = null;
-        int revision = ++_shortcutScanRevision;
-        _shortcutInputEnabled = false;
+        int revision = ++_shortcuts.ScanRevision;
+        _shortcuts.InputEnabled = false;
         _shortcutEnabledToggle!.IsOn = false;
-        _shortcutDetected = [];
-        _shortcutLoadedPath = string.Empty;
+        _shortcuts.Detected = [];
+        _shortcuts.LoadedPath = string.Empty;
         RenderShortcutButtons();
         _shortcutStatus!.Text = T("ShortcutPanel.ReadingCurrentRepository");
         ShortcutModOption[] options = await Task.Run(() => ReadShortcutModOptions(repository));
-        if (_onlineWindowClosed || revision != _shortcutScanRevision) return;
+        if (_onlineWindowClosed || revision != _shortcuts.ScanRevision) return;
         _shortcutModPicker.ItemsSource = options;
         _ = RefreshShortcutDeployedModsAsync();
         LoadCharacterFollowProfile(repository);
@@ -543,25 +533,25 @@ public sealed partial class MainWindow
 
     private async Task LoadShortcutSelectionAsync(bool force = false)
     {
-        int revision = ++_shortcutScanRevision;
-        _shortcutDetected = [];
-        _shortcutLoadedPath = string.Empty;
+        int revision = ++_shortcuts.ScanRevision;
+        _shortcuts.Detected = [];
+        _shortcuts.LoadedPath = string.Empty;
         RenderShortcutButtons();
         if (_shortcutModPicker?.SelectedItem is not ShortcutModOption mod) { RefreshShortcutOverlay(bindingsChanged: true); return; }
         try
         {
             _shortcutStatus!.Text = T("ShortcutPanel.ReadingINI");
             var detected = await Task.Run(() => _shortcutScanCache.Scan(mod.Path, force));
-            if (_onlineWindowClosed || revision != _shortcutScanRevision) return;
-            _shortcutDetected = detected;
-            _shortcutLoadedPath = mod.Path;
+            if (_onlineWindowClosed || revision != _shortcuts.ScanRevision) return;
+            _shortcuts.Detected = detected;
+            _shortcuts.LoadedPath = mod.Path;
             _shortcutStatus.Text = T("ShortcutPanel.ReadBindingsInGameConditionsAre", detected.Count);
             RenderShortcutButtons();
         }
         catch (Exception ex)
         {
             LogApplicationIssue("Read shortcut panel INI", ex);
-            if (!_onlineWindowClosed && revision == _shortcutScanRevision) _shortcutStatus!.Text = ex.Message;
+            if (!_onlineWindowClosed && revision == _shortcuts.ScanRevision) _shortcutStatus!.Text = ex.Message;
         }
     }
 
@@ -598,18 +588,16 @@ public sealed partial class MainWindow
         };
     }
 
-    private DetectedModShortcut[] VisibleShortcuts() => _shortcutHideUnsupported
-        ? _shortcutDetected.Where(s => ShortcutKeyPlan.TryCreate(s.RawKey, out _)).ToArray()
-        : _shortcutDetected.ToArray();
+    private DetectedModShortcut[] VisibleShortcuts() => _shortcuts.VisibleShortcuts();
 
     // Selects the INI of the first binding in File Explorer; the panel itself never edits Mod files.
     private void ShowShortcutIniFile()
     {
-        if (_shortcutDetected.Count == 0 || string.IsNullOrEmpty(_shortcutLoadedPath)) return;
-        string sourceFile = _shortcutDetected[0].SourceFile;
+        if (_shortcuts.Detected.Count == 0 || string.IsNullOrEmpty(_shortcuts.LoadedPath)) return;
+        string sourceFile = _shortcuts.Detected[0].SourceFile;
         try
         {
-            string? path = Directory.EnumerateFiles(_shortcutLoadedPath, sourceFile, new EnumerationOptions
+            string? path = Directory.EnumerateFiles(_shortcuts.LoadedPath, sourceFile, new EnumerationOptions
             {
                 RecurseSubdirectories = true, IgnoreInaccessible = true, AttributesToSkip = FileAttributes.ReparsePoint,
                 MatchCasing = MatchCasing.CaseInsensitive
@@ -625,14 +613,14 @@ public sealed partial class MainWindow
 
     private void RenderShortcutButtons()
     {
-        if (_shortcutOpenIniButton is not null) _shortcutOpenIniButton.IsEnabled = _shortcutDetected.Count > 0;
+        if (_shortcutOpenIniButton is not null) _shortcutOpenIniButton.IsEnabled = _shortcuts.Detected.Count > 0;
         RefreshShortcutOverlay(bindingsChanged: true);
         if (_shortcutButtons is null || _currentPrimarySection != PrimarySection.Shortcuts) return;
         DetectedModShortcut[] visible = VisibleShortcuts();
         if (_mainBindings.SequenceEqual(visible)) return;
         _mainBindings = visible;
         _shortcutButtons.Children.Clear();
-        int hidden = _shortcutDetected.Count - visible.Length;
+        int hidden = _shortcuts.Detected.Count - visible.Length;
         if (_shortcutHiddenNote is not null)
         {
             _shortcutHiddenNote.Text = hidden > 0 ? T("ShortcutPanel.BindingsThatCannotBeSentAre", hidden) : string.Empty;
@@ -736,7 +724,7 @@ public sealed partial class MainWindow
         var slider = new Slider
         {
             Header = string.IsNullOrEmpty(header) ? null : header, Minimum = ShortcutOverlayWindow.MinimumOpacity, Maximum = 100, StepFrequency = 5,
-            SmallChange = 5, Value = _shortcutOverlayOpacity
+            SmallChange = 5, Value = _shortcuts.OverlayOpacity
         };
         // WinUI raises ValueChanged while the template loads (observed resetting to the minimum);
         // only react to changes after the slider is live, and restore the saved value first.
@@ -744,21 +732,21 @@ public sealed partial class MainWindow
         slider.Loaded += (_, _) =>
         {
             if (live) return;
-            slider.Value = _shortcutOverlayOpacity;
+            slider.Value = _shortcuts.OverlayOpacity;
             live = true;
         };
         slider.ValueChanged += (_, e) =>
         {
-            if (!live || _shortcutOpacitySyncing || (int)Math.Round(e.NewValue) == _shortcutOverlayOpacity) return;
-            _shortcutOverlayOpacity = (int)Math.Round(e.NewValue);
+            if (!live || _shortcutOpacitySyncing || (int)Math.Round(e.NewValue) == _shortcuts.OverlayOpacity) return;
+            _shortcuts.OverlayOpacity = (int)Math.Round(e.NewValue);
             _shortcutOpacitySyncing = true;
             try
             {
                 foreach (Slider other in new[] { _shortcutOpacitySlider, _overlayOpacitySlider }.OfType<Slider>())
-                    if (other != slider) other.Value = _shortcutOverlayOpacity;
+                    if (other != slider) other.Value = _shortcuts.OverlayOpacity;
             }
             finally { _shortcutOpacitySyncing = false; }
-            _shortcutOverlay?.SetBackgroundOpacity(_shortcutOverlayOpacity);
+            _shortcutOverlay?.SetBackgroundOpacity(_shortcuts.OverlayOpacity);
             ApplyOverlayAppearance();
             SaveShellConfig();
         };
@@ -819,26 +807,26 @@ public sealed partial class MainWindow
 
     private async Task SendShortcutFromPanelAsync(DetectedModShortcut shortcut)
     {
-        if (_shortcutSendInProgress) return;
-        _shortcutSendInProgress = true;
+        if (_shortcuts.SendInProgress) return;
+        _shortcuts.SendInProgress = true;
         try
         {
-            if (!_shortcutInputEnabled || _shortcutTargetPicker?.SelectedItem is not ShortcutTarget target)
+            if (!_shortcuts.InputEnabled || _shortcutTargetPicker?.SelectedItem is not ShortcutTarget target)
                 throw new InvalidOperationException(T("ShortcutPanel.SelectATargetWindowAndEnable"));
-            if (!Directory.Exists(_shortcutLoadedPath) || Path.GetFileName(_shortcutLoadedPath).StartsWith("DISABLED", StringComparison.OrdinalIgnoreCase))
+            if (!Directory.Exists(_shortcuts.LoadedPath) || Path.GetFileName(_shortcuts.LoadedPath).StartsWith("DISABLED", StringComparison.OrdinalIgnoreCase))
                 throw new InvalidOperationException(T("ShortcutPanel.TheModFolderChangedReloadIt"));
             if (!ShortcutKeyPlan.TryCreate(shortcut.RawKey, out var plan)) return;
             int hold = shortcut.Behavior.Equals("hold", StringComparison.OrdinalIgnoreCase)
                 ? (int)(double.IsFinite(_shortcutHoldDuration!.Value) ? _shortcutHoldDuration.Value : 300)
                 : (int)(double.IsFinite(_shortcutTapDuration!.Value) ? _shortcutTapDuration.Value : 200);
-            string report = await _shortcutInput.SendAsync(target, plan!, hold, _shortcutInputMode, IsEnglishUi);
+            string report = await _shortcutInput.SendAsync(target, plan!, hold, _shortcuts.InputMode, IsEnglishUi);
             if (!_onlineWindowClosed) _shortcutStatus!.Text = shortcut.Shortcut + " · " + report;
         }
         catch (Exception ex)
         {
             if (!_onlineWindowClosed) _shortcutStatus!.Text = ex.Message;
         }
-        finally { _shortcutSendInProgress = false; }
+        finally { _shortcuts.SendInProgress = false; }
         if (!_onlineWindowClosed) RefreshShortcutOverlay();
     }
 
@@ -854,15 +842,15 @@ public sealed partial class MainWindow
                 {
                     // A language rebuild may already have opened a replacement overlay.
                     if (!ReferenceEquals(_shortcutOverlay, overlay)) return;
-                    _shortcutOverlay = null; _shortcutOverlayVisible = false; _overlayClickThrough = false;
+                    _shortcutOverlay = null; _shortcuts.OverlayVisible = false; _overlayClickThrough = false;
                     _overlayButtonList = null; _overlayScroll = null; _overlayBindings = []; _overlayOpacitySlider = null;
                 };
-                _shortcutOverlay.SetBackgroundOpacity(_shortcutOverlayOpacity);
+                _shortcutOverlay.SetBackgroundOpacity(_shortcuts.OverlayOpacity);
             }
             // The game may have started after the window list was read.
             if (_shortcutTargetPicker?.SelectedItem is not ShortcutTarget) RefreshShortcutTargets();
             _shortcutOverlay.ShowPanel();
-            _shortcutOverlayVisible = true;
+            _shortcuts.OverlayVisible = true;
             RefreshShortcutOverlay(bindingsChanged: true);
             // Mods may have been enabled or disabled since the list was read.
             _ = RefreshShortcutDeployedModsAsync();
@@ -906,7 +894,7 @@ public sealed partial class MainWindow
         _overlayInputToggle.Click += (_, _) => SetShortcutInputFromOverlay(_overlayInputToggle.IsChecked == true);
         var savePreset = ShortcutButton(T("ShortcutPanel.SavePreset"), () => _ = QuickSaveCombinationFromOverlayAsync());
         ToolTipService.SetToolTip(savePreset, T("ShortcutPanel.SaveTheEnabledModCombinationAnd"));
-        var hide = ShortcutButton(T("ShortcutPanel.Hide"), () => { _shortcutOverlay?.AppWindow.Hide(); _shortcutOverlayVisible = false; });
+        var hide = ShortcutButton(T("ShortcutPanel.Hide"), () => { _shortcutOverlay?.AppWindow.Hide(); _shortcuts.OverlayVisible = false; });
         savePreset.Foreground = hide.Foreground = _overlayTextBrush;
         savePreset.HorizontalAlignment = hide.HorizontalAlignment = HorizontalAlignment.Stretch;
         // Three equal columns at the default 420 DIP width: default padding cut "Input: off" / "Save preset".
@@ -1036,7 +1024,7 @@ public sealed partial class MainWindow
     /// <summary>Flush loader memory before capturing; offer an explicit disk-only fallback when input is unavailable.</summary>
     private async Task QuickSaveCombinationFromOverlayAsync()
     {
-        if (_savingOverlaySinglePreset || _applyingCombinationProfile || (_shortcutSendInProgress && !_restoringPersistentRuntime)) return;
+        if (_savingOverlaySinglePreset || _applyingCombinationProfile || (_shortcuts.SendInProgress && !_restoringPersistentRuntime)) return;
         if (GetSelectedRepository() is not { } repository)
         {
             _shortcutStatus!.Text = T("ShortcutPanel.SelectARepositoryInTheMain");
@@ -1087,7 +1075,7 @@ public sealed partial class MainWindow
 
     private void RefreshShortcutOverlay(bool bindingsChanged = false)
     {
-        if (_shortcutOverlay is not null && _shortcutOverlayVisible) UpdateShortcutOverlayControls(bindingsChanged);
+        if (_shortcutOverlay is not null && _shortcuts.OverlayVisible) UpdateShortcutOverlayControls(bindingsChanged);
     }
 
     private void UpdateShortcutOverlayControls(bool bindingsChanged = true)
@@ -1109,8 +1097,8 @@ public sealed partial class MainWindow
             _overlayModPicker.PlaceholderText = _overlayModOptions.Length == 0
                 ? T("ShortcutPanel.NoEnabledMods")
                 : current is null ? T("ShortcutPanel.SelectAMod") : T("ShortcutPanel.CurrentModNotEnabledPickAn");
-            _overlayInputToggle!.IsChecked = _shortcutInputEnabled;
-            _overlayInputToggle.Content = _shortcutInputEnabled ? T("ShortcutPanel.InputOn") : T("ShortcutPanel.InputOff");
+            _overlayInputToggle!.IsChecked = _shortcuts.InputEnabled;
+            _overlayInputToggle.Content = _shortcuts.InputEnabled ? T("ShortcutPanel.InputOn") : T("ShortcutPanel.InputOff");
         }
         finally { _overlaySyncing = false; }
         _overlayTargetText!.Text = (_shortcutTargetPicker?.SelectedItem as ShortcutTarget)?.Label ?? T("ShortcutPanel.NoTargetWindowSelectItIn");
@@ -1135,21 +1123,21 @@ public sealed partial class MainWindow
 
     private async Task SendNumLockAsync()
     {
-        if (_shortcutSendInProgress) return;
-        _shortcutSendInProgress = true;
+        if (_shortcuts.SendInProgress) return;
+        _shortcuts.SendInProgress = true;
         try
         {
-            if (!_shortcutInputEnabled || _shortcutTargetPicker?.SelectedItem is not ShortcutTarget target)
+            if (!_shortcuts.InputEnabled || _shortcutTargetPicker?.SelectedItem is not ShortcutTarget target)
                 throw new InvalidOperationException(T("ShortcutPanel.SelectATargetWindowAndEnable"));
             _shortcutStatus!.Text = await _shortcutInput.SendAsync(target, new ShortcutKeyPlan(new ushort[] { 0x90 }, Array.Empty<ushort>()), 150, ShortcutInputMode.VirtualKey, IsEnglishUi);
         }
         catch (Exception ex) { if (!_onlineWindowClosed) _shortcutStatus!.Text = ex.Message; }
-        finally { _shortcutSendInProgress = false; if (!_onlineWindowClosed) RefreshShortcutOverlay(); }
+        finally { _shortcuts.SendInProgress = false; if (!_onlineWindowClosed) RefreshShortcutOverlay(); }
     }
 
     private void CloseShortcutPanel()
     {
-        ++_shortcutScanRevision;
+        ++_shortcuts.ScanRevision;
         _shortcutPanelHotkey?.Dispose();
         _characterFollowTimer?.Dispose();
         _shortcutInput.Dispose();
@@ -1163,8 +1151,8 @@ public sealed partial class MainWindow
         {
             _shortcutPanelHotkey = new ShortcutPanelHotkey(WinRT.Interop.WindowNative.GetWindowHandle(this),
                 () => DispatcherQueue.TryEnqueue(ToggleShortcutOverlay));
-            if (_shortcutPanelHotkeyEnabled)
-                _shortcutHotkeyRegistered = _shortcutPanelHotkey.TrySet(_shortcutPanelHotkeyModifiers, _shortcutPanelHotkeyKey);
+            if (_shortcuts.HotkeyEnabled)
+                _shortcuts.HotkeyRegistered = _shortcutPanelHotkey.TrySet(_shortcuts.HotkeyModifiers, _shortcuts.HotkeyKey);
             UpdateShortcutHotkeyStatus();
         }
         catch (Exception ex) { LogApplicationIssue("Shortcut panel hotkey", ex); }
@@ -1181,10 +1169,10 @@ public sealed partial class MainWindow
                 SetOverlayClickThrough(false);
                 return;
             }
-            if (_shortcutOverlayVisible)
+            if (_shortcuts.OverlayVisible)
             {
                 _shortcutOverlay?.AppWindow.Hide();
-                _shortcutOverlayVisible = false;
+                _shortcuts.OverlayVisible = false;
                 return;
             }
             if (_shortcutModPicker is null)
@@ -1247,15 +1235,14 @@ public sealed partial class MainWindow
     private void UpdateShortcutHotkeyStatus()
     {
         if (_shortcutHotkeyStatus is null) return;
-        string mod = _shortcutPanelHotkeyModifiers switch { 6 => "Ctrl+Shift", 5 => "Alt+Shift", _ => "Ctrl+Alt" };
-        string key = _shortcutPanelHotkeyKey >= 0x70 ? "F" + (_shortcutPanelHotkeyKey - 0x6F) : ((char)_shortcutPanelHotkeyKey).ToString();
+        (string mod, string key) = _shortcuts.HotkeyLabel();
         // A working hotkey is already on the module row's summary; the line below explains only problems.
-        _shortcutHotkeyStatus.Text = _shortcutHotkeyRegistered
+        _shortcutHotkeyStatus.Text = _shortcuts.HotkeyRegistered
             ? string.Empty
             : T("ShortcutPanel.GlobalHotkeyDisabledOrUnavailableChoose");
-        _shortcutHotkeyStatus.Visibility = _shortcutHotkeyRegistered ? Visibility.Collapsed : Visibility.Visible;
+        _shortcutHotkeyStatus.Visibility = _shortcuts.HotkeyRegistered ? Visibility.Collapsed : Visibility.Visible;
         if (_shortcutOverlaySummary is not null)
-            _shortcutOverlaySummary.Text = _shortcutHotkeyRegistered
+            _shortcutOverlaySummary.Text = _shortcuts.HotkeyRegistered
                 ? T("ShortcutPanel.OverlayHotkeySummary", mod, key)
                 : T("ShortcutPanel.OverlayHotkeyOff");
     }

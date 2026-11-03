@@ -27,12 +27,12 @@ public sealed partial class MainWindow
         if (!canSend) return await AskToReadExistingFileAsync(T("ShortcutCapture.CannotSend"), T("ShortcutCapture.ReadExistingWarning"));
         _shortcutStatus!.Text = T("ShortcutCapture.Waiting");
         RefreshShortcutOverlay();
-        _shortcutSendInProgress = true;
+        _shortcuts.SendInProgress = true;
         try
         {
             var chosen = (ShortcutTarget)_shortcutTargetPicker!.SelectedItem;
             await LoaderStateCapture.FlushAsync(userIni,
-                _ => _shortcutInput.SendAsync(chosen, new ShortcutKeyPlan([LoaderReloadKey], []), 120, _shortcutInputMode, IsEnglishUi));
+                _ => _shortcutInput.SendAsync(chosen, new ShortcutKeyPlan([LoaderReloadKey], []), 120, _shortcuts.InputMode, IsEnglishUi));
             return !_onlineWindowClosed;
         }
         catch (TimeoutException)
@@ -40,7 +40,7 @@ public sealed partial class MainWindow
             // The loader writes nothing when no value changed since its last save (common for a new Mod),
             // which looks the same as a missed F10. Let the user decide instead of refusing outright.
         }
-        finally { _shortcutSendInProgress = false; }
+        finally { _shortcuts.SendInProgress = false; }
         bool readExisting = !_onlineWindowClosed
             && await AskToReadExistingFileAsync(T("ShortcutCapture.NoNewWrite"), T("ShortcutCapture.NoNewWriteWarning"));
         if (!readExisting && !_onlineWindowClosed)
@@ -81,7 +81,7 @@ public sealed partial class MainWindow
 
     private async Task RefreshOverlayFromDiskAsync()
     {
-        if (_applyingCombinationProfile || _restoringPersistentRuntime || _shortcutSendInProgress) return;
+        if (_applyingCombinationProfile || _restoringPersistentRuntime || _shortcuts.SendInProgress) return;
         await RefreshShortcutDeployedModsAsync();
         await LoadShortcutSelectionAsync(force: true);
         if (_shortcutModPicker?.SelectedItem is null) _shortcutStatus!.Text = T("ShortcutCapture.CurrentRemoved");

@@ -2,7 +2,6 @@ using System.Text.Json;
 using IntegratedModManager.Core.Configuration;
 using IntegratedModManager.Core.Layout;
 using IntegratedModManager.Core.Repository;
-using IntegratedModManager.Core.Shortcuts;
 using IntegratedModManager.Core.Updates;
 using Microsoft.UI.Windowing;
 using Windows.Graphics;
@@ -95,14 +94,10 @@ public sealed partial class MainWindow
             };
             _lastUpdateCheckUtc = TryParseDateTimeOffset(config?.LastUpdateCheckUtc);
             _modUpdateCheckInterval = ParseUpdateCheckInterval(config?.ModUpdateCheckInterval);
-            _shortcutPanelHotkeyModifiers = config?.ShortcutPanelHotkeyModifiers is 3 or 5 or 6 ? config.ShortcutPanelHotkeyModifiers : 3;
-            _shortcutPanelHotkeyKey = config?.ShortcutPanelHotkeyKey is >= 0x41 and <= 0x5A or >= 0x70 and <= 0x7B ? config.ShortcutPanelHotkeyKey : 0x4B;
-            _shortcutPanelHotkeyEnabled = config?.ShortcutPanelHotkeyEnabled ?? true;
-            _shortcutInputMode = Enum.TryParse(config?.ShortcutInputMode, out ShortcutInputMode inputMode) ? inputMode : ShortcutInputMode.ScanCode;
-            if (!Enum.IsDefined(_shortcutInputMode)) _shortcutInputMode = ShortcutInputMode.ScanCode;
-            _shortcutOverlayOpacity = Math.Clamp(config?.ShortcutOverlayOpacity ?? 100, ShortcutOverlayWindow.MinimumOpacity, 100);
+            _shortcuts.LoadSettings(config?.ShortcutInputMode, config?.ShortcutOverlayOpacity, config?.ShortcutHideUnsupported,
+                config?.ShortcutPanelHotkeyEnabled ?? true, config?.ShortcutPanelHotkeyModifiers ?? ShortcutPageViewModel.DefaultHotkeyModifiers,
+                config?.ShortcutPanelHotkeyKey ?? ShortcutPageViewModel.DefaultHotkeyKey);
             _overlayElementOpacity = OverlayAppearancePolicy.ClampElementOpacity(config?.ShortcutOverlayElementOpacity);
-            _shortcutHideUnsupported = config?.ShortcutHideUnsupported ?? false;
             _overlaySlotSwitchEnabled = config?.OverlaySlotSwitchEnabled ?? false;
             _capturePresetPreviews = config?.CapturePresetPreviews ?? false;
             _overlayCompactSlots = config?.OverlayCompactSlots ?? false;
@@ -261,13 +256,13 @@ public sealed partial class MainWindow
                 UpdateCheckInterval = ApplicationReleasePolicy.UpdateSettingToSave(_updateCheckInterval.ToString(), _loadedUpdateCheckInterval),
                 LastUpdateCheckUtc = _lastUpdateCheckUtc?.ToString("O"),
                 ModUpdateCheckInterval = _modUpdateCheckInterval.ToString(),
-                ShortcutPanelHotkeyModifiers = _shortcutPanelHotkeyModifiers,
-                ShortcutPanelHotkeyKey = _shortcutPanelHotkeyKey,
-                ShortcutPanelHotkeyEnabled = _shortcutPanelHotkeyEnabled,
-                ShortcutInputMode = _shortcutInputMode.ToString(),
-                ShortcutOverlayOpacity = _shortcutOverlayOpacity,
+                ShortcutPanelHotkeyModifiers = _shortcuts.HotkeyModifiers,
+                ShortcutPanelHotkeyKey = _shortcuts.HotkeyKey,
+                ShortcutPanelHotkeyEnabled = _shortcuts.HotkeyEnabled,
+                ShortcutInputMode = _shortcuts.InputMode.ToString(),
+                ShortcutOverlayOpacity = _shortcuts.OverlayOpacity,
                 ShortcutOverlayElementOpacity = _overlayElementOpacity,
-                ShortcutHideUnsupported = _shortcutHideUnsupported,
+                ShortcutHideUnsupported = _shortcuts.HideUnsupported,
                 OverlaySlotSwitchEnabled = _overlaySlotSwitchEnabled,
                 CapturePresetPreviews = _capturePresetPreviews,
                 OverlayCompactSlots = _overlayCompactSlots,

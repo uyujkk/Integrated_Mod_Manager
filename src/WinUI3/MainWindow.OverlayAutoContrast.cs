@@ -49,8 +49,8 @@ public sealed partial class MainWindow
     private void CheckOverlayContrast()
     {
         // Only when the scene shows through and nothing else is going on in the overlay.
-        if (_shortcutOverlay is not { } overlay || !_shortcutOverlayVisible || overlay.ShowsLayer || _savingOverlaySinglePreset
-            || !OverlayAppearancePolicy.ShowTextShadow(_shortcutOverlayOpacity) || overlay.ClientArea is not { } area)
+        if (_shortcutOverlay is not { } overlay || !_shortcuts.OverlayVisible || overlay.ShowsLayer || _savingOverlaySinglePreset
+            || !OverlayAppearancePolicy.ShowTextShadow(_shortcuts.OverlayOpacity) || overlay.ClientArea is not { } area)
         {
             RestoreOverlayTextColor();
             return;

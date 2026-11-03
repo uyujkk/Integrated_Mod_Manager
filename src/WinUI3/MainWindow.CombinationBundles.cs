@@ -28,6 +28,8 @@ public sealed partial class MainWindow
         });
         _exportPresetShareButton = RepositoryButton("\uE72D", async (_, _) => await RunUiActionAsync("Share preset", ExportPresetShareAsync));
         _importPresetShareButton = RepositoryButton("\uE8B5", async (_, _) => await RunUiActionAsync("Import shared preset", ImportPresetShareAsync));
+        AutomationProperties.SetAutomationId(_exportPresetShareButton, "PresetShareExportButton");
+        AutomationProperties.SetAutomationId(_importPresetShareButton, "PresetShareImportButton");
         foreach (Button button in new[] { _exportCombinationBundleButton, _importCombinationBundleButton, _exportPresetShareButton, _importPresetShareButton, _cancelCombinationBundleButton })
         {
             button.HorizontalAlignment = HorizontalAlignment.Stretch;

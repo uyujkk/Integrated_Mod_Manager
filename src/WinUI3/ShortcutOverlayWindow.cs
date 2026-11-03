@@ -17,7 +17,7 @@ internal sealed record RegionSelectionText(string Hint, string LockSize, string 
 /// <summary>A separate, non-activating desktop overlay; independent of main-window minimization.</summary>
 internal sealed class ShortcutOverlayWindow : Window
 {
-    public const int MinimumOpacity = 10;
+    public const int MinimumOpacity = ShortcutPageViewModel.MinimumOverlayOpacity;
     private const int DefaultWidth = 420, DefaultHeight = 860, TitleRowHeight = 32, FadeMilliseconds = 90, MoveMilliseconds = 220;
     private readonly nint handle;
     private readonly SubclassProc callback;

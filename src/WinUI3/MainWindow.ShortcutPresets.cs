@@ -11,7 +11,7 @@ public sealed partial class MainWindow
 
     private async Task SaveSingleModPresetFromOverlayAsync()
     {
-        if (_savingOverlaySinglePreset || _applyingCombinationProfile || (_shortcutSendInProgress && !_restoringPersistentRuntime)) return;
+        if (_savingOverlaySinglePreset || _applyingCombinationProfile || (_shortcuts.SendInProgress && !_restoringPersistentRuntime)) return;
         var overlay = _shortcutOverlay;
         if (overlay?.Content is not FrameworkElement root) return;
         // Freeze the repository and Mod at click time, independently of the main repository selection

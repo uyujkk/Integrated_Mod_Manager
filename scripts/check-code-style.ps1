@@ -29,6 +29,7 @@ $dotnetProjects = @(
     "tests\DataStore.Tests\IntegratedModManager.DataStore.Tests.csproj",
     "tests\UpdateAgent.Tests\IntegratedModManager.UpdateAgent.Tests.csproj",
     "tests\EndfieldLaunch.Tests\IntegratedModManager.EndfieldLaunch.Tests.csproj",
+    "tests\UI.Tests\IntegratedModManager.UI.Tests.csproj",
     "tests\Performance\RepositoryPerformance.csproj"
 )
 $winuiProjects = @(
