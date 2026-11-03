@@ -1,6 +1,6 @@
 # Shortcut Panel and Overlay
 
-> For 4.6.1. [中文](../zh-CN/快捷键与浮窗.md) · [User guide](./User-Guide.md)
+> For 4.7.0. [中文](../zh-CN/快捷键与浮窗.md) · [User guide](./User-Guide.md)
 
 The Shortcuts page reads the `[Key…]` bindings in a Mod's INI files and sends the matching key to the game when you click a button, so you don't have to remember shortcuts or own a numeric keypad. The always-on-top overlay works over the game: switch Mods, save presets, hot-switch state slots, and follow the character currently on the field.
 
@@ -26,6 +26,7 @@ The toolbar at the top holds the Mod picker, the target game window and the send
 - Optional, off by default: "Take a screenshot when saving a preset from the overlay" stores one small picture of the game with the preset. State slots then show it in the overlay, with a larger view on hover, and restore dialogs show how the preset looked when saved. The picture may show your UID, nickname or chat; it stays on this PC and is not added to diagnostic reports. An exclusive full-screen game usually gives a black picture, which is not kept. With slot switching on, click a slot, then "Frame character": the overlay becomes an empty frame that you move and resize around the character before choosing Capture, and the picture goes to that slot. The frame can lock its size and be set as the default area: saving a single-Mod preset then captures that area, until you clear it on the Shortcuts page. "Pick by picture" moves the overlay to the middle of the screen and lists the pictures of the current Mod's slots in a row; choose one to switch to its slot. A separate switch shows overlay slots as text only.
 - When saving a state slot, the Mod menu's open state, page and position are left out by default; the main window lists them so you can keep any. The Shortcuts page can also change the loader's auto-save interval, with a backup of d3dx.ini.
 - "Clear", "Balanced" and "Minimal" on the Shortcuts page set the background, backing and compact view in one click. "Compact" on the overlay keeps only the Mod, state slots and keys. "Click through" leaves the overlay visible but ignores the mouse; press the overlay show/hide hotkey to restore it. It needs that hotkey to be on. In the main window, "Set preview" on a selected state slot or combination preset captures the game, uses an image file, or clears the picture.
+- "Automatic contrast" (off by default, Windows 10 2004 or later): with a background under 60%, the overlay looks at the scene behind it every 1.5 seconds and switches to dark or light text. The colour you chose is still what is saved; the overlay itself is left out of what it looks at.
 - Available in the overlay:
   - **Switch Mod**: lists only enabled Mods (deployed to the loader's Mods folder).
   - **Sending on/off**: pause or resume sending.

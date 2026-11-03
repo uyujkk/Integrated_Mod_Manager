@@ -71,6 +71,23 @@ Core tests verify 100-Mod/100-value plans, encoding preservation, strict matchin
 
 ## Real-environment checks / 真实环境检查
 
+### 4.7 maintainer checklist / 4.7 维护者清单
+
+Features shipped in 4.7.0 that only a real game or the live servers can confirm. Record results in [the 4.7.0 verification record](../verification/v4.7.0.md).
+4.7.0 中只能在真实游戏或真实服务器上确认的功能。结果写入 [4.7.0 验证记录](../verification/v4.7.0.md)。
+
+| Check / 操作 | Expected / 预期 | Status / 状态 |
+| --- | --- | --- |
+| XXMI launch for Genshin Impact, Honkai: Star Rail and Zenless Zone Zero / 原神、星穹铁道、绝区零通过 XXMI 启动 | Run Launcher starts each game with its importer; a missing importer or game folder is reported / “运行启动器”用对应导入器启动游戏；缺导入器或游戏目录时有提示 | Pending / 待验证 |
+| Click-through over a full-screen game / 全屏游戏上的鼠标穿透 | Clicks reach the game; the show/hide hotkey restores the overlay / 点击落到游戏里；显示/隐藏快捷键能恢复 | Pending / 待验证 |
+| Automatic contrast over bright and dark scenes / 明亮和昏暗画面上的自动对比度 | Text switches without flicker; frame rate unaffected / 文字切换不闪烁，帧率不受影响 | Pending / 待验证 |
+| Restore a Default slot after a Mod update / Mod 更新后恢复“默认”槽位 | The values the Mod declares now are written / 写入 Mod 当前声明的默认值 | Pending / 待验证 |
+| Batch add, copy, bundle export and delete / 批量加入、复制、导出组合包和删除 | Each acts only on the selected Mods; delete keeps Mods whose links cannot be checked / 只作用于选中的 Mod；无法确认链接的 Mod 不删除 | Pending / 待验证 |
+| Loader auto-save interval / 加载器自动保存间隔 | d3dx.ini is backed up and changed; no stutter at the shorter interval / 备份并修改 d3dx.ini；较短间隔下不卡顿 | Pending / 待验证 |
+| File dialogs while elevated / 管理员权限下的文件选择 | Browse in the Endfield launch settings opens / 终末地启动设置里的“浏览”能打开 | Pending / 待验证 |
+| Share a preset and import it in another repository / 分享方案并在另一个仓库导入 | Matched Mods, missing list and slots as described / 匹配数、缺失列表和槽位与说明一致 | Pending / 待验证 |
+| Online catalogs, online page and app update check against the real servers / 角色目录、在线页和检查更新连接真实服务器 | Same results as before the move into Core / 与移到核心库之前的结果一致 | Pending / 待验证 |
+
 ### 4.6.2 maintainer checklist / 4.6.2 维护者清单
 
 Tick these while playing; tests and fixtures cannot prove the first four. Record results in the release's verification file.

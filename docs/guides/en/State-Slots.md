@@ -1,6 +1,6 @@
 # Single-Mod State Slots
 
-> For 4.5 and later. [中文](../zh-CN/状态槽位.md) · [User guide](./User-Guide.md)
+> For 4.7 and later. [中文](../zh-CN/状态槽位.md) · [User guide](./User-Guide.md)
 
 Many Mods keep their look (outfit, hair, accessories) in `global persist` variables, and the loader stores the current values in `d3dx_user.ini`. State slots save those values for **one Mod** as named sets you can switch back to.
 
@@ -13,10 +13,12 @@ Many Mods keep their look (outfit, hair, accessories) in `global persist` variab
 3. Click **Save Slot** and give it a name.
 
 - Only the numeric `global persist` values declared by this Mod are saved; other Mods are untouched.
+- The Mod menu's open state, page and position are left out by default, so restoring a slot does not reopen or move the menu. The main window lists these variables after saving; check **Save Mod menu state in slots too** to keep them.
 - The values must already be in `d3dx_user.ini`; missing ones are never replaced by the Mod's defaults.
 - Each Mod can have several slots; the one saved, updated or restored last is marked current.
-- A Mod newly added to the repository that declares `global persist` values gets a slot named "Default" when the repository is scanned, holding the defaults from its own INI files (0 where none is written). In the Chinese UI it shows as "默认"; once renamed, the name no longer follows the language. Deleting it does not bring it back, and Mods already in the repository do not get one.
+- Every Mod that declares `global persist` values has a slot named "Default" ("默认" in the Chinese UI) holding its original defaults. Restoring it reads what the Mod declares now, so it follows Mod updates. Mods from before 4.7 got one on the first scan after upgrading; deleting it does not bring it back, and once renamed the name no longer follows the language.
 - In game you can also use the overlay's **Save single-Mod preset**, which sends F10 for you; see [Shortcut panel and overlay](./Shortcut-Panel.md).
+- **Set preview** on a selected slot captures the game, uses an image file or clears the picture. The overlay shows slot pictures and can frame a character for the current slot; see [Shortcut panel and overlay](./Shortcut-Panel.md).
 
 ## Restoring a slot
 
