@@ -169,7 +169,7 @@ public sealed partial class MainWindow
             LogApplicationIssueWithStack("Tracked Mod update", ex);
             if (task is not null && !committed) UpdateDownloadTask(task, DownloadTaskState.Failed, task.Progress, $"更新失败：{ex.Message}", $"Update failed: {ex.Message}", forceRefresh: true);
             if (!_onlineWindowClosed) await ShowMessageAsync(
-                L(committed ? "文件已替换并备份，但保存记录或刷新失败：" : "更新未完成，原文件保留：", committed ? "Files were replaced and backed up, but saving or refreshing failed: " : "Update stopped; original files retained: ") + ex.Message,
+                (committed ? T("ModUpdates.ReplacedButSaveFailed") : T("ModUpdates.StoppedOriginalsKept")) + ex.Message,
                 T("ModUpdates.ModUpdate"));
         }
         finally

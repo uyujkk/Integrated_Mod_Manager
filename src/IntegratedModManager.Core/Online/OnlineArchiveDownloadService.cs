@@ -152,7 +152,7 @@ public static class OnlineDownloadFilePolicy
             string candidate = suffix == 1 ? desired : Path.Combine(Path.GetDirectoryName(desired)!,
                 $"{Path.GetFileNameWithoutExtension(desired)}-{suffix}{Path.GetExtension(desired)}");
             try { File.Move(source, candidate, overwrite: false); return candidate; }
-            catch (IOException) when (File.Exists(candidate) || Directory.Exists(candidate)) { }
+            catch (IOException) when (File.Exists(candidate) || Directory.Exists(candidate)) { } // Name taken: try the next suffix.
         }
         throw new IOException("No unused download file name could be reserved.");
     }

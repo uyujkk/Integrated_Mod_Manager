@@ -10,6 +10,7 @@ namespace ModFolderCopier.WinUI;
 public sealed partial class MainWindow
 {
     private Button? _exportCombinationBundleButton, _importCombinationBundleButton, _cancelCombinationBundleButton;
+    private Button? _exportPresetShareButton, _importPresetShareButton;
     private CancellationTokenSource? _bundleOperationCancellation;
 
     private void InitializeCombinationBundleActions()
@@ -25,7 +26,9 @@ public sealed partial class MainWindow
             _bundleOperationCancellation?.Cancel();
             RefreshCombinationBundleActions();
         });
-        foreach (Button button in new[] { _exportCombinationBundleButton, _importCombinationBundleButton, _cancelCombinationBundleButton })
+        _exportPresetShareButton = RepositoryButton("\uE72D", async (_, _) => await RunUiActionAsync("Share preset", ExportPresetShareAsync));
+        _importPresetShareButton = RepositoryButton("\uE8B5", async (_, _) => await RunUiActionAsync("Import shared preset", ImportPresetShareAsync));
+        foreach (Button button in new[] { _exportCombinationBundleButton, _importCombinationBundleButton, _exportPresetShareButton, _importPresetShareButton, _cancelCombinationBundleButton })
         {
             button.HorizontalAlignment = HorizontalAlignment.Stretch;
             actions.Children.Add(button);
@@ -43,6 +46,10 @@ public sealed partial class MainWindow
         SetLabel(_exportCombinationBundleButton, "\uE896", T("CombinationBundles.ExportBundle"));
         SetLabel(_importCombinationBundleButton!, "\uE898", T("CombinationBundles.InstallBundle"));
         SetLabel(_cancelCombinationBundleButton!, "\uE711", T("CombinationBundles.CancelTask"));
+        SetLabel(_exportPresetShareButton!, "\uE72D", T("PresetShare.Export"));
+        SetLabel(_importPresetShareButton!, "\uE8B5", T("PresetShare.Import"));
+        _exportPresetShareButton!.IsEnabled = available && GetSelectedConfigurationProfile() is not null;
+        _importPresetShareButton!.IsEnabled = available;
         _exportCombinationBundleButton.IsEnabled = available && GetSelectedConfigurationProfile() is not null;
         _importCombinationBundleButton!.IsEnabled = available;
         _cancelCombinationBundleButton!.Visibility = _bundleOperationCancellation is null ? Visibility.Collapsed : Visibility.Visible;
@@ -84,13 +91,17 @@ public sealed partial class MainWindow
             await ReportBundleErrorAsync(ex, false);
             return;
         }
+        await ExportModsAsBundleAsync(root, name, game, includeState, mods, T("CombinationBundles.ExportSavedPresetStateNotCurrent"));
+    }
+
+    private async Task ExportModsAsBundleAsync(string root, string name, string game, bool includeState, CombinationPresetState[] mods, string confirmation)
+    {
         using var cancellation = new CancellationTokenSource();
         _bundleOperationCancellation = cancellation;
         SetCombinationBusy(true);
         try
         {
-            if (!await ShowConfirmAsync(T("CombinationBundles.ExportSavedPresetStateNotCurrent"),
-                T("CombinationBundles.ExportBundle"))) return;
+            if (!await ShowConfirmAsync(confirmation, T("CombinationBundles.ExportBundle"))) return;
             cancellation.Token.ThrowIfCancellationRequested();
             string? folder = await PickFolderAsync();
             cancellation.Token.ThrowIfCancellationRequested();
@@ -247,11 +258,7 @@ public sealed partial class MainWindow
     private async Task ReportBundleErrorAsync(Exception ex, bool committed)
     {
         LogApplicationIssue("Combination bundle", ex);
-        await ReportOnlineActionErrorAsync(L(committed
-            ? "组合已安装并保存，但后续刷新未完成；请刷新仓库后重试恢复。\n"
-            : "组合包操作未完成，已有 Mod 不会被覆盖。\n", committed
-            ? "The combination was installed and saved, but refresh did not finish. Refresh the repository before restoring.\n"
-            : "Bundle operation did not finish; existing Mods are not overwritten.\n") + ex.Message,
+        await ReportOnlineActionErrorAsync((committed ? T("CombinationBundles.InstalledButRefreshFailed") : T("CombinationBundles.OperationNotFinished")) + "\n" + ex.Message,
             T("CombinationBundles.CombinationBundle"));
     }
 }

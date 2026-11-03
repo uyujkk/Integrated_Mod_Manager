@@ -531,10 +531,10 @@ public static partial class ModPersistentPresetEngine
     }
 
     private static string NormalizeRuntimeKey(string key) => key.Trim().Replace('/', '\\').ToLowerInvariant();
-    private static bool IsSafeVariable(string value) => Regex.IsMatch(value, @"^\$[A-Za-z_][A-Za-z_0-9]*$", RegexOptions.CultureInvariant);
-    private static bool IsSafeRuntimeKey(string value) => value.StartsWith("$\\", StringComparison.Ordinal)
+    internal static bool IsSafeVariable(string value) => Regex.IsMatch(value, @"^\$[A-Za-z_][A-Za-z_0-9]*$", RegexOptions.CultureInvariant);
+    internal static bool IsSafeRuntimeKey(string value) => value.StartsWith("$\\", StringComparison.Ordinal)
         && value.IndexOfAny(['\r', '\n', '=', ';']) < 0;
-    private static bool IsSafeNumber(string value) => Numeric.IsMatch(value) && double.TryParse(value, NumberStyles.Float, CultureInfo.InvariantCulture, out double n) && double.IsFinite(n);
+    internal static bool IsSafeNumber(string value) => Numeric.IsMatch(value) && double.TryParse(value, NumberStyles.Float, CultureInfo.InvariantCulture, out double n) && double.IsFinite(n);
 
     private static string Decode(byte[] bytes, out Encoding encoding)
     {

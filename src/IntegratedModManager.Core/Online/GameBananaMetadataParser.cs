@@ -130,7 +130,7 @@ public static class GameBananaMetadataParser
         long epoch = Number(file, "_tsDateAdded");
         if (epoch > 0)
             try { added = DateTimeOffset.FromUnixTimeSeconds(epoch).ToLocalTime(); }
-            catch (ArgumentOutOfRangeException) { }
+            catch (ArgumentOutOfRangeException) { } // An impossible date leaves the file undated; the file itself is still offered.
         files.Add(new OnlineDownloadCandidate
         {
             FileId = Text(file, "_idRow") ?? fallbackId, FileName = name, DownloadUrl = url,

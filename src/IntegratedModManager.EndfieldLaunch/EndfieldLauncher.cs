@@ -58,6 +58,7 @@ public static class EndfieldGame
             }
             catch (Exception ex) when (ex is ArgumentException or NotSupportedException or PathTooLongException)
             {
+                // Not a usable path: skip this candidate.
             }
 
             return null;
@@ -82,6 +83,7 @@ public static class EndfieldGame
         }
         catch (Exception ex) when (ex is ArgumentException or IOException or UnauthorizedAccessException)
         {
+            // No parent folders to search; the other candidates still apply.
         }
 
         roots.AddRange(RegisteredLauncherRoots());
@@ -132,6 +134,7 @@ public static class EndfieldGame
         }
         catch (Exception ex) when (ex is IOException or UnauthorizedAccessException or System.Security.SecurityException or ArgumentException)
         {
+            // An unreadable registry entry only means one fewer place to look.
         }
 
         return roots;

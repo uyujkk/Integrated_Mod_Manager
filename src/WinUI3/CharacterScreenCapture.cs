@@ -23,6 +23,32 @@ internal static class CharacterScreenCapture
         return new(origin.X, origin.Y, client.Right, client.Bottom);
     }
 
+    /// <summary>Whatever the screen shows in this area, with no foreground requirement. Null when it cannot be read.</summary>
+    public static byte[]? CaptureScreenArea(IntegratedModManager.Core.Presets.PixelRect area)
+    {
+        if (area.Width < 1 || area.Height < 1 || (long)area.Width * area.Height > 33_177_600) return null;
+        nint screen = GetDC(0), memory = 0, bitmap = 0, previous = 0;
+        try
+        {
+            memory = CreateCompatibleDC(screen);
+            var info = new BitmapInfo { Size = 40, Width = area.Width, Height = -area.Height, Planes = 1, Bits = 32 };
+            bitmap = CreateDIBSection(screen, ref info, 0, out nint pixels, 0, 0);
+            if (memory == 0 || bitmap == 0 || pixels == 0) return null;
+            previous = SelectObject(memory, bitmap);
+            if (!BitBlt(memory, 0, 0, area.Width, area.Height, screen, area.X, area.Y, 0x00CC0020)) return null;
+            var bytes = new byte[checked(area.Width * area.Height * 4)];
+            Marshal.Copy(pixels, bytes, 0, bytes.Length);
+            return bytes;
+        }
+        finally
+        {
+            if (previous != 0 && memory != 0) SelectObject(memory, previous);
+            if (bitmap != 0) DeleteObject(bitmap);
+            if (memory != 0) DeleteDC(memory);
+            if (screen != 0) ReleaseDC(0, screen);
+        }
+    }
+
     public static CharacterFrame Capture(ShortcutTarget target, bool english = false)
     {
         if (!ShortcutInputService.IsTargetForeground(target)) throw new InvalidOperationException(BetaLocalization.Resolve(english, "请让目标游戏保持前台。", "Keep the selected game in the foreground."));

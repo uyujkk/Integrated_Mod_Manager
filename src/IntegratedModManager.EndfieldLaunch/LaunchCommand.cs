@@ -137,6 +137,7 @@ public static class LaunchCommand
         }
         catch (Exception ex) when (ex is DllNotFoundException or EntryPointNotFoundException)
         {
+            // Without a message box the error is still in the launch log and the exit code.
         }
     }
 

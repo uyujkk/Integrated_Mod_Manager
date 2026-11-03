@@ -143,6 +143,7 @@ internal static class LocalUpdateAgent
             }
             catch
             {
+                // Reporting the failure must not hide it: the update has already been rolled back.
             }
 
             MessageBox.Show(
@@ -165,6 +166,7 @@ internal static class LocalUpdateAgent
             }
             catch
             {
+                // A leftover extraction folder is removed by the next update's stale-folder cleanup.
             }
         }
     }
@@ -288,6 +290,7 @@ internal static class LocalUpdateAgent
         }
         catch
         {
+            // If the old version cannot be restarted, the user starts it; the files are already restored.
         }
     }
 
@@ -312,6 +315,7 @@ internal static class LocalUpdateAgent
         }
         catch
         {
+            // Housekeeping only: a locked old folder is tried again next time.
         }
     }
 
@@ -349,6 +353,7 @@ internal static class LocalUpdateAgent
         }
         catch (ArgumentException)
         {
+            // The process had already exited.
         }
     }
 

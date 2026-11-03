@@ -87,6 +87,7 @@ public static class ModUpdateReplacement
             {
                 // Delete only this operation's private staging tree. Unexpected links are retained.
                 try { _ = Inventory(stage); Directory.Delete(stage, true); }
+                // A staging folder that cannot be removed now is left for the next run; it never replaces the update result.
                 catch (IOException) { }
                 catch (UnauthorizedAccessException) { }
             }

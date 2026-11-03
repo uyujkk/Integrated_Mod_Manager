@@ -24,7 +24,7 @@ public sealed partial class MainWindow
         WorkspaceRepository fallbackRepository = new()
         {
             Id = Guid.NewGuid().ToString("N"),
-            Name = L("默认仓库", "Default repository"),
+            Name = T("Configuration.DefaultRepositoryName"),
             SourcePath = SourceTextBox.Text ?? string.Empty,
             TargetPath = TargetTextBox.Text ?? string.Empty,
             LauncherPath = LauncherTextBox.Text ?? string.Empty,
@@ -112,6 +112,9 @@ public sealed partial class MainWindow
             _presetPreviewFrameLocked = config?.PresetPreviewFrameLocked ?? false;
             _presetPreviewDefaultRegion = config?.PresetPreviewDefaultRegion is { IsValid: true } region ? region : null;
             _overlayTextBrush.Color = ParseOverlayTextColor(config?.ShortcutOverlayTextColor);
+            _overlayUserTextColor = _overlayTextBrush.Color;
+            _overlayAutoContrast = config?.OverlayAutoContrast ?? false;
+            UpdateOverlayContrastTimer();
             _lastModUpdateCheckUtc = TryParseDateTimeOffset(config?.LastModUpdateCheckUtc);
             _latestReleaseTag = config?.LatestReleaseTag;
             _latestReleaseTitle = config?.LatestReleaseTitle;
@@ -269,6 +272,7 @@ public sealed partial class MainWindow
                 CapturePresetPreviews = _capturePresetPreviews,
                 OverlayCompactSlots = _overlayCompactSlots,
                 OverlayCompactView = _overlayCompactView,
+                OverlayAutoContrast = _overlayAutoContrast,
                 KeepMenuStateVariables = _keepMenuStateVariables,
                 LoaderAutoSaveOriginals = _loaderAutoSaveOriginals.Count == 0 ? null : new Dictionary<string, int>(_loaderAutoSaveOriginals),
                 PresetPreviewFrameLocked = _presetPreviewFrameLocked,

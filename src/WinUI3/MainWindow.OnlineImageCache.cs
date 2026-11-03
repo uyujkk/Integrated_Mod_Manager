@@ -39,6 +39,7 @@ public sealed partial class MainWindow
         }
         catch (OperationCanceledException)
         {
+            // The card was recycled or the page changed; its new image is loading.
         }
         catch (Exception exception)
         {
