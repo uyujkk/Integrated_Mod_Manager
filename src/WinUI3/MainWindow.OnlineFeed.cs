@@ -1,5 +1,4 @@
 using System.Globalization;
-using System.Net;
 using System.Security.Cryptography;
 using System.Text.Json;
 using System.Text;
@@ -880,20 +879,8 @@ public sealed partial class MainWindow
         }
     }
 
-    /// <summary>One request per 40 Mods (the list API has no download counts at all).</summary>
-    private async Task<Dictionary<int, int>> FetchGameBananaDownloadCountsAsync(IReadOnlyList<int> itemIds, CancellationToken cancellationToken)
-    {
-        var counts = new Dictionary<int, int>();
-        foreach (int[] batch in itemIds.Distinct().Chunk(GameBananaDownloadCounts.MaxBatch))
-        {
-            using HttpResponseMessage response = await _httpClient.GetAsync(GameBananaDownloadCounts.BatchUrl(batch), cancellationToken);
-            if (response.StatusCode == HttpStatusCode.TooManyRequests) throw new OnlineRateLimitException(response.Headers.RetryAfter?.Delta);
-            response.EnsureSuccessStatusCode();
-            foreach (var pair in GameBananaDownloadCounts.Parse(await response.Content.ReadAsStringAsync(cancellationToken), batch))
-                counts[pair.Key] = pair.Value;
-        }
-        return counts;
-    }
+    private Task<Dictionary<int, int>> FetchGameBananaDownloadCountsAsync(IReadOnlyList<int> itemIds, CancellationToken cancellationToken)
+        => GameBananaDownloadCounts.FetchAsync(_httpClient, itemIds, cancellationToken);
 
     /// <summary>
     /// Fills download counts from the 12-hour metric cache, then one batch request. Returns how many

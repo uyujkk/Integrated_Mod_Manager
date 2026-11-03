@@ -1,6 +1,5 @@
 using System.Diagnostics;
 using System.IO.Compression;
-using System.Net.Http.Headers;
 using System.Runtime.InteropServices;
 using System.Text;
 using System.Text.Json;
@@ -359,54 +358,8 @@ public sealed partial class MainWindow
         return host;
     }
 
-    private async Task<LatestReleaseInfo> FetchLatestReleaseInfoAsync(CancellationToken cancellationToken = default)
-    {
-        using HttpRequestMessage request = new(HttpMethod.Get, GitHubLatestReleaseApiUrl);
-        request.Headers.Accept.Add(new MediaTypeWithQualityHeaderValue("application/vnd.github+json"));
-        using HttpResponseMessage response = await _httpClient.SendAsync(request, HttpCompletionOption.ResponseHeadersRead, cancellationToken);
-        response.EnsureSuccessStatusCode();
-        await using Stream stream = await response.Content.ReadAsStreamAsync(cancellationToken);
-        using JsonDocument document = await JsonDocument.ParseAsync(stream, cancellationToken: cancellationToken);
-        JsonElement root = document.RootElement;
-
-        string tag = root.TryGetProperty("tag_name", out JsonElement tagElement) ? tagElement.GetString() ?? string.Empty : string.Empty;
-        string pageUrl = root.TryGetProperty("html_url", out JsonElement urlElement) ? urlElement.GetString() ?? GitHubRepositoryUrl : GitHubRepositoryUrl;
-        string title = root.TryGetProperty("name", out JsonElement nameElement) ? nameElement.GetString() ?? tag : tag;
-        string body = root.TryGetProperty("body", out JsonElement bodyElement) ? bodyElement.GetString() ?? string.Empty : string.Empty;
-        string publishedAt = root.TryGetProperty("published_at", out JsonElement publishedElement) ? publishedElement.GetString() ?? string.Empty : string.Empty;
-        string? packageUrl = null;
-        string? packageFileName = null;
-        var checksumAssets = new List<(string Name, string DownloadUrl)>();
-
-        if (root.TryGetProperty("assets", out JsonElement assets) && assets.ValueKind == JsonValueKind.Array)
-        {
-            foreach (JsonElement asset in assets.EnumerateArray())
-            {
-                string name = asset.TryGetProperty("name", out JsonElement assetName) ? assetName.GetString() ?? string.Empty : string.Empty;
-                string downloadUrl = asset.TryGetProperty("browser_download_url", out JsonElement downloadElement) ? downloadElement.GetString() ?? string.Empty : string.Empty;
-                if (string.IsNullOrWhiteSpace(downloadUrl))
-                {
-                    continue;
-                }
-
-                if (LocalUpdatePackageRegex.IsMatch(name))
-                {
-                    packageUrl = downloadUrl;
-                    packageFileName = name;
-                }
-                else if (name.EndsWith(".sha256", StringComparison.OrdinalIgnoreCase)
-                    || name.Equals("SHA256SUMS.txt", StringComparison.OrdinalIgnoreCase))
-                {
-                    checksumAssets.Add((name, downloadUrl));
-                }
-            }
-        }
-
-        string? sha256Url = packageFileName is null
-            ? null
-            : UpdateReleaseAssetSelector.SelectChecksumUrl(packageFileName, checksumAssets);
-        return new LatestReleaseInfo(tag, title, body.Trim(), publishedAt, pageUrl, packageUrl, sha256Url);
-    }
+    private Task<LatestReleaseInfo> FetchLatestReleaseInfoAsync(CancellationToken cancellationToken = default)
+        => ApplicationUpdateClient.FetchLatestReleaseAsync(_httpClient, GitHubLatestReleaseApiUrl, GitHubRepositoryUrl, cancellationToken);
 
     private void ApplyLatestReleaseInfo(LatestReleaseInfo release)
     {
@@ -454,41 +407,29 @@ public sealed partial class MainWindow
             AppUpdateProgressBar.Value = 0;
             AppUpdateProgressTextBlock.Text = T("ProductivityFeatures.PreparingUpdateDownload");
 
-            using var timeout = new CancellationTokenSource(TimeSpan.FromMinutes(15));
-            using HttpResponseMessage response = await _httpClient.GetAsync(release.PackageUrl, HttpCompletionOption.ResponseHeadersRead, timeout.Token);
-            response.EnsureSuccessStatusCode();
-            long? totalBytes = response.Content.Headers.ContentLength;
-            AppUpdateProgressBar.IsIndeterminate = !totalBytes.HasValue || totalBytes <= 0;
-
-            await using (Stream source = await response.Content.ReadAsStreamAsync(timeout.Token))
-            {
-                await UpdatePackageFile.WriteAsync(source, temporaryPath, downloaded =>
-                {
-                    if (totalBytes is > 0)
-                    {
-                        double progress = Math.Clamp(downloaded * 100d / totalBytes.Value, 0, 100);
-                        AppUpdateProgressBar.Value = progress;
-                        AppUpdateProgressTextBlock.Text = T("ProductivityFeatures.DownloadingUpdate", progress, FormatStorageSize(downloaded), FormatStorageSize(totalBytes.Value));
-                    }
-                    else
-                    {
-                        AppUpdateProgressTextBlock.Text = T("ProductivityFeatures.Downloaded", FormatStorageSize(downloaded));
-                    }
-                }, timeout.Token);
-            }
-
             if (string.IsNullOrWhiteSpace(release.Sha256Url))
             {
                 throw new InvalidDataException(T("ProductivityFeatures.ThisReleaseDoesNotProvideA"));
             }
 
+            using var timeout = new CancellationTokenSource(TimeSpan.FromMinutes(15));
+            await ApplicationUpdateClient.DownloadAsync(_httpClient, release.PackageUrl, temporaryPath, (downloaded, totalBytes) =>
+            {
+                AppUpdateProgressBar.IsIndeterminate = totalBytes is null;
+                if (totalBytes is { } total)
+                {
+                    double progress = Math.Clamp(downloaded * 100d / total, 0, 100);
+                    AppUpdateProgressBar.Value = progress;
+                    AppUpdateProgressTextBlock.Text = T("ProductivityFeatures.DownloadingUpdate", progress, FormatStorageSize(downloaded), FormatStorageSize(total));
+                }
+                else if (downloaded > 0)
+                {
+                    AppUpdateProgressTextBlock.Text = T("ProductivityFeatures.Downloaded", FormatStorageSize(downloaded));
+                }
+            }, timeout.Token);
+
             AppUpdateProgressTextBlock.Text = T("ProductivityFeatures.VerifyingUpdatePackage");
-            string checksumText = await _httpClient.GetStringAsync(release.Sha256Url, timeout.Token);
-            string packageFileName = Path.GetFileName(new Uri(release.PackageUrl).LocalPath);
-            string checksumFileName = Path.GetFileName(new Uri(release.Sha256Url).LocalPath);
-            string expectedHash = ParseExpectedSha256(checksumText, packageFileName, checksumFileName);
-            string actualHash = await UpdatePackageFile.ComputeSha256Async(temporaryPath, timeout.Token);
-            if (!actualHash.Equals(expectedHash, StringComparison.OrdinalIgnoreCase))
+            if (!await ApplicationUpdateClient.VerifyAsync(_httpClient, release.PackageUrl, release.Sha256Url, temporaryPath, timeout.Token))
             {
                 throw new InvalidDataException(T("ProductivityFeatures.TheUpdatePackageFailedSHA256"));
             }
@@ -519,11 +460,6 @@ public sealed partial class MainWindow
             AppUpdateProgressPanel.Visibility = Visibility.Collapsed;
             await ShowMessageAsync(T("ProductivityFeatures.FailedToDownloadOrInstallUpdate") + ex.Message, T("Common.UpdateFailed"));
         }
-    }
-
-    private static string ParseExpectedSha256(string checksumText, string packageFileName, string checksumFileName)
-    {
-        return UpdateChecksumParser.ParseSha256(checksumText, packageFileName, checksumFileName);
     }
 
     private void OnStartupUpdateToggled(object sender, RoutedEventArgs e)
@@ -1048,15 +984,6 @@ public sealed partial class MainWindow
         }
         return (loadedItems, scan.ModCount);
     }
-
-    private sealed record LatestReleaseInfo(
-        string Tag,
-        string Title,
-        string Body,
-        string PublishedAt,
-        string PageUrl,
-        string? PackageUrl,
-        string? Sha256Url);
 
     private sealed record InstallBackupDisplayItem(
         string Path,

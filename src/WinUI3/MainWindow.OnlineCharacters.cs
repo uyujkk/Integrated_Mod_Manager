@@ -1,4 +1,3 @@
-using System.Globalization;
 using System.Security.Cryptography;
 using System.Text;
 using System.Text.Json;
@@ -708,50 +707,8 @@ public sealed partial class MainWindow
         }
     }
 
-    private WikiCatalogDescriptor? GetWikiCatalogDescriptor(WorkspaceRepository repository)
-    {
-        string wikiUrl = repository.WikiUrl?.Trim() ?? string.Empty;
-        if (!Uri.TryCreate(wikiUrl, UriKind.Absolute, out Uri? uri))
-        {
-            return null;
-        }
-
-        string path = uri.AbsolutePath;
-        if (path.Contains("/zzz/wiki/", StringComparison.OrdinalIgnoreCase))
-        {
-            return new WikiCatalogDescriptor(
-                "zzz_wiki",
-                43,
-                "https://act-api-takumi-static.mihoyo.com/common/blackboard/zzz_wiki/v1/home/content/list",
-                "https://baike.mihoyo.com/zzz/wiki/content/{0}/detail",
-                "zzz",
-                "8");
-        }
-
-        if (path.Contains("/ys/obc/", StringComparison.OrdinalIgnoreCase))
-        {
-            return new WikiCatalogDescriptor(
-                "ys_obc",
-                25,
-                "https://act-api-takumi-static.mihoyo.com/common/blackboard/ys_obc/v1/home/content/list",
-                "https://baike.mihoyo.com/ys/obc/content/{0}/detail?bbs_presentation_style=no_header&visit_device=pc",
-                "genshin",
-                "2");
-        }
-
-        if (path.Contains("/sr/wiki/", StringComparison.OrdinalIgnoreCase))
-        {
-            return new WikiCatalogDescriptor(
-                "sr_wiki",
-                18,
-                "https://act-api-takumi-static.mihoyo.com/common/blackboard/sr_wiki/v1/home/content/list",
-                "https://bbs.mihoyo.com/sr/wiki/content/{0}/detail?bbs_presentation_style=no_header",
-                "hsr",
-                "104");
-        }
-
-        return null;
-    }
+    private static WikiCatalogDescriptor? GetWikiCatalogDescriptor(WorkspaceRepository repository)
+        => CharacterCatalogClient.Describe(repository.WikiUrl);
 
     private async Task<List<OnlineCharacterOption>> FetchWikiCharacterCatalogAsync(WorkspaceRepository repository)
     {
@@ -760,78 +717,9 @@ public sealed partial class MainWindow
             return await FetchEndfieldCharacterCatalogAsync(repository);
         }
 
-        WikiCatalogDescriptor? descriptor = GetWikiCatalogDescriptor(repository);
-        if (descriptor is null)
-        {
-            return [];
-        }
-
-        string requestUrl = $"{descriptor.ApiUrl}?app_sn={Uri.EscapeDataString(descriptor.AppSn)}&channel_id={descriptor.ChannelId}&lang=zh-cn";
-        using HttpResponseMessage response = await _httpClient.GetAsync(requestUrl);
-        response.EnsureSuccessStatusCode();
-        string json = await response.Content.ReadAsStringAsync();
-        using JsonDocument document = JsonDocument.Parse(json);
-
-        if (!document.RootElement.TryGetProperty("data", out JsonElement data)
-            || !data.TryGetProperty("list", out JsonElement channels)
-            || channels.ValueKind != JsonValueKind.Array)
-        {
-            return [];
-        }
-
-        JsonElement characterItems = default;
-        foreach (JsonElement channel in channels.EnumerateArray())
-        {
-            if (GameBananaJson.Int32(channel, "id") == descriptor.ChannelId
-                && channel.TryGetProperty("list", out JsonElement items)
-                && items.ValueKind == JsonValueKind.Array)
-            {
-                characterItems = items;
-                break;
-            }
-        }
-
-        if (characterItems.ValueKind != JsonValueKind.Array)
-        {
-            return [];
-        }
-
-        var records = new List<WikiCharacterRecord>();
-        var knownTitles = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
-        foreach (JsonElement item in characterItems.EnumerateArray())
-        {
-            string title = GameBananaJson.Text(item, "title")?.Trim() ?? string.Empty;
-            if (string.IsNullOrWhiteSpace(title) || !knownTitles.Add(OnlineCharacterCatalogMatcher.NormalizeLookup(title)))
-            {
-                continue;
-            }
-
-            int contentId = GameBananaJson.Int32(item, "content_id");
-            records.Add(new WikiCharacterRecord(
-                title,
-                GameBananaJson.Text(item, "alias_name")?.Trim() ?? string.Empty,
-                GameBananaJson.Text(item, "icon")?.Trim() ?? string.Empty,
-                contentId > 0 ? string.Format(CultureInfo.InvariantCulture, descriptor.ContentUrlTemplate, contentId) : repository.WikiUrl));
-        }
-
-        var characters = new List<OnlineCharacterOption>(records.Count);
-        for (int index = 0; index < records.Count; index++)
-        {
-            WikiCharacterRecord record = records[index];
-            characters.Add(new OnlineCharacterOption
-            {
-                Key = record.Title,
-                DisplayNameZh = record.Title,
-                DisplayNameEn = record.Title,
-                AvatarUrl = record.AvatarUrl,
-                WikiUrl = record.WikiUrl,
-                Aliases = OnlineCharacterCatalogMatcher.ParseWikiAliases(record.Title, record.AliasName),
-                IsWikiCharacter = true,
-                WikiOrder = index
-            });
-        }
-
-        return characters;
+        return GetWikiCatalogDescriptor(repository) is { } descriptor
+            ? await CharacterCatalogClient.FetchWikiCharactersAsync(_httpClient, descriptor, repository.WikiUrl)
+            : [];
     }
 
     private async Task<List<OnlineCharacterOption>> FetchEndfieldCharacterCatalogAsync(WorkspaceRepository repository)
@@ -900,91 +788,8 @@ public sealed partial class MainWindow
         return characters;
     }
 
-    private async Task<List<OnlineCharacterOption>> FetchGameBananaCharacterCatalogAsync(string categoryId)
-    {
-        string requestUrl = $"https://gamebanana.com/apiv11/Mod/Categories?_idCategoryRow={Uri.EscapeDataString(categoryId)}&_sSort=a_to_z&_bShowEmpty=true";
-        using HttpResponseMessage response = await _httpClient.GetAsync(requestUrl);
-        response.EnsureSuccessStatusCode();
-        string json = await response.Content.ReadAsStringAsync();
-        using JsonDocument document = JsonDocument.Parse(json);
-        if (document.RootElement.ValueKind != JsonValueKind.Array)
-        {
-            return [];
-        }
-
-        bool hasNestedCategories = document.RootElement
-            .EnumerateArray()
-            .Any(category => GameBananaJson.Int32(category, "_nCategoryCount") > 0);
-        var characters = new List<OnlineCharacterOption>();
-
-        if (!hasNestedCategories)
-        {
-            foreach (JsonElement category in document.RootElement.EnumerateArray())
-            {
-                AddGameBananaCharacterCategory(characters, category);
-            }
-        }
-        else
-        {
-            foreach (JsonElement category in document.RootElement.EnumerateArray())
-            {
-                int nestedCount = GameBananaJson.Int32(category, "_nCategoryCount");
-                int nestedCategoryId = GameBananaJson.Int32(category, "_idRow");
-                if (nestedCount <= 0 || nestedCategoryId <= 0)
-                {
-                    continue;
-                }
-
-                string nestedUrl = $"https://gamebanana.com/apiv11/ModCategory/{nestedCategoryId}/SubCategories";
-                using HttpResponseMessage nestedResponse = await _httpClient.GetAsync(nestedUrl);
-                nestedResponse.EnsureSuccessStatusCode();
-                string nestedJson = await nestedResponse.Content.ReadAsStringAsync();
-                using JsonDocument nestedDocument = JsonDocument.Parse(nestedJson);
-                if (nestedDocument.RootElement.ValueKind != JsonValueKind.Array)
-                {
-                    continue;
-                }
-
-                foreach (JsonElement nestedCategory in nestedDocument.RootElement.EnumerateArray())
-                {
-                    AddGameBananaCharacterCategory(characters, nestedCategory);
-                }
-            }
-        }
-
-        return characters
-            .Where(character => !string.IsNullOrWhiteSpace(character.CategoryId))
-            .GroupBy(character => character.CategoryId, StringComparer.OrdinalIgnoreCase)
-            .Select(group => group.First())
-            .ToList();
-    }
-
-    private static void AddGameBananaCharacterCategory(
-        List<OnlineCharacterOption> characters,
-        JsonElement category)
-    {
-        string name = GameBananaJson.Text(category, "_sName")?.Trim() ?? string.Empty;
-        string categoryUrl = GameBananaJson.Text(category, "_sUrl")?.Trim() ?? string.Empty;
-        int numericCategoryId = GameBananaJson.Int32(category, "_idRow");
-        string resolvedCategoryId = numericCategoryId > 0
-            ? numericCategoryId.ToString(CultureInfo.InvariantCulture)
-            : GameBananaJson.TrailingNumericId(categoryUrl);
-        if (string.IsNullOrWhiteSpace(name) || string.IsNullOrWhiteSpace(resolvedCategoryId))
-        {
-            return;
-        }
-
-        characters.Add(new OnlineCharacterOption
-        {
-            Key = name,
-            DisplayNameZh = name,
-            DisplayNameEn = name,
-            CategoryId = resolvedCategoryId,
-            AvatarUrl = GameBananaJson.Text(category, "_sIconUrl")?.Trim() ?? string.Empty,
-            Aliases = [name]
-        });
-    }
-
+    private Task<List<OnlineCharacterOption>> FetchGameBananaCharacterCatalogAsync(string categoryId)
+        => CharacterCatalogClient.FetchGameBananaCharactersAsync(_httpClient, categoryId);
 
     private async Task ApplyOfficialHoYoWikiEnglishNamesAsync(
         WorkspaceRepository repository,
@@ -1001,137 +806,14 @@ public sealed partial class MainWindow
         try
         {
             // Fetch sequentially to keep the monthly Wiki refresh gentle and separate from mod loading.
-            List<HoYoWikiLocalizedCharacter> chineseCharacters = await FetchHoYoWikiCharacterNamesAsync(
-                descriptor,
-                "zh-cn");
-            List<HoYoWikiLocalizedCharacter> englishCharacters = await FetchHoYoWikiCharacterNamesAsync(
-                descriptor,
-                "en-us");
-
-            Dictionary<string, string> englishByEntryId = englishCharacters
-                .Where(item => !string.IsNullOrWhiteSpace(item.EntryPageId)
-                    && !string.IsNullOrWhiteSpace(item.Name))
-                .GroupBy(item => item.EntryPageId, StringComparer.OrdinalIgnoreCase)
-                .ToDictionary(group => group.Key, group => group.First().Name, StringComparer.OrdinalIgnoreCase);
-            var englishByChineseName = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
-            foreach (HoYoWikiLocalizedCharacter chineseCharacter in chineseCharacters)
-            {
-                if (!englishByEntryId.TryGetValue(chineseCharacter.EntryPageId, out string? englishName))
-                {
-                    continue;
-                }
-
-                string normalizedChineseName = OnlineCharacterCatalogMatcher.NormalizeLookup(chineseCharacter.Name);
-                if (!string.IsNullOrWhiteSpace(normalizedChineseName))
-                {
-                    englishByChineseName[normalizedChineseName] = englishName;
-                }
-            }
-
-            foreach (OnlineCharacterOption character in characters)
-            {
-                string? officialEnglishName = new[] { character.DisplayNameZh, character.Key }
-                    .Concat(character.Aliases)
-                    .Select(OnlineCharacterCatalogMatcher.NormalizeLookup)
-                    .Where(name => !string.IsNullOrWhiteSpace(name))
-                    .Select(name => englishByChineseName.TryGetValue(name, out string? englishName)
-                        ? englishName
-                        : null)
-                    .FirstOrDefault(name => !string.IsNullOrWhiteSpace(name));
-                if (string.IsNullOrWhiteSpace(officialEnglishName))
-                {
-                    continue;
-                }
-
-                character.DisplayNameEn = officialEnglishName.Trim();
-                if (!character.Aliases.Contains(character.DisplayNameEn, StringComparer.OrdinalIgnoreCase))
-                {
-                    character.Aliases.Add(character.DisplayNameEn);
-                }
-            }
+            List<HoYoWikiLocalizedCharacter> chineseCharacters = await CharacterCatalogClient.FetchHoYoWikiNamesAsync(_httpClient, descriptor, "zh-cn");
+            List<HoYoWikiLocalizedCharacter> englishCharacters = await CharacterCatalogClient.FetchHoYoWikiNamesAsync(_httpClient, descriptor, "en-us");
+            CharacterCatalogClient.ApplyEnglishNames(characters, chineseCharacters, englishCharacters);
         }
         catch
         {
             // The existing Chinese catalog and translation fallback remain usable when HoYoWiki is unavailable.
         }
-    }
-
-    private async Task<List<HoYoWikiLocalizedCharacter>> FetchHoYoWikiCharacterNamesAsync(
-        WikiCatalogDescriptor descriptor,
-        string language)
-    {
-        const int pageSize = 50;
-        const int maxPages = 10;
-        var characters = new List<HoYoWikiLocalizedCharacter>();
-        var knownEntryIds = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
-
-        for (int page = 1; page <= maxPages; page++)
-        {
-            using var request = new HttpRequestMessage(
-                HttpMethod.Post,
-                $"{HoYoWikiApiBaseUrl}/get_entry_page_list");
-            request.Headers.TryAddWithoutValidation("x-rpc-language", language);
-            request.Headers.TryAddWithoutValidation("x-rpc-wiki_app", descriptor.HoYoWikiApp);
-            request.Headers.Referrer = new Uri("https://wiki.hoyolab.com/");
-            request.Content = new StringContent(
-                JsonSerializer.Serialize(new
-                {
-                    filters = Array.Empty<object>(),
-                    menu_id = descriptor.HoYoWikiCharacterMenuId,
-                    page_num = page,
-                    page_size = pageSize,
-                    use_es = true
-                }),
-                Encoding.UTF8,
-                "application/json");
-
-            using HttpResponseMessage response = await _httpClient.SendAsync(request);
-            response.EnsureSuccessStatusCode();
-            string json = await response.Content.ReadAsStringAsync();
-            using JsonDocument document = JsonDocument.Parse(json);
-            if (!document.RootElement.TryGetProperty("data", out JsonElement data)
-                || !data.TryGetProperty("list", out JsonElement list)
-                || list.ValueKind != JsonValueKind.Array)
-            {
-                break;
-            }
-
-            int returnedCount = 0;
-            foreach (JsonElement item in list.EnumerateArray())
-            {
-                returnedCount++;
-                string entryPageId = GameBananaJson.Text(item, "entry_page_id")?.Trim() ?? string.Empty;
-                string name = GameBananaJson.Text(item, "name")?.Trim() ?? string.Empty;
-                if (!string.IsNullOrWhiteSpace(entryPageId)
-                    && !string.IsNullOrWhiteSpace(name)
-                    && knownEntryIds.Add(entryPageId))
-                {
-                    characters.Add(new HoYoWikiLocalizedCharacter(entryPageId, name));
-                }
-            }
-
-            int totalCount = 0;
-            if (data.TryGetProperty("total", out JsonElement total))
-            {
-                if (total.ValueKind == JsonValueKind.Number)
-                {
-                    total.TryGetInt32(out totalCount);
-                }
-                else if (total.ValueKind == JsonValueKind.String)
-                {
-                    int.TryParse(total.GetString(), NumberStyles.Integer, CultureInfo.InvariantCulture, out totalCount);
-                }
-            }
-
-            if (returnedCount == 0
-                || (totalCount > 0 && characters.Count >= totalCount)
-                || (totalCount == 0 && returnedCount < pageSize))
-            {
-                break;
-            }
-        }
-
-        return characters;
     }
 
     private async Task TranslateWikiCharacterOptionsAsync(List<OnlineCharacterOption> characters)

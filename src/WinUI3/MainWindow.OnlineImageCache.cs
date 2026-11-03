@@ -1,6 +1,6 @@
-using System.Net;
 using System.Security.Cryptography;
 using System.Text;
+using IntegratedModManager.Core.Online;
 using Microsoft.UI.Xaml.Controls;
 using Microsoft.UI.Xaml.Media.Imaging;
 
@@ -156,45 +156,13 @@ public sealed partial class MainWindow
     {
         using var timeout = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
         timeout.CancelAfter(OnlinePreviewImageRequestTimeout);
-        cancellationToken = timeout.Token;
-        const int maxAttempts = 3;
-        for (int attempt = 0; attempt < maxAttempts; attempt++)
+        OnlineImageDownload download = await OnlineImageDownloader.DownloadAsync(_httpClient, remoteUri, timeout.Token);
+        if (download.FailedStatus is { } status)
         {
-            using HttpResponseMessage response = await _httpClient.GetAsync(
-                remoteUri,
-                HttpCompletionOption.ResponseHeadersRead,
-                cancellationToken);
-            if (response.IsSuccessStatusCode)
-            {
-                if (response.Content.Headers.ContentLength is > 26214400)
-                {
-                    return null;
-                }
-
-                return await response.Content.ReadAsByteArrayAsync(cancellationToken);
-            }
-
-            bool retryable = response.StatusCode == HttpStatusCode.TooManyRequests
-                || (int)response.StatusCode >= 500;
-            if (!retryable || attempt == maxAttempts - 1)
-            {
-                LogApplicationIssue("Online image download",
-                    new HttpRequestException($"Image server returned HTTP {(int)response.StatusCode}.",
-                        null, response.StatusCode));
-                return null;
-            }
-
-            TimeSpan retryDelay = response.Headers.RetryAfter?.Delta
-                ?? TimeSpan.FromMilliseconds(600 * Math.Pow(2, attempt));
-            if (retryDelay > TimeSpan.FromSeconds(6))
-            {
-                retryDelay = TimeSpan.FromSeconds(6);
-            }
-
-            await Task.Delay(retryDelay, cancellationToken);
+            LogApplicationIssue("Online image download",
+                new HttpRequestException($"Image server returned HTTP {(int)status}.", null, status));
         }
-
-        return null;
+        return download.Bytes;
     }
 
     private void TrimOnlineImageCache()

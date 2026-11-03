@@ -235,14 +235,14 @@ B2 第二阶段的取景框差异已在 B2 节说明；待确认的小项：图�
 | 项 | 现状 | 做法 | 工作量 |
 | --- | --- | --- | --- |
 | `BetaLocalization.EnToZh` | 已完成：合并进 `zh-CN.json`（47 处中文按原运行效果保留）后删除 | — | — |
-| 界面自动化测试 | 已建立：`tests/UI.Tests`（FlaUI）和 `scripts/test-ui.ps1`，7 个冒烟测试，含切换空源目录仓库的崩溃回归；不在 CI 中运行 | 重构前补对应页面的测试 | — |
+| 界面自动化测试 | 已建立：`tests/UI.Tests`（FlaUI）和 `scripts/test-ui.ps1`，19 个冒烟测试，覆盖首次安装、各页面、仓库视图、设置两种布局、在线页布局切换、更新页检查间隔，以及切换空源目录仓库的崩溃回归；不在 CI 中运行 | 重构前补对应页面的测试 | — |
 | 快捷键页 ViewModel | 只有布局策略，是 UI 重构唯一没有 ViewModel 的主要页面 | 按其他页面的方式抽出并补测试；最好在 B 之前或同时做 | M |
 | `async void` 处理器 | 已审查 68 个：只有在线详情的上一个/下一个没有保护，已套上 `RunUiActionAsync` | — | — |
 | 运行时 `L(中, 英)` | 已完成：文字常量迁到语言文件；其余 `L()` 传的是运行时状态（下载、在线状态），保留。另删除了 `MainWindow.Updates.cs` 里 68 行 `#if false` 死代码 | — | — |
 | 空 `catch` | 已完成：17 处补上为什么可以忽略的说明 | — | — |
 | `MainWindow.RefinedWorkspace.cs` | 第一步已完成：设置页分区导航、主页路径区和仓库页外框（工作台、详情页签、状态栏）写回 XAML，删除了只在启动时跑一次的旧布局代码；界面测试覆盖仓库页、视图切换和设置页两种布局。仍在代码里：`RepositoryWorkspace.cs` 拼出的角色/Mod 卡片内容、工具栏和详情页脚 | 卡片内容随相关功能改动逐步移入 XAML | M |
 | 大文件 | `RepositoryWorkspace`（1514 行）、`OnlineCharacters`（1407 行）等 | 只在相关功能改动时拆分 | — |
-| 在线数据层 | 第一步已完成：GameBanana 分类列表的抓取和解析移到 Core（`GameBananaCategoryClient`），有模拟 HTTP 测试。仍在窗口层：Wiki 和角色目录、Mod 详情、图片缓存、软件更新下载 | 其余部分逐个迁移 | M |
+| 在线数据层 | 已完成：请求和解析都在 Core，有模拟 HTTP 测试——GameBanana 分类列表（`GameBananaCategoryClient`）、角色目录（`CharacterCatalogClient`：米游社 Wiki、GameBanana 角色分类、HoYoWiki 英文名）、软件更新（`ApplicationUpdateClient`：最新版本、下载、SHA256 校验）、翻译（`TextTranslationClient`）、图片下载重试（`OnlineImageDownloader`）、下载数（`GameBananaDownloadCounts.FetchAsync`）。窗口层只留缓存、界面状态和终末地干员目录（依赖窗口内的角色数据） | — | — |
 | 已合并的远程分支、旧工作树 | 13 个远程分支；`foundation`、`layout`、`online`、`tests` 等工作树的分支都已合并 | 维护者确认后清理 | S |
 
 不再列入：`SectionCard` 控件（UI 重构已完成，没有页面需要它）。

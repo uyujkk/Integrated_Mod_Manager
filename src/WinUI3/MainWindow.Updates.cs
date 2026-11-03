@@ -742,7 +742,7 @@ public sealed partial class MainWindow
 
         foreach (string packagePath in Directory.EnumerateFiles(installRoot, "*.zip", SearchOption.TopDirectoryOnly))
         {
-            Match match = LocalUpdatePackageRegex.Match(Path.GetFileName(packagePath));
+            Match match = ApplicationUpdateClient.PackageNamePattern.Match(Path.GetFileName(packagePath));
             if (!match.Success || !Version.TryParse(match.Groups["version"].Value, out Version? packageVersion))
             {
                 continue;
