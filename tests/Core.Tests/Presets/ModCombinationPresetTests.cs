@@ -7,6 +7,27 @@ namespace IntegratedModManager.Core.Tests;
 public sealed class ModCombinationPresetTests
 {
     [Fact]
+    public void Capture_KeyNamesAlwaysUseBackslashes()
+    {
+        // 3DMigoto's own format on every platform. Saved slots stop matching if this ever follows the path separator.
+        string root = Path.Combine(Path.GetTempPath(), "imm-key-" + Guid.NewGuid().ToString("N"));
+        string mod = Path.Combine(root, "Skin");
+        Directory.CreateDirectory(Path.Combine(mod, "sub"));
+        try
+        {
+            File.WriteAllText(Path.Combine(mod, "sub", "mod.ini"), "[Constants]\nglobal persist $x = 0\n");
+            string user = Path.Combine(root, "d3dx_user.ini");
+            File.WriteAllText(user, "[Constants]\n$\\mods\\skin\\sub\\mod.ini\\x = 3\n");
+
+            ModPersistentValue value = Assert.Single(Assert.Single(ModPersistentPresetEngine.CaptureCombination([(mod, "Skin")], user)).Values);
+
+            Assert.Equal("sub\\mod.ini", value.RelativeIniPath);
+            Assert.Equal("$\\mods\\skin\\sub\\mod.ini\\x", value.RuntimeKey, ignoreCase: true);
+        }
+        finally { Directory.Delete(root, recursive: true); }
+    }
+
+    [Fact]
     public void CaptureRestoreTwoMods_UsesOnePatchAndPreservesOtherModsAndSourceIni()
     {
         using var f = new Fixture();
@@ -176,10 +197,9 @@ public sealed class ModCombinationPresetTests
         Assert.True(Directory.Exists(duplicate));
     }
 
-    [Fact]
+    [WindowsFact]
     public void JunctionInventoryUsesExactSourceIdentityAndPreservesForeignLinks()
     {
-        if (!OperatingSystem.IsWindows()) return;
         using var f = new Fixture();
         Directory.CreateDirectory(Path.Combine(f.Source, "CharacterB", "A"));
         string foreign = Directory.CreateDirectory(Path.Combine(f.Root, "foreign")).FullName;

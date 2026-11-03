@@ -13,16 +13,11 @@ public sealed class ArchiveProcessRunnerTests
     private static readonly TimeSpan FixtureStartLimit = TimeSpan.FromMinutes(2);
     private static readonly TimeSpan ProcessStartAllowance = TimeSpan.FromMinutes(1);
 
-    [Theory]
+    [WindowsTheory]
     [InlineData(0)]
     [InlineData(7)]
     public void Run_ClosesInputAndPreservesLargeOutputAndExitCode(int exitCode)
     {
-        if (!OperatingSystem.IsWindows())
-        {
-            return;
-        }
-
         // Each output exceeds pipe capacity, so sequential reads would deadlock.
         ProcessStartInfo startInfo = CreatePowerShellStartInfo(
             "$inputText = [Console]::In.ReadToEnd(); " +
@@ -36,14 +31,9 @@ public sealed class ArchiveProcessRunnerTests
         Assert.Equal(new string('e', 131072), result.Error);
     }
 
-    [Fact]
+    [WindowsFact]
     public void Run_TimeoutTerminatesHangingProcessAndItsChild()
     {
-        if (!OperatingSystem.IsWindows())
-        {
-            return;
-        }
-
         using var processes = new TemporaryProcesses();
         string script = "$ErrorActionPreference = 'Stop'; " + $"[IO.File]::WriteAllText('{processes.ParentIdPath}', [string]$PID); " +
             $"$child = Start-Process -FilePath '{HangingChildPath}' -ArgumentList {HangingChildArguments} -WindowStyle Hidden -PassThru; " +
@@ -64,14 +54,9 @@ public sealed class ArchiveProcessRunnerTests
         processes.AssertBothExited();
     }
 
-    [Fact]
+    [WindowsFact]
     public void Run_TimeoutAlsoBoundsPipesHeldOpenAfterParentExit()
     {
-        if (!OperatingSystem.IsWindows())
-        {
-            return;
-        }
-
         using var processes = new TemporaryProcesses();
         // Redirecting stdin makes CreateProcess inherit the parent's stdout/stderr handles.
         string script = "$ErrorActionPreference = 'Stop'; " + $"[IO.File]::WriteAllText('{processes.ParentIdPath}', [string]$PID); " +

@@ -17,7 +17,7 @@ public static class LaunchCommand
     public const string GameOnlyVerb = "--endfield-game-only";
 
     /// <summary>Held by every launch process; the updater refuses to replace files while it exists.</summary>
-    public const string RunningMutexName = @"Local\IntegratedModManager.EndfieldLaunch.Running";
+    public static string RunningMutexName { get; internal set; } = @"Local\IntegratedModManager.EndfieldLaunch.Running";
     private const string GameSessionMutexName = @"Local\IntegratedModManager.EndfieldGameSession";
 
     public static bool IsLaunchCommand(string[] args) =>

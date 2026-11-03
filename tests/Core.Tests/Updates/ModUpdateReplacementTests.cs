@@ -116,10 +116,9 @@ public sealed class ModUpdateReplacementTests : IDisposable
         Assert.Throws<ArgumentException>(() => ModUpdateReplacement.Capture("", Mod));
     }
 
-    [Fact]
+    [WindowsFact]
     public void LinkedInputsAreRejectedWithoutTouchingTheirTargets()
     {
-        if (!OperatingSystem.IsWindows()) return;
         string link = Path.Combine(Repo, "link");
         DirectoryLinkDeployment.CreateJunction(link, Payload);
         try { Assert.Throws<IOException>(() => ModUpdateReplacement.Capture(Repo, link)); }
@@ -131,10 +130,9 @@ public sealed class ModUpdateReplacementTests : IDisposable
         Assert.Equal("user-edited original", File.ReadAllText(Path.Combine(Mod, "old.ini")));
     }
 
-    [Fact]
+    [WindowsFact]
     public void ExternalDeployedJunctionStillResolvesAfterReplacement()
     {
-        if (!OperatingSystem.IsWindows()) return;
         string link = Path.Combine(root, "deployed-link");
         DirectoryLinkDeployment.CreateJunction(link, Mod);
         try
