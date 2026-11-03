@@ -707,8 +707,17 @@ public sealed partial class MainWindow
         }
     }
 
+    // Each catalog request gets this long, then one more try; see CharacterCatalogClient.WithRetryAsync.
+    private static readonly TimeSpan CharacterCatalogRequestTimeout = TimeSpan.FromSeconds(20);
+
+    // The repository's own wiki link, else its game's built-in one (found by category or game name).
     private static WikiCatalogDescriptor? GetWikiCatalogDescriptor(WorkspaceRepository repository)
-        => CharacterCatalogClient.Describe(repository.WikiUrl);
+        => CharacterCatalogClient.Describe(repository.WikiUrl,
+            BuiltInRepositoryPresets.FirstOrDefault(preset => IsRepositoryForPreset(repository, preset))?.WikiUrl);
+
+    private Task<T> RequestCharacterCatalogAsync<T>(string operation, Func<CancellationToken, Task<T>> request)
+        => CharacterCatalogClient.WithRetryAsync(request, CharacterCatalogRequestTimeout,
+            ex => LogApplicationIssue(operation + ", trying again", ex));
 
     private async Task<List<OnlineCharacterOption>> FetchWikiCharacterCatalogAsync(WorkspaceRepository repository)
     {
@@ -718,16 +727,19 @@ public sealed partial class MainWindow
         }
 
         return GetWikiCatalogDescriptor(repository) is { } descriptor
-            ? await CharacterCatalogClient.FetchWikiCharactersAsync(_httpClient, descriptor, repository.WikiUrl)
+            ? await RequestCharacterCatalogAsync("Load wiki character catalog",
+                token => CharacterCatalogClient.FetchWikiCharactersAsync(_httpClient, descriptor, repository.WikiUrl, token))
             : [];
     }
 
     private Task<List<OnlineCharacterOption>> FetchEndfieldCharacterCatalogAsync(WorkspaceRepository repository)
-        => CharacterCatalogClient.FetchEndfieldOperatorsAsync(_httpClient, EndfieldCharacters,
-            string.IsNullOrWhiteSpace(repository.WikiUrl) ? EndfieldOfficialWikiUrl : repository.WikiUrl);
+        => RequestCharacterCatalogAsync("Load Endfield operator catalog",
+            token => CharacterCatalogClient.FetchEndfieldOperatorsAsync(_httpClient, EndfieldCharacters,
+                string.IsNullOrWhiteSpace(repository.WikiUrl) ? EndfieldOfficialWikiUrl : repository.WikiUrl, token));
 
     private Task<List<OnlineCharacterOption>> FetchGameBananaCharacterCatalogAsync(string categoryId)
-        => CharacterCatalogClient.FetchGameBananaCharactersAsync(_httpClient, categoryId);
+        => RequestCharacterCatalogAsync("Load GameBanana character categories",
+            token => CharacterCatalogClient.FetchGameBananaCharactersAsync(_httpClient, categoryId, token));
 
     private async Task ApplyOfficialHoYoWikiEnglishNamesAsync(
         WorkspaceRepository repository,
@@ -744,13 +756,16 @@ public sealed partial class MainWindow
         try
         {
             // Fetch sequentially to keep the monthly Wiki refresh gentle and separate from mod loading.
-            List<HoYoWikiLocalizedCharacter> chineseCharacters = await CharacterCatalogClient.FetchHoYoWikiNamesAsync(_httpClient, descriptor, "zh-cn");
-            List<HoYoWikiLocalizedCharacter> englishCharacters = await CharacterCatalogClient.FetchHoYoWikiNamesAsync(_httpClient, descriptor, "en-us");
+            List<HoYoWikiLocalizedCharacter> chineseCharacters = await RequestCharacterCatalogAsync("Load HoYoWiki names",
+                token => CharacterCatalogClient.FetchHoYoWikiNamesAsync(_httpClient, descriptor, "zh-cn", token));
+            List<HoYoWikiLocalizedCharacter> englishCharacters = await RequestCharacterCatalogAsync("Load HoYoWiki names",
+                token => CharacterCatalogClient.FetchHoYoWikiNamesAsync(_httpClient, descriptor, "en-us", token));
             CharacterCatalogClient.ApplyEnglishNames(characters, chineseCharacters, englishCharacters);
         }
-        catch
+        catch (Exception ex)
         {
             // The existing Chinese catalog and translation fallback remain usable when HoYoWiki is unavailable.
+            LogApplicationIssue("Load HoYoWiki names", ex);
         }
     }
 
@@ -879,9 +894,10 @@ public sealed partial class MainWindow
                     gameBananaCharacters = await FetchGameBananaCharacterCatalogAsync(
                         GetEffectiveOnlineCategoryId(repository));
                 }
-                catch
+                catch (Exception ex)
                 {
                     // Wiki names remain usable if the optional category mapping request fails.
+                    LogApplicationIssue("Load GameBanana character categories", ex);
                 }
 
                 List<OnlineCharacterOption> mergedCharacters = OnlineCharacterCatalogMatcher.Merge(
@@ -893,9 +909,10 @@ public sealed partial class MainWindow
                 ApplyOnlineCharacterCatalog(catalogKey, mergedCharacters);
             }
         }
-        catch
+        catch (Exception ex)
         {
-            // The current page still supplies a usable partial character list.
+            // The current page still supplies a usable partial character list; the log says why the catalog did not load.
+            LogApplicationIssue("Load online character catalog", ex);
         }
         finally
         {
