@@ -6,7 +6,13 @@
 
 This document records version changes in Integrated Mod Manager. Unpublished versions are marked separately.
 
-## v4.7.0-preview.1 — 未发布（本地预览 / Local preview）
+## v4.7.0 — 未发布（正式版 / Stable）
+
+预设图片与图片切换；浮窗底板、紧凑布局、鼠标穿透、外观预设和自动对比度；不含 Mod 文件的方案分享；首次安装按系统语言选语言并选择游戏，其他游戏通过 XXMI 启动；每个 Mod 的“默认”槽位；批量操作（含导出组合包）；修复切换空源目录仓库时退出、管理员权限下无法选文件，以及无法确认加载器链接时仍删除 Mod。取代本地预览 v4.7.0-preview.1。见 [v4.7.0](v4.7.0.md)。
+
+Preset pictures and pick by picture; overlay backing, compact view, click-through, looks and automatic contrast; sharing a preset without Mod files; first install picks the language and the game, and other games start through XXMI; a Default slot for every Mod; batch actions, including bundle export; fixes for switching to a repository without a source folder, elevated file dialogs, and deleting a Mod whose loader links cannot be checked. Replaces the local preview v4.7.0-preview.1. See [v4.7.0](v4.7.0.md).
+
+## v4.7.0-preview.1 — 2026-11-03（预览版 / Pre-release）
 
 预设图片、框选角色与图片切换；浮窗底板、紧凑布局、鼠标穿透和外观预设；首次安装按系统语言选语言并选择游戏，其他游戏通过 XXMI 启动；每个 Mod 的“默认”槽位；保存槽位略过菜单状态、调整自动保存间隔；批量操作；修复切换空源目录仓库时退出和管理员权限下无法选文件。见 [v4.7.0-preview.1](v4.7.0-preview.1.md)。
 

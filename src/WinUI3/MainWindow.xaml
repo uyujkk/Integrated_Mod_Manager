@@ -545,6 +545,45 @@
                         <RowDefinition Height="Auto" />
                         <RowDefinition Height="*" />
                     </Grid.RowDefinitions>
+                    <!-- Title and repository picker with refresh, import and launch; under them the view buttons and the counts. -->
+                    <Border x:Name="RepositoryToolbarCard" Style="{StaticResource CommandSurfaceBorderStyle}" Padding="14,10,14,10" CornerRadius="6">
+                        <Grid x:Name="RepositoryToolbarGrid" RowSpacing="10">
+                            <Grid.RowDefinitions>
+                                <RowDefinition Height="Auto" />
+                                <RowDefinition Height="Auto" />
+                            </Grid.RowDefinitions>
+                            <Grid x:Name="RepositoryHeaderGrid" ColumnSpacing="8">
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="*" />
+                                    <ColumnDefinition Width="Auto" />
+                                </Grid.ColumnDefinitions>
+                                <StackPanel Orientation="Horizontal" Spacing="12" VerticalAlignment="Center">
+                                    <TextBlock x:Name="WorkspaceTitleTextBlock" FontSize="22" FontWeight="SemiBold" />
+                                    <ComboBox x:Name="RepositoryWorkspacePicker" MinWidth="190" MaxWidth="300" MinHeight="32" HorizontalAlignment="Left"
+                                            SelectionChanged="OnRepositoryWorkspacePickerSelectionChanged" />
+                                </StackPanel>
+                                <Grid x:Name="RepositoryToolbarCommandsGrid" Grid.Column="1" ColumnSpacing="8" HorizontalAlignment="Right" VerticalAlignment="Center">
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="Auto" />
+                                        <ColumnDefinition Width="Auto" />
+                                        <ColumnDefinition Width="Auto" />
+                                    </Grid.ColumnDefinitions>
+                                    <Button x:Name="RefreshButton" HorizontalAlignment="Left" MinHeight="36" Click="OnRefreshClicked" Style="{StaticResource SecondaryButtonStyle}" />
+                                    <Button x:Name="ImportZipButton" Grid.Column="1" HorizontalAlignment="Left" MinHeight="36" Click="OnImportZipClicked" Style="{StaticResource SecondaryButtonStyle}" />
+                                    <Button x:Name="RunLauncherButton" Grid.Column="2" HorizontalAlignment="Left" MinHeight="36" Click="OnRunLauncherClicked" Style="{StaticResource SecondaryButtonStyle}" />
+                                </Grid>
+                            </Grid>
+                            <Grid Grid.Row="1" ColumnSpacing="8">
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="*" />
+                                    <ColumnDefinition Width="Auto" />
+                                </Grid.ColumnDefinitions>
+                                <!-- The view buttons, details and the import commands are added by RepositoryWorkspace.cs and ExistingModImport.cs. -->
+                                <StackPanel x:Name="RepositoryViewButtonsPanel" Orientation="Horizontal" Spacing="6" />
+                                <TextBlock x:Name="RepositoryCountTextBlock" Grid.Column="1" FontSize="12" VerticalAlignment="Center" />
+                            </Grid>
+                        </Grid>
+                    </Border>
                     <!-- Hidden holders: the toolbar and footer take these controls, and the counts are read from the metrics. -->
                     <Grid x:Name="WorkspaceActionsGrid" ColumnSpacing="14" Visibility="Collapsed">
                         <Grid.ColumnDefinitions>
@@ -558,10 +597,6 @@
                             <ProgressBar x:Name="CopyProgressBar" Minimum="0" Maximum="100" Height="8" />
                             <TextBlock x:Name="ProgressTextBlock" Style="{StaticResource MutedTextStyle}" />
                         </StackPanel>
-                        <Button x:Name="RefreshButton" Grid.Column="1" Click="OnRefreshClicked" Style="{StaticResource SecondaryButtonStyle}" />
-                        <Button x:Name="ImportZipButton" Grid.Column="2" Click="OnImportZipClicked" Style="{StaticResource SecondaryButtonStyle}" />
-                        <Button x:Name="RunLauncherButton" Grid.Column="3" Click="OnRunLauncherClicked" Style="{StaticResource SecondaryButtonStyle}" />
-                        <Button x:Name="ToggleCopyButton" Grid.Column="4" Click="OnToggleCopyClicked" Style="{StaticResource PrimaryButtonStyle}" />
                     </Grid>
                     <Grid x:Name="RepositoryMetricsGrid" Visibility="Collapsed" ColumnSpacing="12" RowSpacing="12">
                         <Grid.ColumnDefinitions>
@@ -611,191 +646,154 @@
                                 <RowDefinition Height="Auto" />
                             </Grid.RowDefinitions>
                             <Grid x:Name="WorkspaceWorkbench" ColumnSpacing="12" RowSpacing="12">
-                                <Border x:Name="CategoryCard" Style="{StaticResource CardBorderStyle}" HorizontalAlignment="Stretch" VerticalAlignment="Stretch">
-                                    <Grid RowSpacing="12">
+                                <!-- Characters: heading with add and "More", search, the list, and a hint while the repository is empty. -->
+                                <Border x:Name="CategoryCard" Style="{StaticResource CardBorderStyle}" Padding="12" CornerRadius="6" HorizontalAlignment="Stretch" VerticalAlignment="Stretch">
+                                    <Grid RowSpacing="10">
                                         <Grid.RowDefinitions>
                                             <RowDefinition Height="Auto" />
                                             <RowDefinition Height="Auto" />
-                                            <RowDefinition Height="Auto" />
                                             <RowDefinition Height="*" />
+                                            <RowDefinition Height="Auto" />
                                         </Grid.RowDefinitions>
-                                        <Grid ColumnSpacing="10">
+                                        <Grid ColumnSpacing="4">
                                             <Grid.ColumnDefinitions>
                                                 <ColumnDefinition Width="*" />
                                                 <ColumnDefinition Width="Auto" />
                                                 <ColumnDefinition Width="Auto" />
-                                                <ColumnDefinition Width="Auto" />
-                                                <ColumnDefinition Width="Auto" />
                                             </Grid.ColumnDefinitions>
-                                            <TextBlock x:Name="FirstLevelSectionTitleTextBlock" VerticalAlignment="Center" Style="{StaticResource SectionTitleTextStyle}" />
-                                            <Button
-                                                x:Name="CreateFirstLevelButton"
-                                                Grid.Column="1"
-                                                Width="42"
-                                                Height="42"
-                                                Padding="0"
-                                                Click="OnCreateFirstLevelClicked"
-                                                Style="{StaticResource SecondaryButtonStyle}">
+                                            <TextBlock x:Name="RepositoryCategoryTitleTextBlock" FontSize="15" FontWeight="SemiBold" VerticalAlignment="Center" />
+                                            <Button x:Name="CreateFirstLevelButton" Grid.Column="1" Width="32" Height="32" MinWidth="32" MinHeight="32" Padding="5" CornerRadius="4"
+                                                    Click="OnCreateFirstLevelClicked" Style="{StaticResource SecondaryButtonStyle}">
                                                 <FontIcon FontSize="16" Glyph="&#xE710;" />
                                             </Button>
-                                            <Button
-                                                x:Name="RenameFirstLevelButton"
-                                                Grid.Column="2"
-                                                Width="42"
-                                                Height="42"
-                                                Padding="0"
-                                                Click="OnRenameFirstLevelClicked"
-                                                Style="{StaticResource SecondaryButtonStyle}">
-                                                <FontIcon FontSize="16" Glyph="&#xE70F;" />
+                                            <!-- Rename, avatar and the several-Mods toggle are in the "More" menu, the same menu as a right-click on a
+                                                 character. The hidden controls keep their state and handlers. -->
+                                            <Button x:Name="CharacterMoreButton" Grid.Column="2" Width="32" Height="32" MinWidth="32" MinHeight="32" Padding="5" CornerRadius="4"
+                                                    Click="OnCharacterMoreClicked" Style="{StaticResource SecondaryButtonStyle}">
+                                                <FontIcon FontSize="16" Glyph="&#xE712;" />
                                             </Button>
-                                            <Button
-                                                x:Name="CharacterAvatarButton"
-                                                Grid.Column="3"
-                                                Width="42"
-                                                Height="42"
-                                                Padding="0"
-                                                Click="OnCharacterAvatarButtonClicked"
-                                                Style="{StaticResource SecondaryButtonStyle}">
-                                                <FontIcon FontSize="16" Glyph="&#xE77B;" />
-                                            </Button>
-                                            <ToggleButton
-                                                x:Name="CharacterMultipleModsToggle"
-                                                Grid.Column="4"
-                                                Width="42"
-                                                Height="42"
-                                                Padding="0"
-                                                Click="OnCharacterMultipleModsToggleClicked">
-                                                <FontIcon FontSize="16" Glyph="&#xE8B3;" />
-                                            </ToggleButton>
+                                            <Button x:Name="RenameFirstLevelButton" Grid.Column="2" Visibility="Collapsed" Click="OnRenameFirstLevelClicked" Style="{StaticResource SecondaryButtonStyle}" />
+                                            <Button x:Name="CharacterAvatarButton" Grid.Column="2" Visibility="Collapsed" Click="OnCharacterAvatarButtonClicked" Style="{StaticResource SecondaryButtonStyle}" />
+                                            <ToggleButton x:Name="CharacterMultipleModsToggle" Grid.Column="2" Visibility="Collapsed" Click="OnCharacterMultipleModsToggleClicked" />
                                         </Grid>
-                                        <TextBlock x:Name="FirstLevelSectionSubtitleTextBlock" Grid.Row="1" Style="{StaticResource MutedTextStyle}" TextWrapping="Wrap" />
-                                        <Border Grid.Row="2" Style="{StaticResource InsetBorderStyle}">
-                                            <TextBox
-                                                x:Name="FirstLevelSearchTextBox"
-                                                Padding="12,8"
-                                                BorderThickness="0"
+                                        <TextBox x:Name="FirstLevelSearchTextBox" Grid.Row="1" Height="34" MinWidth="0" Padding="8,6,8,6" BorderThickness="0"
                                                 TextChanged="OnFirstLevelSearchTextChanged" />
-                                        </Border>
-                                        <Border Grid.Row="3" Style="{StaticResource InsetBorderStyle}">
-                                            <ListView x:Name="FirstLevelListView" SingleSelectionFollowsFocus="False" SelectionChanged="OnFirstLevelSelectionChanged" Style="{StaticResource AppListViewStyle}" ItemContainerStyle="{StaticResource CompactListViewItemStyle}">
-                                                <ListView.ItemTemplate>
-                                                    <DataTemplate x:DataType="local:FirstLevelFolderItem">
-                                                        <Grid Padding="4,8" ColumnSpacing="8" RightTapped="OnFirstLevelItemRightTapped">
-                                                            <Grid.ColumnDefinitions>
-                                                                <ColumnDefinition Width="Auto" />
-                                                                <ColumnDefinition Width="*" />
-                                                                <ColumnDefinition Width="Auto" />
-                                                            </Grid.ColumnDefinitions>
-                                                            <Grid Width="28" Height="28">
-                                                                <Ellipse Fill="{ThemeResource ControlFillColorSecondaryBrush}" />
-                                                                <TextBlock Text="{x:Bind AvatarInitial}" FontSize="12" FontWeight="SemiBold" HorizontalAlignment="Center" VerticalAlignment="Center" Opacity="0.75" Visibility="{x:Bind AvatarPlaceholderVisibility, Mode=OneWay}" />
-                                                                <Ellipse>
-                                                                    <Ellipse.Fill>
-                                                                        <ImageBrush ImageSource="{x:Bind AvatarImageSource, Mode=OneWay}" Stretch="UniformToFill" />
-                                                                    </Ellipse.Fill>
-                                                                </Ellipse>
-                                                            </Grid>
-                                                            <TextBlock Grid.Column="1" FontWeight="SemiBold" Text="{x:Bind Name}" MaxLines="1" TextTrimming="CharacterEllipsis" VerticalAlignment="Center" />
-                                                            <TextBlock Grid.Column="2" FontSize="12" Text="{x:Bind ChildrenCount}" VerticalAlignment="Center" Opacity="0.75" />
+                                        <ListView x:Name="FirstLevelListView" Grid.Row="2" MinHeight="0" SingleSelectionFollowsFocus="False" SelectionChanged="OnFirstLevelSelectionChanged" Style="{StaticResource AppListViewStyle}" ItemContainerStyle="{StaticResource CompactListViewItemStyle}">
+                                            <ListView.ItemTemplate>
+                                                <DataTemplate x:DataType="local:FirstLevelFolderItem">
+                                                    <Grid Padding="4,8" ColumnSpacing="8" RightTapped="OnFirstLevelItemRightTapped">
+                                                        <Grid.ColumnDefinitions>
+                                                            <ColumnDefinition Width="Auto" />
+                                                            <ColumnDefinition Width="*" />
+                                                            <ColumnDefinition Width="Auto" />
+                                                        </Grid.ColumnDefinitions>
+                                                        <Grid Width="28" Height="28">
+                                                            <Ellipse Fill="{ThemeResource ControlFillColorSecondaryBrush}" />
+                                                            <TextBlock Text="{x:Bind AvatarInitial}" FontSize="12" FontWeight="SemiBold" HorizontalAlignment="Center" VerticalAlignment="Center" Opacity="0.75" Visibility="{x:Bind AvatarPlaceholderVisibility, Mode=OneWay}" />
+                                                            <Ellipse>
+                                                                <Ellipse.Fill>
+                                                                    <ImageBrush ImageSource="{x:Bind AvatarImageSource, Mode=OneWay}" Stretch="UniformToFill" />
+                                                                </Ellipse.Fill>
+                                                            </Ellipse>
                                                         </Grid>
-                                                    </DataTemplate>
-                                                </ListView.ItemTemplate>
-                                            </ListView>
-                                        </Border>
+                                                        <TextBlock Grid.Column="1" FontWeight="SemiBold" Text="{x:Bind Name}" MaxLines="1" TextTrimming="CharacterEllipsis" VerticalAlignment="Center" />
+                                                        <TextBlock Grid.Column="2" FontSize="12" Text="{x:Bind ChildrenCount}" VerticalAlignment="Center" Opacity="0.75" />
+                                                    </Grid>
+                                                </DataTemplate>
+                                            </ListView.ItemTemplate>
+                                        </ListView>
+                                        <TextBlock x:Name="CharacterFolderHintTextBlock" Grid.Row="3" Margin="2,8,2,0" FontSize="12" Opacity="0.75"
+                                                TextWrapping="Wrap" VerticalAlignment="Center" Visibility="Collapsed" />
                                     </Grid>
                                 </Border>
-                                <Border x:Name="ModCard" Style="{StaticResource CardBorderStyle}" HorizontalAlignment="Stretch" VerticalAlignment="Stretch">
-                                    <Grid RowSpacing="12">
+                                <!-- Mods: heading, search and tag buttons (added by LocalTags), state chips, and the list or cover views. -->
+                                <Border x:Name="ModCard" Style="{StaticResource CardBorderStyle}" Padding="12" CornerRadius="6" HorizontalAlignment="Stretch" VerticalAlignment="Stretch">
+                                    <Grid x:Name="ModCardGrid" RowSpacing="10">
                                         <Grid.RowDefinitions>
+                                            <RowDefinition Height="Auto" />
                                             <RowDefinition Height="Auto" />
                                             <RowDefinition Height="Auto" />
                                             <RowDefinition Height="*" />
                                         </Grid.RowDefinitions>
-                                        <Grid ColumnSpacing="10">
+                                        <Grid ColumnSpacing="8">
                                             <Grid.ColumnDefinitions>
                                                 <ColumnDefinition Width="*" />
                                                 <ColumnDefinition Width="Auto" />
+                                                <ColumnDefinition Width="Auto" />
                                             </Grid.ColumnDefinitions>
-                                            <TextBlock x:Name="SecondLevelSectionTitleTextBlock" VerticalAlignment="Center" Style="{StaticResource SectionTitleTextStyle}" />
-                                            <Button
-                                                x:Name="DeleteSecondLevelButton"
-                                                Grid.Column="1"
-                                                Width="42"
-                                                Height="42"
-                                                Padding="0"
-                                                Click="OnDeleteSecondLevelClicked"
-                                                Style="{StaticResource SecondaryButtonStyle}">
+                                            <TextBlock x:Name="RepositoryModTitleTextBlock" FontSize="16" FontWeight="SemiBold" VerticalAlignment="Center" />
+                                            <TextBlock x:Name="RepositoryModCountTextBlock" Grid.Column="1" FontSize="12" VerticalAlignment="Center" />
+                                            <Button x:Name="DeleteSecondLevelButton" Grid.Column="2" Width="32" Height="32" MinHeight="32" Padding="6" CornerRadius="4"
+                                                    Click="OnDeleteSecondLevelClicked" Style="{StaticResource SecondaryButtonStyle}">
                                                 <FontIcon FontSize="16" Glyph="&#xE74D;" />
                                             </Button>
                                         </Grid>
-                                        <TextBlock x:Name="SecondLevelSectionSubtitleTextBlock" Grid.Row="1" Style="{StaticResource MutedTextStyle}" TextWrapping="Wrap" />
-                                        <Border
-                                            x:Name="SecondLevelDropBorder"
-                                            Grid.Row="2"
-                                            AllowDrop="True"
-                                            Style="{StaticResource InsetBorderStyle}"
-                                            DragOver="OnSecondLevelDragOver"
-                                            DragLeave="OnDropTargetDragLeave"
-                                            Drop="OnSecondLevelDrop">
-                                            <ListView x:Name="SecondLevelListView" SingleSelectionFollowsFocus="False" SelectionChanged="OnSecondLevelSelectionChanged" DoubleTapped="OnSecondLevelDoubleTapped" Style="{StaticResource AppListViewStyle}" ItemContainerStyle="{StaticResource AppListViewItemStyle}">
-                                                <ListView.ItemTemplate>
-                                                    <!-- A row: cover thumbnail, name with its tag chips and shortcut count, size, and the state as a pill. -->
-                                                    <DataTemplate x:DataType="local:SecondLevelFolderItem">
-                                                        <Grid Padding="6,6" ColumnSpacing="10" RightTapped="OnSecondLevelItemRightTapped">
-                                                            <Grid.ColumnDefinitions>
-                                                                <ColumnDefinition Width="Auto" />
-                                                                <ColumnDefinition Width="*" />
-                                                                <ColumnDefinition Width="Auto" />
-                                                                <ColumnDefinition Width="Auto" />
-                                                            </Grid.ColumnDefinitions>
-                                                            <Grid Width="40" Height="40" CornerRadius="6" Background="{ThemeResource AppPreviewBackgroundBrush}">
-                                                                <FontIcon Glyph="&#xE8A5;" FontSize="16" Opacity="0.6" Visibility="{x:Bind CoverPlaceholderVisibility, Mode=OneWay}" />
-                                                                <Image Source="{x:Bind CoverImageSource, Mode=OneWay}" Stretch="UniformToFill" />
-                                                            </Grid>
-                                                            <StackPanel Grid.Column="1" Spacing="3" VerticalAlignment="Center">
-                                                                <TextBlock FontWeight="SemiBold" MaxLines="1" Text="{x:Bind Name}" TextTrimming="CharacterEllipsis" />
-                                                                <StackPanel Orientation="Horizontal" Spacing="8" Visibility="{x:Bind DetailLineVisibility, Mode=OneWay}">
-                                                                    <ItemsRepeater ItemsSource="{x:Bind Tags, Mode=OneWay}">
-                                                                        <ItemsRepeater.Layout>
-                                                                            <StackLayout Orientation="Horizontal" Spacing="4" />
-                                                                        </ItemsRepeater.Layout>
-                                                                        <ItemsRepeater.ItemTemplate>
-                                                                            <DataTemplate x:DataType="x:String">
-                                                                                <Border Padding="6,0,6,1" CornerRadius="4" Background="{ThemeResource AppSecondaryDefaultBrush}">
-                                                                                    <TextBlock FontSize="12" Opacity="0.85" Text="{x:Bind}" />
-                                                                                </Border>
-                                                                            </DataTemplate>
-                                                                        </ItemsRepeater.ItemTemplate>
-                                                                    </ItemsRepeater>
-                                                                    <TextBlock Style="{StaticResource CaptionTextStyle}" Text="{x:Bind KeysText, Mode=OneWay}" VerticalAlignment="Center" />
+                                        <StackPanel x:Name="RepositoryStateChipsPanel" Grid.Row="2" Orientation="Horizontal" Spacing="6" />
+                                        <Border x:Name="SecondLevelDropBorder" Grid.Row="3" Padding="0" AllowDrop="True" Style="{StaticResource InsetBorderStyle}"
+                                                DragOver="OnSecondLevelDragOver" DragLeave="OnDropTargetDragLeave" Drop="OnSecondLevelDrop">
+                                            <!-- The list; RepositoryWorkspace.cs adds the cover view and the empty state over it. -->
+                                            <Grid x:Name="RepositoryModViewsGrid">
+                                                <ListView x:Name="SecondLevelListView" MinHeight="0" SingleSelectionFollowsFocus="False" SelectionChanged="OnSecondLevelSelectionChanged" DoubleTapped="OnSecondLevelDoubleTapped" Style="{StaticResource AppListViewStyle}" ItemContainerStyle="{StaticResource AppListViewItemStyle}">
+                                                    <ListView.ItemTemplate>
+                                                        <!-- A row: cover thumbnail, name with its tag chips and shortcut count, size, and the state as a pill. -->
+                                                        <DataTemplate x:DataType="local:SecondLevelFolderItem">
+                                                            <Grid Padding="6,6" ColumnSpacing="10" RightTapped="OnSecondLevelItemRightTapped">
+                                                                <Grid.ColumnDefinitions>
+                                                                    <ColumnDefinition Width="Auto" />
+                                                                    <ColumnDefinition Width="*" />
+                                                                    <ColumnDefinition Width="Auto" />
+                                                                    <ColumnDefinition Width="Auto" />
+                                                                </Grid.ColumnDefinitions>
+                                                                <Grid Width="40" Height="40" CornerRadius="6" Background="{ThemeResource AppPreviewBackgroundBrush}">
+                                                                    <FontIcon Glyph="&#xE8A5;" FontSize="16" Opacity="0.6" Visibility="{x:Bind CoverPlaceholderVisibility, Mode=OneWay}" />
+                                                                    <Image Source="{x:Bind CoverImageSource, Mode=OneWay}" Stretch="UniformToFill" />
+                                                                </Grid>
+                                                                <StackPanel Grid.Column="1" Spacing="3" VerticalAlignment="Center">
+                                                                    <TextBlock FontWeight="SemiBold" MaxLines="1" Text="{x:Bind Name}" TextTrimming="CharacterEllipsis" />
+                                                                    <StackPanel Orientation="Horizontal" Spacing="8" Visibility="{x:Bind DetailLineVisibility, Mode=OneWay}">
+                                                                        <ItemsRepeater ItemsSource="{x:Bind Tags, Mode=OneWay}">
+                                                                            <ItemsRepeater.Layout>
+                                                                                <StackLayout Orientation="Horizontal" Spacing="4" />
+                                                                            </ItemsRepeater.Layout>
+                                                                            <ItemsRepeater.ItemTemplate>
+                                                                                <DataTemplate x:DataType="x:String">
+                                                                                    <Border Padding="6,0,6,1" CornerRadius="4" Background="{ThemeResource AppSecondaryDefaultBrush}">
+                                                                                        <TextBlock FontSize="12" Opacity="0.85" Text="{x:Bind}" />
+                                                                                    </Border>
+                                                                                </DataTemplate>
+                                                                            </ItemsRepeater.ItemTemplate>
+                                                                        </ItemsRepeater>
+                                                                        <TextBlock Style="{StaticResource CaptionTextStyle}" Text="{x:Bind KeysText, Mode=OneWay}" VerticalAlignment="Center" />
+                                                                    </StackPanel>
                                                                 </StackPanel>
-                                                            </StackPanel>
-                                                            <TextBlock
-                                                                Grid.Column="2"
-                                                                MinWidth="64"
-                                                                Style="{StaticResource CaptionTextStyle}"
-                                                                Text="{x:Bind SizeText, Mode=OneWay}"
-                                                                TextAlignment="Right"
-                                                                VerticalAlignment="Center" />
-                                                            <Grid Grid.Column="3" VerticalAlignment="Center">
-                                                                <Border Padding="8,2" CornerRadius="4" Background="{ThemeResource AppSuccessSoftBrush}" Visibility="{x:Bind DeployedPillVisibility, Mode=OneWay}">
-                                                                    <TextBlock FontSize="12" Foreground="{ThemeResource AppSuccessBrush}" Text="{x:Bind State, Mode=OneWay}" />
-                                                                </Border>
-                                                                <Border Padding="8,2" CornerRadius="4" Background="{ThemeResource AppSecondaryDefaultBrush}" Visibility="{x:Bind IdlePillVisibility, Mode=OneWay}">
-                                                                    <TextBlock FontSize="12" Opacity="0.8" Text="{x:Bind State, Mode=OneWay}" />
-                                                                </Border>
+                                                                <TextBlock
+                                                                    Grid.Column="2"
+                                                                    MinWidth="64"
+                                                                    Style="{StaticResource CaptionTextStyle}"
+                                                                    Text="{x:Bind SizeText, Mode=OneWay}"
+                                                                    TextAlignment="Right"
+                                                                    VerticalAlignment="Center" />
+                                                                <Grid Grid.Column="3" VerticalAlignment="Center">
+                                                                    <Border Padding="8,2" CornerRadius="4" Background="{ThemeResource AppSuccessSoftBrush}" Visibility="{x:Bind DeployedPillVisibility, Mode=OneWay}">
+                                                                        <TextBlock FontSize="12" Foreground="{ThemeResource AppSuccessBrush}" Text="{x:Bind State, Mode=OneWay}" />
+                                                                    </Border>
+                                                                    <Border Padding="8,2" CornerRadius="4" Background="{ThemeResource AppSecondaryDefaultBrush}" Visibility="{x:Bind IdlePillVisibility, Mode=OneWay}">
+                                                                        <TextBlock FontSize="12" Opacity="0.8" Text="{x:Bind State, Mode=OneWay}" />
+                                                                    </Border>
+                                                                </Grid>
                                                             </Grid>
-                                                        </Grid>
-                                                    </DataTemplate>
-                                                </ListView.ItemTemplate>
-                                            </ListView>
+                                                        </DataTemplate>
+                                                    </ListView.ItemTemplate>
+                                                </ListView>
+                                            </Grid>
                                         </Border>
                                     </Grid>
                                 </Border>
-                                <Grid x:Name="WorkspaceDetailHost" RowSpacing="12">
+                                <Grid x:Name="WorkspaceDetailHost" RowSpacing="8">
                                     <Grid.RowDefinitions>
                                         <RowDefinition Height="Auto" />
                                         <RowDefinition Height="*" />
+                                        <RowDefinition Height="Auto" />
                                     </Grid.RowDefinitions>
                                     <Border x:Name="SelectionSummaryCard" Style="{StaticResource CardBorderStyle}" CornerRadius="6" Padding="12">
                                         <Grid ColumnSpacing="18">
@@ -946,6 +944,26 @@
                                             </ScrollViewer>
                                         </TabViewItem>
                                     </TabView>
+                                    <Border x:Name="RepositoryDetailFooterCard" Grid.Row="2" Style="{StaticResource CardBorderStyle}" Padding="12" CornerRadius="6">
+                                        <Grid RowSpacing="8">
+                                            <Grid.RowDefinitions>
+                                                <RowDefinition Height="Auto" />
+                                                <RowDefinition Height="Auto" />
+                                            </Grid.RowDefinitions>
+                                            <TextBlock x:Name="RepositoryDeploymentHintTextBlock" FontSize="12" Opacity="0.8" TextWrapping="Wrap" VerticalAlignment="Center" />
+                                            <Grid Grid.Row="1" ColumnSpacing="8">
+                                                <Grid.ColumnDefinitions>
+                                                    <ColumnDefinition Width="Auto" />
+                                                    <ColumnDefinition Width="*" />
+                                                </Grid.ColumnDefinitions>
+                                                <Button x:Name="RepositoryOpenModFolderButton" MinWidth="44" MinHeight="40" CornerRadius="4"
+                                                        Click="OnRepositoryOpenModFolderClicked" Style="{StaticResource SecondaryButtonStyle}">
+                                                    <FontIcon FontSize="16" Glyph="&#xE8B7;" />
+                                                </Button>
+                                                <Button x:Name="ToggleCopyButton" Grid.Column="1" MinHeight="40" HorizontalAlignment="Stretch" Click="OnToggleCopyClicked" Style="{StaticResource PrimaryButtonStyle}" />
+                                            </Grid>
+                                        </Grid>
+                                    </Border>
                                 </Grid>
                             </Grid>
                             <Border x:Name="WorkspaceStatusCard" Grid.Row="1" Style="{StaticResource CardBorderStyle}" Padding="14,12">

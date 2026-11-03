@@ -164,14 +164,9 @@ public sealed partial class MainWindow
         CurrentStateHintTextBlock.Text = T("Localization.DistinguishesNormalCopiesFromDirectoryJunctions");
         CurrentFolderLabelTextBlock.Text = T("Localization.CurrentSecondLevelFolder");
         CurrentFolderHintTextBlock.Text = T("Localization.ShowsTheCurrentlySelectedModName");
-
-        FirstLevelSectionTitleTextBlock.Text = T("Localization.Categories");
-        FirstLevelSectionSubtitleTextBlock.Text = T("Localization.ChooseACategoryFolderFirst");
         FirstLevelSearchTextBox.PlaceholderText = T("RepositoryWorkspace.SearchCharacters");
         CreateFirstLevelButton.Content = T("Localization.NewFolder");
         RenameFirstLevelButton.Content = T("Localization.Rename");
-        SecondLevelSectionTitleTextBlock.Text = T("Localization.ModLibrary");
-        SecondLevelSectionSubtitleTextBlock.Text = T("Localization.ThenChooseASpecificMod");
         DeleteSecondLevelButton.Content = T("Localization.DeleteMod");
 
         ShortcutSectionTitleTextBlock.Text = T("Localization.ShortcutNotes");

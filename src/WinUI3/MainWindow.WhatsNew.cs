@@ -11,7 +11,7 @@ namespace ModFolderCopier.WinUI;
 public sealed partial class MainWindow
 {
     private const string WhatsNewFeatureSet = "4.7.0";
-    private const string WhatsNewReleaseNotes = "v4.7.0-preview.1.md";
+    private const string WhatsNewReleaseNotes = "v4.7.0.md";
     private string? _whatsNewSeenVersion;
 
     private async Task ShowWhatsNewOnceAsync()

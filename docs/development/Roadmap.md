@@ -240,7 +240,7 @@ B2 第二阶段的取景框差异已在 B2 节说明；待确认的小项：图�
 | `async void` 处理器 | 已审查 68 个：只有在线详情的上一个/下一个没有保护，已套上 `RunUiActionAsync` | — | — |
 | 运行时 `L(中, 英)` | 已完成：文字常量迁到语言文件；其余 `L()` 传的是运行时状态（下载、在线状态），保留。另删除了 `MainWindow.Updates.cs` 里 68 行 `#if false` 死代码 | — | — |
 | 空 `catch` | 已完成：17 处补上为什么可以忽略的说明 | — | — |
-| `MainWindow.RefinedWorkspace.cs` | 第一步已完成：设置页分区导航、主页路径区和仓库页外框（工作台、详情页签、状态栏）写回 XAML，删除了只在启动时跑一次的旧布局代码；界面测试覆盖仓库页、视图切换和设置页两种布局。仍在代码里：`RepositoryWorkspace.cs` 拼出的角色/Mod 卡片内容、工具栏和详情页脚 | 卡片内容随相关功能改动逐步移入 XAML | M |
+| `MainWindow.RefinedWorkspace.cs` | 已完成：设置页、主页路径区、仓库页外框，以及角色卡片、Mod 卡片、工具栏和详情页脚都在 XAML 中声明；代码只添加动态内容（视图按钮、状态筛选、封面视图、标签工具）并按断点调整 | — | — |
 | 大文件 | `RepositoryWorkspace`（1514 行）、`OnlineCharacters`（1407 行）等 | 只在相关功能改动时拆分 | — |
 | 在线数据层 | 已完成：请求和解析都在 Core，有模拟 HTTP 测试——GameBanana 分类列表（`GameBananaCategoryClient`）、角色目录（`CharacterCatalogClient`：米游社 Wiki、终末地官网干员、GameBanana 角色分类、HoYoWiki 英文名）、软件更新（`ApplicationUpdateClient`：最新版本、下载、SHA256 校验）、翻译（`TextTranslationClient`）、图片下载重试（`OnlineImageDownloader`）、下载数（`GameBananaDownloadCounts.FetchAsync`）。窗口层只留缓存和界面状态，不再直接发请求 | — | — |
 | 已合并的远程分支、旧工作树 | 13 个远程分支；`foundation`、`layout`、`online`、`tests` 等工作树的分支都已合并 | 维护者确认后清理 | S |
