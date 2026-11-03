@@ -24,17 +24,7 @@ public sealed partial class MainWindow
     private readonly ModListViewModel _modList = new();
     private readonly ModDetailsViewModel _modDetails = new();
     private readonly HashSet<SecondLevelFolderItem> _repositoryCoversLoading = [];
-    private Grid? _repositoryToolbar;
-    private TextBlock? _workspaceTitleText;
-    private Grid? _repositoryHeader;
-    private Grid? _repositoryToolbarCommands;
-    private StackPanel? _repositoryViewButtons;
     private ToggleButton[] _repositoryModeButtons = [];
-    private ComboBox? _repositoryWorkspacePicker;
-    private TextBlock? _repositoryCountText;
-    private TextBlock? _repositoryCategoryTitle;
-    private TextBlock? _repositoryModTitle;
-    private TextBlock? _repositoryModCount;
     private TextBox? _repositoryModSearch;
     private EmptyState? _repositoryEmptyState;
     private StackPanel? _repositoryEmptyButtons;
@@ -44,7 +34,6 @@ public sealed partial class MainWindow
     private TextBlock? _repositorySetupProgress;
     private SetupStepRow[] _repositorySetupSteps = [];
     private ToggleButton[] _repositoryStateChips = [];
-    private TextBlock? _characterFolderHint;
     private TextBlock[] _repositoryInfoLabels = [];
     private HyperlinkButton? _repositoryInfoSource;
     private TextBlock? _repositoryInfoSourceEmpty;
@@ -68,12 +57,8 @@ public sealed partial class MainWindow
     private ItemsRepeater? _repositoryCoverRepeater;
     private UniformGridLayout? _repositoryCoverWrap;
     private Button? _repositoryOpenDetails;
-    private Button? _repositoryOpenModFolder;
     private Button? _repositoryCopyModPath;
-    private Button? _characterMoreButton;
-    private Button? _repositoryOpenPresets;
     private TextBlock? _repositorySelectedPath;
-    private TextBlock? _repositoryDeploymentHint;
     private TextBlock? _repositoryTaskStatusText;
     private FontIcon? _repositoryTaskStatusIcon;
     private Grid? _combinationWorkspace;
@@ -89,67 +74,14 @@ public sealed partial class MainWindow
     // Reuse the real controls and handlers. No parallel deployment or persistence implementation.
     private void InitializeRepositoryWorkspaceV4()
     {
-        _repositoryCategoryTitle = RepositoryText(15, true);
-        _repositoryModTitle = RepositoryText(16, true);
-        _repositoryModCount = RepositoryText(12);
         _repositoryModSearch = new TextBox { Height = 36, MinWidth = 0 };
         _repositoryModSearch.TextChanged += (_, _) => RefreshRepositoryModView();
         AutomationProperties.SetName(_repositoryModSearch, T("RepositoryWorkspace.SearchMods"));
-        var categoryGrid = RepositoryRows(GridLength.Auto, GridLength.Auto, new GridLength(1, GridUnitType.Star), GridLength.Auto);
-        var categoryHeading = RepositoryColumns(new GridLength(1, GridUnitType.Star), GridLength.Auto, GridLength.Auto);
-        categoryHeading.Children.Add(_repositoryCategoryTitle);
-        RepositoryMove(CreateFirstLevelButton, categoryHeading, 0, 1);
-        // Rename, avatar and the several-Mods toggle live in the "More" menu, which is the same
-        // menu as the character right-click menu. The original controls stay as the state holders.
-        _characterMoreButton = RepositoryButton("\uE712", (sender, _) =>
-        {
-            if (_characters.Selected is { } item)
-                CreateFirstLevelMenu(item).ShowAt((FrameworkElement)sender,
-                    new FlyoutShowOptions { Placement = FlyoutPlacementMode.BottomEdgeAlignedLeft });
-        });
-        Grid.SetColumn(_characterMoreButton, 2); categoryHeading.Children.Add(_characterMoreButton);
-        // Every header control must be moved out: this heading replaces the XAML one.
-        foreach (Control hidden in new Control[] { RenameFirstLevelButton, CharacterAvatarButton, CharacterMultipleModsToggle })
-        {
-            RepositoryMove(hidden, categoryHeading, 0, 2);
-            hidden.Visibility = Visibility.Collapsed;
-        }
-        categoryHeading.ColumnSpacing = 4;
-        foreach (Control button in new Control[] { CreateFirstLevelButton, _characterMoreButton })
-        { button.Width = 32; button.Height = 32; button.MinWidth = 32; button.MinHeight = 32; button.Padding = new Thickness(5); }
-        _characterMoreButton.CornerRadius = CreateFirstLevelButton.CornerRadius;
         RepositoryDecorateButton(CreateFirstLevelButton, "\uE710", true);
         UpdateCharacterHeaderActions();
-        categoryGrid.Children.Add(categoryHeading);
-        RepositoryMove(FirstLevelSearchTextBox, categoryGrid, 1);
-        FirstLevelSearchTextBox.Padding = new Thickness(8, 6, 8, 6);
-        FirstLevelSearchTextBox.Height = 34;
-        FirstLevelSearchTextBox.MinWidth = 0;
-        RepositoryMove(FirstLevelListView, categoryGrid, 2);
-        FirstLevelListView.Height = double.NaN;
-        FirstLevelListView.MinHeight = 0;
-        // Shown while the repository has no Mods: what a character is and where Mods come from.
-        _characterFolderHint = RepositoryText(12);
-        _characterFolderHint.TextWrapping = TextWrapping.Wrap;
-        _characterFolderHint.Opacity = 0.75;
-        _characterFolderHint.Margin = new Thickness(2, 8, 2, 0);
-        _characterFolderHint.Visibility = Visibility.Collapsed;
-        Grid.SetRow(_characterFolderHint, 3); categoryGrid.Children.Add(_characterFolderHint);
-        CategoryCard.Child = categoryGrid;
-        CategoryCard.Padding = new Thickness(12);
-        CategoryCard.CornerRadius = new CornerRadius(6);
 
-        var modGrid = RepositoryRows(GridLength.Auto, GridLength.Auto, GridLength.Auto, new GridLength(1, GridUnitType.Star), GridLength.Auto);
-        var modHeading = RepositoryColumns(new GridLength(1, GridUnitType.Star), GridLength.Auto, GridLength.Auto);
-        modHeading.Children.Add(_repositoryModTitle);
-        Grid.SetColumn(_repositoryModCount, 1); modHeading.Children.Add(_repositoryModCount);
-        RepositoryMove(DeleteSecondLevelButton, modHeading, 0, 2);
-        DeleteSecondLevelButton.Width = 32; DeleteSecondLevelButton.Height = 32;
-        DeleteSecondLevelButton.MinHeight = 32; DeleteSecondLevelButton.Padding = new Thickness(6);
         RepositoryDecorateButton(DeleteSecondLevelButton, "\uE74D", true);
-        modGrid.Children.Add(modHeading);
-        InitializeLocalTagControls(modGrid);
-        var chips = new StackPanel { Orientation = Orientation.Horizontal, Spacing = 6 };
+        InitializeLocalTagControls(ModCardGrid);
         _repositoryStateChips = Enum.GetValues<ModStateFilter>().Select(filter =>
         {
             var chip = new ToggleButton
@@ -158,10 +90,9 @@ public sealed partial class MainWindow
                 Tag = filter, IsChecked = filter == _modList.StateFilter
             };
             chip.Click += (_, _) => SetRepositoryStateFilter((ModStateFilter)chip.Tag);
-            chips.Children.Add(chip);
+            RepositoryStateChipsPanel.Children.Add(chip);
             return chip;
         }).ToArray();
-        Grid.SetRow(chips, 2); modGrid.Children.Add(chips);
 
         _repositoryCoverWrap = new UniformGridLayout
         {
@@ -209,8 +140,6 @@ public sealed partial class MainWindow
         {
             QueueRepositoryCoverLayoutV4();
         };
-        SecondLevelListView.Height = double.NaN;
-        SecondLevelListView.MinHeight = 0;
         SecondLevelListView.ItemsSource = _modList.VisibleMods;
         // List rows show the same cover thumbnail as the cover view, loaded as rows come into view.
         SecondLevelListView.ContainerContentChanging += (list, args) =>
@@ -220,22 +149,8 @@ public sealed partial class MainWindow
             _ = EnsureModSizeAsync(mod);
             _ = EnsureModShortcutCountAsync(mod);
         };
-        var modViews = new Grid();
-        RepositoryMove(SecondLevelListView, modViews);
-        modViews.Children.Add(_repositoryCoverGrid);
-        modViews.Children.Add(CreateRepositoryEmptyState());
-        SecondLevelDropBorder.Child = modViews;
-        SecondLevelDropBorder.Padding = new Thickness(0);
-        RepositoryMove(SecondLevelDropBorder, modGrid, 3);
-        _repositoryOpenPresets = RepositoryButton("\uE8F1", (_, _) => SetRepositoryWorkspaceViewV4(RepositoryWorkspaceView.Presets));
-        Grid.SetRow(_repositoryOpenPresets, 4);
-        _repositoryOpenPresets.HorizontalAlignment = HorizontalAlignment.Stretch;
-        // The same entry is always available in the top view switcher.
-        _repositoryOpenPresets.Visibility = Visibility.Collapsed;
-        modGrid.Children.Add(_repositoryOpenPresets);
-        ModCard.Child = modGrid;
-        ModCard.Padding = new Thickness(12);
-        ModCard.CornerRadius = new CornerRadius(6);
+        RepositoryModViewsGrid.Children.Add(_repositoryCoverGrid);
+        RepositoryModViewsGrid.Children.Add(CreateRepositoryEmptyState());
 
         InitializeRepositoryInspectorV4();
         InitializeCombinationWorkspaceV4();
@@ -251,58 +166,42 @@ public sealed partial class MainWindow
         SetRepositoryWorkspaceViewV4(_modList.View, save: false);
     }
 
+    private void OnCharacterMoreClicked(object sender, RoutedEventArgs e)
+    {
+        if (_characters.Selected is { } item)
+            CreateFirstLevelMenu(item).ShowAt((FrameworkElement)sender,
+                new FlyoutShowOptions { Placement = FlyoutPlacementMode.BottomEdgeAlignedLeft });
+    }
+
+    private void OnRepositoryWorkspacePickerSelectionChanged(object sender, SelectionChangedEventArgs e)
+    {
+        if (_refreshingRepositoryPicker || _repositoryWorkspaceBusy) return;
+        if (RepositoryWorkspacePicker.SelectedItem is ComboBoxItem { Tag: string id }
+            && !string.Equals(id, _selectedRepositoryId, StringComparison.Ordinal))
+            SwitchRepository(id, openManager: true);
+    }
+
+    private void OnRepositoryOpenModFolderClicked(object sender, RoutedEventArgs e)
+    {
+        if (GetSelectedSecondLevelItem() is { } mod) OpenDirectory(mod.Path, T("Common.ModFolder"));
+    }
+
     private void InitializeRepositoryToolbarV4()
     {
-        _repositoryToolbar = RepositoryRows(GridLength.Auto, GridLength.Auto);
-        _repositoryHeader = RepositoryColumns(new GridLength(1, GridUnitType.Star), GridLength.Auto);
-        var title = new StackPanel { Spacing = 12, Orientation = Orientation.Horizontal, VerticalAlignment = VerticalAlignment.Center };
-        _workspaceTitleText = new TextBlock { FontSize = 22, FontWeight = Microsoft.UI.Text.FontWeights.SemiBold };
-        title.Children.Add(_workspaceTitleText);
-        _repositoryWorkspacePicker = new ComboBox { MinWidth = 190, MaxWidth = 300, MinHeight = 32, HorizontalAlignment = HorizontalAlignment.Left };
-        _repositoryWorkspacePicker.SelectionChanged += (_, _) =>
-        {
-            if (_refreshingRepositoryPicker || _repositoryWorkspaceBusy) return;
-            if (_repositoryWorkspacePicker.SelectedItem is ComboBoxItem { Tag: string id }
-                && !string.Equals(id, _selectedRepositoryId, StringComparison.Ordinal))
-                SwitchRepository(id, openManager: true);
-        };
-        title.Children.Add(_repositoryWorkspacePicker);
-        _repositoryHeader.Children.Add(title);
-        _repositoryToolbarCommands = RepositoryColumns(GridLength.Auto, GridLength.Auto, GridLength.Auto);
-        _repositoryToolbarCommands.HorizontalAlignment = HorizontalAlignment.Right;
-        _repositoryToolbarCommands.VerticalAlignment = VerticalAlignment.Center;
-        RepositoryMove(RefreshButton, _repositoryToolbarCommands);
-        RepositoryMove(ImportZipButton, _repositoryToolbarCommands, 0, 1);
-        RepositoryMove(RunLauncherButton, _repositoryToolbarCommands, 0, 2);
-        foreach (var button in new[] { RefreshButton, ImportZipButton, RunLauncherButton })
-        { button.HorizontalAlignment = HorizontalAlignment.Left; button.MinHeight = 36; }
         RepositoryDecorateButton(RefreshButton, "\uE72C", true);
         RepositoryDecorateButton(ImportZipButton, "\uE8E5");
         RepositoryDecorateButton(RunLauncherButton, "\uE768");
-        Grid.SetColumn(_repositoryToolbarCommands, 1); _repositoryHeader.Children.Add(_repositoryToolbarCommands);
-        _repositoryToolbar.Children.Add(_repositoryHeader);
-
-        var switchRow = RepositoryColumns(new GridLength(1, GridUnitType.Star), GridLength.Auto);
-        _repositoryViewButtons = new StackPanel { Orientation = Orientation.Horizontal, Spacing = 6 };
         _repositoryModeButtons = Enumerable.Range(0, 3).Select(index =>
         {
             var button = new ToggleButton { MinHeight = 34, Padding = new Thickness(10, 6, 10, 6), CornerRadius = new CornerRadius(4), Tag = (RepositoryWorkspaceView)index };
             AutomationProperties.SetAutomationId(button, "RepositoryView" + (RepositoryWorkspaceView)index);
             button.Click += (_, _) => SetRepositoryWorkspaceViewV4((RepositoryWorkspaceView)button.Tag);
-            _repositoryViewButtons.Children.Add(button);
+            RepositoryViewButtonsPanel.Children.Add(button);
             return button;
         }).ToArray();
         _repositoryOpenDetails = RepositoryButton("\uE8A5", async (_, _) => await ShowRepositoryDetailsV4Async());
-        _repositoryViewButtons.Children.Add(_repositoryOpenDetails);
-        InitializeExistingModImportCommands(_repositoryViewButtons);
-        switchRow.Children.Add(_repositoryViewButtons);
-        _repositoryCountText = RepositoryText(12);
-        Grid.SetColumn(_repositoryCountText, 1); switchRow.Children.Add(_repositoryCountText);
-        Grid.SetRow(switchRow, 1); _repositoryToolbar.Children.Add(switchRow);
-        var toolbar = RepositoryCard(_repositoryToolbar);
-        toolbar.Style = (Style)Application.Current.Resources["CommandSurfaceBorderStyle"];
-        toolbar.Padding = new Thickness(14, 10, 14, 10);
-        WorkspacePageHost.Children.Insert(0, toolbar);
+        RepositoryViewButtonsPanel.Children.Add(_repositoryOpenDetails);
+        InitializeExistingModImportCommands(RepositoryViewButtonsPanel);
 
         InitializeRepositoryStatusV4();
         FirstCountTextBlock.RegisterPropertyChangedCallback(TextBlock.TextProperty, (_, _) => RefreshRepositoryCountsV4());
@@ -392,8 +291,6 @@ public sealed partial class MainWindow
 
     private void InitializeRepositoryInspectorV4()
     {
-        WorkspaceDetailHost.RowDefinitions.Add(new RowDefinition { Height = GridLength.Auto });
-        WorkspaceDetailHost.RowSpacing = 8;
         PreviewCard.Padding = new Thickness(12);
         PreviewSectionTitleTextBlock.Visibility = Visibility.Collapsed;
         PreviewSectionSubtitleTextBlock.Visibility = Visibility.Collapsed;
@@ -477,28 +374,7 @@ public sealed partial class MainWindow
             };
         }
 
-        // Footer: what deploying does, then the pinned actions.
-        _repositoryOpenModFolder = RepositoryButton("\uE8B7", (_, _) =>
-        {
-            if (GetSelectedSecondLevelItem() is { } mod) OpenDirectory(mod.Path, T("Common.ModFolder"));
-        });
-        _repositoryOpenModFolder.MinHeight = 40; _repositoryOpenModFolder.MinWidth = 44;
-        _repositoryDeploymentHint = RepositoryText(12);
-        _repositoryDeploymentHint.TextWrapping = TextWrapping.Wrap;
-        _repositoryDeploymentHint.Opacity = 0.8;
-        var actions = RepositoryColumns(GridLength.Auto, new GridLength(1, GridUnitType.Star));
-        actions.Children.Add(_repositoryOpenModFolder);
-        RepositoryMove(ToggleCopyButton, actions, 0, 1);
-        var footer = RepositoryRows(GridLength.Auto, GridLength.Auto);
-        footer.RowSpacing = 8;
-        footer.Children.Add(_repositoryDeploymentHint);
-        Grid.SetRow(actions, 1); footer.Children.Add(actions);
-        ToggleCopyButton.HorizontalAlignment = HorizontalAlignment.Stretch;
-        ToggleCopyButton.MinHeight = 40;
         RepositoryDecorateButton(ToggleCopyButton, "\uE71B");
-        var footerCard = RepositoryCard(footer);
-        footerCard.Padding = new Thickness(12);
-        Grid.SetRow(footerCard, 2); WorkspaceDetailHost.Children.Add(footerCard);
         ShortcutCard.Padding = new Thickness(12);
         ShortcutSectionSubtitleTextBlock.Visibility = Visibility.Collapsed;
         ShortcutHintTextBlock.Visibility = Visibility.Collapsed;
@@ -692,9 +568,9 @@ public sealed partial class MainWindow
     private void UpdateRepositoryWorkspaceLanguageV4()
     {
         if (!_repositoryV4Ready) return;
-        _workspaceTitleText!.Text = _modList.View == RepositoryWorkspaceView.Presets ? T("RepositoryWorkspace.CombinationPresets") : T("Common.ModWorkspace");
-        _repositoryCategoryTitle!.Text = T("RepositoryWorkspace.Characters");
-        _repositoryModTitle!.Text = _characters.Selected is { } role ? role.Name : T("RepositoryWorkspace.ModFiles");
+        WorkspaceTitleTextBlock.Text = _modList.View == RepositoryWorkspaceView.Presets ? T("RepositoryWorkspace.CombinationPresets") : T("Common.ModWorkspace");
+        RepositoryCategoryTitleTextBlock.Text = T("RepositoryWorkspace.Characters");
+        RepositoryModTitleTextBlock.Text = _characters.Selected is { } role ? role.Name : T("RepositoryWorkspace.ModFiles");
         _repositoryModSearch!.PlaceholderText = T("RepositoryWorkspace.SearchThisCharacterSMods");
         if (_localTagsButton is not null) _localTagsButton.Content = T("Common.Tags");
         if (_updatesCombinationShortcut is not null)
@@ -716,9 +592,8 @@ public sealed partial class MainWindow
         }
         _repositoryOpenDetails!.Content = RepositoryIconLabel("\uE8A5", T("RepositoryWorkspace.Details"));
         AutomationProperties.SetName(_repositoryOpenDetails, T("RepositoryWorkspace.ModDetails"));
-        _repositoryOpenPresets!.Content = RepositoryIconLabel("\uE8F1", T("RepositoryWorkspace.CombinationStatePresets"));
-        ToolTipService.SetToolTip(_repositoryOpenModFolder!, T("RepositoryWorkspace.OpenFolder"));
-        AutomationProperties.SetName(_repositoryOpenModFolder, T("RepositoryWorkspace.OpenModFolder"));
+        ToolTipService.SetToolTip(RepositoryOpenModFolderButton, T("RepositoryWorkspace.OpenFolder"));
+        AutomationProperties.SetName(RepositoryOpenModFolderButton, T("RepositoryWorkspace.OpenModFolder"));
         ToolTipService.SetToolTip(_repositoryCopyModPath!, T("RepositoryWorkspace.CopyPath"));
         AutomationProperties.SetName(_repositoryCopyModPath, T("RepositoryWorkspace.CopyPath"));
         PreviewTab.Header = T("RepositoryWorkspace.Preview");
@@ -728,7 +603,7 @@ public sealed partial class MainWindow
         _combinationWorkspaceTitle!.Text = T("RepositoryWorkspace.MyPresets");
         AutomationProperties.SetName(DeleteConfigurationProfileButton, T("RepositoryWorkspace.DeletePreset"));
         ToolTipService.SetToolTip(DeleteConfigurationProfileButton, T("RepositoryWorkspace.DeletePreset"));
-        AutomationProperties.SetName(_repositoryWorkspacePicker!, T("RepositoryWorkspace.CurrentRepository"));
+        AutomationProperties.SetName(RepositoryWorkspacePicker, T("RepositoryWorkspace.CurrentRepository"));
         _combinationRecoveryTitle!.Text = T("RepositoryWorkspace.SaveRestore");
         _combinationRecoveryHint!.Text = T("RepositoryWorkspace.N1CloseTheGameAndLoader");
         _combinationNoProfiles!.Text = T("RepositoryWorkspace.OnlyRecognizedDeploymentsInThisRepository");
@@ -744,7 +619,7 @@ public sealed partial class MainWindow
                 _repositoryStateChips[index].Resources["ToggleButtonBorderBrush" + state] = GetAppThemeBrush("AppNavSelectedBorderBrush");
             }
         }
-        _characterFolderHint!.Text = T("RepositoryWorkspace.CharacterFolderHint");
+        CharacterFolderHintTextBlock.Text = T("RepositoryWorkspace.CharacterFolderHint");
         string[] infoLabels = [T("RepositoryWorkspace.InfoSource"), T("RepositoryWorkspace.InfoLocation"), T("RepositoryWorkspace.InfoTags"), T("RepositoryWorkspace.InfoSize")];
         for (int index = 0; index < _repositoryInfoLabels.Length; index++) _repositoryInfoLabels[index].Text = infoLabels[index];
         _repositoryLinkEditorTitle?.SetValue(TextBlock.TextProperty, ModLinkSectionTitleTextBlock.Text);
@@ -784,15 +659,15 @@ public sealed partial class MainWindow
         FirstLevelListView.Height = double.NaN; SecondLevelListView.Height = double.NaN;
         PreviewCard.MinHeight = 0; ShortcutCard.MinHeight = 0;
         UpdateRepositoryCoverLayoutV4();
-        _repositoryHeader!.RowDefinitions.Clear();
-        _repositoryHeader.RowDefinitions.Add(new RowDefinition { Height = GridLength.Auto });
-        _repositoryHeader.RowDefinitions.Add(new RowDefinition { Height = width < 720 ? GridLength.Auto : new GridLength(0) });
-        _repositoryHeader.RowSpacing = width < 720 ? 8 : 0;
-        Grid.SetRow(_repositoryToolbarCommands!, width < 720 ? 1 : 0);
-        Grid.SetColumn(_repositoryToolbarCommands!, width < 720 ? 0 : 1);
-        Grid.SetColumnSpan(_repositoryToolbarCommands!, width < 720 ? 2 : 1);
-        _repositoryToolbarCommands!.HorizontalAlignment = width < 720 ? HorizontalAlignment.Left : HorizontalAlignment.Right;
-        _repositoryCountText!.Visibility = width < 620 ? Visibility.Collapsed : Visibility.Visible;
+        RepositoryHeaderGrid.RowDefinitions.Clear();
+        RepositoryHeaderGrid.RowDefinitions.Add(new RowDefinition { Height = GridLength.Auto });
+        RepositoryHeaderGrid.RowDefinitions.Add(new RowDefinition { Height = width < 720 ? GridLength.Auto : new GridLength(0) });
+        RepositoryHeaderGrid.RowSpacing = width < 720 ? 8 : 0;
+        Grid.SetRow(RepositoryToolbarCommandsGrid, width < 720 ? 1 : 0);
+        Grid.SetColumn(RepositoryToolbarCommandsGrid, width < 720 ? 0 : 1);
+        Grid.SetColumnSpan(RepositoryToolbarCommandsGrid, width < 720 ? 2 : 1);
+        RepositoryToolbarCommandsGrid.HorizontalAlignment = width < 720 ? HorizontalAlignment.Left : HorizontalAlignment.Right;
+        RepositoryCountTextBlock.Visibility = width < 620 ? Visibility.Collapsed : Visibility.Visible;
         _combinationWorkspace!.ColumnDefinitions.Clear(); _combinationWorkspace.RowDefinitions.Clear();
         bool inlineRecovery = RepositoryWorkspacePolicy.InlineCombinationRecovery(width, height);
         _combinationWorkspace.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(width >= 1100 ? 220 : 160) });
@@ -881,8 +756,8 @@ public sealed partial class MainWindow
         // A search or filter that hides the selected Mod moves the selection to the first match,
         // so the details never describe a Mod the list no longer shows.
         if (SecondLevelListView.SelectedItem is null && visible.Length > 0) SecondLevelListView.SelectedItem = visible[0];
-        _repositoryModTitle!.Text = _characters.Selected is { } role ? role.Name : T("RepositoryWorkspace.ModFiles");
-        _repositoryModCount!.Text = T("RepositoryWorkspace.Mods", visible.Length, _secondLevelItems.Count);
+        RepositoryModTitleTextBlock.Text = _characters.Selected is { } role ? role.Name : T("RepositoryWorkspace.ModFiles");
+        RepositoryModCountTextBlock.Text = T("RepositoryWorkspace.Mods", visible.Length, _secondLevelItems.Count);
         if (_localFiltersButton is not null)
         {
             _localFiltersButton.Content = string.IsNullOrEmpty(_localTagFilter) ? T("Common.Filters") : T("RepositoryWorkspace.TagActive");
@@ -1126,7 +1001,7 @@ public sealed partial class MainWindow
         _repositoryEmptyOnline!.Content = RepositoryIconLabel("\uE774", T("RepositoryWorkspace.FindOnline"));
         _repositoryEmptyAdopt.Content = T("RepositoryWorkspace.AdoptExistingFolder");
         _repositoryEmptyImport.IsEnabled = _repositoryEmptyOnline.IsEnabled = _repositoryEmptyAdopt.IsEnabled = !_repositoryWorkspaceBusy;
-        _characterFolderHint!.Visibility = _characters.All.Sum(item => item.Children.Count) == 0 ? Visibility.Visible : Visibility.Collapsed;
+        CharacterFolderHintTextBlock.Visibility = _characters.All.Sum(item => item.Children.Count) == 0 ? Visibility.Visible : Visibility.Collapsed;
     }
 
     private void SyncRepositorySelectionV4(SecondLevelFolderItem? item)
@@ -1182,7 +1057,7 @@ public sealed partial class MainWindow
         var mod = GetSelectedSecondLevelItem();
         _repositorySelectedPath.Text = mod is null ? T("RepositoryWorkspace.SelectAMod") : RepositoryWorkspacePolicy.DisplayPath(SourceTextBox.Text, mod.Path);
         ToolTipService.SetToolTip(_repositorySelectedPath, mod?.Path);
-        _repositoryOpenModFolder!.IsEnabled = mod is not null && !_repositoryWorkspaceBusy;
+        RepositoryOpenModFolderButton.IsEnabled = mod is not null && !_repositoryWorkspaceBusy;
         _repositoryCopyModPath!.IsEnabled = mod is not null;
         _repositoryOpenDetails!.IsEnabled = mod is not null && !_repositoryWorkspaceBusy;
         _repositoryEditSource!.IsEnabled = _repositoryAddTags!.IsEnabled = mod is not null && !_repositoryWorkspaceBusy;
@@ -1209,7 +1084,7 @@ public sealed partial class MainWindow
         bool several = links && mod is not null && AllowsMultipleMods(repository!, mod.Path);
         string? replaced = mod is null || !links || ModTone(mod) == ModStateTone.Deployed || several ? null
             : RepositoryWorkspacePolicy.ReplacedByDeploy(_secondLevelItems.Select(item => (item.Name, ModTone(item))), mod.Name);
-        _repositoryDeploymentHint!.Text = replaced is not null
+        RepositoryDeploymentHintTextBlock.Text = replaced is not null
             ? T("RepositoryWorkspace.DeployReplaces", _characters.Selected?.Name ?? string.Empty, replaced)
             : several ? T("RepositoryWorkspace.LinkDeploymentKeepsOtherMods")
             : links ? T("RepositoryWorkspace.LinkDeploymentReplacesTheSameCharacter")
@@ -1287,21 +1162,21 @@ public sealed partial class MainWindow
 
     private void RefreshRepositoryCountsV4()
     {
-        if (_repositoryCountText is null) return;
+        if (RepositoryCountTextBlock is null) return;
         int deployed = _characters.All.Sum(character => character.Children.Count(mod => ModTone(mod) == ModStateTone.Deployed));
-        _repositoryCountText.Text = T("RepositoryWorkspace.CharactersMods", FirstCountTextBlock.Text, SecondCountTextBlock.Text, deployed);
+        RepositoryCountTextBlock.Text = T("RepositoryWorkspace.CharactersMods", FirstCountTextBlock.Text, SecondCountTextBlock.Text, deployed);
     }
 
     private void RefreshRepositoryPickerV4()
     {
-        if (_repositoryWorkspacePicker is null) return;
+        if (RepositoryWorkspacePicker is null) return;
         _refreshingRepositoryPicker = true;
         try
         {
-            _repositoryWorkspacePicker.Items.Clear();
-            foreach (var repository in _repositories) _repositoryWorkspacePicker.Items.Add(new ComboBoxItem { Content = repository.Name, Tag = repository.Id });
-            _repositoryWorkspacePicker.SelectedItem = _repositoryWorkspacePicker.Items.OfType<ComboBoxItem>().FirstOrDefault(item => (string?)item.Tag == _selectedRepositoryId);
-            _repositoryWorkspacePicker.PlaceholderText = T("RepositoryWorkspace.SelectRepository");
+            RepositoryWorkspacePicker.Items.Clear();
+            foreach (var repository in _repositories) RepositoryWorkspacePicker.Items.Add(new ComboBoxItem { Content = repository.Name, Tag = repository.Id });
+            RepositoryWorkspacePicker.SelectedItem = RepositoryWorkspacePicker.Items.OfType<ComboBoxItem>().FirstOrDefault(item => (string?)item.Tag == _selectedRepositoryId);
+            RepositoryWorkspacePicker.PlaceholderText = T("RepositoryWorkspace.SelectRepository");
         }
         finally { _refreshingRepositoryPicker = false; }
     }
@@ -1361,8 +1236,7 @@ public sealed partial class MainWindow
         if (!_repositoryV4Ready) return;
         _repositoryCoverGrid!.IsEnabled = !busy;
         _repositoryModSearch!.IsEnabled = !busy;
-        _repositoryWorkspacePicker!.IsEnabled = !busy;
-        _repositoryOpenPresets!.IsEnabled = !busy;
+        RepositoryWorkspacePicker.IsEnabled = !busy;
         _combinationPresetList!.IsEnabled = !busy;
         foreach (var button in _repositoryModeButtons) button.IsEnabled = !busy;
         UpdateRepositorySelectedMetadataV4();
