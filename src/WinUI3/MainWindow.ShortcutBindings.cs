@@ -385,7 +385,7 @@ public sealed partial class MainWindow
     {
         return ModShortcutDescriptionFormatter.Describe(
             shortcut,
-            useEnglish: _currentLanguage == AppLanguage.EnUs);
+            useEnglish: !IsChineseUi);
     }
 
     private ShortcutBinding CreateAutomaticShortcutBinding(DetectedModShortcut shortcut)

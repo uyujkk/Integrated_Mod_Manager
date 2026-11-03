@@ -121,7 +121,7 @@ public sealed partial class MainWindow
             if (!IsSupportedArchiveFile(archive)) throw new InvalidDataException(T("ModUpdates.TheDownloadedFileIsNotA"));
             string payload = Path.Combine(work, "payload");
             Directory.CreateDirectory(payload);
-            UpdateDownloadTask(task, DownloadTaskState.Extracting, 92, "正在解压更新...", "Extracting update...", forceRefresh: true);
+            UpdateDownloadTask(task, DownloadTaskState.Extracting, 92, M("ModUpdates.Extracting"), forceRefresh: true);
             await Task.Run(() =>
             {
                 ExtractArchiveToDirectory(archive, payload);
@@ -134,7 +134,7 @@ public sealed partial class MainWindow
                 throw new IOException(T("ModUpdates.TheOriginalRepositoryOrTrackingRecord"));
             string backupRoot = Path.Combine(Path.GetDirectoryName(Path.TrimEndingDirectorySeparator(Path.GetFullPath(repositoryPath)))!, ".imm-mod-update-backups");
             task.ReplacementCommitting = true;
-            UpdateDownloadTask(task, DownloadTaskState.Extracting, 98, "正在备份并替换...", "Backing up and replacing...", forceRefresh: true);
+            UpdateDownloadTask(task, DownloadTaskState.Extracting, 98, M("ModUpdates.BackingUp"), forceRefresh: true);
             ModUpdateReplacementResult replaced = await Task.Run(() => ModUpdateReplacement.Replace(snapshot, payload, backupRoot,
                 JsonSerializer.Serialize(origin), task.Cancellation.Token));
             committed = true;
@@ -147,27 +147,26 @@ public sealed partial class MainWindow
             _modLinks[result.Path] = origin.ProfileUrl;
             result.HasUpdate = false;
             result.LastKnownUpdatedAt = origin.LastKnownUpdatedAt;
-            result.StatusTextZh = "更新已替换；复制部署请重新部署。";
-            result.StatusTextEn = "Update replaced; redeploy copy installations.";
+            result.Status = M("ModUpdates.Replaced");
             result.BackupPath = replaced.BackupPath;
             int keptImages = replaced.PreservedImages.Count;
-            SetModUpdateStatus(
-                $"已更新 {origin.Title}，旧版已备份" + (keptImages > 0 ? $"，保留了 {keptImages} 张原预览图" : string.Empty) + "；复制部署请重新部署。",
-                $"Updated {origin.Title}; old version backed up" + (keptImages > 0 ? $", {keptImages} preview image(s) kept" : string.Empty) + ". Redeploy copy installations.");
-            UpdateDownloadTask(task, DownloadTaskState.Completed, 100, $"已替换，旧版备份：{replaced.BackupPath}", $"Replaced; old version backed up: {replaced.BackupPath}", forceRefresh: true);
+            SetModUpdateStatus(keptImages > 0
+                ? M("ModUpdates.UpdatedWithBackupAndImages", origin.Title, keptImages)
+                : M("ModUpdates.UpdatedWithBackup", origin.Title));
+            UpdateDownloadTask(task, DownloadTaskState.Completed, 100, M("ModUpdates.ReplacedBackup", replaced.BackupPath), forceRefresh: true);
             if (!SaveConfig()) throw new IOException(T("ModUpdates.UpdatedFilesWereReplacedButTracking"));
             SaveShellConfig(throwOnError: true);
             if (GetSelectedRepository()?.Id == repositoryId) await RefreshListsAsync();
-            ShowAppNotification($"Mod 已更新：{origin.Title}。复制部署请重新部署。", $"Mod updated: {origin.Title}. Redeploy copy installations.");
+            ShowAppNotification(T("ModUpdates.Updated", origin.Title));
         }
         catch (OperationCanceledException) when (!committed)
         {
-            if (task is not null) UpdateDownloadTask(task, DownloadTaskState.Canceled, task.Progress, "更新已取消，原 Mod 未替换。", "Update canceled; original Mod unchanged.", forceRefresh: true);
+            if (task is not null) UpdateDownloadTask(task, DownloadTaskState.Canceled, task.Progress, M("ModUpdates.Canceled"), forceRefresh: true);
         }
         catch (Exception ex)
         {
             LogApplicationIssueWithStack("Tracked Mod update", ex);
-            if (task is not null && !committed) UpdateDownloadTask(task, DownloadTaskState.Failed, task.Progress, $"更新失败：{ex.Message}", $"Update failed: {ex.Message}", forceRefresh: true);
+            if (task is not null && !committed) UpdateDownloadTask(task, DownloadTaskState.Failed, task.Progress, M("ModUpdates.Failed", ex.Message), forceRefresh: true);
             if (!_onlineWindowClosed) await ShowMessageAsync(
                 (committed ? T("ModUpdates.ReplacedButSaveFailed") : T("ModUpdates.StoppedOriginalsKept")) + ex.Message,
                 T("ModUpdates.ModUpdate"));

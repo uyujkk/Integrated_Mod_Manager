@@ -1,3 +1,4 @@
+using IntegratedModManager.Core.Configuration;
 using IntegratedModManager.Core.Online;
 using IntegratedModManager.Core.Updates;
 using Microsoft.UI.Xaml;
@@ -17,8 +18,9 @@ public sealed partial class MainWindow
             SourceIdentity = GetOnlineDownloadIdentity(mod),
             DestinationPath = destinationPath,
             State = DownloadTaskState.Queued,
-            StatusZh = "等待开始",
-            StatusEn = "Waiting to start"
+            Status = M("DownloadTasks.WaitingToStart"),
+            StatusZh = UiText.Chinese("DownloadTasks.WaitingToStart"),
+            StatusEn = UiText.English("DownloadTasks.WaitingToStart")
         };
         _downloadTasks.Insert(0, task);
         while (_downloadTasks.Count > 30)
@@ -40,8 +42,7 @@ public sealed partial class MainWindow
         DownloadTaskItem task,
         DownloadTaskState state,
         double progress,
-        string statusZh,
-        string statusEn,
+        UiMessage status,
         bool forceRefresh = false)
     {
         if (!DownloadProgressPolicy.CanApply(task.State, state))
@@ -52,8 +53,9 @@ public sealed partial class MainWindow
         bool phaseChanged = task.State != state;
         task.State = state;
         task.Progress = DownloadProgressPolicy.MergeProgress(task.Progress, progress);
-        task.StatusZh = statusZh;
-        task.StatusEn = statusEn;
+        task.Status = status;
+        task.StatusZh = status.Resolve(UiLanguagePolicy.Chinese);
+        task.StatusEn = status.Resolve(UiLanguagePolicy.English);
         if (!_onlineWindowClosed && (phaseChanged || DownloadProgressPolicy.IsTerminal(state))) PersistDownloadTasks();
 
         DateTimeOffset now = DateTimeOffset.UtcNow;
@@ -69,6 +71,10 @@ public sealed partial class MainWindow
             RefreshOnlineCardStates(refreshInstalled: DownloadProgressPolicy.IsTerminal(task.State));
         });
     }
+
+    // Tasks restored from the history file have only the stored Chinese and English status.
+    private string DownloadTaskStatusText(DownloadTaskItem task)
+        => task.Status is not null ? T(task.Status) : L(task.StatusZh, task.StatusEn);
 
     private DownloadHistoryFilter _downloadHistoryFilter;
     private ToggleButton[] _downloadHistoryChips = [];
@@ -170,7 +176,7 @@ public sealed partial class MainWindow
         grid.Children.Add(action);
         _downloadTaskCards[task.Id] = new DownloadTaskCardView(status, progress, action);
         RefreshDownloadTaskCardView(task, _downloadTaskCards[task.Id]);
-        ToolTipService.SetToolTip(status, L(task.StatusZh, task.StatusEn));
+        ToolTipService.SetToolTip(status, DownloadTaskStatusText(task));
         return new Border { Style = (Style)Application.Current.Resources["InsetBorderStyle"], Padding = new Thickness(10), Child = grid };
     }
 
@@ -191,7 +197,7 @@ public sealed partial class MainWindow
                 {
                     if (task.Session?.CanCancel == false || task.ReplacementCommitting) return;
                     task.Cancellation.Cancel();
-                    UpdateDownloadTask(task, DownloadTaskState.Canceling, task.Progress, "正在取消...", "Canceling...", forceRefresh: true);
+                    UpdateDownloadTask(task, DownloadTaskState.Canceling, task.Progress, M("DownloadTasks.Canceling"), forceRefresh: true);
                     return;
                 }
 
@@ -269,7 +275,7 @@ public sealed partial class MainWindow
     private void RefreshDownloadTaskCardView(DownloadTaskItem task, DownloadTaskCardView view)
     {
         bool active = DownloadProgressPolicy.IsActive(task.State);
-        view.StatusTextBlock.Text = L(task.StatusZh, task.StatusEn);
+        view.StatusTextBlock.Text = DownloadTaskStatusText(task);
         view.ProgressBar.Value = task.Progress;
         view.ProgressBar.IsIndeterminate = active
             && (task.State is not DownloadTaskState.Downloading || !task.HasKnownTotalLength);

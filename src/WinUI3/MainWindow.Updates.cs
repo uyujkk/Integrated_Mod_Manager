@@ -82,20 +82,18 @@ public sealed partial class MainWindow
         return !_lastModUpdateCheckUtc.HasValue || DateTimeOffset.UtcNow - _lastModUpdateCheckUtc.Value >= interval.Value;
     }
 
-    private void SetUpdateStatus(string zh, string en)
+    private void SetUpdateStatus(UiMessage status)
     {
-        _updateStatusZh = zh;
-        _updateStatusEn = en;
-        UpdateStatusTextBlock.Text = L(zh, en);
+        _updateStatus = status;
+        UpdateStatusTextBlock.Text = T(status);
     }
 
-    private void SetModUpdateStatus(string zh, string en)
+    private void SetModUpdateStatus(UiMessage status)
     {
-        _modUpdateStatusZh = zh;
-        _modUpdateStatusEn = en;
+        _modUpdateStatus = status;
         if (ModUpdateStatusTextBlock is not null)
         {
-            ModUpdateStatusTextBlock.Text = L(zh, en);
+            ModUpdateStatusTextBlock.Text = T(status);
         }
     }
 
@@ -194,13 +192,13 @@ public sealed partial class MainWindow
         CheckModUpdatesButton.Content = _isCheckingModUpdates ? T("Common.Checking") : T("Updates.CheckNow");
         TrackedModsTitleTextBlock.Text = T("Updates.TrackedMods");
 
-        if (string.IsNullOrWhiteSpace(_modUpdateStatusZh) || string.IsNullOrWhiteSpace(_modUpdateStatusEn))
+        if (_modUpdateStatus is null)
         {
-            SetModUpdateStatus("尚未检查已追踪 Mod 更新。", "Tracked mod updates have not been checked yet.");
+            SetModUpdateStatus(M("Updates.TrackedModsNotCheckedYet"));
         }
         else
         {
-            ModUpdateStatusTextBlock.Text = L(_modUpdateStatusZh, _modUpdateStatusEn);
+            ModUpdateStatusTextBlock.Text = T(_modUpdateStatus);
         }
 
         string lastCheckedText = _lastModUpdateCheckUtc.HasValue
@@ -235,9 +233,7 @@ public sealed partial class MainWindow
                 PreviewUrl = origin.PreviewUrl,
                 ItemId = origin.ItemId,
                 LastKnownUpdatedAt = origin.LastKnownUpdatedAt,
-                LatestUpdatedAt = origin.LastKnownUpdatedAt,
-                StatusTextZh = string.Empty,
-                StatusTextEn = string.Empty
+                LatestUpdatedAt = origin.LastKnownUpdatedAt
             }, false, TrackedModStatus.NotChecked))];
 
         if (_trackedModChips.Length == 0)
@@ -378,11 +374,11 @@ public sealed partial class MainWindow
             Style = (Style)Application.Current.Resources["CaptionTextStyle"], MaxLines = 1, TextTrimming = TextTrimming.CharacterEllipsis
         });
         // Only a failed check needs its message on the row; other results are said by the pill.
-        if (entry.Status == TrackedModStatus.Failed && !string.IsNullOrWhiteSpace(result.StatusTextZh))
+        if (entry.Status == TrackedModStatus.Failed && result.Status is not null)
         {
             var message = new TextBlock
             {
-                Text = L(result.StatusTextZh, result.StatusTextEn), FontSize = 12, Foreground = GetAppThemeBrush("AppDangerBrush"),
+                Text = T(result.Status), FontSize = 12, Foreground = GetAppThemeBrush("AppDangerBrush"),
                 MaxLines = 1, TextTrimming = TextTrimming.CharacterEllipsis
             };
             ToolTipService.SetToolTip(message, message.Text);
@@ -481,7 +477,7 @@ public sealed partial class MainWindow
 
         if (_trackedModOrigins.Count == 0)
         {
-            SetModUpdateStatus("还没有可检查更新的在线 Mod。", "There are no tracked online mods to check yet.");
+            SetModUpdateStatus(M("Updates.NoTrackedOnlineMods"));
             RefreshUpdatesPane();
             if (showDialogs)
             {
@@ -502,7 +498,7 @@ public sealed partial class MainWindow
         try
         {
             _isCheckingModUpdates = true;
-            SetModUpdateStatus($"正在检查 {_trackedModOrigins.Count} 个已追踪 Mod 的更新...", $"Checking {_trackedModOrigins.Count} tracked mods for updates...");
+            SetModUpdateStatus(M("Updates.CheckingTrackedMods", _trackedModOrigins.Count));
             RefreshUpdatesPane();
 
             _trackedModUpdateResults.Clear();
@@ -535,13 +531,9 @@ public sealed partial class MainWindow
             int updateCount = _trackedModUpdateResults.Count(item => item.HasUpdate);
             int failedCount = _trackedModUpdateResults.Count(item => item.CheckFailed);
             SetModUpdateStatus(
-                failedCount > 0 ? $"检查完成，发现 {updateCount} 个更新，{failedCount} 个检查失败，请重试。" :
-                updateCount > 0
-                    ? $"检查完成，发现 {updateCount} 个 Mod 有更新。"
-                    : "检查完成，当前所有已追踪 Mod 都是最新状态。",
-                failedCount > 0 ? $"Check complete: {updateCount} updates, {failedCount} checks failed. Please retry." : updateCount > 0
-                    ? $"Check complete. {updateCount} tracked mods have updates."
-                    : "Check complete. All tracked mods are up to date.");
+                failedCount > 0 ? M("Updates.CheckCompleteWithFailures", updateCount, failedCount)
+                : updateCount > 0 ? M("Updates.CheckCompleteWithUpdates", updateCount)
+                : M("Updates.CheckCompleteAllCurrent"));
 
             // The check is over; do not keep showing "Checking..." behind the result dialog.
             _isCheckingModUpdates = false;
@@ -563,7 +555,7 @@ public sealed partial class MainWindow
         }
         catch (Exception ex)
         {
-            SetModUpdateStatus("检查已追踪 Mod 更新失败，请稍后重试。", "Failed to check tracked mod updates. Please try again later.");
+            SetModUpdateStatus(M("Updates.TrackedCheckFailed"));
             RefreshUpdatesPane();
             if (showDialogs)
             {
@@ -597,8 +589,7 @@ public sealed partial class MainWindow
                 Path = origin.Path, ItemId = origin.ItemId, Title = origin.Title,
                 ProfileUrl = origin.ProfileUrl, PreviewUrl = origin.PreviewUrl,
                 LastKnownUpdatedAt = origin.LastKnownUpdatedAt, CheckFailed = true,
-                StatusTextZh = "检查失败，未能取得最新版本，请重试。",
-                StatusTextEn = "Check failed; latest version unavailable. Please retry."
+                Status = M("Updates.CheckFailedLatestUnavailable")
             };
 
         DateTimeOffset? latestUpdatedAt = latest?.UpdatedAt;
@@ -622,8 +613,7 @@ public sealed partial class MainWindow
             LastKnownUpdatedAt = recordedUpdatedAt ?? origin.LastKnownUpdatedAt,
             LatestUpdatedAt = latestUpdatedAt ?? recordedUpdatedAt ?? origin.LastKnownUpdatedAt,
             HasUpdate = hasUpdate,
-            StatusTextZh = hasUpdate ? "检测到新版本，可前往页面查看。" : "当前没有检测到更新。",
-            StatusTextEn = hasUpdate ? "A newer version was found. Open the page to review it." : "No update was detected."
+            Status = M(hasUpdate ? "Updates.NewerVersionFound" : "Updates.NoUpdateDetected")
         };
     }
 
@@ -759,9 +749,7 @@ public sealed partial class MainWindow
 
         if (_localUpdatePackageVersion is not null)
         {
-            SetUpdateStatus(
-                $"检测到本地更新包：v{_localUpdatePackageVersion}，配置将在更新时保留。",
-                $"Local update v{_localUpdatePackageVersion} detected. Your configuration will be preserved.");
+            SetUpdateStatus(M("Updates.LocalPackageDetected", _localUpdatePackageVersion));
         }
 
         RefreshSettingsButtonLabels();
@@ -843,7 +831,7 @@ public sealed partial class MainWindow
                 "--process-id", Environment.ProcessId.ToString(CultureInfo.InvariantCulture),
                 "--launcher", QuoteCommandLineArgument(launcherPath),
                 "--expected-version", _localUpdatePackageVersion?.ToString() ?? string.Empty,
-                "--language", _currentLanguage == AppLanguage.EnUs ? "en" : "zh");
+                "--language", !IsChineseUi ? "en" : "zh");
 
             Process.Start(new ProcessStartInfo
             {
@@ -881,7 +869,7 @@ public sealed partial class MainWindow
             _isCheckingUpdates = true;
             CheckUpdatesButton.IsEnabled = false;
             RefreshSettingsPane();
-            SetUpdateStatus("正在连接 GitHub Releases 检查更新...", "Checking GitHub Releases for updates...");
+            SetUpdateStatus(M("Updates.CheckingGitHub"));
 
             using var timeout = new CancellationTokenSource(TimeSpan.FromSeconds(20));
             LatestReleaseInfo release = await FetchLatestReleaseInfoAsync(timeout.Token);
@@ -889,19 +877,19 @@ public sealed partial class MainWindow
 
             if (!TryParseVersion(release.Tag, out _))
             {
-                SetUpdateStatus("GitHub 返回了结果，但没有读到有效版本号。", "GitHub responded, but no valid version tag was found.");
+                SetUpdateStatus(M("Updates.NoValidVersion"));
             }
             else if (!IsReleaseNewer(release.Tag))
             {
-                SetUpdateStatus($"当前已经是最新版本：{AppVersion}", $"You are already on the latest version: {AppVersion}");
+                SetUpdateStatus(M("Updates.AlreadyLatest", AppVersion));
                 if (showDialogs)
                 {
-                    ShowAppNotification("当前已经是最新版本。", "The app is up to date.", InfoBarSeverity.Success);
+                    ShowAppNotification(T("Updates.AppUpToDate"), InfoBarSeverity.Success);
                 }
             }
             else
             {
-                SetUpdateStatus($"检测到新版本：{release.Tag}，当前是 {AppVersion}", $"New version detected: {release.Tag}. Current version: {AppVersion}");
+                SetUpdateStatus(M("Updates.NewVersionDetected", release.Tag, AppVersion));
                 if (showDialogs || promptIfAvailable)
                 {
                     bool install = await ShowConfirmAsync(
@@ -916,7 +904,7 @@ public sealed partial class MainWindow
         }
         catch (Exception ex)
         {
-            SetUpdateStatus("检查更新失败，请稍后重试。", "Update check failed. Please try again later.");
+            SetUpdateStatus(M("Updates.AppCheckFailed"));
             if (showDialogs)
             {
                 await ShowMessageAsync(

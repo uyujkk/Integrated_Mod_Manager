@@ -303,9 +303,8 @@ public sealed partial class MainWindow
         RefreshOnlineCharacterAvatarStrip();
         PopulateOnlineCharacterOptions();
         ShowAppNotification(
-            isFavorite ? "已收藏角色并置顶。" : "已取消角色收藏。",
-            isFavorite ? "Character favorited and pinned." : "Character removed from favorites.",
-            InfoBarSeverity.Informational);
+                isFavorite ? T("ProductivityFeatures.CharacterFavorited") : T("ProductivityFeatures.CharacterUnfavorited"),
+                InfoBarSeverity.Informational);
     }
 
     private FrameworkElement WrapCharacterButtonWithFavorite(Button characterButton, string characterKey)
@@ -692,7 +691,7 @@ public sealed partial class MainWindow
                 await RollbackInstallTransactionAsync(backupPath, clearLastTransaction: true);
                 await RefreshListsAsync();
                 await RefreshInstallBackupListAsync();
-                ShowAppNotification("备份已恢复。", "Backup restored.");
+                ShowAppNotification(T("ProductivityFeatures.BackupRestored"));
             }
             catch (Exception ex)
             {
@@ -836,7 +835,7 @@ public sealed partial class MainWindow
         var sanitizedConfig = new
         {
             AppVersion,
-            Language = _currentLanguage.ToString(),
+            Language = _currentLanguage,
             Theme = _isDarkTheme ? "Dark" : "Light",
             _checkAppUpdatesOnStartup,
             UpdateInterval = _updateCheckInterval.ToString(),

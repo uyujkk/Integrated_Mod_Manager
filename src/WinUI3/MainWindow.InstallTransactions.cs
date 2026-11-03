@@ -253,7 +253,7 @@ public sealed partial class MainWindow
             {
                 await RollbackInstallTransactionAsync(_lastInstallTransactionPath, clearLastTransaction: true);
                 await RefreshListsAsync();
-                ShowAppNotification("已恢复上次 Mod 操作前的状态。", "Restored the state before the last mod operation.");
+                ShowAppNotification(T("InstallTransactions.Restored"));
             }
             catch (Exception ex)
             {

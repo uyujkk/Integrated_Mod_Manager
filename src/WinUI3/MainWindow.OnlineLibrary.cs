@@ -98,8 +98,7 @@ public sealed partial class MainWindow
         if (!remove) _onlinePreferences.SavedMods.Insert(0, new OnlineSavedMod(repository.Id, repository.SourcePath, mod));
         _onlinePreferences.SavedMods = _onlinePreferences.SavedMods.Take(100).ToList();
         SaveShellConfig();
-        ShowAppNotification(remove ? "已移出稍后下载。" : "已加入稍后下载。",
-            remove ? "Removed from saved items." : "Saved for later.");
+        ShowAppNotification(remove ? T("OnlineLibrary.RemovedFromSaved") : T("OnlineLibrary.Saved"));
     }
 
     private MenuFlyout CreateOnlineCardMenu(OnlineModCard mod)

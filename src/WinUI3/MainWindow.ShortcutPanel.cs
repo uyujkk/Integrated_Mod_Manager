@@ -68,7 +68,7 @@ public sealed partial class MainWindow
         catch (Exception ex) { ReportUiActionFailure(nameof(OnShortcutsNavClicked), ex); }
     }
 
-    private bool IsEnglishUi => _currentLanguage == AppLanguage.EnUs;
+    private bool IsEnglishUi => !IsChineseUi;
     private string? _shortcutRestoreModPath;
 
     /// <summary>The pane and overlay are built once with localized text; a language switch rebuilds both, keeping the selection.</summary>
@@ -819,7 +819,7 @@ public sealed partial class MainWindow
             int hold = shortcut.Behavior.Equals("hold", StringComparison.OrdinalIgnoreCase)
                 ? (int)(double.IsFinite(_shortcutHoldDuration!.Value) ? _shortcutHoldDuration.Value : 300)
                 : (int)(double.IsFinite(_shortcutTapDuration!.Value) ? _shortcutTapDuration.Value : 200);
-            string report = await _shortcutInput.SendAsync(target, plan!, hold, _shortcuts.InputMode, IsEnglishUi);
+            string report = await _shortcutInput.SendAsync(target, plan!, hold, _shortcuts.InputMode, _currentLanguage);
             if (!_onlineWindowClosed) _shortcutStatus!.Text = shortcut.Shortcut + " · " + report;
         }
         catch (Exception ex)
@@ -1129,7 +1129,7 @@ public sealed partial class MainWindow
         {
             if (!_shortcuts.InputEnabled || _shortcutTargetPicker?.SelectedItem is not ShortcutTarget target)
                 throw new InvalidOperationException(T("ShortcutPanel.SelectATargetWindowAndEnable"));
-            _shortcutStatus!.Text = await _shortcutInput.SendAsync(target, new ShortcutKeyPlan(new ushort[] { 0x90 }, Array.Empty<ushort>()), 150, ShortcutInputMode.VirtualKey, IsEnglishUi);
+            _shortcutStatus!.Text = await _shortcutInput.SendAsync(target, new ShortcutKeyPlan(new ushort[] { 0x90 }, Array.Empty<ushort>()), 150, ShortcutInputMode.VirtualKey, _currentLanguage);
         }
         catch (Exception ex) { if (!_onlineWindowClosed) _shortcutStatus!.Text = ex.Message; }
         finally { _shortcuts.SendInProgress = false; if (!_onlineWindowClosed) RefreshShortcutOverlay(); }

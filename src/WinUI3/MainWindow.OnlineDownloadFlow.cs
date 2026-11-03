@@ -184,20 +184,14 @@ public sealed partial class MainWindow
             installBusy = true;
             // The picker is finished; a different visible Mod can now start its own task.
             RefreshOnlineDetailActionState();
-            UpdateDownloadTask(downloadTask, DownloadTaskState.Preparing, 0, "正在读取下载信息...", "Reading download information...", forceRefresh: true);
+            UpdateDownloadTask(downloadTask, DownloadTaskState.Preparing, 0, M("OnlineDownload.ReadingInformation"), forceRefresh: true);
             downloadTask.Cancellation.Token.ThrowIfCancellationRequested();
             OnlineModDetails details = await GetOnlineModDetailsAsync(effectiveMod, downloadTask.Cancellation.Token);
 
-            SetOnlineDownloadProgress(true, 0, "准备下载...", "Preparing download...", isIndeterminate: true);
-            string downloadStatusZh = $"正在下载 {effectiveMod.Title}，完成后会自动解压到你选择的文件夹中。";
-            string downloadStatusEn = $"Downloading {effectiveMod.Title}. It will be extracted into the folder you selected.";
-            if (!string.IsNullOrWhiteSpace(details.AccessRequirementSummary))
-            {
-                downloadStatusZh += $" 页面文字提到了可能的额外访问要求：{details.AccessRequirementSummary}";
-                downloadStatusEn += $" The page text mentions possible extra access requirements: {details.AccessRequirementSummary}";
-            }
-
-            SetOnlineStatus(downloadStatusZh, downloadStatusEn);
+            SetOnlineDownloadProgress(true, 0, T("OnlineDownload.Preparing"), isIndeterminate: true);
+            SetOnlineStatus(string.IsNullOrWhiteSpace(details.AccessRequirementSummary)
+                ? M("OnlineDownload.Downloading", effectiveMod.Title)
+                : M("OnlineDownload.DownloadingWithRequirements", effectiveMod.Title, details.AccessRequirementSummary));
 
             string archivePath = await DownloadOnlineModArchiveAsync(effectiveMod, selectedFolder, downloadTask, downloadTask.Cancellation.Token);
             session.RegisterArchive(archivePath);
@@ -217,7 +211,7 @@ public sealed partial class MainWindow
             session.RegisterExtraction(extractFolder);
 
             downloadTask.DestinationPath = extractFolder;
-            UpdateDownloadTask(downloadTask, DownloadTaskState.Extracting, 92, "正在解压并写入 Mod 信息...", "Extracting and writing mod metadata...", forceRefresh: true);
+            UpdateDownloadTask(downloadTask, DownloadTaskState.Extracting, 92, M("OnlineDownload.Extracting"), forceRefresh: true);
             downloadTask.Cancellation.Token.ThrowIfCancellationRequested();
             await Task.Run(() =>
             {
@@ -232,8 +226,7 @@ public sealed partial class MainWindow
                 metadata => CommitOnlineInstallMetadata(extractFolder, metadata),
                 downloadTask.Cancellation.Token);
             UpdateDownloadTask(downloadTask, DownloadTaskState.Completed, 100,
-                prepared.PersistenceWarning is null ? $"已完成：{extractFolder}" : $"已安装，但配置保存失败：{extractFolder}",
-                prepared.PersistenceWarning is null ? $"Completed: {extractFolder}" : $"Installed, but config could not be saved: {extractFolder}",
+                M(prepared.PersistenceWarning is null ? "OnlineDownload.CompletedAt" : "OnlineDownload.InstalledConfigNotSaved", extractFolder),
                 forceRefresh: true);
 
             // A failed refresh/notification must never turn a committed installation into a
@@ -252,9 +245,9 @@ public sealed partial class MainWindow
                         && string.Equals(repository.SourcePath, context.RepositoryPath, StringComparison.OrdinalIgnoreCase))
                         SelectSecondLevelByPath(extractFolder);
                 }
-                SetOnlineStatus($"已下载并解压到：{extractFolder}", $"Downloaded and extracted to: {extractFolder}");
+                SetOnlineStatus(M("OnlineDownload.ExtractedTo", extractFolder));
                 RefreshUpdatesPane();
-                ShowAppNotification($"下载完成：{effectiveMod.Title}", $"Download completed: {effectiveMod.Title}");
+                ShowAppNotification(T("OnlineDownload.Completed", effectiveMod.Title));
                 if (prepared.PersistenceWarning is not null)
                     await ShowMessageAsync(T("OnlineDownloadFlow.TheModIsInstalledButIts"),
                         T("OnlineDownloadFlow.TrackingRecordNotSaved"));
@@ -267,14 +260,14 @@ public sealed partial class MainWindow
         catch (OperationCanceledException)
         {
             CleanupOnlineDownload(session, canceled: true);
-            UpdateDownloadTask(downloadTask, DownloadTaskState.Canceled, downloadTask.Progress, "任务已取消", "Task canceled", forceRefresh: true);
-            SetOnlineStatus("下载任务已取消。", "The download task was canceled.");
+            UpdateDownloadTask(downloadTask, DownloadTaskState.Canceled, downloadTask.Progress, M("OnlineDownload.TaskCanceled"), forceRefresh: true);
+            SetOnlineStatus(M("OnlineDownload.Canceled"));
         }
         catch (Exception ex)
         {
             CleanupOnlineDownload(session, canceled: false);
-            UpdateDownloadTask(downloadTask, DownloadTaskState.Failed, downloadTask.Progress, $"失败：{ex.Message}", $"Failed: {ex.Message}", forceRefresh: true);
-            SetOnlineStatus("下载或解压在线 Mod 失败。", "Failed to download or extract the online mod.");
+            UpdateDownloadTask(downloadTask, DownloadTaskState.Failed, downloadTask.Progress, M("OnlineDownload.TaskFailed", ex.Message), forceRefresh: true);
+            SetOnlineStatus(M("OnlineDownload.DownloadOrExtractFailed"));
             string message = ex.Message;
             if (ex is InvalidDataException or IOException)
             {
@@ -286,21 +279,20 @@ public sealed partial class MainWindow
 
             string failedArchiveName = Path.GetFileName(downloadTask.ArchivePath);
             UpdateDownloadTask(downloadTask, DownloadTaskState.Failed, downloadTask.Progress,
-                $"{failedArchiveName}\n失败原因：{message}", $"{failedArchiveName}\nReason: {message}", forceRefresh: true);
-            ShowAppNotification($"下载失败：{effectiveMod.Title}。可在任务中心查看原因并重试。",
-                $"Download failed: {effectiveMod.Title}. See the task center for details and retry.", InfoBarSeverity.Error);
+                M("OnlineDownload.FailedWithReason", failedArchiveName, message), forceRefresh: true);
+            ShowAppNotification(T("OnlineDownload.Failed", effectiveMod.Title), InfoBarSeverity.Error);
         }
         finally
         {
             if (!_onlineWindowClosed && string.Equals(_foregroundDownloadTaskId, downloadTask.Id, StringComparison.Ordinal))
             {
                 _foregroundDownloadTaskId = null;
-                SetOnlineDownloadProgress(false, 0, string.Empty, string.Empty);
+                SetOnlineDownloadProgress(false, 0, string.Empty);
             }
             if (!_onlineWindowClosed && !_downloadTasks.Any(task => DownloadProgressPolicy.IsActive(task.State)))
             {
                 _foregroundDownloadTaskId = null;
-                SetOnlineDownloadProgress(false, 0, string.Empty, string.Empty);
+                SetOnlineDownloadProgress(false, 0, string.Empty);
             }
             if (installBusy && !_onlineWindowClosed) SetOnlineInstallBusy(false);
             try { if (!_onlineWindowClosed) RefreshOnlinePaneV2(); }
@@ -326,13 +318,12 @@ public sealed partial class MainWindow
                     downloadTask.HasKnownTotalLength = progress.TotalBytes > 0;
                     string currentSize = FormatFileSize(progress.BytesRead);
                     string totalSize = progress.TotalBytes > 0 ? FormatFileSize(progress.TotalBytes) : "?";
-                    string statusZh = $"正在下载：{currentSize} / {totalSize}";
-                    string statusEn = $"Downloading: {currentSize} / {totalSize}";
+                    UiMessage downloadStatus = M("OnlineDownload.Progress", currentSize, totalSize);
                     if (string.Equals(_foregroundDownloadTaskId, downloadTask.Id, StringComparison.Ordinal))
-                        SetOnlineDownloadProgress(true, progress.Percent, statusZh, statusEn,
+                        SetOnlineDownloadProgress(true, progress.Percent, T(downloadStatus),
                             isIndeterminate: progress.TotalBytes <= 0);
                     UpdateDownloadTask(downloadTask, DownloadTaskState.Downloading,
-                        Math.Min(90, progress.Percent * 0.9), statusZh, statusEn, forceRefresh: true);
+                        Math.Min(90, progress.Percent * 0.9), downloadStatus, forceRefresh: true);
                 }),
                 cancellationToken);
             downloadTask.ArchivePath = result.ArchivePath;
@@ -473,9 +464,7 @@ public sealed partial class MainWindow
         _trackedModUpdateResults.RemoveAll(item => string.Equals(item.Path, result.Path, StringComparison.CurrentCultureIgnoreCase));
         SaveConfig();
         SaveShellConfig();
-        SetModUpdateStatus(
-            $"已移除 {result.Title} 的追踪记录。",
-            $"Removed the tracking record for {result.Title}.");
+        SetModUpdateStatus(M("Updates.TrackingRemoved", result.Title));
         RefreshUpdatesPane();
     }
 

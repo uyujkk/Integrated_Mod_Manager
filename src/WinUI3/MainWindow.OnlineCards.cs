@@ -412,7 +412,7 @@ public sealed partial class MainWindow
             await RunUiActionAsync("ShowOnlineModDetailsAsync", () => ShowOnlineModDetailsAsync(mod));
     }
 
-    private string FormatCompactMetric(int value) => OnlineBrowseOrder.CompactCount(value, _currentLanguage == AppLanguage.ZhCn);
+    private string FormatCompactMetric(int value) => OnlineBrowseOrder.CompactCount(value, IsChineseUi);
 
     private void AnimateOnlineModCardHover(Border card, bool isPointerOver)
     {

@@ -331,7 +331,7 @@ public sealed partial class MainWindow
         NewRepositoryMenu.Items.Add(new MenuFlyoutSeparator());
         foreach (RepositoryPresetInfo preset in BuiltInRepositoryPresets)
         {
-            string name = _currentLanguage == AppLanguage.ZhCn ? preset.DisplayNameZh : preset.DisplayNameEn;
+            string name = IsChineseUi ? preset.DisplayNameZh : preset.DisplayNameEn;
             WorkspaceRepository? existing = FindRepositoryForPreset(preset);
             var item = new MenuFlyoutItem
             {

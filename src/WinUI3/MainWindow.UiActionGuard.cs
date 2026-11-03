@@ -39,10 +39,7 @@ public sealed partial class MainWindow
             }
 
             string summary = SanitizeDiagnosticText(exception.Message);
-            ShowAppNotification(
-                $"操作意外中断，详情已记录到 app-errors.log：{summary}",
-                $"The action stopped unexpectedly. Details were saved to app-errors.log: {summary}",
-                InfoBarSeverity.Error);
+            ShowAppNotification(T("UiActionGuard.Stopped", summary), InfoBarSeverity.Error);
         }
         catch
         {

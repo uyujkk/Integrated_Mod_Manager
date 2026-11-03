@@ -68,30 +68,18 @@ public sealed partial class OnlinePageViewModel : ObservableObject
     /// <summary>0 all works, 1 installed only, 2 saved only.</summary>
     public int AuthorWorkFilter { get => _authorWorkFilter; set => SetProperty(ref _authorWorkFilter, value); }
 
-    // Status lines keep both languages so a language switch can show them again without a reload.
-    public string? StatusZh { get; private set; }
+    // Status lines are kept as messages so a language switch can show them again without a reload.
+    internal UiMessage? Status { get; private set; }
 
-    public string? StatusEn { get; private set; }
+    internal UiMessage? CacheStatus { get; private set; }
 
-    public string? CacheStatusZh { get; private set; }
+    public bool HasStatus => Status is not null;
 
-    public string? CacheStatusEn { get; private set; }
+    public bool HasCacheStatus => CacheStatus is not null;
 
-    public bool HasStatus => !string.IsNullOrWhiteSpace(StatusZh) && !string.IsNullOrWhiteSpace(StatusEn);
+    internal void SetStatus(UiMessage status) => Status = status;
 
-    public bool HasCacheStatus => !string.IsNullOrWhiteSpace(CacheStatusZh) && !string.IsNullOrWhiteSpace(CacheStatusEn);
-
-    public void SetStatus(string zh, string en)
-    {
-        StatusZh = zh;
-        StatusEn = en;
-    }
-
-    public void SetCacheStatus(string? zh, string? en)
-    {
-        CacheStatusZh = zh;
-        CacheStatusEn = en;
-    }
+    internal void SetCacheStatus(UiMessage? status) => CacheStatus = status;
 
     public void ApplyPageResult(int totalCount, int totalPages)
     {

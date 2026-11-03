@@ -37,7 +37,9 @@ public sealed partial class MainWindow
         var link = new HyperlinkButton
         {
             Content = new TextBlock { Text = mod.Author, TextTrimming = TextTrimming.CharacterEllipsis },
-            Padding = new Thickness(0), MinHeight = 0, MinWidth = 0,
+            Padding = new Thickness(0),
+            MinHeight = 0,
+            MinWidth = 0,
             HorizontalAlignment = HorizontalAlignment.Stretch,
             HorizontalContentAlignment = HorizontalAlignment.Left,
             IsEnabled = !string.IsNullOrWhiteSpace(mod.Author)
@@ -65,7 +67,7 @@ public sealed partial class MainWindow
                     if (!_onlineWindowClosed && context == GetOnlineDetailContextKey())
                     {
                         if (mod.AuthorId <= 0 && mod.ItemId > 0)
-                            ShowAppNotification("作者身份暂未获取，先筛选当前页。", "Author identity unavailable; filtering this page instead.");
+                            ShowAppNotification(T("OnlineBrowse.AuthorUnavailable"));
                         await BrowseOnlineAuthorAsync(mod.AuthorId, mod.Author);
                     }
                 }
@@ -111,7 +113,7 @@ public sealed partial class MainWindow
         return new(
             !string.IsNullOrWhiteSpace(mod.DownloadUrl) && !IsOnlineDownloadActionBlocked(mod),
             text,
-            task is null ? text : L(task.StatusZh, task.StatusEn),
+            task is null ? text : DownloadTaskStatusText(task),
             action,
             active ? "\uE895" : task?.State == DownloadTaskState.Failed ? "\uE72C" : "\uE896");
     }

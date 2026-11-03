@@ -239,7 +239,7 @@ public sealed partial class MainWindow
 
     private string GetOnlineCharacterDisplayName(OnlineCharacterOption character)
     {
-        return _currentLanguage == AppLanguage.ZhCn
+        return IsChineseUi
             ? character.DisplayNameZh
             : character.DisplayNameEn;
     }
@@ -456,7 +456,7 @@ public sealed partial class MainWindow
 
     private string GetOnlineCharacterDisplayName(EndfieldCharacterInfo character)
     {
-        return _currentLanguage == AppLanguage.ZhCn ? character.ChineseName : character.EnglishName;
+        return IsChineseUi ? character.ChineseName : character.EnglishName;
     }
 
     private string GetOnlineCharacterDisplayName(string characterName)
@@ -1027,7 +1027,7 @@ public sealed partial class MainWindow
         return CharacterFolderPlanner.Plan(repositoryPath,
             Directory.GetDirectories(repositoryPath),
             Directory.GetFiles(repositoryPath).Select(Path.GetFileName).OfType<string>().ToArray(),
-            aliases, mod.CharacterName, chinese, english, _currentLanguage == AppLanguage.ZhCn);
+            aliases, mod.CharacterName, chinese, english, IsChineseUi);
     }
 
     private string CharacterFolderReasonText(CharacterFolderPlan plan, string character) => plan.Reason switch
