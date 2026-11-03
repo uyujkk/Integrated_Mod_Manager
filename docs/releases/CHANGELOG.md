@@ -6,7 +6,13 @@
 
 This document records version changes in Integrated Mod Manager. Unpublished versions are marked separately.
 
-## v4.7.0 — 未发布（正式版 / Stable）
+## v4.7.1 — 未发布（正式版 / Stable）
+
+更新器改用 .NET 8 构建，不再被几家杀毒引擎误报为病毒（VirusTotal 从 5/71 降到 1/70），并且只需要主程序同样需要的 .NET 8 运行时；4.7 文档更新。功能与 4.7.0 相同。见 [v4.7.1](v4.7.1.md)。
+
+The updater is built with .NET 8, so several antivirus engines no longer flag it as malware (VirusTotal 5/71 down to 1/70), and it needs only the .NET 8 runtime the app already needs; 4.7 docs updated. Features are the same as 4.7.0. See [v4.7.1](v4.7.1.md).
+
+## v4.7.0 — 2026-11-03（正式版 / Stable）
 
 预设图片与图片切换；浮窗底板、紧凑布局、鼠标穿透、外观预设和自动对比度；不含 Mod 文件的方案分享；首次安装按系统语言选语言并选择游戏，其他游戏通过 XXMI 启动；每个 Mod 的“默认”槽位；批量操作（含导出组合包）；修复切换空源目录仓库时退出、管理员权限下无法选文件，以及无法确认加载器链接时仍删除 Mod。取代本地预览 v4.7.0-preview.1。见 [v4.7.0](v4.7.0.md)。
 
