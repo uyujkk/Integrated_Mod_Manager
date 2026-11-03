@@ -238,6 +238,8 @@ public sealed partial class MainWindow
                     T("PersistentSlots.NoSupportedState"));
                 return;
             }
+            if (await ChooseSlotValuesAsync(values) is not { } chosen) return;
+            values = chosen;
 
             string? name = await PromptForTextAsync(
                 T("PersistentSlots.FoundVariablesNameThisSlot", values.Count),

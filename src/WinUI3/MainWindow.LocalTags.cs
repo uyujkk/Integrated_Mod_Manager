@@ -40,6 +40,7 @@ public sealed partial class MainWindow
         row.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(1, GridUnitType.Star) });
         row.ColumnDefinitions.Add(new ColumnDefinition { Width = GridLength.Auto });
         row.ColumnDefinitions.Add(new ColumnDefinition { Width = GridLength.Auto });
+        row.ColumnDefinitions.Add(new ColumnDefinition { Width = GridLength.Auto });
         row.Children.Add(_repositoryModSearch!);
         _localTagsButton = new Button { Content = T("Common.Tags"), MinHeight = 36 };
         _localTagsButton.Click += async (_, _) => await RunUiActionAsync("EditLocalTagsAsync", () => EditLocalTagsAsync());
@@ -48,6 +49,10 @@ public sealed partial class MainWindow
         _localFiltersButton = new Button { Content = T("Common.Filters"), MinHeight = 36 };
         _localFiltersButton.Click += (_, _) => ShowLocalFilterMenu();
         Grid.SetColumn(_localFiltersButton, 2); row.Children.Add(_localFiltersButton);
+        _batchModsButton = new Button { Content = T("BatchMods.Button"), MinHeight = 36 };
+        _batchModsButton.Click += async (_, _) => await RunUiActionAsync("Batch Mod actions", ShowBatchModActionsAsync);
+        AutomationProperties.SetName(_batchModsButton, T("BatchMods.Title"));
+        Grid.SetColumn(_batchModsButton, 3); row.Children.Add(_batchModsButton);
         Grid.SetRow(row, 1); modGrid.Children.Add(row);
     }
 

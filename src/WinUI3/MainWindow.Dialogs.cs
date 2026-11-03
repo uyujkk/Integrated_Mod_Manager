@@ -447,6 +447,13 @@ public sealed partial class MainWindow
             PlaceholderText = T("Dialogs.LauncherPathOptional")
         };
 
+        var importerBox = new ComboBox { HorizontalAlignment = HorizontalAlignment.Stretch };
+        importerBox.Items.Add(new ComboBoxItem { Content = T("XxmiLaunch.ImporterAutomatic"), Tag = null });
+        foreach (string importer in IntegratedModManager.Core.Repository.XxmiLaunchPolicy.Importers)
+            importerBox.Items.Add(new ComboBoxItem { Content = importer, Tag = importer });
+        importerBox.SelectedItem = importerBox.Items.OfType<ComboBoxItem>()
+            .FirstOrDefault(item => string.Equals(item.Tag as string, initial.XxmiImporter, StringComparison.OrdinalIgnoreCase)) ?? importerBox.Items[0];
+
         TextBox siteBox = new()
         {
             Text = string.IsNullOrWhiteSpace(initial.OnlineSourceSite) ? DefaultOnlineSourceSite : initial.OnlineSourceSite,
@@ -492,6 +499,7 @@ public sealed partial class MainWindow
         panel.Children.Add(linkDeploymentBox);
         panel.Children.Add(multipleModsBox);
         panel.Children.Add(CreateLabeledEditor(T("Dialogs.LauncherPath"), launcherBox));
+        panel.Children.Add(CreateLabeledEditor(T("XxmiLaunch.Importer"), importerBox));
         panel.Children.Add(CreateLabeledEditor(T("Common.OnlineSource"), siteBox));
         panel.Children.Add(CreateLabeledEditor(T("Dialogs.TargetGame"), gameBox));
         panel.Children.Add(CreateLabeledEditor(T("Dialogs.CategoryID"), categoryBox));
@@ -523,6 +531,7 @@ public sealed partial class MainWindow
             UseDirectoryLinks = linkDeploymentBox.IsChecked == true,
             AllowMultipleModsPerCharacter = multipleModsBox.IsChecked == true,
             LauncherPath = launcherBox.Text,
+            XxmiImporter = (importerBox.SelectedItem as ComboBoxItem)?.Tag as string,
             OnlineSourceSite = siteBox.Text,
             OnlineGameName = gameBox.Text,
             OnlineCategoryId = categoryBox.Text,

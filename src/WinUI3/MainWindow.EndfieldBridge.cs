@@ -520,7 +520,7 @@ public sealed partial class MainWindow
     {
         if (repository is null || CanUseEndfieldBridge(repository)) return false;
         RepositoryPresetInfo? preset = BuiltInRepositoryPresets.FirstOrDefault(candidate => IsRepositoryForPreset(repository, candidate));
-        if (XxmiLaunchPolicy.ImporterFor(preset?.Id) is not { } importer) return false;
+        if (XxmiLaunchPolicy.ImporterFor(preset?.Id, repository.XxmiImporter) is not { } importer) return false;
         string loader = EndfieldBridgeIntegration.ResolveLoader(LauncherTextBox.Text, DefaultLoaderPaths());
         if (!XxmiLaunchPolicy.IsXxmiLauncher(loader) || !File.Exists(loader)) return false;
 

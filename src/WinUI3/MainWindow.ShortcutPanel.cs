@@ -321,6 +321,7 @@ public sealed partial class MainWindow
         overlay.Children.Add(ShortcutGroupLabel(T("ShortcutPanel.BehaviorGroup")));
         AddOverlaySlotSwitchSetting(overlay);
         AddPresetPreviewSetting(overlay);
+        AddSlotCaptureSettings(overlay);
         overlay.Children.Add(new TextBlock
         {
             Text = T("ShortcutPanel.TheOverlaySupportsWindowedBorderlessMode"),

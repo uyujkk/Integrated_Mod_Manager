@@ -17,6 +17,9 @@ public sealed class WorkspaceRepository
 
     public string LauncherPath { get; set; } = string.Empty;
 
+    /// <summary>XXMI importer to start through, such as GIMI; empty follows the game preset.</summary>
+    public string? XxmiImporter { get; set; }
+
     /// <summary>Use the integrated Endfield launch instead of running LauncherPath directly.</summary>
     public bool UseEndfieldBridge { get; set; }
 

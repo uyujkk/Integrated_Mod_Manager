@@ -90,6 +90,8 @@ public sealed partial class MainWindow
             await ShowMessageAsync(T("PersistentSlots.NoNumericPersistentValuesMatchedThis"), T("PersistentSlots.NoSupportedState"));
             return;
         }
+        if (await ChooseSlotValuesAsync(values) is not { } chosen) return;
+        values = chosen;
         if (!await ShowConfirmAsync(T("PersistentVariants.ReplaceSlotValues", context.Slot.Name, context.Slot.Values.Count, values.Count),
                 T("PersistentVariants.UpdateSelectedSlot")))
         {

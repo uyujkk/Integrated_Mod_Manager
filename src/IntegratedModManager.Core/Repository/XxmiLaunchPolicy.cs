@@ -9,6 +9,15 @@ public static class XxmiLaunchPolicy
 {
     public const string LauncherFileName = "XXMI Launcher.exe";
 
+    /// <summary>The importers a repository can choose. EFMI is left out: Endfield has its own integrated launch.</summary>
+    public static readonly IReadOnlyList<string> Importers = ["GIMI", "SRMI", "ZZMI", "WWMI", "HIMI"];
+
+    /// <summary>The repository's own choice when it made one, otherwise the one its game preset implies.</summary>
+    public static string? ImporterFor(string? presetId, string? chosen) =>
+        chosen is not null && Importers.Contains(chosen, StringComparer.OrdinalIgnoreCase)
+            ? Importers.First(importer => string.Equals(importer, chosen, StringComparison.OrdinalIgnoreCase))
+            : ImporterFor(presetId);
+
     public static string? ImporterFor(string? presetId) => presetId switch
     {
         "genshin" => "GIMI",
