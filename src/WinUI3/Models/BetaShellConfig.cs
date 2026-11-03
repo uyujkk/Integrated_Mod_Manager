@@ -81,6 +81,9 @@ public sealed class BetaShellConfig
     /// <summary>Per repository id, the Mods (relative paths) already offered a default slot. Missing for a repository not scanned yet.</summary>
     public Dictionary<string, List<string>>? DefaultSlotSeeds { get; set; }
 
+    /// <summary>Repository ids whose Mods have all been offered a default slot. Missing in configs from before the back-fill.</summary>
+    public List<string>? DefaultSlotsBackfilled { get; set; }
+
     public int? WindowX { get; set; }
 
     public int? WindowY { get; set; }

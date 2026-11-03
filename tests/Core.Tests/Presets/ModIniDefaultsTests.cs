@@ -52,11 +52,19 @@ public sealed class ModIniDefaultsTests : IDisposable
     }
 
     [Fact]
-    public void DefaultSlotPolicy_FirstScanOnlyRecordsThenOnlyUnseenModsAreNew()
+    public void DefaultSlotPolicy_BackfillGivesEveryModWithoutOneADefault()
     {
-        Assert.Empty(DefaultSlotPolicy.NewMods(["A\\One", "A\\Two"], known: null));
-        Assert.Equal(["B\\Three"], DefaultSlotPolicy.NewMods(["A\\One", "a\\two", "B\\Three", "B\\Three"], ["A\\One", "A\\Two"]));
-        Assert.Empty(DefaultSlotPolicy.NewMods(["A\\One"], ["A\\One", "Deleted\\Mod"]));
+        // Mods that already had other slots, as in repositories scanned before default slots existed.
+        Assert.Equal(["A\\One", "A\\Two"], DefaultSlotPolicy.ModsNeedingDefault(["A\\One", "A\\Two"], known: null, backfilled: false, []));
+        Assert.Equal(["A\\Two"], DefaultSlotPolicy.ModsNeedingDefault(["A\\One", "A\\Two"], ["A\\One", "A\\Two"], backfilled: false, ["a\\one"]));
+    }
+
+    [Fact]
+    public void DefaultSlotPolicy_AfterBackfillOnlyUnseenModsGetOne()
+    {
+        Assert.Equal(["B\\Three"], DefaultSlotPolicy.ModsNeedingDefault(["A\\One", "a\\two", "B\\Three", "B\\Three"], ["A\\One", "A\\Two"], backfilled: true, []));
+        // A default slot the user deleted stays deleted.
+        Assert.Empty(DefaultSlotPolicy.ModsNeedingDefault(["A\\One"], ["A\\One"], backfilled: true, []));
     }
 
     [Theory]

@@ -246,6 +246,7 @@ public sealed partial class MainWindow
             name = name?.Trim();
             if (string.IsNullOrWhiteSpace(name)) return;
 
+            await EnsureDefaultSlotAsync(repository, modPath, relative);
             var slot = new ModPersistentSlot
             {
                 RepositoryId = repository.Id,
@@ -297,8 +298,10 @@ public sealed partial class MainWindow
                 if (string.IsNullOrWhiteSpace(repository.TargetPath)
                     || !Directory.Exists(Path.Combine(repository.TargetPath, deployedName)))
                     throw new InvalidDataException(T("PersistentSlots.DeployThisModUnderItsMatching"));
+                IReadOnlyList<ModPersistentValue> values = await Task.Run(() => ValuesToRestore(slot, modPath));
                 ModPersistentRuntimeRestorePlan plan = await Task.Run(() =>
-                    ModPersistentPresetEngine.PlanRuntimeRestore(modPath, deployedName, userIni, slot.Values));
+                    ModPersistentPresetEngine.PlanRuntimeRestore(modPath, deployedName, userIni, values));
+                slot.Values = [.. values];
                 var closedCheck = new CheckBox
                 {
                     Content = T("Common.IHaveFullyClosedTheGame")
