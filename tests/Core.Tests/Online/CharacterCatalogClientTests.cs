@@ -1,5 +1,6 @@
 using System.Net;
 using System.Text;
+using IntegratedModManager.Core.Endfield;
 using IntegratedModManager.Core.Online;
 
 namespace IntegratedModManager.Core.Tests;
@@ -166,6 +167,48 @@ public sealed class CharacterCatalogClientTests
         Assert.Equal(("Hu Tao", "Zhongli", "无名"), (hutao.DisplayNameEn, zhongli.DisplayNameEn, unknown.DisplayNameEn));
         Assert.Contains("Hu Tao", hutao.Aliases);
         Assert.Equal(["无名"], unknown.Aliases);
+    }
+
+    private static readonly EndfieldCharacterInfo[] BuiltInOperators =
+    [
+        new("Endministrator (M)", "管理员 (男)", "901", "https://img/m.png", "Endmin M"),
+        new("Endministrator (F)", "管理员 (女)", "902", "https://img/f.png"),
+        new("Perlica", "佩丽卡", "903", "https://img/perlica.png", "Perl")
+    ];
+
+    [Fact]
+    public void EndfieldOperators_CompletesTheOfficialListFromTheBuiltInOne()
+    {
+        List<OnlineCharacterOption> characters = CharacterCatalogClient.EndfieldOperators(
+        [
+            new("endmin", "管理员", "Endministrator", "", 1),
+            new("endmin", "管理员", "Endministrator", "https://site/f.png", 2),
+            new("perlica", "佩丽卡", "Perlica", "https://site/perlica.png", 3),
+            new("newcomer", "新人", "Newcomer", "https://site/new.png", 4)
+        ], BuiltInOperators, "https://wiki.skland.com/endfield");
+
+        Assert.Equal(["Endministrator (M)", "Endministrator (F)", "Perlica", "Newcomer"], characters.Select(character => character.Key));
+        Assert.Equal(["管理员 (男)", "管理员 (女)", "佩丽卡", "新人"], characters.Select(character => character.DisplayNameZh));
+        Assert.Equal(["901", "902", "903", ""], characters.Select(character => character.CategoryId));
+        // The site's own image wins; the built-in one fills a missing image.
+        Assert.Equal(["https://img/m.png", "https://site/f.png", "https://site/perlica.png", "https://site/new.png"], characters.Select(character => character.AvatarUrl));
+        Assert.Equal([0, 1, 2, 3], characters.Select(character => character.WikiOrder));
+        Assert.All(characters, character => Assert.Equal(("https://wiki.skland.com/endfield", true), (character.WikiUrl, character.IsWikiCharacter)));
+        Assert.Equal(["Endministrator (M)", "管理员 (男)", "Endministrator", "管理员", "Endmin M"], characters[0].Aliases);
+        Assert.Contains("Perl", characters[2].Aliases);
+    }
+
+    [Fact]
+    public async Task FetchEndfieldOperators_ReadsTheOperatorPage()
+    {
+        var (client, requests) = Client(("endfield.hypergryph.com/operator", """
+            <main><div class="OperatorItem_operatorItem__a"><div class="OperatorItem_image__b" data-key="perlica" style="background-image:url(https://cdn/p.png)"></div><div class="OperatorItem_contentBlock__c"><span class="OperatorItem_nameText__d">佩丽卡</span><div class="OperatorItem_codename__e">// Perlica</div><div class="OperatorItem_index__f">01<!-- --> / <!-- -->01</div></div></div></main>
+            """));
+
+        List<OnlineCharacterOption> characters = await CharacterCatalogClient.FetchEndfieldOperatorsAsync(client, BuiltInOperators, "https://wiki");
+
+        Assert.Equal(("Perlica", "903"), (Assert.Single(characters).Key, characters[0].CategoryId));
+        Assert.Equal(CharacterCatalogClient.EndfieldOperatorCatalogUrl, Assert.Single(requests).RequestUri!.ToString());
     }
 
     private sealed class Handler(Func<HttpRequestMessage, HttpResponseMessage> reply) : HttpMessageHandler

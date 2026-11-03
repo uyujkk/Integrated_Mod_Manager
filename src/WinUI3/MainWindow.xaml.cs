@@ -28,7 +28,6 @@ public sealed partial class MainWindow : Window
     private const string DefaultOnlineCategoryId = "42770";
     private const string DefaultOnlineGameName = "Arknights: Endfield";
     private const string EndfieldOfficialWikiUrl = "https://wiki.skland.com/endfield";
-    private const string EndfieldOfficialOperatorCatalogUrl = "https://endfield.hypergryph.com/operator";
     private const int OnlineDisplayPageSize = 40;
     private const int OnlineRawPageLimit = 80;
     private static readonly TimeSpan OnlineModListRequestTimeout = TimeSpan.FromSeconds(5);

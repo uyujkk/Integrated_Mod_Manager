@@ -1,6 +1,7 @@
 using System.Globalization;
 using System.Text;
 using System.Text.Json;
+using IntegratedModManager.Core.Endfield;
 
 namespace IntegratedModManager.Core.Online;
 
@@ -22,6 +23,7 @@ public sealed record HoYoWikiLocalizedCharacter(string EntryPageId, string Name)
 public static class CharacterCatalogClient
 {
     public const string HoYoWikiApiBaseUrl = "https://sg-wiki-api-static.hoyolab.com/hoyowiki/wapi";
+    public const string EndfieldOperatorCatalogUrl = "https://endfield.hypergryph.com/operator";
 
     /// <summary>The catalog behind a repository's wiki link, or null for a wiki without one.</summary>
     public static WikiCatalogDescriptor? Describe(string? wikiUrl)
@@ -164,6 +166,69 @@ public static class CharacterCatalogClient
             .GroupBy(character => character.CategoryId, StringComparer.OrdinalIgnoreCase)
             .Select(group => group.First())
             .ToList();
+    }
+
+    /// <summary>The operators on the official Endfield site, completed from the built-in list.</summary>
+    public static async Task<List<OnlineCharacterOption>> FetchEndfieldOperatorsAsync(HttpClient client,
+        IReadOnlyList<EndfieldCharacterInfo> builtIn, string wikiUrl, CancellationToken cancellationToken = default)
+    {
+        using HttpResponseMessage response = await client.GetAsync(EndfieldOperatorCatalogUrl, cancellationToken);
+        response.EnsureSuccessStatusCode();
+        string html = await response.Content.ReadAsStringAsync(cancellationToken);
+        return EndfieldOperators(EndfieldOperatorCatalogParser.Parse(html), builtIn, wikiUrl);
+    }
+
+    /// <summary>
+    /// One option per official operator. The built-in entry with a matching name adds the GameBanana
+    /// category, aliases and a fallback avatar. The site lists the Endministrator twice: first the male,
+    /// then the female variant, which the built-in list names apart.
+    /// </summary>
+    public static List<OnlineCharacterOption> EndfieldOperators(IReadOnlyList<EndfieldOperatorCatalogEntry> officialOperators,
+        IReadOnlyList<EndfieldCharacterInfo> builtIn, string wikiUrl)
+    {
+        var characters = new List<OnlineCharacterOption>(officialOperators.Count);
+        int endministratorVariant = 0;
+        foreach (EndfieldOperatorCatalogEntry officialOperator in officialOperators)
+        {
+            string englishName = officialOperator.EnglishName;
+            string chineseName = officialOperator.ChineseName;
+            EndfieldCharacterInfo? fallbackCharacter;
+            if (string.Equals(englishName, "Endministrator", StringComparison.OrdinalIgnoreCase))
+            {
+                bool isMaleVariant = endministratorVariant++ == 0;
+                englishName = isMaleVariant ? "Endministrator (M)" : "Endministrator (F)";
+                chineseName = isMaleVariant ? "管理员 (男)" : "管理员 (女)";
+                fallbackCharacter = builtIn.FirstOrDefault(character =>
+                    string.Equals(character.EnglishName, englishName, StringComparison.OrdinalIgnoreCase));
+            }
+            else
+            {
+                fallbackCharacter = builtIn.FirstOrDefault(character =>
+                    character.AllNames.Any(name =>
+                        string.Equals(name, englishName, StringComparison.OrdinalIgnoreCase)
+                        || string.Equals(name, chineseName, StringComparison.OrdinalIgnoreCase)));
+            }
+
+            List<string> aliases = new[] { englishName, chineseName, officialOperator.EnglishName, officialOperator.ChineseName }
+                .Concat(fallbackCharacter?.AllNames ?? [])
+                .Where(name => !string.IsNullOrWhiteSpace(name))
+                .Distinct(StringComparer.OrdinalIgnoreCase)
+                .ToList();
+            characters.Add(new OnlineCharacterOption
+            {
+                Key = englishName,
+                DisplayNameZh = chineseName,
+                DisplayNameEn = englishName,
+                CategoryId = fallbackCharacter?.GameBananaCategoryId ?? string.Empty,
+                AvatarUrl = string.IsNullOrWhiteSpace(officialOperator.AvatarUrl) ? fallbackCharacter?.AvatarUrl : officialOperator.AvatarUrl,
+                WikiUrl = wikiUrl,
+                Aliases = aliases,
+                IsWikiCharacter = true,
+                WikiOrder = Math.Max(0, officialOperator.Order - 1)
+            });
+        }
+
+        return characters;
     }
 
     /// <summary>Character names from one HoYoWiki language, paged until the wiki's total is reached.</summary>
