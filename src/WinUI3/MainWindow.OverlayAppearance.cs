@@ -3,6 +3,7 @@ using IntegratedModManager.Core.Layout;
 using Microsoft.UI.Composition;
 using Microsoft.UI.Xaml;
 using Microsoft.UI.Xaml.Controls;
+using Microsoft.UI.Xaml.Controls.Primitives;
 using Microsoft.UI.Xaml.Hosting;
 using Microsoft.UI.Xaml.Media;
 using Windows.UI;
@@ -14,6 +15,12 @@ namespace ModFolderCopier.WinUI;
 public sealed partial class MainWindow
 {
     private int _overlayElementOpacity = OverlayAppearancePolicy.DefaultElementOpacity;
+    private bool _overlayCompactView;
+    private bool _overlayClickThrough;
+    private ToggleButton? _overlayCompactToggle;
+    private Slider? _overlayElementSlider;
+    private Button? _overlayClickThroughButton;
+    private FrameworkElement[] _overlayDetailRows = [];
     private readonly SolidColorBrush _overlayElementBrush = new();
     private readonly SolidColorBrush _overlayElementHoverBrush = new();
     private readonly List<(SpriteVisual Visual, DropShadow Shadow)> _overlayTextShadows = [];
@@ -86,6 +93,96 @@ public sealed partial class MainWindow
         visual.IsVisible = OverlayAppearancePolicy.ShowTextShadow(_shortcutOverlayOpacity);
         shadow.Color = OverlayUsesLightBacking ? Color.FromArgb(255, 255, 255, 255) : Color.FromArgb(255, 0, 0, 0);
         return host;
+    }
+
+    // Two ways to keep the overlay out of the way in game: fewer rows, and ignoring the mouse.
+    private Grid CreateOverlayViewRow()
+    {
+        _overlayCompactToggle = new ToggleButton
+        {
+            Content = T("OverlayView.Compact"), IsChecked = _overlayCompactView, Foreground = _overlayTextBrush,
+            HorizontalAlignment = HorizontalAlignment.Stretch, AllowFocusOnInteraction = false, FontSize = 13
+        };
+        ToolTipService.SetToolTip(_overlayCompactToggle, T("OverlayView.CompactHint"));
+        _overlayCompactToggle.Click += (_, _) =>
+        {
+            _overlayCompactView = _overlayCompactToggle.IsChecked == true;
+            ApplyOverlayCompactView();
+            SaveShellConfig();
+        };
+        _overlayClickThroughButton = new Button
+        {
+            Content = T("OverlayView.ClickThrough"), Foreground = _overlayTextBrush,
+            HorizontalAlignment = HorizontalAlignment.Stretch, AllowFocusOnInteraction = false, FontSize = 13
+        };
+        ToolTipService.SetToolTip(_overlayClickThroughButton, T("OverlayView.ClickThroughHint"));
+        _overlayClickThroughButton.Click += (_, _) => SetOverlayClickThrough(true);
+        var row = new Grid { ColumnSpacing = 6 };
+        row.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(1, GridUnitType.Star) });
+        row.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(1, GridUnitType.Star) });
+        Grid.SetColumn(_overlayClickThroughButton, 1);
+        row.Children.Add(_overlayCompactToggle);
+        row.Children.Add(_overlayClickThroughButton);
+        return row;
+    }
+
+    private void ApplyOverlayCompactView()
+    {
+        Visibility visibility = _overlayCompactView ? Visibility.Collapsed : Visibility.Visible;
+        foreach (FrameworkElement row in _overlayDetailRows) row.Visibility = visibility;
+    }
+
+    private void SetOverlayClickThrough(bool enabled)
+    {
+        if (_shortcutOverlay is null) return;
+        // Without the hotkey the user could not get the mouse back, short of closing the app.
+        if (enabled && (!_shortcutPanelHotkeyEnabled || _shortcutPanelHotkey is null))
+        {
+            _shortcutStatus!.Text = T("OverlayView.ClickThroughNeedsHotkey");
+            if (_overlayCompactView) { _overlayCompactView = false; ApplyOverlayCompactView(); _overlayCompactToggle!.IsChecked = false; }
+            RefreshShortcutOverlay(bindingsChanged: true);
+            return;
+        }
+        _overlayClickThrough = enabled;
+        _shortcutOverlay.SetClickThrough(enabled);
+        // The status row is hidden in the compact view, and this is the one thing that must stay visible.
+        _overlayClickThroughButton!.Content = enabled ? T("OverlayView.ClickThroughActive") : T("OverlayView.ClickThrough");
+        _shortcutStatus!.Text = enabled ? T("OverlayView.ClickThroughOn") : T("OverlayView.ClickThroughOff");
+        RefreshShortcutOverlay(bindingsChanged: true);
+    }
+
+    private StackPanel CreateOverlayAppearancePresetRow()
+    {
+        var row = new StackPanel { Orientation = Orientation.Horizontal, Spacing = 6 };
+        foreach (OverlayAppearancePreset preset in OverlayAppearancePreset.All)
+        {
+            string label = preset.Id switch
+            {
+                "clear" => T("OverlayView.Preset.clear"),
+                "balanced" => T("OverlayView.Preset.balanced"),
+                _ => T("OverlayView.Preset.minimal")
+            };
+            var button = new Button { Content = label };
+            button.Click += (_, _) => ApplyOverlayAppearancePreset(preset);
+            row.Children.Add(button);
+        }
+        return row;
+    }
+
+    private void ApplyOverlayAppearancePreset(OverlayAppearancePreset preset)
+    {
+        _shortcutOverlayOpacity = preset.BackgroundOpacity;
+        _overlayElementOpacity = preset.ElementOpacity;
+        _overlayCompactView = preset.CompactView;
+        _shortcutOverlay?.SetBackgroundOpacity(_shortcutOverlayOpacity);
+        ApplyOverlayAppearance();
+        ApplyOverlayCompactView();
+        if (_overlayCompactToggle is not null) _overlayCompactToggle.IsChecked = _overlayCompactView;
+        // The sliders ignore a value that already matches the field, so moving them changes nothing twice.
+        if (_shortcutOpacitySlider is not null) _shortcutOpacitySlider.Value = _shortcutOverlayOpacity;
+        if (_overlayOpacitySlider is not null) _overlayOpacitySlider.Value = _shortcutOverlayOpacity;
+        if (_overlayElementSlider is not null) _overlayElementSlider.Value = _overlayElementOpacity;
+        SaveShellConfig();
     }
 
     private Slider CreateOverlayElementOpacitySlider()

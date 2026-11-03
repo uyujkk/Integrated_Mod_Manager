@@ -18,6 +18,7 @@ public sealed class BetaShellConfig
     public bool? OverlaySlotSwitchEnabled { get; set; }
     public bool CapturePresetPreviews { get; set; }
     public bool OverlayCompactSlots { get; set; }
+    public bool OverlayCompactView { get; set; }
     public bool PresetPreviewFrameLocked { get; set; }
     public CharacterScreenRegion? PresetPreviewDefaultRegion { get; set; }
     public Dictionary<string, LocalLibraryState>? LocalLibraries { get; set; }

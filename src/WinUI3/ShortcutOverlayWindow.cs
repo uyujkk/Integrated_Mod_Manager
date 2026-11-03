@@ -91,6 +91,19 @@ internal sealed class ShortcutOverlayWindow : Window
 
     public void ShowPanel() => AppWindow.Show(false);
 
+    // Pointer input reaches whatever is behind the window. Windows only honours this on a layered window.
+    public void SetClickThrough(bool enabled)
+    {
+        const nint transparent = 0x20, layered = 0x80000;
+        nint style = GetWindowLongPtr(handle, -20);
+        if (enabled)
+        {
+            SetWindowLongPtr(handle, -20, style | transparent | layered);
+            SetLayeredWindowAttributes(handle, 0, 255, 2); // LWA_ALPHA: fully opaque, so the per-pixel background is unchanged.
+        }
+        else SetWindowLongPtr(handle, -20, style & ~(transparent | layered));
+    }
+
     /// <summary>Turns the panel into an empty bordered frame the user moves and resizes. Returns the framed area on screen, or null when cancelled.</summary>
     public async Task<RegionSelection?> SelectRegionAsync(PixelRect start, RegionSelectionText text, bool lockSize, bool useAsDefault, bool animate)
     {
@@ -290,6 +303,7 @@ internal sealed class ShortcutOverlayWindow : Window
     private delegate nint SubclassProc(nint hwnd, uint message, nuint wParam, nint lParam, nuint id, nuint data);
     [DllImport("user32.dll")] private static extern uint GetDpiForWindow(nint hwnd);
     [DllImport("user32.dll")] private static extern bool SetWindowDisplayAffinity(nint hwnd, uint affinity);
+    [DllImport("user32.dll")] private static extern bool SetLayeredWindowAttributes(nint hwnd, uint colorKey, byte alpha, uint flags);
     [DllImport("user32.dll", EntryPoint = "GetWindowLongPtrW")] private static extern nint GetWindowLongPtr(nint hwnd, int index);
     [DllImport("user32.dll", EntryPoint = "SetWindowLongPtrW")] private static extern nint SetWindowLongPtr(nint hwnd, int index, nint value);
     [DllImport("comctl32.dll")] private static extern bool SetWindowSubclass(nint hwnd, SubclassProc proc, nuint id, nuint data);

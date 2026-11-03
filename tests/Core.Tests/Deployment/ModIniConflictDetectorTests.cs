@@ -208,14 +208,9 @@ public sealed class ModIniConflictDetectorTests : IDisposable
         Assert.False(ModIniConflictDetector.IsDisabledName("Skin DISABLED"));
     }
 
-    [Fact]
+    [WindowsFact]
     public void BrokenDeploymentLinksAreSkippedInsteadOfAbortingTheScan()
     {
-        if (!OperatingSystem.IsWindows())
-        {
-            return;
-        }
-
         string candidate = CreateMod("Candidate", ("mod.ini", SkinA));
         string target = Path.Combine(_root, "Mods");
         CreateMod(Path.Combine("Mods", "OtherSkin"), ("mod.ini", SkinA.Replace("ShaderOverrideOutline", "ShaderOverrideOther")));
