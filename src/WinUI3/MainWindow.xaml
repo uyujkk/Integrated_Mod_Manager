@@ -902,6 +902,7 @@
                             <Button x:Name="BrowsePersistentUserIniButton" Grid.Column="1" Click="OnBrowsePersistentUserIniClicked" Style="{StaticResource SecondaryButtonStyle}" />
                         </Grid>
                         <ComboBox x:Name="PersistentSlotComboBox" SelectionChanged="OnPersistentSlotSelectionChanged" HorizontalAlignment="Stretch" />
+                        <ContentControl x:Name="PersistentSlotPreviewHost" HorizontalContentAlignment="Stretch" />
                         <TextBlock x:Name="PersistentSlotValuesTextBlock" Style="{StaticResource CaptionTextStyle}" TextWrapping="Wrap" IsTextSelectionEnabled="True" />
                         <Grid ColumnSpacing="8">
                             <Grid.ColumnDefinitions>

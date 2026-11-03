@@ -1,3 +1,4 @@
+using IntegratedModManager.Core.Online;
 using IntegratedModManager.Core.Presets;
 
 namespace IntegratedModManager.Core.Tests;
@@ -90,6 +91,52 @@ public sealed class PresetPreviewStoreTests : IDisposable
     [InlineData(6000, 1, 640, 1)]
     public void ThumbnailSize_LimitsTheLongEdgeAndNeverEnlarges(int width, int height, int expectedWidth, int expectedHeight)
         => Assert.Equal((expectedWidth, expectedHeight), PresetPreviewStore.ThumbnailSize(width, height));
+
+    [Fact]
+    public void ClipToGame_ReturnsTheSelectionRelativeToTheGame()
+        => Assert.Equal(new PixelRect(100, 50, 200, 300),
+            PresetPreviewStore.ClipToGame(new PixelRect(1000, 500, 1920, 1080), new PixelRect(1100, 550, 200, 300)));
+
+    [Fact]
+    public void ClipToGame_CutsWhatLiesOutsideTheGame()
+        => Assert.Equal(new PixelRect(0, 0, 100, 80),
+            PresetPreviewStore.ClipToGame(new PixelRect(100, 100, 800, 600), new PixelRect(50, 60, 150, 120)));
+
+    [Theory]
+    [InlineData(2000, 0, 200, 200)]
+    [InlineData(100, 100, 31, 200)]
+    [InlineData(-200, 100, 220, 200)]
+    public void ClipToGame_RefusesSelectionsWithTooLittleOfTheGame(int x, int y, int width, int height)
+        => Assert.Null(PresetPreviewStore.ClipToGame(new PixelRect(0, 0, 800, 600), new PixelRect(x, y, width, height)));
+
+    [Fact]
+    public void Region_RoundTripsAndFollowsTheWindowSize()
+    {
+        CharacterScreenRegion region = PresetPreviewStore.RegionOf(new PixelRect(480, 270, 960, 540), 1920, 1080);
+
+        Assert.Equal(new CharacterScreenRegion(.25, .25, .5, .5), region);
+        Assert.Equal(new PixelRect(480, 270, 960, 540), PresetPreviewStore.RegionToPixels(region, 1920, 1080));
+        Assert.Equal(new PixelRect(640, 360, 1280, 720), PresetPreviewStore.RegionToPixels(region, 2560, 1440));
+    }
+
+    [Theory]
+    [InlineData(-.1, 0, .5, .5)]
+    [InlineData(.8, 0, .5, .5)]
+    [InlineData(0, 0, .01, .5)]
+    [InlineData(double.NaN, 0, .5, .5)]
+    public void RegionToPixels_RefusesDamagedOrTinyRegions(double x, double y, double width, double height)
+        => Assert.Null(PresetPreviewStore.RegionToPixels(new CharacterScreenRegion(x, y, width, height), 1920, 1080));
+
+    [Fact]
+    public void CropBgra_CopiesTheChosenPixels()
+    {
+        byte[] frame = new byte[3 * 3 * 4];
+        for (int i = 0; i < frame.Length; i++) frame[i] = (byte)i;
+
+        byte[] cropped = PresetPreviewStore.CropBgra(frame, 3, new PixelRect(1, 1, 2, 2));
+
+        Assert.Equal([16, 17, 18, 19, 20, 21, 22, 23, 28, 29, 30, 31, 32, 33, 34, 35], cropped);
+    }
 
     [Fact]
     public void IsNearlyBlack_DetectsBlackAndNoiseButNotARealFrame()

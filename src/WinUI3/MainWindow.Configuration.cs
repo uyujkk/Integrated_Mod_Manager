@@ -103,6 +103,9 @@ public sealed partial class MainWindow
             _shortcutHideUnsupported = config?.ShortcutHideUnsupported ?? false;
             _overlaySlotSwitchEnabled = config?.OverlaySlotSwitchEnabled ?? false;
             _capturePresetPreviews = config?.CapturePresetPreviews ?? false;
+            _overlayCompactSlots = config?.OverlayCompactSlots ?? false;
+            _presetPreviewFrameLocked = config?.PresetPreviewFrameLocked ?? false;
+            _presetPreviewDefaultRegion = config?.PresetPreviewDefaultRegion is { IsValid: true } region ? region : null;
             _overlayTextBrush.Color = ParseOverlayTextColor(config?.ShortcutOverlayTextColor);
             _lastModUpdateCheckUtc = TryParseDateTimeOffset(config?.LastModUpdateCheckUtc);
             _latestReleaseTag = config?.LatestReleaseTag;
@@ -257,6 +260,9 @@ public sealed partial class MainWindow
                 ShortcutHideUnsupported = _shortcutHideUnsupported,
                 OverlaySlotSwitchEnabled = _overlaySlotSwitchEnabled,
                 CapturePresetPreviews = _capturePresetPreviews,
+                OverlayCompactSlots = _overlayCompactSlots,
+                PresetPreviewFrameLocked = _presetPreviewFrameLocked,
+                PresetPreviewDefaultRegion = _presetPreviewDefaultRegion,
                 ShortcutOverlayTextColor = OverlayTextColorValue,
                 LastModUpdateCheckUtc = _lastModUpdateCheckUtc?.ToString("O"),
                 LatestReleaseTag = _latestReleaseTag,

@@ -16,6 +16,13 @@ internal static class CharacterScreenCapture
         return panel.Left < left + region.Width * client.Right && panel.Right > left
             && panel.Top < top + region.Height * client.Bottom && panel.Bottom > top;
     }
+    public static IntegratedModManager.Core.Presets.PixelRect? ClientScreenRect(nint window)
+    {
+        var origin = new Point();
+        if (!GetClientRect(window, out var client) || !ClientToScreen(window, ref origin)) return null;
+        return new(origin.X, origin.Y, client.Right, client.Bottom);
+    }
+
     public static CharacterFrame Capture(ShortcutTarget target, bool english = false)
     {
         if (!ShortcutInputService.IsTargetForeground(target)) throw new InvalidOperationException(BetaLocalization.Resolve(english, "请让目标游戏保持前台。", "Keep the selected game in the foreground."));
