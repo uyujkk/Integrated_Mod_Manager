@@ -14,6 +14,8 @@ public sealed class RepositoryEditorResult
 
     public string LauncherPath { get; set; } = string.Empty;
 
+    public string? XxmiImporter { get; set; }
+
     public string OnlineSourceSite { get; set; } = string.Empty;
 
     public string OnlineGameName { get; set; } = string.Empty;

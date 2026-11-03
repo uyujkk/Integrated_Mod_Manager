@@ -169,6 +169,7 @@ public sealed partial class MainWindow
             UseDirectoryLinks = result.UseDirectoryLinks,
             AllowMultipleModsPerCharacter = result.AllowMultipleModsPerCharacter,
             LauncherPath = result.LauncherPath.Trim(),
+            XxmiImporter = result.XxmiImporter,
             OnlineSourceSite = result.OnlineSourceSite.Trim(),
             OnlineGameName = result.OnlineGameName.Trim(),
             OnlineCategoryId = result.OnlineCategoryId.Trim(),
@@ -357,6 +358,7 @@ public sealed partial class MainWindow
         repository.UseDirectoryLinks = result.UseDirectoryLinks;
         repository.AllowMultipleModsPerCharacter = result.AllowMultipleModsPerCharacter;
         repository.LauncherPath = result.LauncherPath.Trim();
+        repository.XxmiImporter = result.XxmiImporter;
         repository.OnlineSourceSite = result.OnlineSourceSite.Trim();
         repository.OnlineGameName = result.OnlineGameName.Trim();
         repository.OnlineCategoryId = result.OnlineCategoryId.Trim();

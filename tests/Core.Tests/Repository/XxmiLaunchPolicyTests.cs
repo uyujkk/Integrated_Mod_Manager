@@ -14,6 +14,15 @@ public sealed class XxmiLaunchPolicyTests
         => Assert.Equal(expected, XxmiLaunchPolicy.ImporterFor(preset));
 
     [Theory]
+    [InlineData(null, "wwmi", "WWMI")]
+    [InlineData("genshin", "ZZMI", "ZZMI")]
+    [InlineData("genshin", null, "GIMI")]
+    [InlineData("genshin", "EFMI", "GIMI")]
+    [InlineData(null, "bogus", null)]
+    public void ImporterFor_PrefersTheRepositorysOwnChoice(string? preset, string? chosen, string? expected)
+        => Assert.Equal(expected, XxmiLaunchPolicy.ImporterFor(preset, chosen));
+
+    [Theory]
     [InlineData(@"C:\Games\XXMI Launcher\Resources\Bin\XXMI Launcher.exe", true)]
     [InlineData("xxmi launcher.exe", true)]
     [InlineData(@"C:\Games\launcher.exe", false)]

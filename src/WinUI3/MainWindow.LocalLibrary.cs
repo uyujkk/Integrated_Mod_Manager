@@ -420,6 +420,24 @@ public sealed partial class MainWindow
         e.Handled = true;
     }
 
+    // Removes the deployment links first: deleting only the source would leave links that
+    // break conflict checks for every later installation.
+    private void RemoveModAndItsLinks(SecondLevelFolderItem item, IReadOnlyList<string> deployedLinks)
+    {
+        foreach (string link in deployedLinks)
+        {
+            if (string.Equals(DirectoryLinkDeployment.TryGetStoredTarget(link), Path.GetFullPath(item.Path).TrimEnd(Path.DirectorySeparatorChar),
+                    StringComparison.OrdinalIgnoreCase))
+            {
+                DirectoryLinkDeployment.RemoveLink(link);
+            }
+        }
+
+        _trackedModOrigins.Remove(item.Path);
+        _modLinks.Remove(item.Path);
+        DeleteDirectoryTreeSafely(item.Path);
+    }
+
     private async void OnDeleteSecondLevelClicked(object sender, RoutedEventArgs e)
     {
         try
@@ -461,20 +479,7 @@ public sealed partial class MainWindow
             try
             {
                 string selectedFirstLevelPath = (_characters.Selected)?.Path ?? string.Empty;
-                // Remove the deployment links first: deleting only the source would leave
-                // links that break conflict checks for every later installation.
-                foreach (string link in deployedLinks)
-                {
-                    if (string.Equals(DirectoryLinkDeployment.TryGetStoredTarget(link), Path.GetFullPath(item.Path).TrimEnd(Path.DirectorySeparatorChar),
-                            StringComparison.OrdinalIgnoreCase))
-                    {
-                        DirectoryLinkDeployment.RemoveLink(link);
-                    }
-                }
-
-                _trackedModOrigins.Remove(item.Path);
-                _modLinks.Remove(item.Path);
-                DeleteDirectoryTreeSafely(item.Path);
+                RemoveModAndItsLinks(item, deployedLinks);
                 SaveConfig();
                 await RefreshListsAsync();
                 SelectFirstLevelByPath(selectedFirstLevelPath);

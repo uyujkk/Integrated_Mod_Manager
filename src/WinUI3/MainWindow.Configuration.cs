@@ -107,6 +107,8 @@ public sealed partial class MainWindow
             _capturePresetPreviews = config?.CapturePresetPreviews ?? false;
             _overlayCompactSlots = config?.OverlayCompactSlots ?? false;
             _overlayCompactView = config?.OverlayCompactView ?? false;
+            _keepMenuStateVariables = config?.KeepMenuStateVariables ?? false;
+            _loaderAutoSaveOriginals = new Dictionary<string, int>(config?.LoaderAutoSaveOriginals ?? [], StringComparer.OrdinalIgnoreCase);
             _presetPreviewFrameLocked = config?.PresetPreviewFrameLocked ?? false;
             _presetPreviewDefaultRegion = config?.PresetPreviewDefaultRegion is { IsValid: true } region ? region : null;
             _overlayTextBrush.Color = ParseOverlayTextColor(config?.ShortcutOverlayTextColor);
@@ -267,6 +269,8 @@ public sealed partial class MainWindow
                 CapturePresetPreviews = _capturePresetPreviews,
                 OverlayCompactSlots = _overlayCompactSlots,
                 OverlayCompactView = _overlayCompactView,
+                KeepMenuStateVariables = _keepMenuStateVariables,
+                LoaderAutoSaveOriginals = _loaderAutoSaveOriginals.Count == 0 ? null : new Dictionary<string, int>(_loaderAutoSaveOriginals),
                 PresetPreviewFrameLocked = _presetPreviewFrameLocked,
                 PresetPreviewDefaultRegion = _presetPreviewDefaultRegion,
                 ShortcutOverlayTextColor = OverlayTextColorValue,

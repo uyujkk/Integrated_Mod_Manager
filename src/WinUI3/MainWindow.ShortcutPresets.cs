@@ -82,9 +82,10 @@ public sealed partial class MainWindow
             // write fail rather than quietly producing a partial preset or capturing defaults.
             var states = await Task.Run(() => ModPersistentPresetEngine.CaptureCombination(
                 [(modPath, ModDeploymentLayout.DeployedName(modPath))], userIni));
-            var values = states.Single().Values;
-            if (values.Count == 0)
+            var captured = states.Single().Values;
+            if (captured.Count == 0)
                 throw new InvalidDataException(T("PersistentSlots.NoNumericPersistentValuesMatchedThis"));
+            var (values, menuStateLeft) = FilterSlotValues(captured);
             if (_onlineWindowClosed) return;
             var slot = new ModPersistentSlot
             {
@@ -97,7 +98,8 @@ public sealed partial class MainWindow
             try { SaveShellConfig(throwOnError: true); }
             catch { _modPersistentSlots.Remove(slot); DeletePresetPreview(slot.PreviewFile); throw; }
             _selectedModPersistentSlotId = slot.Id;
-            _shortcutStatus.Text = T("ShortcutPanel.SinglePresetSaved", name, values.Count) + PresetPreviewNote(slot.PreviewFile);
+            _shortcutStatus.Text = T("ShortcutPanel.SinglePresetSaved", name, values.Count) + PresetPreviewNote(slot.PreviewFile)
+                + (menuStateLeft > 0 ? T("SlotCapture.MenuStateLeftOut", menuStateLeft) : string.Empty);
         }
         catch (Exception ex)
         {
