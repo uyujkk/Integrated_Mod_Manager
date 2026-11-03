@@ -1,17 +1,22 @@
 namespace IntegratedModManager.Core.Presets;
 
 /// <summary>
-/// A Mod that is new to a repository gets one slot holding its declared defaults. The repository
-/// remembers which Mods it has seen, so a deleted default slot does not come back, and its first scan
-/// only records the Mods it already had.
+/// Every Mod gets one slot holding its declared defaults, the only way back once d3dx_user.ini holds
+/// other values. A repository is back-filled once: each Mod without a default slot gets one, including
+/// Mods that already had other slots. After that only Mods it has never seen do, so a default slot the
+/// user deleted does not come back.
 /// </summary>
 public static class DefaultSlotPolicy
 {
-    // Mods (paths relative to the repository) seen for the first time. Known is null on a repository's first scan.
-    public static IReadOnlyList<string> NewMods(IEnumerable<string> current, IReadOnlyCollection<string>? known)
-        => known is null ? []
-            : current.Where(mod => !known.Contains(mod, StringComparer.OrdinalIgnoreCase))
-                .Distinct(StringComparer.OrdinalIgnoreCase).ToArray();
+    // Mods (paths relative to the repository) to give a default slot now. Known is null before a repository's first scan.
+    public static IReadOnlyList<string> ModsNeedingDefault(IEnumerable<string> current, IReadOnlyCollection<string>? known,
+        bool backfilled, IEnumerable<string> withDefault)
+    {
+        var have = new HashSet<string>(withDefault, StringComparer.OrdinalIgnoreCase);
+        return current.Where(mod => !have.Contains(mod)
+                && (!backfilled || known is null || !known.Contains(mod, StringComparer.OrdinalIgnoreCase)))
+            .Distinct(StringComparer.OrdinalIgnoreCase).ToArray();
+    }
 
     // An automatic default slot follows the UI language while it still has one of the default names;
     // returns the new name, or null to keep it (renamed by the user, already right, or taken by another slot).

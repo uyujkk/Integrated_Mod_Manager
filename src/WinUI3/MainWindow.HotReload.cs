@@ -204,7 +204,9 @@ public sealed partial class MainWindow
             string deployedName = ModDeploymentLayout.DeployedName(modPath);
             if (string.IsNullOrWhiteSpace(repository.TargetPath) || !Directory.Exists(ModDeploymentLayout.DeployedPath(repository.TargetPath, modPath)))
                 throw new InvalidDataException(T("PersistentSlots.DeployThisModUnderItsMatching"));
-            ModPersistentRuntimeRestorePlan plan = await Task.Run(() => ModPersistentPresetEngine.PlanRuntimeRestore(modPath, deployedName, userIni, slot.Values));
+            IReadOnlyList<ModPersistentValue> values = await Task.Run(() => ValuesToRestore(slot, modPath));
+            ModPersistentRuntimeRestorePlan plan = await Task.Run(() => ModPersistentPresetEngine.PlanRuntimeRestore(modPath, deployedName, userIni, values));
+            slot.Values = [.. values];
             await Task.Run(() => ModPersistentPresetEngine.ApplyRuntimeRestore(plan));
             slot.ActivatedAtUtc = DateTimeOffset.UtcNow;
             SaveShellConfig();

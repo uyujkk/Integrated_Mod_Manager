@@ -30,6 +30,7 @@ Updated 2026-11-02 against main after v4.6.1. This brings the earlier plans and 
 | 4 | G2、G3 | 已写好，待合并（分支 `feature/first-run-preset`）；G3 待实机启动验证，自定义仓库选导入器未做 |
 | 5 | B3、B4 | 背景模式、鼠标穿透、HUD、外观预设；待生效队列 |
 | 6 | F 其余 | F1 压缩、F2 跳过机制和键名测试、F4 Windows 版本实测；Endfield 测试开着游戏运行会失败，要与真实启动会话隔离 |
+| 6a | 预设与 Mod 原始默认值 | 已补建“默认”槽位并让它跟随 Mod 更新（分支 `feature/default-slot-backfill`）；“清除加载器保存的值”未做 |
 | 7 | C、D | C1、C2、C4–C6；语言文件合并、快捷键页 ViewModel、`async void` 等清理 |
 | 搁置 | #15、C3、#9、E | 等转储或依赖项 |
 

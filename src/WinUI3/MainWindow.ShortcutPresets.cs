@@ -91,6 +91,7 @@ public sealed partial class MainWindow
                 RepositoryId = repository.Id, ModRelativePath = relative, Name = name,
                 Values = [.. values], ActivatedAtUtc = DateTimeOffset.UtcNow
             };
+            await EnsureDefaultSlotAsync(repository, modPath, relative);
             slot.PreviewFile = await StorePresetPreviewAsync(repository.Id, slot.Id, CropToDefaultRegion(preview));
             _modPersistentSlots.Add(slot);
             try { SaveShellConfig(throwOnError: true); }

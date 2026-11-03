@@ -144,6 +144,8 @@ public sealed partial class MainWindow
                     && slot.Values is { Count: > 0 }));
             }
             _defaultSlotSeeds.Clear();
+            _defaultSlotsBackfilled.Clear();
+            _defaultSlotsBackfilled.UnionWith(config?.DefaultSlotsBackfilled ?? []);
             foreach ((string repositoryId, List<string> mods) in config?.DefaultSlotSeeds ?? [])
             {
                 _defaultSlotSeeds[repositoryId] = new HashSet<string>(mods ?? [], StringComparer.OrdinalIgnoreCase);
@@ -289,6 +291,7 @@ public sealed partial class MainWindow
                 ConfigurationProfiles = [.. _configurationProfiles],
                 ModPersistentSlots = [.. _modPersistentSlots],
                 DefaultSlotSeeds = _defaultSlotSeeds.ToDictionary(pair => pair.Key, pair => pair.Value.Order(StringComparer.OrdinalIgnoreCase).ToList()),
+                DefaultSlotsBackfilled = [.. _defaultSlotsBackfilled.Order(StringComparer.Ordinal)],
                 WindowX = _savedWindowX,
                 WindowY = _savedWindowY,
                 WindowWidth = _savedWindowWidth,
