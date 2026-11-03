@@ -235,14 +235,9 @@ public sealed class BandizipArchiveExtractorTests : IDisposable
         Assert.True(File.Exists(_archivePath));
     }
 
-    [Fact]
+    [WindowsFact]
     public void Extract_PreservesTimeoutWhenAStillRunningReaderPreventsCleanup()
     {
-        if (!OperatingSystem.IsWindows())
-        {
-            return;
-        }
-
         string? stagedArchive = null;
         FileStream? remainingReader = null;
         var failure = new TimeoutException("Termination of the archive tool could not be confirmed.");

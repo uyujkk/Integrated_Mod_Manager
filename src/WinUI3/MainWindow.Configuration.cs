@@ -106,6 +106,7 @@ public sealed partial class MainWindow
             _overlaySlotSwitchEnabled = config?.OverlaySlotSwitchEnabled ?? false;
             _capturePresetPreviews = config?.CapturePresetPreviews ?? false;
             _overlayCompactSlots = config?.OverlayCompactSlots ?? false;
+            _overlayCompactView = config?.OverlayCompactView ?? false;
             _presetPreviewFrameLocked = config?.PresetPreviewFrameLocked ?? false;
             _presetPreviewDefaultRegion = config?.PresetPreviewDefaultRegion is { IsValid: true } region ? region : null;
             _overlayTextBrush.Color = ParseOverlayTextColor(config?.ShortcutOverlayTextColor);
@@ -263,6 +264,7 @@ public sealed partial class MainWindow
                 OverlaySlotSwitchEnabled = _overlaySlotSwitchEnabled,
                 CapturePresetPreviews = _capturePresetPreviews,
                 OverlayCompactSlots = _overlayCompactSlots,
+                OverlayCompactView = _overlayCompactView,
                 PresetPreviewFrameLocked = _presetPreviewFrameLocked,
                 PresetPreviewDefaultRegion = _presetPreviewDefaultRegion,
                 ShortcutOverlayTextColor = OverlayTextColorValue,

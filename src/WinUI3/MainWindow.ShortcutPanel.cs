@@ -312,9 +312,11 @@ public sealed partial class MainWindow
         overlay.Children.Add(_shortcutHotkeyStatus);
         UpdateShortcutHotkeyStatus();
         overlay.Children.Add(ShortcutGroupLabel(T("ShortcutPanel.AppearanceGroup")));
+        overlay.Children.Add(CreateOverlayAppearancePresetRow());
         _shortcutOpacitySlider = CreateOverlayOpacitySlider(T("ShortcutPanel.OverlayOpacity"));
         overlay.Children.Add(_shortcutOpacitySlider);
-        overlay.Children.Add(CreateOverlayElementOpacitySlider());
+        _overlayElementSlider = CreateOverlayElementOpacitySlider();
+        overlay.Children.Add(_overlayElementSlider);
         overlay.Children.Add(BuildOverlayTextColorButton());
         overlay.Children.Add(ShortcutGroupLabel(T("ShortcutPanel.BehaviorGroup")));
         AddOverlaySlotSwitchSetting(overlay);
@@ -840,7 +842,7 @@ public sealed partial class MainWindow
                 {
                     // A language rebuild may already have opened a replacement overlay.
                     if (!ReferenceEquals(_shortcutOverlay, overlay)) return;
-                    _shortcutOverlay = null; _shortcutOverlayVisible = false;
+                    _shortcutOverlay = null; _shortcutOverlayVisible = false; _overlayClickThrough = false;
                     _overlayButtonList = null; _overlayScroll = null; _overlayBindings = []; _overlayOpacitySlider = null;
                 };
                 _shortcutOverlay.SetBackgroundOpacity(_shortcutOverlayOpacity);
@@ -883,7 +885,8 @@ public sealed partial class MainWindow
         _overlayTargetText = FixedStatusText(lines: 1, fontSize: 11);
         _overlayStatusText = FixedStatusText(lines: 2, fontSize: 11);
         _overlayTargetText.Foreground = _overlayStatusText.Foreground = _overlayTextBrush;
-        panel.Children.Add(_overlayModPicker); panel.Children.Add(OverlayLabel(_overlayTargetText));
+        var targetRow = OverlayLabel(_overlayTargetText);
+        panel.Children.Add(_overlayModPicker); panel.Children.Add(CreateOverlayViewRow()); panel.Children.Add(targetRow);
         var actions = new Grid { ColumnSpacing = 6 };
         for (int i = 0; i < 3; i++) actions.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(1, GridUnitType.Star) });
         _overlayInputToggle = new ToggleButton { HorizontalAlignment = HorizontalAlignment.Stretch, Foreground = _overlayTextBrush };
@@ -925,7 +928,10 @@ public sealed partial class MainWindow
         opacityRow.Children.Add(OverlayLabel(opacityLabel)); opacityRow.Children.Add(_overlayOpacitySlider);
         panel.Children.Add(opacityRow);
         AddOverlaySlotSection(panel);
-        panel.Children.Add(OverlayLabel(_overlayStatusText));
+        var statusRow = OverlayLabel(_overlayStatusText);
+        panel.Children.Add(statusRow);
+        _overlayDetailRows = [targetRow, actions, secondaryActions, opacityRow, statusRow];
+        ApplyOverlayCompactView();
         _overlayButtonList = new StackPanel { Spacing = 8 };
         _overlayScroll = new ScrollViewer { Content = _overlayButtonList, VerticalScrollBarVisibility = ScrollBarVisibility.Auto,
             HorizontalScrollBarVisibility = ScrollBarVisibility.Disabled };
@@ -1157,6 +1163,12 @@ public sealed partial class MainWindow
         try
         {
             if (_onlineWindowClosed || _savingOverlaySinglePreset) return;
+            // The hotkey is the only way back once the overlay ignores the mouse: first press restores it.
+            if (_overlayClickThrough)
+            {
+                SetOverlayClickThrough(false);
+                return;
+            }
             if (_shortcutOverlayVisible)
             {
                 _shortcutOverlay?.AppWindow.Hide();

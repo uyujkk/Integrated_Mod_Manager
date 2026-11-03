@@ -4,14 +4,9 @@ namespace IntegratedModManager.Core.Tests;
 
 public sealed class DirectoryLinkDeploymentTests
 {
-    [Fact]
+    [WindowsFact]
     public void Junction_WriteThroughUpdatesRepositoryAndRemovalKeepsTarget()
     {
-        if (!OperatingSystem.IsWindows())
-        {
-            return;
-        }
-
         using var directory = new TemporaryDirectory();
         string repositoryMod = Path.Combine(directory.Path, "repository", "ExampleMod");
         string loaderMods = Path.Combine(directory.Path, "loader", "Mods");
@@ -34,14 +29,9 @@ public sealed class DirectoryLinkDeploymentTests
         Assert.Equal("state=2", File.ReadAllText(Path.Combine(repositoryMod, "settings.ini")));
     }
 
-    [Fact]
+    [WindowsFact]
     public void CreateJunction_RejectsExistingDestination()
     {
-        if (!OperatingSystem.IsWindows())
-        {
-            return;
-        }
-
         using var directory = new TemporaryDirectory();
         string target = Path.Combine(directory.Path, "target");
         string junction = Path.Combine(directory.Path, "junction");
@@ -51,14 +41,9 @@ public sealed class DirectoryLinkDeploymentTests
         Assert.Throws<IOException>(() => DirectoryLinkDeployment.CreateJunction(junction, target));
     }
 
-    [Fact]
+    [WindowsFact]
     public void Junction_CanBeMovedForTransactionalRollbackWithoutMovingTarget()
     {
-        if (!OperatingSystem.IsWindows())
-        {
-            return;
-        }
-
         using var directory = new TemporaryDirectory();
         string target = Path.Combine(directory.Path, "repository", "ModA");
         string loader = Path.Combine(directory.Path, "loader");
@@ -102,14 +87,9 @@ public sealed class DirectoryLinkDeploymentTests
         DirectoryLinkDeployment.RemoveLink(Path.Combine(directory.Path, "missing-link"));
     }
 
-    [Fact]
+    [WindowsFact]
     public void CreateJunction_RejectsPathInsideTarget()
     {
-        if (!OperatingSystem.IsWindows())
-        {
-            return;
-        }
-
         using var directory = new TemporaryDirectory();
         string target = Path.Combine(directory.Path, "target");
         Directory.CreateDirectory(target);
@@ -118,14 +98,9 @@ public sealed class DirectoryLinkDeploymentTests
             DirectoryLinkDeployment.CreateJunction(Path.Combine(target, "loop"), target));
     }
 
-    [Fact]
+    [WindowsFact]
     public void FindSiblingLinksToReplace_ReturnsOnlyLinkedModForSameCharacter()
     {
-        if (!OperatingSystem.IsWindows())
-        {
-            return;
-        }
-
         using var directory = new TemporaryDirectory();
         string repository = Path.Combine(directory.Path, "repository");
         string modA = Path.Combine(repository, "CharacterA", "ModA");
@@ -151,14 +126,9 @@ public sealed class DirectoryLinkDeploymentTests
         DirectoryLinkDeployment.RemoveLink(otherCharacterLink);
     }
 
-    [Fact]
+    [WindowsFact]
     public void FindSiblingLinksToReplace_IgnoresNormalCopiedSibling()
     {
-        if (!OperatingSystem.IsWindows())
-        {
-            return;
-        }
-
         using var directory = new TemporaryDirectory();
         string repository = Path.Combine(directory.Path, "repository");
         string modA = Path.Combine(repository, "CharacterA", "ModA");
@@ -244,14 +214,9 @@ public sealed class DirectoryLinkDeploymentTests
             DirectoryLinkDeployment.FindSiblingLinksToReplace(source, repository, loader));
     }
 
-    [Fact]
+    [WindowsFact]
     public void FindSiblingLinksToReplace_IgnoresJunctionWithUnexpectedTarget()
     {
-        if (!OperatingSystem.IsWindows())
-        {
-            return;
-        }
-
         using var directory = new TemporaryDirectory();
         string repository = Path.Combine(directory.Path, "repository");
         string modA = Path.Combine(repository, "CharacterA", "ModA");
@@ -271,14 +236,9 @@ public sealed class DirectoryLinkDeploymentTests
         DirectoryLinkDeployment.RemoveLink(deployedPath);
     }
 
-    [Fact]
+    [WindowsFact]
     public void BrokenLinksAreFoundAndOnlyThoseLinksAreRemoved()
     {
-        if (!OperatingSystem.IsWindows())
-        {
-            return;
-        }
-
         using var directory = new TemporaryDirectory();
         string deleted = Path.Combine(directory.Path, "仓库", "角色 A", "旧 Mod");
         string kept = Path.Combine(directory.Path, "仓库", "角色 A", "旧 Mod v2");
@@ -312,14 +272,9 @@ public sealed class DirectoryLinkDeploymentTests
         DirectoryLinkDeployment.RemoveLink(goodLink);
     }
 
-    [Fact]
+    [WindowsFact]
     public void BrokenLinkCleanupKeepsALinkWhoseSourceCameBack()
     {
-        if (!OperatingSystem.IsWindows())
-        {
-            return;
-        }
-
         using var directory = new TemporaryDirectory();
         string source = Path.Combine(directory.Path, "repository", "ModA");
         string link = Path.Combine(directory.Path, "loader", "ModA");
@@ -336,14 +291,9 @@ public sealed class DirectoryLinkDeploymentTests
         DirectoryLinkDeployment.RemoveLink(link);
     }
 
-    [Fact]
+    [WindowsFact]
     public void LinksTargetingASourceAreMatchedByTargetNeverBySimilarName()
     {
-        if (!OperatingSystem.IsWindows())
-        {
-            return;
-        }
-
         using var directory = new TemporaryDirectory();
         string source = Path.Combine(directory.Path, "repository", "Char", "Skin");
         string similar = Path.Combine(directory.Path, "repository", "Char", "Skin v2");
