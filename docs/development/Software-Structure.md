@@ -12,7 +12,8 @@ This document describes how Integrated Mod Manager is put together: its parts, h
 | --- | --- |
 | 主程序 / Application | C# 12、.NET 8、WinUI 3（Windows App SDK 1.7，自包含 / self-contained），`net8.0-windows10.0.19041.0` |
 | 核心库与数据 / Core and data | .NET 8 类库 / class libraries；SQLite（`Microsoft.Data.Sqlite` 8.0） |
-| 启动器与更新器 / Launcher and updater | .NET Framework 4.x，由 `csc.exe` 编译的单文件程序 / single-file programs compiled with `csc.exe` |
+| 启动器 / Launcher | .NET Framework 4.x，由 `csc.exe` 编译的单文件程序 / a single-file program compiled with `csc.exe` |
+| 更新器 / Updater | .NET 8，依赖框架的单文件程序（`dotnet publish`），不用 Windows Forms，只需要主程序同样需要的 .NET 8 运行时 / a framework-dependent .NET 8 single file without Windows Forms, needing only the runtime the app needs |
 | 测试 / Tests | xUnit、coverlet 覆盖率 / coverage、Roslyn（文案检查 / UI text checks） |
 | 构建与 CI / Build and CI | MSBuild、PowerShell 脚本 / scripts、GitHub Actions（`windows-latest`） |
 
@@ -27,7 +28,7 @@ src/
   IntegratedModManager.Data/              SQLite 缓存与索引 / SQLite caches and index
   IntegratedModManager.EndfieldLaunch/    内置终末地启动（AGPL-3.0-only）/ integrated Endfield launch
   IntegratedModManager.UpdateAgent.Core/  把更新器编译成可测试的程序集 / updater as a testable assembly
-  Launcher/                               WinUILauncher.cs、LocalUpdateAgent.cs
+  Launcher/                               WinUILauncher.cs；LocalUpdateAgent.cs、.csproj、.manifest（更新器 / updater）
   WinUI3/                                 主程序 ModFolderCopier.WinUI / the WinUI application
 tests/
   Core.Tests/  DataStore.Tests/  UpdateAgent.Tests/  EndfieldLaunch.Tests/
@@ -66,6 +67,7 @@ flowchart LR
 | `IntegratedModManager.Core` | 不依赖控件的全部业务逻辑：解压、部署、预设、在线数据、快捷键、更新等，几乎全部有单元测试。All business logic that needs no controls; nearly all of it is unit tested. |
 | `IntegratedModManager.Data` | `AppDataStore` 管理 SQLite 数据库；在线元数据缓存与仓库索引的适配器。SQLite store plus adapters for online metadata and the repository index. |
 | `IntegratedModManager.EndfieldLaunch` | 以官方签名的 `Games.exe` 为父进程启动终末地、与 XXMI/EFMI 集成、保存启动设置与恢复点。唯一的 AGPL 组件。Launches Endfield under the signed `Games.exe`, integrates with XXMI/EFMI, stores launch settings and restore points. The only AGPL component. |
+| `Launcher/LocalUpdateAgent.csproj` | 把更新器发布成单个 `LocalUpdateAgent.exe`。4.7.0 之前它是用 `csc.exe` 编译的 .NET Framework 程序，被几家机器学习扫描引擎误报（GameBanana 因此暂扣了上传）；改用 .NET 8 构建后基本不再报。Publishes the updater as one `LocalUpdateAgent.exe`; until 4.7.0 it was a .NET Framework program compiled with `csc.exe` that several machine-learning scanners flagged, which the .NET 8 build mostly avoids. |
 | `IntegratedModManager.UpdateAgent.Core` | 不含自己的源码，只把 `src/Launcher/LocalUpdateAgent.cs` 编译成程序集供测试使用。Has no sources of its own; compiles the updater source for tests. |
 | `WinUI3` | 主程序：窗口、页面、置顶浮窗、按键发送、本地化文案。依赖 Core、Data、EndfieldLaunch。The application: window, pages, overlay, key input, localized text. |
 
@@ -76,7 +78,7 @@ flowchart LR
 ```text
 IntegratedModManager.exe        启动器（.NET Framework）/ launcher
 ModFolderCopier.exe             兼容入口（v3.8.5 起的原位更新）/ compatibility entry for in-place updates from v3.8.5
-LocalUpdateAgent.exe            更新器（.NET Framework）/ updater
+LocalUpdateAgent.exe            更新器（.NET 8 单文件）/ updater (.NET 8 single file)
 LICENSE, LICENSE-AGPL-3.0.txt, LICENSING.md, README.md, 开始使用.md, PACKAGE-INFO.json, 验证状态.md
 docs/                           手册、发布说明、截图、验证记录 / manuals, release notes, screenshots, verification
 WinUI3/

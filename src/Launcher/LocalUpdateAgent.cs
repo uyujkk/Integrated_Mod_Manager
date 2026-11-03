@@ -6,25 +6,27 @@ using System.IO.Compression;
 using System.Linq;
 using System.Reflection;
 using System.Threading;
-using System.Windows.Forms;
+using System.Runtime.InteropServices;
 
 [assembly: AssemblyTitle("Integrated Mod Manager Local Update Agent")]
+[assembly: AssemblyDescription("Installs a downloaded Integrated Mod Manager release after the user confirms the update.")]
+[assembly: AssemblyCompany("uyujkk")]
 [assembly: AssemblyProduct("Integrated Mod Manager")]
 [assembly: AssemblyCopyright("Copyright (c) 2026 uyujkk")]
 [assembly: AssemblyVersion("4.7.0.0")]
 [assembly: AssemblyFileVersion("4.7.0.0")]
 [assembly: AssemblyInformationalVersion("4.7.0")]
-#if !UPDATE_AGENT_TESTS
-// csc.exe emits no target framework, so .NET Framework applied legacy path handling (set before Main
-// runs) and rejected both long paths and \\?\ prefixes (issue #16). 4.6.2 defaults accept \\?\ paths.
-[assembly: System.Runtime.Versioning.TargetFramework(".NETFramework,Version=v4.6.2", FrameworkDisplayName = ".NET Framework 4.6.2")]
-#endif
 #if UPDATE_AGENT_TESTS
 [assembly: System.Runtime.CompilerServices.InternalsVisibleTo("IntegratedModManager.UpdateAgent.Tests")]
 #endif
 
 internal static class LocalUpdateAgent
 {
+    private const uint MessageBoxIconError = 0x10;
+
+    [DllImport("user32.dll", CharSet = CharSet.Unicode)]
+    private static extern int MessageBoxW(IntPtr owner, string text, string caption, uint type);
+
     private const string ManagedFilesManifestName = ".managed-files.txt";
     private static readonly string[] PreservedRelativePaths =
     {
@@ -47,6 +49,9 @@ internal static class LocalUpdateAgent
 
 #if !UPDATE_AGENT_TESTS
     [STAThread]
+    // A plain Windows error box, so the updater needs no Windows Forms and runs on the base .NET runtime.
+    private static void ShowError(string text, string caption) => MessageBoxW(IntPtr.Zero, text, caption, MessageBoxIconError);
+
     private static int Main(string[] args)
     {
         Dictionary<string, string> options = ParseArguments(args);
@@ -146,13 +151,11 @@ internal static class LocalUpdateAgent
                 // Reporting the failure must not hide it: the update has already been rolled back.
             }
 
-            MessageBox.Show(
+            ShowError(
                 english
                     ? "The local update failed. The previous version and configuration were restored.\n\n" + ex.Message
                     : "本地更新失败，已恢复上一版本和现有配置。\n\n" + ex.Message,
-                english ? "Update Failed" : "更新失败",
-                MessageBoxButtons.OK,
-                MessageBoxIcon.Error);
+                english ? "Update Failed" : "更新失败");
             return 1;
         }
         finally

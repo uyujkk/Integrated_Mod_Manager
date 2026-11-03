@@ -2,7 +2,6 @@
   <PropertyGroup>
     <TargetFramework>net8.0-windows</TargetFramework>
     <Nullable>disable</Nullable>
-    <UseWindowsForms>true</UseWindowsForms>
     <GenerateAssemblyInfo>false</GenerateAssemblyInfo>
     <DefineConstants>$(DefineConstants);UPDATE_AGENT_TESTS</DefineConstants>
     <AssemblyName>IntegratedModManager.UpdateAgent.Core</AssemblyName>
