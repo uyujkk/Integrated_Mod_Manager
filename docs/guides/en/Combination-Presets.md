@@ -1,6 +1,6 @@
 # Combination Presets and Bundles
 
-> For 4.6.1. [中文](../zh-CN/组合预设.md) · [User guide](./User-Guide.md)
+> For 4.7.0. [中文](../zh-CN/组合预设.md) · [User guide](./User-Guide.md)
 
 A combination preset records **which Mods are enabled** in the current repository, optionally with those Mods' values from `d3dx_user.ini`. Restoring brings back the Mod set first, then writes the values. A bundle exports a preset together with its Mod files so it can be installed in another repository.
 
@@ -19,6 +19,8 @@ Switch to **Presets** at the top of Repositories.
 
 Turn state capture off to save only the enabled set. The left panel lists this repository's presets; the middle shows members and value counts.
 
+**Batch** above the Mod list adds several Mods to a preset at once, and can export the selected Mods as a bundle (Mod files only). A selected preset can also have a picture: **Set preview** captures the game, uses an image file or clears it.
+
 **Saving in game:** the overlay's **Save preset** sends F10 to the game window first and saves only after the loader has written (two matching reads); if nothing is written within 5 seconds, it asks whether to save from the existing file or cancel. Without a `d3dx_user.ini`, it saves the Mod set alone. See [Shortcut panel and overlay](./Shortcut-Panel.md).
 
 ## Restoring a combination
@@ -30,6 +32,16 @@ Turn state capture off to save only the enabled set. The left panel lists this r
 - With directory links, if the preset enables several Mods of a single-selection character, you are asked first.
 - Unknown target folders, namespace conflicts, duplicate deployment names or concurrent changes stop the restore and leave things as they were.
 - Restoring never rewrites a Mod's original INI and never sends keys to the game.
+
+## Sharing a preset without Mod files
+
+**Share preset** writes the selected preset to a small `.imm-share.json` file: the Mods it uses (by their path in the repository, such as `Character/Mod`) and, if the preset saved them, their values. It contains no Mod files.
+
+- **Import shared preset** first shows how many of those Mods this repository has, which ones are missing, and a warning when the preset came from another game. Missing Mods are listed, never downloaded.
+- Importing creates a new combination preset with the Mods you have, plus a state slot with the same name for each of those Mods that has values. An existing slot with that name is never replaced. Nothing is deployed until you restore the preset.
+- Every path, variable and value is checked as untrusted input. Files above 4 MB are refused, and a preset that would be larger is not exported.
+
+To give someone the Mod files as well, export a bundle instead.
 
 ## Bundles
 

@@ -1,6 +1,6 @@
 # Integrated Mod Manager User Guide
 
-> For 4.6.1 on Windows 10/11 x64. Tool author: uyujkk.
+> For 4.7.0 on Windows 10/11 x64. Tool author: uyujkk.
 >
 > This is an unofficial fan-made tool. It is not affiliated with, authorized, endorsed, or sponsored by XXMI, any game publisher, or related developers.
 
@@ -44,6 +44,8 @@ On wide windows, **Collapse** at the foot of the navigation turns it into an ico
 3. Keep `IntegratedModManager.exe`, `LocalUpdateAgent.exe`, the compatibility entry `ModFolderCopier.exe` and the `WinUI3` folder together.
 4. Run `IntegratedModManager.exe`.
 
+On a first install the app picks Chinese or English from the Windows display language and asks which game's Mods you will manage; the choice fills in the default repository's online category and wiki. **Set up later** leaves the repository without a game, and you can choose one on the Dashboard at any time. Upgrades keep your language and repositories and don't ask.
+
 The executable is not commercially code-signed, so SmartScreen may report an unknown publisher. Download only from this project's Releases page and do not disable Microsoft Defender to run it.
 
 ### 2.3 Upgrading
@@ -70,6 +72,7 @@ Mod Storage Folder
 - The target folder is usually the `Mods` directory read by XXMI or the game.
 - On a dashboard repository card, click **Switch to this repository**, or **Manage** to open its Mods; the card's **More actions** edit the repository, open the game Wiki or delete it (the last repository can't be deleted). The current-repository strip at the top also switches, edits and opens folders.
 - The **New repository** menu offers game presets (Endfield, Zenless Zone Zero, Genshin Impact, Honkai: Star Rail) or a blank repository.
+- The repository editor's **XXMI importer** decides how **Run Launcher** starts the game through XXMI: **Automatic (by game)** uses GIMI, SRMI or ZZMI for Genshin Impact, Honkai: Star Rail and Zenless Zone Zero; you can also pick GIMI, SRMI, ZZMI, WWMI or HIMI yourself (see 4.8).
 
 ## 4. Local Mod management
 
@@ -101,7 +104,8 @@ While a repository isn't set up, the Repositories page shows a **Get started** c
 - Each Mod row shows a thumbnail, the name, tags, the number of key bindings, size and deploy state. **All Mods / Deployed only / Not deployed** above the list filter by deploy state; the search box filters by name.
 - Single-click only selects a Mod and refreshes its preview, information, shortcuts and deployment state. Wide windows show details inline; narrow windows use Details. When a search or filter hides the selected Mod, the first visible Mod is selected instead.
 - Double-click a Mod or use the deployment button at the bottom of Details to toggle it: a missing target folder is deployed, an existing same-named folder is removed. When deploying replaces another Mod of the same character, the hint at the bottom of Details names it.
-- Right-click a Mod to deploy or remove it, open its folder, edit tags or delete it. Deleting removes the source Mod from the library after a confirmation.
+- Right-click a Mod to deploy or remove it, open its folder, edit tags or delete it. Deleting removes the source Mod from the library after a confirmation, together with its links in the loader folder; when those links can't be checked, the Mod is not deleted and the dialog says why.
+- **Batch** above the Mod list acts on several Mods at once: add them to a combination preset, copy them to a folder, export them as a combination bundle (Mod files only, no values) or delete them. Batch delete is permanent too, and keeps any Mod whose links can't be checked.
 - When the character has no Mods yet, the list says why and offers Import, **Find online** and **Adopt an existing Mod folder**.
 - Deploy, remove and profile changes create transactional backups and roll back on failure. The status bar shows whether the deploy target is connected.
 
@@ -142,17 +146,25 @@ The information table below the preview shows:
 
 Choose a launcher executable and use **Run Launcher**; its folder is used as the working directory, which suits XXMI Launcher and similar tools. Endfield repositories can use the integrated launch instead; see [Endfield launch](./Endfield-Launch.md).
 
+**Other games through XXMI.** When the launcher is `XXMI Launcher.exe` and the repository has an XXMI importer (automatic for Genshin Impact, Honkai: Star Rail and Zenless Zone Zero, or chosen in the repository editor), **Run Launcher** asks XXMI to start the game with that importer, without showing XXMI's own window. The manager first reads XXMI's configuration: if the importer isn't enabled or has no game folder it says so and stops, and if XXMI is already running it asks you to exit XXMI first. A configuration it can't read is left for XXMI to report.
+
 ## 5. Single-Mod state slots
 
 Select a Mod and open the **State Slots** tab to save the Mod's current `global persist` values as named slots, several per Mod. You can also write a slot as the Mod's defaults, import a variant file, snapshot the whole `d3dx_user.ini`, and hot-apply while the game runs (experimental). See [State slots](./State-Slots.md).
+
+Every Mod gets a **Default** slot with its original defaults; restoring it reads what the Mod declares now, so it follows Mod updates. When you save a slot, the Mod menu's open state, page and position are left out by default, and the main window lists them so you can keep any. A selected slot can have a picture (captured from the game, an image file, or cleared) that shows in the overlay and in restore dialogs.
 
 ## 6. Shortcut page and overlay
 
 The Shortcuts page lists a Mod's INI key bindings and sends them to the game window with a click. The always-on-top overlay (Ctrl + Alt + K) works over the game: switch enabled Mods, save a combination or single-Mod preset (F10 is sent first), refresh, hot-switch state slots, and follow the active character. Endfield needs the manager to run as administrator. See [Shortcut panel and overlay](./Shortcut-Panel.md).
 
+The overlay's **Compact** view keeps only the Mod, slots and keys; **Click through** leaves it visible but ignores the mouse until you press the show/hide hotkey; **Clear**, **Balanced** and **Minimal** set its looks in one click, and **Automatic contrast** switches between dark and light text over bright or dark scenes. It can take a picture when saving a preset, frame a character as a slot's picture, and switch slots by picture. The Shortcuts page also sets the loader's auto-save interval.
+
 ## 7. Combination presets and bundles
 
 Open **Presets** at the top of Repositories to save the enabled Mod set, optionally with `d3dx_user.ini` values; restoring brings back the set first, then the values. Bundles export a preset with its Mod files for installation in another repository. See [Combination presets](./Combination-Presets.md).
+
+**Share preset** writes a small file with only the Mods a preset uses and their values, without Mod files; **Import shared preset** shows how many of those Mods this repository has and imports the ones it has. Presets can have a picture too.
 
 ## 8. Online browsing and downloads
 
@@ -214,6 +226,7 @@ Most data is under `WinUI3`:
 | SQLite database (`cache/app-index.db`) | Online pages, characters, details, metrics, favorites, versions and file index |
 | `cache/online-images` | Re-creatable online image cache |
 | `snapshots/user-ini` | Whole `d3dx_user.ini` snapshots |
+| `snapshots/preset-previews` | Pictures of state slots and combination presets; they stay on this PC and are not added to diagnostic reports |
 | `backups` | Configuration, install transaction, app update and Endfield launch backups |
 | `diagnostics` | Local diagnostics such as the shortcut send log |
 
@@ -256,6 +269,6 @@ Configuration writes are atomic with rotated backups; a damaged main configurati
 - Detection, translation and automatic extraction are aids; the original author page is authoritative. Inspect and scan unknown Mods first.
 - Review screenshots, configuration and diagnostics for personal paths, accounts or credentials before sharing.
 
-**Feature status (4.6.1):** directory-link deployment, loader state restore and combination presets are verified, stable features; variant file import still needs a real exported file; F10 hot apply and online auto-translation remain experimental.
+**Feature status (4.7.0):** directory-link deployment, loader state restore and combination presets are verified, stable features; variant file import still needs a real exported file; F10 hot apply and online auto-translation remain experimental. Not yet confirmed in a real game: XXMI launches, click-through in full screen, automatic contrast, restoring Default slots and importing a shared preset.
 
 Source code, issues and full release history: <https://github.com/uyujkk/Integrated_Mod_Manager>

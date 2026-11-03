@@ -1,8 +1,8 @@
 # 后续路线图 / Roadmap
 
-更新于 2026-11-02，基于 v4.6.1 之后的 main（`5af54eb`）。本文把此前分散的计划和遗留项整合到一处，是规划，不是已实现功能。工作量为粗估：S ≈ 1–2 天，M ≈ 3–5 天，L ≈ 2 周以上。
+更新于 2026-11-03，基于 v4.7.0 发布后的 main（`017247b`）。本文把此前分散的计划和遗留项整合到一处，是规划，不是已实现功能。工作量为粗估：S ≈ 1–2 天，M ≈ 3–5 天，L ≈ 2 周以上。
 
-Updated 2026-11-02 against main after v4.6.1. This brings the earlier plans and leftovers into one place. It is a plan, not shipped features. Effort is a rough guess: S ≈ 1–2 days, M ≈ 3–5 days, L ≈ 2+ weeks.
+Updated 2026-11-03 against main after the v4.7.0 release (`017247b`). This brings the earlier plans and leftovers into one place. It is a plan, not shipped features. Effort is a rough guess: S ≈ 1–2 days, M ≈ 3–5 days, L ≈ 2+ weeks.
 
 ## 总览 / Overview
 
@@ -10,30 +10,27 @@ Updated 2026-11-02 against main after v4.6.1. This brings the earlier plans and 
 
 | 阶段 | 内容 | 工作量 | 依赖 |
 | --- | --- | --- | --- |
-| **A. 4.6.2 收尾** | 真实环境核对、不稳定测试、Discord 入口、按键相关的界面问题 | S | 需要真实游戏和维护者配合 |
-| **B. 4.7 浮窗** | 元素底板和文字阴影 → 预设截图第一阶段 → 背景模式、鼠标穿透、HUD → 待生效队列 | M–L | 建议先完成 A 的 F10 核对 |
-| **C. 4.8 功能** | 批量操作 → 预设截图第二阶段；瞬态变量过滤、轻量方案分享、自动保存间隔 | L | 无 |
-| **D. 工程清理（穿插）** | 语言文件合并、快捷键页 ViewModel、`async void`、空 `catch` 等 | 每项 S–M | 无，不单独发版 |
+| **A. 真实环境核对** | 真实游戏里的 F10、按键发送、变体导入、默认槽位，以及 4.7 新功能的实机确认（见回归清单） | S | 需要真实游戏和维护者配合 |
+| **B. 浮窗** | 已发布于 4.7.0：底板和文字阴影、预设截图、鼠标穿透、紧凑布局、外观预设、自动对比度。剩余：背景模式（透明/模糊/实色）、待生效队列 | M | 待生效队列依赖 A 的 F10 核对 |
+| **C. 功能** | 已发布于 4.7.0：批量操作（含导出组合包）、瞬态变量过滤、方案分享、自动保存间隔。剩余：C2 截图第二阶段（WGC 暂缓）、Mod 列表多选 | M | 无 |
+| **D. 工程清理** | 已全部完成（#69–#80）：语言文件合并、快捷键页 ViewModel、`async void`、空 `catch`、界面改回 XAML、在线层移到 Core、界面自动化测试 | — | — |
 | **F. 测试整合与兼容** | 整合压缩测试；补配置和格式的兼容测试；明确支持范围 | M–L | 建议排在 B 之前，详见 F 节 |
 | **G. 适配其他游戏** | 按系统语言选界面语言（G1 已实现）；首次安装弹窗选择默认仓库预设（G2 已实现）；其他游戏通过 XXMI 一键启动（G3 部分实现） | M | G3 需要实机核对；建议在面向其他游戏发布前完成 |
 | **搁置** | #15 原生闪退（等转储）、C3 终末地修复器集成（#8）、#9 角色定向修复（等 #8）、E Linux 尝试 | — | 见下 |
 
-## 未完成内容 / Open work（2026-11-02 整理）
+## 未完成内容 / Open work（2026-11-03 整理）
 
-已完成：A2、A3、A4（#61）；B1（#62）；F3 的配置样本和未知字段（#63）；B2 和 G1（#64）；G2 和 G3 的主要部分（#65）；B3 的三项和 F2 的两项（#66）；“默认”槽位补建（#67）。B2 的自动截图和框选已由维护者实测可用；锁定大小、默认区域和管理员权限下选文件尚待确认。
+v4.7.0 已于 2026-11-03 发布，包含 #61–#80：B1–B3（除背景模式）、C1、C4、C5、C6、D 全部、F3 的配置兼容、G1–G3。代码审查发现的 #74–#78 已在 #79 修复。
 
 | 优先级 | 项目 | 状态或缺口 |
 | --- | --- | --- |
-| 1 | 确认 #64 未实测的部分 | 管理员权限选文件、点图切换和动画流畅度尚待确认 |
-| 2 | 切换耗时 | 用 `startup.log` 的 `Slot switch` 记录分清管理器和游戏各占多少；3 秒只读保持是否能缩短，取决于 A1 的 F10 核对 |
-| 3 | A1 实机核对 | F10 热应用、变体导入、默认槽位、更新设置写回等未逐项勾选 |
-| 4 | G2、G3 | 已合并（#65）；G3 待实机启动验证；自定义仓库选导入器见 #68 |
-| 5 | B3、B4 | 鼠标穿透、紧凑布局和外观预设已合并（#66）；背景模式、自动对比度、待生效队列未做 |
-| 6 | F 其余 | F1 压缩、F4 Windows 版本实测未做；键名测试、跳过机制和 Endfield 测试隔离已合并（#66） |
-| 6a | 预设与 Mod 原始默认值 | 已补建“默认”槽位并让它跟随 Mod 更新（#67）；“清除加载器保存的值”未做 |
-| 7 | C、D | C1 大部分、C4、C6、G3 自定义导入器见 #68；C2、C5、组合包导出未做；D 清理未做 |
-
-B2 第二阶段的取景框差异已在 B2 节说明；待确认的小项：图片切换列表是否改用固定深色背景；组合预设不进图片切换。
+| 1 | A1 与 4.7 的实机核对 | 见[回归清单](./Regression-Checklist.md)的 4.7 部分：XXMI 启动三个游戏、全屏下的鼠标穿透、自动对比度、恢复“默认”槽位、批量操作、自动保存间隔、管理员权限下选文件、分享方案往返、联网请求；4.6.2 的 F10、按键发送、变体导入仍未勾选 |
+| 2 | 切换耗时 | 用 `startup.log` 的 `Slot switch` 记录分清管理器和游戏各占多少；3 秒只读保持能否缩短取决于 A1 |
+| 3 | B3 背景模式、B4 待生效队列 | 未做；B4 依赖 A1 的 F10 核对 |
+| 4 | 预设与 Mod 原始默认值 | “默认”槽位已补建并跟随 Mod 更新；“清除加载器保存的值”未做 |
+| 5 | F 其余 | F1 压缩、F4 Windows 版本实测未做 |
+| 6 | C1 多选、C2 | Mod 列表多选未做；C2 的 WGC 按维护者决定暂缓，只截取框选区域和组合包带图未做 |
+| 7 | 文档 | 4.7 的手册与开发文档已更新；Wiki 仍停在 4.6.1，截图仍是 4.6 |
 
 ---
 
@@ -148,7 +145,7 @@ B2 第二阶段的取景框差异已在 B2 节说明；待确认的小项：图�
 
 ### B3. 透明模式：其余项（M）
 
-自动对比度已实现（分支 `feature/share-and-cleanup`）：默认关闭，背景低于 60% 时每 1.5 秒看一眼浮窗后面的画面，切换深色或浅色文字，条件结束即恢复用户颜色；需要 Windows 10 2004 以上。
+自动对比度已实现（#69）：默认关闭，背景低于 60% 时每 1.5 秒看一眼浮窗后面的画面，切换深色或浅色文字，条件结束即恢复用户颜色；需要 Windows 10 2004 以上。
 
 鼠标穿透、HUD 紧凑布局和外观预设（清晰、平衡、极简）已实现。穿透不保存到配置，用显示/隐藏浮窗的快捷键恢复，没开快捷键时不允许开启。紧凑布局暂不支持调整字号。真实游戏里未验证。
 
@@ -179,7 +176,7 @@ B2 第二阶段的取景框差异已在 B2 节说明；待确认的小项：图�
 
 ### C1. 仓库批量操作（M，大部分已实现）
 
-已实现（#68）：Mod 列表旁的“批量”对话框，可加入组合预设、复制到文件夹、删除；批量加标签原来就有。删除和单个删除一样是永久删除，不进回收站。批量导出成组合包已补上（分支 `feature/share-and-cleanup`），只含 Mod 文件。
+已实现（#68）：Mod 列表旁的“批量”对话框，可加入组合预设、复制到文件夹、删除；批量加标签原来就有。删除和单个删除一样是永久删除，不进回收站；无法确认加载器链接的 Mod 不删除（#79）。批量导出成组合包已补上（#69），只含 Mod 文件。
 
 设计稿里还没做的部分：Mod 列表多选后批量加标签、加入组合预设、导出、删除。删除走现有的确认和回收流程。设计稿中 Ctrl+K 的部署和在线搜索动作之前决定不做，仍然不列入。
 
@@ -208,7 +205,7 @@ B2 第二阶段的取景框差异已在 B2 节说明；待确认的小项：图�
 
 ### C5. 轻量方案分享（M，已实现）
 
-已实现（分支 `feature/share-and-cleanup`）：`PresetShareService` 和组合预设页的“分享方案”“导入方案”。导入前显示匹配率、缺失的 Mod 和游戏不一致警告，只导入已有的 Mod，并为每个 Mod 新建同名状态槽位（同名不覆盖）。
+已实现（#69）：`PresetShareService` 和组合预设页的“分享方案”“导入方案”。导入前显示匹配率、缺失的 Mod 和游戏不一致警告，只导入已有的 Mod，并为每个 Mod 新建同名状态槽位（同名不覆盖）。
 
 **目标**：只分享组合预设的选择和参数值，不带 Mod 文件；对方自己已有这些 Mod 时可以直接套用。它与组合包并存，也避开了 Mod 文件的再分发问题。
 
@@ -459,4 +456,4 @@ G1 和 G2 用同一个判断：`config.ini` 和 `beta-shell.json` 都不存在�
 - **F. Tests and compatibility (M–L):** the suite is neither slow nor visibly duplicated: 67 s in total, 40 s of it in two timeout tests, one of them the flaky one. Consolidate in low-risk batches (fix those two, merge into `[Theory]`, shared fixtures, smaller data matrices), then delete only reviewed candidates, keeping safety, rollback, config and updater tests and all coverage gates. The real gaps are compatibility: `beta-shell.json` has no tests and drops unknown fields, bundles reject other versions and unknown fields, 18 tests pass silently off Windows, and Windows 10 is claimed but has no recorded test.
 - **G. Other games (M, before publishing for other games):** on a first install only, pick the UI language from the system language (Chinese or English), and ask for the default repository preset instead of assuming Endfield; upgrades are unaffected. One-click launch for Genshin Impact, Honkai: Star Rail and Zenless Zone Zero through XXMI's own importers, without rewriting XXMI's configuration. Needs real-game checks.
 - **On hold:** #15 (needs a crash dump), C3 the optional Endfield repair tool (#8, set aside 2026-11-02), #9 (needs #8), E the Linux experiment, and one-shot `[Present]` injection, a fallback to evaluate only if A1 shows the read-only method is unreliable.
-- **Suggested next step:** A, then B1.
+- **Status (2026-11-03):** v4.7.0 shipped B1–B3 (except background modes), C1, C4–C6, all of D and G1–G3. **Suggested next step:** the real-game checks in A, then B4.
