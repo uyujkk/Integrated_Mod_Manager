@@ -78,11 +78,13 @@ if not exist "%UPDATER_SOURCE%" (
   exit /b 1
 )
 
-if exist "%APP_ICON%" (
-  "%CSC%" /nologo /target:winexe /win32icon:"%APP_ICON%" /out:"%UPDATER_OUTPUT%" /reference:System.dll /reference:System.Core.dll /reference:System.Windows.Forms.dll /reference:System.IO.Compression.dll /reference:System.IO.Compression.FileSystem.dll "%UPDATER_SOURCE%" || exit /b 1
-) else (
-  "%CSC%" /nologo /target:winexe /out:"%UPDATER_OUTPUT%" /reference:System.dll /reference:System.Core.dll /reference:System.Windows.Forms.dll /reference:System.IO.Compression.dll /reference:System.IO.Compression.FileSystem.dll "%UPDATER_SOURCE%" || exit /b 1
+rem The updater is one framework-dependent .NET 8 file; the app copies just that file to run it.
+if not exist "%DOTNET%" (
+  echo The .NET SDK is needed to build the local update agent.
+  exit /b 1
 )
+"%DOTNET%" publish "%ROOT%\src\Launcher\LocalUpdateAgent.csproj" -c Release -o "%ROOT%\artifacts\LocalUpdateAgent" --nologo || exit /b 1
+copy /y "%ROOT%\artifacts\LocalUpdateAgent\LocalUpdateAgent.exe" "%UPDATER_OUTPUT%" >nul || exit /b 1
 
 if exist "%OUTPUT%\startup.log" del /f /q "%OUTPUT%\startup.log"
 for /r "%OUTPUT%" %%F in (*.pdb) do del /f /q "%%F"

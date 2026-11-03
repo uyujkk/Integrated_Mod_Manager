@@ -180,12 +180,12 @@ if (!$SkipBuild) {
     ) + $iconArgument + @(Join-Path $root "src\Launcher\WinUILauncher.cs"))
     Copy-Item -LiteralPath $launcherOutput -Destination $legacyLauncherOutput -Force
 
-    Invoke-Checked $compiler (@(
-        "/nologo", "/target:winexe", "/out:$updaterOutput",
-        "/reference:System.dll", "/reference:System.Core.dll",
-        "/reference:System.Windows.Forms.dll", "/reference:System.IO.Compression.dll",
-        "/reference:System.IO.Compression.FileSystem.dll"
-    ) + $iconArgument + @(Join-Path $root "src\Launcher\LocalUpdateAgent.cs"))
+    # The updater is one framework-dependent .NET 8 file; the app copies just that file to run it.
+    $updaterPublish = Join-Path $artifacts "LocalUpdateAgent"
+    Invoke-Checked $dotnetCommand.Source @(
+        "publish", (Join-Path $root "src\Launcher\LocalUpdateAgent.csproj"), "-c", "Release", "-o", $updaterPublish, "--nologo"
+    )
+    Copy-Item -LiteralPath (Join-Path $updaterPublish "LocalUpdateAgent.exe") -Destination $updaterOutput -Force
 
     $runtimeOutput = Join-Path $root "src\WinUI3\bin\x64\Release\net8.0-windows10.0.19041.0\win-x64\ModFolderCopier.WinUI.exe"
     Assert-FileExists $runtimeOutput
