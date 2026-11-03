@@ -6,7 +6,13 @@
 
 This document records version changes in Integrated Mod Manager. Unpublished versions are marked separately.
 
-## v4.7.1 — 未发布（正式版 / Stable）
+## v4.7.2 — 未发布（正式版 / Stable）
+
+修复原神、星铁、绝区零的在线角色列表有时加载不出来：角色目录请求最多等 20 秒，超时或网络出错时重试一次；没填 Wiki 地址的仓库改用游戏内置 Wiki；失败写入错误日志。见 [v4.7.2](v4.7.2.md)。
+
+Fixes Genshin, Star Rail and ZZZ online character lists that sometimes failed to load: character catalog requests time out after 20 seconds and are retried once; repositories without a wiki address use the game's built-in wiki; failures are logged. See [v4.7.2](v4.7.2.md).
+
+## v4.7.1 — 2026-11-03（正式版 / Stable）
 
 更新器改用 .NET 8 构建，不再被几家杀毒引擎误报为病毒（VirusTotal 从 5/71 降到 1/70），并且只需要主程序同样需要的 .NET 8 运行时；4.7 文档更新。功能与 4.7.0 相同。见 [v4.7.1](v4.7.1.md)。
 

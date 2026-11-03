@@ -3,7 +3,7 @@ param(
     [Parameter(Mandatory)][string]$BasePackage,
     [Parameter(Mandatory)][string]$Package,
     [Parameter(Mandatory)][string]$Application,
-    [string]$Version = '4.7.1',
+    [string]$Version = '4.7.2',
     [string]$OutputDirectory = 'artifacts\preview-upgrade'
 )
 $ErrorActionPreference = 'Stop'
