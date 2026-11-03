@@ -156,6 +156,81 @@ public sealed class SmokeTests
         app.AssertNoErrors();
     }
 
+    [Fact]
+    public void Dashboard_ShowsTheRepositoryPaths()
+    {
+        using AppSession app = AppSession.Configured().Start();
+
+        Assert.EndsWith("ModRepository", app.Find("SourceTextBox").Patterns.Value.Pattern.Value.Value);
+        Assert.True(app.Shows("TargetTextBox"));
+        app.AssertNoErrors();
+    }
+
+    [Fact]
+    public void Repository_ShowsTheCharacterAndItsMods()
+    {
+        using AppSession app = AppSession.Configured((shell, _) => shell["CurrentPrimarySection"] = "repository").Start();
+
+        AppSession.Invoke(app.FindByName("TestCharacter"));
+
+        app.FindByName("TestModA");
+        app.FindByName("TestModB");
+        Assert.True(app.Shows("FirstLevelSearchTextBox"));
+        Assert.True(app.Shows("RefreshButton"));
+        app.AssertNoErrors();
+    }
+
+    [Theory]
+    [InlineData("Covers")]
+    [InlineData("Presets")]
+    [InlineData("List")]
+    public void Repository_ViewButtonsSwitchAndAreSaved(string view)
+    {
+        using AppSession app = AppSession.Configured((shell, _) =>
+        {
+            shell["CurrentPrimarySection"] = "repository";
+            shell["RepositoryWorkspaceView"] = view == "List" ? "covers" : "list";
+        }).Start();
+
+        AppSession.Invoke(app.Find("RepositoryView" + view));
+
+        Assert.Equal(view, (string?)app.ShellConfig()["RepositoryWorkspaceView"], ignoreCase: true);
+        Assert.Equal(view == "Presets", app.Shows("PresetShareImportButton"));
+        Assert.Equal(view == "List", app.Shows("SecondLevelListView"));
+        app.AssertNoErrors();
+    }
+
+    // One id inside each settings card, in section order.
+    private static readonly string[] SettingsCardControls = ["LanguageComboBox", "CheckUpdatesButton", "EditOnlineRepositoryButton", "ExportDiagnosticsButton", "ProjectResourcesTitleTextBlock"];
+
+    [Fact]
+    public void Settings_SectionButtonsShowOneCardAtATime()
+    {
+        using AppSession app = AppSession.Configured((shell, _) => shell["CurrentPrimarySection"] = "settings").Start();
+        app.Resize(1000, 760);
+
+        for (int section = 0; section < SettingsCardControls.Length; section++)
+        {
+            AppSession.Invoke(app.Find("SettingsSection" + section));
+            for (int card = 0; card < SettingsCardControls.Length; card++)
+                Assert.True(app.Shows(SettingsCardControls[card]) == (card == section), $"Section {section}: {SettingsCardControls[card]}");
+        }
+        app.Capture(nameof(Settings_SectionButtonsShowOneCardAtATime));
+        app.AssertNoErrors();
+    }
+
+    [Fact]
+    public void Settings_WideWindowShowsEveryCard()
+    {
+        using AppSession app = AppSession.Configured((shell, _) => shell["CurrentPrimarySection"] = "settings").Start();
+        app.Resize(1700, 1000);
+
+        Assert.All(SettingsCardControls, id => Assert.True(app.Shows(id), id));
+        Assert.False(app.Shows("SettingsSection0"));
+        app.Capture(nameof(Settings_WideWindowShowsEveryCard));
+        app.AssertNoErrors();
+    }
+
     // Ctrl+Alt+F9, set by AppSession.Configured.
     private static void PressHotkey()
     {

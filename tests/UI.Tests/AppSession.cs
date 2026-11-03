@@ -86,6 +86,19 @@ public sealed class AppSession : IDisposable
 
     public AutomationElement FindByName(string name, TimeSpan? timeout = null) => FindIn(MainWindow, cf => cf.ByName(name), name, timeout);
 
+    /// <summary>Whether the element is in the automation tree now; collapsed elements are not.</summary>
+    public bool Shows(string automationId) => MainWindow.FindFirstDescendant(cf => cf.ByAutomationId(automationId)) is not null;
+
+    /// <summary>Sets the main window's outer size, so a test can pick a layout breakpoint.</summary>
+    public void Resize(int width, int height)
+    {
+        if (MainWindow.Patterns.Window.Pattern.WindowVisualState.Value != FlaUI.Core.Definitions.WindowVisualState.Normal)
+            MainWindow.Patterns.Window.Pattern.SetWindowVisualState(FlaUI.Core.Definitions.WindowVisualState.Normal);
+        MainWindow.Patterns.Transform.Pattern.Move(20, 20);
+        MainWindow.Patterns.Transform.Pattern.Resize(width, height);
+        Thread.Sleep(1200);
+    }
+
     public static AutomationElement FindIn(AutomationElement parent, Func<FlaUI.Core.Conditions.ConditionFactory, FlaUI.Core.Conditions.ConditionBase> condition,
         string description, TimeSpan? timeout = null)
         => Retry.WhileNull(() => parent.FindFirstDescendant(condition), timeout ?? TimeSpan.FromSeconds(10), TimeSpan.FromMilliseconds(250)).Result

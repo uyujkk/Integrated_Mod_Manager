@@ -101,7 +101,7 @@ public sealed partial class MainWindow
     private FontIcon AttachPathStatusIcon(TextBox box)
     {
         var icon = new FontIcon { FontSize = 14, Margin = new Thickness(0, 0, 12, 0), VerticalAlignment = VerticalAlignment.Center };
-        Border? border = _workspacePathRows
+        Border? border = WorkspacePathRows
             .SelectMany(row => row.Children.OfType<Border>())
             .FirstOrDefault(candidate => ReferenceEquals(candidate.Child, box));
         if (border is not null)

@@ -121,15 +121,7 @@ public sealed partial class MainWindow
     private void ApplyShellState(bool refreshRepository)
     {
         DashboardScrollViewer.Visibility = _currentPrimarySection == PrimarySection.Dashboard ? Visibility.Visible : Visibility.Collapsed;
-        if (_workspacePageHost is null)
-        {
-            WorkspaceScrollViewer.Visibility = _currentPrimarySection == PrimarySection.Repository ? Visibility.Visible : Visibility.Collapsed;
-        }
-        else
-        {
-            WorkspaceScrollViewer.Visibility = Visibility.Visible;
-            _workspacePageHost.Visibility = _currentPrimarySection == PrimarySection.Repository ? Visibility.Visible : Visibility.Collapsed;
-        }
+        WorkspacePageHost.Visibility = _currentPrimarySection == PrimarySection.Repository ? Visibility.Visible : Visibility.Collapsed;
         OnlineScrollViewer.Visibility = _currentPrimarySection == PrimarySection.Online ? Visibility.Visible : Visibility.Collapsed;
         UpdatesScrollViewer.Visibility = _currentPrimarySection == PrimarySection.Updates ? Visibility.Visible : Visibility.Collapsed;
         SettingsScrollViewer.Visibility = _currentPrimarySection == PrimarySection.Settings ? Visibility.Visible : Visibility.Collapsed;
@@ -171,7 +163,7 @@ public sealed partial class MainWindow
         return _currentPrimarySection switch
         {
             PrimarySection.Dashboard => DashboardScrollViewer,
-            PrimarySection.Repository => _workspacePageHost is not null ? _workspacePageHost : WorkspaceScrollViewer,
+            PrimarySection.Repository => WorkspacePageHost,
             PrimarySection.Online => OnlineScrollViewer,
             PrimarySection.Updates => UpdatesScrollViewer,
             PrimarySection.Shortcuts => ShortcutsScrollViewer,
