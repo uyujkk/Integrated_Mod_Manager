@@ -722,71 +722,9 @@ public sealed partial class MainWindow
             : [];
     }
 
-    private async Task<List<OnlineCharacterOption>> FetchEndfieldCharacterCatalogAsync(WorkspaceRepository repository)
-    {
-        using HttpResponseMessage response = await _httpClient.GetAsync(EndfieldOfficialOperatorCatalogUrl);
-        response.EnsureSuccessStatusCode();
-        string html = await response.Content.ReadAsStringAsync();
-        IReadOnlyList<EndfieldOperatorCatalogEntry> officialOperators = EndfieldOperatorCatalogParser.Parse(html);
-        if (officialOperators.Count == 0)
-        {
-            return [];
-        }
-
-        var characters = new List<OnlineCharacterOption>(officialOperators.Count);
-        int endministratorVariant = 0;
-        foreach (EndfieldOperatorCatalogEntry officialOperator in officialOperators)
-        {
-            string englishName = officialOperator.EnglishName;
-            string chineseName = officialOperator.ChineseName;
-            EndfieldCharacterInfo? fallbackCharacter;
-            if (string.Equals(englishName, "Endministrator", StringComparison.OrdinalIgnoreCase))
-            {
-                bool isMaleVariant = endministratorVariant++ == 0;
-                englishName = isMaleVariant ? "Endministrator (M)" : "Endministrator (F)";
-                chineseName = isMaleVariant ? "管理员 (男)" : "管理员 (女)";
-                fallbackCharacter = EndfieldCharacters.FirstOrDefault(character =>
-                    string.Equals(character.EnglishName, englishName, StringComparison.OrdinalIgnoreCase));
-            }
-            else
-            {
-                fallbackCharacter = EndfieldCharacters.FirstOrDefault(character =>
-                    character.AllNames.Any(name =>
-                        string.Equals(name, englishName, StringComparison.OrdinalIgnoreCase)
-                        || string.Equals(name, chineseName, StringComparison.OrdinalIgnoreCase)));
-            }
-
-            List<string> aliases = new[]
-                {
-                    englishName,
-                    chineseName,
-                    officialOperator.EnglishName,
-                    officialOperator.ChineseName
-                }
-                .Concat(fallbackCharacter?.AllNames ?? [])
-                .Where(name => !string.IsNullOrWhiteSpace(name))
-                .Distinct(StringComparer.OrdinalIgnoreCase)
-                .ToList();
-            characters.Add(new OnlineCharacterOption
-            {
-                Key = englishName,
-                DisplayNameZh = chineseName,
-                DisplayNameEn = englishName,
-                CategoryId = fallbackCharacter?.GameBananaCategoryId ?? string.Empty,
-                AvatarUrl = string.IsNullOrWhiteSpace(officialOperator.AvatarUrl)
-                    ? fallbackCharacter?.AvatarUrl
-                    : officialOperator.AvatarUrl,
-                WikiUrl = string.IsNullOrWhiteSpace(repository.WikiUrl)
-                    ? EndfieldOfficialWikiUrl
-                    : repository.WikiUrl,
-                Aliases = aliases,
-                IsWikiCharacter = true,
-                WikiOrder = Math.Max(0, officialOperator.Order - 1)
-            });
-        }
-
-        return characters;
-    }
+    private Task<List<OnlineCharacterOption>> FetchEndfieldCharacterCatalogAsync(WorkspaceRepository repository)
+        => CharacterCatalogClient.FetchEndfieldOperatorsAsync(_httpClient, EndfieldCharacters,
+            string.IsNullOrWhiteSpace(repository.WikiUrl) ? EndfieldOfficialWikiUrl : repository.WikiUrl);
 
     private Task<List<OnlineCharacterOption>> FetchGameBananaCharacterCatalogAsync(string categoryId)
         => CharacterCatalogClient.FetchGameBananaCharactersAsync(_httpClient, categoryId);

@@ -462,7 +462,10 @@ public sealed partial class MainWindow
             }
             catch (Exception ex) when (ex is IOException or UnauthorizedAccessException or ArgumentException)
             {
+                // Without the list of links, deleting the folder could leave links to a missing folder.
                 LogApplicationIssue("Find deployed links before delete", ex);
+                await ShowMessageAsync(T("LocalLibrary.LinksUnknown", item.Name, ex.Message), T("LocalLibrary.DeleteFailed"));
+                return;
             }
 
             string linkNote = deployedLinks.Count == 0

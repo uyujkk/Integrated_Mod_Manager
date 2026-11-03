@@ -78,6 +78,7 @@ public sealed partial class MainWindow
                     .Where(mod => mod.Relative is not null).ToArray();
                 IReadOnlyList<string> fresh = DefaultSlotPolicy.ModsNeedingDefault(mods.Select(mod => mod.Relative!), known, backfilled, withDefault);
                 var defaults = new List<(string Relative, IReadOnlyList<ModPersistentValue> Values)>();
+                var unreadable = new List<string>();
                 foreach (var mod in mods.Where(mod => fresh.Contains(mod.Relative!, StringComparer.OrdinalIgnoreCase)))
                 {
                     try
@@ -88,9 +89,10 @@ public sealed partial class MainWindow
                     catch (Exception ex) when (ex is IOException or UnauthorizedAccessException or InvalidDataException)
                     {
                         LogApplicationIssue("Read Mod defaults for a default slot", ex);
+                        unreadable.Add(mod.Relative!);
                     }
                 }
-                return (All: mods.Select(mod => mod.Relative!).ToArray(), Defaults: defaults);
+                return (All: DefaultSlotPolicy.Seen(mods.Select(mod => mod.Relative!), unreadable), Defaults: defaults);
             });
             if (_onlineWindowClosed || !ReferenceEquals(GetSelectedRepository(), repository)) return;
 

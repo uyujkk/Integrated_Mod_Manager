@@ -114,6 +114,8 @@ public sealed partial class MainWindow
     {
         string loaderRoot = (repository.TargetPath ?? string.Empty).Trim();
         var links = new Dictionary<SecondLevelFolderItem, IReadOnlyList<string>>();
+        // A Mod whose links could not be listed is kept: deleting it could leave links to a missing folder.
+        var unverified = new List<string>();
         foreach (SecondLevelFolderItem mod in mods)
         {
             try
@@ -123,16 +125,24 @@ public sealed partial class MainWindow
             catch (Exception ex) when (ex is IOException or UnauthorizedAccessException or ArgumentException)
             {
                 LogApplicationIssue("Find deployed links before delete", ex);
-                links[mod] = [];
+                unverified.Add(mod.Name + ": " + ex.Message);
             }
         }
-        int linkCount = links.Values.Sum(list => list.Count);
-        string names = string.Join("\n", mods.Select(mod => mod.Name));
-        if (!await ShowConfirmAsync(T("BatchMods.ConfirmDelete", mods.Count, linkCount, names), T("LocalLibrary.ConfirmDelete"))) return;
+        SecondLevelFolderItem[] deletable = mods.Where(links.ContainsKey).ToArray();
+        string unverifiedNote = unverified.Count == 0 ? string.Empty : T("BatchMods.LinksUnknown", string.Join("\n", unverified));
+        if (deletable.Length == 0)
+        {
+            await ShowMessageAsync(unverifiedNote, T("LocalLibrary.DeleteFailed"));
+            return;
+        }
+        int linkCount = deletable.Sum(mod => links[mod].Count);
+        string names = string.Join("\n", deletable.Select(mod => mod.Name));
+        string confirm = T("BatchMods.ConfirmDelete", deletable.Length, linkCount, names) + (unverified.Count == 0 ? string.Empty : "\n\n" + unverifiedNote);
+        if (!await ShowConfirmAsync(confirm, T("LocalLibrary.ConfirmDelete"))) return;
 
         string selectedFirstLevelPath = _characters.Selected?.Path ?? string.Empty;
         var failed = new List<string>();
-        foreach (SecondLevelFolderItem mod in mods)
+        foreach (SecondLevelFolderItem mod in deletable)
         {
             try { RemoveModAndItsLinks(mod, links[mod]); }
             catch (Exception ex) when (ex is IOException or UnauthorizedAccessException or ArgumentException or InvalidOperationException)
@@ -144,7 +154,7 @@ public sealed partial class MainWindow
         SaveConfig();
         await RefreshListsAsync();
         SelectFirstLevelByPath(selectedFirstLevelPath);
-        StatusTextBlock.Text = T("BatchMods.Deleted", mods.Count - failed.Count);
+        StatusTextBlock.Text = T("BatchMods.Deleted", deletable.Length - failed.Count);
         if (failed.Count > 0) await ShowMessageAsync(string.Join("\n", failed), T("LocalLibrary.DeleteFailed"));
     }
 }

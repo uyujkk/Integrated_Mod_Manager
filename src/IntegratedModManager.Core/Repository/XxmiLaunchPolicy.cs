@@ -37,7 +37,9 @@ public static class XxmiLaunchPolicy
         try
         {
             using JsonDocument document = JsonDocument.Parse(configurationJson);
-            if (!document.RootElement.TryGetProperty("Importers", out JsonElement importers)
+            // Valid JSON that is not an object (an array, null, a number) is a configuration XXMI must report on.
+            if (document.RootElement.ValueKind != JsonValueKind.Object
+                || !document.RootElement.TryGetProperty("Importers", out JsonElement importers)
                 || importers.ValueKind != JsonValueKind.Object) return XxmiImporterState.Unknown;
             if (!importers.TryGetProperty(importer, out JsonElement entry) || entry.ValueKind != JsonValueKind.Object
                 || !entry.TryGetProperty("Importer", out JsonElement settings) || settings.ValueKind != JsonValueKind.Object)

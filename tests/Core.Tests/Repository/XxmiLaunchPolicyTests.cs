@@ -41,6 +41,10 @@ public sealed class XxmiLaunchPolicyTests
     [InlineData("""{ "Importers": { "SRMI": { "Importer": { "game_folder": "D:\\Game" } } } }""", XxmiImporterState.ImporterMissing)]
     [InlineData("""{ "Other": 1 }""", XxmiImporterState.Unknown)]
     [InlineData("not json", XxmiImporterState.Unknown)]
+    [InlineData("[]", XxmiImporterState.Unknown)]
+    [InlineData("null", XxmiImporterState.Unknown)]
+    [InlineData("42", XxmiImporterState.Unknown)]
+    [InlineData("\"text\"", XxmiImporterState.Unknown)]
     public void CheckImporter_ReadsTheConfiguration(string json, XxmiImporterState expected)
         => Assert.Equal(expected, XxmiLaunchPolicy.CheckImporter(json, "GIMI"));
 }

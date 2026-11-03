@@ -25,7 +25,7 @@ public static class OnlineImageDownloader
             {
                 return response.Content.Headers.ContentLength is > MaxImageBytes
                     ? new OnlineImageDownload(null, null)
-                    : new OnlineImageDownload(await response.Content.ReadAsByteArrayAsync(cancellationToken), null);
+                    : new OnlineImageDownload(await ReadLimitedAsync(response.Content, cancellationToken), null);
             }
 
             bool retryable = response.StatusCode == HttpStatusCode.TooManyRequests || (int)response.StatusCode >= 500;
@@ -36,6 +36,21 @@ public static class OnlineImageDownloader
 
             await delay(RetryDelay(response.Headers.RetryAfter?.Delta, attempt), cancellationToken);
         }
+    }
+
+    // A response may not say how long it is, so the limit is counted while reading; null once it is passed.
+    private static async Task<byte[]?> ReadLimitedAsync(HttpContent content, CancellationToken cancellationToken)
+    {
+        await using Stream stream = await content.ReadAsStreamAsync(cancellationToken);
+        using var buffer = new MemoryStream();
+        byte[] chunk = new byte[81920];
+        int read;
+        while ((read = await stream.ReadAsync(chunk, cancellationToken)) > 0)
+        {
+            if (buffer.Length + read > MaxImageBytes) return null;
+            buffer.Write(chunk, 0, read);
+        }
+        return buffer.ToArray();
     }
 
     /// <summary>The server's Retry-After, else 0.6 s doubling per attempt; never more than six seconds.</summary>
