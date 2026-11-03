@@ -3,7 +3,7 @@ param(
     [Parameter(Mandatory)][string]$BasePackage,
     [Parameter(Mandatory)][string]$Package,
     [Parameter(Mandatory)][string]$Application,
-    [string]$Version = '4.5.2-preview.1',
+    [string]$Version = '4.7.0-preview.1',
     [string]$OutputDirectory = 'artifacts\preview-upgrade'
 )
 $ErrorActionPreference = 'Stop'
@@ -80,9 +80,13 @@ function Test-Preserved($old, $new) {
     return $old -ceq $new
 }
 $taskResult = [ordered]@{From=$taskOldVersion;To=[Diagnostics.FileVersionInfo]::GetVersionInfo((Join-Path $taskInstall 'WinUI3\ModFolderCopier.WinUI.exe')).ProductVersion;AgentExit=$agent.ExitCode}
-foreach ($key in @('Repositories','OnlinePreferences','LocalLibraries','ConfigurationProfiles','ModPersistentSlots')) {
+foreach ($key in @('Repositories','OnlinePreferences','LocalLibraries','ConfigurationProfiles')) {
     $taskResult[$key+'Preserved'] = Test-Preserved $taskBefore.$key $taskAfter.$key
 }
+# Since 4.7 a Mod without one gets an automatic Default slot, so slots may be added; every old slot must stay as it was.
+$taskResult['ModPersistentSlotsPreserved'] = @($taskBefore.ModPersistentSlots | Where-Object {
+    $old = $_; $match = @($taskAfter.ModPersistentSlots | Where-Object { $_.Id -eq $old.Id })
+    $match.Count -ne 1 -or !(Test-Preserved $old $match[0]) }).Count -eq 0
 $taskResult['UserBackupsAndSnapshotsPreserved'] = @($taskSentinels | Where-Object { (Get-FileHash (Join-Path $taskInstall $_)).Hash -ne $taskHashes[$_] }).Count -eq 0
 $taskResult['RuntimeMatches'] = (Get-FileHash (Join-Path $taskInstall 'WinUI3\ModFolderCopier.WinUI.dll')).Hash -eq (Get-FileHash (Join-Path (Split-Path $Application) 'WinUI3\ModFolderCopier.WinUI.dll')).Hash
 $manifest=Get-Content (Join-Path $taskInstall '.managed-files.txt')
