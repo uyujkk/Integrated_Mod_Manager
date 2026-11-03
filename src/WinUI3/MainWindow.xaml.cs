@@ -227,11 +227,11 @@ public sealed partial class MainWindow : Window
         BuildShortcutRows();
         TraceStartupStage("Input handlers and shortcuts initialized");
         // Neither file exists only on a first install; upgrades keep them, and with them the user's language.
-        bool firstInstall = !File.Exists(_configPath) && !File.Exists(_shellConfigPath);
-        if (firstInstall && !UiLanguagePolicy.UsesChinese(System.Globalization.CultureInfo.CurrentUICulture.Name)) _currentLanguage = AppLanguage.EnUs;
+        _firstInstall = !File.Exists(_configPath) && !File.Exists(_shellConfigPath);
+        if (_firstInstall && !UiLanguagePolicy.UsesChinese(System.Globalization.CultureInfo.CurrentUICulture.Name)) _currentLanguage = AppLanguage.EnUs;
         LoadConfig();
         LoadShellConfig();
-        if (firstInstall) SaveConfig();
+        if (_firstInstall) SaveConfig();
         InitializeTraySupport();
         InitializeShortcutPanelHotkey();
         try

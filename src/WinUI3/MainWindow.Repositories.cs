@@ -217,9 +217,7 @@ public sealed partial class MainWindow
             {
                 Id = Guid.NewGuid().ToString("N"),
                 Name = repositoryName.Trim(),
-                OnlineSourceSite = DefaultOnlineSourceSite,
-                OnlineGameName = DefaultOnlineGameName,
-                OnlineCategoryId = DefaultOnlineCategoryId
+                OnlineSourceSite = DefaultOnlineSourceSite
             };
 
             _repositories.Add(repository);

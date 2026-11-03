@@ -2,6 +2,7 @@ using System.ComponentModel;
 using System.Diagnostics;
 using IntegratedModManager.Core.Endfield;
 using IntegratedModManager.Core.Layout;
+using IntegratedModManager.Core.Repository;
 using IntegratedModManager.EndfieldLaunch;
 using Microsoft.UI.Xaml;
 using Microsoft.UI.Xaml.Controls;
@@ -487,6 +488,8 @@ public sealed partial class MainWindow
                 return;
             }
 
+            if (await TryStartThroughXxmiAsync(repository)) return;
+
             string loader = CanUseEndfieldBridge(repository)
                 ? EndfieldBridgeIntegration.ResolveLoader(LauncherTextBox.Text, DefaultLoaderPaths())
                 : (LauncherTextBox.Text ?? string.Empty).Trim();
@@ -509,6 +512,51 @@ public sealed partial class MainWindow
         {
             await ShowMessageAsync(T("EndfieldBridge.FailedToRunLauncher") + ex.Message, T("EndfieldBridge.LaunchFailed"));
         }
+    }
+
+    // Other games need no setup in XXMI's configuration: naming the importer is enough, and XXMI starts the game.
+    // Returns false to run the repository's own program: no importer for this game, or a launcher that is not XXMI.
+    private async Task<bool> TryStartThroughXxmiAsync(WorkspaceRepository? repository)
+    {
+        if (repository is null || CanUseEndfieldBridge(repository)) return false;
+        RepositoryPresetInfo? preset = BuiltInRepositoryPresets.FirstOrDefault(candidate => IsRepositoryForPreset(repository, candidate));
+        if (XxmiLaunchPolicy.ImporterFor(preset?.Id) is not { } importer) return false;
+        string loader = EndfieldBridgeIntegration.ResolveLoader(LauncherTextBox.Text, DefaultLoaderPaths());
+        if (!XxmiLaunchPolicy.IsXxmiLauncher(loader) || !File.Exists(loader)) return false;
+
+        if (Process.GetProcessesByName(Path.GetFileNameWithoutExtension(XxmiLaunchPolicy.LauncherFileName)).Length > 0)
+        {
+            await ShowMessageAsync(T("XxmiLaunch.AlreadyRunning"), T("EndfieldBridge.LaunchFailed"));
+            return true;
+        }
+        string workingDirectory = Path.GetDirectoryName(loader) ?? AppContext.BaseDirectory;
+        try
+        {
+            string configuration = XxmiIntegration.ConfigPath(loader);
+            workingDirectory = Path.GetDirectoryName(configuration) ?? workingDirectory;
+            string? problem = XxmiLaunchPolicy.CheckImporter(await File.ReadAllTextAsync(configuration), importer) switch
+            {
+                XxmiImporterState.ImporterMissing => T("XxmiLaunch.ImporterMissing", importer),
+                XxmiImporterState.NoGameFolder => T("XxmiLaunch.NoGameFolder", importer),
+                _ => null
+            };
+            if (problem is not null)
+            {
+                await ShowMessageAsync(problem, T("EndfieldBridge.LaunchFailed"));
+                return true;
+            }
+        }
+        catch (Exception ex) when (ex is EndfieldLaunchException or IOException or UnauthorizedAccessException)
+        {
+            // XXMI may keep its configuration elsewhere. It reports its own problems once started.
+            LogApplicationIssue("Read XXMI configuration", ex);
+        }
+
+        Process.Start(new ProcessStartInfo(loader, XxmiLaunchPolicy.Arguments(importer)) { WorkingDirectory = workingDirectory, UseShellExecute = true });
+        StatusTextBlock.Text = T("XxmiLaunch.Started", importer);
+        if (string.IsNullOrWhiteSpace(LauncherTextBox.Text)) LauncherTextBox.Text = loader;
+        SaveConfig();
+        return true;
     }
 
     private async Task StartIntegratedEndfieldLaunchAsync(WorkspaceRepository repository)

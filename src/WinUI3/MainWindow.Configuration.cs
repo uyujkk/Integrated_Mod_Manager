@@ -20,17 +20,18 @@ public sealed partial class MainWindow
     {
         _repositories.Clear();
 
+        // A first install starts without a game and asks for one. Earlier installs without this file keep what they always got.
         WorkspaceRepository fallbackRepository = new()
         {
             Id = Guid.NewGuid().ToString("N"),
-            Name = "默认仓库",
+            Name = L("默认仓库", "Default repository"),
             SourcePath = SourceTextBox.Text ?? string.Empty,
             TargetPath = TargetTextBox.Text ?? string.Empty,
             LauncherPath = LauncherTextBox.Text ?? string.Empty,
             OnlineSourceSite = DefaultOnlineSourceSite,
-            OnlineGameName = DefaultOnlineGameName,
-            OnlineCategoryId = DefaultOnlineCategoryId,
-            WikiUrl = EndfieldOfficialWikiUrl
+            OnlineGameName = _firstInstall ? string.Empty : DefaultOnlineGameName,
+            OnlineCategoryId = _firstInstall ? string.Empty : DefaultOnlineCategoryId,
+            WikiUrl = _firstInstall ? string.Empty : EndfieldOfficialWikiUrl
         };
 
         if (!File.Exists(_shellConfigPath))
@@ -48,6 +49,7 @@ public sealed partial class MainWindow
             string shellJson = ReadConfigurationTextWithRecovery(_shellConfigPath, ConfigurationFileStore.IsJsonObject);
             BetaShellConfig? config = JsonSerializer.Deserialize<BetaShellConfig>(shellJson);
             _shellConfigExtensionData = config?.ExtensionData;
+            if (config is not null) RepositoryGameMigration.Apply(config, DefaultOnlineGameName, DefaultOnlineCategoryId);
             if (config is not null) RemoveOrphanPresetPreviews(config);
             if (config?.Repositories is { Count: > 0 })
             {
@@ -294,6 +296,7 @@ public sealed partial class MainWindow
                 WindowMaximized = _savedWindowMaximized,
                 WhatsNewSeenVersion = _whatsNewSeenVersion,
                 Repositories = [.. _repositories],
+                RepositoryGamesExplicit = true,
                 ExtensionData = _shellConfigExtensionData
             };
 

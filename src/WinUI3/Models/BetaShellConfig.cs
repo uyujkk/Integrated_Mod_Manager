@@ -92,6 +92,9 @@ public sealed class BetaShellConfig
 
     public List<WorkspaceRepository> Repositories { get; set; } = [];
 
+    /// <summary>False in configs from before an empty game meant "no game" (see <see cref="RepositoryGameMigration"/>).</summary>
+    public bool RepositoryGamesExplicit { get; set; }
+
     // Fields written by a newer version survive being saved by this one, so going back and forth loses nothing.
     [JsonExtensionData]
     public Dictionary<string, JsonElement>? ExtensionData { get; set; }

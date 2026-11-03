@@ -12,6 +12,13 @@ public sealed partial class MainWindow
     private int _repositoryScanGeneration;
     private RepositoryCardActions? _repositoryCardActions;
 
+    // Card commands run from XAML: an exception that gets past here ends the whole process.
+    private void SwitchRepositoryFromCard(string id, bool openManager)
+    {
+        try { SwitchRepository(id, openManager); }
+        catch (Exception ex) { ReportUiActionFailure("Switch repository", ex); }
+    }
+
     private void RefreshDashboard()
     {
         if (DashboardRepositoryComboBox is null)
@@ -36,8 +43,8 @@ public sealed partial class MainWindow
             T("Dashboard.DeleteRepository"),
             T("Dashboard.Current"));
         _repositoryCardActions ??= new RepositoryCardActions(
-            id => SwitchRepository(id, openManager: false),
-            id => SwitchRepository(id, openManager: true),
+            id => SwitchRepositoryFromCard(id, openManager: false),
+            id => SwitchRepositoryFromCard(id, openManager: true),
             EditRepositoryFromCardAsync,
             id =>
             {
@@ -140,7 +147,6 @@ public sealed partial class MainWindow
 
     private string DescribeRepositorySource(WorkspaceRepository repository)
     {
-        // The effective values include the built-in defaults the online page also falls back to.
         string game = GetEffectiveOnlineGameName(repository).Trim();
         string category = GetEffectiveOnlineCategoryId(repository).Trim();
         string source = string.IsNullOrWhiteSpace(category)

@@ -219,9 +219,7 @@ public sealed partial class MainWindow
             return string.Empty;
         }
 
-        return string.IsNullOrWhiteSpace(repository.OnlineGameName)
-            ? DefaultOnlineGameName
-            : repository.OnlineGameName.Trim();
+        return repository.OnlineGameName?.Trim() ?? string.Empty;
     }
 
     private string GetEffectiveOnlineCategoryId(WorkspaceRepository? repository)
@@ -231,9 +229,7 @@ public sealed partial class MainWindow
             return string.Empty;
         }
 
-        return string.IsNullOrWhiteSpace(repository.OnlineCategoryId)
-            ? DefaultOnlineCategoryId
-            : repository.OnlineCategoryId.Trim();
+        return repository.OnlineCategoryId?.Trim() ?? string.Empty;
     }
 
     private string GetOnlineRequestCategoryId(WorkspaceRepository? repository)
