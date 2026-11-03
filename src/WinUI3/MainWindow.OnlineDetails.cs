@@ -1,7 +1,5 @@
 using System.Globalization;
 using System.Numerics;
-using System.Text;
-using System.Text.Json;
 using System.Text.RegularExpressions;
 using IntegratedModManager.Core.Configuration;
 using IntegratedModManager.Core.Layout;
@@ -825,106 +823,11 @@ public sealed partial class MainWindow
         }
     }
 
-    private async Task<string> TranslateTextForDisplayAsync(string text, string targetLanguage)
-    {
-        if (string.IsNullOrWhiteSpace(text))
-        {
-            return string.Empty;
-        }
+    private Task<string> TranslateTextForDisplayAsync(string text, string targetLanguage)
+        => TextTranslationClient.TranslateLongTextAsync(_httpClient, text, targetLanguage);
 
-        List<string> chunks = SplitTextForTranslation(text, 2500);
-        var builder = new StringBuilder();
-        for (int i = 0; i < chunks.Count; i++)
-        {
-            string translatedChunk = await TranslateChunkAsync(chunks[i], targetLanguage);
-            if (builder.Length > 0)
-            {
-                builder.AppendLine();
-                builder.AppendLine();
-            }
-
-            builder.Append(translatedChunk.Trim());
-        }
-
-        return builder.ToString().Trim();
-    }
-
-    private async Task<string> TranslateChunkAsync(string text, string targetLanguage)
-    {
-        string requestUrl = $"https://translate.googleapis.com/translate_a/single?client=gtx&sl=auto&tl={Uri.EscapeDataString(targetLanguage)}&dt=t&q={Uri.EscapeDataString(text)}";
-        using HttpResponseMessage response = await _httpClient.GetAsync(requestUrl);
-        response.EnsureSuccessStatusCode();
-
-        string json = await response.Content.ReadAsStringAsync();
-        using JsonDocument document = JsonDocument.Parse(json);
-        JsonElement root = document.RootElement;
-        if (root.ValueKind != JsonValueKind.Array || root.GetArrayLength() == 0 || root[0].ValueKind != JsonValueKind.Array)
-        {
-            return text;
-        }
-
-        var builder = new StringBuilder();
-        foreach (JsonElement sentence in root[0].EnumerateArray())
-        {
-            if (sentence.ValueKind == JsonValueKind.Array && sentence.GetArrayLength() > 0 && sentence[0].ValueKind == JsonValueKind.String)
-            {
-                builder.Append(sentence[0].GetString());
-            }
-        }
-
-        return string.IsNullOrWhiteSpace(builder.ToString()) ? text : builder.ToString();
-    }
-
-    private static List<string> SplitTextForTranslation(string text, int maxChunkLength)
-    {
-        List<string> chunks = [];
-        string[] paragraphs = text.Split(["\r\n\r\n", "\n\n"], StringSplitOptions.None);
-        var builder = new StringBuilder();
-
-        foreach (string paragraph in paragraphs)
-        {
-            string current = paragraph.Trim();
-            if (string.IsNullOrWhiteSpace(current))
-            {
-                continue;
-            }
-
-            if (builder.Length > 0 && builder.Length + current.Length + 2 > maxChunkLength)
-            {
-                chunks.Add(builder.ToString());
-                builder.Clear();
-            }
-
-            if (current.Length > maxChunkLength)
-            {
-                if (builder.Length > 0)
-                {
-                    chunks.Add(builder.ToString());
-                    builder.Clear();
-                }
-
-                for (int index = 0; index < current.Length; index += maxChunkLength)
-                {
-                    chunks.Add(current.Substring(index, Math.Min(maxChunkLength, current.Length - index)));
-                }
-                continue;
-            }
-
-            if (builder.Length > 0)
-            {
-                builder.AppendLine();
-                builder.AppendLine();
-            }
-            builder.Append(current);
-        }
-
-        if (builder.Length > 0)
-        {
-            chunks.Add(builder.ToString());
-        }
-
-        return chunks.Count == 0 ? [text] : chunks;
-    }
+    private Task<string> TranslateChunkAsync(string text, string targetLanguage)
+        => TextTranslationClient.TranslateAsync(_httpClient, text, targetLanguage);
 
     private async void OnCloseOnlineDetailsClicked(object sender, RoutedEventArgs e)
     {

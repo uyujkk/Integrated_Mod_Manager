@@ -1,5 +1,4 @@
 using System.Collections.ObjectModel;
-using System.Text.RegularExpressions;
 using IntegratedModManager.Core.Archives;
 using IntegratedModManager.Core.Configuration;
 using IntegratedModManager.Core.Online;
@@ -30,7 +29,6 @@ public sealed partial class MainWindow : Window
     private const string DefaultOnlineGameName = "Arknights: Endfield";
     private const string EndfieldOfficialWikiUrl = "https://wiki.skland.com/endfield";
     private const string EndfieldOfficialOperatorCatalogUrl = "https://endfield.hypergryph.com/operator";
-    private const string HoYoWikiApiBaseUrl = "https://sg-wiki-api-static.hoyolab.com/hoyowiki/wapi";
     private const int OnlineDisplayPageSize = 40;
     private const int OnlineRawPageLimit = 80;
     private static readonly TimeSpan OnlineModListRequestTimeout = TimeSpan.FromSeconds(5);
@@ -44,9 +42,6 @@ public sealed partial class MainWindow : Window
     private static readonly IReadOnlyList<string> SupportedArchiveExtensions = ArchiveExtractor.SupportedExtensions;
     private static readonly ArchiveExtractor ArchiveExtraction = new(
         FindSevenZipExecutable, FindBandizipExecutable, TimeSpan.FromMinutes(ArchiveToolTimeoutMinutes));
-    private static readonly Regex LocalUpdatePackageRegex = new(
-        @"^Integrated_Mod_Manager-v(?<version>\d+\.\d+\.\d+)\.zip$",
-        RegexOptions.IgnoreCase | RegexOptions.Compiled);
     private static readonly HashSet<string> GenericOnlineCharacterNames = new(StringComparer.OrdinalIgnoreCase)
     {
         "operator", "operators", "character", "characters", "skin", "skins",

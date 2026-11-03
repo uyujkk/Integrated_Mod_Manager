@@ -27,6 +27,21 @@ public static class GameBananaDownloadCounts
         return url.Append("return_keys=true&format=json_min").ToString();
     }
 
+    /// <summary>One request per batch of <see cref="MaxBatch"/> Mods (the list API has no download counts at all).</summary>
+    public static async Task<Dictionary<int, int>> FetchAsync(HttpClient client, IReadOnlyList<int> itemIds, CancellationToken cancellationToken = default)
+    {
+        var counts = new Dictionary<int, int>();
+        foreach (int[] batch in itemIds.Distinct().Chunk(MaxBatch))
+        {
+            using HttpResponseMessage response = await client.GetAsync(BatchUrl(batch), cancellationToken);
+            if (response.StatusCode == System.Net.HttpStatusCode.TooManyRequests) throw new OnlineRateLimitException(response.Headers.RetryAfter?.Delta);
+            response.EnsureSuccessStatusCode();
+            foreach (var pair in Parse(await response.Content.ReadAsStringAsync(cancellationToken), batch))
+                counts[pair.Key] = pair.Value;
+        }
+        return counts;
+    }
+
     /// <summary>Maps results back by position. A response of the wrong length is rejected rather than misassigned.</summary>
     public static IReadOnlyDictionary<int, int> Parse(string json, IReadOnlyList<int> itemIds)
     {

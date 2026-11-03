@@ -231,6 +231,49 @@ public sealed class SmokeTests
         app.AssertNoErrors();
     }
 
+    [Theory]
+    [InlineData("Grid", "OnlineVirtualizedGridView")]
+    [InlineData("List", "OnlineVirtualizedListView")]
+    public void Online_LayoutButtonsSwitchAndAreSaved(string layout, string shownView)
+    {
+        // The test repository has no online category, so the page opens without loading anything.
+        using AppSession app = AppSession.Configured((shell, _) =>
+        {
+            shell["CurrentPrimarySection"] = "online";
+            shell["OnlineCardLayout"] = layout == "Grid" ? "list" : "grid";
+        }).Start();
+
+        Assert.True(app.Shows("OnlineSearchTextBox"));
+        AppSession.Invoke(app.Find("Online" + layout + "LayoutButton"));
+
+        Assert.Equal(layout, (string?)app.ShellConfig()["OnlineCardLayout"], ignoreCase: true);
+        Assert.True(app.Shows(shownView), shownView);
+        Assert.True(app.IsRunning);
+        app.AssertNoErrors();
+    }
+
+    [Fact]
+    public void Updates_ShowsItsSectionsAndSavesTheCheckInterval()
+    {
+        using AppSession app = AppSession.Configured((shell, _) => shell["CurrentPrimarySection"] = "updates").Start();
+        foreach (string id in new[] { "CheckModUpdatesButton", "ClearDownloadTasksButton", "ModUpdateIntervalComboBox" })
+            Assert.True(app.Shows(id), id);
+        string? before = (string?)app.ShellConfig()["ModUpdateCheckInterval"];
+
+        AutomationElement picker = app.Find("ModUpdateIntervalComboBox");
+        picker.Patterns.ExpandCollapse.Pattern.Expand();
+        Thread.Sleep(500);
+        AutomationElement[] options = picker.FindAllChildren(cf => cf.ByControlType(FlaUI.Core.Definitions.ControlType.ListItem));
+        AutomationElement other = options.First(option => !option.Patterns.SelectionItem.Pattern.IsSelected.Value);
+        AppSession.Invoke(other);
+        Thread.Sleep(800);
+
+        string? after = (string?)app.ShellConfig()["ModUpdateCheckInterval"];
+        Assert.False(string.IsNullOrEmpty(after));
+        Assert.NotEqual(before, after);
+        app.AssertNoErrors();
+    }
+
     // Ctrl+Alt+F9, set by AppSession.Configured.
     private static void PressHotkey()
     {
