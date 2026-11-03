@@ -18,11 +18,13 @@
     <Compile Include="..\..\src\WinUI3\Models\OnlineWorkspacePreferences.cs" Link="WindowAdapters\OnlineWorkspacePreferences.cs" />
     <Compile Include="..\..\src\WinUI3\Models\WorkspaceRepository.cs" Link="WindowAdapters\WorkspaceRepository.cs" />
     <Compile Include="..\..\src\WinUI3\Models\RepositoryGameMigration.cs" Link="WindowAdapters\RepositoryGameMigration.cs" />
+    <Compile Include="..\..\src\WinUI3\ViewModels\ShortcutPageViewModel.cs" Link="WindowAdapters\ShortcutPageViewModel.cs" />
     <None Update="Configuration\Samples\*.json" CopyToOutputDirectory="PreserveNewest" />
   </ItemGroup>
 
   <!-- UiTextResourceTests parses the window sources to check every text key and its values. -->
   <ItemGroup>
     <PackageReference Include="Microsoft.CodeAnalysis.CSharp" Version="4.11.0" />
+    <PackageReference Include="CommunityToolkit.Mvvm" Version="8.4.0" />
   </ItemGroup>
 </Project>

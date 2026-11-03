@@ -52,6 +52,7 @@ public sealed partial class MainWindow
         _batchModsButton = new Button { Content = T("BatchMods.Button"), MinHeight = 36 };
         _batchModsButton.Click += async (_, _) => await RunUiActionAsync("Batch Mod actions", ShowBatchModActionsAsync);
         AutomationProperties.SetName(_batchModsButton, T("BatchMods.Title"));
+        AutomationProperties.SetAutomationId(_batchModsButton, "BatchModsButton");
         Grid.SetColumn(_batchModsButton, 3); row.Children.Add(_batchModsButton);
         Grid.SetRow(row, 1); modGrid.Children.Add(row);
     }

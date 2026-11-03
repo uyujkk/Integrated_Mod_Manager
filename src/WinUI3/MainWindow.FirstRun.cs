@@ -1,4 +1,5 @@
 using Microsoft.UI.Xaml;
+using Microsoft.UI.Xaml.Automation;
 using Microsoft.UI.Xaml.Controls;
 
 namespace ModFolderCopier.WinUI;
@@ -16,7 +17,11 @@ public sealed partial class MainWindow
 
         var games = new RadioButtons();
         foreach (RepositoryPresetInfo preset in BuiltInRepositoryPresets)
-            games.Items.Add(new RadioButton { Content = L(preset.DisplayNameZh, preset.DisplayNameEn), Tag = preset.Id });
+        {
+            var option = new RadioButton { Content = L(preset.DisplayNameZh, preset.DisplayNameEn), Tag = preset.Id };
+            AutomationProperties.SetAutomationId(option, "FirstRunGame_" + preset.Id);
+            games.Items.Add(option);
+        }
         var content = new StackPanel { Spacing = 12 };
         content.Children.Add(new TextBlock { Text = T("FirstRun.Explanation"), TextWrapping = TextWrapping.Wrap });
         content.Children.Add(games);

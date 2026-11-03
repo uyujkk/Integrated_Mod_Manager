@@ -27,6 +27,17 @@ CI 在每个分支推送时运行（只改文档的推送除外），指向 `mai
 Builds every project with the `.editorconfig` rules enabled (for example IDE0005, unnecessary `using`) and fails on any finding. Shared compiler settings live in `Directory.Build.props`. CI runs this before `test-all`; locally, run it before `test-all` too, because its rebuild cleans the shared intermediate files.
 按 `.editorconfig` 规则（例如 IDE0005 多余的 `using`）编译所有项目，有任何问题即失败。公共编译设置在 `Directory.Build.props`。CI 在 `test-all` 之前运行它；本地也请先运行它再运行 `test-all`，因为它的重新生成会清理共享的中间文件。
 
+## UI automation / 界面自动化测试
+
+```powershell
+./scripts/test-all.ps1
+./scripts/test-ui.ps1
+./scripts/test-ui.ps1 -Filter "FullyQualifiedName~Overlay"
+```
+
+`tests/UI.Tests` drives the built application through Windows UI Automation (FlaUI). Each test copies the runtime that `test-all` staged in `artifacts/verification/ReleaseSource` (or `-Application <folder>`) and the synthetic `tests/TestData` into a temporary folder, starts it, and checks windows, the saved configuration and the error logs. Tests run one at a time and press a global hotkey, so use an unlocked desktop and leave the mouse and keyboard alone. They are not part of `test-all` or CI. Controls built in code carry an `AutomationProperties.AutomationId`; give new ones an id too, so tests do not depend on the display language.
+`tests/UI.Tests` 通过 Windows UI Automation（FlaUI）操作已构建的程序。每个测试把 `test-all` 在 `artifacts/verification/ReleaseSource` 生成的运行文件（或 `-Application <文件夹>`）和合成数据 `tests/TestData` 复制到临时目录后启动，检查窗口、保存的配置和错误日志。测试逐个运行并会按全局快捷键，请在解锁的桌面上运行，期间不要操作鼠标键盘。它不属于 `test-all`，也不在 CI 中运行。代码里创建的控件设有 `AutomationProperties.AutomationId`；新增控件也请设置，测试就不依赖界面语言。
+
 ## Four suites / 四组测试
 
 | Project | Scope / 范围 |

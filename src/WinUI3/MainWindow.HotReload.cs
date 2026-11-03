@@ -25,7 +25,7 @@ public sealed partial class MainWindow
     private string? _overlayCurrentSlotId;
     private string _overlaySlotSignature = string.Empty;
 
-    private bool CanHotReloadLoader => _shortcutInputEnabled && _shortcutTargetPicker?.SelectedItem is ShortcutTarget;
+    private bool CanHotReloadLoader => _shortcuts.InputEnabled && _shortcutTargetPicker?.SelectedItem is ShortcutTarget;
 
     // Sends F10 with d3dx_user.ini kept read-only and describes the outcome.
     private async Task<string> HotReloadLoaderAsync(string userIni, Action? keySent = null)
@@ -39,7 +39,7 @@ public sealed partial class MainWindow
         LoaderHotReloadResult result = await LoaderHotReload.ReloadAsync(userIni,
             async _ =>
             {
-                await _shortcutInput.SendAsync(target, plan, 120, _shortcutInputMode, IsEnglishUi);
+                await _shortcutInput.SendAsync(target, plan, 120, _shortcuts.InputMode, IsEnglishUi);
                 keySent?.Invoke();
             },
             LoaderHotReload.DefaultHold);
@@ -174,7 +174,7 @@ public sealed partial class MainWindow
     private async Task SwitchSlotFromOverlayAsync(string slotId, string modPath)
     {
         if (_savingOverlaySinglePreset || _applyingCombinationProfile) return;
-        if (_restoringPersistentRuntime || _shortcutSendInProgress)
+        if (_restoringPersistentRuntime || _shortcuts.SendInProgress)
         {
             _shortcutStatus!.Text = T("HotReload.StillApplying");
             RefreshShortcutOverlay(bindingsChanged: true);
@@ -197,7 +197,7 @@ public sealed partial class MainWindow
         }
 
         _restoringPersistentRuntime = true;
-        _shortcutSendInProgress = true;
+        _shortcuts.SendInProgress = true;
         try
         {
             var clock = System.Diagnostics.Stopwatch.StartNew();
@@ -228,7 +228,7 @@ public sealed partial class MainWindow
         finally
         {
             _restoringPersistentRuntime = false;
-            _shortcutSendInProgress = false;
+            _shortcuts.SendInProgress = false;
             _overlaySlotSignature = string.Empty;
             if (!_onlineWindowClosed)
             {

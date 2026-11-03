@@ -175,7 +175,7 @@ public sealed partial class MainWindow
             }
         }
         catch (Exception ex) { if (!_onlineWindowClosed) _characterFollowStatus!.Text = ex.Message; }
-        finally { _characterCaptureBusy = false; if (!_onlineWindowClosed && _shortcutOverlayVisible) _shortcutOverlay?.ShowPanel(); }
+        finally { _characterCaptureBusy = false; if (!_onlineWindowClosed && _shortcuts.OverlayVisible) _shortcutOverlay?.ShowPanel(); }
     }
 
     private async Task SaveCharacterReferenceAsync()
@@ -198,13 +198,13 @@ public sealed partial class MainWindow
             _characterFollowStatus!.Text = T("CharacterFollow.SavedReferenceForTotal", role, _characterProfile.Templates.Count);
         }
         catch (Exception ex) { if (!_onlineWindowClosed) _characterFollowStatus!.Text = ex.Message; }
-        finally { _characterCaptureBusy = false; if (!_onlineWindowClosed && _shortcutOverlayVisible) _shortcutOverlay?.ShowPanel(); }
+        finally { _characterCaptureBusy = false; if (!_onlineWindowClosed && _shortcuts.OverlayVisible) _shortcutOverlay?.ShowPanel(); }
     }
 
     private async Task ObserveCharacterAsync()
     {
         if (_characterCaptureBusy || _onlineWindowClosed || _characterFollowToggle?.IsOn != true
-            || _shortcutSendInProgress || _shortcutTargetPicker?.SelectedItem is not ShortcutTarget target
+            || _shortcuts.SendInProgress || _shortcutTargetPicker?.SelectedItem is not ShortcutTarget target
             || _characterProfile.Region is not CharacterScreenRegion region) return;
         if (!ShortcutInputService.IsTargetForeground(target))
         {
@@ -216,7 +216,7 @@ public sealed partial class MainWindow
         try
         {
             // If our panel covers the chosen HUD region, never match the panel itself.
-            if (_shortcutOverlayVisible && _shortcutOverlay is not null
+            if (_shortcuts.OverlayVisible && _shortcutOverlay is not null
                 && CharacterScreenCapture.OverlapsRegion(WinRT.Interop.WindowNative.GetWindowHandle(_shortcutOverlay), target, region))
             { _characterMatcher.Reset(); _characterFollowStatus!.Text = T("CharacterFollow.MoveTheOverlayAwayFromThe"); return; }
             CharacterFrame frame = await Task.Run(() => CharacterScreenCapture.Capture(target, IsEnglishUi));

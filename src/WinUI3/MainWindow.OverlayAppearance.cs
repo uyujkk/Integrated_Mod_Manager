@@ -2,6 +2,7 @@ using System.Numerics;
 using IntegratedModManager.Core.Layout;
 using Microsoft.UI.Composition;
 using Microsoft.UI.Xaml;
+using Microsoft.UI.Xaml.Automation;
 using Microsoft.UI.Xaml.Controls;
 using Microsoft.UI.Xaml.Controls.Primitives;
 using Microsoft.UI.Xaml.Hosting;
@@ -36,7 +37,7 @@ public sealed partial class MainWindow
         byte hover = light ? (byte)215 : (byte)68;
         _overlayElementBrush.Color = Color.FromArgb(OverlayAppearancePolicy.ElementAlpha(_overlayElementOpacity), fill, fill, (byte)(fill + (light ? 0 : 10)));
         _overlayElementHoverBrush.Color = Color.FromArgb(OverlayAppearancePolicy.HoverAlpha(_overlayElementOpacity), hover, hover, (byte)(hover + (light ? 0 : 10)));
-        bool show = OverlayAppearancePolicy.ShowTextShadow(_shortcutOverlayOpacity);
+        bool show = OverlayAppearancePolicy.ShowTextShadow(_shortcuts.OverlayOpacity);
         Color shadowColor = light ? Color.FromArgb(255, 255, 255, 255) : Color.FromArgb(255, 0, 0, 0);
         foreach ((SpriteVisual visual, DropShadow shadow) in _overlayTextShadows)
         {
@@ -90,7 +91,7 @@ public sealed partial class MainWindow
         text.SizeChanged += (_, _) => Refresh();
         text.RegisterPropertyChangedCallback(TextBlock.TextProperty, (_, _) => Refresh());
         _overlayTextShadows.Add((visual, shadow));
-        visual.IsVisible = OverlayAppearancePolicy.ShowTextShadow(_shortcutOverlayOpacity);
+        visual.IsVisible = OverlayAppearancePolicy.ShowTextShadow(_shortcuts.OverlayOpacity);
         shadow.Color = OverlayUsesLightBacking ? Color.FromArgb(255, 255, 255, 255) : Color.FromArgb(255, 0, 0, 0);
         return host;
     }
@@ -104,6 +105,7 @@ public sealed partial class MainWindow
             HorizontalAlignment = HorizontalAlignment.Stretch, AllowFocusOnInteraction = false, FontSize = 13
         };
         ToolTipService.SetToolTip(_overlayCompactToggle, T("OverlayView.CompactHint"));
+        AutomationProperties.SetAutomationId(_overlayCompactToggle, "OverlayCompactButton");
         _overlayCompactToggle.Click += (_, _) =>
         {
             _overlayCompactView = _overlayCompactToggle.IsChecked == true;
@@ -116,6 +118,7 @@ public sealed partial class MainWindow
             HorizontalAlignment = HorizontalAlignment.Stretch, AllowFocusOnInteraction = false, FontSize = 13
         };
         ToolTipService.SetToolTip(_overlayClickThroughButton, T("OverlayView.ClickThroughHint"));
+        AutomationProperties.SetAutomationId(_overlayClickThroughButton, "OverlayClickThroughButton");
         _overlayClickThroughButton.Click += (_, _) => SetOverlayClickThrough(true);
         var row = new Grid { ColumnSpacing = 6 };
         row.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(1, GridUnitType.Star) });
@@ -136,7 +139,7 @@ public sealed partial class MainWindow
     {
         if (_shortcutOverlay is null) return;
         // Without the hotkey the user could not get the mouse back, short of closing the app.
-        if (enabled && (!_shortcutPanelHotkeyEnabled || _shortcutPanelHotkey is null))
+        if (enabled && (!_shortcuts.HotkeyEnabled || _shortcutPanelHotkey is null))
         {
             _shortcutStatus!.Text = T("OverlayView.ClickThroughNeedsHotkey");
             if (_overlayCompactView) { _overlayCompactView = false; ApplyOverlayCompactView(); _overlayCompactToggle!.IsChecked = false; }
@@ -171,16 +174,16 @@ public sealed partial class MainWindow
 
     private void ApplyOverlayAppearancePreset(OverlayAppearancePreset preset)
     {
-        _shortcutOverlayOpacity = preset.BackgroundOpacity;
+        _shortcuts.OverlayOpacity = preset.BackgroundOpacity;
         _overlayElementOpacity = preset.ElementOpacity;
         _overlayCompactView = preset.CompactView;
-        _shortcutOverlay?.SetBackgroundOpacity(_shortcutOverlayOpacity);
+        _shortcutOverlay?.SetBackgroundOpacity(_shortcuts.OverlayOpacity);
         ApplyOverlayAppearance();
         ApplyOverlayCompactView();
         if (_overlayCompactToggle is not null) _overlayCompactToggle.IsChecked = _overlayCompactView;
         // The sliders ignore a value that already matches the field, so moving them changes nothing twice.
-        if (_shortcutOpacitySlider is not null) _shortcutOpacitySlider.Value = _shortcutOverlayOpacity;
-        if (_overlayOpacitySlider is not null) _overlayOpacitySlider.Value = _shortcutOverlayOpacity;
+        if (_shortcutOpacitySlider is not null) _shortcutOpacitySlider.Value = _shortcuts.OverlayOpacity;
+        if (_overlayOpacitySlider is not null) _overlayOpacitySlider.Value = _shortcuts.OverlayOpacity;
         if (_overlayElementSlider is not null) _overlayElementSlider.Value = _overlayElementOpacity;
         SaveShellConfig();
     }
