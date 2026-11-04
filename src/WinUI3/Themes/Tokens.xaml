@@ -71,6 +71,10 @@
             <SolidColorBrush x:Key="AppDangerSoftBrush" Color="#FDE7E9" />
             <!-- SystemFillColorCriticalBrush. -->
             <SolidColorBrush x:Key="AppDangerBrush" Color="#C42B1C" />
+            <!-- SmokeFillColorDefaultBrush: the dimmed window behind the command palette. -->
+            <SolidColorBrush x:Key="AppSmokeBrush" Color="#4D000000" />
+            <!-- AcrylicInAppFillColorDefaultBrush: the command palette. -->
+            <AcrylicBrush x:Key="AppPaletteBackgroundBrush" TintColor="#FCFCFC" TintOpacity="0" TintLuminosityOpacity="0.85" FallbackColor="#F9F9F9" />
         </ResourceDictionary>
         <ResourceDictionary x:Key="Dark">
             <SolidColorBrush x:Key="AppPrimaryButtonBrush" Color="{ThemeResource SystemAccentColorLight2}" />
@@ -101,6 +105,8 @@
             <SolidColorBrush x:Key="AppSuccessBrush" Color="#6CCB5F" />
             <SolidColorBrush x:Key="AppDangerSoftBrush" Color="#442726" />
             <SolidColorBrush x:Key="AppDangerBrush" Color="#FF99A4" />
+            <SolidColorBrush x:Key="AppSmokeBrush" Color="#4D000000" />
+            <AcrylicBrush x:Key="AppPaletteBackgroundBrush" TintColor="#2C2C2C" TintOpacity="0.15" TintLuminosityOpacity="0.96" FallbackColor="#2C2C2C" />
         </ResourceDictionary>
         <ResourceDictionary x:Key="HighContrast">
             <SolidColorBrush x:Key="AppPrimaryButtonBrush" Color="{ThemeResource SystemColorHighlightColor}" />
@@ -131,6 +137,8 @@
             <SolidColorBrush x:Key="AppSuccessBrush" Color="{ThemeResource SystemColorWindowTextColor}" />
             <SolidColorBrush x:Key="AppDangerSoftBrush" Color="{ThemeResource SystemColorWindowColor}" />
             <SolidColorBrush x:Key="AppDangerBrush" Color="{ThemeResource SystemColorWindowTextColor}" />
+            <SolidColorBrush x:Key="AppSmokeBrush" Color="#4D000000" />
+            <SolidColorBrush x:Key="AppPaletteBackgroundBrush" Color="{ThemeResource SystemColorWindowColor}" />
         </ResourceDictionary>
     </ResourceDictionary.ThemeDictionaries>
 </ResourceDictionary>
