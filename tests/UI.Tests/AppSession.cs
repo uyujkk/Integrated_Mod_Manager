@@ -16,6 +16,10 @@ public sealed class AppSession : IDisposable
 {
     private static readonly Lazy<string> RepositoryRoot = new(FindRepositoryRoot);
     private static readonly Lazy<Dictionary<string, string>> ChineseText = new(() => LoadText("zh-CN"));
+    // A first install picks Chinese on a Chinese system and English elsewhere, such as a CI runner.
+    private static readonly Lazy<Dictionary<string, string>> FirstInstallText = new(() => LoadText(
+        System.Globalization.CultureInfo.CurrentUICulture.Name.StartsWith("zh", StringComparison.OrdinalIgnoreCase) ? "zh-CN" : "en-US"));
+    private Lazy<Dictionary<string, string>> _text = ChineseText;
     // The app shows its what's-new dialog once per feature set; a configured session has seen it.
     private static readonly Lazy<string> WhatsNewFeatureSet = new(() => System.Text.RegularExpressions.Regex.Match(
         File.ReadAllText(Path.Combine(RepositoryRoot.Value, "src", "WinUI3", "MainWindow.WhatsNew.cs")), "WhatsNewFeatureSet = \"([^\"]+)\"").Groups[1].Value);
@@ -36,7 +40,7 @@ public sealed class AppSession : IDisposable
     }
 
     /// <summary>A copy that has never run: the next start is a first install.</summary>
-    public static AppSession FirstInstall() => new();
+    public static AppSession FirstInstall() => new() { _text = FirstInstallText };
 
     /// <summary>A copy that already has settings, so no first-run dialog appears.</summary>
     public static AppSession Configured(Action<JsonObject, AppSession>? configure = null)
@@ -80,7 +84,8 @@ public sealed class AppSession : IDisposable
 
     public bool IsRunning => _application is { HasExited: false };
 
-    public string Text(string key) => ChineseText.Value.TryGetValue(key, out string? text) ? text : throw new KeyNotFoundException(key);
+    // Text in the language this session's app shows: Chinese once configured, the system's choice on a first install.
+    public string Text(string key) => _text.Value.TryGetValue(key, out string? text) ? text : throw new KeyNotFoundException(key);
 
     // Text from another language file, for tests that switch the language.
     public static string TextIn(string language, string key) => LoadText(language)[key];
@@ -107,7 +112,8 @@ public sealed class AppSession : IDisposable
 
     public static AutomationElement FindIn(AutomationElement parent, Func<FlaUI.Core.Conditions.ConditionFactory, FlaUI.Core.Conditions.ConditionBase> condition,
         string description, TimeSpan? timeout = null)
-        => Retry.WhileNull(() => parent.FindFirstDescendant(condition), timeout ?? TimeSpan.FromSeconds(10), TimeSpan.FromMilliseconds(250)).Result
+        => Retry.WhileNull(() => parent.FindFirstDescendant(condition), timeout ?? TimeSpan.FromSeconds(10), TimeSpan.FromMilliseconds(250),
+                ignoreException: true).Result
             ?? throw new InvalidOperationException("Not found: " + description);
 
     /// <summary>Windows of this application other than the main one, such as the overlay.</summary>

@@ -1,0 +1,174 @@
+name: Release
+
+# Pushing a version tag (v4.7.3) builds, tests and packages that commit and prepares a DRAFT release:
+# the package, its SHA-256, a build provenance attestation and the notes from docs/releases/v<version>.md.
+# Nothing is public until the draft is reviewed and published on GitHub.
+#
+# A pull request that changes the release machinery runs a rehearsal instead: the same build, package
+# and upgrade test for the app's current version, without an attestation or a release.
+on:
+  push:
+    tags: ['v[0-9]+.[0-9]+.[0-9]+']
+  pull_request:
+    branches: [main]
+    paths:
+      - .github/workflows/release.yml
+      - scripts/package-stable-release.ps1
+      - scripts/package-release.ps1
+      - scripts/release-file-policy.ps1
+      - scripts/test-preview-upgrade.ps1
+      - scripts/new-release-notes.ps1
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: Existing version tag to build, such as v4.7.3
+        required: true
+
+permissions:
+  contents: write      # create the draft release
+  id-token: write      # sign the provenance attestation
+  attestations: write
+
+concurrency:
+  group: release-${{ github.event.inputs.tag || github.ref }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
+jobs:
+  release:
+    name: ${{ github.event_name == 'pull_request' && 'Release rehearsal' || 'Package and draft the release' }}
+    runs-on: windows-latest
+    timeout-minutes: 60
+    env:
+      REHEARSAL: ${{ github.event_name == 'pull_request' }}
+      # Empty in a rehearsal, which takes the version from the app.
+      TAG: ${{ github.event_name != 'pull_request' && (github.event.inputs.tag || github.ref_name) || '' }}
+      GH_TOKEN: ${{ github.token }}
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          ref: ${{ env.TAG != '' && format('refs/tags/{0}', env.TAG) || '' }}
+          # The packager records the commit of the previous release tag.
+          fetch-depth: 0
+      - uses: actions/setup-dotnet@v5
+        with:
+          dotnet-version: 8.0.x
+      - uses: microsoft/setup-msbuild@v2
+      - uses: actions/cache@v6
+        with:
+          path: ~/.nuget/packages
+          key: nuget-${{ runner.os }}-${{ hashFiles('**/*.csproj', '**/*.props') }}
+          restore-keys: nuget-${{ runner.os }}-
+
+      - name: Check the tag and find the previous release
+        id: version
+        shell: pwsh
+        run: |
+          $policy = Get-Content src/IntegratedModManager.Core/Updates/ApplicationReleasePolicy.cs -Raw
+          if ($policy -notmatch 'VersionLabel = "v(?<label>\d+\.\d+\.\d+)"') { throw 'No stable version in ApplicationReleasePolicy.cs.' }
+          $version = $Matches.label
+          if ($env:REHEARSAL -ne 'true') {
+            if ($env:TAG -ne "v$version") { throw "Tag $env:TAG does not match the app version v$version in ApplicationReleasePolicy.cs." }
+            gh release view $env:TAG *> $null
+            if ($LASTEXITCODE -eq 0) { throw "A release for $env:TAG already exists; delete it first to rebuild." }
+          }
+          if (!(Test-Path "docs/releases/v$version.md")) { throw "docs/releases/v$version.md is missing." }
+          # The newest published stable release older than this version.
+          $releases = gh release list --exclude-drafts --exclude-pre-releases --limit 100 --json tagName | ConvertFrom-Json
+          $base = $releases.tagName | Where-Object { $_ -match '^v\d+\.\d+\.\d+$' -and [version]$_.Substring(1) -lt [version]$version } |
+            Sort-Object { [version]$_.Substring(1) } | Select-Object -Last 1
+          if (!$base) { throw "No published release older than v$version to upgrade from." }
+          "version=$version" >> $env:GITHUB_OUTPUT
+          "base=$base" >> $env:GITHUB_OUTPUT
+          "Version v$version, previous release $base, rehearsal: $env:REHEARSAL" | Out-File $env:GITHUB_STEP_SUMMARY -Append -Encoding utf8
+
+      - name: Check code style
+        shell: pwsh
+        run: .\scripts\check-code-style.ps1 -OutputDirectory artifacts\code-style
+      - name: Run tests and build
+        shell: pwsh
+        run: .\scripts\test-all.ps1 -ArtifactsDirectory artifacts\verification\v${{ steps.version.outputs.version }}
+
+      - name: Package the stable release
+        id: package
+        shell: pwsh
+        run: |
+          $ciUrl = "$env:GITHUB_SERVER_URL/$env:GITHUB_REPOSITORY/actions/runs/$env:GITHUB_RUN_ID"
+          .\scripts\package-stable-release.ps1 -Version ${{ steps.version.outputs.version }} -BaseTag ${{ steps.version.outputs.base }} `
+            -VerificationDirectory artifacts\verification\v${{ steps.version.outputs.version }} -ForGitHubRelease -CiUrl $ciUrl
+          $delivery = Get-ChildItem artifacts\stable -Recurse -Filter delivery.json | Sort-Object LastWriteTime | Select-Object -Last 1
+          $info = Get-Content $delivery.FullName -Raw | ConvertFrom-Json
+          "zip=$($info.Package)" >> $env:GITHUB_OUTPUT
+          "app=$($info.Application)" >> $env:GITHUB_OUTPUT
+          "tests=$($info.TestsPassed)" >> $env:GITHUB_OUTPUT
+
+      - name: Upgrade from the previous release and roll back
+        shell: pwsh
+        run: |
+          gh release download ${{ steps.version.outputs.base }} --pattern '*.zip' --dir artifacts\base-release
+          $base = (Get-ChildItem artifacts\base-release -Filter *.zip | Select-Object -First 1).FullName
+          .\scripts\test-preview-upgrade.ps1 -BasePackage $base -Package '${{ steps.package.outputs.zip }}' `
+            -Application '${{ steps.package.outputs.app }}' -Version ${{ steps.version.outputs.version }} -OutputDirectory artifacts\upgrade-test
+
+      # Hosted runners start at 1024x768; the wide-layout tests need a larger screen.
+      - name: Set the screen resolution
+        shell: pwsh
+        run: |
+          try { Set-DisplayResolution -Width 1920 -Height 1080 -Force } catch { Write-Warning "Could not change the resolution: $_" }
+          Add-Type -AssemblyName System.Windows.Forms
+          "Screen: $([System.Windows.Forms.Screen]::PrimaryScreen.Bounds.Size)"
+      - name: Run UI smoke tests
+        shell: pwsh
+        run: .\scripts\test-ui.ps1 -Application artifacts\verification\v${{ steps.version.outputs.version }}\ReleaseSource
+
+      - name: Write the release notes
+        shell: pwsh
+        run: .\scripts\new-release-notes.ps1 -Version ${{ steps.version.outputs.version }} -OutputPath artifacts\release-notes.md
+
+      - name: Attest build provenance
+        if: env.REHEARSAL != 'true'
+        uses: actions/attest-build-provenance@v4
+        with:
+          subject-path: ${{ steps.package.outputs.zip }}
+
+      - name: Create the draft release
+        if: env.REHEARSAL != 'true'
+        shell: pwsh
+        run: |
+          $zip = '${{ steps.package.outputs.zip }}'
+          gh release create $env:TAG $zip "$zip.sha256" --draft --verify-tag --title "Integrated Mod Manager $env:TAG" --notes-file artifacts\release-notes.md
+          if ($LASTEXITCODE -ne 0) { throw 'Could not create the draft release.' }
+
+      - name: Download the draft assets and check SHA-256
+        if: env.REHEARSAL != 'true'
+        shell: pwsh
+        run: |
+          gh release download $env:TAG --dir artifacts\draft-check
+          if ($LASTEXITCODE -ne 0) { throw 'Could not download the draft assets.' }
+          $zip = Get-ChildItem artifacts\draft-check -Filter *.zip | Select-Object -First 1
+          $expected = ((Get-Content "$($zip.FullName).sha256" -Raw).Trim() -split '\s+')[0]
+          $actual = (Get-FileHash $zip.FullName -Algorithm SHA256).Hash
+          if ($actual -ne $expected) { throw "Downloaded $($zip.Name) has SHA-256 $actual, expected $expected." }
+          $url = gh release view $env:TAG --json url --jq .url
+          @(
+            "## Draft release $env:TAG is ready"
+            ''
+            "- Previous release: ${{ steps.version.outputs.base }} (upgrade and rollback tested)"
+            "- Tests passed: ${{ steps.package.outputs.tests }}"
+            "- $($zip.Name) SHA-256: ``$actual`` (re-downloaded and checked)"
+            '- Build provenance attested; check it with `gh attestation verify <zip> --repo uyujkk/Integrated_Mod_Manager`'
+            ''
+            "Review and publish the draft: $url"
+          ) | Out-File $env:GITHUB_STEP_SUMMARY -Append -Encoding utf8
+
+      - name: Upload test results and upgrade logs
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: release-checks-${{ steps.version.outputs.version || github.run_id }}
+          path: |
+            artifacts/release-notes.md
+            artifacts/verification/*/TestResults/**/*
+            artifacts/upgrade-test/*.json
+            tests/UI.Tests/bin/Release/*/screenshots/*.png
+          if-no-files-found: ignore
+          retention-days: 30

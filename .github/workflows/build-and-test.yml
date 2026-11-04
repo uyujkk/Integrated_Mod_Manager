@@ -30,6 +30,11 @@ jobs:
         with:
           dotnet-version: 8.0.x
       - uses: microsoft/setup-msbuild@v2
+      - uses: actions/cache@v6
+        with:
+          path: ~/.nuget/packages
+          key: nuget-${{ runner.os }}-${{ hashFiles('**/*.csproj', '**/*.props') }}
+          restore-keys: nuget-${{ runner.os }}-
       # Runs first: its rebuild cleans shared intermediate files, and test-all then rebuilds
       # the outputs that are uploaded below.
       - name: Check code style (unnecessary usings and other .editorconfig rules)
@@ -38,6 +43,21 @@ jobs:
       - name: Run tests and build verification
         shell: pwsh
         run: .\scripts\test-all.ps1 -ArtifactsDirectory artifacts\verification
+      # Hosted runners start at 1024x768; the wide-layout tests need a larger screen.
+      - name: Set the screen resolution
+        shell: pwsh
+        run: |
+          try { Set-DisplayResolution -Width 1920 -Height 1080 -Force } catch { Write-Warning "Could not change the resolution: $_" }
+          Add-Type -AssemblyName System.Windows.Forms
+          "Screen: $([System.Windows.Forms.Screen]::PrimaryScreen.Bounds.Size)"
+      # The UI tests start the built app on the runner's desktop and drive it with UI Automation.
+      - name: Run UI smoke tests
+        shell: pwsh
+        run: .\scripts\test-ui.ps1 -Application artifacts\verification\ReleaseSource
+      - name: Report UI text by language
+        if: always()
+        shell: pwsh
+        run: .\scripts\report-translations.ps1
       - name: Build standalone Developer Tools
         shell: pwsh
         run: .\scripts\package-developer-tools.ps1 -OutputDirectory artifacts\developer-tools
@@ -46,7 +66,9 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: test-results-${{ github.sha }}
-          path: artifacts/verification/TestResults/**/*
+          path: |
+            artifacts/verification/TestResults/**/*
+            tests/UI.Tests/bin/Release/*/screenshots/*.png
           if-no-files-found: warn
           retention-days: 14
       - name: Upload verified build outputs
