@@ -39,6 +39,24 @@ powershell.exe -NoProfile -ExecutionPolicy Bypass -File .\tools\ui-baseline\Capt
 - **首次安装弹窗只有一种语言和主题。** 首次安装的判断是“`config.ini` 和 `beta-shell.json` 都不存在”，此时语言跟随 Windows 显示语言、主题跟随 Windows，脚本不改系统设置，所以每种尺寸只拍一张（文件名 `firstrun-system-system-<尺寸>`）。要拍其他语言，需要在对应显示语言的 Windows 账户下运行。
 - **在线页没有在线数据。** 测试仓库没有在线分类，在线页显示的是空状态，不访问网络；有数据的在线页截图另需离线样例。
 - 首次运行可能出现 Windows 防火墙或 SmartScreen 提示，遮住截图时重拍。
+- **不要紧接着界面测试拍。** 界面测试会模拟按键；之后 Windows 认为“上一次输入是键盘”，应用启动时导航栏的搜索按钮会画出键盘焦点框，每张图都多出约 1000 个像素的差异。先用鼠标点一下桌面或等一会儿再拍。
+- J0 基线的副本文件夹名是随机的（`imm-baseline-<随机>`），仪表盘路径框里能看到它；之后脚本改用固定的 `%TEMP%\imm-baseline`，所以与 J0 基线比较时仪表盘和首次安装图的路径框总会有差异，可以忽略。
+
+## 对比脚本
+
+```powershell
+python -I .\tools\ui-baseline\compare_baselines.py artifacts\ui-baseline\j0-f6c2800 artifacts\ui-baseline\<新的一组> --diff artifacts\ui-baseline\<差异图目录>
+```
+
+逐张比较同名图片，每个颜色通道差超过 24 才算不同（吸收抗锯齿），忽略窗口边缘 3 像素；打印每张不同图片的差异像素数和范围，`--diff` 把差异像素用洋红色标在淡化的新图上。需要 Pillow 和 NumPy。
+
+## 启动时间
+
+```powershell
+powershell.exe -NoProfile -ExecutionPolicy Bypass -File .\tools\ui-baseline\Measure-Startup.ps1 -Application <旧构建>,artifacts\verification\ReleaseSource -Runs 7
+```
+
+各构建轮流启动（同样在 `%TEMP%` 副本里，打开仪表盘），读 `startup.log`，输出中位数：`ConstructorMs` 是 `MainWindow constructor entered` 到 `completed`，`ToRootLoadedMs` 是进程启动到 `RootGrid loaded`。
 
 ## 当前基线
 
