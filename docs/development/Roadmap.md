@@ -18,7 +18,7 @@ Updated 2026-11-04 against main after the v4.7.3 release (`5dfe728`). This bring
 | **G. 适配其他游戏** | 按系统语言选界面语言（G1 已实现）；首次安装弹窗选择默认仓库预设（G2 已实现）；其他游戏通过 XXMI 一键启动（G3 部分实现） | M | G3 需要实机核对；建议在面向其他游戏发布前完成 |
 | **H. 多语言** | 已发布于 4.7.3：界面语言改为文件（#86）、俄语界面与布局修复（#91）。剩余：母语者审校、俄语下未检查的界面 | S | 审校需要俄语使用者配合 |
 | **I. 发布与分发** | 已完成：.NET 8 更新器（4.7.1）、GitHub Actions 发布流程、CodeQL、Dependabot、CI 里的界面测试（#87）。剩余：代码签名、GameBanana 申诉 | S–M | 签名取决于签名服务的申请结果 |
-| **J. 界面结构拆分** | 把 67 个 partial 文件的 `MainWindow` 拆成六个页面加服务层，继续用 WinUI 3，外观不变（设置页改用 `SettingsCard`）。见[界面结构拆分计划](./UI-Structure-Plan.md) | L（约 5–7 周，分 9 个 PR） | 无；拆分期间新功能尽量做在已拆出的页面 |
+| **J. 界面结构拆分** | 把 67 个 partial 文件的 `MainWindow` 拆成六个页面加服务层，继续用 WinUI 3，外观不变（设置页改用 `SettingsCard`）。见[界面结构拆分计划](./UI-Structure-Plan.md)。拆分之后的逐页外观改进另见[界面外观优化方案](./UI-Fluent-Design-Plan.md)（新增 J1T 设计令牌、J1N 外壳和几个 `-b` PR，与结构移动分开提交，约多 4–6 周） | L（约 5–7 周，分 9 个 PR） | 无；拆分期间新功能尽量做在已拆出的页面 |
 | **搁置** | #15 原生闪退（等转储）、C3 终末地修复器集成（#8）、#9 角色定向修复（等 #8）、E Linux 尝试 | — | 见下 |
 
 ## 未完成内容 / Open work（2026-11-04 整理）
@@ -34,7 +34,7 @@ Updated 2026-11-04 against main after the v4.7.3 release (`5dfe728`). This bring
 | 5 | B3 背景模式、B4 待生效队列 | 未做；B4 依赖 A1 的 F10 核对 |
 | 6 | 预设与 Mod 原始默认值 | “默认”槽位已补建并跟随 Mod 更新；“清除加载器保存的值”未做 |
 | 7 | F 其余 | F1 压缩、F4 Windows 版本实测未做 |
-| 8 | J 界面结构拆分 | 计划见[界面结构拆分计划](./UI-Structure-Plan.md)，从 J0 准备开始 |
+| 8 | J 界面结构拆分 | 计划见[界面结构拆分计划](./UI-Structure-Plan.md)，从 J0 准备开始；外观改进见[界面外观优化方案](./UI-Fluent-Design-Plan.md)，与拆分分开提交 |
 | 9 | C1 多选、C2 | Mod 列表多选未做；C2 的 WGC 2026-11-04 决定不做，只截取框选区域和组合包带图未做 |
 | 10 | I 发布与分发 | 代码签名（SignPath 免费开源计划，或 Azure Artifact Signing，后者只面向美国和加拿大的个人）；GameBanana 申诉稿写于 4.7.1 之前，发送前要更新；4.7.1 之后的更新器还没单独查过 VirusTotal |
 | 11 | 文档 | Wiki 仍停在 4.6.1，截图仍是 4.6；`CHANGELOG.md` 里 4.7.3 的日期在下一个版本准备 PR 中补上 |
@@ -464,6 +464,6 @@ G1 和 G2 用同一个判断：`config.ini` 和 `beta-shell.json` 都不存在�
 - **G. Other games (M, before publishing for other games):** on a first install only, pick the UI language from the system language (Chinese or English), and ask for the default repository preset instead of assuming Endfield; upgrades are unaffected. One-click launch for Genshin Impact, Honkai: Star Rail and Zenless Zone Zero through XXMI's own importers, without rewriting XXMI's configuration. Needs real-game checks.
 - **On hold:** #15 (needs a crash dump), C3 the optional Endfield repair tool (#8, set aside 2026-11-02), #9 (needs #8), E the Linux experiment, and one-shot `[Present]` injection, a fallback to evaluate only if A1 shows the read-only method is unreliable.
 - **H. Languages (S):** shipped in 4.7.3: UI languages as files (#86) and a Russian interface with layout fixes (#91). Left: a native-speaker review, and checking the overlay, in-action dialogs and live online lists in Russian.
-- **J. UI structure (L, about 5–7 weeks in 9 PRs):** split the 67-file `MainWindow` into six pages plus a service layer, staying on WinUI 3 with the same look (Settings moves to `SettingsCard`); see the [UI structure plan](./UI-Structure-Plan.md). Screenshot phase 2 (WGC) was dropped on 2026-11-04.
+- **J. UI structure (L, about 5–7 weeks in 9 PRs):** split the 67-file `MainWindow` into six pages plus a service layer, staying on WinUI 3 with the same look (Settings moves to `SettingsCard`); see the [UI structure plan](./UI-Structure-Plan.md). Per-page Fluent appearance work is planned separately in the [UI Fluent design plan](./UI-Fluent-Design-Plan.md) (new stages J1T and J1N plus `-b` PRs, always committed apart from the structural moves). Screenshot phase 2 (WGC) was dropped on 2026-11-04.
 - **I. Release and distribution (S–M):** done: the .NET 8 updater (4.7.1), releases through GitHub Actions, CodeQL, Dependabot and UI tests in CI (#87). Left: code signing (SignPath or Azure Artifact Signing) and updating the GameBanana appeal.
 - **Status (2026-11-04):** v4.7.0 shipped B1–B3 (except background modes), C1, C4–C6, all of D and G1–G3; 4.7.1 the .NET 8 updater; 4.7.2 catalog retries; 4.7.3 the Russian interface. #93 closed the CodeQL zip slip alert. A2–A4 were done in #61. **Suggested next step:** the real-game checks in A, the Russian review, then B4.
