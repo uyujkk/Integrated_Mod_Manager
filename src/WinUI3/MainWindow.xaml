@@ -113,7 +113,7 @@
                                 <FontIcon Glyph="&#xE896;" FontSize="16" Opacity="0.88" />
                                 <Border x:Name="NavTasksBadge" Margin="0,-8,-14,0" Padding="5,0" MinWidth="16" CornerRadius="8"
                                         HorizontalAlignment="Right" VerticalAlignment="Top" Background="{ThemeResource AppAccentBrush}" Visibility="Collapsed">
-                                    <TextBlock x:Name="NavTasksCountTextBlock" FontSize="10" FontWeight="SemiBold" Foreground="White" HorizontalAlignment="Center" />
+                                    <TextBlock x:Name="NavTasksCountTextBlock" FontSize="10" FontWeight="SemiBold" Foreground="{ThemeResource TextOnAccentFillColorPrimaryBrush}" HorizontalAlignment="Center" />
                                 </Border>
                             </Grid>
                             <TextBlock x:Name="NavTasksLabelTextBlock" VerticalAlignment="Center" HorizontalAlignment="Center" />
@@ -171,7 +171,9 @@
                 </Grid>
             </Border>
 
-            <Grid x:Name="PagesHostGrid" Grid.Column="2">
+            <!-- The pages sit on one content layer over the window's Mica, like Windows Settings. -->
+            <Grid x:Name="PagesHostGrid" Grid.Column="2" Background="{ThemeResource AppContentLayerBrush}"
+                  CornerRadius="{StaticResource OverlayCornerRadius}">
                 <ScrollViewer x:Name="DashboardScrollViewer" VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled" Visibility="Collapsed">
                     <StackPanel x:Name="DashboardRootPanel" Margin="2,2,8,20" Spacing="12">
                         <local:PageHeader x:Name="DashboardPageHeader">
@@ -216,11 +218,11 @@
                                 </StackPanel>
                                 <StackPanel x:Name="DashboardStripStatus" Grid.Column="2" Spacing="4" VerticalAlignment="Center">
                                     <Grid HorizontalAlignment="Left">
-                                        <Border Background="{ThemeResource AppSuccessSoftBrush}" CornerRadius="6" Padding="10,3" Visibility="{x:Bind Dashboard.CurrentIsReady, Mode=OneWay}">
-                                            <TextBlock Text="{x:Bind Dashboard.CurrentStatusText, Mode=OneWay}" Foreground="{ThemeResource AppSuccessBrush}" Style="{StaticResource CaptionTextStyle}" FontWeight="SemiBold" />
+                                        <Border Style="{StaticResource StatusBadgeSuccessBorderStyle}" Visibility="{x:Bind Dashboard.CurrentIsReady, Mode=OneWay}">
+                                            <TextBlock Text="{x:Bind Dashboard.CurrentStatusText, Mode=OneWay}" Style="{StaticResource StatusBadgeSuccessTextStyle}" FontWeight="SemiBold" />
                                         </Border>
-                                        <Border Background="{ThemeResource AppDangerSoftBrush}" CornerRadius="6" Padding="10,3" Visibility="{x:Bind Dashboard.CurrentNeedsSetup, Mode=OneWay}">
-                                            <TextBlock Text="{x:Bind Dashboard.CurrentStatusText, Mode=OneWay}" Foreground="{ThemeResource AppDangerBrush}" Style="{StaticResource CaptionTextStyle}" FontWeight="SemiBold" />
+                                        <Border Style="{StaticResource StatusBadgeDangerBorderStyle}" Visibility="{x:Bind Dashboard.CurrentNeedsSetup, Mode=OneWay}">
+                                            <TextBlock Text="{x:Bind Dashboard.CurrentStatusText, Mode=OneWay}" Style="{StaticResource StatusBadgeDangerTextStyle}" FontWeight="SemiBold" />
                                         </Border>
                                     </Grid>
                                     <TextBlock Text="{x:Bind Dashboard.CurrentSummary, Mode=OneWay}" Style="{StaticResource CaptionTextStyle}" />
@@ -434,11 +436,11 @@
                                                                     <TextBlock Text="{x:Bind Subtitle, Mode=OneWay}" Style="{StaticResource CaptionTextStyle}" TextTrimming="CharacterEllipsis" />
                                                                 </StackPanel>
                                                                 <Grid Grid.Column="1" VerticalAlignment="Top">
-                                                                    <Border Background="{ThemeResource AppSuccessSoftBrush}" CornerRadius="6" Padding="8,2" Visibility="{x:Bind IsReady, Mode=OneWay}">
-                                                                        <TextBlock Text="{x:Bind StatusText, Mode=OneWay}" Foreground="{ThemeResource AppSuccessBrush}" Style="{StaticResource CaptionTextStyle}" />
+                                                                    <Border Style="{StaticResource StatusBadgeSuccessBorderStyle}" Visibility="{x:Bind IsReady, Mode=OneWay}">
+                                                                        <TextBlock Text="{x:Bind StatusText, Mode=OneWay}" Style="{StaticResource StatusBadgeSuccessTextStyle}" />
                                                                     </Border>
-                                                                    <Border Background="{ThemeResource AppDangerSoftBrush}" CornerRadius="6" Padding="8,2" Visibility="{x:Bind NeedsSetup, Mode=OneWay}">
-                                                                        <TextBlock Text="{x:Bind StatusText, Mode=OneWay}" Foreground="{ThemeResource AppDangerBrush}" Style="{StaticResource CaptionTextStyle}" />
+                                                                    <Border Style="{StaticResource StatusBadgeDangerBorderStyle}" Visibility="{x:Bind NeedsSetup, Mode=OneWay}">
+                                                                        <TextBlock Text="{x:Bind StatusText, Mode=OneWay}" Style="{StaticResource StatusBadgeDangerTextStyle}" />
                                                                     </Border>
                                                                 </Grid>
                                                             </Grid>
@@ -558,7 +560,7 @@
                                     <ColumnDefinition Width="Auto" />
                                 </Grid.ColumnDefinitions>
                                 <StackPanel Orientation="Horizontal" Spacing="12" VerticalAlignment="Center">
-                                    <TextBlock x:Name="WorkspaceTitleTextBlock" FontSize="22" FontWeight="SemiBold" />
+                                    <TextBlock x:Name="WorkspaceTitleTextBlock" Style="{StaticResource PageTitleTextStyle}" />
                                     <ComboBox x:Name="RepositoryWorkspacePicker" MinWidth="190" MaxWidth="300" MinHeight="32" HorizontalAlignment="Left"
                                             SelectionChanged="OnRepositoryWorkspacePickerSelectionChanged" />
                                 </StackPanel>
@@ -776,11 +778,11 @@
                                                                     TextAlignment="Right"
                                                                     VerticalAlignment="Center" />
                                                                 <Grid Grid.Column="3" VerticalAlignment="Center">
-                                                                    <Border Padding="8,2" CornerRadius="4" Background="{ThemeResource AppSuccessSoftBrush}" Visibility="{x:Bind DeployedPillVisibility, Mode=OneWay}">
-                                                                        <TextBlock FontSize="12" Foreground="{ThemeResource AppSuccessBrush}" Text="{x:Bind State, Mode=OneWay}" />
+                                                                    <Border Style="{StaticResource StatusBadgeSuccessBorderStyle}" Visibility="{x:Bind DeployedPillVisibility, Mode=OneWay}">
+                                                                        <TextBlock Style="{StaticResource StatusBadgeSuccessTextStyle}" Text="{x:Bind State, Mode=OneWay}" />
                                                                     </Border>
-                                                                    <Border Padding="8,2" CornerRadius="4" Background="{ThemeResource AppSecondaryDefaultBrush}" Visibility="{x:Bind IdlePillVisibility, Mode=OneWay}">
-                                                                        <TextBlock FontSize="12" Opacity="0.8" Text="{x:Bind State, Mode=OneWay}" />
+                                                                    <Border Style="{StaticResource StatusBadgeBorderStyle}" Visibility="{x:Bind IdlePillVisibility, Mode=OneWay}">
+                                                                        <TextBlock Style="{StaticResource StatusBadgeTextStyle}" Text="{x:Bind State, Mode=OneWay}" />
                                                                     </Border>
                                                                 </Grid>
                                                             </Grid>
@@ -1002,7 +1004,7 @@
                                             <ColumnDefinition Width="Auto" />
                                         </Grid.ColumnDefinitions>
                                         <StackPanel Orientation="Horizontal" Spacing="8" VerticalAlignment="Center">
-                                            <TextBlock x:Name="OnlineTitleTextBlock" FontSize="20" FontWeight="SemiBold" VerticalAlignment="Center" />
+                                            <TextBlock x:Name="OnlineTitleTextBlock" Style="{StaticResource PageTitleTextStyle}" VerticalAlignment="Center" />
                                             <!-- The page descriptions live in this tooltip instead of two header lines. -->
                                             <FontIcon Glyph="&#xE946;" FontSize="14" Opacity="0.7" VerticalAlignment="Center">
                                                 <ToolTipService.ToolTip>
