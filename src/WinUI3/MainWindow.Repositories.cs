@@ -113,16 +113,14 @@ public sealed partial class MainWindow
             if (existing is not null)
             {
                 SwitchRepository(existing.Id, openManager: false);
-                ShowAppNotification(
-                    $"已切换到现有仓库：{existing.Name}",
-                    $"Switched to the existing repository: {existing.Name}");
+                ShowAppNotification(T("Repositories.SwitchedToExisting", existing.Name));
                 return;
             }
 
             SaveSelectedRepositoryFromInputs();
             WorkspaceRepository draftRepository = new()
             {
-                Name = _currentLanguage == AppLanguage.ZhCn ? preset.DisplayNameZh : preset.DisplayNameEn,
+                Name = IsChineseUi ? preset.DisplayNameZh : preset.DisplayNameEn,
                 OnlineSourceSite = DefaultOnlineSourceSite,
                 OnlineGameName = preset.DisplayNameEn,
                 OnlineCategoryId = preset.CategoryId,
@@ -148,9 +146,7 @@ public sealed partial class MainWindow
             SaveShellConfig();
             RefreshDashboard();
             RefreshRepositoryActionButtons();
-            ShowAppNotification(
-                $"已创建仓库：{repository.Name}",
-                $"Created repository: {repository.Name}");
+            ShowAppNotification(T("Repositories.Created", repository.Name));
         }
         catch (Exception ex)
         {
@@ -191,10 +187,7 @@ public sealed partial class MainWindow
         }
         catch (Exception ex)
         {
-            ShowAppNotification(
-                $"打开 Wiki 失败：{ex.Message}",
-                $"Failed to open the Wiki: {ex.Message}",
-                InfoBarSeverity.Error);
+            ShowAppNotification(T("Repositories.OpenWikiFailed", ex.Message), InfoBarSeverity.Error);
         }
     }
 
@@ -587,7 +580,7 @@ public sealed partial class MainWindow
             _ = EnsureOnlineCharacterCatalogAsync(repository, forceReload: false);
             RefreshSettingsPane();
             RefreshOnlinePaneV2();
-            ShowAppNotification("角色分类映射已更新。", "Character category mapping updated.");
+            ShowAppNotification(T("Repositories.CategoryMappingUpdated"));
         }
         catch (Exception ex)
         {

@@ -17,7 +17,7 @@ public sealed partial class MainWindow
         return System.Text.Json.JsonSerializer.Serialize(new[]
         {
             repository?.Id, repository?.SourcePath, repository?.OnlineCategoryId,
-            repository?.OnlineSourceSite, _currentLanguage.ToString()
+            repository?.OnlineSourceSite, _currentLanguage
         });
     }
 

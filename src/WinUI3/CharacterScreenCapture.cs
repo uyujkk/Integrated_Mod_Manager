@@ -49,32 +49,32 @@ internal static class CharacterScreenCapture
         }
     }
 
-    public static CharacterFrame Capture(ShortcutTarget target, bool english = false)
+    public static CharacterFrame Capture(ShortcutTarget target, string language)
     {
-        if (!ShortcutInputService.IsTargetForeground(target)) throw new InvalidOperationException(BetaLocalization.Resolve(english, "请让目标游戏保持前台。", "Keep the selected game in the foreground."));
-        if (!GetClientRect(target.Handle, out var rect)) throw new InvalidOperationException(BetaLocalization.Resolve(english, "无法读取目标窗口大小。", "Cannot read target bounds."));
+        if (!ShortcutInputService.IsTargetForeground(target)) throw new InvalidOperationException(UiText.Get(language, "ScreenCapture.KeepGameInForeground"));
+        if (!GetClientRect(target.Handle, out var rect)) throw new InvalidOperationException(UiText.Get(language, "ScreenCapture.CannotReadTargetBounds"));
         var origin = new Point();
-        if (!ClientToScreen(target.Handle, ref origin)) throw new InvalidOperationException(BetaLocalization.Resolve(english, "无法定位目标窗口。", "Cannot locate target window."));
+        if (!ClientToScreen(target.Handle, ref origin)) throw new InvalidOperationException(UiText.Get(language, "ScreenCapture.CannotLocateTarget"));
         int width = rect.Right, height = rect.Bottom;
-        if (width < 32 || height < 32 || (long)width * height > 33_177_600) throw new InvalidOperationException(BetaLocalization.Resolve(english, "目标窗口尺寸不受支持。", "Unsupported target size."));
+        if (width < 32 || height < 32 || (long)width * height > 33_177_600) throw new InvalidOperationException(UiText.Get(language, "ScreenCapture.UnsupportedTargetSize"));
         // Reject partly offscreen windows rather than matching unrelated desktop pixels.
         int left = GetSystemMetrics(76), top = GetSystemMetrics(77);
         if (origin.X < left || origin.Y < top || origin.X + width > left + GetSystemMetrics(78)
-            || origin.Y + height > top + GetSystemMetrics(79)) throw new InvalidOperationException(BetaLocalization.Resolve(english, "目标窗口需完整显示在屏幕内。", "The target window must be fully on screen."));
+            || origin.Y + height > top + GetSystemMetrics(79)) throw new InvalidOperationException(UiText.Get(language, "ScreenCapture.TargetMustBeOnScreen"));
         nint screen = GetDC(0), memory = 0, bitmap = 0, previous = 0;
         try
         {
             memory = CreateCompatibleDC(screen);
             var info = new BitmapInfo { Size = 40, Width = width, Height = -height, Planes = 1, Bits = 32 };
             bitmap = CreateDIBSection(screen, ref info, 0, out nint pixels, 0, 0);
-            if (memory == 0 || bitmap == 0 || pixels == 0) throw new InvalidOperationException(BetaLocalization.Resolve(english, "无法分配截图缓冲区。", "Cannot allocate capture surface."));
+            if (memory == 0 || bitmap == 0 || pixels == 0) throw new InvalidOperationException(UiText.Get(language, "ScreenCapture.CannotAllocateSurface"));
             previous = SelectObject(memory, bitmap);
             if (!BitBlt(memory, 0, 0, width, height, screen, origin.X, origin.Y, 0x00CC0020 | 0x40000000))
-                throw new InvalidOperationException(BetaLocalization.Resolve(english, "截取画面失败。", "Screen capture failed."));
+                throw new InvalidOperationException(UiText.Get(language, "ScreenCapture.CaptureFailed"));
             var bytes = new byte[checked(width * height * 4)];
             Marshal.Copy(pixels, bytes, 0, bytes.Length);
             for (int i = 3; i < bytes.Length; i += 4) bytes[i] = 255;
-            if (!ShortcutInputService.IsTargetForeground(target)) throw new InvalidOperationException(BetaLocalization.Resolve(english, "截图过程中目标窗口失去焦点。", "Target focus changed during capture."));
+            if (!ShortcutInputService.IsTargetForeground(target)) throw new InvalidOperationException(UiText.Get(language, "ScreenCapture.FocusChangedDuringCapture"));
             return new(width, height, bytes);
         }
         finally

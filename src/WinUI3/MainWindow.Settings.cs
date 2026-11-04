@@ -29,13 +29,13 @@ public sealed partial class MainWindow
         }
         RefreshSettingsButtonLabels();
 
-        if (string.IsNullOrWhiteSpace(_updateStatusZh) || string.IsNullOrWhiteSpace(_updateStatusEn))
+        if (_updateStatus is null)
         {
-            SetUpdateStatus($"当前版本：{AppVersion}", $"Current version: {AppVersion}");
+            SetUpdateStatus(M("Updates.CurrentVersion", AppVersion));
         }
         else
         {
-            UpdateStatusTextBlock.Text = L(_updateStatusZh, _updateStatusEn);
+            UpdateStatusTextBlock.Text = T(_updateStatus);
         }
 
         PopulateUpdateCheckIntervalOptions();
@@ -138,7 +138,8 @@ public sealed partial class MainWindow
     private void InitializeAppearanceSettings()
     {
         _themePreference = ThemePreferences.Parse(_storedThemePreference, _legacyDarkTheme);
-        AppearanceSettings.LanguageIndex = _currentLanguage == AppLanguage.EnUs ? 1 : 0;
+        AppearanceSettings.SetLanguageOptions(UiText.Languages.Select(UiText.LanguageName).ToArray());
+        AppearanceSettings.LanguageIndex = Math.Max(0, IndexOfLanguage(_currentLanguage));
         AppearanceSettings.Theme = _themePreference;
         AppearanceSettings.DensityIndex = _interfaceDensity == InterfaceDensity.Compact ? 1 : 0;
         AppearanceSettings.ReduceMotion = _reduceMotion;
@@ -170,8 +171,8 @@ public sealed partial class MainWindow
         switch (e.PropertyName)
         {
             case nameof(AppearanceSettingsViewModel.LanguageIndex):
-                AppLanguage language = AppearanceSettings.LanguageIndex == 1 ? AppLanguage.EnUs : AppLanguage.ZhCn;
-                if (language != _currentLanguage)
+                string language = UiText.Languages[Math.Clamp(AppearanceSettings.LanguageIndex, 0, UiText.Languages.Count - 1)];
+                if (!string.Equals(language, _currentLanguage, StringComparison.Ordinal))
                 {
                     SwitchLanguage(language);
                 }
@@ -197,9 +198,8 @@ public sealed partial class MainWindow
                     _reduceMotion = AppearanceSettings.ReduceMotion;
                     SaveShellConfig();
                     ShowAppNotification(
-                        _reduceMotion ? "已减少界面动态效果。" : "已恢复界面动态效果。",
-                        _reduceMotion ? "Interface motion has been reduced." : "Interface motion has been restored.",
-                        InfoBarSeverity.Informational);
+            _reduceMotion ? T("Settings.MotionReduced") : T("Settings.MotionRestored"),
+            InfoBarSeverity.Informational);
                 }
                 break;
         }
@@ -296,7 +296,10 @@ public sealed partial class MainWindow
         ShortcutRowsPanel.Spacing = compact ? 6 : 10;
     }
 
-    private void SwitchLanguage(AppLanguage language)
+    private static int IndexOfLanguage(string language)
+        => UiText.Languages.ToList().FindIndex(item => string.Equals(item, language, StringComparison.OrdinalIgnoreCase));
+
+    private void SwitchLanguage(string language)
     {
         SaveCurrentModBindings();
         _currentLanguage = language;

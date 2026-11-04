@@ -215,7 +215,7 @@ public sealed partial class MainWindow
         return button;
     }
 
-    private async void ShowAppNotification(string zh, string en, InfoBarSeverity severity = InfoBarSeverity.Success)
+    private async void ShowAppNotification(string message, InfoBarSeverity severity = InfoBarSeverity.Success)
     {
         try
         {
@@ -228,7 +228,7 @@ public sealed partial class MainWindow
                 InfoBarSeverity.Informational => T("Dialogs.Notice"),
                 _ => T("Dialogs.Completed")
             };
-            AppInfoBar.Message = L(zh, en);
+            AppInfoBar.Message = message;
             AppInfoBar.IsOpen = true;
 
             await Task.Delay(TimeSpan.FromSeconds(3.5));

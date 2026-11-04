@@ -57,12 +57,6 @@ public sealed partial class MainWindow : Window
         Shortcuts
     }
 
-    private enum AppLanguage
-    {
-        ZhCn,
-        EnUs
-    }
-
     private enum ShellLayoutMode
     {
         Expanded,
@@ -158,12 +152,11 @@ public sealed partial class MainWindow : Window
     private string? _selectedRepositoryId;
     private string? _selectedConfigurationProfileId;
     private string? _lastInstallTransactionPath;
-    private string _modUpdateStatusEn = string.Empty;
-    private string _modUpdateStatusZh = string.Empty;
-    private string _updateStatusEn = string.Empty;
-    private string _updateStatusZh = string.Empty;
+    private UiMessage? _modUpdateStatus;
+    private UiMessage? _updateStatus;
     private OnlineModCard? _activeOnlineDetailMod;
-    private AppLanguage _currentLanguage = AppLanguage.ZhCn;
+    // A language code with a file in Strings, such as zh-CN or en-US.
+    private string _currentLanguage = UiLanguagePolicy.Chinese;
     private PrimarySection _currentPrimarySection = PrimarySection.Dashboard;
     private ShellLayoutMode _shellLayoutMode = (ShellLayoutMode)(-1);
     private bool _primaryNavExpanded;
@@ -222,7 +215,7 @@ public sealed partial class MainWindow : Window
         TraceStartupStage("Input handlers and shortcuts initialized");
         // Neither file exists only on a first install; upgrades keep them, and with them the user's language.
         _firstInstall = !File.Exists(_configPath) && !File.Exists(_shellConfigPath);
-        if (_firstInstall && !UiLanguagePolicy.UsesChinese(System.Globalization.CultureInfo.CurrentUICulture.Name)) _currentLanguage = AppLanguage.EnUs;
+        if (_firstInstall) _currentLanguage = UiLanguagePolicy.ForSystem(System.Globalization.CultureInfo.CurrentUICulture.Name, UiText.Languages);
         LoadConfig();
         LoadShellConfig();
         if (_firstInstall) SaveConfig();

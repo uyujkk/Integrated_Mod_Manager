@@ -32,7 +32,7 @@ public sealed partial class MainWindow
         {
             var chosen = (ShortcutTarget)_shortcutTargetPicker!.SelectedItem;
             await LoaderStateCapture.FlushAsync(userIni,
-                _ => _shortcutInput.SendAsync(chosen, new ShortcutKeyPlan([LoaderReloadKey], []), 120, _shortcuts.InputMode, IsEnglishUi));
+                _ => _shortcutInput.SendAsync(chosen, new ShortcutKeyPlan([LoaderReloadKey], []), 120, _shortcuts.InputMode, _currentLanguage));
             return !_onlineWindowClosed;
         }
         catch (TimeoutException)

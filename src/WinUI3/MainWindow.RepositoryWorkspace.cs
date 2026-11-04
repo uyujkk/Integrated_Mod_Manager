@@ -268,7 +268,7 @@ public sealed partial class MainWindow
         if (_repositoryTaskStatusText is null || _repositoryTaskStatusIcon is null) return;
         string message = ProgressTextBlock.Text ?? string.Empty;
         bool noTask = string.IsNullOrWhiteSpace(message)
-            || message == "当前无复制任务" || message == "No active copy task";
+            || UiText.Languages.Any(language => message == UiText.Get(language, "Common.NoActiveCopyTask"));
         _repositoryTaskStatusText.Text = noTask
             ? (_repositoryWorkspaceBusy ? T("RepositoryWorkspace.Working") : T("RepositoryWorkspace.Idle"))
             : message;
@@ -1197,7 +1197,7 @@ public sealed partial class MainWindow
                 Grid.SetColumn(nameText, 1); name.Children.Add(nameText);
                 if (CreatePresetPreviewImage(profile.PreviewFile, 160, 90) is { } thumbnail) label.Children.Add(thumbnail);
                 label.Children.Add(name);
-                label.Children.Add(new TextBlock { Text = T("RepositoryWorkspace.Mods2", profile.ModRelativePaths.Count, (profile.IncludesPersistentState ? "组合 + 状态" : "仅组合"), (profile.IncludesPersistentState ? "set + state" : "set only")), FontSize = 12 });
+                label.Children.Add(new TextBlock { Text = T("RepositoryWorkspace.Mods2", profile.ModRelativePaths.Count, T(profile.IncludesPersistentState ? "RepositoryWorkspace.SetAndState" : "RepositoryWorkspace.SetOnly")), FontSize = 12 });
                 _combinationPresetList.Items.Add(new ListViewItem { Content = label, Tag = profile.Id, HorizontalContentAlignment = HorizontalAlignment.Stretch });
             }
             _combinationPresetList.SelectedItem = _combinationPresetList.Items.OfType<ListViewItem>().FirstOrDefault(item => (string?)item.Tag == _selectedConfigurationProfileId);

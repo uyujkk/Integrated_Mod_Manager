@@ -134,7 +134,7 @@ flowchart TD
 | 文件 / File | 作用 / Role |
 | --- | --- |
 | `Program.cs`, `App.xaml(.cs)` | 入口、单实例、全局异常记录。Entry point, single instance, unhandled-exception logging. |
-| `UiText.cs` + `Strings/zh-CN.json`, `Strings/en-US.json` | 界面文案（嵌入资源）。UI text as embedded resources. |
+| `UiText.cs`、`UiMessage.cs` + `Strings/*.json` | 界面文案，每种语言一个文件（嵌入资源）。UI text, one embedded file per language. |
 | `ShortcutOverlayWindow.cs` | 不抢焦点的置顶浮窗（`WS_EX_NOACTIVATE`）；命名预设时临时允许键盘输入。Non-activating always-on-top overlay; takes keyboard input only while naming a preset. |
 | `ShortcutInputService.cs`, `ShortcutProcessSecurity.cs`, `ShortcutPanelHotkey.cs` | 用 `SendInput` 向游戏窗口发送按键、检查进程权限、注册全局快捷键。Sends keys with `SendInput`, checks process integrity, registers the global hotkey. |
 | `CharacterScreenCapture.cs` | 跟随出场角色时截取 HUD 区域。Captures the HUD region to follow the active character. |
@@ -259,8 +259,10 @@ Before each release, the previous public package's own updater upgrades an isola
 
 - 不需要控件的逻辑放进 Core 并写单元测试；窗口只负责调用、显示和本地化。
   Logic that needs no controls goes into Core with unit tests; the window calls it, displays results and localizes them.
-- 界面文案放在 `Strings/zh-CN.json` 和 `en-US.json`，代码用 `T("功能.名称", 值…)` 读取，两个文件的键与参数个数由 `UiTextResourceTests` 检查；`L(中, 英)` 只用于运行时才拼出的文本。
-  UI text lives in the two JSON files and is read with `T("Feature.Name", values…)`; `UiTextResourceTests` checks keys and placeholder counts. `L(zh, en)` is only for text built at run time.
+- 界面文案放在 `Strings/<语言>.json`（`zh-CN.json`、`en-US.json`……），代码用 `T("功能.名称", 值…)` 读取；要保存下来、切换语言后重新显示的状态用 `M("功能.名称", 值…)` 生成 `UiMessage`，显示时再翻译。`UiTextResourceTests` 检查键与参数个数。`L(中, 英)` 只剩运行时才有的中英两份内容（游戏名、下载记录文件里保存的状态、终末地启动组件返回的消息）。
+  UI text lives in `Strings/<language>.json` and is read with `T("Feature.Name", values…)`; a status that is kept and shown again after a language switch is a `UiMessage` from `M("Feature.Name", values…)`, translated when shown. `UiTextResourceTests` checks keys and placeholder counts. `L(zh, en)` is left only for content that exists in both languages at run time (game names, statuses saved in the download history, messages from the Endfield launch component).
+- **添加一种语言**：复制 `en-US.json` 为 `<代码>.json`（如 `ru-RU.json`），翻译其中的文字，并把 `Language.Name` 改成该语言自己的名称。它会自动出现在“设置 → 语言”里，系统语言相同的新安装会默认使用它；没翻译的键显示英文。占位符 `{0}`、`{1}` 只能用英文版有的。角色名、Wiki 名称等在线内容，除中文外都显示英文；启动器的出错提示只有中文和英文。
+  **Adding a language:** copy `en-US.json` to `<code>.json` (for example `ru-RU.json`), translate the texts, and set `Language.Name` to the language's own name. It appears in Settings → Language, and a first install on a system with that language uses it; keys left out show English. Placeholders `{0}`, `{1}` may only be ones the English text has. Online content such as character and wiki names is English in every language except Chinese, and the launcher's error dialogs are Chinese or English only.
 - Core 用 `ErrorTags` 给异常附加错误类型，界面按类型映射提示文字，不匹配异常消息。
   Core tags exceptions with a kind through `ErrorTags`; the UI maps kinds to messages instead of matching text.
 - 路径包含判断统一用 `PathSafety`；目录遍历、复制、删除用不跟随链接的 `SafeDirectoryTree`。

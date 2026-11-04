@@ -100,7 +100,7 @@ public sealed partial class MainWindow
         Xxmi = EndfieldBridgeIntegration.ResolveLoader(repository.LauncherPath, DefaultLoaderPaths()),
         GameArguments = repository.EndfieldGameArguments.Trim(),
         WithMods = repository.EndfieldUseMods,
-        Language = _currentLanguage == AppLanguage.EnUs ? "en-US" : "zh-CN",
+        Language = !IsChineseUi ? "en-US" : "zh-CN",
         SessionId = sessionId ?? string.Empty
     };
 
@@ -114,7 +114,7 @@ public sealed partial class MainWindow
             EndfieldLaunchService service = CreateEndfieldLaunchService();
             bool migrated = ImportLegacyBridgeSettings(repository, service);
             if (migrated) SaveShellConfig();
-            bool english = _currentLanguage == AppLanguage.EnUs;
+            bool english = !IsChineseUi;
             DialogViewport viewport = DialogViewportPolicy.Selection(RootGrid.ActualWidth, RootGrid.ActualHeight);
 
             var gameBox = PathBox(repository.EndfieldGamePath, T("EndfieldBridge.SelectEndfieldExeInTheGame"));
@@ -175,6 +175,9 @@ public sealed partial class MainWindow
                 GameArguments = argumentsBox.Text.Trim(), WithMods = modsSwitch.IsOn,
                 Language = english ? "en-US" : "zh-CN"
             };
+            // Text from the language files, as a launch message in the current language.
+            LaunchText Here(string text) => new(text, text);
+
             void Show(LaunchText text, bool failure = false)
             {
                 output.Text = (failure ? T("EndfieldBridge.NotCompleted") : string.Empty) + text.For(english);
@@ -282,7 +285,7 @@ public sealed partial class MainWindow
                 argumentsBox.Text = profile.GameArguments;
                 if (!integrated.IsOn || consent.IsChecked != true)
                 {
-                    Show(new LaunchText("请先开启内置启动并勾选账号风险确认，再适配 EFMI。", "Enable integrated launch and confirm the account risk before setting up EFMI."), failure: true);
+                    Show(Here(T("EndfieldBridge.EnableIntegratedLaunchFirst")), failure: true);
                     return Task.CompletedTask;
                 }
 
@@ -290,24 +293,23 @@ public sealed partial class MainWindow
                 modsSwitch.IsOn = true;
                 if (backup is null)
                 {
-                    Show(new LaunchText("适配已完成，启动配置已同步，原始恢复点未覆盖。\n", "Setup is complete; the launch profile was saved and the original restore point kept.\n") + service.Integration.AuthorizationStatus(profile));
+                    Show(Here(T("EndfieldBridge.SetupCompleteRestorePointKept")) + service.Integration.AuthorizationStatus(profile));
                     return Task.CompletedTask;
                 }
 
-                Show(new LaunchText($"已适配 EFMI。完整备份：{backup}\n首次启动时 XXMI 会提示命令未验证：核对命令指向本管理器后选择“保持”。\n",
-                    $"EFMI is set up. Full backup: {backup}\nOn first launch XXMI reports an unverified command: check that it points to this manager, then choose Keep.\n") + service.Integration.Inspect(profile));
+                Show(Here(T("EndfieldBridge.SetUpWithBackup", backup)) + service.Integration.Inspect(profile));
                 return Task.CompletedTask;
             }));
             actionRow.Add(ActionButton(T("EndfieldBridge.RestoreEFMI"), () =>
             {
                 service.Integration.Restore();
                 modsSwitch.IsOn = false;
-                Show(new LaunchText("已恢复适配前的 EFMI 启动字段，其他设置保留。", "EFMI launch fields were restored to their values before setup; other settings were kept."));
+                Show(Here(T("EndfieldBridge.FieldsRestored")));
                 return Task.CompletedTask;
             }));
             actionRow.Add(ActionButton(T("EndfieldBridge.OpenLaunchLog"), () =>
             {
-                if (!File.Exists(service.Store.LogPath)) service.Store.Log(new LaunchText("日志已创建。", "Log created."), english);
+                if (!File.Exists(service.Store.LogPath)) service.Store.Log(Here(T("EndfieldBridge.LogCreated")), english);
                 OpenTextDocument(service.Store.LogPath);
                 return Task.CompletedTask;
             }));
@@ -610,7 +612,7 @@ public sealed partial class MainWindow
             {
                 case LaunchStates.GameStarted:
                     StatusTextBlock.Text = status!.Message.For(english);
-                    ShowAppNotification("终末地已启动。启动成功不代表账号安全。", "Endfield started. A successful launch does not establish account safety.");
+                    ShowAppNotification(T("EndfieldBridge.Started"));
                     break;
                 case LaunchStates.Failed:
                 case LaunchStates.Exited:

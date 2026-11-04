@@ -408,9 +408,7 @@ public sealed partial class MainWindow
             _legacyDarkTheme = config.DarkTheme;
             if (config.Language is not null)
             {
-                _currentLanguage = string.Equals(config.Language, "en", StringComparison.OrdinalIgnoreCase)
-                    ? AppLanguage.EnUs
-                    : AppLanguage.ZhCn;
+                _currentLanguage = UiLanguagePolicy.FromConfig(config.Language, UiText.Languages) ?? _currentLanguage;
             }
 
             foreach ((string modPath, List<ShortcutBinding> bindings) in config.Bindings) _modBindings[modPath] = bindings;
@@ -444,7 +442,7 @@ public sealed partial class MainWindow
                 TargetDirectory = TargetTextBox.Text ?? string.Empty,
                 LauncherPath = LauncherTextBox.Text ?? string.Empty,
                 DarkTheme = _isDarkTheme,
-                Language = _currentLanguage == AppLanguage.EnUs ? "en" : "zh"
+                Language = UiLanguagePolicy.ToConfig(_currentLanguage)
             };
             foreach ((string modPath, List<ShortcutBinding> bindings) in _modBindings) config.Bindings[modPath] = bindings;
             foreach ((string modPath, string link) in _modLinks) config.ModLinks[modPath] = link;

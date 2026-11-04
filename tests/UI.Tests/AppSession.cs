@@ -82,6 +82,12 @@ public sealed class AppSession : IDisposable
 
     public string Text(string key) => ChineseText.Value.TryGetValue(key, out string? text) ? text : throw new KeyNotFoundException(key);
 
+    // Text from another language file, for tests that switch the language.
+    public static string TextIn(string language, string key) => LoadText(language)[key];
+
+    public static IEnumerable<string> LanguageFiles() =>
+        Directory.EnumerateFiles(Path.Combine(RepositoryRoot.Value, "src", "WinUI3", "Strings"), "*.json").Select(Path.GetFileNameWithoutExtension)!;
+
     public AutomationElement Find(string automationId, TimeSpan? timeout = null) => FindIn(MainWindow, cf => cf.ByAutomationId(automationId), automationId, timeout);
 
     public AutomationElement FindByName(string name, TimeSpan? timeout = null) => FindIn(MainWindow, cf => cf.ByName(name), name, timeout);

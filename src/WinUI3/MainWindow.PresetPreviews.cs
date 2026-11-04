@@ -94,7 +94,7 @@ public sealed partial class MainWindow
         {
             // Let the desktop compositor apply the exclusion, and the game regain focus after a dialog.
             await Task.Delay(150);
-            CharacterFrame frame = CharacterScreenCapture.Capture(target, IsEnglishUi);
+            CharacterFrame frame = CharacterScreenCapture.Capture(target, _currentLanguage);
             return PresetPreviewStore.IsNearlyBlack(frame.Bgra) ? null : frame;
         }
         catch (Exception ex)

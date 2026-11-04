@@ -114,7 +114,7 @@ public sealed partial class MainWindow
                 cancellation.Token, progress: progress));
             await ReportOnlineActionErrorAsync(T("CombinationBundles.BundleCreatedModsSavedValues", mods.Length, mods.Sum(mod => mod.Values.Count), output), T("CombinationBundles.ExportComplete"));
         }
-        catch (OperationCanceledException) { if (!_onlineWindowClosed) ShowAppNotification("已取消导出组合包。", "Bundle export cancelled."); }
+        catch (OperationCanceledException) { if (!_onlineWindowClosed) ShowAppNotification(T("CombinationBundles.ExportCanceled")); }
         catch (Exception ex) { await ReportBundleErrorAsync(ex, false); }
         finally
         {
@@ -181,10 +181,10 @@ public sealed partial class MainWindow
             if (!_onlineWindowClosed)
             {
                 await RefreshListsAsync();
-                ShowAppNotification($"已安装并保存组合“{profile.Name}”。", $"Installed and saved combination '{profile.Name}'.");
+                ShowAppNotification(T("CombinationBundles.InstalledAndSaved", profile.Name));
             }
         }
-        catch (OperationCanceledException) { if (!_onlineWindowClosed) ShowAppNotification("已取消安装组合包。", "Bundle installation cancelled."); }
+        catch (OperationCanceledException) { if (!_onlineWindowClosed) ShowAppNotification(T("CombinationBundles.InstallCanceled")); }
         catch (Exception ex) { restore = false; await ReportBundleErrorAsync(ex, import?.IsCommitted == true); }
         finally
         {

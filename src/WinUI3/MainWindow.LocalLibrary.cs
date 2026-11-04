@@ -896,7 +896,7 @@ public sealed partial class MainWindow
                 await Task.Run(() => DeleteDirectoryTreeSafely(targetPath));
                 UpdateProgress(100, T("LocalLibrary.RemovalComplete"));
                 StatusTextBlock.Text = item.Name + T("LocalLibrary.WasRemovedFromTheTargetFolder");
-                ShowAppNotification($"{item.Name} 已从目标文件夹移除。", $"{item.Name} was removed from the target folder.");
+                ShowAppNotification(T("LocalLibrary.RemovedFromTarget", item.Name));
             }
             else
             {
@@ -914,23 +914,18 @@ public sealed partial class MainWindow
 
                 var progress = new Progress<ProgressInfo>(info => UpdateProgress(info.Percent, info.Message));
                 await DeployModAsync(item.Path, targetPath, repository, progress);
-                string replacedNames = string.Join("、", siblingLinksToReplace.Select(Path.GetFileName));
+                string replacedNames = string.Join(T("Common.ListSeparator"), siblingLinksToReplace.Select(Path.GetFileName));
                 StatusTextBlock.Text = repository.UseDirectoryLinks
                     ? siblingLinksToReplace.Count > 0
                         ? T("LocalLibrary.DisconnectedAndLinked", replacedNames, item.Name)
                         : item.Name + T("LocalLibrary.WasLinkedIntoTheTargetFolder")
                     : item.Name + T("LocalLibrary.WasCopiedToTheTargetFolder");
                 ShowAppNotification(
-                    repository.UseDirectoryLinks
-                        ? siblingLinksToReplace.Count > 0
-                            ? $"已切换同角色链接：{replacedNames} → {item.Name}"
-                            : $"{item.Name} 已链接到目标文件夹。"
-                        : $"{item.Name} 已复制到目标文件夹。",
-                    repository.UseDirectoryLinks
-                        ? siblingLinksToReplace.Count > 0
-                            ? $"Switched the same-character link: {replacedNames} → {item.Name}"
-                            : $"{item.Name} was linked into the target folder."
-                        : $"{item.Name} was copied to the target folder.");
+                repository.UseDirectoryLinks
+                    ? siblingLinksToReplace.Count > 0
+                        ? T("LocalLibrary.SwitchedSameCharacterLink", replacedNames, item.Name)
+                        : T("LocalLibrary.LinkedIntoTarget", item.Name)
+                    : T("LocalLibrary.CopiedToTarget", item.Name));
             }
 
             CommitInstallTransaction(transactionPath);
@@ -971,7 +966,7 @@ public sealed partial class MainWindow
 
             string importedName = Path.GetFileName(importedPath);
             StatusTextBlock.Text = T("LocalLibrary.InstalledAs", Path.GetFileName(archivePath), item.Name, importedName, importedPath);
-            ShowAppNotification($"压缩包已安装到 {item.Name}\\{importedName}。", $"The archive was installed to {item.Name}\\{importedName}.");
+            ShowAppNotification(T("LocalLibrary.ArchiveInstalled", item.Name, importedName));
             await RefreshListsAsync();
             SelectFirstLevelByPath(item.Path);
             SelectSecondLevelByPath(importedPath);
@@ -1017,7 +1012,7 @@ public sealed partial class MainWindow
             });
 
             StatusTextBlock.Text = item.Name + T("LocalLibrary.SPreviewImageWasUpdated");
-            ShowAppNotification($"{item.Name} 的预览图已更新。", $"The preview image for {item.Name} was updated.");
+            ShowAppNotification(T("LocalLibrary.PreviewUpdated", item.Name));
             await RefreshListsAsync();
             SelectSecondLevelByPath(item.Path);
         }

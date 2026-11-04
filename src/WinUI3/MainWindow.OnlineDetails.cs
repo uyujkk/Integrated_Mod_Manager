@@ -72,7 +72,9 @@ public sealed partial class MainWindow
             new[] { raw.Summary, raw.Description }.Where(value => !string.IsNullOrWhiteSpace(value)));
         return new OnlineModDetails
         {
-            Summary = raw.Summary, Description = raw.Description, ImageUrls = raw.ImageUrls.ToList(),
+            Summary = raw.Summary,
+            Description = raw.Description,
+            ImageUrls = raw.ImageUrls.ToList(),
             AccessRequirementSummary = ExtractAccessRequirementSummary(text),
             ShortcutBindings = ExtractShortcutBindingsFromText(text)
         };
@@ -85,7 +87,7 @@ public sealed partial class MainWindow
             return [];
         }
 
-        if (_currentLanguage != AppLanguage.ZhCn)
+        if (!IsChineseUi)
         {
             return bindings
                 .Take(ShortcutScanSafetyLimit)
@@ -539,7 +541,7 @@ public sealed partial class MainWindow
 
     private async Task<OnlineModDetails> TryTranslateOnlineModDetailsAsync(OnlineModDetails details)
     {
-        if (_currentLanguage != AppLanguage.ZhCn)
+        if (!IsChineseUi)
         {
             return details;
         }
