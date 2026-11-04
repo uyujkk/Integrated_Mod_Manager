@@ -289,7 +289,7 @@ public sealed partial class MainWindow
                 _foregroundDownloadTaskId = null;
                 SetOnlineDownloadProgress(false, 0, string.Empty);
             }
-            if (!_onlineWindowClosed && !_downloadTasks.Any(task => DownloadProgressPolicy.IsActive(task.State)))
+            if (!_onlineWindowClosed && !_services.Downloads.Tasks.Any(task => DownloadProgressPolicy.IsActive(task.State)))
             {
                 _foregroundDownloadTaskId = null;
                 SetOnlineDownloadProgress(false, 0, string.Empty);
@@ -441,7 +441,7 @@ public sealed partial class MainWindow
             _trackedModOrigins.Values.Select(origin => new OnlineTrackedInstallation(
                 origin.Path, GetTrackedModIdentity(origin.ItemId, origin.ProfileUrl),
                 Directory.Exists(origin.Path), origin.LastKnownUpdatedAt)),
-            _repositories.Select(repository => repository.SourcePath));
+            _services.Repositories.Items.Select(repository => repository.SourcePath));
         foreach (string path in stalePaths)
         {
             _trackedModOrigins.Remove(path);

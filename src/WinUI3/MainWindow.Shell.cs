@@ -53,15 +53,15 @@ public sealed partial class MainWindow
             SecondaryNavPanel.Children.Add(CreateSecondaryNavButton(
                 "all-repositories",
                 T("Common.AllRepositories"),
-                _selectedRepositoryId is null));
+                _services.Repositories.SelectedId is null));
         }
 
-        foreach (WorkspaceRepository repository in _repositories)
+        foreach (WorkspaceRepository repository in _services.Repositories.Items)
         {
             SecondaryNavPanel.Children.Add(CreateSecondaryNavButton(
                 repository.Id,
                 repository.Name,
-                repository.Id == _selectedRepositoryId));
+                repository.Id == _services.Repositories.SelectedId));
         }
     }
 
@@ -120,12 +120,7 @@ public sealed partial class MainWindow
 
     private void ApplyShellState(bool refreshRepository)
     {
-        DashboardScrollViewer.Visibility = _currentPrimarySection == PrimarySection.Dashboard ? Visibility.Visible : Visibility.Collapsed;
-        WorkspacePageHost.Visibility = _currentPrimarySection == PrimarySection.Repository ? Visibility.Visible : Visibility.Collapsed;
-        OnlineScrollViewer.Visibility = _currentPrimarySection == PrimarySection.Online ? Visibility.Visible : Visibility.Collapsed;
-        UpdatesScrollViewer.Visibility = _currentPrimarySection == PrimarySection.Updates ? Visibility.Visible : Visibility.Collapsed;
-        SettingsScrollViewer.Visibility = _currentPrimarySection == PrimarySection.Settings ? Visibility.Visible : Visibility.Collapsed;
-        ShortcutsScrollViewer.Visibility = _currentPrimarySection == PrimarySection.Shortcuts ? Visibility.Visible : Visibility.Collapsed;
+        PageContentHost.Content = _pages[_currentPrimarySection];
         if (_currentPrimarySection == PrimarySection.Shortcuts)
         {
             BuildShortcutPane();
@@ -156,6 +151,27 @@ public sealed partial class MainWindow
         UIElement activeSection = GetActiveSectionElement();
         RootGrid.DispatcherQueue.TryEnqueue(() => AnimateSectionEntrance(activeSection));
         RootGrid.Focus(FocusState.Programmatic);
+    }
+
+    // Each page container stays alive in its wrapper, so switching keeps scroll positions,
+    // selections and loading work, as when the hidden pages were only collapsed.
+    private readonly Dictionary<PrimarySection, WrapperPage> _pages = [];
+
+    private void InitializePageHost()
+    {
+        foreach ((PrimarySection section, FrameworkElement container) in new (PrimarySection, FrameworkElement)[]
+        {
+            (PrimarySection.Dashboard, DashboardScrollViewer),
+            (PrimarySection.Repository, WorkspacePageHost),
+            (PrimarySection.Online, OnlineScrollViewer),
+            (PrimarySection.Updates, UpdatesScrollViewer),
+            (PrimarySection.Settings, SettingsScrollViewer),
+            (PrimarySection.Shortcuts, ShortcutsScrollViewer)
+        })
+        {
+            PagesHostGrid.Children.Remove(container);
+            _pages[section] = new WrapperPage(container);
+        }
     }
 
     private UIElement GetActiveSectionElement()
@@ -200,7 +216,7 @@ public sealed partial class MainWindow
     private void RefreshRepositoryActionButtons()
     {
         // Deleting lives in each repository card's menu, which disables it for the last repository.
-        RenameRepositoryButton.IsEnabled = GetSelectedRepository() is not null && _selectedRepositoryId is not null;
+        RenameRepositoryButton.IsEnabled = GetSelectedRepository() is not null && _services.Repositories.SelectedId is not null;
     }
 
     private void OnWindowSizeChanged(object sender, Microsoft.UI.Xaml.WindowSizeChangedEventArgs args)
@@ -525,7 +541,7 @@ public sealed partial class MainWindow
 
     private Brush GetAppThemeBrush(string resourceKey)
     {
-        string themeKey = _isDarkTheme ? "Dark" : "Light";
+        string themeKey = _services.Appearance.IsDark ? "Dark" : "Light";
         ResourceDictionary themeDictionary = (ResourceDictionary)Application.Current.Resources.ThemeDictionaries[themeKey];
         return (Brush)themeDictionary[resourceKey];
     }
@@ -540,9 +556,9 @@ public sealed partial class MainWindow
     private void OnOnlineNavClicked(object sender, RoutedEventArgs e)
     {
         SaveSelectedRepositoryFromInputs();
-        if (_selectedRepositoryId is null && _repositories.Count > 0)
+        if (_services.Repositories.SelectedId is null && _services.Repositories.Items.Count > 0)
         {
-            _selectedRepositoryId = _repositories[0].Id;
+            _services.Repositories.SelectedId = _services.Repositories.Items[0].Id;
         }
 
         _currentPrimarySection = PrimarySection.Online;
@@ -576,7 +592,7 @@ public sealed partial class MainWindow
         }
 
         SaveSelectedRepositoryFromInputs();
-        _selectedRepositoryId = key == "all-repositories" ? null : key;
+        _services.Repositories.SelectedId = key == "all-repositories" ? null : key;
         ResetOnlineRepositoryContext();
         ApplyShellState(refreshRepository: _currentPrimarySection == PrimarySection.Repository);
     }
@@ -589,7 +605,7 @@ public sealed partial class MainWindow
             RootGrid.Loaded -= OnRootGridLoaded;
             InitializeAccessibilityFeatures();
             TraceStartupStage("Accessibility initialized");
-            ApplyTheme(_isDarkTheme);
+            ApplyTheme(_services.Appearance.IsDark);
             RestoreWindowPlacement();
             UpdateOnlineWorkspaceWidthConstraint();
             DispatcherQueue.TryEnqueue(UpdateOnlineWorkspaceWidthConstraint);
@@ -634,7 +650,7 @@ public sealed partial class MainWindow
         _onlineWindowClosed = true;
         InvalidateOnlineDetailRequest();
         _onlineDownloadActions.CancelPreparation();
-        foreach (DownloadTaskItem task in _downloadTasks.Where(task => DownloadProgressPolicy.IsActive(task.State)))
+        foreach (DownloadTaskItem task in _services.Downloads.Tasks.Where(task => DownloadProgressPolicy.IsActive(task.State)))
             if (task.Session?.CanCancel != false) task.Cancellation.Cancel();
         ++_folderRefreshGeneration;
         _folderRefreshCancellation?.Cancel();
@@ -776,9 +792,9 @@ public sealed partial class MainWindow
 
     private UIElement? GetCurrentShellFocusTarget()
     {
-        if (_currentPrimarySection == PrimarySection.Repository && _selectedRepositoryId is not null)
+        if (_currentPrimarySection == PrimarySection.Repository && _services.Repositories.SelectedId is not null)
         {
-            return SecondaryNavPanel.Children.OfType<Button>().FirstOrDefault(button => string.Equals(button.Tag as string, _selectedRepositoryId, StringComparison.Ordinal));
+            return SecondaryNavPanel.Children.OfType<Button>().FirstOrDefault(button => string.Equals(button.Tag as string, _services.Repositories.SelectedId, StringComparison.Ordinal));
         }
 
         return _currentPrimarySection switch
@@ -794,19 +810,13 @@ public sealed partial class MainWindow
 
     private void ApplyTheme(bool dark)
     {
-        _isDarkTheme = dark;
+        _services.Appearance.IsDark = dark;
         RootGrid.RequestedTheme = _systemHighContrast
             ? ElementTheme.Default
             : dark ? ElementTheme.Dark : ElementTheme.Light;
         ApplyWindowChrome(dark);
-        RenderModSummary();
-        RefreshPrimaryNavigationVisuals();
-        RefreshSecondaryNavigation();
-        UpdateShortcutKeyFocusVisuals();
-        // Binding cards take their key-cap colours when created; drop them so they are rebuilt.
-        _mainShortcutControls.Clear();
-        _mainBindings = [];
-        RenderShortcutButtons();
+        // The pages recolour what they drew in code (MainWindow.AppearanceEvents.cs).
+        _services.Appearance.NotifyThemeChanged();
         ApplyLanguage();
     }
 

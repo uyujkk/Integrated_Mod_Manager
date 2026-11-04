@@ -9,7 +9,7 @@ public sealed partial class MainWindow
     private IEnumerable<ModConfigurationProfile> GetCurrentRepositoryProfiles()
     {
         return _configurationProfiles
-            .Where(profile => string.Equals(profile.RepositoryId, _selectedRepositoryId, StringComparison.Ordinal))
+            .Where(profile => string.Equals(profile.RepositoryId, _services.Repositories.SelectedId, StringComparison.Ordinal))
             .OrderBy(profile => profile.Name, StringComparer.CurrentCultureIgnoreCase);
     }
 
@@ -17,7 +17,7 @@ public sealed partial class MainWindow
     {
         return _configurationProfiles.FirstOrDefault(profile =>
             string.Equals(profile.Id, _selectedConfigurationProfileId, StringComparison.Ordinal)
-            && string.Equals(profile.RepositoryId, _selectedRepositoryId, StringComparison.Ordinal));
+            && string.Equals(profile.RepositoryId, _services.Repositories.SelectedId, StringComparison.Ordinal));
     }
 
     private void RefreshConfigurationProfiles()

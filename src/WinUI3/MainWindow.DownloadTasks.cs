@@ -22,16 +22,16 @@ public sealed partial class MainWindow
             StatusZh = UiText.Chinese("DownloadTasks.WaitingToStart"),
             StatusEn = UiText.English("DownloadTasks.WaitingToStart")
         };
-        _downloadTasks.Insert(0, task);
-        while (_downloadTasks.Count > 30)
+        _services.Downloads.Tasks.Insert(0, task);
+        while (_services.Downloads.Tasks.Count > 30)
         {
-            DownloadTaskItem? oldestFinished = _downloadTasks.LastOrDefault(item =>
+            DownloadTaskItem? oldestFinished = _services.Downloads.Tasks.LastOrDefault(item =>
                 item.State is DownloadTaskState.Completed or DownloadTaskState.Failed or DownloadTaskState.Canceled);
             if (oldestFinished is null)
             {
                 break;
             }
-            _downloadTasks.Remove(oldestFinished);
+            _services.Downloads.Tasks.Remove(oldestFinished);
             oldestFinished.Cancellation.Dispose();
         }
         RefreshDownloadTaskCenter();
@@ -93,10 +93,10 @@ public sealed partial class MainWindow
 
         // The updates page keeps the history: finished, failed and canceled downloads. Running ones
         // are followed in the navigation's task flyout, so the page only points there.
-        DownloadTaskItem[] finished = [.. _downloadTasks.Where(item => DownloadProgressPolicy.IsTerminal(item.State))];
+        DownloadTaskItem[] finished = [.. _services.Downloads.Tasks.Where(item => DownloadProgressPolicy.IsTerminal(item.State))];
         _downloadHistoryIds.Clear();
         foreach (DownloadTaskItem task in finished) _downloadHistoryIds.Add(task.Id);
-        int running = _downloadTasks.Count - finished.Length;
+        int running = _services.Downloads.Tasks.Count - finished.Length;
         DownloadHistoryRunningTextBlock.Text = running > 0 ? T("DownloadTasks.RunningInNavigation", running) : string.Empty;
         DownloadHistoryRunningTextBlock.Visibility = running > 0 ? Visibility.Visible : Visibility.Collapsed;
         ClearDownloadTasksButton.IsEnabled = finished.Length > 0;
@@ -269,7 +269,7 @@ public sealed partial class MainWindow
             if (cards.TryGetValue(task.Id, out DownloadTaskCardView? view)) RefreshDownloadTaskCardView(task, view);
         }
         ClearDownloadTasksButton.IsEnabled = NavTasksClearButton.IsEnabled
-            = _downloadTasks.Any(item => DownloadProgressPolicy.IsTerminal(item.State));
+            = _services.Downloads.Tasks.Any(item => DownloadProgressPolicy.IsTerminal(item.State));
     }
 
     private void RefreshDownloadTaskCardView(DownloadTaskItem task, DownloadTaskCardView view)
@@ -291,7 +291,7 @@ public sealed partial class MainWindow
     private void RefreshNavTasks()
     {
         if (NavTasksButton is null) return;
-        DownloadTaskItem[] active = _downloadTasks.Where(item => DownloadProgressPolicy.IsActive(item.State)).ToArray();
+        DownloadTaskItem[] active = _services.Downloads.Tasks.Where(item => DownloadProgressPolicy.IsActive(item.State)).ToArray();
         NavTasksCountTextBlock.Text = active.Length > 0 ? active.Length.ToString() : string.Empty;
         NavTasksBadge.Visibility = active.Length > 0 ? Visibility.Visible : Visibility.Collapsed;
         NavTasksProgressBar.Visibility = active.Length > 0 ? Visibility.Visible : Visibility.Collapsed;
@@ -314,11 +314,11 @@ public sealed partial class MainWindow
     {
         NavTasksPanel.Children.Clear();
         _navTaskCards.Clear();
-        foreach (DownloadTaskItem task in _downloadTasks.Take(12))
+        foreach (DownloadTaskItem task in _services.Downloads.Tasks.Take(12))
             NavTasksPanel.Children.Add(CreateDownloadTaskCard(task, _navTaskCards));
-        if (_downloadTasks.Count == 0)
+        if (_services.Downloads.Tasks.Count == 0)
             NavTasksPanel.Children.Add(new TextBlock { Text = T("DownloadTasks.NoDownloadTasks"), Opacity = 0.75 });
-        NavTasksClearButton.IsEnabled = _downloadTasks.Any(item => DownloadProgressPolicy.IsTerminal(item.State));
+        NavTasksClearButton.IsEnabled = _services.Downloads.Tasks.Any(item => DownloadProgressPolicy.IsTerminal(item.State));
     }
 
     private void OnNavTasksFlyoutClosed(object? sender, object e)
@@ -335,11 +335,11 @@ public sealed partial class MainWindow
 
     private void OnClearDownloadTasksClicked(object sender, RoutedEventArgs e)
     {
-        foreach (DownloadTaskItem task in _downloadTasks
+        foreach (DownloadTaskItem task in _services.Downloads.Tasks
             .Where(item => item.State is DownloadTaskState.Completed or DownloadTaskState.Failed or DownloadTaskState.Canceled)
             .ToList())
         {
-            _downloadTasks.Remove(task);
+            _services.Downloads.Tasks.Remove(task);
             task.Cancellation.Dispose();
         }
         RefreshDownloadTaskCenter();

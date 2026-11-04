@@ -129,7 +129,7 @@ public sealed partial class MainWindow
             });
             task.Cancellation.Token.ThrowIfCancellationRequested();
             // Never redirect a captured update to whichever repository is now visible.
-            if (!_repositories.Any(item => item.Id == repositoryId && string.Equals(item.SourcePath, repositoryPath, StringComparison.OrdinalIgnoreCase))
+            if (!_services.Repositories.Items.Any(item => item.Id == repositoryId && string.Equals(item.SourcePath, repositoryPath, StringComparison.OrdinalIgnoreCase))
                 || !_trackedModOrigins.TryGetValue(result.Path, out var current) || !ReferenceEquals(current, origin))
                 throw new IOException(T("ModUpdates.TheOriginalRepositoryOrTrackingRecord"));
             string backupRoot = Path.Combine(Path.GetDirectoryName(Path.TrimEndingDirectorySeparator(Path.GetFullPath(repositoryPath)))!, ".imm-mod-update-backups");

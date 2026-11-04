@@ -576,7 +576,7 @@ public sealed partial class MainWindow
     private async Task RefreshInstallBackupListAsync()
     {
         BackupListPanel.Children.Clear();
-        Directory.CreateDirectory(_modInstallBackupPath);
+        Directory.CreateDirectory(_services.Deployment.InstallBackupPath);
         List<InstallBackupDisplayItem> backups = await Task.Run(ReadInstallBackups);
         long totalBytes = backups.Sum(item => item.SizeBytes);
         BackupSummaryTextBlock.Text = T("ProductivityFeatures.BackupsGB", backups.Count, FormatStorageSize(totalBytes), _installBackupLimitGb);
@@ -632,13 +632,13 @@ public sealed partial class MainWindow
 
     private List<InstallBackupDisplayItem> ReadInstallBackups()
     {
-        if (!Directory.Exists(_modInstallBackupPath))
+        if (!Directory.Exists(_services.Deployment.InstallBackupPath))
         {
             return [];
         }
 
         List<InstallBackupDisplayItem> result = [];
-        foreach (string directory in Directory.EnumerateDirectories(_modInstallBackupPath))
+        foreach (string directory in Directory.EnumerateDirectories(_services.Deployment.InstallBackupPath))
         {
             try
             {
@@ -712,13 +712,13 @@ public sealed partial class MainWindow
     {
         try
         {
-            if (!Directory.Exists(_modInstallBackupPath))
+            if (!Directory.Exists(_services.Deployment.InstallBackupPath))
             {
                 return;
             }
 
-            string root = Path.GetFullPath(_modInstallBackupPath).TrimEnd(Path.DirectorySeparatorChar) + Path.DirectorySeparatorChar;
-            List<(DirectoryInfo Directory, long Size)> directories = new DirectoryInfo(_modInstallBackupPath).EnumerateDirectories()
+            string root = Path.GetFullPath(_services.Deployment.InstallBackupPath).TrimEnd(Path.DirectorySeparatorChar) + Path.DirectorySeparatorChar;
+            List<(DirectoryInfo Directory, long Size)> directories = new DirectoryInfo(_services.Deployment.InstallBackupPath).EnumerateDirectories()
                 .Select(directory => (directory, GetDirectorySize(directory.FullName)))
                 .OrderByDescending(item => item.directory.CreationTimeUtc)
                 .ToList();
@@ -824,25 +824,25 @@ public sealed partial class MainWindow
         summary.AppendLine($"OS architecture: {RuntimeInformation.OSArchitecture}");
         summary.AppendLine($"Process architecture: {RuntimeInformation.ProcessArchitecture}");
         summary.AppendLine($".NET: {RuntimeInformation.FrameworkDescription}");
-        summary.AppendLine($"Language: {_currentLanguage}");
-        summary.AppendLine($"Theme: {(_isDarkTheme ? "Dark" : "Light")}");
-        summary.AppendLine($"Repository count: {_repositories.Count}");
-        summary.AppendLine($"Source paths configured: {_repositories.Count(item => !string.IsNullOrWhiteSpace(item.SourcePath))}");
-        summary.AppendLine($"Target paths configured: {_repositories.Count(item => !string.IsNullOrWhiteSpace(item.TargetPath))}");
+        summary.AppendLine($"Language: {_services.Language.Current}");
+        summary.AppendLine($"Theme: {(_services.Appearance.IsDark ? "Dark" : "Light")}");
+        summary.AppendLine($"Repository count: {_services.Repositories.Items.Count}");
+        summary.AppendLine($"Source paths configured: {_services.Repositories.Items.Count(item => !string.IsNullOrWhiteSpace(item.SourcePath))}");
+        summary.AppendLine($"Target paths configured: {_services.Repositories.Items.Count(item => !string.IsNullOrWhiteSpace(item.TargetPath))}");
         summary.AppendLine($"SQLite: {_appDataStore.GetHealthSummary()}");
         WriteZipText(archive, "report.txt", summary.ToString());
 
         var sanitizedConfig = new
         {
             AppVersion,
-            Language = _currentLanguage,
-            Theme = _isDarkTheme ? "Dark" : "Light",
+            Language = _services.Language.Current,
+            Theme = _services.Appearance.IsDark ? "Dark" : "Light",
             _checkAppUpdatesOnStartup,
             UpdateInterval = _updateCheckInterval.ToString(),
             _installBackupLimitGb,
             ReduceMotion = _reduceMotion,
             Density = _interfaceDensity.ToString(),
-            Repositories = _repositories.Select((repository, index) => new
+            Repositories = _services.Repositories.Items.Select((repository, index) => new
             {
                 Number = index + 1,
                 HasSourcePath = !string.IsNullOrWhiteSpace(repository.SourcePath),

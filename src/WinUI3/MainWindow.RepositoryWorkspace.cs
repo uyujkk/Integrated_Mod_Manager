@@ -177,7 +177,7 @@ public sealed partial class MainWindow
     {
         if (_refreshingRepositoryPicker || _repositoryWorkspaceBusy) return;
         if (RepositoryWorkspacePicker.SelectedItem is ComboBoxItem { Tag: string id }
-            && !string.Equals(id, _selectedRepositoryId, StringComparison.Ordinal))
+            && !string.Equals(id, _services.Repositories.SelectedId, StringComparison.Ordinal))
             SwitchRepository(id, openManager: true);
     }
 
@@ -1174,8 +1174,8 @@ public sealed partial class MainWindow
         try
         {
             RepositoryWorkspacePicker.Items.Clear();
-            foreach (var repository in _repositories) RepositoryWorkspacePicker.Items.Add(new ComboBoxItem { Content = repository.Name, Tag = repository.Id });
-            RepositoryWorkspacePicker.SelectedItem = RepositoryWorkspacePicker.Items.OfType<ComboBoxItem>().FirstOrDefault(item => (string?)item.Tag == _selectedRepositoryId);
+            foreach (var repository in _services.Repositories.Items) RepositoryWorkspacePicker.Items.Add(new ComboBoxItem { Content = repository.Name, Tag = repository.Id });
+            RepositoryWorkspacePicker.SelectedItem = RepositoryWorkspacePicker.Items.OfType<ComboBoxItem>().FirstOrDefault(item => (string?)item.Tag == _services.Repositories.SelectedId);
             RepositoryWorkspacePicker.PlaceholderText = T("RepositoryWorkspace.SelectRepository");
         }
         finally { _refreshingRepositoryPicker = false; }

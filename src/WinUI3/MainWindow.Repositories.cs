@@ -10,7 +10,7 @@ public sealed partial class MainWindow
 {
     private WorkspaceRepository? GetSelectedRepository()
     {
-        return _repositories.FirstOrDefault(repository => repository.Id == _selectedRepositoryId);
+        return _services.Repositories.Selected;
     }
 
     private void SaveSelectedRepositoryFromInputs()
@@ -57,13 +57,13 @@ public sealed partial class MainWindow
 
     private void SwitchRepository(string repositoryId, bool openManager)
     {
-        if (!_repositories.Any(repository => string.Equals(repository.Id, repositoryId, StringComparison.Ordinal)))
+        if (!_services.Repositories.Items.Any(repository => string.Equals(repository.Id, repositoryId, StringComparison.Ordinal)))
         {
             return;
         }
 
         SaveSelectedRepositoryFromInputs();
-        _selectedRepositoryId = repositoryId;
+        _services.Repositories.SelectedId = repositoryId;
         ResetOnlineRepositoryContext();
         ApplySelectedRepositoryToInputs();
         if (openManager)
@@ -138,8 +138,8 @@ public sealed partial class MainWindow
             }
 
             WorkspaceRepository repository = CreateRepositoryFromEditorResult(result);
-            _repositories.Add(repository);
-            _selectedRepositoryId = repository.Id;
+            _services.Repositories.Items.Add(repository);
+            _services.Repositories.SelectedId = repository.Id;
             ResetOnlineRepositoryContext();
             ApplySelectedRepositoryToInputs();
             SaveConfig();
@@ -214,8 +214,8 @@ public sealed partial class MainWindow
                 OnlineSourceSite = DefaultOnlineSourceSite
             };
 
-            _repositories.Add(repository);
-            _selectedRepositoryId = repository.Id;
+            _services.Repositories.Items.Add(repository);
+            _services.Repositories.SelectedId = repository.Id;
             _onlinePage.ResetPaging();
             _onlinePage.CharacterFilter = string.Empty;
             _onlinePage.KnownCharacters.Clear();
@@ -239,7 +239,7 @@ public sealed partial class MainWindow
         try
         {
             WorkspaceRepository? repository = GetSelectedRepository();
-            if (repository is null || _selectedRepositoryId is null)
+            if (repository is null || _services.Repositories.SelectedId is null)
             {
                 return;
             }
@@ -293,8 +293,8 @@ public sealed partial class MainWindow
 
             WorkspaceRepository repository = CreateRepositoryFromEditorResult(result);
 
-            _repositories.Add(repository);
-            _selectedRepositoryId = repository.Id;
+            _services.Repositories.Items.Add(repository);
+            _services.Repositories.SelectedId = repository.Id;
             _currentPrimarySection = PrimarySection.Repository;
             _onlinePage.ResetPaging();
             _onlinePage.CharacterFilter = string.Empty;
@@ -328,7 +328,7 @@ public sealed partial class MainWindow
     private async Task EditSelectedRepositoryAsync()
     {
         WorkspaceRepository? repository = GetSelectedRepository();
-        if (repository is null || _selectedRepositoryId is null)
+        if (repository is null || _services.Repositories.SelectedId is null)
         {
             return;
         }
@@ -372,7 +372,7 @@ public sealed partial class MainWindow
         try
         {
             WorkspaceRepository? repository = GetSelectedRepository();
-            if (repository is null || _selectedRepositoryId is null)
+            if (repository is null || _services.Repositories.SelectedId is null)
             {
                 await ShowMessageAsync(
                     T("Repositories.SelectARepositoryOnTheLeft"),
@@ -593,7 +593,7 @@ public sealed partial class MainWindow
     {
         try
         {
-            if (_repositories.Count <= 1)
+            if (_services.Repositories.Items.Count <= 1)
             {
                 await ShowMessageAsync(
                     T("Repositories.AtLeastOneRepositoryMustRemain"),
@@ -617,15 +617,15 @@ public sealed partial class MainWindow
                 return;
             }
 
-            bool wasSelected = repository.Id == _selectedRepositoryId;
-            int currentIndex = _repositories.FindIndex(item => item.Id == repository.Id);
-            _repositories.RemoveAll(item => item.Id == repository.Id);
+            bool wasSelected = repository.Id == _services.Repositories.SelectedId;
+            int currentIndex = _services.Repositories.Items.FindIndex(item => item.Id == repository.Id);
+            _services.Repositories.Items.RemoveAll(item => item.Id == repository.Id);
 
             // Deleting another repository from its card keeps the current one selected.
             if (wasSelected)
             {
-                _selectedRepositoryId = _repositories.Count > 0
-                    ? _repositories[Math.Clamp(currentIndex, 0, _repositories.Count - 1)].Id
+                _services.Repositories.SelectedId = _services.Repositories.Items.Count > 0
+                    ? _services.Repositories.Items[Math.Clamp(currentIndex, 0, _services.Repositories.Items.Count - 1)].Id
                     : null;
                 ApplySelectedRepositoryToInputs();
             }

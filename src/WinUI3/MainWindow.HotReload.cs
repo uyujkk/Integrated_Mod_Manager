@@ -39,7 +39,7 @@ public sealed partial class MainWindow
         LoaderHotReloadResult result = await LoaderHotReload.ReloadAsync(userIni,
             async _ =>
             {
-                await _shortcutInput.SendAsync(target, plan, 120, _shortcuts.InputMode, _currentLanguage);
+                await _shortcutInput.SendAsync(target, plan, 120, _shortcuts.InputMode, _services.Language.Current);
                 keySent?.Invoke();
             },
             LoaderHotReload.DefaultHold);

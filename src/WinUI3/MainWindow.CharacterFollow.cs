@@ -124,7 +124,7 @@ public sealed partial class MainWindow
         _shortcutOverlay?.AppWindow.Hide();
         if (!ShortcutInputService.FocusTarget(target)) throw new InvalidOperationException(T("CharacterFollow.CouldNotFocusTheGameWindow"));
         await Task.Delay(300);
-        return await Task.Run(() => CharacterScreenCapture.Capture(target, _currentLanguage));
+        return await Task.Run(() => CharacterScreenCapture.Capture(target, _services.Language.Current));
     }
 
     private async Task SelectCharacterRegionAsync()
@@ -219,7 +219,7 @@ public sealed partial class MainWindow
             if (_shortcuts.OverlayVisible && _shortcutOverlay is not null
                 && CharacterScreenCapture.OverlapsRegion(WinRT.Interop.WindowNative.GetWindowHandle(_shortcutOverlay), target, region))
             { _characterMatcher.Reset(); _characterFollowStatus!.Text = T("CharacterFollow.MoveTheOverlayAwayFromThe"); return; }
-            CharacterFrame frame = await Task.Run(() => CharacterScreenCapture.Capture(target, _currentLanguage));
+            CharacterFrame frame = await Task.Run(() => CharacterScreenCapture.Capture(target, _services.Language.Current));
             if (_onlineWindowClosed || _characterFollowToggle?.IsOn != true) return;
             if (_shortcutTargetPicker?.SelectedItem is not ShortcutTarget current
                 || current.Handle != target.Handle || current.StartTicks != target.StartTicks)

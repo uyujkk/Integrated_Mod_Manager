@@ -1,4 +1,3 @@
-using IntegratedModManager.Core.Configuration;
 using Microsoft.UI.Xaml.Automation;
 using Microsoft.UI.Xaml.Controls;
 
@@ -6,26 +5,16 @@ namespace ModFolderCopier.WinUI;
 
 public sealed partial class MainWindow
 {
-    // Chinese content (character names, wiki names, 万/亿) in Chinese; English content in every other language.
-    private bool IsChineseUi => string.Equals(_currentLanguage, UiLanguagePolicy.Chinese, StringComparison.Ordinal);
+    private bool IsChineseUi => _services.Language.IsChinese;
 
-    // Text from the language files (Strings/*.json) by key.
-    private string T(string key)
-    {
-        return UiText.Get(_currentLanguage, key);
-    }
+    // Text lookups forward to the language service, so pages can use it without the window.
+    private string T(string key) => _services.Language.T(key);
 
-    // Text with values: the language files use {0}, {1}, ... placeholders.
-    private string T(string key, params object?[] values)
-    {
-        return string.Format(System.Globalization.CultureInfo.CurrentCulture, T(key), values);
-    }
+    private string T(string key, params object?[] values) => _services.Language.T(key, values);
 
-    // A stored message, shown in the current language.
-    private string T(UiMessage message) => message.Resolve(_currentLanguage);
+    private string T(UiMessage message) => _services.Language.T(message);
 
-    // Text by key and values kept for later, such as a status line that a language switch shows again.
-    private static UiMessage M(string key, params object?[] values) => new(key, values);
+    private static UiMessage M(string key, params object?[] values) => LanguageService.M(key, values);
 
     // For text pairs built at runtime, such as stored status messages.
     private string L(string zh, string en)

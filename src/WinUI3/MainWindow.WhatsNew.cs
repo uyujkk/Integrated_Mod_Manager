@@ -1,7 +1,6 @@
 using System.Diagnostics;
 using Microsoft.UI.Xaml;
 using Microsoft.UI.Xaml.Controls;
-using Microsoft.UI.Xaml.Media;
 
 namespace ModFolderCopier.WinUI;
 
@@ -56,8 +55,7 @@ public sealed partial class MainWindow
         }
     }
 
-    private bool IsContentDialogOpen() => RootGrid.XamlRoot is not null
-        && VisualTreeHelper.GetOpenPopupsForXamlRoot(RootGrid.XamlRoot).Any(popup => popup.Child is ContentDialog);
+    private bool IsContentDialogOpen() => _services.Dialogs.IsDialogOpen;
 
     // The detailed feature introduction: the release notes the package ships in docs\releases beside
     // the launcher (a source checkout has them at the root), or the copy on GitHub.

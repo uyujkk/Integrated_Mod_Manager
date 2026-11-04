@@ -93,8 +93,10 @@ $whatsNewSet = [regex]::Match((Get-Content -Raw (Join-Path $root 'src\WinUI3\Mai
 function Encode([string]$value) { [Convert]::ToBase64String([Text.Encoding]::UTF8.GetBytes($value)) }
 function ConfigLanguage([string]$language) { switch ($language) { 'zh-CN' { 'zh' } 'en-US' { 'en' } default { $language } } }
 
-# One private copy of the app and the test data for the whole run.
-$work = Join-Path ([IO.Path]::GetTempPath()) ('imm-baseline-' + [Guid]::NewGuid().ToString('N').Substring(0, 12))
+# One private copy of the app and the test data for the whole run. The folder name is fixed because
+# the dashboard shows the repository paths: a random name would differ in every picture set.
+$work = Join-Path ([IO.Path]::GetTempPath()) 'imm-baseline'
+if (Test-Path -LiteralPath $work) { Remove-Item -LiteralPath $work -Recurse -Force }
 $appFolder = Join-Path $work 'WinUI3'
 $testData = Join-Path $work 'TestData'
 Copy-Item -LiteralPath (Join-Path $app 'WinUI3') -Destination $appFolder -Recurse

@@ -17,7 +17,7 @@ public sealed partial class MainWindow
 
     private void LoadShellConfig()
     {
-        _repositories.Clear();
+        _services.Repositories.Items.Clear();
 
         // A first install starts without a game and asks for one. Earlier installs without this file keep what they always got.
         WorkspaceRepository fallbackRepository = new()
@@ -33,11 +33,11 @@ public sealed partial class MainWindow
             WikiUrl = _firstInstall ? string.Empty : EndfieldOfficialWikiUrl
         };
 
-        if (!File.Exists(_shellConfigPath))
+        if (!File.Exists(_services.ShellConfig.ShellConfigPath))
         {
             fallbackRepository = TryCreatePersistentDemoRepository() ?? fallbackRepository;
-            _repositories.Add(fallbackRepository);
-            _selectedRepositoryId = fallbackRepository.Id;
+            _services.Repositories.Items.Add(fallbackRepository);
+            _services.Repositories.SelectedId = fallbackRepository.Id;
             SaveShellConfig();
             ApplySelectedRepositoryToInputs();
             return;
@@ -45,24 +45,24 @@ public sealed partial class MainWindow
 
         try
         {
-            string shellJson = ReadConfigurationTextWithRecovery(_shellConfigPath, ConfigurationFileStore.IsJsonObject);
+            string shellJson = ReadConfigurationTextWithRecovery(_services.ShellConfig.ShellConfigPath, ConfigurationFileStore.IsJsonObject);
             BetaShellConfig? config = JsonSerializer.Deserialize<BetaShellConfig>(shellJson);
-            _shellConfigExtensionData = config?.ExtensionData;
+            _services.ShellConfig.ExtensionData = config?.ExtensionData;
             if (config is not null) RepositoryGameMigration.Apply(config, DefaultOnlineGameName, DefaultOnlineCategoryId);
             if (config is not null) RemoveOrphanPresetPreviews(config);
             if (config?.Repositories is { Count: > 0 })
             {
-                _repositories.AddRange(config.Repositories.Where(repository => !string.IsNullOrWhiteSpace(repository.Id)));
+                _services.Repositories.Items.AddRange(config.Repositories.Where(repository => !string.IsNullOrWhiteSpace(repository.Id)));
             }
 
-            if (_repositories.Count == 0)
+            if (_services.Repositories.Items.Count == 0)
             {
-                _repositories.Add(fallbackRepository);
+                _services.Repositories.Items.Add(fallbackRepository);
             }
 
-            _selectedRepositoryId = _repositories.Any(repository => repository.Id == config?.SelectedRepositoryId)
+            _services.Repositories.SelectedId = _services.Repositories.Items.Any(repository => repository.Id == config?.SelectedRepositoryId)
                 ? config?.SelectedRepositoryId
-                : _repositories[0].Id;
+                : _services.Repositories.Items[0].Id;
 
             _currentPrimarySection = config?.CurrentPrimarySection switch
             {
@@ -169,8 +169,8 @@ public sealed partial class MainWindow
         }
         catch
         {
-            _repositories.Add(fallbackRepository);
-            _selectedRepositoryId = fallbackRepository.Id;
+            _services.Repositories.Items.Add(fallbackRepository);
+            _services.Repositories.SelectedId = fallbackRepository.Id;
             _currentPrimarySection = PrimarySection.Dashboard;
             _updateCheckInterval = UpdateCheckInterval.Manual;
             _lastUpdateCheckUtc = null;
@@ -207,7 +207,7 @@ public sealed partial class MainWindow
     private bool UpgradeBuiltInRepositoryMetadata()
     {
         bool changed = false;
-        foreach (WorkspaceRepository repository in _repositories)
+        foreach (WorkspaceRepository repository in _services.Repositories.Items)
         {
             repository.CharacterCategoryMappings ??= [];
             repository.CharacterAvatarBindings ??= [];
@@ -252,7 +252,7 @@ public sealed partial class MainWindow
                 CurrentPrimarySection = _currentPrimarySection.ToString().ToLowerInvariant(),
                 OnlinePreferences = _onlinePreferences,
                 LocalLibraries = _localLibraries,
-                SelectedRepositoryId = _selectedRepositoryId,
+                SelectedRepositoryId = _services.Repositories.SelectedId,
                 UpdateCheckInterval = ApplicationReleasePolicy.UpdateSettingToSave(_updateCheckInterval.ToString(), _loadedUpdateCheckInterval),
                 LastUpdateCheckUtc = _lastUpdateCheckUtc?.ToString("O"),
                 ModUpdateCheckInterval = _modUpdateCheckInterval.ToString(),
@@ -303,13 +303,13 @@ public sealed partial class MainWindow
                 WindowHeight = _savedWindowHeight,
                 WindowMaximized = _savedWindowMaximized,
                 WhatsNewSeenVersion = _whatsNewSeenVersion,
-                Repositories = [.. _repositories],
+                Repositories = [.. _services.Repositories.Items],
                 RepositoryGamesExplicit = true,
-                ExtensionData = _shellConfigExtensionData
+                ExtensionData = _services.ShellConfig.ExtensionData
             };
 
             string json = JsonSerializer.Serialize(config, new JsonSerializerOptions { WriteIndented = true });
-            WriteConfigurationTextWithBackup(_shellConfigPath, json);
+            WriteConfigurationTextWithBackup(_services.ShellConfig.ShellConfigPath, json);
         }
         catch (Exception ex)
         {
@@ -393,7 +393,7 @@ public sealed partial class MainWindow
         _modLinks.Clear();
         _trackedModOrigins.Clear();
 
-        if (!File.Exists(_configPath))
+        if (!File.Exists(_services.ShellConfig.ConfigPath))
         {
             LoadDefaultShortcutTemplate();
             return;
@@ -401,14 +401,14 @@ public sealed partial class MainWindow
 
         try
         {
-            LegacyConfig config = LegacyConfigFile.Parse(ReadConfigurationTextWithRecovery(_configPath, LegacyConfigFile.IsValid));
+            LegacyConfig config = LegacyConfigFile.Parse(ReadConfigurationTextWithRecovery(_services.ShellConfig.ConfigPath, LegacyConfigFile.IsValid));
             if (config.SourceDirectory is not null) SourceTextBox.Text = config.SourceDirectory;
             if (config.TargetDirectory is not null) TargetTextBox.Text = config.TargetDirectory;
             if (config.LauncherPath is not null) LauncherTextBox.Text = config.LauncherPath;
             _legacyDarkTheme = config.DarkTheme;
             if (config.Language is not null)
             {
-                _currentLanguage = UiLanguagePolicy.FromConfig(config.Language, UiText.Languages) ?? _currentLanguage;
+                _services.Language.Load(UiLanguagePolicy.FromConfig(config.Language, UiText.Languages) ?? _services.Language.Current);
             }
 
             foreach ((string modPath, List<ShortcutBinding> bindings) in config.Bindings) _modBindings[modPath] = bindings;
@@ -441,14 +441,14 @@ public sealed partial class MainWindow
                 SourceDirectory = SourceTextBox.Text ?? string.Empty,
                 TargetDirectory = TargetTextBox.Text ?? string.Empty,
                 LauncherPath = LauncherTextBox.Text ?? string.Empty,
-                DarkTheme = _isDarkTheme,
-                Language = UiLanguagePolicy.ToConfig(_currentLanguage)
+                DarkTheme = _services.Appearance.IsDark,
+                Language = UiLanguagePolicy.ToConfig(_services.Language.Current)
             };
             foreach ((string modPath, List<ShortcutBinding> bindings) in _modBindings) config.Bindings[modPath] = bindings;
             foreach ((string modPath, string link) in _modLinks) config.ModLinks[modPath] = link;
             foreach ((string modPath, TrackedModOrigin origin) in _trackedModOrigins) config.ModOrigins[modPath] = origin;
 
-            WriteConfigurationTextWithBackup(_configPath, LegacyConfigFile.Format(config));
+            WriteConfigurationTextWithBackup(_services.ShellConfig.ConfigPath, LegacyConfigFile.Format(config));
             SaveShellConfig();
             return true;
         }
@@ -462,17 +462,17 @@ public sealed partial class MainWindow
 
     private string ReadConfigurationTextWithRecovery(string filePath, Func<string, bool> validator)
     {
-        ConfigurationReadResult result = _configurationFiles.Read(filePath, validator);
-        if (result.RestoredFromBackup)
+        string text = _services.ShellConfig.Read(filePath, validator, out bool restoredFromBackup);
+        if (restoredFromBackup)
         {
             StatusTextBlock.Text = T("Configuration.WasDamagedAndTheLatestBackup", Path.GetFileName(filePath));
         }
 
-        return result.Text;
+        return text;
     }
 
     private void WriteConfigurationTextWithBackup(string filePath, string content)
     {
-        _configurationFiles.Write(filePath, content);
+        _services.ShellConfig.Write(filePath, content);
     }
 }
