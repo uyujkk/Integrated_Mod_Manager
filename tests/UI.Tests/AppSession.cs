@@ -75,8 +75,19 @@ public sealed class AppSession : IDisposable
     public AppSession Start()
     {
         _application = Application.Launch(new ProcessStartInfo(Path.Combine(AppFolder, "ModFolderCopier.WinUI.exe")) { WorkingDirectory = AppFolder });
-        MainWindow = Retry.WhileNull(() => _application.GetMainWindow(_automation, TimeSpan.FromSeconds(2)),
-            TimeSpan.FromSeconds(60), TimeSpan.FromMilliseconds(500), throwOnTimeout: true).Result!;
+        try
+        {
+            // The first start on a fresh runner can be slow enough that a single window lookup times out.
+            MainWindow = Retry.WhileNull(() => _application.GetMainWindow(_automation, TimeSpan.FromSeconds(2)),
+                TimeSpan.FromSeconds(60), TimeSpan.FromMilliseconds(500), throwOnTimeout: true, ignoreException: true).Result!;
+        }
+        catch
+        {
+            // "using var app = ...Start()" never disposes a session whose Start threw. Close the app here, or it
+            // keeps the global overlay hotkey and the later hotkey tests fail too.
+            Dispose();
+            throw;
+        }
         // Startup work (scans, the shell rendering) finishes after the window appears.
         Thread.Sleep(3000);
         return this;
