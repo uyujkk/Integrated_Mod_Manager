@@ -25,11 +25,11 @@ jobs:
     runs-on: windows-latest
     timeout-minutes: 30
     steps:
-      - uses: actions/checkout@v6
+      - uses: actions/checkout@v7
       - uses: actions/setup-dotnet@v5
         with:
           dotnet-version: 8.0.x
-      - uses: microsoft/setup-msbuild@v2
+      - uses: microsoft/setup-msbuild@v3
       - uses: actions/cache@v6
         with:
           path: ~/.nuget/packages
@@ -63,7 +63,7 @@ jobs:
         run: .\scripts\package-developer-tools.ps1 -OutputDirectory artifacts\developer-tools
       - name: Upload test results
         if: always()
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: test-results-${{ github.sha }}
           path: |
@@ -73,7 +73,7 @@ jobs:
           retention-days: 14
       - name: Upload verified build outputs
         if: success()
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: verified-windows-x64-${{ github.sha }}
           path: |
@@ -84,7 +84,7 @@ jobs:
           retention-days: 7
       - name: Upload verified release package
         if: success()
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: verified-release-package-${{ github.sha }}
           path: |
@@ -94,7 +94,7 @@ jobs:
           retention-days: 7
       - name: Upload standalone Developer Tools package
         if: success()
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: verified-developer-tools-${{ github.sha }}
           path: |
