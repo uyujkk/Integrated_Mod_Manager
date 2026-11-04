@@ -236,7 +236,6 @@ public sealed partial class MainWindow : Window
         DetectLocalUpdatePackage();
         TraceStartupStage("Online controls and local update detection initialized");
         RefreshSettingsPane();
-        RefreshSecondaryNavigation();
         TraceStartupStage("Settings and navigation refreshed");
         ApplyShellState(refreshRepository: false);
         UpdateShellLayout();

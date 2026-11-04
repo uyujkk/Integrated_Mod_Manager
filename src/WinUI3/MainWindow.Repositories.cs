@@ -256,7 +256,6 @@ public sealed partial class MainWindow
 
             repository.Name = repositoryName.Trim();
             SaveShellConfig();
-            RefreshSecondaryNavigation();
             RefreshDashboard();
             RefreshRepositoryActionButtons();
             StatusTextBlock.Text = T("Repositories.RenamedRepository", repository.Name);
@@ -361,7 +360,6 @@ public sealed partial class MainWindow
 
         ApplySelectedRepositoryToInputs();
         SaveShellConfig();
-        RefreshSecondaryNavigation();
         RefreshDashboard();
         RefreshRepositoryActionButtons();
         StatusTextBlock.Text = T("Repositories.UpdatedRepository", repository.Name);

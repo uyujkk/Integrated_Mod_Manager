@@ -18,15 +18,23 @@ public sealed partial class MainWindow
     private TextBlock? _commandPaletteHint;
     private CommandPaletteEntry[] _commandPaletteEntries = [];
     private IReadOnlyList<CommandPaletteEntry> _commandPaletteResults = [];
+    // Where focus was before the palette opened; it goes back there when the palette closes.
+    private Control? _focusBeforeCommandPalette;
 
     // Ctrl+K: one search over pages, commands, characters and every Mod in the current repository.
     // Picking a row only navigates or selects; deploying stays on the Deploy button.
     private void OpenCommandPalette()
     {
         EnsureCommandPalette();
+        if (IsCommandPaletteOpen) return;
+        // The title bar search box only opens the palette; returning focus to it would open it again.
+        _focusBeforeCommandPalette = FocusManager.GetFocusedElement(RootGrid.XamlRoot) is Control focused
+            && !IsInside(focused, TitleBarSearchBox) ? focused : null;
         _commandPaletteEntries = BuildCommandPaletteEntries();
-        _commandPalettePanel!.Background = GetAppThemeBrush("AppElevatedBackgroundBrush");
+        // An in-app Acrylic surface over a dimmed window, like other Windows flyouts.
+        _commandPalettePanel!.Background = GetAppThemeBrush("AppPaletteBackgroundBrush");
         _commandPalettePanel.BorderBrush = GetAppThemeBrush("AppStrongBorderBrush");
+        _commandPaletteOverlay!.Background = GetAppThemeBrush("AppSmokeBrush");
         _commandPaletteSearch!.PlaceholderText = T("CommandPalette.Placeholder");
         AutomationProperties.SetName(_commandPaletteSearch, T("CommandPalette.Placeholder"));
         _commandPaletteHint!.Text = T("CommandPalette.Hint");
@@ -58,8 +66,18 @@ public sealed partial class MainWindow
         _commandPaletteEntries = [];
         _commandPaletteResults = [];
         _commandPaletteList!.Items.Clear();
-        // The search box just disappeared; give focus back so window shortcuts keep working.
-        RootGrid.Focus(FocusState.Programmatic);
+        // Back to where the user was; otherwise to the window, so window shortcuts keep working.
+        Control? previous = _focusBeforeCommandPalette;
+        _focusBeforeCommandPalette = null;
+        if (previous is null || previous.XamlRoot is null || !previous.Focus(FocusState.Programmatic))
+            RootGrid.Focus(FocusState.Programmatic);
+    }
+
+    private static bool IsInside(DependencyObject element, DependencyObject container)
+    {
+        for (DependencyObject? current = element; current is not null; current = Microsoft.UI.Xaml.Media.VisualTreeHelper.GetParent(current))
+            if (ReferenceEquals(current, container)) return true;
+        return false;
     }
 
     private bool IsCommandPaletteOpen => _commandPaletteOverlay?.Visibility == Visibility.Visible;
@@ -88,17 +106,13 @@ public sealed partial class MainWindow
         body.Children.Add(_commandPaletteHint);
         _commandPalettePanel = new Border
         {
-            Child = body, Width = 640, Padding = new Thickness(12), CornerRadius = new CornerRadius(10),
+            Child = body, Width = 640, Padding = new Thickness(12), CornerRadius = (CornerRadius)Application.Current.Resources["OverlayCornerRadius"],
             BorderThickness = new Thickness(1), HorizontalAlignment = HorizontalAlignment.Center,
             VerticalAlignment = VerticalAlignment.Top, Margin = new Thickness(16, 72, 16, 16)
         };
         // Clicks on the panel stay inside; clicks on the dimmed area close the palette.
         _commandPalettePanel.Tapped += (_, args) => args.Handled = true;
-        _commandPaletteOverlay = new Grid
-        {
-            Background = new Microsoft.UI.Xaml.Media.SolidColorBrush(Windows.UI.Color.FromArgb(110, 0, 0, 0)),
-            Visibility = Visibility.Collapsed
-        };
+        _commandPaletteOverlay = new Grid { Visibility = Visibility.Collapsed };
         _commandPaletteOverlay.Tapped += (_, _) => CloseCommandPalette();
         _commandPaletteOverlay.Children.Add(_commandPalettePanel);
         Canvas.SetZIndex(_commandPaletteOverlay, 1000);

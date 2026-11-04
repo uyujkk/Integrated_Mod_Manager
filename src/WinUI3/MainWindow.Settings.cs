@@ -283,17 +283,8 @@ public sealed partial class MainWindow
     // Each page applies the density itself (MainWindow.AppearanceEvents.cs).
     private void ApplyInterfaceDensity() => _services.Appearance.ApplyDensity(_interfaceDensity == InterfaceDensity.Compact);
 
-    private void ApplyShellDensity(bool compact)
-    {
-        double padding = compact ? 8 : 12;
-        // The title bar row reaches the window edges; only the content below it is inset.
-        AppShellGrid.Padding = new Thickness(padding, 0, padding, padding);
-        AppShellGrid.RowSpacing = compact ? 2 : 4;
-        AppTitleBar.Margin = new Thickness(-padding, 0, -padding, 0);
-        PrimaryNavBorder.Padding = new Thickness(8, compact ? 8 : 12, 8, compact ? 8 : 12);
-        SecondaryNavBorder.Padding = new Thickness(compact ? 12 : 14);
-        SecondaryNavPanel.Spacing = compact ? 5 : 8;
-    }
+    // The navigation view keeps its own spacing; the density changes the page margins.
+    private void ApplyShellDensity() => ApplyPageMargins();
 
     private void ApplyWorkspaceDensity(bool compact)
     {

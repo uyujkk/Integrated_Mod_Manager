@@ -237,7 +237,9 @@ public sealed partial class MainWindow
             AppInfoBar.Message = message;
             AppInfoBar.IsOpen = true;
 
-            await Task.Delay(TimeSpan.FromSeconds(3.5));
+            // Done and for-your-information notes close themselves; warnings and errors stay until closed.
+            if (severity is not (InfoBarSeverity.Success or InfoBarSeverity.Informational)) return;
+            await Task.Delay(TimeSpan.FromSeconds(5));
             if (notificationVersion == _notificationVersion && !_onlineWindowClosed)
             {
                 AppInfoBar.IsOpen = false;

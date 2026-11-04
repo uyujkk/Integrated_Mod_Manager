@@ -34,12 +34,8 @@ public sealed partial class MainWindow
         AppearanceService appearance = _services.Appearance;
         // Mod workspace: the summary colours are set in code.
         appearance.ThemeChanged += (_, _) => RenderModSummary();
-        // Shell: navigation button colours.
-        appearance.ThemeChanged += (_, _) =>
-        {
-            RefreshPrimaryNavigationVisuals();
-            RefreshSecondaryNavigation();
-        };
+        // Shell: the selected navigation item.
+        appearance.ThemeChanged += (_, _) => RefreshPrimaryNavigationVisuals();
         // Shortcuts: binding cards take their key-cap colours when created; drop them so they are rebuilt.
         appearance.ThemeChanged += (_, _) =>
         {
@@ -49,7 +45,7 @@ public sealed partial class MainWindow
             RenderShortcutButtons();
         };
 
-        appearance.DensityChanged += (_, _) => ApplyShellDensity(appearance.IsCompact);
+        appearance.DensityChanged += (_, _) => ApplyShellDensity();
         appearance.DensityChanged += (_, _) => ApplyWorkspaceDensity(appearance.IsCompact);
     }
 }

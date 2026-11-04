@@ -24,11 +24,9 @@ public sealed partial class MainWindow
     {
         _applyingCombinationProfile = busy;
         SetBusyState(busy);
-        PrimaryNavBorder.IsHitTestVisible = !busy;
-        SecondaryNavPanel.IsHitTestVisible = !busy;
-        foreach (Button button in new[] { DashboardNavButton, RepositoryNavButton, OnlineNavButton, UpdatesNavButton, SettingsNavButton })
-            button.IsEnabled = !busy;
-        foreach (Control control in SecondaryNavPanel.Children.OfType<Control>()) control.IsEnabled = !busy;
+        ShellNavigationView.IsHitTestVisible = !busy;
+        foreach (NavigationViewItem item in new[] { DashboardNavButton, RepositoryNavButton, OnlineNavButton, UpdatesNavButton, SettingsNavButton })
+            item.IsEnabled = !busy;
         SourceTextBox.IsEnabled = !busy;
         TargetTextBox.IsEnabled = !busy;
         LauncherTextBox.IsEnabled = !busy;
