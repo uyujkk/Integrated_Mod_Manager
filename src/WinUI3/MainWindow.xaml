@@ -575,12 +575,14 @@
                             </Grid>
                             <Grid Grid.Row="1" ColumnSpacing="8">
                                 <Grid.ColumnDefinitions>
-                                    <ColumnDefinition Width="*" />
                                     <ColumnDefinition Width="Auto" />
+                                    <ColumnDefinition Width="*" />
                                 </Grid.ColumnDefinitions>
-                                <!-- The view buttons, details and the import commands are added by RepositoryWorkspace.cs and ExistingModImport.cs. -->
+                                <!-- The view buttons, details and the import commands are added by RepositoryWorkspace.cs and ExistingModImport.cs.
+                                     The buttons keep their width; the counts give way and trim when a language needs more room. -->
                                 <StackPanel x:Name="RepositoryViewButtonsPanel" Orientation="Horizontal" Spacing="6" />
-                                <TextBlock x:Name="RepositoryCountTextBlock" Grid.Column="1" FontSize="12" VerticalAlignment="Center" />
+                                <TextBlock x:Name="RepositoryCountTextBlock" Grid.Column="1" FontSize="12" VerticalAlignment="Center" HorizontalAlignment="Right"
+                                           TextTrimming="CharacterEllipsis" ToolTipService.ToolTip="{Binding Text, RelativeSource={RelativeSource Self}}" />
                             </Grid>
                         </Grid>
                     </Border>

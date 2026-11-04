@@ -349,13 +349,43 @@ public sealed partial class MainWindow
             HorizontalAlignment = expanded ? HorizontalAlignment.Left : HorizontalAlignment.Center
         };
         panel.Children.Add(iconHost);
-        panel.Children.Add(new TextBlock
+        var text = new TextBlock
         {
             Text = label, FontSize = expanded ? 14 : 11,
             VerticalAlignment = VerticalAlignment.Center,
             HorizontalAlignment = HorizontalAlignment.Center
-        });
+        };
+        if (expanded)
+        {
+            panel.Children.Add(text);
+            return panel;
+        }
+
+        // The narrow rail has room for about 60 px of label. Longer labels (Russian, for one) wrap onto a
+        // second line at word breaks, and a single word that is still too wide is scaled down to fit.
+        const double room = 60;
+        text.TextAlignment = TextAlignment.Center;
+        text.TextWrapping = TextWrapping.WrapWholeWords;
+        text.MaxLines = 2;
+        double widestWord = label.Split(' ', StringSplitOptions.RemoveEmptyEntries).DefaultIfEmpty(label).Max(word => NavLabelWidth(word, text.FontSize));
+        if (widestWord <= room)
+        {
+            text.MaxWidth = room;
+            panel.Children.Add(text);
+        }
+        else
+        {
+            text.MaxWidth = widestWord;
+            panel.Children.Add(new Viewbox { Width = room, StretchDirection = StretchDirection.DownOnly, Child = text });
+        }
         return panel;
+    }
+
+    private static double NavLabelWidth(string text, double fontSize)
+    {
+        var probe = new TextBlock { Text = text, FontSize = fontSize };
+        probe.Measure(new Windows.Foundation.Size(double.PositiveInfinity, double.PositiveInfinity));
+        return Math.Ceiling(probe.DesiredSize.Width);
     }
 
     private object CreateNavSearchContent()
