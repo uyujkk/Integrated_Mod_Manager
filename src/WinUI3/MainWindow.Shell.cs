@@ -120,12 +120,7 @@ public sealed partial class MainWindow
 
     private void ApplyShellState(bool refreshRepository)
     {
-        DashboardScrollViewer.Visibility = _currentPrimarySection == PrimarySection.Dashboard ? Visibility.Visible : Visibility.Collapsed;
-        WorkspacePageHost.Visibility = _currentPrimarySection == PrimarySection.Repository ? Visibility.Visible : Visibility.Collapsed;
-        OnlineScrollViewer.Visibility = _currentPrimarySection == PrimarySection.Online ? Visibility.Visible : Visibility.Collapsed;
-        UpdatesScrollViewer.Visibility = _currentPrimarySection == PrimarySection.Updates ? Visibility.Visible : Visibility.Collapsed;
-        SettingsScrollViewer.Visibility = _currentPrimarySection == PrimarySection.Settings ? Visibility.Visible : Visibility.Collapsed;
-        ShortcutsScrollViewer.Visibility = _currentPrimarySection == PrimarySection.Shortcuts ? Visibility.Visible : Visibility.Collapsed;
+        PageContentHost.Content = _pages[_currentPrimarySection];
         if (_currentPrimarySection == PrimarySection.Shortcuts)
         {
             BuildShortcutPane();
@@ -156,6 +151,27 @@ public sealed partial class MainWindow
         UIElement activeSection = GetActiveSectionElement();
         RootGrid.DispatcherQueue.TryEnqueue(() => AnimateSectionEntrance(activeSection));
         RootGrid.Focus(FocusState.Programmatic);
+    }
+
+    // Each page container stays alive in its wrapper, so switching keeps scroll positions,
+    // selections and loading work, as when the hidden pages were only collapsed.
+    private readonly Dictionary<PrimarySection, WrapperPage> _pages = [];
+
+    private void InitializePageHost()
+    {
+        foreach ((PrimarySection section, FrameworkElement container) in new (PrimarySection, FrameworkElement)[]
+        {
+            (PrimarySection.Dashboard, DashboardScrollViewer),
+            (PrimarySection.Repository, WorkspacePageHost),
+            (PrimarySection.Online, OnlineScrollViewer),
+            (PrimarySection.Updates, UpdatesScrollViewer),
+            (PrimarySection.Settings, SettingsScrollViewer),
+            (PrimarySection.Shortcuts, ShortcutsScrollViewer)
+        })
+        {
+            PagesHostGrid.Children.Remove(container);
+            _pages[section] = new WrapperPage(container);
+        }
     }
 
     private UIElement GetActiveSectionElement()

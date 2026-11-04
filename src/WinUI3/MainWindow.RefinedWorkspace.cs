@@ -22,9 +22,6 @@ public sealed partial class MainWindow
     private void InitializeRefinedWorkspace()
     {
         InitializePathStatusIcons();
-        WorkspacePageHost.Visibility = _currentPrimarySection == PrimarySection.Repository
-            ? Visibility.Visible
-            : Visibility.Collapsed;
         InitializeResponsiveSettingsLayout();
         InitializePageLayouts();
         RootGrid.SizeChanged += (_, _) => UpdateRefinedWorkspaceLayout();

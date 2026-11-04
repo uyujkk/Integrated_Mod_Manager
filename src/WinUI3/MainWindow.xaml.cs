@@ -191,6 +191,7 @@ public sealed partial class MainWindow : Window
         InitializeComponent();
         _services.Dialogs.Attach(() => RootGrid.XamlRoot);
         _services.Status.NotificationRequested += OnNotificationRequested;
+        InitializePageHost();
         ApplyWindowIcon();
         TraceStartupStage("InitializeComponent completed");
         InitializePersistentDataStore();

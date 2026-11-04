@@ -2126,6 +2126,11 @@
                         </Grid>
                     </StackPanel>
                 </ScrollViewer>
+
+                <!-- The page containers above are moved into wrapper pages at startup (MainWindow.Shell.cs);
+                     this host shows the current one. -->
+                <ContentControl x:Name="PageContentHost" IsTabStop="False"
+                                HorizontalContentAlignment="Stretch" VerticalContentAlignment="Stretch" />
             </Grid>
         </Grid>
         </Grid>
