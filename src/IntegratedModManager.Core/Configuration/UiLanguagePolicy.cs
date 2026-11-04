@@ -25,7 +25,7 @@ public static class UiLanguagePolicy
     }
 
     /// <summary>
-    /// The language saved in the configuration. Versions before 4.8 saved "zh" or "en" and read
+    /// The language saved in the configuration. Versions before 4.7.3 saved "zh" or "en" and read
     /// anything else as Chinese, so those two keep their old values and other languages use their code.
     /// </summary>
     public static string ToConfig(string language) => language switch
