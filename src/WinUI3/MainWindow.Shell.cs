@@ -126,7 +126,6 @@ public sealed partial class MainWindow
             (PrimarySection.Dashboard, DashboardScrollViewer),
             (PrimarySection.Repository, WorkspacePageHost),
             (PrimarySection.Online, OnlineScrollViewer),
-            (PrimarySection.Updates, UpdatesScrollViewer),
             (PrimarySection.Shortcuts, ShortcutsScrollViewer)
         })
         {
@@ -135,6 +134,8 @@ public sealed partial class MainWindow
         }
         // Stage J2: the Settings page is a page of its own.
         _pages[PrimarySection.Settings] = new SettingsPage(_services);
+        // Stage J3: the Updates page too.
+        _pages[PrimarySection.Updates] = new UpdatesPage(_services);
     }
 
     private UIElement GetActiveSectionElement()
@@ -144,7 +145,7 @@ public sealed partial class MainWindow
             PrimarySection.Dashboard => DashboardScrollViewer,
             PrimarySection.Repository => WorkspacePageHost,
             PrimarySection.Online => OnlineScrollViewer,
-            PrimarySection.Updates => UpdatesScrollViewer,
+            PrimarySection.Updates => _pages[PrimarySection.Updates],
             PrimarySection.Shortcuts => ShortcutsScrollViewer,
             _ => _pages[PrimarySection.Settings]
         };
@@ -203,7 +204,7 @@ public sealed partial class MainWindow
         }
 
         UpdateOnlineResponsiveLayout(width);
-        UpdateUpdatesLayout();
+        // The Settings and Updates pages lay themselves out when their own size changes.
         UpdateRefinedWorkspaceLayout();
 
         // The navigation view opens its labelled pane from 1440 px (ExpandedModeThresholdWidth) unless
@@ -259,7 +260,7 @@ public sealed partial class MainWindow
     private void RefreshUpdatesNavBadge()
     {
         if (UpdatesNavInfoBadge is null) return;
-        int count = _trackedModUpdateResults.Count(item => item.HasUpdate);
+        int count = UpdatesView.AvailableUpdateCount;
         UpdatesNavInfoBadge.Value = count;
         UpdatesNavInfoBadge.Visibility = count > 0 ? Visibility.Visible : Visibility.Collapsed;
     }

@@ -11,7 +11,6 @@ public sealed partial class MainWindow
     private void InitializePageLayouts()
     {
         AttachPageLayout(DashboardScrollViewer, UpdateDashboardLayout);
-        AttachPageLayout(UpdatesScrollViewer, UpdateUpdatesLayout);
         AttachPageLayout(ShortcutsScrollViewer, UpdateShortcutsLayout);
     }
 

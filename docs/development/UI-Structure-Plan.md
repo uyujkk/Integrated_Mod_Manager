@@ -132,6 +132,25 @@ J0 结果（2026-11-04，分支 `claude/ui-j0-prep`）：
 
 应用自更新的逻辑（检查、下载、校验、启动更新程序）仍在 `MainWindow.Updates.cs` 和 `ProductivityFeatures.cs`，因为它依赖窗口的配置保存、对话框和关闭窗口；它只通过 `SettingsViewModel` 改设置页。以后可以连同配置一起移进单独的服务。
 
+#### J3 牵连清单（更新页）
+
+更新页 `UpdatesScrollViewer` 里有 62 个命名控件。除了 `MainWindow.Updates.cs`，下面这些地方直接读写它们，或者更新页的代码读写别的页面和外壳：
+
+| 位置 | 做什么 | 改成 |
+| --- | --- | --- |
+| `MainWindow.Shell.cs` | 更新页的导航徽标（J1N 的 `InfoBadge`）直接数 `_trackedModUpdateResults`；窗口尺寸变化时调 `UpdateUpdatesLayout` | 徽标跟 `UpdatesViewModel.AvailableUpdateCount` 的变化事件；页面按自己的尺寸排布 |
+| `MainWindow.DownloadTasks.cs` | 下载历史列表、筛选条、“清除已完成”；任务更新时同时刷新更新页的行和导航下载浮层的卡片，并启用两个“清除”按钮 | `DownloadService` 新增 `Changed`、`TaskUpdated` 事件：页面自己重建历史、更新自己的行，窗口只管导航浮层；行的状态文字和按钮由共用的 `DownloadTaskViews` 决定；行上的按钮经请求回到窗口（`RunDownloadTaskActionAsync`，浮层也用它） |
+| `MainWindow.ProductivityFeatures.cs` | 三栏排布、下载历史卡片按整行收高、备份管理卡片文字、上限、备份列表（含进场动画）、“恢复” | 排布和文字进页面；备份列表由窗口读出后写进 `UpdatesViewModel.SetBackups`；“恢复”发请求；动画是否减少由 `AppearanceService.ReduceAnimations` 告诉页面 |
+| `MainWindow.ConfigurationProfiles.cs` | “撤销上次 Mod 改动”按钮的可用、显示、说明文字和这一行的列宽 | `UpdatesViewModel.SetRollback` |
+| `MainWindow.RepositoryWorkspace.cs` | 启动时把更新页里“组合预设”卡片的控件搬进 Mod 工作区的预设视图，删掉这张卡片，再往更新页的恢复操作行里塞一个“打开组合工作区”按钮；冲突检测开关的处理 | 预设卡片不再属于更新页：它的 XAML 留在 `MainWindow.xaml` 的隐藏容器 `CombinationProfileControlsHost` 里，J7 随工作区一起移；“打开组合工作区”按钮写进更新页 XAML，点击发请求；冲突检测开关进 ViewModel |
+| `MainWindow.Localization.cs` | “立即检查”的提示和朗读名称 | 页面自己写 |
+| `MainWindow.PageLayout.cs` | `AttachPageLayout(UpdatesScrollViewer, …)` | 页面自己监听尺寸 |
+| `MainWindow.OnlineImageCache.cs`（在线页） | 已跟踪 Mod 行的缩略图走在线页的图片缓存 | 新的 `ImageService`：窗口在启动时把缓存的加载方法交给它，J6 再把缓存本身移过去 |
+| `MainWindow.OnlineDownloadFlow.cs`、`ModUpdates.cs`（在线页） | “下载并替换”“移除跟踪”、正在替换的 Mod、重试要等在线页准备完 | 行上的按钮发请求，窗口照旧执行；正在替换的路径写进 `UpdatesViewModel.SetReplacing`；`DownloadService.IsRetryBlocked` |
+| 空状态的“浏览在线 Mod”、恢复行的“打开组合工作区” | 直接调 `OnOnlineNavClicked`、`OnOpenCombinationPresetsClicked` | 页面发 `BrowseOnline`、`OpenCombinationPresets` 请求，由窗口导航 |
+
+检查更新、下载替换、回滚和恢复备份的逻辑仍在窗口里：它们依赖配置保存、对话框、部署和在线页的状态。已跟踪 Mod 的数据（`_trackedModOrigins`、`_trackedModUpdateResults`）也还在窗口，在线页下载时会写它们；窗口把它们转成 `TrackedModRow` 交给页面。`PopulateStableIntervalOptions` 不再有人用，已删除。
+
 ### J8. 对话框与资源
 
 - 每种对话框一个类（`Dialogs/` 下），由 `DialogService` 统一设置 `XamlRoot` 并保证同一时间只有一个对话框。

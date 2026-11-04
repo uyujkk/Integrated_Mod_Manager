@@ -18,4 +18,9 @@ internal sealed class AppServices
 
     /// <summary>The Settings page's state; the window writes results here and answers its requests.</summary>
     public SettingsViewModel Settings { get; } = new();
+
+    /// <summary>The Updates page's state (stage J3).</summary>
+    public UpdatesViewModel Updates { get; } = new();
+
+    public ImageService Images { get; } = new();
 }

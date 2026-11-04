@@ -102,7 +102,6 @@ public sealed partial class MainWindow : Window
     private readonly List<TrackedModUpdateResult> _trackedModUpdateResults = [];
     private readonly List<ModConfigurationProfile> _configurationProfiles = [];
     private readonly List<ModPersistentSlot> _modPersistentSlots = [];
-    private readonly Dictionary<string, DownloadTaskCardView> _downloadTaskCards = new(StringComparer.Ordinal);
     private readonly Dictionary<string, DownloadTaskCardView> _navTaskCards = new(StringComparer.Ordinal);
 
     private ThemePreference _themePreference = ThemePreference.System;
@@ -188,6 +187,7 @@ public sealed partial class MainWindow : Window
         _services.Dialogs.Attach(() => RootGrid.XamlRoot);
         _services.Status.NotificationRequested += OnNotificationRequested;
         InitializeSettingsHost();
+        InitializeUpdatesHost();
         InitializePageHost();
         SubscribeToAppearanceEvents();
         ApplyWindowIcon();

@@ -13,31 +13,6 @@ public sealed partial class MainWindow
     private readonly HashSet<string> _modUpdatesInProgress = new(StringComparer.OrdinalIgnoreCase);
     private bool _showingModUpdateNotification;
 
-    private void PopulateStableIntervalOptions(ComboBox combo, UpdateCheckInterval selected)
-    {
-        (UpdateCheckInterval Value, string Label)[] choices =
-        [
-            (UpdateCheckInterval.Manual, T("ModUpdates.ManualOnly")),
-            (UpdateCheckInterval.Daily, T("ModUpdates.CheckDailyOnStartup")),
-            (UpdateCheckInterval.EveryThreeDays, T("ModUpdates.CheckEvery3DaysOnStartup")),
-            (UpdateCheckInterval.Weekly, T("ModUpdates.CheckWeeklyOnStartup"))
-        ];
-        // Do not clear/recreate an open ComboBox in its SelectionChanged call stack.
-        if (combo.Items.Count == 0)
-            foreach (var choice in choices) combo.Items.Add(new ComboBoxItem { Tag = choice.Value, Content = choice.Label });
-        foreach (ComboBoxItem item in combo.Items.OfType<ComboBoxItem>())
-        {
-            var choice = choices.First(option => Equals(option.Value, item.Tag));
-            bool relabeled = !Equals(item.Content, choice.Label);
-            if (relabeled) item.Content = choice.Label;
-            if (choice.Value != selected) continue;
-            // A closed combo box keeps showing the old text of a relabeled selection
-            // (after a language switch) until the item is selected again.
-            if (relabeled && ReferenceEquals(combo.SelectedItem, item) && !combo.IsDropDownOpen) combo.SelectedItem = null;
-            if (!ReferenceEquals(combo.SelectedItem, item)) combo.SelectedItem = item;
-        }
-    }
-
     private async Task NotifyModUpdatesAvailableAsync()
     {
         if (_showingModUpdateNotification || _onlineWindowClosed) return;

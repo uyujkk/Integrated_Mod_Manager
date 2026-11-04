@@ -6,7 +6,6 @@ using System.Text.Json;
 using System.Text.RegularExpressions;
 using IntegratedModManager.Core.Deployment;
 using IntegratedModManager.Core.Infrastructure;
-using IntegratedModManager.Core.Layout;
 using IntegratedModManager.Core.Repository;
 using IntegratedModManager.Core.Updates;
 using IntegratedModManager.Data;
@@ -164,97 +163,6 @@ public sealed partial class MainWindow
         _currentPrimarySection = section;
         ApplyShellState(refreshRepository: section == PrimarySection.Repository);
         SaveShellConfig();
-    }
-
-    private int _updatesColumns = -1;
-    // The history card height the layout chose; FitDownloadHistoryToWholeRows trims below it.
-    private double? _downloadsCardHeight;
-    private const double DownloadHistoryRowSpacing = 6; // StackLayout.Spacing of DownloadHistoryRepeater
-
-    private void QueueFitDownloadHistory()
-        => DispatcherQueue.TryEnqueue(Microsoft.UI.Dispatching.DispatcherQueuePriority.Low, FitDownloadHistoryToWholeRows);
-
-    // A fixed-height history card ends its list on a whole row instead of cutting the last one in half.
-    private void FitDownloadHistoryToWholeRows()
-    {
-        if (_downloadsCardHeight is not double full || DownloadHistoryRepeater.TryGetElement(0) is not FrameworkElement first
-            || first.ActualHeight <= 0 || DownloadHistoryListScroll.ActualHeight <= 0) return;
-        double viewport = DownloadHistoryListScroll.ActualHeight + (full - UpdatesDownloadsCard.Height);
-        double pitch = first.ActualHeight + DownloadHistoryRowSpacing;
-        int count = DownloadHistoryRepeater.ItemsSourceView?.Count ?? 0;
-        double whole = Math.Floor((viewport + DownloadHistoryRowSpacing) / pitch) * pitch - DownloadHistoryRowSpacing;
-        double target = count * pitch - DownloadHistoryRowSpacing <= viewport || whole <= 0 ? full : full - (viewport - whole);
-        if (Math.Abs(UpdatesDownloadsCard.Height - target) > 0.5) UpdatesDownloadsCard.Height = target;
-    }
-
-    // Laid out from the page's own width (see AttachPageLayout), not the window's.
-    private void UpdateUpdatesLayout()
-    {
-        double width = PageWidth(UpdatesScrollViewer);
-        int columns = UpdatesLayoutPolicy.Columns(width);
-
-        // Side-by-side columns fill the window and scroll inside, so the page itself never scrolls;
-        // a stacked or very short page scrolls as a whole, with each list capped in height.
-        double? fixedHeight = columns > 1
-            ? UpdatesLayoutPolicy.FixedColumnHeight(UpdatesScrollViewer.ActualHeight, UpdatesPageHeader.ActualHeight)
-            : null;
-        UpdatesScrollViewer.VerticalScrollMode = fixedHeight is null ? ScrollMode.Enabled : ScrollMode.Disabled;
-        UpdatesScrollViewer.VerticalScrollBarVisibility = fixedHeight is null ? ScrollBarVisibility.Auto : ScrollBarVisibility.Disabled;
-        UpdatesTrackedModsCard.MinHeight = 0;
-        // A narrow history card keeps its description in the title's tooltip, leaving the rows the room.
-        bool narrowHistory = columns == 2;
-        DownloadTaskCenterHintTextBlock.Visibility = narrowHistory ? Visibility.Collapsed : Visibility.Visible;
-        ToolTipService.SetToolTip(DownloadTaskCenterTitleTextBlock, narrowHistory ? DownloadTaskCenterHintTextBlock.Text : null);
-        if (fixedHeight is double height)
-        {
-            UpdatesTrackedModsCard.Height = height;
-            UpdatesDownloadsCard.Height = columns == 3 ? height : Math.Max(360, Math.Round(height * 0.65));
-            _downloadsCardHeight = UpdatesDownloadsCard.Height;
-            UpdatesSupportScroll.Height = height;
-            TrackedModsListScroll.MaxHeight = double.PositiveInfinity;
-            DownloadHistoryListScroll.MaxHeight = double.PositiveInfinity;
-            QueueFitDownloadHistory();
-        }
-        else
-        {
-            _downloadsCardHeight = null;
-            UpdatesTrackedModsCard.Height = double.NaN;
-            UpdatesDownloadsCard.Height = double.NaN;
-            UpdatesSupportScroll.Height = double.NaN;
-            double viewport = UpdatesScrollViewer.ActualHeight > 0 ? UpdatesScrollViewer.ActualHeight : 800;
-            TrackedModsListScroll.MaxHeight = Math.Max(320, Math.Round(viewport * 0.6));
-            DownloadHistoryListScroll.MaxHeight = 360;
-        }
-
-        if (_updatesColumns == columns)
-        {
-            return;
-        }
-        _updatesColumns = columns;
-
-        // Download history gets its own middle column on very wide pages; otherwise it heads the
-        // support column, which sits beside tracked Mods or below them.
-        UpdatesSupportPanel.Children.Remove(UpdatesDownloadsCard);
-        UpdatesTopGrid.Children.Remove(UpdatesDownloadsCard);
-        UpdatesPrimaryColumn.Width = new GridLength(columns == 3 ? 1.3 : columns == 2 ? 1.35 : 1, GridUnitType.Star);
-        UpdatesSecondaryColumn.Width = columns == 1 ? new GridLength(0) : new GridLength(columns == 3 ? 1 : 0.85, GridUnitType.Star);
-        UpdatesTertiaryColumn.Width = columns == 3 ? new GridLength(1, GridUnitType.Star) : new GridLength(0);
-        UpdatesTopGrid.ColumnSpacing = columns == 1 ? 0 : 16;
-        if (columns == 3)
-        {
-            UpdatesDownloadsCard.VerticalAlignment = VerticalAlignment.Top;
-            Grid.SetRow(UpdatesDownloadsCard, 0);
-            Grid.SetColumn(UpdatesDownloadsCard, 1);
-            UpdatesTopGrid.Children.Add(UpdatesDownloadsCard);
-            Grid.SetRow(UpdatesSupportScroll, 0);
-            Grid.SetColumn(UpdatesSupportScroll, 2);
-        }
-        else
-        {
-            UpdatesSupportPanel.Children.Insert(0, UpdatesDownloadsCard);
-            Grid.SetRow(UpdatesSupportScroll, columns == 2 ? 0 : 1);
-            Grid.SetColumn(UpdatesSupportScroll, columns == 2 ? 1 : 0);
-        }
     }
 
     private bool IsFavoriteCharacter(string characterKey)
@@ -442,36 +350,9 @@ public sealed partial class MainWindow
 
     private void RefreshBackupManagerText()
     {
-        BackupManagerTitleTextBlock.Text = T("ProductivityFeatures.InstallBackups");
-        BackupManagerHintTextBlock.Text = T("ProductivityFeatures.AutomaticallyPreserveTheStateBeforeInstalls");
-        BackupLimitLabelTextBlock.Text = T("ProductivityFeatures.StorageLimitGB");
-        RefreshBackupsButton.Content = T("ProductivityFeatures.RefreshList");
-        AutomationProperties.SetName(BackupLimitNumberBox, T("ProductivityFeatures.InstallBackupStorageLimitInGB"));
-        AutomationProperties.SetName(RefreshBackupsButton, RefreshBackupsButton.Content?.ToString() ?? string.Empty);
-        AutomationProperties.SetName(BackupHistoryExpander, T("ProductivityFeatures.ExpandInstallBackupHistory"));
         _isApplyingBackupLimitSetting = true;
-        BackupLimitNumberBox.Value = _installBackupLimitGb;
+        UpdatesView.BackupLimitGb = _installBackupLimitGb;
         _isApplyingBackupLimitSetting = false;
-    }
-
-    private async void OnBackupLimitValueChanged(NumberBox sender, NumberBoxValueChangedEventArgs args)
-    {
-        try
-        {
-            if (_isApplyingBackupLimitSetting || double.IsNaN(args.NewValue))
-            {
-                return;
-            }
-
-            _installBackupLimitGb = Math.Clamp(args.NewValue, 0.5, 100);
-            SaveShellConfig();
-            await Task.Run(() => PruneInstallTransactionsByStorageLimit(null));
-            await RefreshInstallBackupListAsync();
-        }
-        catch (Exception ex)
-        {
-            ReportUiActionFailure("OnBackupLimitValueChanged", ex);
-        }
     }
 
     private async void OnRefreshBackupsClicked(object sender, RoutedEventArgs e)
@@ -488,59 +369,13 @@ public sealed partial class MainWindow
 
     private async Task RefreshInstallBackupListAsync()
     {
-        BackupListPanel.Children.Clear();
         Directory.CreateDirectory(_services.Deployment.InstallBackupPath);
         List<InstallBackupDisplayItem> backups = await Task.Run(ReadInstallBackups);
         long totalBytes = backups.Sum(item => item.SizeBytes);
-        BackupSummaryTextBlock.Text = T("ProductivityFeatures.BackupsGB", backups.Count, FormatStorageSize(totalBytes), _installBackupLimitGb);
-
-        if (backups.Count == 0)
-        {
-            BackupListPanel.Children.Add(new TextBlock
-            {
-                Text = T("ProductivityFeatures.NoInstallBackupsYet"),
-                Style = (Style)Application.Current.Resources["CaptionTextStyle"]
-            });
-            return;
-        }
-
-        foreach (InstallBackupDisplayItem backup in backups.Take(30))
-        {
-            var grid = new Grid { ColumnSpacing = 12 };
-            grid.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(1, GridUnitType.Star) });
-            grid.ColumnDefinitions.Add(new ColumnDefinition { Width = GridLength.Auto });
-            var details = new StackPanel { Spacing = 3 };
-            details.Children.Add(new TextBlock { Text = backup.Description, FontWeight = Microsoft.UI.Text.FontWeights.SemiBold, TextTrimming = TextTrimming.CharacterEllipsis });
-            details.Children.Add(new TextBlock
-            {
-                Text = T("ProductivityFeatures.Text", backup.CreatedAt.ToLocalTime(), backup.ModNames, FormatStorageSize(backup.SizeBytes)),
-                Style = (Style)Application.Current.Resources["CaptionTextStyle"],
-                TextWrapping = TextWrapping.Wrap
-            });
-            grid.Children.Add(details);
-            var restore = new Button
-            {
-                Content = T("ProductivityFeatures.Restore"),
-                Style = (Style)Application.Current.Resources["SecondaryButtonStyle"],
-                VerticalAlignment = VerticalAlignment.Center,
-                Tag = backup.Path
-            };
-            Grid.SetColumn(restore, 1);
-            AutomationProperties.SetName(restore, T("ProductivityFeatures.RestoreBackup", backup.Description));
-            restore.Click += OnRestoreInstallBackupClicked;
-            grid.Children.Add(restore);
-            var border = new Border
-            {
-                Padding = new Thickness(12),
-                CornerRadius = new CornerRadius(12),
-                Background = GetAppThemeBrush("AppInsetBackgroundBrush"),
-                BorderBrush = GetAppThemeBrush("AppCardBorderBrush"),
-                BorderThickness = new Thickness(1),
-                Child = grid
-            };
-            BackupListPanel.Children.Add(border);
-            AnimateElementEntrance(border);
-        }
+        UpdatesView.SetBackups(
+            T("ProductivityFeatures.BackupsGB", backups.Count, FormatStorageSize(totalBytes), _installBackupLimitGb),
+            [.. backups.Take(30).Select(backup => new InstallBackupRow(backup.Path, backup.Description,
+                T("ProductivityFeatures.Text", backup.CreatedAt.ToLocalTime(), backup.ModNames, FormatStorageSize(backup.SizeBytes))))]);
     }
 
     private List<InstallBackupDisplayItem> ReadInstallBackups()
@@ -584,11 +419,11 @@ public sealed partial class MainWindow
         return result.OrderByDescending(item => item.CreatedAt).ToList();
     }
 
-    private async void OnRestoreInstallBackupClicked(object sender, RoutedEventArgs e)
+    private async Task RestoreInstallBackupAsync(string backupPath)
     {
         try
         {
-            if (sender is not Button { Tag: string backupPath } || !Directory.Exists(backupPath))
+            if (!Directory.Exists(backupPath))
             {
                 return;
             }

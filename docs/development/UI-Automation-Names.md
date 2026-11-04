@@ -74,6 +74,10 @@ J6-b：搜索框换 `AutoSuggestBox` 后，AutomationId 落在外层控件上，
 | `CheckModUpdatesButton` | `x:Name` | `MainWindow.xaml:1510` | Updates_ShowsItsSectionsAndSavesTheCheckInterval |
 | `ClearDownloadTasksButton` | `x:Name` | `MainWindow.xaml:1592` | Updates_ShowsItsSectionsAndSavesTheCheckInterval |
 | `ModUpdateIntervalComboBox` | `x:Name` | `MainWindow.xaml:1532` | Updates_ShowsItsSectionsAndSavesTheCheckInterval |
+| `ConflictDetectionToggleSwitch` | `x:Name` | `Pages/UpdatesPage.xaml` | Updates_ConflictDetectionSwitchIsSaved（J3 新增的冒烟测试） |
+| `OpenCombinationPresetsButton` | `x:Name`（J3 起写在 XAML 里，原来由工作区代码临时加上） | `Pages/UpdatesPage.xaml` | 同上 |
+
+J3 之后这几个控件都在 `Pages/UpdatesPage.xaml`，名称不变。
 
 J3-b：`SelectorBar` 分三个视图后，“清除下载记录”只在“下载记录”视图里，`Shows("ClearDownloadTasksButton")` 在默认视图会失败。测试要先切到对应视图（给 `SelectorBarItem` 设 AutomationId，例如 `UpdatesViewMods`、`UpdatesViewDownloads`、`UpdatesViewRecovery`）。
 

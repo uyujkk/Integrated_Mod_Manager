@@ -12,6 +12,9 @@ internal sealed class AppearanceService
     /// <summary>The theme dictionary the window shows: "Light", "Dark" or "HighContrast".</summary>
     public string ThemeKey => IsHighContrast ? "HighContrast" : IsDark ? "Dark" : "Light";
 
+    /// <summary>Whether to skip entrance animations: the user's choice, high contrast or Windows settings. Set by the window.</summary>
+    public Func<bool> ReduceAnimations { get; set; } = () => false;
+
     public bool IsCompact { get; private set; }
 
     /// <summary>Raised after the window took the new theme; pages recolour what they drew in code.</summary>

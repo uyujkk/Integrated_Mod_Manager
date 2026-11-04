@@ -42,7 +42,6 @@ public sealed partial class MainWindow
 
         ToolTipService.SetToolTip(AddRepositoryButton, T("Localization.CreateRepository"));
         ToolTipService.SetToolTip(RenameRepositoryButton, T("Localization.EditCurrentRepository"));
-        ToolTipService.SetToolTip(CheckModUpdatesButton, T("Localization.CheckTrackedModUpdatesNow"));
         ToolTipService.SetToolTip(RefreshOnlineButton, T("Localization.RefreshOnlineModList"));
         ToolTipService.SetToolTip(OnlinePrevPageButton, null);
         ToolTipService.SetToolTip(OnlineNextPageButton, null);
@@ -52,7 +51,6 @@ public sealed partial class MainWindow
         ToolTipService.SetToolTip(OnlineDetailHeroImage, T("Localization.ClickToViewFullSize"));
         AutomationProperties.SetName(AddRepositoryButton, T("Localization.CreateRepository"));
         AutomationProperties.SetName(RenameRepositoryButton, T("Localization.EditCurrentRepository"));
-        AutomationProperties.SetName(CheckModUpdatesButton, T("Localization.CheckTrackedModUpdatesNow"));
         AutomationProperties.SetName(RefreshOnlineButton, T("Localization.RefreshOnlineModList"));
         AutomationProperties.SetName(OnlinePrevPageButton, T("Localization.PreviousPage"));
         AutomationProperties.SetName(OnlineNextPageButton, T("Localization.NextPage"));

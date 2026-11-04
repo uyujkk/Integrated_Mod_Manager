@@ -76,17 +76,10 @@ public sealed partial class MainWindow
             : T("ConfigurationProfiles.Summary", selected.Name, selected.ModRelativePaths.Count, selected.PersistentStates.Sum(state => state.Values.Count))
                 + (selected.IncludesPersistentState ? T("ConfigurationProfiles.SummaryWithState") : T("ConfigurationProfiles.SummarySetOnly"));
 
-        RollbackLastInstallButton.IsEnabled = !string.IsNullOrWhiteSpace(_lastInstallTransactionPath)
-            && Directory.Exists(_lastInstallTransactionPath);
-        InstallRollbackStatusTextBlock.Text = RollbackLastInstallButton.IsEnabled
+        bool canUndo = !string.IsNullOrWhiteSpace(_lastInstallTransactionPath) && Directory.Exists(_lastInstallTransactionPath);
+        UpdatesView.SetRollback(canUndo, canUndo
             ? T("ConfigurationProfiles.UndoCoversModDeploymentCombinationParameters")
-            : T("ConfigurationProfiles.ThereIsNoModOperationTo");
-        // With nothing to undo the button would only sit disabled; the line below says why,
-        // and the combination shortcut beside it takes the full row.
-        bool canUndo = RollbackLastInstallButton.IsEnabled;
-        RollbackLastInstallButton.Visibility = canUndo ? Visibility.Visible : Visibility.Collapsed;
-        UpdatesRecoveryActionsGrid.ColumnDefinitions[0].Width = canUndo ? new GridLength(1, GridUnitType.Star) : new GridLength(0);
-        UpdatesRecoveryActionsGrid.ColumnSpacing = canUndo ? 8 : 0;
+            : T("ConfigurationProfiles.ThereIsNoModOperationTo"));
         RefreshCombinationWorkspaceV4();
         RefreshCombinationBundleActions();
     }

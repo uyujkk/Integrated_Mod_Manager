@@ -534,21 +534,8 @@ public sealed partial class MainWindow
         RepositoryDetach(ConfigurationProfileComboBox);
         ConfigurationProfileComboBox.Visibility = Visibility.Collapsed;
         list.Children.Add(ConfigurationProfileComboBox);
-        var oldCard = UpdatesSupportPanel.Children.OfType<Border>().FirstOrDefault(card => card.Child is StackPanel panel
-            && panel.Children.Contains(ConfigurationProfilesTitleTextBlock));
-        if (oldCard is not null) UpdatesSupportPanel.Children.Remove(oldCard);
-        var shortcut = RepositoryButton("\uE8F1", (_, _) => OnOpenCombinationPresetsClicked(this, new RoutedEventArgs()));
-        shortcut.Content = RepositoryIconLabel("\uE8F1", T("Common.OpenCombinationWorkspace"));
-        _updatesCombinationShortcut = shortcut;
-        // Restoring a preset is a recovery action: keep it beside "Undo last change" instead of a lone card.
-        shortcut.HorizontalAlignment = HorizontalAlignment.Stretch;
-        Grid.SetColumn(shortcut, 1);
-        UpdatesRecoveryActionsGrid.Children.Add(shortcut);
         WorkspaceContentGrid.Children.Add(_combinationWorkspace);
     }
-
-    // The Updates page's shortcut to the combination workspace; its label follows the language.
-    private Button? _updatesCombinationShortcut;
 
     private void SetRepositoryWorkspaceViewV4(RepositoryWorkspaceView view, bool save = true)
     {
@@ -573,8 +560,6 @@ public sealed partial class MainWindow
         RepositoryModTitleTextBlock.Text = _characters.Selected is { } role ? role.Name : T("RepositoryWorkspace.ModFiles");
         _repositoryModSearch!.PlaceholderText = T("RepositoryWorkspace.SearchThisCharacterSMods");
         if (_localTagsButton is not null) _localTagsButton.Content = T("Common.Tags");
-        if (_updatesCombinationShortcut is not null)
-            _updatesCombinationShortcut.Content = RepositoryIconLabel("", T("Common.OpenCombinationWorkspace"));
         AutomationProperties.SetName(_repositoryModSearch, T("RepositoryWorkspace.SearchMods"));
         FirstLevelSearchTextBox.PlaceholderText = T("RepositoryWorkspace.SearchCharacters");
         string[] labels = [T("RepositoryWorkspace.Files"), T("RepositoryWorkspace.Covers"), T("RepositoryWorkspace.Presets")];
@@ -1343,7 +1328,7 @@ public sealed partial class MainWindow
         // During construction, WinUI may not expose Parent for an unloaded subtree.
         // Detach through the owned logical children, before assigning a second parent.
         foreach (var root in new FrameworkElement?[] { RootGrid, CategoryCard, ModCard, WorkspaceActionsGrid,
-            WorkspaceDetailHost, PreviewCard, ShortcutCard, UpdatesSupportPanel, WorkspaceStatusCard })
+            WorkspaceDetailHost, PreviewCard, ShortcutCard, CombinationProfileControlsHost, WorkspaceStatusCard })
             if (root is not null && RepositoryRemoveOwnedChild(root, element)) return;
     }
 
@@ -1376,17 +1361,6 @@ public sealed partial class MainWindow
         RepositoryDetach(element);
         Grid.SetRow(element, row); Grid.SetColumn(element, column); Grid.SetColumnSpan(element, 1); Grid.SetRowSpan(element, 1);
         parent.Children.Add(element);
-    }
-
-    private void OnConflictDetectionToggled(object sender, RoutedEventArgs e)
-    {
-        if (ConflictDetectionToggleSwitch is null)
-        {
-            return;
-        }
-
-        _enableConflictDetection = ConflictDetectionToggleSwitch.IsOn;
-        SaveShellConfig();
     }
 
     private void OnLinkDeploymentToggled(object sender, RoutedEventArgs e)
