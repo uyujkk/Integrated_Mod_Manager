@@ -44,7 +44,7 @@ jobs:
       TAG: ${{ github.event_name != 'pull_request' && (github.event.inputs.tag || github.ref_name) || '' }}
       GH_TOKEN: ${{ github.token }}
     steps:
-      - uses: actions/checkout@v6
+      - uses: actions/checkout@v7
         with:
           ref: ${{ env.TAG != '' && format('refs/tags/{0}', env.TAG) || '' }}
           # The packager records the commit of the previous release tag.
@@ -52,7 +52,7 @@ jobs:
       - uses: actions/setup-dotnet@v5
         with:
           dotnet-version: 8.0.x
-      - uses: microsoft/setup-msbuild@v2
+      - uses: microsoft/setup-msbuild@v3
       - uses: actions/cache@v6
         with:
           path: ~/.nuget/packages
@@ -162,7 +162,7 @@ jobs:
 
       - name: Upload test results and upgrade logs
         if: always()
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: release-checks-${{ steps.version.outputs.version || github.run_id }}
           path: |
