@@ -249,7 +249,7 @@ public sealed partial class MainWindow
         EnsureOnlineCharacterOptionsForRepository(GetSelectedRepository());
         IReadOnlyList<OnlineCharacterOption> visibleCharacters = GetVisibleOnlineCharacterOptions();
         string characterSignature = string.Join(";", visibleCharacters.Select(item => $"{item.Key}:{item.DisplayNameZh}:{item.DisplayNameEn}:{item.CategoryId}:{item.AvatarUrl}:{item.WikiOrder}"));
-        string signature = $"{_services.Language.Current}|{_isDarkTheme}|{_isLoadingOnlineMods}|{_onlinePage.CharacterFilter}|{_onlinePage.TotalCount}|horizontal={_useHorizontalOnlineCharacterRail}|{characterSignature}";
+        string signature = $"{_services.Language.Current}|{_services.Appearance.IsDark}|{_isLoadingOnlineMods}|{_onlinePage.CharacterFilter}|{_onlinePage.TotalCount}|horizontal={_useHorizontalOnlineCharacterRail}|{characterSignature}";
         if (string.Equals(signature, _onlineCharacterStripSignature, StringComparison.Ordinal))
         {
             return;

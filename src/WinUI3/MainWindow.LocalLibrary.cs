@@ -816,7 +816,7 @@ public sealed partial class MainWindow
         {
             ModStateTone.Deployed => CopiedBrush,
             ModStateTone.NotDeployed => MissingBrush,
-            _ => _isDarkTheme ? new SolidColorBrush(Colors.WhiteSmoke) : NeutralBrush
+            _ => _services.Appearance.IsDark ? new SolidColorBrush(Colors.WhiteSmoke) : NeutralBrush
         };
     }
 

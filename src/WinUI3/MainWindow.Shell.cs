@@ -541,7 +541,7 @@ public sealed partial class MainWindow
 
     private Brush GetAppThemeBrush(string resourceKey)
     {
-        string themeKey = _isDarkTheme ? "Dark" : "Light";
+        string themeKey = _services.Appearance.IsDark ? "Dark" : "Light";
         ResourceDictionary themeDictionary = (ResourceDictionary)Application.Current.Resources.ThemeDictionaries[themeKey];
         return (Brush)themeDictionary[resourceKey];
     }
@@ -605,7 +605,7 @@ public sealed partial class MainWindow
             RootGrid.Loaded -= OnRootGridLoaded;
             InitializeAccessibilityFeatures();
             TraceStartupStage("Accessibility initialized");
-            ApplyTheme(_isDarkTheme);
+            ApplyTheme(_services.Appearance.IsDark);
             RestoreWindowPlacement();
             UpdateOnlineWorkspaceWidthConstraint();
             DispatcherQueue.TryEnqueue(UpdateOnlineWorkspaceWidthConstraint);
@@ -810,19 +810,13 @@ public sealed partial class MainWindow
 
     private void ApplyTheme(bool dark)
     {
-        _isDarkTheme = dark;
+        _services.Appearance.IsDark = dark;
         RootGrid.RequestedTheme = _systemHighContrast
             ? ElementTheme.Default
             : dark ? ElementTheme.Dark : ElementTheme.Light;
         ApplyWindowChrome(dark);
-        RenderModSummary();
-        RefreshPrimaryNavigationVisuals();
-        RefreshSecondaryNavigation();
-        UpdateShortcutKeyFocusVisuals();
-        // Binding cards take their key-cap colours when created; drop them so they are rebuilt.
-        _mainShortcutControls.Clear();
-        _mainBindings = [];
-        RenderShortcutButtons();
+        // The pages recolour what they drew in code (MainWindow.AppearanceEvents.cs).
+        _services.Appearance.NotifyThemeChanged();
         ApplyLanguage();
     }
 

@@ -441,7 +441,7 @@ public sealed partial class MainWindow
                 SourceDirectory = SourceTextBox.Text ?? string.Empty,
                 TargetDirectory = TargetTextBox.Text ?? string.Empty,
                 LauncherPath = LauncherTextBox.Text ?? string.Empty,
-                DarkTheme = _isDarkTheme,
+                DarkTheme = _services.Appearance.IsDark,
                 Language = UiLanguagePolicy.ToConfig(_services.Language.Current)
             };
             foreach ((string modPath, List<ShortcutBinding> bindings) in _modBindings) config.Bindings[modPath] = bindings;

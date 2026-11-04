@@ -1,6 +1,5 @@
 using System.Diagnostics;
 using IntegratedModManager.Core.Configuration;
-using IntegratedModManager.Core.Online;
 using Microsoft.UI.Xaml;
 using Microsoft.UI.Xaml.Automation;
 using Microsoft.UI.Xaml.Controls;
@@ -163,7 +162,7 @@ public sealed partial class MainWindow
         }
         catch (Exception)
         {
-            return _isDarkTheme;
+            return _services.Appearance.IsDark;
         }
     }
 
@@ -281,9 +280,11 @@ public sealed partial class MainWindow
         ApplySecondLevelSelectionState(GetSelectedSecondLevelItem(), preserveStatus: true);
     }
 
-    private void ApplyInterfaceDensity()
+    // Each page applies the density itself (MainWindow.AppearanceEvents.cs).
+    private void ApplyInterfaceDensity() => _services.Appearance.ApplyDensity(_interfaceDensity == InterfaceDensity.Compact);
+
+    private void ApplyShellDensity(bool compact)
     {
-        bool compact = _interfaceDensity == InterfaceDensity.Compact;
         double padding = compact ? 8 : 12;
         // The title bar row reaches the window edges; only the content below it is inset.
         AppShellGrid.Padding = new Thickness(padding, 0, padding, padding);
@@ -292,6 +293,10 @@ public sealed partial class MainWindow
         PrimaryNavBorder.Padding = new Thickness(8, compact ? 8 : 12, 8, compact ? 8 : 12);
         SecondaryNavBorder.Padding = new Thickness(compact ? 12 : 14);
         SecondaryNavPanel.Spacing = compact ? 5 : 8;
+    }
+
+    private void ApplyWorkspaceDensity(bool compact)
+    {
         FirstLevelListView.Padding = new Thickness(compact ? 3 : 6);
         SecondLevelListView.Padding = new Thickness(compact ? 3 : 6);
         ShortcutRowsPanel.Spacing = compact ? 6 : 10;
@@ -303,17 +308,8 @@ public sealed partial class MainWindow
     private void SwitchLanguage(string language)
     {
         SaveCurrentModBindings();
+        // The pages relabel themselves and the choice is saved (MainWindow.AppearanceEvents.cs).
         _services.Language.Change(language);
-        RelabelDefaultSlots();
-        ApplyLanguage();
-        RefreshVisibleShortcutDescriptionsForLanguage();
-        RebuildShortcutPaneForLanguage();
-        RefreshSettingsPane();
-        RefreshUpdatesPane();
-        SaveConfig();
-        // Re-project the same raw cache in the new language; reject the older translation.
-        if (IsOnlineDetailOpen && _activeOnlineDetailMod is OnlineModCard mod)
-            _ = ShowOnlineModDetailsAsync(mod);
     }
 
     private void OnOpenGitHubClicked(object sender, RoutedEventArgs e)

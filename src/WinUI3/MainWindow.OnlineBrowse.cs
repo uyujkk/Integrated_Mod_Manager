@@ -14,7 +14,7 @@ public sealed partial class MainWindow
 
     private void RefreshOnlineCardPresentation()
     {
-        string key = $"{_services.Language.Current}|{_isDarkTheme}|{_interfaceDensity}";
+        string key = $"{_services.Language.Current}|{_services.Appearance.IsDark}|{_interfaceDensity}";
         if (_onlineCardPresentationKey == key) return;
         _onlineCardPresentationKey = key;
         RefreshPresenters(OnlineVirtualizedListView);

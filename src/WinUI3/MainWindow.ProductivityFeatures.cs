@@ -825,7 +825,7 @@ public sealed partial class MainWindow
         summary.AppendLine($"Process architecture: {RuntimeInformation.ProcessArchitecture}");
         summary.AppendLine($".NET: {RuntimeInformation.FrameworkDescription}");
         summary.AppendLine($"Language: {_services.Language.Current}");
-        summary.AppendLine($"Theme: {(_isDarkTheme ? "Dark" : "Light")}");
+        summary.AppendLine($"Theme: {(_services.Appearance.IsDark ? "Dark" : "Light")}");
         summary.AppendLine($"Repository count: {_services.Repositories.Items.Count}");
         summary.AppendLine($"Source paths configured: {_services.Repositories.Items.Count(item => !string.IsNullOrWhiteSpace(item.SourcePath))}");
         summary.AppendLine($"Target paths configured: {_services.Repositories.Items.Count(item => !string.IsNullOrWhiteSpace(item.TargetPath))}");
@@ -836,7 +836,7 @@ public sealed partial class MainWindow
         {
             AppVersion,
             Language = _services.Language.Current,
-            Theme = _isDarkTheme ? "Dark" : "Light",
+            Theme = _services.Appearance.IsDark ? "Dark" : "Light",
             _checkAppUpdatesOnStartup,
             UpdateInterval = _updateCheckInterval.ToString(),
             _installBackupLimitGb,

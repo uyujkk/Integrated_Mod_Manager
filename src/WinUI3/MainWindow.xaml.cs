@@ -108,7 +108,6 @@ public sealed partial class MainWindow : Window
     private readonly Dictionary<string, DownloadTaskCardView> _downloadTaskCards = new(StringComparer.Ordinal);
     private readonly Dictionary<string, DownloadTaskCardView> _navTaskCards = new(StringComparer.Ordinal);
 
-    private bool _isDarkTheme;
     private ThemePreference _themePreference = ThemePreference.System;
     // Kept alive for its ColorValuesChanged event, which follows the Windows app theme.
     private readonly Windows.UI.ViewManagement.UISettings _uiSettings = new();
@@ -192,6 +191,7 @@ public sealed partial class MainWindow : Window
         _services.Dialogs.Attach(() => RootGrid.XamlRoot);
         _services.Status.NotificationRequested += OnNotificationRequested;
         InitializePageHost();
+        SubscribeToAppearanceEvents();
         ApplyWindowIcon();
         TraceStartupStage("InitializeComponent completed");
         InitializePersistentDataStore();
