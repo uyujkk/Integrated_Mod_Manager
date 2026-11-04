@@ -43,6 +43,13 @@ jobs:
       - name: Run tests and build verification
         shell: pwsh
         run: .\scripts\test-all.ps1 -ArtifactsDirectory artifacts\verification
+      # Hosted runners start at 1024x768; the wide-layout tests need a larger screen.
+      - name: Set the screen resolution
+        shell: pwsh
+        run: |
+          try { Set-DisplayResolution -Width 1920 -Height 1080 -Force } catch { Write-Warning "Could not change the resolution: $_" }
+          Add-Type -AssemblyName System.Windows.Forms
+          "Screen: $([System.Windows.Forms.Screen]::PrimaryScreen.Bounds.Size)"
       # The UI tests start the built app on the runner's desktop and drive it with UI Automation.
       - name: Run UI smoke tests
         shell: pwsh

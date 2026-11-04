@@ -109,6 +109,13 @@ jobs:
           .\scripts\test-preview-upgrade.ps1 -BasePackage $base -Package '${{ steps.package.outputs.zip }}' `
             -Application '${{ steps.package.outputs.app }}' -Version ${{ steps.version.outputs.version }} -OutputDirectory artifacts\upgrade-test
 
+      # Hosted runners start at 1024x768; the wide-layout tests need a larger screen.
+      - name: Set the screen resolution
+        shell: pwsh
+        run: |
+          try { Set-DisplayResolution -Width 1920 -Height 1080 -Force } catch { Write-Warning "Could not change the resolution: $_" }
+          Add-Type -AssemblyName System.Windows.Forms
+          "Screen: $([System.Windows.Forms.Screen]::PrimaryScreen.Bounds.Size)"
       - name: Run UI smoke tests
         shell: pwsh
         run: .\scripts\test-ui.ps1 -Application artifacts\verification\v${{ steps.version.outputs.version }}\ReleaseSource
