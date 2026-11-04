@@ -88,6 +88,12 @@ J2–J5 之间没有顺序依赖，可以按方便调整。J6、J7 最大、和�
 2. 列出 `tests/UI.Tests` 用到的自动化名称和控件；拆分时保持不变。
 3. 在一个空分支里引用 `CommunityToolkit.WinUI.Controls.SettingsControls`，确认能和现在的 Windows App SDK 1.7、`net8.0-windows10.0.19041.0` 一起构建并打包，再决定版本号。
 
+J0 结果（2026-11-04，分支 `claude/ui-j0-prep`）：
+
+- 截图：脚本 `tools/ui-baseline/Capture-UiBaseline.ps1`，用法、限制和当前基线（含壁纸）见[界面基线截图](./UI-Baseline-Screenshots.md)。
+- 自动化名称：见[界面测试依赖的自动化名称](./UI-Automation-Names.md)，39 个 AutomationId，另有按文字和类名的查找，并按阶段列出需要同步改的测试。
+- 工具包：`CommunityToolkit.WinUI.Controls.SettingsControls`、`Segmented`、`Sizers` 均为 8.2.251219（最新稳定版，要求 Windows App SDK ≥ 1.6）。引用后 `test-all` 的 Release 构建 0 警告，ZIP 打包通过，三个程序集和它们的 XAML 资源都在包里；此时还没有任何界面使用这些控件，首次实际使用在 J2。
+
 ### J1. 外壳与服务
 
 1. 按“目标结构”建 `AppServices` 和各服务。先把现有字段和方法原样搬进服务，不改逻辑；`T()`、`M()` 改为转发到 `LanguageService`。

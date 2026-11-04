@@ -27,6 +27,11 @@
     <PackageReference Include="Microsoft.Windows.SDK.BuildTools" Version="10.0.26100.6584" PrivateAssets="all" />
     <!-- MIT. Source generators for view models (ObservableObject, [ObservableProperty], [RelayCommand]). -->
     <PackageReference Include="CommunityToolkit.Mvvm" Version="8.4.0" />
+    <!-- MIT. Windows Community Toolkit controls for stage J (docs/development/UI-Fluent-Design-Plan.md):
+         SettingsCard/SettingsExpander, Segmented and GridSplitter. 8.2.251219 needs Windows App SDK 1.6 or later. -->
+    <PackageReference Include="CommunityToolkit.WinUI.Controls.SettingsControls" Version="8.2.251219" />
+    <PackageReference Include="CommunityToolkit.WinUI.Controls.Segmented" Version="8.2.251219" />
+    <PackageReference Include="CommunityToolkit.WinUI.Controls.Sizers" Version="8.2.251219" />
   </ItemGroup>
 
   <ItemGroup>
