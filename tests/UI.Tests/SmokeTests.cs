@@ -53,6 +53,43 @@ public sealed class SmokeTests
         app.AssertNoErrors();
     }
 
+    // Regression: going back to the dashboard from another page ended the app with a layout cycle when the
+    // current repository had no folders (so no characters). Since J1 a page leaves the window while another
+    // is shown and is laid out again on return; the empty characters grid's scroll bar then flipped on and off.
+    // Every page is left and opened again several times, in a normal and in a large window.
+    [Theory]
+    [InlineData(1400, 900, false)]
+    [InlineData(2048, 1110, false)]
+    [InlineData(1400, 900, true)]
+    [InlineData(2048, 1110, true)]
+    public void Navigation_LeavingAndReturningToEveryPageKeepsRunning(int width, int height, bool repositoryWithoutFolders)
+    {
+        using AppSession app = AppSession.Configured((shell, _) =>
+        {
+            shell["CurrentPrimarySection"] = "online";
+            if (!repositoryWithoutFolders) return;
+            shell["Repositories"]!.AsArray().Add(new JsonObject
+            {
+                ["Id"] = "empty-repository", ["Name"] = "Empty repository", ["SourcePath"] = "", ["TargetPath"] = ""
+            });
+            shell["SelectedRepositoryId"] = "empty-repository";
+        }).Start();
+        app.Resize(width, height);
+        string[] pages = ["OnlineNavButton", "DashboardNavButton", "RepositoryNavButton", "DashboardNavButton", "UpdatesNavButton",
+            "DashboardNavButton", "ShortcutsNavButton", "DashboardNavButton", "SettingsNavButton", "DashboardNavButton"];
+        for (int round = 0; round < 3; round++)
+        {
+            foreach (string page in pages)
+            {
+                AppSession.Invoke(app.Find(page));
+                Assert.True(app.IsRunning, $"The app ended after opening {page} (round {round + 1})");
+            }
+        }
+
+        app.Capture(nameof(Navigation_LeavingAndReturningToEveryPageKeepsRunning));
+        app.AssertNoErrors();
+    }
+
     [Fact]
     public void Dashboard_SwitchingToARepositoryWithoutFoldersKeepsRunning()
     {
