@@ -292,7 +292,7 @@ public sealed partial class MainWindow
     {
         if (NavTasksButton is null) return;
         DownloadTaskItem[] active = _services.Downloads.Tasks.Where(item => DownloadProgressPolicy.IsActive(item.State)).ToArray();
-        NavTasksCountTextBlock.Text = active.Length > 0 ? active.Length.ToString() : string.Empty;
+        NavTasksBadge.Value = active.Length;
         NavTasksBadge.Visibility = active.Length > 0 ? Visibility.Visible : Visibility.Collapsed;
         NavTasksProgressBar.Visibility = active.Length > 0 ? Visibility.Visible : Visibility.Collapsed;
         NavTasksProgressBar.IsIndeterminate = active.Any(item => item.State is not DownloadTaskState.Downloading || !item.HasKnownTotalLength);

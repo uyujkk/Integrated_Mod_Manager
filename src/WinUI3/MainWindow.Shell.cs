@@ -6,6 +6,7 @@ using Microsoft.UI.Windowing;
 using Microsoft.UI.Xaml;
 using Microsoft.UI.Xaml.Automation;
 using Microsoft.UI.Xaml.Controls;
+using Microsoft.UI.Xaml.Controls.Primitives;
 using Microsoft.UI.Xaml.Hosting;
 using Microsoft.UI.Xaml.Input;
 using Microsoft.UI.Xaml.Media;
@@ -44,45 +45,7 @@ public sealed partial class MainWindow
         }
     }
 
-    private void RefreshSecondaryNavigation()
-    {
-        SecondaryNavPanel.Children.Clear();
-
-        if (_currentPrimarySection == PrimarySection.Dashboard)
-        {
-            SecondaryNavPanel.Children.Add(CreateSecondaryNavButton(
-                "all-repositories",
-                T("Common.AllRepositories"),
-                _services.Repositories.SelectedId is null));
-        }
-
-        foreach (WorkspaceRepository repository in _services.Repositories.Items)
-        {
-            SecondaryNavPanel.Children.Add(CreateSecondaryNavButton(
-                repository.Id,
-                repository.Name,
-                repository.Id == _services.Repositories.SelectedId));
-        }
-    }
-
-    private Button CreateSecondaryNavButton(string key, string label, bool isSelected)
-    {
-        var button = new Button
-        {
-            Content = label,
-            Tag = key,
-            HorizontalAlignment = HorizontalAlignment.Stretch,
-            HorizontalContentAlignment = HorizontalAlignment.Left,
-            MinHeight = 44,
-            Style = (Style)Application.Current.Resources["SecondaryButtonStyle"],
-            UseSystemFocusVisuals = false
-        };
-        button.Click += OnSecondaryNavButtonClicked;
-        ApplySecondaryNavButtonVisual(button, isSelected);
-
-        return button;
-    }
-
+    // A selectable button drawn like a toggle: the online page's list and grid buttons.
     private void ApplySecondaryNavButtonVisual(Button button, bool isSelected)
     {
         Brush backgroundBrush = isSelected
@@ -128,7 +91,6 @@ public sealed partial class MainWindow
         }
 
         RefreshPrimaryNavigationVisuals();
-        RefreshSecondaryNavigation();
         ApplyLanguage();
         RefreshSettingsPane();
         UpdateShellLayout();
@@ -224,8 +186,6 @@ public sealed partial class MainWindow
         UpdateShellLayout();
     }
 
-    private bool _primaryNavShort;
-
     private void UpdateShellLayout()
     {
         double width = Bounds.Width;
@@ -236,15 +196,7 @@ public sealed partial class MainWindow
             _ => ShellLayoutMode.Expanded
         };
 
-        if (PrimaryNavColumn is null
-            || SecondaryNavColumn is null
-            || SecondaryNavBorder is null
-            || PrimaryNavBorder is null
-            || DashboardNavButton is null
-            || RepositoryNavButton is null
-            || OnlineNavButton is null
-            || UpdatesNavButton is null
-            || SettingsNavButton is null)
+        if (ShellNavigationView is null || PagesHostGrid is null)
         {
             return;
         }
@@ -253,291 +205,119 @@ public sealed partial class MainWindow
         UpdateUpdatesLayout();
         UpdateRefinedWorkspaceLayout();
 
-        // Wide windows show labelled navigation unless the user collapsed it to the icon rail.
+        // The navigation view opens its labelled pane from 1440 px (ExpandedModeThresholdWidth) unless
+        // the user collapsed it; below that it shows icons.
         bool expanded = nextMode == ShellLayoutMode.Expanded && !_navigationCollapsed;
-        // On a short window the full-height buttons overran the bottom group, hiding the Downloads
-        // icon behind Shortcuts; shorter buttons keep every entry visible.
-        bool shortNav = Bounds.Height > 0 && Bounds.Height < 720;
-        if (_shellLayoutMode == nextMode && _primaryNavExpanded == expanded && _primaryNavShort == shortNav)
+        if (_shellLayoutMode == nextMode && _primaryNavExpanded == expanded)
         {
             return;
         }
 
         _shellLayoutMode = nextMode;
         _primaryNavExpanded = expanded;
-        _primaryNavShort = shortNav;
-        RefreshNavCollapseButton();
-        PrimaryNavColumn.Width = new GridLength(expanded ? 220 : 84);
-        SecondaryNavColumn.Width = new GridLength(0);
-        SecondaryNavBorder.Visibility = Visibility.Collapsed;
-        foreach (Button button in new[] { NavSearchButton, DashboardNavButton, RepositoryNavButton, OnlineNavButton, UpdatesNavButton, ShortcutsNavButton, NavTasksButton, SettingsNavButton })
-        {
-            button.Width = expanded ? 202 : 66;
-            button.Height = expanded ? (shortNav ? 38 : 46) : (shortNav ? 50 : 60);
-            button.MinHeight = button.Height;
-            button.HorizontalContentAlignment = expanded ? HorizontalAlignment.Left : HorizontalAlignment.Center;
-            button.Padding = expanded ? new Thickness(14, 0, 12, 0) : new Thickness(0);
-        }
-        // The search entry reads as a search box when labelled, and as one more icon in the rail.
-        NavSearchButton.Height = NavSearchButton.MinHeight = expanded ? 38 : (shortNav ? 44 : 52);
-        NavSearchButton.HorizontalContentAlignment = expanded ? HorizontalAlignment.Stretch : HorizontalAlignment.Center;
-        NavSearchButton.Padding = expanded ? new Thickness(12, 0, 10, 0) : new Thickness(0);
-
+        ApplyPageMargins();
         ApplyPrimaryNavigationContent();
+    }
+
+    // Page margins from the Windows layout guidance: wider on wide windows, tighter in compact density.
+    private void ApplyPageMargins()
+    {
+        bool wide = _shellLayoutMode == ShellLayoutMode.Expanded;
+        bool compact = _interfaceDensity == InterfaceDensity.Compact;
+        double side = wide ? (compact ? 24 : 36) : (compact ? 16 : 24);
+        double top = wide ? (compact ? 16 : 24) : (compact ? 8 : 16);
+        PagesHostGrid.Margin = new Thickness(side, top, side, top);
     }
 
     private void ApplyPrimaryNavigationContent()
     {
         UpdateRefinedWorkspaceLanguage();
-        DashboardNavButton.Content = CreatePrimaryNavContent("\uE80F", T("Shell.Dashboard"));
-        RepositoryNavButton.Content = CreatePrimaryNavContent("\uE8B7", T("Shell.Repositories"));
-        OnlineNavButton.Content = CreatePrimaryNavContent("\uE774", T("Shell.Online"));
-        UpdatesNavButton.Content = CreatePrimaryNavContent("\uE895", T("Shell.Updates"), UpdatesNavBadge());
-        ShortcutsNavButton.Content = CreatePrimaryNavContent("\uE765", T("Common.Shortcuts"));
-        ToolTipService.SetToolTip(ShortcutsNavButton, T("Common.ModShortcuts"));
-        AutomationProperties.SetName(ShortcutsNavButton, T("Common.ModShortcuts"));
-        SettingsNavButton.Content = CreatePrimaryNavContent("\uE713", T("Shell.Settings"));
-        NavSearchButton.Content = CreateNavSearchContent();
+        SetNavigationItem(DashboardNavButton, T("Shell.Dashboard"), T("Shell.Dashboard"));
+        SetNavigationItem(RepositoryNavButton, T("Shell.Repositories"), T("Shell.Repositories"));
+        SetNavigationItem(OnlineNavButton, T("Shell.Online"), T("Shell.OnlineMods"));
+        SetNavigationItem(UpdatesNavButton, T("Shell.Updates"), T("Shell.Updates"));
+        SetNavigationItem(ShortcutsNavButton, T("Common.Shortcuts"), T("Common.ModShortcuts"));
+        SetNavigationItem(SettingsNavButton, T("Shell.Settings"), T("Shell.Settings"));
+        RefreshUpdatesNavBadge();
+        NavTasksLabelTextBlock.Text = T("Shell.Downloads");
         string searchName = T("CommandPalette.Placeholder") + " (Ctrl+K)";
-        ToolTipService.SetToolTip(NavSearchButton, searchName);
-        AutomationProperties.SetName(NavSearchButton, searchName);
-        LayoutNavTasksContent();
+        TitleBarSearchBox.PlaceholderText = searchName;
+        AutomationProperties.SetName(TitleBarSearchBox, searchName);
         RefreshNavTasks();
+    }
 
-        ToolTipService.SetToolTip(DashboardNavButton, T("Shell.Dashboard"));
-        ToolTipService.SetToolTip(RepositoryNavButton, T("Shell.Repositories"));
-        ToolTipService.SetToolTip(OnlineNavButton, T("Shell.OnlineMods"));
-        ToolTipService.SetToolTip(UpdatesNavButton, T("Shell.Updates"));
-        ToolTipService.SetToolTip(SettingsNavButton, T("Shell.Settings"));
-
-        AutomationProperties.SetName(DashboardNavButton, T("Shell.Dashboard"));
-        AutomationProperties.SetName(RepositoryNavButton, T("Shell.Repositories"));
-        AutomationProperties.SetName(OnlineNavButton, T("Shell.OnlineMods"));
-        AutomationProperties.SetName(UpdatesNavButton, T("Shell.Updates"));
-        AutomationProperties.SetName(SettingsNavButton, T("Shell.Settings"));
-        RefreshNavCollapseButton();
+    // The label shows in the open pane; the name (sometimes longer) is the tooltip and what Narrator reads.
+    private static void SetNavigationItem(NavigationViewItem item, string label, string name)
+    {
+        item.Content = label;
+        ToolTipService.SetToolTip(item, name);
+        AutomationProperties.SetName(item, name);
     }
 
     // Updates carries a badge with the number of Mods that have a new version.
-    private string? UpdatesNavBadge()
-    {
-        int count = _trackedModUpdateResults.Count(item => item.HasUpdate);
-        return count > 0 ? count.ToString(System.Globalization.CultureInfo.CurrentCulture) : null;
-    }
-
     private void RefreshUpdatesNavBadge()
     {
-        if (UpdatesNavButton is not null) UpdatesNavButton.Content = CreatePrimaryNavContent("\uE895", T("Shell.Updates"), UpdatesNavBadge());
+        if (UpdatesNavInfoBadge is null) return;
+        int count = _trackedModUpdateResults.Count(item => item.HasUpdate);
+        UpdatesNavInfoBadge.Value = count;
+        UpdatesNavInfoBadge.Visibility = count > 0 ? Visibility.Visible : Visibility.Collapsed;
     }
 
-    private object CreatePrimaryNavContent(string glyph, string label, string? badge = null)
+    // The navigation view shows the current page as its selected item.
+    private void RefreshPrimaryNavigationVisuals()
     {
-        var icon = new FontIcon
+        NavigationViewItem item = _currentPrimarySection switch
         {
-            Glyph = glyph,
-            FontSize = 16,
-            Opacity = 0.88
+            PrimarySection.Repository => RepositoryNavButton,
+            PrimarySection.Online => OnlineNavButton,
+            PrimarySection.Updates => UpdatesNavButton,
+            PrimarySection.Shortcuts => ShortcutsNavButton,
+            PrimarySection.Settings => SettingsNavButton,
+            _ => DashboardNavButton
         };
-        FrameworkElement iconHost = icon;
-        if (!string.IsNullOrEmpty(badge))
-        {
-            var host = new Grid { HorizontalAlignment = HorizontalAlignment.Center, VerticalAlignment = VerticalAlignment.Center };
-            host.Children.Add(icon);
-            host.Children.Add(new Border
-            {
-                Margin = new Thickness(0, -8, -14, 0), Padding = new Thickness(5, 0, 5, 0), MinWidth = 16, CornerRadius = new CornerRadius(8),
-                HorizontalAlignment = HorizontalAlignment.Right, VerticalAlignment = VerticalAlignment.Top,
-                Background = GetAppThemeBrush("AppAccentBrush"),
-                Child = new TextBlock
-                {
-                    Text = badge, FontSize = 10, FontWeight = Microsoft.UI.Text.FontWeights.SemiBold,
-                    Foreground = new SolidColorBrush(Colors.White), HorizontalAlignment = HorizontalAlignment.Center
-                }
-            });
-            iconHost = host;
-        }
-        bool expanded = _primaryNavExpanded;
-        var panel = new StackPanel
-        {
-            Orientation = expanded ? Orientation.Horizontal : Orientation.Vertical,
-            Spacing = expanded ? 12 : 6,
-            VerticalAlignment = VerticalAlignment.Center,
-            HorizontalAlignment = expanded ? HorizontalAlignment.Left : HorizontalAlignment.Center
-        };
-        panel.Children.Add(iconHost);
-        var text = new TextBlock
-        {
-            Text = label, FontSize = expanded ? 14 : 11,
-            VerticalAlignment = VerticalAlignment.Center,
-            HorizontalAlignment = HorizontalAlignment.Center
-        };
-        if (expanded)
-        {
-            panel.Children.Add(text);
-            return panel;
-        }
-
-        // The narrow rail has room for about 60 px of label. Longer labels (Russian, for one) wrap onto a
-        // second line at word breaks, and a single word that is still too wide is scaled down to fit.
-        const double room = 60;
-        text.TextAlignment = TextAlignment.Center;
-        text.TextWrapping = TextWrapping.WrapWholeWords;
-        text.MaxLines = 2;
-        double widestWord = label.Split(' ', StringSplitOptions.RemoveEmptyEntries).DefaultIfEmpty(label).Max(word => NavLabelWidth(word, text.FontSize));
-        if (widestWord <= room)
-        {
-            text.MaxWidth = room;
-            panel.Children.Add(text);
-        }
-        else
-        {
-            text.MaxWidth = widestWord;
-            panel.Children.Add(new Viewbox { Width = room, StretchDirection = StretchDirection.DownOnly, Child = text });
-        }
-        return panel;
+        if (!ReferenceEquals(ShellNavigationView.SelectedItem, item)) ShellNavigationView.SelectedItem = item;
     }
 
-    private static double NavLabelWidth(string text, double fontSize)
+    private void OnShellNavigationItemInvoked(NavigationView sender, NavigationViewItemInvokedEventArgs args)
     {
-        var probe = new TextBlock { Text = text, FontSize = fontSize };
-        probe.Measure(new Windows.Foundation.Size(double.PositiveInfinity, double.PositiveInfinity));
-        return Math.Ceiling(probe.DesiredSize.Width);
-    }
-
-    private object CreateNavSearchContent()
-    {
-        if (!_primaryNavExpanded)
+        if (args.InvokedItemContainer is not NavigationViewItem { Tag: string tag } item) return;
+        var routed = new RoutedEventArgs();
+        switch (tag)
         {
-            return CreatePrimaryNavContent("", T("Shell.Search"));
-        }
-
-        var grid = new Grid { ColumnSpacing = 10, VerticalAlignment = VerticalAlignment.Center };
-        grid.ColumnDefinitions.Add(new ColumnDefinition { Width = GridLength.Auto });
-        grid.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(1, GridUnitType.Star) });
-        grid.ColumnDefinitions.Add(new ColumnDefinition { Width = GridLength.Auto });
-        grid.Children.Add(new FontIcon { Glyph = "", FontSize = 14, Opacity = 0.75 });
-        var label = new TextBlock { Text = T("Shell.Search"), FontSize = 13, Opacity = 0.75, VerticalAlignment = VerticalAlignment.Center };
-        Grid.SetColumn(label, 1);
-        grid.Children.Add(label);
-        var key = new Border
-        {
-            Padding = new Thickness(5, 0, 5, 1), CornerRadius = new CornerRadius(4), BorderThickness = new Thickness(1),
-            BorderBrush = GetAppThemeBrush("AppCardBorderBrush"), VerticalAlignment = VerticalAlignment.Center,
-            Child = new TextBlock { Text = "Ctrl K", FontSize = 11, Opacity = 0.75 }
-        };
-        Grid.SetColumn(key, 2);
-        grid.Children.Add(key);
-        return grid;
-    }
-
-    // The download entry keeps its named badge and bar (RefreshNavTasks updates them); only their
-    // arrangement follows the navigation: a row when labelled, a stack in the icon rail.
-    private void LayoutNavTasksContent()
-    {
-        bool expanded = _primaryNavExpanded;
-        NavTasksLabelTextBlock.Text = T("Shell.Downloads");
-        NavTasksLabelTextBlock.FontSize = expanded ? 14 : 11;
-        NavTasksContent.ColumnDefinitions.Clear();
-        NavTasksContent.RowDefinitions.Clear();
-        NavTasksContent.RowDefinitions.Add(new RowDefinition { Height = GridLength.Auto });
-        NavTasksContent.RowDefinitions.Add(new RowDefinition { Height = GridLength.Auto });
-        if (expanded)
-        {
-            NavTasksContent.ColumnDefinitions.Add(new ColumnDefinition { Width = GridLength.Auto });
-            NavTasksContent.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(1, GridUnitType.Star) });
-            Place(NavTasksIconHost, 0, 0);
-            Place(NavTasksLabelTextBlock, 0, 1);
-            Place(NavTasksProgressBar, 1, 0, 2);
-            NavTasksContent.Width = 170;
-            NavTasksProgressBar.Margin = new Thickness(0);
-            NavTasksLabelTextBlock.HorizontalAlignment = HorizontalAlignment.Left;
-        }
-        else
-        {
-            NavTasksContent.RowDefinitions.Add(new RowDefinition { Height = GridLength.Auto });
-            Place(NavTasksIconHost, 0, 0);
-            Place(NavTasksLabelTextBlock, 1, 0);
-            Place(NavTasksProgressBar, 2, 0);
-            NavTasksContent.Width = 62;
-            NavTasksProgressBar.Margin = new Thickness(10, 0, 10, 0);
-            NavTasksLabelTextBlock.HorizontalAlignment = HorizontalAlignment.Center;
+            case "Dashboard": OnDashboardNavClicked(item, routed); break;
+            case "Repository": OnRepositoryNavClicked(item, routed); break;
+            case "Online": OnOnlineNavClicked(item, routed); break;
+            case "Updates": OnUpdatesNavClicked(item, routed); break;
+            case "Shortcuts": OnShortcutsNavClicked(item, routed); break;
+            case "Settings": OnSettingsNavClicked(item, routed); break;
+            case "Downloads": FlyoutBase.ShowAttachedFlyout(item); break;
         }
     }
 
-    private void OnNavCollapseClicked(object sender, RoutedEventArgs e)
+    // Opening the pane in the wide layout is the user's choice and is remembered; the narrower
+    // layouts close it themselves, which is not.
+    private bool _applyingPaneState;
+
+    private void OnShellNavigationDisplayModeChanged(NavigationView sender, NavigationViewDisplayModeChangedEventArgs args)
     {
-        _navigationCollapsed = !_navigationCollapsed;
+        if (args.DisplayMode != NavigationViewDisplayMode.Expanded) return;
+        _applyingPaneState = true;
+        sender.IsPaneOpen = !_navigationCollapsed;
+        _applyingPaneState = false;
+    }
+
+    private void OnShellNavigationPaneToggled(NavigationView sender, object args)
+    {
+        if (_applyingPaneState || sender.DisplayMode != NavigationViewDisplayMode.Expanded) return;
+        bool collapsed = !sender.IsPaneOpen;
+        if (collapsed == _navigationCollapsed) return;
+        _navigationCollapsed = collapsed;
         UpdateShellLayout();
         SaveShellConfig();
     }
 
-    // The collapse toggle only matters where the window is wide enough for labelled navigation.
-    private void RefreshNavCollapseButton()
-    {
-        if (NavCollapseButton is null) return;
-        NavCollapseButton.Visibility = _shellLayoutMode == ShellLayoutMode.Expanded ? Visibility.Visible : Visibility.Collapsed;
-        string label = _navigationCollapsed ? T("Shell.ExpandNavigation") : T("Shell.CollapseNavigation");
-        NavCollapseButton.Content = CreatePrimaryNavContent(_navigationCollapsed ? "" : "", label);
-        NavCollapseButton.Width = _primaryNavExpanded ? 202 : 66;
-        NavCollapseButton.Height = _primaryNavExpanded ? 40 : 52;
-        NavCollapseButton.HorizontalContentAlignment = _primaryNavExpanded ? HorizontalAlignment.Left : HorizontalAlignment.Center;
-        NavCollapseButton.Padding = _primaryNavExpanded ? new Thickness(14, 0, 12, 0) : new Thickness(0);
-        ToolTipService.SetToolTip(NavCollapseButton, label);
-        AutomationProperties.SetName(NavCollapseButton, label);
-    }
-
-    private void RefreshPrimaryNavigationVisuals()
-    {
-        ApplyPrimaryButtonVisual(DashboardNavButton, _currentPrimarySection == PrimarySection.Dashboard);
-        ApplyPrimaryButtonVisual(RepositoryNavButton, _currentPrimarySection == PrimarySection.Repository);
-        ApplyPrimaryButtonVisual(OnlineNavButton, _currentPrimarySection == PrimarySection.Online);
-        ApplyPrimaryButtonVisual(UpdatesNavButton, _currentPrimarySection == PrimarySection.Updates);
-        ApplyPrimaryButtonVisual(ShortcutsNavButton, _currentPrimarySection == PrimarySection.Shortcuts);
-        ApplyPrimaryButtonVisual(SettingsNavButton, _currentPrimarySection == PrimarySection.Settings);
-        ApplyPrimaryButtonVisual(NavCollapseButton, false);
-        ApplyPrimaryButtonVisual(NavTasksButton, false);
-        ApplyPrimaryButtonVisual(NavSearchButton, false);
-        // Outlined like a text box, so the search entry is told apart from the pages below it.
-        NavSearchButton.BorderBrush = GetAppThemeBrush("AppCardBorderBrush");
-    }
-
-    private void ApplyPrimaryButtonVisual(Button button, bool isSelected)
-    {
-        Brush backgroundBrush = isSelected
-            ? GetAppThemeBrush("AppNavSelectedBrush")
-            : GetAppThemeBrush("AppNavDefaultBrush");
-        Brush pointerOverBrush = isSelected
-            ? backgroundBrush
-            : GetAppThemeBrush("AppNavHoverBrush");
-        Brush borderBrush = isSelected
-            ? GetAppThemeBrush("AppNavSelectedBorderBrush")
-            : GetAppThemeBrush("AppNavDefaultBrush");
-        Brush foregroundBrush = isSelected
-            ? GetAppThemeBrush("AppNavSelectedForegroundBrush")
-            : GetAppThemeBrush("AppNavDefaultForegroundBrush");
-        Brush disabledForegroundBrush = GetAppThemeBrush("AppDisabledForegroundBrush");
-        Brush disabledBackgroundBrush = GetAppThemeBrush("AppInsetBackgroundBrush");
-        Brush disabledBorderBrush = GetAppThemeBrush("AppCardBorderBrush");
-
-        button.Background = backgroundBrush;
-        button.BorderBrush = borderBrush;
-        button.Foreground = foregroundBrush;
-
-        button.Resources["ButtonBackground"] = backgroundBrush;
-        button.Resources["ButtonBackgroundPointerOver"] = pointerOverBrush;
-        button.Resources["ButtonBackgroundPressed"] = backgroundBrush;
-        button.Resources["ButtonBackgroundDisabled"] = disabledBackgroundBrush;
-
-        button.Resources["ButtonBorderBrush"] = borderBrush;
-        button.Resources["ButtonBorderBrushPointerOver"] = pointerOverBrush;
-        button.Resources["ButtonBorderBrushPressed"] = borderBrush;
-        button.Resources["ButtonBorderBrushDisabled"] = disabledBorderBrush;
-
-        button.Resources["ButtonForeground"] = foregroundBrush;
-        button.Resources["ButtonForegroundPointerOver"] = foregroundBrush;
-        button.Resources["ButtonForegroundPressed"] = foregroundBrush;
-        button.Resources["ButtonForegroundDisabled"] = disabledForegroundBrush;
-    }
+    // The title bar search box is the entry to the Ctrl+K palette, which has the search itself.
+    private void OnTitleBarSearchGotFocus(object sender, RoutedEventArgs e) => OpenCommandPalette();
 
     private Brush GetAppThemeBrush(string resourceKey)
     {
@@ -582,19 +362,6 @@ public sealed partial class MainWindow
         SaveSelectedRepositoryFromInputs();
         _currentPrimarySection = PrimarySection.Settings;
         ApplyShellState(refreshRepository: false);
-    }
-
-    private void OnSecondaryNavButtonClicked(object sender, RoutedEventArgs e)
-    {
-        if (sender is not Button { Tag: string key })
-        {
-            return;
-        }
-
-        SaveSelectedRepositoryFromInputs();
-        _services.Repositories.SelectedId = key == "all-repositories" ? null : key;
-        ResetOnlineRepositoryContext();
-        ApplyShellState(refreshRepository: _currentPrimarySection == PrimarySection.Repository);
     }
 
     private async void OnRootGridLoaded(object sender, RoutedEventArgs e)
@@ -792,11 +559,6 @@ public sealed partial class MainWindow
 
     private UIElement? GetCurrentShellFocusTarget()
     {
-        if (_currentPrimarySection == PrimarySection.Repository && _services.Repositories.SelectedId is not null)
-        {
-            return SecondaryNavPanel.Children.OfType<Button>().FirstOrDefault(button => string.Equals(button.Tag as string, _services.Repositories.SelectedId, StringComparison.Ordinal));
-        }
-
         return _currentPrimarySection switch
         {
             PrimarySection.Dashboard => DashboardNavButton,
@@ -836,10 +598,8 @@ public sealed partial class MainWindow
         {
             TraceStartupStage("Title bar height could not be applied: " + ex.Message);
         }
-        // The title bar holds no controls: search and downloads live in the side navigation.
+        // The TitleBar control keeps its search box clickable and the rest of the bar draggable.
     }
-
-    private void OnNavSearchClicked(object sender, RoutedEventArgs e) => OpenCommandPalette();
 
     private void ApplyWindowChrome(bool dark)
     {

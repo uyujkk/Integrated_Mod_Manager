@@ -38,28 +38,8 @@ public sealed partial class MainWindow
     {
         Title = T("Common.IntegratedModManager", AppVersion);
 
-        BetaTitleTextBlock.Text = _shellLayoutMode == ShellLayoutMode.Compact
-            ? T("Localization.ManagerShort")
-            : T("Localization.Workspace");
-        BetaCaptionTextBlock.Text = T("Localization.ManageRepositorySwitchingOnlineResourcesAnd");
         ApplyPrimaryNavigationContent();
 
-        SecondaryNavTitleTextBlock.Text = _currentPrimarySection switch
-        {
-            PrimarySection.Dashboard => T("Localization.RepositoryPreview"),
-            PrimarySection.Repository => T("Localization.RepositorySwitcher"),
-            PrimarySection.Online => T("Localization.OnlineSources"),
-            PrimarySection.Updates => T("Localization.UpdatesNavigation"),
-            _ => T("Localization.SettingsNavigation")
-        };
-        SecondaryNavHintTextBlock.Text = _currentPrimarySection switch
-        {
-            PrimarySection.Dashboard => T("Localization.BrowseSummaryDataForAllRepositories"),
-            PrimarySection.Repository => T("Localization.SwitchWorkspacesHereWhileReusingThe"),
-            PrimarySection.Online => T("Localization.TheOnlinePageWillUseThe"),
-            PrimarySection.Updates => T("Localization.ManageProfilesInstallRollbackDownloadTasks"),
-            _ => T("Localization.ManageLanguageThemeUpdateChecksAnd")
-        };
         ToolTipService.SetToolTip(AddRepositoryButton, T("Localization.CreateRepository"));
         ToolTipService.SetToolTip(RenameRepositoryButton, T("Localization.EditCurrentRepository"));
         ToolTipService.SetToolTip(OpenGitHubButton, T("Localization.OpenGitHubRepository"));
@@ -127,10 +107,8 @@ public sealed partial class MainWindow
             ? T("Localization.CurrentVersion", AppVersion)
             : UpdateStatusTextBlock.Text;
 
-        HeaderTitleTextBlock.Text = T("Localization.IntegratedModManager");
-        HeaderVersionBadgeTextBlock.Text = AppVersion;
-        HeaderSubtitleTextBlock.Text = string.Empty;
-        HeaderCaptionTextBlock.Text = T("Localization.SelectAFirstLevelCategoryFirst");
+        AppTitleBar.Title = T("Localization.IntegratedModManager");
+        AppTitleBar.Subtitle = AppVersion;
 
 
         PathSectionTitleTextBlock.Text = T("Localization.PathsAndLauncher");
