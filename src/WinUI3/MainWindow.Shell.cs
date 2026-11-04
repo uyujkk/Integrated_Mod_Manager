@@ -53,15 +53,15 @@ public sealed partial class MainWindow
             SecondaryNavPanel.Children.Add(CreateSecondaryNavButton(
                 "all-repositories",
                 T("Common.AllRepositories"),
-                _selectedRepositoryId is null));
+                _services.Repositories.SelectedId is null));
         }
 
-        foreach (WorkspaceRepository repository in _repositories)
+        foreach (WorkspaceRepository repository in _services.Repositories.Items)
         {
             SecondaryNavPanel.Children.Add(CreateSecondaryNavButton(
                 repository.Id,
                 repository.Name,
-                repository.Id == _selectedRepositoryId));
+                repository.Id == _services.Repositories.SelectedId));
         }
     }
 
@@ -200,7 +200,7 @@ public sealed partial class MainWindow
     private void RefreshRepositoryActionButtons()
     {
         // Deleting lives in each repository card's menu, which disables it for the last repository.
-        RenameRepositoryButton.IsEnabled = GetSelectedRepository() is not null && _selectedRepositoryId is not null;
+        RenameRepositoryButton.IsEnabled = GetSelectedRepository() is not null && _services.Repositories.SelectedId is not null;
     }
 
     private void OnWindowSizeChanged(object sender, Microsoft.UI.Xaml.WindowSizeChangedEventArgs args)
@@ -540,9 +540,9 @@ public sealed partial class MainWindow
     private void OnOnlineNavClicked(object sender, RoutedEventArgs e)
     {
         SaveSelectedRepositoryFromInputs();
-        if (_selectedRepositoryId is null && _repositories.Count > 0)
+        if (_services.Repositories.SelectedId is null && _services.Repositories.Items.Count > 0)
         {
-            _selectedRepositoryId = _repositories[0].Id;
+            _services.Repositories.SelectedId = _services.Repositories.Items[0].Id;
         }
 
         _currentPrimarySection = PrimarySection.Online;
@@ -576,7 +576,7 @@ public sealed partial class MainWindow
         }
 
         SaveSelectedRepositoryFromInputs();
-        _selectedRepositoryId = key == "all-repositories" ? null : key;
+        _services.Repositories.SelectedId = key == "all-repositories" ? null : key;
         ResetOnlineRepositoryContext();
         ApplyShellState(refreshRepository: _currentPrimarySection == PrimarySection.Repository);
     }
@@ -634,7 +634,7 @@ public sealed partial class MainWindow
         _onlineWindowClosed = true;
         InvalidateOnlineDetailRequest();
         _onlineDownloadActions.CancelPreparation();
-        foreach (DownloadTaskItem task in _downloadTasks.Where(task => DownloadProgressPolicy.IsActive(task.State)))
+        foreach (DownloadTaskItem task in _services.Downloads.Tasks.Where(task => DownloadProgressPolicy.IsActive(task.State)))
             if (task.Session?.CanCancel != false) task.Cancellation.Cancel();
         ++_folderRefreshGeneration;
         _folderRefreshCancellation?.Cancel();
@@ -776,9 +776,9 @@ public sealed partial class MainWindow
 
     private UIElement? GetCurrentShellFocusTarget()
     {
-        if (_currentPrimarySection == PrimarySection.Repository && _selectedRepositoryId is not null)
+        if (_currentPrimarySection == PrimarySection.Repository && _services.Repositories.SelectedId is not null)
         {
-            return SecondaryNavPanel.Children.OfType<Button>().FirstOrDefault(button => string.Equals(button.Tag as string, _selectedRepositoryId, StringComparison.Ordinal));
+            return SecondaryNavPanel.Children.OfType<Button>().FirstOrDefault(button => string.Equals(button.Tag as string, _services.Repositories.SelectedId, StringComparison.Ordinal));
         }
 
         return _currentPrimarySection switch

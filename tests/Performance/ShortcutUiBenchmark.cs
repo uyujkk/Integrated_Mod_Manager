@@ -86,7 +86,7 @@ public sealed partial class MainWindow
         File.WriteAllText(Path.Combine(a, "mod.ini"), "[KeyA]\nkey = A\n$x = 1\n");
         File.WriteAllText(Path.Combine(b, "mod.ini"), "[KeyB]\nkey = B\n$x = 2\n");
         var repository = new WorkspaceRepository { Name = "Synthetic", SourcePath = source, TargetPath = target, UseDirectoryLinks = true };
-        _repositories.Add(repository); _selectedRepositoryId = repository.Id;
+        _services.Repositories.Items.Add(repository); _services.Repositories.SelectedId = repository.Id;
         DirectoryLinkDeployment.CreateJunction(Path.Combine(target, "A"), a);
         _shortcutModPicker!.ItemsSource = ReadShortcutModOptions(source);
         _shortcutModPicker.SelectedItem = ((ShortcutModOption[])_shortcutModPicker.ItemsSource)[0];

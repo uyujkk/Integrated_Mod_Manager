@@ -6,8 +6,6 @@ namespace ModFolderCopier.WinUI;
 
 public sealed partial class MainWindow
 {
-    private readonly DownloadTaskJournal<OnlineDownloadRetryRequest> _downloadJournal = new(
-        Path.Combine(AppContext.BaseDirectory, "backups", "download-queue", "tasks.json"));
     private bool _downloadJournalAvailable = true;
     private bool _downloadJournalWarningShown;
     private int _restoredInterruptedDownloads;
@@ -16,10 +14,10 @@ public sealed partial class MainWindow
     {
         try
         {
-            var restored = _downloadJournal.Load();
+            var restored = _services.Downloads.Journal.Load();
             foreach (var record in restored.Tasks)
             {
-                _downloadTasks.Add(new DownloadTaskItem
+                _services.Downloads.Tasks.Add(new DownloadTaskItem
                 {
                     Id = record.Id, Title = record.Title, SourceIdentity = record.SourceIdentity,
                     DestinationPath = record.DestinationPath, ArchivePath = record.ArchivePath,
@@ -51,7 +49,7 @@ public sealed partial class MainWindow
         try
         {
             if (!_downloadJournalAvailable) throw new IOException(T("DownloadRecovery.TheDownloadRecordCouldNotBe"));
-            _downloadJournal.Save(_downloadTasks.Select(task => ModUpdateRecoveryPolicy.ForSnapshot(new DownloadTaskRecord<OnlineDownloadRetryRequest>(
+            _services.Downloads.Journal.Save(_services.Downloads.Tasks.Select(task => ModUpdateRecoveryPolicy.ForSnapshot(new DownloadTaskRecord<OnlineDownloadRetryRequest>(
                 task.Id, task.Title, task.SourceIdentity, task.DestinationPath, task.State, task.Progress,
                 task.StatusZh, task.StatusEn, task.RetryRequest, task.ArchivePath, task.Interrupted))));
         }
@@ -70,7 +68,7 @@ public sealed partial class MainWindow
     private async Task<bool> ConfirmRestoredDownloadAsync(DownloadTaskItem task, OnlineDownloadRetryRequest request)
     {
         if (request.Mod is null || request.Context is null || request.CharacterAliases is null
-            || !_repositories.Any(repository => repository.Id == request.Context.RepositoryId
+            || !_services.Repositories.Items.Any(repository => repository.Id == request.Context.RepositoryId
                 && string.Equals(repository.SourcePath, request.Context.RepositoryPath, StringComparison.OrdinalIgnoreCase)))
             throw new InvalidDataException(T("DownloadRecovery.TheOriginalRepositoryWasRemovedOr"));
         if (!task.RestoredFromJournal) return true;

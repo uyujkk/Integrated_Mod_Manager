@@ -140,7 +140,7 @@ public sealed partial class MainWindow
     {
         _themePreference = ThemePreferences.Parse(_storedThemePreference, _legacyDarkTheme);
         AppearanceSettings.SetLanguageOptions(UiText.Languages.Select(UiText.LanguageName).ToArray());
-        AppearanceSettings.LanguageIndex = Math.Max(0, IndexOfLanguage(_currentLanguage));
+        AppearanceSettings.LanguageIndex = Math.Max(0, IndexOfLanguage(_services.Language.Current));
         AppearanceSettings.Theme = _themePreference;
         AppearanceSettings.DensityIndex = _interfaceDensity == InterfaceDensity.Compact ? 1 : 0;
         AppearanceSettings.ReduceMotion = _reduceMotion;
@@ -173,7 +173,7 @@ public sealed partial class MainWindow
         {
             case nameof(AppearanceSettingsViewModel.LanguageIndex):
                 string language = UiText.Languages[Math.Clamp(AppearanceSettings.LanguageIndex, 0, UiText.Languages.Count - 1)];
-                if (!string.Equals(language, _currentLanguage, StringComparison.Ordinal))
+                if (!string.Equals(language, _services.Language.Current, StringComparison.Ordinal))
                 {
                     SwitchLanguage(language);
                 }
@@ -303,7 +303,7 @@ public sealed partial class MainWindow
     private void SwitchLanguage(string language)
     {
         SaveCurrentModBindings();
-        _currentLanguage = language;
+        _services.Language.Change(language);
         RelabelDefaultSlots();
         ApplyLanguage();
         RefreshVisibleShortcutDescriptionsForLanguage();

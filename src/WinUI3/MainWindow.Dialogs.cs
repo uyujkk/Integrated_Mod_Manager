@@ -215,8 +215,14 @@ public sealed partial class MainWindow
         return button;
     }
 
-    private async void ShowAppNotification(string message, InfoBarSeverity severity = InfoBarSeverity.Success)
+    // Any page can ask for a notification through the status service; the window shows it.
+    private void ShowAppNotification(string message, InfoBarSeverity severity = InfoBarSeverity.Success)
+        => _services.Status.Notify(message, severity);
+
+    private async void OnNotificationRequested(object? sender, StatusNotification notification)
     {
+        string message = notification.Message;
+        InfoBarSeverity severity = notification.Severity;
         try
         {
             int notificationVersion = ++_notificationVersion;

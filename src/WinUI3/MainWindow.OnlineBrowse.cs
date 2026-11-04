@@ -14,7 +14,7 @@ public sealed partial class MainWindow
 
     private void RefreshOnlineCardPresentation()
     {
-        string key = $"{_currentLanguage}|{_isDarkTheme}|{_interfaceDensity}";
+        string key = $"{_services.Language.Current}|{_isDarkTheme}|{_interfaceDensity}";
         if (_onlineCardPresentationKey == key) return;
         _onlineCardPresentationKey = key;
         RefreshPresenters(OnlineVirtualizedListView);
@@ -89,7 +89,7 @@ public sealed partial class MainWindow
     {
         bool active = _onlineDownloadActions.IsActive(CaptureOnlineDownloadContext(GetSelectedRepository()),
             GetOnlineDownloadIdentity(mod));
-        DownloadTaskItem? task = _downloadTasks.FirstOrDefault(item =>
+        DownloadTaskItem? task = _services.Downloads.Tasks.FirstOrDefault(item =>
             item.Session is not null && item.SourceIdentity == GetOnlineDownloadIdentity(mod)
             && string.Equals(item.Session.Context.RepositoryId, GetSelectedRepository()?.Id, StringComparison.OrdinalIgnoreCase)
             && string.Equals(item.Session.Context.RepositoryPath, GetSelectedRepository()?.SourcePath, StringComparison.OrdinalIgnoreCase));

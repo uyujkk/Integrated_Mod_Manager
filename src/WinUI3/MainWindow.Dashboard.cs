@@ -26,9 +26,9 @@ public sealed partial class MainWindow
             return;
         }
 
-        if (_selectedRepositoryId is null && _repositories.Count > 0)
+        if (_services.Repositories.SelectedId is null && _services.Repositories.Items.Count > 0)
         {
-            _selectedRepositoryId = _repositories[0].Id;
+            _services.Repositories.SelectedId = _services.Repositories.Items[0].Id;
         }
 
         PopulateDashboardRepositorySwitcher();
@@ -52,17 +52,17 @@ public sealed partial class MainWindow
             },
             DeleteRepositoryFromCardAsync);
 
-        var ids = new List<string>(_repositories.Count);
-        for (int index = 0; index < _repositories.Count; index++)
+        var ids = new List<string>(_services.Repositories.Items.Count);
+        for (int index = 0; index < _services.Repositories.Items.Count; index++)
         {
-            WorkspaceRepository repository = _repositories[index];
+            WorkspaceRepository repository = _services.Repositories.Items[index];
             ids.Add(repository.Id);
             RepositoryCardViewModel card = Dashboard.GetOrAdd(repository.Id, index,
                 () => new RepositoryCardViewModel(repository.Id, _repositoryCardActions));
             card.Name = repository.Name;
             card.Subtitle = DescribeRepositorySource(repository);
-            card.IsCurrent = string.Equals(repository.Id, _selectedRepositoryId, StringComparison.Ordinal);
-            card.CanDelete = _repositories.Count > 1;
+            card.IsCurrent = string.Equals(repository.Id, _services.Repositories.SelectedId, StringComparison.Ordinal);
+            card.CanDelete = _services.Repositories.Items.Count > 1;
             card.HasWiki = Uri.TryCreate(repository.WikiUrl, UriKind.Absolute, out _);
             card.Labels = labels;
             ApplyRepositorySummary(card, repository);
@@ -143,7 +143,7 @@ public sealed partial class MainWindow
     }
 
     private WorkspaceRepository? FindRepository(string id)
-        => _repositories.FirstOrDefault(repository => string.Equals(repository.Id, id, StringComparison.Ordinal));
+        => _services.Repositories.Items.FirstOrDefault(repository => string.Equals(repository.Id, id, StringComparison.Ordinal));
 
     private string DescribeRepositorySource(WorkspaceRepository repository)
     {
@@ -198,7 +198,7 @@ public sealed partial class MainWindow
             : !summary.Value.SourceReady ? T("Dashboard.SetSourceToSeeCharacters")
             : T("Dashboard.NoCharacters");
         IReadOnlyList<RepositoryCategorySummary> categories = summary?.Categories ?? [];
-        string key = $"{_currentLanguage}|{repository?.Id}|{emptyText}|"
+        string key = $"{_services.Language.Current}|{repository?.Id}|{emptyText}|"
             + string.Join("/", categories.Select(category => category.Path + ":" + category.ModCount));
         if (key == _dashboardCharactersKey)
         {
@@ -262,7 +262,7 @@ public sealed partial class MainWindow
     {
         int generation = ++_repositoryScanGeneration;
         (string Id, string? Source, string? Target)[] targets =
-            [.. _repositories.Select(repository => (repository.Id, (string?)repository.SourcePath, (string?)repository.TargetPath))];
+            [.. _services.Repositories.Items.Select(repository => (repository.Id, (string?)repository.SourcePath, (string?)repository.TargetPath))];
         try
         {
             Dictionary<string, RepositoryContentSummary> results = await Task.Run(() => targets.ToDictionary(
@@ -301,7 +301,7 @@ public sealed partial class MainWindow
         try
         {
             DashboardRepositoryComboBox.Items.Clear();
-            foreach (WorkspaceRepository repository in _repositories)
+            foreach (WorkspaceRepository repository in _services.Repositories.Items)
             {
                 DashboardRepositoryComboBox.Items.Add(new ComboBoxItem
                 {
@@ -312,7 +312,7 @@ public sealed partial class MainWindow
 
             DashboardRepositoryComboBox.SelectedItem = DashboardRepositoryComboBox.Items
                 .OfType<ComboBoxItem>()
-                .FirstOrDefault(item => string.Equals(item.Tag as string, _selectedRepositoryId, StringComparison.Ordinal));
+                .FirstOrDefault(item => string.Equals(item.Tag as string, _services.Repositories.SelectedId, StringComparison.Ordinal));
         }
         finally
         {
@@ -347,7 +347,7 @@ public sealed partial class MainWindow
 
     private WorkspaceRepository? FindRepositoryForPreset(RepositoryPresetInfo preset)
     {
-        return _repositories.FirstOrDefault(repository =>
+        return _services.Repositories.Items.FirstOrDefault(repository =>
             string.Equals(repository.OnlineSourceSite, DefaultOnlineSourceSite, StringComparison.OrdinalIgnoreCase)
             && IsRepositoryForPreset(repository, preset));
     }
@@ -365,7 +365,7 @@ public sealed partial class MainWindow
 
     private async Task EditRepositoryFromCardAsync(string id)
     {
-        if (!string.Equals(id, _selectedRepositoryId, StringComparison.Ordinal))
+        if (!string.Equals(id, _services.Repositories.SelectedId, StringComparison.Ordinal))
         {
             SwitchRepository(id, openManager: false);
         }
@@ -410,9 +410,9 @@ public sealed partial class MainWindow
 
     private void OnDashboardOpenRepositoryClicked(object sender, RoutedEventArgs e)
     {
-        if (_selectedRepositoryId is not null)
+        if (_services.Repositories.SelectedId is not null)
         {
-            SwitchRepository(_selectedRepositoryId, openManager: true);
+            SwitchRepository(_services.Repositories.SelectedId, openManager: true);
         }
     }
 }

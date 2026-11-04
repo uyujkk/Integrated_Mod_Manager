@@ -500,11 +500,7 @@ public sealed partial class MainWindow
                 return;
             }
 
-            Process.Start(new ProcessStartInfo(loader)
-            {
-                WorkingDirectory = Path.GetDirectoryName(loader) ?? AppContext.BaseDirectory,
-                UseShellExecute = true
-            });
+            _services.Launch.StartLoader(loader);
             StatusTextBlock.Text = T("EndfieldBridge.ExistingLoaderStarted");
             if (string.IsNullOrWhiteSpace(LauncherTextBox.Text)) LauncherTextBox.Text = loader;
             SaveConfig();
@@ -553,7 +549,7 @@ public sealed partial class MainWindow
             LogApplicationIssue("Read XXMI configuration", ex);
         }
 
-        Process.Start(new ProcessStartInfo(loader, XxmiLaunchPolicy.Arguments(importer)) { WorkingDirectory = workingDirectory, UseShellExecute = true });
+        _services.Launch.StartWithArguments(loader, XxmiLaunchPolicy.Arguments(importer), workingDirectory);
         StatusTextBlock.Text = T("XxmiLaunch.Started", importer);
         if (string.IsNullOrWhiteSpace(LauncherTextBox.Text)) LauncherTextBox.Text = loader;
         SaveConfig();

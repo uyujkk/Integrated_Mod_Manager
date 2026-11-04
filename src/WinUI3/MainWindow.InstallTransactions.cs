@@ -144,7 +144,7 @@ public sealed partial class MainWindow
     {
         List<string> targets = affectedTargets.ToList();
         string transactionPath = await Task.Run(() => WithLocalizedInstallErrors(() => ModInstallTransactions.Create(
-            _modInstallBackupPath, description, repository.Id, repository.TargetPath, repository.SourcePath, targets, LogApplicationIssue)));
+            _services.Deployment.InstallBackupPath, description, repository.Id, repository.TargetPath, repository.SourcePath, targets, LogApplicationIssue)));
         PruneInstallTransactionsByStorageLimit(transactionPath);
         return transactionPath;
     }
@@ -172,7 +172,7 @@ public sealed partial class MainWindow
     private async Task RollbackInstallTransactionAsync(string transactionPath, bool clearLastTransaction)
     {
         ModInstallTransaction transaction = await Task.Run(() => WithLocalizedInstallErrors(() => ModInstallTransactions.ReadManifest(transactionPath)));
-        WorkspaceRepository repository = _repositories.FirstOrDefault(item => item.Id == transaction.RepositoryId)
+        WorkspaceRepository repository = _services.Repositories.Items.FirstOrDefault(item => item.Id == transaction.RepositoryId)
             ?? throw new InvalidOperationException(T("InstallTransactions.TheRepositoryForThisBackupNo"));
 
         await Task.Run(() => WithLocalizedInstallErrors(() =>

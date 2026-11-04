@@ -1,4 +1,3 @@
-using System.Collections.ObjectModel;
 using IntegratedModManager.Core.Archives;
 using IntegratedModManager.Core.Configuration;
 using IntegratedModManager.Core.Online;
@@ -15,6 +14,9 @@ namespace ModFolderCopier.WinUI;
 public sealed partial class MainWindow : Window
 {
     private const string AppVersion = ApplicationReleasePolicy.VersionLabel;
+
+    // Shared state and file access; MainWindow forwards to these until each page owns its part.
+    private readonly AppServices _services = new();
 
     /// <summary>The Settings page binds its appearance choices to this view model.</summary>
     public AppearanceSettingsViewModel AppearanceSettings { get; } = new();
@@ -83,15 +85,10 @@ public sealed partial class MainWindow : Window
     private static readonly SolidColorBrush MissingBrush = new(ColorHelper.FromArgb(255, 177, 76, 55));
     private static readonly SolidColorBrush NeutralBrush = new(ColorHelper.FromArgb(255, 60, 60, 60));
 
-    private readonly string _configPath = Path.Combine(AppContext.BaseDirectory, "config.ini");
-    private readonly string _shellConfigPath = Path.Combine(AppContext.BaseDirectory, "beta-shell.json");
-    private Dictionary<string, System.Text.Json.JsonElement>? _shellConfigExtensionData;
     private readonly string _onlineImageCachePath = Path.Combine(AppContext.BaseDirectory, "cache", "online-images");
     private readonly string _onlinePageCachePath = Path.Combine(AppContext.BaseDirectory, "cache", "online-pages");
     private readonly string _onlineDetailsCachePath = Path.Combine(AppContext.BaseDirectory, "cache", "online-details");
     private readonly string _onlineCharacterCachePath = Path.Combine(AppContext.BaseDirectory, "cache", "online-characters");
-    private readonly ConfigurationFileStore _configurationFiles = new(Path.Combine(AppContext.BaseDirectory, "backups", "config"));
-    private readonly string _modInstallBackupPath = Path.Combine(AppContext.BaseDirectory, "backups", "mod-installs");
     private readonly HttpClient _httpClient = CreateHttpClient();
     private readonly RequestCooldown _onlineRateLimit = new();
     private readonly SemaphoreSlim _onlineCharacterAvatarDownloadGate = new(3, 3);
@@ -104,12 +101,10 @@ public sealed partial class MainWindow : Window
     private readonly Dictionary<string, string> _modLinks = new(StringComparer.CurrentCultureIgnoreCase);
     private readonly Dictionary<string, TrackedModOrigin> _trackedModOrigins = new(StringComparer.CurrentCultureIgnoreCase);
     private readonly GameBananaMetadataService _gameBananaMetadataService;
-    private readonly List<WorkspaceRepository> _repositories = [];
     private readonly List<string> _onlineDetailImageUrls = [];
     private readonly List<TrackedModUpdateResult> _trackedModUpdateResults = [];
     private readonly List<ModConfigurationProfile> _configurationProfiles = [];
     private readonly List<ModPersistentSlot> _modPersistentSlots = [];
-    private readonly ObservableCollection<DownloadTaskItem> _downloadTasks = [];
     private readonly Dictionary<string, DownloadTaskCardView> _downloadTaskCards = new(StringComparer.Ordinal);
     private readonly Dictionary<string, DownloadTaskCardView> _navTaskCards = new(StringComparer.Ordinal);
 
@@ -149,14 +144,11 @@ public sealed partial class MainWindow : Window
     private string? _onlineCharacterStripSignature;
     private string? _onlineCharacterCatalogKey;
     private bool _useHorizontalOnlineCharacterRail;
-    private string? _selectedRepositoryId;
     private string? _selectedConfigurationProfileId;
     private string? _lastInstallTransactionPath;
     private UiMessage? _modUpdateStatus;
     private UiMessage? _updateStatus;
     private OnlineModCard? _activeOnlineDetailMod;
-    // A language code with a file in Strings, such as zh-CN or en-US.
-    private string _currentLanguage = UiLanguagePolicy.Chinese;
     private PrimarySection _currentPrimarySection = PrimarySection.Dashboard;
     private ShellLayoutMode _shellLayoutMode = (ShellLayoutMode)(-1);
     private bool _primaryNavExpanded;
@@ -197,6 +189,8 @@ public sealed partial class MainWindow : Window
             new OnlineMetadataCacheAdapter(_appDataStore, _onlineDetailsCachePath, LogApplicationIssue),
             diagnostics: LogApplicationIssue);
         InitializeComponent();
+        _services.Dialogs.Attach(() => RootGrid.XamlRoot);
+        _services.Status.NotificationRequested += OnNotificationRequested;
         ApplyWindowIcon();
         TraceStartupStage("InitializeComponent completed");
         InitializePersistentDataStore();
@@ -214,8 +208,8 @@ public sealed partial class MainWindow : Window
         BuildShortcutRows();
         TraceStartupStage("Input handlers and shortcuts initialized");
         // Neither file exists only on a first install; upgrades keep them, and with them the user's language.
-        _firstInstall = !File.Exists(_configPath) && !File.Exists(_shellConfigPath);
-        if (_firstInstall) _currentLanguage = UiLanguagePolicy.ForSystem(System.Globalization.CultureInfo.CurrentUICulture.Name, UiText.Languages);
+        _firstInstall = _services.ShellConfig.IsFirstInstall;
+        if (_firstInstall) _services.Language.Load(UiLanguagePolicy.ForSystem(System.Globalization.CultureInfo.CurrentUICulture.Name, UiText.Languages));
         LoadConfig();
         LoadShellConfig();
         if (_firstInstall) SaveConfig();
