@@ -1,8 +1,8 @@
 # 后续路线图 / Roadmap
 
-更新于 2026-11-03，基于 v4.7.0 发布后的 main（`017247b`）。本文把此前分散的计划和遗留项整合到一处，是规划，不是已实现功能。工作量为粗估：S ≈ 1–2 天，M ≈ 3–5 天，L ≈ 2 周以上。
+更新于 2026-11-04，基于 v4.7.3 发布后的 main（`5dfe728`）。本文把此前分散的计划和遗留项整合到一处，是规划，不是已实现功能。工作量为粗估：S ≈ 1–2 天，M ≈ 3–5 天，L ≈ 2 周以上。
 
-Updated 2026-11-03 against main after the v4.7.0 release (`017247b`). This brings the earlier plans and leftovers into one place. It is a plan, not shipped features. Effort is a rough guess: S ≈ 1–2 days, M ≈ 3–5 days, L ≈ 2+ weeks.
+Updated 2026-11-04 against main after the v4.7.3 release (`5dfe728`). This brings the earlier plans and leftovers into one place. It is a plan, not shipped features. Effort is a rough guess: S ≈ 1–2 days, M ≈ 3–5 days, L ≈ 2+ weeks.
 
 ## 总览 / Overview
 
@@ -16,21 +16,26 @@ Updated 2026-11-03 against main after the v4.7.0 release (`017247b`). This bring
 | **D. 工程清理** | 已全部完成（#69–#80）：语言文件合并、快捷键页 ViewModel、`async void`、空 `catch`、界面改回 XAML、在线层移到 Core、界面自动化测试 | — | — |
 | **F. 测试整合与兼容** | 整合压缩测试；补配置和格式的兼容测试；明确支持范围 | M–L | 建议排在 B 之前，详见 F 节 |
 | **G. 适配其他游戏** | 按系统语言选界面语言（G1 已实现）；首次安装弹窗选择默认仓库预设（G2 已实现）；其他游戏通过 XXMI 一键启动（G3 部分实现） | M | G3 需要实机核对；建议在面向其他游戏发布前完成 |
+| **H. 多语言** | 已发布于 4.7.3：界面语言改为文件（#86）、俄语界面与布局修复（#91）。剩余：母语者审校、俄语下未检查的界面 | S | 审校需要俄语使用者配合 |
+| **I. 发布与分发** | 已完成：.NET 8 更新器（4.7.1）、GitHub Actions 发布流程、CodeQL、Dependabot、CI 里的界面测试（#87）。剩余：代码签名、GameBanana 申诉 | S–M | 签名取决于签名服务的申请结果 |
 | **搁置** | #15 原生闪退（等转储）、C3 终末地修复器集成（#8）、#9 角色定向修复（等 #8）、E Linux 尝试 | — | 见下 |
 
-## 未完成内容 / Open work（2026-11-03 整理）
+## 未完成内容 / Open work（2026-11-04 整理）
 
-v4.7.0 已于 2026-11-03 发布，包含 #61–#80：B1–B3（除背景模式）、C1、C4、C5、C6、D 全部、F3 的配置兼容、G1–G3。代码审查发现的 #74–#78 已在 #79 修复。
+已发布：v4.7.0（2026-11-03，#61–#80：B1–B3 除背景模式、C1、C4–C6、D 全部、F3 的配置兼容、G1–G3）；v4.7.1（#82，更新器改用 .NET 8，不再被误报）；v4.7.2（#84，在线角色列表超时重试）；v4.7.3（2026-11-04，#86、#91，俄语界面）。此后合并：#93（ZIP 解压处就地检查路径，关闭 CodeQL zip slip 告警）。
 
 | 优先级 | 项目 | 状态或缺口 |
 | --- | --- | --- |
 | 1 | A1 与 4.7 的实机核对 | 见[回归清单](./Regression-Checklist.md)的 4.7 部分：XXMI 启动三个游戏、全屏下的鼠标穿透、自动对比度、恢复“默认”槽位、批量操作、自动保存间隔、管理员权限下选文件、分享方案往返、联网请求；4.6.2 的 F10、按键发送、变体导入仍未勾选 |
-| 2 | 切换耗时 | 用 `startup.log` 的 `Slot switch` 记录分清管理器和游戏各占多少；3 秒只读保持能否缩短取决于 A1 |
-| 3 | B3 背景模式、B4 待生效队列 | 未做；B4 依赖 A1 的 F10 核对 |
-| 4 | 预设与 Mod 原始默认值 | “默认”槽位已补建并跟随 Mod 更新；“清除加载器保存的值”未做 |
-| 5 | F 其余 | F1 压缩、F4 Windows 版本实测未做 |
-| 6 | C1 多选、C2 | Mod 列表多选未做；C2 的 WGC 按维护者决定暂缓，只截取框选区域和组合包带图未做 |
-| 7 | 文档 | 4.7 的手册与开发文档已更新；Wiki 仍停在 4.6.1，截图仍是 4.6 |
+| 2 | H 俄语收尾 | 请俄语使用者审校译文；俄语下检查游戏内浮窗、下载/恢复/导入过程中的对话框、带真实数据的在线列表；英文系统和俄语系统的首次安装各试一次 |
+| 3 | 窗口很小时的布局 | 约 670×530 DIP 时在线页、预设页工具栏溢出，导航栏“下载”和上一项重叠；中英俄都有，与翻译无关 |
+| 4 | 切换耗时 | 用 `startup.log` 的 `Slot switch` 记录分清管理器和游戏各占多少；3 秒只读保持能否缩短取决于 A1 |
+| 5 | B3 背景模式、B4 待生效队列 | 未做；B4 依赖 A1 的 F10 核对 |
+| 6 | 预设与 Mod 原始默认值 | “默认”槽位已补建并跟随 Mod 更新；“清除加载器保存的值”未做 |
+| 7 | F 其余 | F1 压缩、F4 Windows 版本实测未做 |
+| 8 | C1 多选、C2 | Mod 列表多选未做；C2 的 WGC 按维护者决定暂缓，只截取框选区域和组合包带图未做 |
+| 9 | I 发布与分发 | 代码签名（SignPath 免费开源计划，或 Azure Artifact Signing，后者只面向美国和加拿大的个人）；GameBanana 申诉稿写于 4.7.1 之前，发送前要更新；4.7.1 之后的更新器还没单独查过 VirusTotal |
+| 10 | 文档 | Wiki 仍停在 4.6.1，截图仍是 4.6；`CHANGELOG.md` 里 4.7.3 的日期在下一个版本准备 PR 中补上 |
 
 ---
 
@@ -390,7 +395,7 @@ E 搁置期间，只做下面“顺序和完成标准”里列出的跳过机制
 
 ### G1. 按系统语言选择界面语言（S，已实现）
 
-系统界面语言是中文（含繁体）时用中文，其他语言一律用英文。规则在 Core 的 `UiLanguagePolicy`，有测试。结果写入 `config.ini`，之后不再跟随系统变化。中文系统的首次启动已实测；英文系统未实测，该分支只有单元测试。
+系统界面语言有对应的语言文件时就用它（4.7.3 起有中文、英文、俄语；繁体中文用中文），否则用英文。规则在 Core 的 `UiLanguagePolicy`，有测试。结果写入 `config.ini`，之后不再跟随系统变化。中文系统的首次启动已实测；英文系统未实测，该分支只有单元测试。
 
 ### G2. 选择默认仓库预设（S–M，已实现）
 
@@ -437,7 +442,7 @@ G1 和 G2 用同一个判断：`config.ini` 和 `beta-shell.json` 都不存在�
 
 ## 已完成，不再跟踪 / Done
 
-这些出现在旧计划（`FollowUp-Plan.md`、[FollowUp-2026-10-24](./FollowUp-2026-10-24.md)）里，现在都已合并：角色头像、单选或多选链接规则、状态槽位和变体、写入 Mod 默认值、整份快照、F10 热应用、浮窗保存前 F10、浮窗刷新、多参数响应速度、中性名称和功能标记、`src/` `tests/` 结构、UI 重构第 0–6 阶段、默认槽位（#56）、排版修复（#57）。
+这些出现在旧计划（`FollowUp-Plan.md`、[FollowUp-2026-10-24](./FollowUp-2026-10-24.md)）里，现在都已合并：角色头像、单选或多选链接规则、状态槽位和变体、写入 Mod 默认值、整份快照、F10 热应用、浮窗保存前 F10、浮窗刷新、多参数响应速度、中性名称和功能标记、`src/` `tests/` 结构、UI 重构第 0–6 阶段、默认槽位（#56）、排版修复（#57）。4.6.2 收尾的 A2 不稳定测试、A3 Discord 入口、A4 按键提示已在 #61 完成。4.7.1–4.7.3 和 #93 的内容见上面的“未完成内容”开头。
 
 ## 仍然有效的决定 / Standing decisions
 
@@ -456,4 +461,6 @@ G1 和 G2 用同一个判断：`config.ini` 和 `beta-shell.json` 都不存在�
 - **F. Tests and compatibility (M–L):** the suite is neither slow nor visibly duplicated: 67 s in total, 40 s of it in two timeout tests, one of them the flaky one. Consolidate in low-risk batches (fix those two, merge into `[Theory]`, shared fixtures, smaller data matrices), then delete only reviewed candidates, keeping safety, rollback, config and updater tests and all coverage gates. The real gaps are compatibility: `beta-shell.json` has no tests and drops unknown fields, bundles reject other versions and unknown fields, 18 tests pass silently off Windows, and Windows 10 is claimed but has no recorded test.
 - **G. Other games (M, before publishing for other games):** on a first install only, pick the UI language from the system language (Chinese or English), and ask for the default repository preset instead of assuming Endfield; upgrades are unaffected. One-click launch for Genshin Impact, Honkai: Star Rail and Zenless Zone Zero through XXMI's own importers, without rewriting XXMI's configuration. Needs real-game checks.
 - **On hold:** #15 (needs a crash dump), C3 the optional Endfield repair tool (#8, set aside 2026-11-02), #9 (needs #8), E the Linux experiment, and one-shot `[Present]` injection, a fallback to evaluate only if A1 shows the read-only method is unreliable.
-- **Status (2026-11-03):** v4.7.0 shipped B1–B3 (except background modes), C1, C4–C6, all of D and G1–G3. **Suggested next step:** the real-game checks in A, then B4.
+- **H. Languages (S):** shipped in 4.7.3: UI languages as files (#86) and a Russian interface with layout fixes (#91). Left: a native-speaker review, and checking the overlay, in-action dialogs and live online lists in Russian.
+- **I. Release and distribution (S–M):** done: the .NET 8 updater (4.7.1), releases through GitHub Actions, CodeQL, Dependabot and UI tests in CI (#87). Left: code signing (SignPath or Azure Artifact Signing) and updating the GameBanana appeal.
+- **Status (2026-11-04):** v4.7.0 shipped B1–B3 (except background modes), C1, C4–C6, all of D and G1–G3; 4.7.1 the .NET 8 updater; 4.7.2 catalog retries; 4.7.3 the Russian interface. #93 closed the CodeQL zip slip alert. A2–A4 were done in #61. **Suggested next step:** the real-game checks in A, the Russian review, then B4.
