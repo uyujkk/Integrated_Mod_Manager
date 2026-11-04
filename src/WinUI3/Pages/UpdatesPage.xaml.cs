@@ -1,6 +1,6 @@
 using System.ComponentModel;
 using System.Diagnostics;
-using IntegratedModManager.Core.Layout;
+using CommunityToolkit.WinUI.Controls;
 using IntegratedModManager.Core.Online;
 using IntegratedModManager.Core.Updates;
 using Microsoft.UI.Xaml;
@@ -12,26 +12,22 @@ using Microsoft.UI.Xaml.Media;
 namespace ModFolderCopier.WinUI;
 
 /// <summary>
-/// The Updates page (stage J3, docs/development/UI-Structure-Plan.md): tracked Mods, download history,
-/// install safety and backups. It labels and lays itself out, builds its rows from
-/// <see cref="UpdatesViewModel"/> and the download tasks, and sends clicks out as requests.
+/// The Updates page (stages J3 and J3-b, docs/development/UI-Structure-Plan.md and UI-Fluent-Design-Plan.md):
+/// a status area, then three views on a selector bar: Mod updates, download history, and install and
+/// recovery. It labels itself, builds its rows from <see cref="UpdatesViewModel"/> and the download tasks,
+/// and sends clicks out as requests.
 /// </summary>
 public sealed partial class UpdatesPage : UserControl
 {
-    private const double DownloadHistoryRowSpacing = 6; // StackLayout.Spacing of DownloadHistoryRepeater
-
     private readonly AppServices _services;
-    private ToggleButton[] _trackedModChips = [];
-    private ToggleButton[] _downloadHistoryChips = [];
     // The finished tasks the page last listed; a task that finishes later rebuilds the list.
     private readonly HashSet<string> _downloadHistoryIds = [];
     private readonly Dictionary<string, DownloadTaskCardView> _downloadTaskCards = [];
-    private int _updatesColumns = -1;
-    // The history card height the layout chose; FitDownloadHistoryToWholeRows trims below it.
-    private double? _downloadsCardHeight;
     private bool _isApplyingInterval;
     private bool _isApplyingBackupLimit;
     private bool _isApplyingConflictDetection;
+    private bool _isApplyingFilter;
+    private bool _isApplyingView;
 
     internal UpdatesPage(AppServices services)
     {
@@ -39,18 +35,27 @@ public sealed partial class UpdatesPage : UserControl
         ViewModel = services.Updates;
         InitializeComponent();
 
-        UpdatesScrollViewer.SizeChanged += (_, args) =>
+        foreach (TrackedModFilter filter in Enum.GetValues<TrackedModFilter>())
+            TrackedModsFilterSegmented.Items.Add(new SegmentedItem { Tag = filter });
+        foreach (DownloadHistoryFilter filter in Enum.GetValues<DownloadHistoryFilter>())
+            DownloadHistoryFilterSegmented.Items.Add(new SegmentedItem { Tag = filter });
+        TrackedModsToolbar.SizeChanged += (_, _) => LayoutTrackedModsToolbar();
+        UpdatesCheckInfoBar.ActionButton = new Button();
+        ((Button)UpdatesCheckInfoBar.ActionButton).Click += (_, _) =>
         {
-            // A hidden page reports zero; it lays out again when it is shown.
-            if (args.NewSize.Width > 0) UpdateUpdatesLayout();
+            ViewModel.View = UpdatesPageView.Mods;
+            ViewModel.TrackedModFilter = TrackedModFilter.Failed;
+            RenderTrackedMods();
         };
+
         ViewModel.Refreshed += (_, _) => Render();
         ViewModel.PropertyChanged += OnViewModelChanged;
         services.Language.LanguageChanged += (_, _) => Render();
-        // Rows and chips take their colours when they are built.
+        // Rows and the status icon take their colours when they are built.
         services.Appearance.ThemeChanged += (_, _) => Render();
         services.Downloads.Changed += (_, _) => RenderDownloadHistory();
         services.Downloads.TaskUpdated += (_, task) => OnDownloadTaskUpdated(task);
+        ShowView();
         Render();
     }
 
@@ -69,49 +74,59 @@ public sealed partial class UpdatesPage : UserControl
     {
         UpdatesPageHeader.Title = T("Updates.ModUpdates");
         UpdatesPageHeader.Description = T("Updates.CheckInstalledModsForNewVersions");
+        UpdatesViewMods.Text = T("Updates.ViewModUpdates");
+        UpdatesViewDownloads.Text = T("Updates.ViewDownloadHistory");
+        UpdatesViewRecovery.Text = T("Updates.ViewInstallAndRecovery");
+        AutomationProperties.SetName(UpdatesViewSelector, T("Updates.ModUpdates"));
 
-        InstallSafetyTitleTextBlock.Text = T("Updates.InstallSafety");
-        InstallSafetyHintTextBlock.Text = T("Updates.CheckFileConflictsBeforeInstallationCopies");
-        ConflictDetectionToggleSwitch.Header = T("Updates.DetectConflictsBeforeInstall");
+        // Status area.
+        ToolTipService.SetToolTip(CheckModUpdatesButton, T("Localization.CheckTrackedModUpdatesNow"));
+        AutomationProperties.SetName(CheckModUpdatesButton, T("Localization.CheckTrackedModUpdatesNow"));
+        CheckModUpdatesButton.Content = ViewModel.IsCheckingModUpdates ? T("Common.Checking") : T("Updates.CheckNow");
+        ModUpdateStatusTextBlock.Text = ViewModel.ModUpdateStatus;
+        TrackedModsSummaryTextBlock.Text = ViewModel.TrackedSummary;
+        RenderStatus();
+
+        // Mod updates.
+        SetCard(ModUpdateIntervalSettingsCard, T("Updates.CheckInterval"),
+            T("Updates.CheckOnStartupAtTheSelected") + " " + T("Updates.OnlyOnlineInstalledModsWithA"));
+        AutomationProperties.SetName(ModUpdateIntervalComboBox, T("Updates.CheckInterval"));
+        PopulateModUpdateIntervalOptions();
+        RenderTrackedMods();
+
+        // Download history.
+        DownloadTaskCenterHintTextBlock.Text = T("Updates.ShowsOnlineModDownloadAndExtraction");
+        ClearDownloadTasksButton.Content = T("Updates.ClearFinished");
+        RenderDownloadHistory();
+
+        // Install and recovery.
+        SetCard(ConflictDetectionSettingsCard, T("Updates.DetectConflictsBeforeInstall"), T("Updates.CheckFileConflictsBeforeInstallationCopies"));
         ConflictDetectionToggleSwitch.OnContent = T("Common.On");
         ConflictDetectionToggleSwitch.OffContent = T("Common.Off");
+        AutomationProperties.SetName(ConflictDetectionToggleSwitch, T("Updates.DetectConflictsBeforeInstall"));
         _isApplyingConflictDetection = true;
         ConflictDetectionToggleSwitch.IsOn = ViewModel.ConflictDetection;
         _isApplyingConflictDetection = false;
-        RollbackLastInstallButton.Content = T("Updates.UndoLastModChange");
-        OpenCombinationPresetsTextBlock.Text = T("Common.OpenCombinationWorkspace");
+        SetCard(OpenCombinationPresetsButton, T("Common.OpenCombinationWorkspace"), T("Updates.SaveEnabledModsAndPersistentState"));
         RenderRollback();
-
-        DownloadTaskCenterTitleTextBlock.Text = T("Updates.DownloadTasks");
-        DownloadTaskCenterHintTextBlock.Text = T("Updates.ShowsOnlineModDownloadAndExtraction");
-        ClearDownloadTasksButton.Content = T("Updates.ClearFinished");
-
-        BackupManagerTitleTextBlock.Text = T("ProductivityFeatures.InstallBackups");
-        BackupManagerHintTextBlock.Text = T("ProductivityFeatures.AutomaticallyPreserveTheStateBeforeInstalls");
-        BackupLimitLabelTextBlock.Text = T("ProductivityFeatures.StorageLimitGB");
-        RefreshBackupsButton.Content = T("ProductivityFeatures.RefreshList");
-        AutomationProperties.SetName(BackupLimitNumberBox, T("ProductivityFeatures.InstallBackupStorageLimitInGB"));
-        AutomationProperties.SetName(RefreshBackupsButton, RefreshBackupsButton.Content?.ToString() ?? string.Empty);
+        BackupHistoryExpander.Header = T("ProductivityFeatures.InstallBackups");
+        BackupHistoryExpander.Description = T("ProductivityFeatures.AutomaticallyPreserveTheStateBeforeInstalls");
         AutomationProperties.SetName(BackupHistoryExpander, T("ProductivityFeatures.ExpandInstallBackupHistory"));
+        BackupLimitLabelTextBlock.Text = T("ProductivityFeatures.StorageLimitGB");
+        AutomationProperties.SetName(BackupLimitNumberBox, T("ProductivityFeatures.InstallBackupStorageLimitInGB"));
         _isApplyingBackupLimit = true;
         BackupLimitNumberBox.Value = ViewModel.BackupLimitGb;
         _isApplyingBackupLimit = false;
         RenderBackups();
-        RenderDownloadHistory();
+    }
 
-        TrackedModSettingsTitleTextBlock.Text = T("Updates.CheckSettings");
-        TrackedModSettingsHintTextBlock.Text = T("Updates.CheckOnStartupAtTheSelected");
-        ModUpdateIntervalLabelTextBlock.Text = T("Updates.CheckInterval");
-        ModUpdateIntervalHintTextBlock.Text = T("Updates.OnlyOnlineInstalledModsWithA");
-        ToolTipService.SetToolTip(ModUpdateIntervalComboBox, TrackedModSettingsHintTextBlock.Text + "\n" + ModUpdateIntervalHintTextBlock.Text);
-        ToolTipService.SetToolTip(CheckModUpdatesButton, T("Localization.CheckTrackedModUpdatesNow"));
-        AutomationProperties.SetName(CheckModUpdatesButton, T("Localization.CheckTrackedModUpdatesNow"));
-        CheckModUpdatesButton.Content = ViewModel.IsCheckingModUpdates ? T("Common.Checking") : T("Updates.CheckNow");
-        TrackedModsTitleTextBlock.Text = T("Updates.TrackedMods");
-        ModUpdateStatusTextBlock.Text = ViewModel.ModUpdateStatus;
-        TrackedModsSummaryTextBlock.Text = ViewModel.TrackedSummary;
-        PopulateModUpdateIntervalOptions();
-        RenderTrackedMods();
+    // The header is also the card's Narrator name.
+    private static void SetCard(SettingsCard card, string header, string? description)
+    {
+        card.Header = header;
+        // No description (null) hides the line under the header.
+        card.Description = description!;
+        AutomationProperties.SetName(card, header);
     }
 
     private void OnViewModelChanged(object? sender, PropertyChangedEventArgs e)
@@ -127,6 +142,12 @@ public sealed partial class UpdatesPage : UserControl
             case nameof(UpdatesViewModel.ModUpdateIntervalIndex):
                 SelectModUpdateInterval();
                 break;
+            case nameof(UpdatesViewModel.View):
+                ShowView();
+                break;
+            case nameof(UpdatesViewModel.CheckState):
+                RenderStatus();
+                break;
             case nameof(UpdatesViewModel.BackupLimitGb):
                 if (BackupLimitNumberBox.Value != ViewModel.BackupLimitGb)
                 {
@@ -138,51 +159,111 @@ public sealed partial class UpdatesPage : UserControl
         }
     }
 
+    // Views: the selector bar picks one; the others are collapsed and keep their state.
+    private void ShowView()
+    {
+        UpdatesPageView view = ViewModel.View;
+        _isApplyingView = true;
+        UpdatesViewSelector.SelectedItem = view switch
+        {
+            UpdatesPageView.Downloads => UpdatesViewDownloads,
+            UpdatesPageView.Recovery => UpdatesViewRecovery,
+            _ => UpdatesViewMods
+        };
+        _isApplyingView = false;
+        ModsViewScroll.Visibility = view == UpdatesPageView.Mods ? Visibility.Visible : Visibility.Collapsed;
+        DownloadsViewScroll.Visibility = view == UpdatesPageView.Downloads ? Visibility.Visible : Visibility.Collapsed;
+        RecoveryViewScroll.Visibility = view == UpdatesPageView.Recovery ? Visibility.Visible : Visibility.Collapsed;
+    }
+
+    private void OnUpdatesViewSelectionChanged(SelectorBar sender, SelectorBarSelectionChangedEventArgs args)
+    {
+        if (_isApplyingView || sender.SelectedItem?.Tag is not string tag) return;
+        ViewModel.View = Enum.Parse<UpdatesPageView>(tag);
+    }
+
+    // Status area: an icon and colour for the state, a bar while checking, and an InfoBar for failures.
+    private void RenderStatus()
+    {
+        ModUpdateCheckState state = ViewModel.CheckState;
+        (string Glyph, string Background, string Foreground) look = state switch
+        {
+            ModUpdateCheckState.UpdatesAvailable => ("", "AppAccentSoftBrush", "AppAccentBrush"),
+            ModUpdateCheckState.UpToDate => ("", "AppSuccessSoftBrush", "AppSuccessBrush"),
+            ModUpdateCheckState.SomeFailed or ModUpdateCheckState.CheckFailed => ("", "AppDangerSoftBrush", "AppDangerBrush"),
+            _ => ("", "AppSecondaryDefaultBrush", "AppSecondaryDefaultForegroundBrush")
+        };
+        UpdatesStatusGlyph.Glyph = look.Glyph;
+        UpdatesStatusGlyph.Foreground = ThemeBrush(look.Foreground);
+        UpdatesStatusIconBorder.Background = ThemeBrush(look.Background);
+        CheckModUpdatesButton.Content = ViewModel.IsCheckingModUpdates ? T("Common.Checking") : T("Updates.CheckNow");
+        UpdatesCheckProgressBar.Visibility = state == ModUpdateCheckState.Checking ? Visibility.Visible : Visibility.Collapsed;
+
+        int failed = ViewModel.CountFor(TrackedModFilter.Failed);
+        var showFailed = (Button)UpdatesCheckInfoBar.ActionButton;
+        if (state == ModUpdateCheckState.CheckFailed)
+        {
+            UpdatesCheckInfoBar.Severity = InfoBarSeverity.Error;
+            UpdatesCheckInfoBar.Title = T("Updates.UpdateCheckFailed");
+            UpdatesCheckInfoBar.Message = ViewModel.CheckError ?? string.Empty;
+            showFailed.Visibility = Visibility.Collapsed;
+            UpdatesCheckInfoBar.IsOpen = true;
+        }
+        else if (failed > 0 && state != ModUpdateCheckState.Checking)
+        {
+            UpdatesCheckInfoBar.Severity = InfoBarSeverity.Warning;
+            UpdatesCheckInfoBar.Title = T("Updates.ModChecksFailedPleaseRetry", failed);
+            UpdatesCheckInfoBar.Message = string.Empty;
+            showFailed.Content = T("Updates.FilterFailed", failed);
+            showFailed.Visibility = Visibility.Visible;
+            UpdatesCheckInfoBar.IsOpen = true;
+        }
+        else
+        {
+            UpdatesCheckInfoBar.IsOpen = false;
+        }
+        UpdatesStatusDetailsPanel.Visibility = UpdatesCheckInfoBar.IsOpen || UpdatesCheckProgressBar.Visibility == Visibility.Visible
+            ? Visibility.Visible : Visibility.Collapsed;
+    }
+
     // Tracked Mods: filters, search and order come from the view model; the repeater only builds visible rows.
     private void RenderTrackedMods()
     {
         IReadOnlyList<TrackedModRow> entries = ViewModel.TrackedMods;
-        if (_trackedModChips.Length == 0)
-            _trackedModChips = CreateFilterChips(TrackedModsFilterPanel, ViewModel.TrackedModFilter, filter =>
-            {
-                ViewModel.TrackedModFilter = filter;
-                RenderTrackedMods();
-            });
-        foreach (ToggleButton chip in _trackedModChips)
+        _isApplyingFilter = true;
+        foreach (SegmentedItem item in TrackedModsFilterSegmented.Items.OfType<SegmentedItem>())
         {
-            var filter = (TrackedModFilter)chip.Tag;
+            var filter = (TrackedModFilter)item.Tag;
             int count = ViewModel.CountFor(filter);
-            chip.Content = filter switch
+            item.Content = filter switch
             {
                 TrackedModFilter.Updates => T("Updates.FilterUpdates", count),
                 TrackedModFilter.Failed => T("Updates.FilterFailed", count),
                 TrackedModFilter.UpToDate => T("Updates.FilterUpToDate", count),
                 _ => T("Updates.FilterAll", count)
             };
-            chip.IsChecked = filter == ViewModel.TrackedModFilter;
         }
+        TrackedModsFilterSegmented.SelectedIndex = (int)ViewModel.TrackedModFilter;
+        _isApplyingFilter = false;
         TrackedModsSearchBox.PlaceholderText = T("Updates.SearchTrackedMods");
-        TrackedModsFilterPanel.Visibility = TrackedModsSearchBox.Visibility = entries.Count > 0 ? Visibility.Visible : Visibility.Collapsed;
+        AutomationProperties.SetName(TrackedModsSearchBox, T("Updates.SearchTrackedMods"));
+        TrackedModsToolbar.Visibility = entries.Count > 0 ? Visibility.Visible : Visibility.Collapsed;
+        LayoutTrackedModsToolbar();
 
         IReadOnlyList<TrackedModRow> visible = ViewModel.VisibleTrackedMods;
-        if (TrackedModsSearchBox.Parent is Grid toolbar && toolbar.Tag is null)
-        {
-            toolbar.Tag = true;
-            toolbar.SizeChanged += (_, _) => LayoutTrackedModsToolbar();
-        }
-        LayoutTrackedModsToolbar();
         TrackedModsRepeater.ItemTemplate ??= new DelegateElementFactory(item => CreateTrackedModRow((TrackedModRow)item));
         TrackedModsRepeater.ItemsSource = visible;
 
         if (entries.Count == 0)
         {
             // Mods are tracked once they come from the online page, so the empty state leads there.
-            var empty = new StackPanel { Spacing = 10 };
-            empty.Children.Add(CreateInfoCard(T("Updates.NoTrackedOnlineModsYet"), T("Updates.AfterDownloadingAndExtractingFromThe")));
             var browse = new Button { Content = T("Dashboard.BrowseOnline"), Style = AppStyle("PrimaryButtonStyle") };
             browse.Click += (_, _) => ViewModel.Request(UpdatesAction.BrowseOnline);
-            empty.Children.Add(browse);
-            TrackedModsEmptyHost.Content = empty;
+            TrackedModsEmptyHost.Content = new EmptyState
+            {
+                Glyph = "", Title = T("Updates.NoTrackedOnlineModsYet"), Hint = T("Updates.AfterDownloadingAndExtractingFromThe"),
+                Actions = browse
+            };
         }
         else
         {
@@ -192,54 +273,31 @@ public sealed partial class UpdatesPage : UserControl
         }
     }
 
+    private void OnTrackedModsFilterChanged(object sender, SelectionChangedEventArgs e)
+    {
+        if (_isApplyingFilter || TrackedModsFilterSegmented.SelectedItem is not SegmentedItem { Tag: TrackedModFilter filter }) return;
+        ViewModel.TrackedModFilter = filter;
+        RenderTrackedMods();
+    }
+
     private void OnTrackedModsSearchChanged(object sender, TextChangedEventArgs e)
     {
         ViewModel.Search = TrackedModsSearchBox.Text;
         RenderTrackedMods();
     }
 
-    // The search box sits beside the chips while they fit, and drops to its own row when they don't.
+    // The search box sits beside the filter while they fit, and drops to its own row when they don't.
     private void LayoutTrackedModsToolbar()
     {
-        // A hidden toolbar (no tracked Mods) gets no rows, so their spacing takes no room either.
-        if (TrackedModsSearchBox.Parent is not Grid toolbar || toolbar.ActualWidth <= 0
-            || TrackedModsSearchBox.Visibility != Visibility.Visible) return;
-        TrackedModsFilterPanel.Measure(new Windows.Foundation.Size(double.PositiveInfinity, double.PositiveInfinity));
-        bool besideChips = toolbar.ActualWidth >= TrackedModsFilterPanel.DesiredSize.Width + 12 + 220;
-        if (toolbar.RowDefinitions.Count == 0)
-        {
-            toolbar.RowDefinitions.Add(new RowDefinition { Height = GridLength.Auto });
-            toolbar.RowDefinitions.Add(new RowDefinition { Height = GridLength.Auto });
-            toolbar.RowSpacing = 8;
-        }
-        toolbar.ColumnDefinitions[1].Width = besideChips ? new GridLength(220) : new GridLength(0);
-        toolbar.ColumnSpacing = besideChips ? 12 : 0;
-        Grid.SetRow(TrackedModsSearchBox, besideChips ? 0 : 1);
-        Grid.SetColumn(TrackedModsSearchBox, besideChips ? 1 : 0);
-        toolbar.RowDefinitions[1].Height = besideChips ? new GridLength(0) : GridLength.Auto;
-    }
-
-    // A row of single-choice chips; the caller keeps the choice and rebuilds its list.
-    private ToggleButton[] CreateFilterChips<TFilter>(Panel host, TFilter selected, Action<TFilter> choose) where TFilter : struct, Enum
-    {
-        host.Children.Clear();
-        return Enum.GetValues<TFilter>().Select(filter =>
-        {
-            var chip = new ToggleButton
-            {
-                MinHeight = 28, Padding = new Thickness(10, 2, 10, 2), CornerRadius = new CornerRadius(14),
-                Tag = filter, IsChecked = EqualityComparer<TFilter>.Default.Equals(filter, selected)
-            };
-            foreach (string state in new[] { "Checked", "CheckedPointerOver", "CheckedPressed" })
-            {
-                chip.Resources["ToggleButtonBackground" + state] = ThemeBrush("AppSecondarySelectedBrush");
-                chip.Resources["ToggleButtonForeground" + state] = ThemeBrush("AppSecondarySelectedForegroundBrush");
-                chip.Resources["ToggleButtonBorderBrush" + state] = ThemeBrush("AppNavSelectedBorderBrush");
-            }
-            chip.Click += (_, _) => choose(filter);
-            host.Children.Add(chip);
-            return chip;
-        }).ToArray();
+        if (TrackedModsToolbar.ActualWidth <= 0) return;
+        TrackedModsFilterSegmented.Measure(new Windows.Foundation.Size(double.PositiveInfinity, double.PositiveInfinity));
+        bool beside = TrackedModsToolbar.ActualWidth >= TrackedModsFilterSegmented.DesiredSize.Width + 12 + 260;
+        TrackedModsToolbar.ColumnDefinitions[1].Width = beside ? new GridLength(260) : new GridLength(0);
+        TrackedModsToolbar.ColumnSpacing = beside ? 12 : 0;
+        TrackedModsToolbar.RowDefinitions[1].Height = beside ? new GridLength(0) : GridLength.Auto;
+        TrackedModsToolbar.RowSpacing = beside ? 0 : 8;
+        Grid.SetRow(TrackedModsSearchBox, beside ? 0 : 1);
+        Grid.SetColumn(TrackedModsSearchBox, beside ? 1 : 0);
     }
 
     private static string FormatDateForDisplay(DateTimeOffset? value)
@@ -373,20 +431,6 @@ public sealed partial class UpdatesPage : UserControl
         return new Border { Style = AppStyle("InsetBorderStyle"), Padding = new Thickness(10), Child = grid };
     }
 
-    private static UIElement CreateInfoCard(string title, string body) => new Border
-    {
-        Style = AppStyle("InsetBorderStyle"),
-        Padding = new Thickness(14),
-        Child = new StackPanel
-        {
-            Spacing = 8,
-            Children =
-            {
-                new TextBlock { Text = title, FontSize = 18, FontWeight = Microsoft.UI.Text.FontWeights.SemiBold, TextWrapping = TextWrapping.Wrap },
-                new TextBlock { Text = body, Style = AppStyle("MutedTextStyle"), TextWrapping = TextWrapping.Wrap }
-            }
-        }
-    };
 
     private void PopulateModUpdateIntervalOptions()
     {
@@ -435,7 +479,7 @@ public sealed partial class UpdatesPage : UserControl
     }
 
     // Download history: finished, failed and canceled downloads. Running ones are followed in the
-    // navigation's task flyout, so the page only points there.
+    // navigation's task flyout, so the view only points there.
     private void RenderDownloadHistory()
     {
         _downloadTaskCards.Clear();
@@ -448,39 +492,36 @@ public sealed partial class UpdatesPage : UserControl
         DownloadHistoryRunningTextBlock.Visibility = running > 0 ? Visibility.Visible : Visibility.Collapsed;
         ClearDownloadTasksButton.IsEnabled = finished.Length > 0;
 
-        if (_downloadHistoryChips.Length == 0)
-            _downloadHistoryChips = CreateFilterChips(DownloadHistoryFilterPanel, ViewModel.HistoryFilter, filter =>
-            {
-                ViewModel.HistoryFilter = filter;
-                RenderDownloadHistory();
-            });
-        foreach (ToggleButton chip in _downloadHistoryChips)
+        _isApplyingFilter = true;
+        foreach (SegmentedItem item in DownloadHistoryFilterSegmented.Items.OfType<SegmentedItem>())
         {
-            var filter = (DownloadHistoryFilter)chip.Tag;
+            var filter = (DownloadHistoryFilter)item.Tag;
             int count = finished.Count(task => UpdatesListPolicy.Matches(task.State, filter));
-            chip.Content = filter switch
+            item.Content = filter switch
             {
                 DownloadHistoryFilter.Completed => T("DownloadTasks.FilterCompleted", count),
                 DownloadHistoryFilter.Failed => T("DownloadTasks.FilterFailed", count),
                 DownloadHistoryFilter.Canceled => T("DownloadTasks.FilterCanceled", count),
                 _ => T("DownloadTasks.FilterAll", count)
             };
-            chip.IsChecked = filter == ViewModel.HistoryFilter;
         }
-        DownloadHistoryFilterPanel.Visibility = finished.Length > 0 ? Visibility.Visible : Visibility.Collapsed;
+        DownloadHistoryFilterSegmented.SelectedIndex = (int)ViewModel.HistoryFilter;
+        _isApplyingFilter = false;
+        DownloadHistoryFilterSegmented.Visibility = finished.Length > 0 ? Visibility.Visible : Visibility.Collapsed;
 
         List<DownloadTaskItem> visible = [.. finished.Where(task => UpdatesListPolicy.Matches(task.State, ViewModel.HistoryFilter))];
-        if (DownloadHistoryRepeater.ItemTemplate is null)
-        {
-            DownloadHistoryRepeater.ItemTemplate = new DelegateElementFactory(item => CreateDownloadHistoryRow((DownloadTaskItem)item));
-            // Row heights are known once the first row is built; fit the card to whole rows then.
-            DownloadHistoryRepeater.ElementPrepared += (_, args) => { if (args.Index == 0) QueueFitDownloadHistory(); };
-        }
+        DownloadHistoryRepeater.ItemTemplate ??= new DelegateElementFactory(item => CreateDownloadHistoryRow((DownloadTaskItem)item));
         DownloadHistoryRepeater.ItemsSource = visible;
-        QueueFitDownloadHistory();
         DownloadHistoryEmptyHost.Content = finished.Length == 0
-            ? CreateInfoCard(T("DownloadTasks.NoDownloadTasks"), T("DownloadTasks.DownloadsStartedFromTheOnlineBrowser"))
+            ? new EmptyState { Glyph = "", Title = T("DownloadTasks.NoDownloadTasks"), Hint = T("DownloadTasks.DownloadsStartedFromTheOnlineBrowser") }
             : visible.Count == 0 ? new EmptyState { Glyph = "", Title = T("DownloadTasks.NoMatchingHistory") } : null;
+    }
+
+    private void OnDownloadHistoryFilterChanged(object sender, SelectionChangedEventArgs e)
+    {
+        if (_isApplyingFilter || DownloadHistoryFilterSegmented.SelectedItem is not SegmentedItem { Tag: DownloadHistoryFilter filter }) return;
+        ViewModel.HistoryFilter = filter;
+        RenderDownloadHistory();
     }
 
     private void OnDownloadTaskUpdated(DownloadTaskItem task)
@@ -546,83 +587,36 @@ public sealed partial class UpdatesPage : UserControl
         return new Border { Style = AppStyle("InsetBorderStyle"), Padding = new Thickness(10), Child = grid };
     }
 
-    private void QueueFitDownloadHistory()
-        => DispatcherQueue.TryEnqueue(Microsoft.UI.Dispatching.DispatcherQueuePriority.Low, FitDownloadHistoryToWholeRows);
-
-    // A fixed-height history card ends its list on a whole row instead of cutting the last one in half.
-    private void FitDownloadHistoryToWholeRows()
-    {
-        if (_downloadsCardHeight is not double full || DownloadHistoryRepeater.TryGetElement(0) is not FrameworkElement first
-            || first.ActualHeight <= 0 || DownloadHistoryListScroll.ActualHeight <= 0) return;
-        double viewport = DownloadHistoryListScroll.ActualHeight + (full - UpdatesDownloadsCard.Height);
-        double pitch = first.ActualHeight + DownloadHistoryRowSpacing;
-        int count = DownloadHistoryRepeater.ItemsSourceView?.Count ?? 0;
-        double whole = Math.Floor((viewport + DownloadHistoryRowSpacing) / pitch) * pitch - DownloadHistoryRowSpacing;
-        double target = count * pitch - DownloadHistoryRowSpacing <= viewport || whole <= 0 ? full : full - (viewport - whole);
-        if (Math.Abs(UpdatesDownloadsCard.Height - target) > 0.5) UpdatesDownloadsCard.Height = target;
-    }
-
-    // With nothing to undo the button would only sit disabled; the line below says why,
-    // and the combination shortcut beside it takes the full row.
+    // Undo is a clickable card; with nothing to undo it is disabled and its description says why.
     private void RenderRollback()
     {
-        bool canUndo = ViewModel.CanUndoLastInstall;
-        RollbackLastInstallButton.IsEnabled = canUndo;
-        InstallRollbackStatusTextBlock.Text = ViewModel.RollbackStatus;
-        RollbackLastInstallButton.Visibility = canUndo ? Visibility.Visible : Visibility.Collapsed;
-        UpdatesRecoveryActionsGrid.ColumnDefinitions[0].Width = canUndo ? new GridLength(1, GridUnitType.Star) : new GridLength(0);
-        UpdatesRecoveryActionsGrid.ColumnSpacing = canUndo ? 8 : 0;
+        SetCard(RollbackLastInstallButton, T("Updates.UndoLastModChange"), ViewModel.RollbackStatus);
+        RollbackLastInstallButton.IsEnabled = ViewModel.CanUndoLastInstall;
     }
 
+    // Backups: the summary with "Refresh", then one card per backup with "Restore".
     private void RenderBackups()
     {
-        BackupListPanel.Children.Clear();
-        BackupSummaryTextBlock.Text = ViewModel.BackupSummary;
-        if (ViewModel.Backups.Count == 0)
+        BackupHistoryExpander.Items.Clear();
+        var refresh = new Button { Content = T("ProductivityFeatures.RefreshList"), Style = AppStyle("SecondaryButtonStyle") };
+        AutomationProperties.SetAutomationId(refresh, "RefreshBackupsButton");
+        AutomationProperties.SetName(refresh, T("ProductivityFeatures.RefreshList"));
+        refresh.Click += (_, _) => ViewModel.Request(UpdatesAction.RefreshBackups);
+        BackupHistoryExpander.Items.Add(new SettingsCard
         {
-            BackupListPanel.Children.Add(new TextBlock
-            {
-                Text = T("ProductivityFeatures.NoInstallBackupsYet"),
-                Style = AppStyle("CaptionTextStyle")
-            });
-            return;
-        }
+            Header = ViewModel.BackupSummary,
+            Description = ViewModel.Backups.Count == 0 ? T("ProductivityFeatures.NoInstallBackupsYet") : null!,
+            Content = refresh
+        });
 
         foreach (InstallBackupRow backup in ViewModel.Backups)
         {
-            var grid = new Grid { ColumnSpacing = 12 };
-            grid.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(1, GridUnitType.Star) });
-            grid.ColumnDefinitions.Add(new ColumnDefinition { Width = GridLength.Auto });
-            var details = new StackPanel { Spacing = 3 };
-            details.Children.Add(new TextBlock { Text = backup.Description, FontWeight = Microsoft.UI.Text.FontWeights.SemiBold, TextTrimming = TextTrimming.CharacterEllipsis });
-            details.Children.Add(new TextBlock
-            {
-                Text = backup.Details,
-                Style = AppStyle("CaptionTextStyle"),
-                TextWrapping = TextWrapping.Wrap
-            });
-            grid.Children.Add(details);
-            var restore = new Button
-            {
-                Content = T("ProductivityFeatures.Restore"),
-                Style = AppStyle("SecondaryButtonStyle"),
-                VerticalAlignment = VerticalAlignment.Center
-            };
-            Grid.SetColumn(restore, 1);
+            var restore = new Button { Content = T("ProductivityFeatures.Restore"), Style = AppStyle("SecondaryButtonStyle") };
             AutomationProperties.SetName(restore, T("ProductivityFeatures.RestoreBackup", backup.Description));
             restore.Click += (_, _) => ViewModel.Request(UpdatesAction.RestoreBackup, backup.Path);
-            grid.Children.Add(restore);
-            var border = new Border
-            {
-                Padding = new Thickness(12),
-                CornerRadius = new CornerRadius(12),
-                Background = ThemeBrush("AppInsetBackgroundBrush"),
-                BorderBrush = ThemeBrush("AppCardBorderBrush"),
-                BorderThickness = new Thickness(1),
-                Child = grid
-            };
-            BackupListPanel.Children.Add(border);
-            AnimateEntrance(border);
+            var card = new SettingsCard { Header = backup.Description, Description = backup.Details, Content = restore };
+            BackupHistoryExpander.Items.Add(card);
+            AnimateEntrance(card);
         }
     }
 
@@ -667,80 +661,4 @@ public sealed partial class UpdatesPage : UserControl
     private void OnRollbackLastInstallClicked(object sender, RoutedEventArgs e) => ViewModel.Request(UpdatesAction.RollbackLastInstall);
 
     private void OnOpenCombinationPresetsClicked(object sender, RoutedEventArgs e) => ViewModel.Request(UpdatesAction.OpenCombinationPresets);
-
-    private void OnRefreshBackupsClicked(object sender, RoutedEventArgs e) => ViewModel.Request(UpdatesAction.RefreshBackups);
-
-    // Hidden pages have no size yet, so they estimate from the window minus the navigation.
-    private double PageWidth()
-        => UpdatesScrollViewer.ActualWidth > 0 ? UpdatesScrollViewer.ActualWidth : Math.Max(420, (XamlRoot?.Size.Width ?? 0) - 240);
-
-    // Laid out from the page's own width, not the window's.
-    private void UpdateUpdatesLayout()
-    {
-        double width = PageWidth();
-        int columns = UpdatesLayoutPolicy.Columns(width);
-
-        // Side-by-side columns fill the window and scroll inside, so the page itself never scrolls;
-        // a stacked or very short page scrolls as a whole, with each list capped in height.
-        double? fixedHeight = columns > 1
-            ? UpdatesLayoutPolicy.FixedColumnHeight(UpdatesScrollViewer.ActualHeight, UpdatesPageHeader.ActualHeight)
-            : null;
-        UpdatesScrollViewer.VerticalScrollMode = fixedHeight is null ? ScrollMode.Enabled : ScrollMode.Disabled;
-        UpdatesScrollViewer.VerticalScrollBarVisibility = fixedHeight is null ? ScrollBarVisibility.Auto : ScrollBarVisibility.Disabled;
-        UpdatesTrackedModsCard.MinHeight = 0;
-        // A narrow history card keeps its description in the title's tooltip, leaving the rows the room.
-        bool narrowHistory = columns == 2;
-        DownloadTaskCenterHintTextBlock.Visibility = narrowHistory ? Visibility.Collapsed : Visibility.Visible;
-        ToolTipService.SetToolTip(DownloadTaskCenterTitleTextBlock, narrowHistory ? DownloadTaskCenterHintTextBlock.Text : null);
-        if (fixedHeight is double height)
-        {
-            UpdatesTrackedModsCard.Height = height;
-            UpdatesDownloadsCard.Height = columns == 3 ? height : Math.Max(360, Math.Round(height * 0.65));
-            _downloadsCardHeight = UpdatesDownloadsCard.Height;
-            UpdatesSupportScroll.Height = height;
-            TrackedModsListScroll.MaxHeight = double.PositiveInfinity;
-            DownloadHistoryListScroll.MaxHeight = double.PositiveInfinity;
-            QueueFitDownloadHistory();
-        }
-        else
-        {
-            _downloadsCardHeight = null;
-            UpdatesTrackedModsCard.Height = double.NaN;
-            UpdatesDownloadsCard.Height = double.NaN;
-            UpdatesSupportScroll.Height = double.NaN;
-            double viewport = UpdatesScrollViewer.ActualHeight > 0 ? UpdatesScrollViewer.ActualHeight : 800;
-            TrackedModsListScroll.MaxHeight = Math.Max(320, Math.Round(viewport * 0.6));
-            DownloadHistoryListScroll.MaxHeight = 360;
-        }
-
-        if (_updatesColumns == columns)
-        {
-            return;
-        }
-        _updatesColumns = columns;
-
-        // Download history gets its own middle column on very wide pages; otherwise it heads the
-        // support column, which sits beside tracked Mods or below them.
-        UpdatesSupportPanel.Children.Remove(UpdatesDownloadsCard);
-        UpdatesTopGrid.Children.Remove(UpdatesDownloadsCard);
-        UpdatesPrimaryColumn.Width = new GridLength(columns == 3 ? 1.3 : columns == 2 ? 1.35 : 1, GridUnitType.Star);
-        UpdatesSecondaryColumn.Width = columns == 1 ? new GridLength(0) : new GridLength(columns == 3 ? 1 : 0.85, GridUnitType.Star);
-        UpdatesTertiaryColumn.Width = columns == 3 ? new GridLength(1, GridUnitType.Star) : new GridLength(0);
-        UpdatesTopGrid.ColumnSpacing = columns == 1 ? 0 : 16;
-        if (columns == 3)
-        {
-            UpdatesDownloadsCard.VerticalAlignment = VerticalAlignment.Top;
-            Grid.SetRow(UpdatesDownloadsCard, 0);
-            Grid.SetColumn(UpdatesDownloadsCard, 1);
-            UpdatesTopGrid.Children.Add(UpdatesDownloadsCard);
-            Grid.SetRow(UpdatesSupportScroll, 0);
-            Grid.SetColumn(UpdatesSupportScroll, 2);
-        }
-        else
-        {
-            UpdatesSupportPanel.Children.Insert(0, UpdatesDownloadsCard);
-            Grid.SetRow(UpdatesSupportScroll, columns == 2 ? 0 : 1);
-            Grid.SetColumn(UpdatesSupportScroll, columns == 2 ? 1 : 0);
-        }
-    }
 }

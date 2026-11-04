@@ -178,6 +178,7 @@ public sealed partial class MainWindow
         try
         {
             _isCheckingModUpdates = true;
+            UpdatesView.CheckError = null;
             SetModUpdateStatus(M("Updates.CheckingTrackedMods", _trackedModOrigins.Count));
             RefreshUpdatesPane();
 
@@ -205,6 +206,7 @@ public sealed partial class MainWindow
             }
 
             _lastModUpdateCheckUtc = DateTimeOffset.UtcNow;
+            UpdatesView.HasChecked = true;
             SaveConfig();
             SaveShellConfig();
 
@@ -236,6 +238,7 @@ public sealed partial class MainWindow
         catch (Exception ex)
         {
             SetModUpdateStatus(M("Updates.TrackedCheckFailed"));
+            UpdatesView.CheckError = T("Updates.FailedToCheckTrackedModUpdates") + ex.Message;
             RefreshUpdatesPane();
             if (showDialogs)
             {

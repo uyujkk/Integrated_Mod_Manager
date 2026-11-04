@@ -101,6 +101,7 @@ public sealed partial class MainWindow
     }
 
     private bool _isApplyingConflictDetection;
+    private bool _restoringUpdatesView;
 
     private async void OnUpdatesViewChanged(object? sender, PropertyChangedEventArgs e)
     {
@@ -110,6 +111,9 @@ public sealed partial class MainWindow
             {
                 case nameof(UpdatesViewModel.AvailableUpdateCount):
                     RefreshUpdatesNavBadge();
+                    break;
+                case nameof(UpdatesViewModel.View):
+                    if (!_restoringUpdatesView) SaveShellConfig();
                     break;
                 case nameof(UpdatesViewModel.ModUpdateIntervalIndex):
                     if (_isApplyingModUpdateIntervalSelection) return;

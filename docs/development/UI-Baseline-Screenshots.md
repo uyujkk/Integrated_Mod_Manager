@@ -19,7 +19,7 @@ powershell.exe -NoProfile -ExecutionPolicy Bypass -File .\tools\ui-baseline\Capt
 | `-Languages` | `zh-CN,en-US,ru-RU` | |
 | `-Sizes` | `1400x900,1000x800` | 窗口外框大小，单位是 DIP（与界面测试的 `Resize` 一致），脚本按系统 DPI 换算成像素 |
 | `-Themes` | `light,dark` | 应用自己的主题设置 |
-| `-Pages` | `dashboard,repository,online,shortcuts,updates,settings,whatsnew,firstrun` | `whatsnew` 是带“新功能”对话框的仪表盘；`firstrun` 是首次安装弹窗 |
+| `-Pages` | `dashboard,repository,online,shortcuts,updates,updates-downloads,updates-recovery,settings,whatsnew,firstrun` | `whatsnew` 是带“新功能”对话框的仪表盘；`firstrun` 是首次安装弹窗；`updates-downloads`、`updates-recovery` 是更新页的另外两个视图（J3-b 起，通过 `UpdatesView` 设置） |
 | `-SettleSeconds` | `7` | 窗口出现后等待多久再截图 |
 
 例如只重拍俄语设置页：`-Languages ru-RU -Pages settings`。
@@ -109,6 +109,18 @@ J1N（外壳）换了标题栏和导航，所有页面的可用宽度都变了�
 ## J3 更新页
 
 纯移动后拍了更新、仪表盘、Mod 工作区三页（各 12 张），和 `j1n-8f09993` 比：除窗口右上角 1–11 个像素外都一致。第一次拍时更新页空状态比基线低 8 px：移动后的页面在没有已跟踪 Mod 时也给（隐藏的）搜索栏加了两行和 8 px 行距，已改为搜索栏隐藏时不排布，重拍的 `artifacts\ui-baseline\j3move-updates\` 与基线一致。
+
+## J3-b 更新页外观
+
+`artifacts\ui-baseline\j3b\`：更新页三个视图各 12 张（共 36 张，日志无异常）。和 `j3move-updates` 比，“Mod 更新”视图 12 张全部不同（4–6% 的像素），都是有意的改动：
+
+- **顶部状态区**：图标（按状态换颜色：有更新、都是最新、有失败、检查中、未检查）、`ModUpdateStatus` 作为标题、跟踪数和上次检查时间、“立即检查”；检查中显示不确定进度条，部分检查失败时显示黄色 `InfoBar`（带“失败”筛选按钮），整个检查失败时显示红色 `InfoBar`。
+- **三个视图**：`SelectorBar` 切换“Mod 更新”“下载记录”“安装与恢复”，选中的视图会保存。多栏和嵌套滚动去掉了，每个视图一个滚动区。
+- **Mod 更新**：筛选改用 Toolkit `Segmented`，空状态用 `EmptyState`（带“浏览在线 Mod”），检查间隔是列表下方的一张 `SettingsCard`，说明文字不再藏在提示里。
+- **下载记录**：说明和“清除已完成”在视图顶部，筛选改用 `Segmented`，空状态用 `EmptyState`。
+- **安装与恢复**：冲突检测、撤销上次改动、打开组合工作区三张 `SettingsCard`，备份是一个 `SettingsExpander`（上限在标题行，展开后是汇总、刷新和每个备份）。
+
+测试数据没有已跟踪 Mod、下载记录和备份，所以截图里列表都是空状态；有数据的行样式和加载、失败状态没有截图。俄语两种尺寸三个视图都没有截断。
 
 ## 对比方法
 

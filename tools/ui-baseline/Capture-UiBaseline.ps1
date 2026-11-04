@@ -8,7 +8,8 @@ param(
     # Outer window sizes in device-independent pixels (the same sizes the UI tests use).
     [string[]]$Sizes = @('1400x900', '1000x800'),
     [string[]]$Themes = @('light', 'dark'),
-    [string[]]$Pages = @('dashboard', 'repository', 'online', 'shortcuts', 'updates', 'settings', 'whatsnew', 'firstrun'),
+    # updates-downloads and updates-recovery are the Updates page's other two views (stage J3-b).
+    [string[]]$Pages = @('dashboard', 'repository', 'online', 'shortcuts', 'updates', 'updates-downloads', 'updates-recovery', 'settings', 'whatsnew', 'firstrun'),
     # How long to wait after the window appears before taking the picture.
     [int]$SettleSeconds = 7
 )
@@ -115,7 +116,8 @@ function Write-Configuration([string]$page, [string]$language, [string]$theme, [
     $target = Join-Path $testData 'Loader\Mods'
     $shell = [ordered]@{
         SelectedRepositoryId = 'ui-repository'
-        CurrentPrimarySection = $(if ($page -eq 'whatsnew') { 'dashboard' } else { $page })
+        CurrentPrimarySection = $(if ($page -eq 'whatsnew') { 'dashboard' } elseif ($page -like 'updates-*') { 'updates' } else { $page })
+        UpdatesView = $(if ($page -like 'updates-*') { $page.Substring('updates-'.Length) } else { 'mods' })
         CheckAppUpdatesOnStartup = $false
         WhatsNewSeenVersion = $(if ($page -eq 'whatsnew') { '' } else { $whatsNewSet })
         RepositoryGamesExplicit = $true

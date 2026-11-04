@@ -294,8 +294,12 @@ public sealed class SmokeTests
     public void Updates_ShowsItsSectionsAndSavesTheCheckInterval()
     {
         using AppSession app = AppSession.Configured((shell, _) => shell["CurrentPrimarySection"] = "updates").Start();
-        foreach (string id in new[] { "CheckModUpdatesButton", "ClearDownloadTasksButton", "ModUpdateIntervalComboBox" })
+        // Stage J3-b: the check button heads the page; the interval is in the Mod updates view, "Clear" in the download history.
+        foreach (string id in new[] { "CheckModUpdatesButton", "ModUpdateIntervalComboBox" })
             Assert.True(app.Shows(id), id);
+        AppSession.Invoke(app.Find("UpdatesViewDownloads"));
+        Assert.True(app.Shows("ClearDownloadTasksButton"));
+        AppSession.Invoke(app.Find("UpdatesViewMods"));
         string? before = (string?)app.ShellConfig()["ModUpdateCheckInterval"];
 
         AutomationElement picker = app.Find("ModUpdateIntervalComboBox");
@@ -317,6 +321,7 @@ public sealed class SmokeTests
     public void Updates_ConflictDetectionSwitchIsSaved()
     {
         using AppSession app = AppSession.Configured((shell, _) => shell["CurrentPrimarySection"] = "updates").Start();
+        AppSession.Invoke(app.Find("UpdatesViewRecovery"));
         Assert.True(app.Shows("OpenCombinationPresetsButton"));
         bool before = (bool?)app.ShellConfig()["EnableConflictDetection"] ?? true;
 
@@ -325,6 +330,40 @@ public sealed class SmokeTests
         Assert.True(SpinWait.SpinUntil(() => (bool?)app.ShellConfig()["EnableConflictDetection"] == !before, TimeSpan.FromSeconds(5)),
             "EnableConflictDetection stayed " + before);
         app.Capture(nameof(Updates_ConflictDetectionSwitchIsSaved));
+        app.AssertNoErrors();
+    }
+
+    // Stage J3-b: the views are named for Narrator, switch with the arrow keys and are remembered.
+    [Fact]
+    public void Updates_ViewsSwitchByKeyboardAndAreSaved()
+    {
+        using AppSession app = AppSession.Configured((shell, _) => shell["CurrentPrimarySection"] = "updates").Start();
+        AutomationElement mods = app.Find("UpdatesViewMods");
+        Assert.Equal(app.Text("Updates.ViewModUpdates"), mods.Name);
+        Assert.Equal(app.Text("Updates.ViewDownloadHistory"), app.Find("UpdatesViewDownloads").Name);
+        Assert.Equal(app.Text("Updates.ViewInstallAndRecovery"), app.Find("UpdatesViewRecovery").Name);
+        Assert.False(app.Shows("ConflictDetectionToggleSwitch"));
+
+        // Tab from the check button reaches the selector bar the way a keyboard user does.
+        app.Find("CheckModUpdatesButton").Focus();
+        Thread.Sleep(300);
+        Keyboard.Type(VirtualKeyShort.TAB);
+        Thread.Sleep(300);
+        string afterTab = app.MainWindow.Automation.FocusedElement()?.Properties.AutomationId.ValueOrDefault ?? "";
+        Keyboard.Type(VirtualKeyShort.RIGHT);
+        Thread.Sleep(300);
+        Keyboard.Type(VirtualKeyShort.RIGHT);
+        Thread.Sleep(300);
+        Keyboard.Type(VirtualKeyShort.SPACE);
+        Thread.Sleep(300);
+
+        Assert.True(SpinWait.SpinUntil(() => app.Shows("ConflictDetectionToggleSwitch"), TimeSpan.FromSeconds(5)),
+            "The recovery view did not open; selected: " + string.Join(",", new[] { "UpdatesViewMods", "UpdatesViewDownloads", "UpdatesViewRecovery" }
+                .Where(id => app.Find(id).Patterns.SelectionItem.PatternOrDefault?.IsSelected.ValueOrDefault == true))
+            + "; after Tab: " + afterTab + "; focused: " + app.MainWindow.Automation.FocusedElement()?.Properties.AutomationId.ValueOrDefault);
+        Assert.True(SpinWait.SpinUntil(() => (string?)app.ShellConfig()["UpdatesView"] == "recovery", TimeSpan.FromSeconds(5)),
+            (string?)app.ShellConfig()["UpdatesView"]);
+        app.Capture(nameof(Updates_ViewsSwitchByKeyboardAndAreSaved));
         app.AssertNoErrors();
     }
 

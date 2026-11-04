@@ -34,6 +34,12 @@ public enum UpdatesAction
     RestoreBackup
 }
 
+/// <summary>The three views of the Updates page (stage J3-b), in their order on the selector bar.</summary>
+public enum UpdatesPageView { Mods, Downloads, Recovery }
+
+/// <summary>What the status area at the top of the Updates page says.</summary>
+public enum ModUpdateCheckState { NotChecked, Checking, UpdatesAvailable, SomeFailed, CheckFailed, UpToDate, NothingTracked }
+
 public sealed record UpdatesActionRequest(UpdatesAction Action, object? Item = null);
 
 /// <summary>One row of the tracked Mods list: the check result, or the bare origin before any check.</summary>
@@ -83,6 +89,9 @@ public sealed partial class UpdatesViewModel : ObservableObject
     private string _backupSummary = string.Empty;
     private IReadOnlyList<InstallBackupRow> _backups = [];
     private DownloadHistoryFilter _historyFilter;
+    private UpdatesPageView _view;
+    private string? _checkError;
+    private bool _hasChecked;
 
     /// <summary>Raised when the user asks for something only the window can do.</summary>
     public event EventHandler<UpdatesActionRequest>? ActionRequested;
@@ -104,6 +113,7 @@ public sealed partial class UpdatesViewModel : ObservableObject
         OnPropertyChanged(nameof(TrackedMods));
         OnPropertyChanged(nameof(VisibleTrackedMods));
         if (updates != AvailableUpdateCount) OnPropertyChanged(nameof(AvailableUpdateCount));
+        OnPropertyChanged(nameof(CheckState));
     }
 
     /// <summary>Tracked Mods with a newer version: the number on the navigation badge.</summary>
@@ -148,7 +158,10 @@ public sealed partial class UpdatesViewModel : ObservableObject
     public bool IsCheckingModUpdates
     {
         get => _isCheckingModUpdates;
-        set => SetProperty(ref _isCheckingModUpdates, value);
+        set
+        {
+            if (SetProperty(ref _isCheckingModUpdates, value)) OnPropertyChanged(nameof(CheckState));
+        }
     }
 
     public string ModUpdateStatus
@@ -217,6 +230,53 @@ public sealed partial class UpdatesViewModel : ObservableObject
         OnPropertyChanged(nameof(BackupSummary));
         OnPropertyChanged(nameof(Backups));
     }
+
+    // The page's views and the status area.
+
+    /// <summary>The view the page shows; saved with the window's settings.</summary>
+    public UpdatesPageView View
+    {
+        get => _view;
+        set
+        {
+            if (Enum.IsDefined(value)) SetProperty(ref _view, value);
+        }
+    }
+
+    /// <summary>"mods", "downloads" or "recovery", as the settings file keeps it.</summary>
+    public static string FormatView(UpdatesPageView view) => view.ToString().ToLowerInvariant();
+
+    public static UpdatesPageView ParseView(string? value)
+        => Enum.TryParse(value, ignoreCase: true, out UpdatesPageView view) && Enum.IsDefined(view) ? view : UpdatesPageView.Mods;
+
+    /// <summary>Why the last check could not run at all, in the current language; null when it ran.</summary>
+    public string? CheckError
+    {
+        get => _checkError;
+        set
+        {
+            if (SetProperty(ref _checkError, string.IsNullOrWhiteSpace(value) ? null : value)) OnPropertyChanged(nameof(CheckState));
+        }
+    }
+
+    /// <summary>Whether the tracked Mods were checked since they were last loaded.</summary>
+    public bool HasChecked
+    {
+        get => _hasChecked;
+        set
+        {
+            if (SetProperty(ref _hasChecked, value)) OnPropertyChanged(nameof(CheckState));
+        }
+    }
+
+    public ModUpdateCheckState CheckState
+        => _isCheckingModUpdates ? ModUpdateCheckState.Checking
+            : _checkError is not null ? ModUpdateCheckState.CheckFailed
+            : _trackedMods.Count == 0 ? ModUpdateCheckState.NothingTracked
+            : AvailableUpdateCount > 0 ? ModUpdateCheckState.UpdatesAvailable
+            : CountFor(TrackedModFilter.Failed) > 0 ? ModUpdateCheckState.SomeFailed
+            : _hasChecked ? ModUpdateCheckState.UpToDate
+            : ModUpdateCheckState.NotChecked;
 
     // Download history.
     public DownloadHistoryFilter HistoryFilter
