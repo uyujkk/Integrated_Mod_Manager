@@ -32,6 +32,13 @@ public sealed partial class DashboardViewModel : ObservableObject
 
     public bool HasCharactersEmptyText => !string.IsNullOrEmpty(_charactersEmptyText);
 
+    /// <summary>
+    /// Whether the overview lists any characters. An empty grid is collapsed: left visible, its scroll
+    /// viewer sat in the row sized by the empty text and showed and hid its scroll bar in turn until
+    /// the layout gave up (a layout cycle when returning to the dashboard).
+    /// </summary>
+    public bool HasCharacters => Characters.Count > 0;
+
     public void SetCharacters(IEnumerable<CharacterChipViewModel> characters, string emptyText)
     {
         Characters.Clear();
@@ -40,6 +47,7 @@ public sealed partial class DashboardViewModel : ObservableObject
             Characters.Add(character);
         }
         CharactersEmptyText = Characters.Count == 0 ? emptyText : string.Empty;
+        OnPropertyChanged(nameof(HasCharacters));
     }
 
     public string CurrentStatusText { get => _currentStatusText; set => SetProperty(ref _currentStatusText, value); }
