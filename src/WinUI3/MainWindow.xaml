@@ -1448,252 +1448,44 @@
                 <ScrollViewer x:Name="ShortcutsScrollViewer" VerticalScrollBarVisibility="Auto" Visibility="Collapsed">
                     <StackPanel x:Name="ShortcutPaneContent" Margin="16" Spacing="14" />
                 </ScrollViewer>
-                <ScrollViewer x:Name="UpdatesScrollViewer" VerticalScrollBarVisibility="Auto" Visibility="Collapsed">
-                    <StackPanel Margin="6" Spacing="16">
-                        <local:PageHeader x:Name="UpdatesPageHeader" />
-
-                        <Grid x:Name="UpdatesTopGrid" ColumnSpacing="16" RowSpacing="16">
-                            <Grid.ColumnDefinitions>
-                                <ColumnDefinition x:Name="UpdatesPrimaryColumn" Width="1.35*" />
-                                <ColumnDefinition x:Name="UpdatesSecondaryColumn" Width="0.85*" />
-                                <ColumnDefinition x:Name="UpdatesTertiaryColumn" Width="0" />
-                            </Grid.ColumnDefinitions>
-                            <Grid.RowDefinitions>
-                                <RowDefinition Height="Auto" />
-                                <RowDefinition Height="Auto" />
-                            </Grid.RowDefinitions>
-
-                            <StackPanel x:Name="UpdatesMainPanel" Grid.Column="0" Spacing="16">
-                                <Border x:Name="UpdatesTrackedModsCard" Style="{StaticResource CardBorderStyle}">
-                                    <!-- Header, settings and filters stay put; only the list scrolls, so many Mods never stretch the page. -->
-                                    <Grid RowSpacing="12">
-                                        <Grid.RowDefinitions>
-                                            <RowDefinition Height="Auto" />
-                                            <RowDefinition Height="Auto" />
-                                            <RowDefinition Height="Auto" />
-                                            <RowDefinition Height="*" />
-                                        </Grid.RowDefinitions>
-                                    <Grid ColumnSpacing="14">
-                                        <Grid.ColumnDefinitions>
-                                            <ColumnDefinition Width="44" />
-                                            <ColumnDefinition Width="*" />
-                                            <ColumnDefinition Width="Auto" />
-                                        </Grid.ColumnDefinitions>
-                                        <Border
-                                            Width="40"
-                                            Height="40"
-                                            Background="{ThemeResource AccentFillColorSecondaryBrush}"
-                                            CornerRadius="10">
-                                            <FontIcon Glyph="&#xE895;" FontSize="19" HorizontalAlignment="Center" VerticalAlignment="Center" />
-                                        </Border>
-                                        <StackPanel Grid.Column="1" Spacing="4" VerticalAlignment="Center">
-                                            <TextBlock x:Name="TrackedModsTitleTextBlock" Style="{StaticResource SectionTitleTextStyle}" />
-                                            <TextBlock x:Name="TrackedModsSummaryTextBlock" Style="{StaticResource MutedTextStyle}" TextWrapping="Wrap" />
-                                        </StackPanel>
-                                        <Button
-                                            x:Name="CheckModUpdatesButton"
-                                            Grid.Column="2"
-                                            Click="OnCheckModUpdatesClicked"
-                                            MinHeight="42"
-                                            Style="{StaticResource PrimaryButtonStyle}" />
-                                    </Grid>
-                                    <Border Grid.Row="1" Style="{StaticResource InsetBorderStyle}" Padding="12,8">
-                                        <Grid ColumnSpacing="12">
-                                            <Grid.ColumnDefinitions>
-                                                <ColumnDefinition Width="*" />
-                                                <ColumnDefinition Width="200" />
-                                            </Grid.ColumnDefinitions>
-                                            <StackPanel Spacing="2" VerticalAlignment="Center">
-                                                <TextBlock x:Name="TrackedModSettingsTitleTextBlock" FontWeight="SemiBold" />
-                                                <TextBlock x:Name="ModUpdateStatusTextBlock" Style="{StaticResource CaptionTextStyle}" TextWrapping="Wrap" />
-                                                <!-- The longer explanations live in the interval box's tooltip. -->
-                                                <TextBlock x:Name="TrackedModSettingsHintTextBlock" Visibility="Collapsed" />
-                                                <TextBlock x:Name="ModUpdateIntervalHintTextBlock" Visibility="Collapsed" />
-                                            </StackPanel>
-                                            <StackPanel Grid.Column="1" Spacing="4" VerticalAlignment="Center">
-                                                <TextBlock x:Name="ModUpdateIntervalLabelTextBlock" Style="{StaticResource CaptionTextStyle}" />
-                                                <ComboBox
-                                                    x:Name="ModUpdateIntervalComboBox"
-                                                    MinHeight="36"
-                                                    HorizontalAlignment="Stretch"
-                                                    SelectionChanged="OnModUpdateIntervalSelectionChanged" />
-                                            </StackPanel>
-                                        </Grid>
-                                    </Border>
-                                    <Grid Grid.Row="2" ColumnSpacing="12">
-                                        <Grid.ColumnDefinitions>
-                                            <ColumnDefinition Width="*" />
-                                            <ColumnDefinition Width="220" />
-                                        </Grid.ColumnDefinitions>
-                                        <StackPanel x:Name="TrackedModsFilterPanel" Orientation="Horizontal" Spacing="6" VerticalAlignment="Center" />
-                                        <TextBox x:Name="TrackedModsSearchBox" Grid.Column="1" MinWidth="0" TextChanged="OnTrackedModsSearchChanged" />
-                                    </Grid>
-                                    <Grid Grid.Row="3">
-                                        <ScrollViewer
-                                            x:Name="TrackedModsListScroll"
-                                            HorizontalScrollBarVisibility="Disabled"
-                                            HorizontalScrollMode="Disabled"
-                                            VerticalScrollBarVisibility="Auto">
-                                            <ItemsRepeater x:Name="TrackedModsRepeater" Margin="0,0,10,0">
-                                                <ItemsRepeater.Layout>
-                                                    <StackLayout Spacing="8" />
-                                                </ItemsRepeater.Layout>
-                                            </ItemsRepeater>
-                                        </ScrollViewer>
-                                        <ContentControl x:Name="TrackedModsEmptyHost" HorizontalContentAlignment="Stretch" VerticalAlignment="Top" IsTabStop="False" />
-                                    </Grid>
-                                    </Grid>
-                                </Border>
-                            </StackPanel>
-
-                            <!-- The support column scrolls on its own when the columns fill the window. -->
-                            <ScrollViewer
-                                x:Name="UpdatesSupportScroll"
-                                Grid.Column="1"
-                                HorizontalScrollBarVisibility="Disabled"
-                                HorizontalScrollMode="Disabled"
-                                VerticalScrollBarVisibility="Auto">
-                            <StackPanel x:Name="UpdatesSupportPanel" Spacing="16" Margin="0,0,6,0">
-                                <!-- On very wide pages this card moves into its own middle column. -->
-                                <Border x:Name="UpdatesDownloadsCard" Style="{StaticResource CardBorderStyle}">
-                                    <!-- Finished, failed and canceled downloads; the list scrolls inside the card. -->
-                                    <Grid RowSpacing="10">
-                                        <Grid.RowDefinitions>
-                                            <RowDefinition Height="Auto" />
-                                            <RowDefinition Height="Auto" />
-                                            <RowDefinition Height="Auto" />
-                                            <RowDefinition Height="*" />
-                                        </Grid.RowDefinitions>
-                                        <Grid ColumnSpacing="12">
-                                            <Grid.ColumnDefinitions>
-                                                <ColumnDefinition Width="*" />
-                                                <ColumnDefinition Width="Auto" />
-                                            </Grid.ColumnDefinitions>
-                                            <StackPanel Spacing="5">
-                                                <TextBlock x:Name="DownloadTaskCenterTitleTextBlock" Style="{StaticResource SectionTitleTextStyle}" />
-                                                <TextBlock x:Name="DownloadTaskCenterHintTextBlock" Style="{StaticResource MutedTextStyle}" TextWrapping="Wrap" />
-                                            </StackPanel>
-                                            <Button x:Name="ClearDownloadTasksButton" Grid.Column="1" Click="OnClearDownloadTasksClicked" Style="{StaticResource SecondaryButtonStyle}" />
-                                        </Grid>
-                                        <StackPanel x:Name="DownloadHistoryFilterPanel" Grid.Row="1" Orientation="Horizontal" Spacing="6" />
-                                        <TextBlock x:Name="DownloadHistoryRunningTextBlock" Grid.Row="2" Style="{StaticResource CaptionTextStyle}" TextWrapping="Wrap" Visibility="Collapsed" />
-                                        <Grid Grid.Row="3">
-                                            <ScrollViewer
-                                                x:Name="DownloadHistoryListScroll"
-                                                HorizontalScrollBarVisibility="Disabled"
-                                                HorizontalScrollMode="Disabled"
-                                                VerticalScrollBarVisibility="Auto">
-                                                <ItemsRepeater x:Name="DownloadHistoryRepeater" Margin="0,0,10,0">
-                                                    <ItemsRepeater.Layout>
-                                                        <StackLayout Spacing="6" />
-                                                    </ItemsRepeater.Layout>
-                                                </ItemsRepeater>
-                                            </ScrollViewer>
-                                            <ContentControl x:Name="DownloadHistoryEmptyHost" HorizontalContentAlignment="Stretch" VerticalAlignment="Top" IsTabStop="False" />
-                                        </Grid>
-                                    </Grid>
-                                </Border>
-
-                                <Border x:Name="UpdatesSafetyCard" Style="{StaticResource CardBorderStyle}">
-                                    <StackPanel x:Name="UpdatesSafetyPanel" Spacing="12">
-                                        <TextBlock x:Name="InstallSafetyTitleTextBlock" Style="{StaticResource SectionTitleTextStyle}" />
-                                        <TextBlock x:Name="InstallSafetyHintTextBlock" Style="{StaticResource MutedTextStyle}" TextWrapping="Wrap" />
-                                        <ToggleSwitch x:Name="ConflictDetectionToggleSwitch" Toggled="OnConflictDetectionToggled" />
-                                        <!-- Recovery actions share one equal-width row (the preset shortcut is added in code). -->
-                                        <Grid x:Name="UpdatesRecoveryActionsGrid" ColumnSpacing="8">
-                                            <Grid.ColumnDefinitions>
-                                                <ColumnDefinition Width="*" />
-                                                <ColumnDefinition Width="*" />
-                                            </Grid.ColumnDefinitions>
-                                            <Button x:Name="RollbackLastInstallButton" Click="OnRollbackLastInstallClicked" HorizontalAlignment="Stretch" Style="{StaticResource SecondaryButtonStyle}" />
-                                        </Grid>
-                                        <TextBlock x:Name="InstallRollbackStatusTextBlock" Style="{StaticResource CaptionTextStyle}" TextWrapping="Wrap" />
-                                    </StackPanel>
-                                </Border>
-
-                                <Border Style="{StaticResource CardBorderStyle}">
-                                    <StackPanel Spacing="12">
-                                        <TextBlock x:Name="ConfigurationProfilesTitleTextBlock" Style="{StaticResource SectionTitleTextStyle}" />
-                                        <TextBlock x:Name="ConfigurationProfilesHintTextBlock" Style="{StaticResource MutedTextStyle}" TextWrapping="Wrap" />
-                                        <ComboBox
-                                            x:Name="ConfigurationProfileComboBox"
-                                            MinHeight="42"
-                                            SelectionChanged="OnConfigurationProfileSelectionChanged" />
-                                        <CheckBox x:Name="CaptureCombinationStateCheckBox" IsChecked="True" />
-                                        <Grid ColumnSpacing="8">
-                                            <Grid.ColumnDefinitions>
-                                                <ColumnDefinition Width="*" />
-                                                <ColumnDefinition Width="Auto" />
-                                            </Grid.ColumnDefinitions>
-                                            <TextBox x:Name="CombinationUserIniTextBox" IsReadOnly="True" MinWidth="0" />
-                                            <Button x:Name="BrowseCombinationUserIniButton" Grid.Column="1" Click="OnBrowsePersistentUserIniClicked" Style="{StaticResource SecondaryButtonStyle}" />
-                                        </Grid>
-                                        <Grid ColumnSpacing="8">
-                                            <Grid.ColumnDefinitions>
-                                                <ColumnDefinition Width="Auto" />
-                                                <ColumnDefinition Width="Auto" />
-                                                <ColumnDefinition Width="Auto" />
-                                                <ColumnDefinition Width="*" />
-                                                <ColumnDefinition Width="Auto" />
-                                            </Grid.ColumnDefinitions>
-                                            <Button x:Name="CreateConfigurationProfileButton" Click="OnCreateConfigurationProfileClicked" Style="{StaticResource SecondaryButtonStyle}" />
-                                            <Button x:Name="UpdateConfigurationProfileButton" Grid.Column="1" Click="OnUpdateConfigurationProfileClicked" Style="{StaticResource SecondaryButtonStyle}" />
-                                            <Button x:Name="ApplyConfigurationProfileButton" Grid.Column="2" Click="OnApplyConfigurationProfileClicked" Style="{StaticResource PrimaryButtonStyle}" />
-                                            <Button x:Name="DeleteConfigurationProfileButton" Grid.Column="4" Click="OnDeleteConfigurationProfileClicked" Style="{StaticResource SecondaryButtonStyle}" />
-                                        </Grid>
-                                        <TextBlock x:Name="ConfigurationProfileSummaryTextBlock" Style="{StaticResource CaptionTextStyle}" TextWrapping="Wrap" />
-                                    </StackPanel>
-                                </Border>
-
-                                <Border x:Name="UpdatesBackupCard" Style="{StaticResource CardBorderStyle}">
-                                    <StackPanel x:Name="UpdatesBackupPanel" Spacing="12">
-                                        <StackPanel Spacing="5">
-                                            <TextBlock x:Name="BackupManagerTitleTextBlock" Style="{StaticResource SectionTitleTextStyle}" />
-                                            <TextBlock x:Name="BackupManagerHintTextBlock" Style="{StaticResource MutedTextStyle}" TextWrapping="Wrap" />
-                                        </StackPanel>
-                                        <!-- Controls get their own row so the description keeps the full card width. -->
-                                        <Grid ColumnSpacing="8">
-                                            <Grid.ColumnDefinitions>
-                                                <ColumnDefinition Width="Auto" />
-                                                <ColumnDefinition Width="Auto" />
-                                                <ColumnDefinition Width="*" />
-                                                <ColumnDefinition Width="Auto" />
-                                            </Grid.ColumnDefinitions>
-                                            <TextBlock x:Name="BackupLimitLabelTextBlock" VerticalAlignment="Center" />
-                                            <NumberBox
-                                                x:Name="BackupLimitNumberBox"
-                                                Grid.Column="1"
-                                                Width="110"
-                                                Minimum="0.5"
-                                                Maximum="100"
-                                                SmallChange="0.5"
-                                                SpinButtonPlacementMode="Compact"
-                                                ValueChanged="OnBackupLimitValueChanged" />
-                                            <Button
-                                                x:Name="RefreshBackupsButton"
-                                                Grid.Column="3"
-                                                Click="OnRefreshBackupsClicked"
-                                                Style="{StaticResource SecondaryButtonStyle}" />
-                                        </Grid>
-                                        <Expander
-                                            x:Name="BackupHistoryExpander"
-                                            HorizontalAlignment="Stretch"
-                                            HorizontalContentAlignment="Stretch"
-                                            IsExpanded="False">
-                                            <Expander.Header>
-                                                <TextBlock x:Name="BackupSummaryTextBlock" Style="{StaticResource CaptionTextStyle}" TextWrapping="Wrap" />
-                                            </Expander.Header>
-                                            <ScrollViewer MaxHeight="280" VerticalScrollBarVisibility="Auto">
-                                                <StackPanel x:Name="BackupListPanel" Spacing="10" Margin="0,8,0,0" />
-                                            </ScrollViewer>
-                                        </Expander>
-                                    </StackPanel>
-                                </Border>
-                            </StackPanel>
-                            </ScrollViewer>
-                        </Grid>
-                    </StackPanel>
-                </ScrollViewer>
+                <!-- The combination preset controls. They used to sit on the Updates page; the Mod workspace's
+                     Presets view takes them at startup (MainWindow.RepositoryWorkspace.cs), so this holder
+                     never shows. They move with the workspace in stage J7. -->
+                <Grid x:Name="CombinationProfileControlsHost" Visibility="Collapsed">
+                    <Border Style="{StaticResource CardBorderStyle}">
+                        <StackPanel Spacing="12">
+                            <TextBlock x:Name="ConfigurationProfilesTitleTextBlock" Style="{StaticResource SectionTitleTextStyle}" />
+                            <TextBlock x:Name="ConfigurationProfilesHintTextBlock" Style="{StaticResource MutedTextStyle}" TextWrapping="Wrap" />
+                            <ComboBox
+                                x:Name="ConfigurationProfileComboBox"
+                                MinHeight="42"
+                                SelectionChanged="OnConfigurationProfileSelectionChanged" />
+                            <CheckBox x:Name="CaptureCombinationStateCheckBox" IsChecked="True" />
+                            <Grid ColumnSpacing="8">
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="*" />
+                                    <ColumnDefinition Width="Auto" />
+                                </Grid.ColumnDefinitions>
+                                <TextBox x:Name="CombinationUserIniTextBox" IsReadOnly="True" MinWidth="0" />
+                                <Button x:Name="BrowseCombinationUserIniButton" Grid.Column="1" Click="OnBrowsePersistentUserIniClicked" Style="{StaticResource SecondaryButtonStyle}" />
+                            </Grid>
+                            <Grid ColumnSpacing="8">
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="Auto" />
+                                    <ColumnDefinition Width="Auto" />
+                                    <ColumnDefinition Width="Auto" />
+                                    <ColumnDefinition Width="*" />
+                                    <ColumnDefinition Width="Auto" />
+                                </Grid.ColumnDefinitions>
+                                <Button x:Name="CreateConfigurationProfileButton" Click="OnCreateConfigurationProfileClicked" Style="{StaticResource SecondaryButtonStyle}" />
+                                <Button x:Name="UpdateConfigurationProfileButton" Grid.Column="1" Click="OnUpdateConfigurationProfileClicked" Style="{StaticResource SecondaryButtonStyle}" />
+                                <Button x:Name="ApplyConfigurationProfileButton" Grid.Column="2" Click="OnApplyConfigurationProfileClicked" Style="{StaticResource PrimaryButtonStyle}" />
+                                <Button x:Name="DeleteConfigurationProfileButton" Grid.Column="4" Click="OnDeleteConfigurationProfileClicked" Style="{StaticResource SecondaryButtonStyle}" />
+                            </Grid>
+                            <TextBlock x:Name="ConfigurationProfileSummaryTextBlock" Style="{StaticResource CaptionTextStyle}" TextWrapping="Wrap" />
+                        </StackPanel>
+                    </Border>
+                </Grid>
 
                 <!-- The page containers above are moved into wrapper pages at startup (MainWindow.Shell.cs);
                      this host shows the current one. -->

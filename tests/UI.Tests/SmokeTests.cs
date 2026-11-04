@@ -312,6 +312,22 @@ public sealed class SmokeTests
         app.AssertNoErrors();
     }
 
+    // Smoke test of the Updates page (stage J3): open it and turn conflict detection off, which is saved.
+    [Fact]
+    public void Updates_ConflictDetectionSwitchIsSaved()
+    {
+        using AppSession app = AppSession.Configured((shell, _) => shell["CurrentPrimarySection"] = "updates").Start();
+        Assert.True(app.Shows("OpenCombinationPresetsButton"));
+        bool before = (bool?)app.ShellConfig()["EnableConflictDetection"] ?? true;
+
+        AppSession.Invoke(app.Find("ConflictDetectionToggleSwitch"));
+
+        Assert.True(SpinWait.SpinUntil(() => (bool?)app.ShellConfig()["EnableConflictDetection"] == !before, TimeSpan.FromSeconds(5)),
+            "EnableConflictDetection stayed " + before);
+        app.Capture(nameof(Updates_ConflictDetectionSwitchIsSaved));
+        app.AssertNoErrors();
+    }
+
     // Ctrl+Alt+F9, set by AppSession.Configured.
     private static void PressHotkey()
     {
