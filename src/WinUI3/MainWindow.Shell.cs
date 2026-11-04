@@ -541,9 +541,9 @@ public sealed partial class MainWindow
 
     private Brush GetAppThemeBrush(string resourceKey)
     {
-        string themeKey = _services.Appearance.IsDark ? "Dark" : "Light";
-        ResourceDictionary themeDictionary = (ResourceDictionary)Application.Current.Resources.ThemeDictionaries[themeKey];
-        return (Brush)themeDictionary[resourceKey];
+        // The App*Brush tokens of Themes/Tokens.xaml, in the theme the window shows.
+        string themeKey = _systemHighContrast ? "HighContrast" : _services.Appearance.IsDark ? "Dark" : "Light";
+        return ThemeTokens.Get(resourceKey, themeKey);
     }
 
     private void OnRepositoryNavClicked(object sender, RoutedEventArgs e)
