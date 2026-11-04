@@ -1,0 +1,17 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <!--
+    Checks the live sites the app reads (miHoYo wiki, HoYoWiki, the Endfield site, GameBanana) with the
+    app's own Core clients. They need the network and the sites' current answers, so scripts\test-all.ps1
+    leaves them out; the "Online sources" workflow runs them on a schedule.
+  -->
+  <PropertyGroup>
+    <TargetFramework>net8.0</TargetFramework>
+  </PropertyGroup>
+
+  <Import Project="..\TestDependencies.props" />
+
+  <ItemGroup>
+    <Using Include="Xunit" />
+    <ProjectReference Include="..\..\src\IntegratedModManager.Core\IntegratedModManager.Core.csproj" />
+  </ItemGroup>
+</Project>

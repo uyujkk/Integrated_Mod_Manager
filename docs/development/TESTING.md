@@ -18,6 +18,24 @@ Use a new repository-local output directory: the script clears that directory. N
 CI runs on every branch push (documentation-only pushes are skipped) and on pull requests to `main`.
 CI 在每个分支推送时运行（只改文档的推送除外），指向 `main` 的 PR 也会运行。
 
+## GitHub Actions
+
+| Workflow | When / 何时运行 | What / 做什么 |
+| --- | --- | --- |
+| `build-and-test.yml` | Every push and PR / 每次推送和 PR | Code style, `test-all`, UI smoke tests, a table of UI text by language in the job summary, the verified package as an artifact / 代码风格、`test-all`、界面冒烟测试、作业摘要里的各语言文案统计，并上传已验证的包 |
+| `release.yml` | A pushed tag `vX.Y.Z`; a PR that changes the release scripts / 推送 `vX.Y.Z` 标签；修改发布脚本的 PR | Tests, `package-stable-release.ps1` with this run as the CI link, upgrade and rollback from the previous published release, UI smoke tests, a build provenance attestation, then a **draft** release with the notes from `docs/releases/vX.Y.Z.md`, re-downloaded and hash-checked. A PR runs the same steps for the current version without the attestation or a release. / 测试、以本次运行为 CI 链接打包、从上一个已发布版本升级并回退、界面冒烟测试、构建来源证明，然后用 `docs/releases/vX.Y.Z.md` 创建**草稿** Release，重新下载核对哈希。PR 只演练同样的步骤，不生成证明也不建 Release。 |
+| `online-sources.yml` | Daily and on demand / 每天一次，也可手动 | `tests/Online.Tests` asks the miHoYo wiki, HoYoWiki, the Endfield site and GameBanana what the app asks, with the Core clients. A failure means a site changed or is down. / 用 Core 客户端请求米游社 Wiki、HoYoWiki、终末地官网和 GameBanana；失败说明网站变了或暂时不可用。 |
+| `codeql.yml` | PRs, `main`, weekly / PR、`main`、每周 | CodeQL security analysis of the C# sources without a build; results under Security → Code scanning. / 不构建直接分析 C# 源码，结果在 Security → Code scanning。 |
+| `dependabot.yml` | Weekly / 每周 | Grouped pull requests for minor and patch NuGet updates and for GitHub Actions; major NuGet updates are left for a deliberate upgrade. / 合并的 NuGet 小版本更新与 Actions 更新 PR；NuGet 大版本升级另行安排。 |
+
+To release: merge the version PR, then push the tag. Review and publish the draft the workflow creates; code signing is not set up yet.
+发布方式：合并版本 PR 后推送标签，检查工作流生成的草稿后手动发布。代码签名尚未接入。
+
+```powershell
+git tag v4.7.3
+git push origin v4.7.3
+```
+
 ## Code style / 代码风格
 
 ```powershell
@@ -35,8 +53,8 @@ Builds every project with the `.editorconfig` rules enabled (for example IDE0005
 ./scripts/test-ui.ps1 -Filter "FullyQualifiedName~Overlay"
 ```
 
-`tests/UI.Tests` drives the built application through Windows UI Automation (FlaUI). Each test copies the runtime that `test-all` staged in `artifacts/verification/ReleaseSource` (or `-Application <folder>`) and the synthetic `tests/TestData` into a temporary folder, starts it, and checks windows, the saved configuration and the error logs. Tests run one at a time and press a global hotkey, so use an unlocked desktop and leave the mouse and keyboard alone. They are not part of `test-all` or CI. There are 19 tests: first install, every page, the repository views and batch dialog, both settings layouts, the online layout buttons, the updates check interval, the Shortcuts page and overlay click-through. Controls built in code carry an `AutomationProperties.AutomationId`; give new ones an id too, so tests do not depend on the display language.
-`tests/UI.Tests` 通过 Windows UI Automation（FlaUI）操作已构建的程序。每个测试把 `test-all` 在 `artifacts/verification/ReleaseSource` 生成的运行文件（或 `-Application <文件夹>`）和合成数据 `tests/TestData` 复制到临时目录后启动，检查窗口、保存的配置和错误日志。测试逐个运行并会按全局快捷键，请在解锁的桌面上运行，期间不要操作鼠标键盘。它不属于 `test-all`，也不在 CI 中运行。共 19 个测试：首次安装、各页面、仓库视图和批量对话框、设置页两种布局、在线页布局按钮、更新页检查间隔、快捷键页和浮窗鼠标穿透。代码里创建的控件设有 `AutomationProperties.AutomationId`；新增控件也请设置，测试就不依赖界面语言。
+`tests/UI.Tests` drives the built application through Windows UI Automation (FlaUI). Each test copies the runtime that `test-all` staged in `artifacts/verification/ReleaseSource` (or `-Application <folder>`) and the synthetic `tests/TestData` into a temporary folder, starts it, and checks windows, the saved configuration and the error logs. Tests run one at a time and press a global hotkey, so use an unlocked desktop and leave the mouse and keyboard alone. They are not part of `test-all`; CI runs them after `test-all`. There are 19 tests: first install, every page, the repository views and batch dialog, both settings layouts, the online layout buttons, the updates check interval, the Shortcuts page and overlay click-through. Controls built in code carry an `AutomationProperties.AutomationId`; give new ones an id too, so tests do not depend on the display language.
+`tests/UI.Tests` 通过 Windows UI Automation（FlaUI）操作已构建的程序。每个测试把 `test-all` 在 `artifacts/verification/ReleaseSource` 生成的运行文件（或 `-Application <文件夹>`）和合成数据 `tests/TestData` 复制到临时目录后启动，检查窗口、保存的配置和错误日志。测试逐个运行并会按全局快捷键，请在解锁的桌面上运行，期间不要操作鼠标键盘。它不属于 `test-all`，CI 会在 `test-all` 之后运行。共 19 个测试：首次安装、各页面、仓库视图和批量对话框、设置页两种布局、在线页布局按钮、更新页检查间隔、快捷键页和浮窗鼠标穿透。代码里创建的控件设有 `AutomationProperties.AutomationId`；新增控件也请设置，测试就不依赖界面语言。
 
 ## Four suites / 四组测试
 

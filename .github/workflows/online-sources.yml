@@ -1,0 +1,37 @@
+name: Online sources
+
+# Once a day, asks the sites the app reads (miHoYo wiki, HoYoWiki, the Endfield site and GameBanana)
+# for what the app asks for, with the app's own Core clients. A failure means a site changed or is down;
+# GitHub emails the repository owner when a scheduled run fails.
+on:
+  schedule:
+    - cron: '17 2 * * *'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  check:
+    name: Check the live sites
+    runs-on: windows-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v6
+      - uses: actions/setup-dotnet@v5
+        with:
+          dotnet-version: 8.0.x
+      - name: Run the online checks
+        shell: pwsh
+        run: |
+          dotnet test tests\Online.Tests\IntegratedModManager.Online.Tests.csproj -c Release --nologo `
+            --logger "console;verbosity=normal" --logger "trx;LogFileName=online-sources.trx" --results-directory artifacts\online-sources
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+      - name: Upload results
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: online-sources-${{ github.run_id }}
+          path: artifacts/online-sources/*.trx
+          if-no-files-found: ignore
+          retention-days: 14
