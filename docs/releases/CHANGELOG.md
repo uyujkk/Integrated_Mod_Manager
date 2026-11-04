@@ -6,7 +6,13 @@
 
 This document records version changes in Integrated Mod Manager. Unpublished versions are marked separately.
 
-## v4.7.2 — 未发布（正式版 / Stable）
+## v4.7.3 — 未发布（正式版 / Stable）
+
+界面新增俄语：在“设置 → 语言”中选择“Русский”，系统语言为俄语的新安装会默认使用它。界面语言改为每种语言一个文件，以后添加语言不用改代码。见 [v4.7.3](v4.7.3.md)。
+
+The interface is available in Russian: choose "Русский" under Settings → Language, and a first install on a Russian system uses it. UI languages are now one file each, so adding a language needs no code changes. See [v4.7.3](v4.7.3.md).
+
+## v4.7.2 — 2026-11-03（正式版 / Stable）
 
 修复原神、星铁、绝区零的在线角色列表有时加载不出来：角色目录请求最多等 20 秒，超时或网络出错时重试一次；没填 Wiki 地址的仓库改用游戏内置 Wiki；失败写入错误日志。见 [v4.7.2](v4.7.2.md)。
 

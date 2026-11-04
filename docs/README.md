@@ -4,7 +4,7 @@
 
 This directory contains the usage, release, development, and research documentation for Integrated Mod Manager. The repository root is reserved for GitHub-recognized files, build entry points, and source-code entry points.
 
-当前正式版 / Current stable: **[v4.7.2](https://github.com/uyujkk/Integrated_Mod_Manager/releases/tag/v4.7.2)**。最新公开版本请以 [GitHub Releases](https://github.com/uyujkk/Integrated_Mod_Manager/releases/latest) 为准。历史发布报告与实验记录保留原版本事实。Historical reports retain their original context; screenshot/documentation updates do not replace the published package.
+当前正式版 / Current stable: **[v4.7.3](https://github.com/uyujkk/Integrated_Mod_Manager/releases/tag/v4.7.3)**。最新公开版本请以 [GitHub Releases](https://github.com/uyujkk/Integrated_Mod_Manager/releases/latest) 为准。历史发布报告与实验记录保留原版本事实。Historical reports retain their original context; screenshot/documentation updates do not replace the published package.
 
 ## 使用指南 / Guides
 
@@ -25,6 +25,7 @@ This directory contains the usage, release, development, and research documentat
 
 ## 发布记录 / Releases
 
+- [v4.7.3 俄语界面 / Russian Interface](./releases/v4.7.3.md)
 - [v4.7.2 在线角色列表加载修复 / Online Character List Loading Fix](./releases/v4.7.2.md)
 - [v4.7.1 更新器不再被误报 / Updater No Longer Flagged](./releases/v4.7.1.md)
 - [v4.7.0 预设图片、浮窗外观、方案分享与其他游戏 / Preset Pictures, Overlay Looks, Preset Sharing and Other Games](./releases/v4.7.0.md)
@@ -54,6 +55,7 @@ This directory contains the usage, release, development, and research documentat
 ## 开发文档 / Development
 
 - [软件结构 / Software Structure](./development/Software-Structure.md)
+- [v4.7.3 正式版验证 / Stable Release Verification](./verification/v4.7.3.md)
 - [v4.7.2 正式版验证 / Stable Release Verification](./verification/v4.7.2.md)
 - [v4.7.1 正式版验证 / Stable Release Verification](./verification/v4.7.1.md)
 - [v4.7.0 正式版验证 / Stable Release Verification](./verification/v4.7.0.md)
