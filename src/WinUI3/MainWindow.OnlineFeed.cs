@@ -64,12 +64,12 @@ public sealed partial class MainWindow
         OnlineLoadingOverlay.Visibility = _isLoadingOnlineMods ? Visibility.Visible : Visibility.Collapsed;
         OnlineLoadingTextBlock.Text = T("OnlineFeed.LoadingOnlineModsPleaseWait");
         OnlineStatusTextBlock.Text = _onlinePage.HasStatus
-            ? L(_onlinePage.StatusZh!, _onlinePage.StatusEn!)
+            ? T(_onlinePage.Status!)
             : T("OnlineFeed.ClickRefreshOnlineListToFetch");
         bool hasCacheStatus = _onlinePage.HasCacheStatus;
         OnlineCacheStatusBorder.Visibility = hasCacheStatus ? Visibility.Visible : Visibility.Collapsed;
         OnlineCacheStatusTextBlock.Text = hasCacheStatus
-            ? L(_onlinePage.CacheStatusZh!, _onlinePage.CacheStatusEn!)
+            ? T(_onlinePage.CacheStatus!)
             : string.Empty;
         List<OnlineModCard> filteredMods = canLoadOnlineMods ? GetFilteredOnlineMods() : [];
         List<OnlineModCard> visibleMods = GetVisibleOnlineMods(filteredMods);
@@ -241,20 +241,19 @@ public sealed partial class MainWindow
             : GetEffectiveOnlineCategoryId(repository);
     }
 
-    private void SetOnlineStatus(string zh, string en)
+    private void SetOnlineStatus(UiMessage status)
     {
-        _onlinePage.SetStatus(zh, en);
-        OnlineStatusTextBlock.Text = L(zh, en);
-        ToolTipService.SetToolTip(OnlineStatusTextBlock, L(zh, en));
+        _onlinePage.SetStatus(status);
+        OnlineStatusTextBlock.Text = T(status);
+        ToolTipService.SetToolTip(OnlineStatusTextBlock, T(status));
     }
 
-    private void SetOnlineCacheStatus(string? zh, string? en)
+    private void SetOnlineCacheStatus(UiMessage? status)
     {
-        _onlinePage.SetCacheStatus(zh, en);
-        bool hasStatus = !string.IsNullOrWhiteSpace(zh) && !string.IsNullOrWhiteSpace(en);
-        OnlineCacheStatusBorder.Visibility = hasStatus ? Visibility.Visible : Visibility.Collapsed;
-        OnlineCacheStatusTextBlock.Text = hasStatus ? L(zh!, en!) : string.Empty;
-        ToolTipService.SetToolTip(OnlineCacheStatusBorder, hasStatus ? L(zh!, en!) : null);
+        _onlinePage.SetCacheStatus(status);
+        OnlineCacheStatusBorder.Visibility = status is not null ? Visibility.Visible : Visibility.Collapsed;
+        OnlineCacheStatusTextBlock.Text = status is not null ? T(status) : string.Empty;
+        ToolTipService.SetToolTip(OnlineCacheStatusBorder, status is not null ? T(status) : null);
     }
 
     private void CancelOnlineModListRequest()
@@ -294,51 +293,27 @@ public sealed partial class MainWindow
         _onlineRateLimit.Reset();
     }
 
-    private (string Zh, string En) FormatOnlineCacheAge(DateTimeOffset? cachedAtUtc, bool stale)
+    private static UiMessage FormatOnlineCacheAge(DateTimeOffset? cachedAtUtc, bool stale)
     {
         if (cachedAtUtc is null)
         {
-            return stale ? ("离线缓存", "Stale cache") : ("本地缓存", "Local cache");
+            return M(stale ? "OnlineFeed.StaleCache" : "OnlineFeed.LocalCache");
         }
 
         TimeSpan age = DateTimeOffset.UtcNow - cachedAtUtc.Value;
-        string valueZh;
-        string valueEn;
-        if (age < TimeSpan.FromMinutes(1))
-        {
-            valueZh = "刚刚";
-            valueEn = "just now";
-        }
-        else if (age < TimeSpan.FromHours(1))
-        {
-            int minutes = Math.Max(1, (int)age.TotalMinutes);
-            valueZh = $"{minutes} 分钟前";
-            valueEn = $"{minutes} min ago";
-        }
-        else if (age < TimeSpan.FromDays(1))
-        {
-            int hours = Math.Max(1, (int)age.TotalHours);
-            valueZh = $"{hours} 小时前";
-            valueEn = $"{hours} h ago";
-        }
-        else
-        {
-            int days = Math.Max(1, (int)age.TotalDays);
-            valueZh = $"{days} 天前";
-            valueEn = $"{days} d ago";
-        }
-
-        return stale
-            ? ($"离线缓存 · {valueZh}", $"Stale cache · {valueEn}")
-            : ($"缓存 · {valueZh}", $"Cache · {valueEn}");
+        UiMessage value = age < TimeSpan.FromMinutes(1) ? M("OnlineFeed.JustNow")
+            : age < TimeSpan.FromHours(1) ? M("OnlineFeed.MinutesAgo", Math.Max(1, (int)age.TotalMinutes))
+            : age < TimeSpan.FromDays(1) ? M("OnlineFeed.HoursAgo", Math.Max(1, (int)age.TotalHours))
+            : M("OnlineFeed.DaysAgo", Math.Max(1, (int)age.TotalDays));
+        return M(stale ? "OnlineFeed.StaleCacheAge" : "OnlineFeed.CacheAge", value);
     }
 
-    private void SetOnlineDownloadProgress(bool isVisible, double percent, string zh, string en, bool isIndeterminate = false)
+    private void SetOnlineDownloadProgress(bool isVisible, double percent, string text, bool isIndeterminate = false)
     {
         OnlineDownloadProgressPanel.Visibility = isVisible ? Visibility.Visible : Visibility.Collapsed;
         OnlineDownloadProgressBar.IsIndeterminate = isVisible && isIndeterminate;
         OnlineDownloadProgressBar.Value = Math.Max(0, Math.Min(100, percent));
-        OnlineDownloadProgressTextBlock.Text = L(zh, en);
+        OnlineDownloadProgressTextBlock.Text = text;
     }
 
     private async void OnRefreshOnlineModsClicked(object sender, RoutedEventArgs e)
@@ -377,7 +352,7 @@ public sealed partial class MainWindow
         bool useEndfieldMetadata = IsEndfieldRepository(repository);
         if (!IsGameBananaSource(source) || string.IsNullOrWhiteSpace(baseCategoryId))
         {
-            SetOnlineStatus("当前仓库还没有可用的在线来源配置。", "The current repository does not have a usable online source configuration yet.");
+            SetOnlineStatus(M("OnlineFeed.NoOnlineSource"));
             RefreshOnlinePaneV2();
             return;
         }
@@ -412,8 +387,8 @@ public sealed partial class MainWindow
         string categoryLabel = string.IsNullOrWhiteSpace(gameName)
             ? categoryId
             : $"{gameName} / {categoryId}";
-        SetOnlineStatus($"正在从 GameBanana 读取分类 {categoryLabel} 的在线 Mod 列表...", $"Loading online mods from GameBanana for category {categoryLabel}...");
-        SetOnlineCacheStatus("正在连接", "Connecting");
+        SetOnlineStatus(M("OnlineFeed.LoadingCategory", categoryLabel));
+        SetOnlineCacheStatus(M("OnlineFeed.Connecting"));
         RefreshOnlinePaneV2();
         using CancellationTokenSource timeoutCancellation = new(OnlineModListRequestTimeout);
         using CancellationTokenSource linkedCancellation = CancellationTokenSource.CreateLinkedTokenSource(
@@ -444,10 +419,8 @@ public sealed partial class MainWindow
                 {
                     int seconds = Math.Max(1, (int)Math.Ceiling(cooldownRemaining.TotalSeconds));
                     _blockedOnlineAutoLoadConfigKey = configKey;
-                    SetOnlineStatus(
-                        $"访问频率受限，{seconds} 秒后可再次刷新；当前内容保持不变。",
-                        $"Rate limit cooldown is active. Try again in {seconds} seconds; current content is preserved.");
-                    SetOnlineCacheStatus($"冷却 {seconds} 秒", $"Cooldown {seconds}s");
+                    SetOnlineStatus(M("OnlineFeed.CooldownActive", seconds));
+                    SetOnlineCacheStatus(M("OnlineFeed.Cooldown", seconds));
                     return;
                 }
 
@@ -569,7 +542,7 @@ public sealed partial class MainWindow
             if (pageResult.Mods.Count == 0)
             {
                 _lastLoadedOnlineConfigKey = configKey;
-                SetOnlineStatus("GameBanana 已连接，但当前分类没有返回可用的皮肤 Mod。", "GameBanana responded, but the current category returned no skin mods.");
+                SetOnlineStatus(M("OnlineFeed.NoSkinMods"));
                 return;
             }
 
@@ -594,46 +567,29 @@ public sealed partial class MainWindow
 
             OnlineCharacterOption? selectedCharacter = _onlinePage.CharacterOptions.FirstOrDefault(character =>
                 string.Equals(character.Key, _onlinePage.CharacterFilter, StringComparison.OrdinalIgnoreCase));
-            string roleLabelZh = selectedCharacter?.DisplayNameZh ?? "全部分类";
-            string roleLabelEn = selectedCharacter?.DisplayNameEn ?? "all categories";
-            (string cacheZh, string cacheEn) = loadedFromCache
+            string roleLabel = selectedCharacter is null
+                ? T("OnlineFeed.AllCategories")
+                : IsChineseUi ? selectedCharacter.DisplayNameZh : selectedCharacter.DisplayNameEn;
+            SetOnlineCacheStatus(loadedFromCache
                 ? FormatOnlineCacheAge(pageResult.CachedAtUtc, loadedDuringRateLimit || loadedAfterTimeout)
-                : ("实时数据", "Live");
-            SetOnlineCacheStatus(cacheZh, cacheEn);
+                : M("OnlineFeed.Live"));
             SetOnlineStatus(
-                loadedAfterTimeout
-                    ? $"连接超过 5 秒，已停止访问并显示本地缓存 · {roleLabelZh} · 第 {_onlinePage.CurrentPage} 页"
-                    : loadedDuringRateLimit
-                    ? $"请求频率受限，已显示本地缓存 · {roleLabelZh} · 第 {_onlinePage.CurrentPage} 页"
-                    : loadedFromCache
-                    ? $"本地缓存 · {roleLabelZh} · 第 {_onlinePage.CurrentPage} 页 · {_onlinePage.TotalCount} 个 Mod"
-                    : $"已更新 · {roleLabelZh} · 第 {_onlinePage.CurrentPage} 页 · {_onlinePage.TotalCount} 个 Mod",
-                loadedAfterTimeout
-                    ? $"Connection exceeded 5 seconds; stopped and showing local cache · {roleLabelEn} · Page {_onlinePage.CurrentPage}"
-                    : loadedDuringRateLimit
-                    ? $"Rate limited; showing local cache · {roleLabelEn} · Page {_onlinePage.CurrentPage}"
-                    : loadedFromCache
-                    ? $"Local cache · {roleLabelEn} · Page {_onlinePage.CurrentPage} · {_onlinePage.TotalCount} mods"
-                    : $"Updated · {roleLabelEn} · Page {_onlinePage.CurrentPage} · {_onlinePage.TotalCount} mods");
+                loadedAfterTimeout ? M("OnlineFeed.TimeoutCachePage", roleLabel, _onlinePage.CurrentPage)
+                : loadedDuringRateLimit ? M("OnlineFeed.RateLimitedCachePage", roleLabel, _onlinePage.CurrentPage)
+                : M(loadedFromCache ? "OnlineFeed.LocalCachePage" : "OnlineFeed.UpdatedPage", roleLabel, _onlinePage.CurrentPage, _onlinePage.TotalCount));
             if (loadedAfterTimeout)
             {
-                ShowAppNotification(
-                    "在线访问超过 5 秒，已停止并显示本地缓存。",
-                    "Online access exceeded 5 seconds; the request was stopped and local cache is shown.",
-                    InfoBarSeverity.Warning);
+                ShowAppNotification(T("OnlineFeed.TimeoutShowingCache"), InfoBarSeverity.Warning);
             }
             else if (loadedDuringRateLimit)
             {
-                ShowAppNotification(
-                    "GameBanana 正在限流，已继续显示本地缓存。",
-                    "GameBanana is rate limiting requests; local cache is being shown.",
-                    InfoBarSeverity.Warning);
+                ShowAppNotification(T("OnlineFeed.RateLimitedShowingCache"), InfoBarSeverity.Warning);
             }
             else if (forceReload)
             {
                 // Paging and character switches already show their result in the status chip;
                 // only an explicit refresh gets a notification.
-                ShowAppNotification("在线 Mod 列表已更新。", "The online mod list has been refreshed.");
+                ShowAppNotification(T("OnlineFeed.ListRefreshed"));
             }
         }
         catch (OnlineRateLimitException)
@@ -645,14 +601,9 @@ public sealed partial class MainWindow
             _blockedOnlineAutoLoadConfigKey = configKey;
             TryGetOnlineRateLimitDelay(out TimeSpan remaining);
             int seconds = Math.Max(1, (int)Math.Ceiling(remaining.TotalSeconds));
-            SetOnlineStatus(
-                $"GameBanana 请求较频繁，已暂停访问；{seconds} 秒后可再次刷新。",
-                $"GameBanana is rate limiting requests. Access is paused; try again in {seconds} seconds.");
-            SetOnlineCacheStatus($"冷却 {seconds} 秒", $"Cooldown {seconds}s");
-            ShowAppNotification(
-                "请求过于频繁，已暂停在线刷新；当前内容会保留。",
-                "Online refresh paused due to rate limiting; current content is preserved.",
-                InfoBarSeverity.Warning);
+            SetOnlineStatus(M("OnlineFeed.RateLimitedPaused", seconds));
+            SetOnlineCacheStatus(M("OnlineFeed.Cooldown", seconds));
+            ShowAppNotification(T("OnlineFeed.RefreshPaused"), InfoBarSeverity.Warning);
         }
         catch (OperationCanceledException) when (requestCancellation.IsCancellationRequested)
         {
@@ -665,14 +616,9 @@ public sealed partial class MainWindow
                 return;
             }
             _blockedOnlineAutoLoadConfigKey = configKey;
-            SetOnlineStatus(
-                "连接超过 5 秒，已停止访问；当前内容保持不变。",
-                "Connection exceeded 5 seconds. The request was stopped and current content was preserved.");
-            SetOnlineCacheStatus("访问已停止", "Stopped");
-            ShowAppNotification(
-                "在线 Mod 访问超时，已在 5 秒后停止。",
-                "Online mod access timed out and was stopped after 5 seconds.",
-                InfoBarSeverity.Warning);
+            SetOnlineStatus(M("OnlineFeed.TimeoutPreserved"));
+            SetOnlineCacheStatus(M("OnlineFeed.Stopped"));
+            ShowAppNotification(T("OnlineFeed.TimedOut"), InfoBarSeverity.Warning);
         }
         catch (Exception ex)
         {
@@ -681,8 +627,8 @@ public sealed partial class MainWindow
                 return;
             }
             _blockedOnlineAutoLoadConfigKey = configKey;
-            SetOnlineStatus("读取在线 Mod 失败，请稍后重试。", "Failed to load online mods. Please try again later.");
-            SetOnlineCacheStatus("连接失败", "Connection failed");
+            SetOnlineStatus(M("OnlineFeed.LoadFailed"));
+            SetOnlineCacheStatus(M("OnlineFeed.ConnectionFailed"));
             await ShowMessageAsync(
                 T("OnlineFeed.FailedToLoadTheGameBananaList") + ex.Message,
                 T("OnlineFeed.OnlineLoadFailed"));

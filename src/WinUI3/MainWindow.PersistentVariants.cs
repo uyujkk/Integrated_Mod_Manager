@@ -182,7 +182,7 @@ public sealed partial class MainWindow
 
         string backupsText = string.Join("\n", applied.SelectMany(item => item.Backups));
         PersistentSlotStatusTextBlock.Text = T("PersistentVariants.ModDefaultsWritten", context.Slot.Name, changed, backupsText);
-        ShowAppNotification(T("PersistentVariants.ModDefaultsWrittenShort", context.Slot.Name), T("PersistentVariants.ModDefaultsWrittenShort", context.Slot.Name));
+        ShowAppNotification(T("PersistentVariants.ModDefaultsWrittenShort", context.Slot.Name));
     }
 
     // Imports a compatible variant JSON from the Mod folder (or a chosen file) as state slots.

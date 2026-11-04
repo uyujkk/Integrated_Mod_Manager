@@ -107,7 +107,7 @@ public sealed partial class MainWindow
             }
             finally { operation.Hide(); await shown; }
             if (GetSelectedRepository()?.Id == context.RepositoryId) await RefreshListsAsync();
-            ShowAppNotification("旧 Mod 已复制导入，原目录保持不变。", "Existing mods imported; source folders remain intact.");
+            ShowAppNotification(T("ExistingModImport.Imported"));
         }
         catch (OperationCanceledException)
         {
@@ -208,7 +208,7 @@ public sealed partial class MainWindow
         {
             int count = (await Task.Run(() => FindInterruptedImports())).Length;
             if (count > 0 && !_onlineWindowClosed)
-                ShowAppNotification($"发现 {count} 条中断导入记录，请在对应仓库的整理导入菜单检查。", $"Found {count} interrupted import records. Review them from the original repository's import menu.");
+                ShowAppNotification(T("ExistingModImport.InterruptedFound", count));
         }
         catch (Exception ex) { LogApplicationIssue("Inspect import recovery on startup", ex); }
     }

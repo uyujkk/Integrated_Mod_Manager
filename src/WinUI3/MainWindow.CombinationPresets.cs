@@ -50,7 +50,7 @@ public sealed partial class MainWindow
                 () => ShowConfirmAsync(T("CombinationPresets.NoEnabledRepositoryModsWereRecognized"),
                     T("CombinationPresets.EmptyCombination")));
             if (saved is (int mods, int count))
-                ShowAppNotification($"已保存“{name}”：{mods} 个 Mod，{count} 个参数。", $"Saved '{name}': {mods} Mods, {count} parameters.");
+                ShowAppNotification(T("CombinationPresets.Saved", name, mods, count));
         }
         catch (Exception ex)
         {

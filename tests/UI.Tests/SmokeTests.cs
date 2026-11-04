@@ -219,6 +219,29 @@ public sealed class SmokeTests
         app.AssertNoErrors();
     }
 
+    // The language list is made from the language files, and a choice relabels the window and is saved.
+    [Fact]
+    public void Settings_LanguageListComesFromTheFilesAndSwitchesTheWindow()
+    {
+        using AppSession app = AppSession.Configured((shell, _) => shell["CurrentPrimarySection"] = "settings").Start();
+        app.Resize(1700, 1000);
+
+        ComboBox languages = app.Find("LanguageComboBox").AsComboBox();
+        languages.Expand();
+        string[] names = languages.Items.Select(item => item.Name).ToArray();
+        languages.Collapse();
+        Assert.Equal(AppSession.LanguageFiles().Count(), names.Length);
+        Assert.Equal(["中文", "English"], names.Take(2));
+
+        languages.Select(1);
+        string englishTitle = AppSession.TextIn("en-US", "Common.IntegratedModManager").Split('{')[0].Trim();
+        Assert.True(SpinWait.SpinUntil(() => app.MainWindow.Title.StartsWith(englishTitle, StringComparison.Ordinal), TimeSpan.FromSeconds(5)), app.MainWindow.Title);
+        string[] config = File.ReadAllLines(Path.Combine(app.AppFolder, "config.ini"));
+        Assert.Contains("language=" + Convert.ToBase64String(System.Text.Encoding.UTF8.GetBytes("en")), config);
+        app.Capture(nameof(Settings_LanguageListComesFromTheFilesAndSwitchesTheWindow));
+        app.AssertNoErrors();
+    }
+
     [Fact]
     public void Settings_WideWindowShowsEveryCard()
     {

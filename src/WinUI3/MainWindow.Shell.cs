@@ -568,7 +568,7 @@ public sealed partial class MainWindow
             await RefreshInstallBackupListAsync();
 
             if (_restoredInterruptedDownloads > 0)
-                ShowAppNotification($"已恢复 {_restoredInterruptedDownloads} 个中断任务，请到更新页检查后手动重试。", $"Restored {_restoredInterruptedDownloads} interrupted tasks. Review them in Updates and retry manually.");
+                ShowAppNotification(T("Shell.InterruptedTasksRestored", _restoredInterruptedDownloads));
             await NotifyInterruptedImportsAsync();
             await ChooseFirstInstallGameAsync();
             // Waits for any startup dialog (including the update prompt below) before showing.

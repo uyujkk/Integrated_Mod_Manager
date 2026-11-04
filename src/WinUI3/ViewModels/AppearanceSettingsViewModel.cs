@@ -14,7 +14,7 @@ namespace ModFolderCopier.WinUI;
 /// </remarks>
 public sealed partial class AppearanceSettingsViewModel : ObservableObject
 {
-    private readonly IReadOnlyList<string> _languageOptions = ["中文", "English"];
+    private IReadOnlyList<string> _languageOptions = ["中文", "English"];
     private IReadOnlyList<string> _themeOptions = [];
     private IReadOnlyList<string> _densityOptions = [];
     private int _languageIndex;
@@ -31,11 +31,19 @@ public sealed partial class AppearanceSettingsViewModel : ObservableObject
     /// <summary>Comfortable, Compact.</summary>
     public IReadOnlyList<string> DensityOptions => _densityOptions;
 
-    /// <summary>0 Chinese, 1 English.</summary>
+    /// <summary>The index in <see cref="LanguageOptions"/>: 0 Chinese, 1 English, then any other languages.</summary>
     public int LanguageIndex
     {
         get => _languageIndex;
-        set => SetIndex(ref _languageIndex, value, 2);
+        set => SetIndex(ref _languageIndex, value, _languageOptions.Count);
+    }
+
+    /// <summary>Sets the language names, each in its own language, in the window's language order.</summary>
+    public void SetLanguageOptions(IReadOnlyList<string> names)
+    {
+        _languageOptions = names;
+        OnPropertyChanged(nameof(LanguageOptions));
+        OnPropertyChanged(nameof(LanguageIndex));
     }
 
     public ThemePreference Theme

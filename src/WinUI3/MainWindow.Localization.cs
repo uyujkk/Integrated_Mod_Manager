@@ -1,3 +1,4 @@
+using IntegratedModManager.Core.Configuration;
 using Microsoft.UI.Xaml.Automation;
 using Microsoft.UI.Xaml.Controls;
 
@@ -5,10 +6,13 @@ namespace ModFolderCopier.WinUI;
 
 public sealed partial class MainWindow
 {
+    // Chinese content (character names, wiki names, 万/亿) in Chinese; English content in every other language.
+    private bool IsChineseUi => string.Equals(_currentLanguage, UiLanguagePolicy.Chinese, StringComparison.Ordinal);
+
     // Text from the language files (Strings/*.json) by key.
     private string T(string key)
     {
-        return L(UiText.Chinese(key), UiText.English(key));
+        return UiText.Get(_currentLanguage, key);
     }
 
     // Text with values: the language files use {0}, {1}, ... placeholders.
@@ -17,10 +21,16 @@ public sealed partial class MainWindow
         return string.Format(System.Globalization.CultureInfo.CurrentCulture, T(key), values);
     }
 
+    // A stored message, shown in the current language.
+    private string T(UiMessage message) => message.Resolve(_currentLanguage);
+
+    // Text by key and values kept for later, such as a status line that a language switch shows again.
+    private static UiMessage M(string key, params object?[] values) => new(key, values);
+
     // For text pairs built at runtime, such as stored status messages.
     private string L(string zh, string en)
     {
-        return BetaLocalization.Resolve(_currentLanguage == AppLanguage.EnUs, zh, en);
+        return BetaLocalization.Resolve(!IsChineseUi, zh, en);
     }
 
     private string NormalizeUiText(string? value)
@@ -30,7 +40,7 @@ public sealed partial class MainWindow
             return string.Empty;
         }
 
-        return _currentLanguage == AppLanguage.EnUs
+        return !IsChineseUi
             ? value
             : BetaLocalization.NormalizeChineseText(value);
     }
@@ -40,7 +50,7 @@ public sealed partial class MainWindow
         Title = T("Common.IntegratedModManager", AppVersion);
 
         BetaTitleTextBlock.Text = _shellLayoutMode == ShellLayoutMode.Compact
-            ? "管理器"
+            ? T("Localization.ManagerShort")
             : T("Localization.Workspace");
         BetaCaptionTextBlock.Text = T("Localization.ManageRepositorySwitchingOnlineResourcesAnd");
         ApplyPrimaryNavigationContent();

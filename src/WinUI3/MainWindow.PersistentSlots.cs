@@ -262,8 +262,7 @@ public sealed partial class MainWindow
             repository.PersistentUserIniPath = userIni;
             SaveShellConfig();
             RefreshPersistentSlotControls();
-            ShowAppNotification($"已保存 {values.Count} 个变量到“{name}”。这是离线快照，尚未验证游戏内效果。",
-                $"Saved {values.Count} variables to '{name}'. This is an offline snapshot; in-game behavior is not verified.");
+            ShowAppNotification(T("PersistentSlots.OfflineSaved", values.Count, name));
         }
         catch (Exception ex)
         {
@@ -337,8 +336,7 @@ public sealed partial class MainWindow
                 SaveShellConfig();
                 resultText = T("PersistentSlots.RestoreVerified", slot.Name, plan.ChangedCount, plan.AddedCount, plan.UnchangedCount) + "\n"
                     + (backup is null ? T("PersistentSlots.NoNewBackup") : T("PersistentSlots.BackupAt", backup)) + "\n" + T("PersistentSlots.RestartToVerify");
-                ShowAppNotification($"已恢复“{slot.Name}”的 {plan.Values.Count} 个加载器变量，并重新读取核对。请重启游戏验证效果。",
-                    $"Restored and verified {plan.Values.Count} loader variables for '{slot.Name}'. Restart the game to verify.");
+                ShowAppNotification(T("PersistentSlots.OfflineRestored", slot.Name, plan.Values.Count));
                 if (hotReload.IsChecked == true)
                     resultText += "\n" + await HotReloadLoaderAsync(userIni);
             }

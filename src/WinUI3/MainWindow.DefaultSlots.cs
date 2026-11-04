@@ -41,8 +41,11 @@ public sealed partial class MainWindow
         if (values.Count == 0 || DefaultSlotMods(repository).Contains(relative, StringComparer.OrdinalIgnoreCase)) return false;
         _modPersistentSlots.Add(new ModPersistentSlot
         {
-            RepositoryId = repository.Id, ModRelativePath = relative,
-            Name = T("PersistentSlots.DefaultSlotName"), IsModDefault = true, Values = [.. values]
+            RepositoryId = repository.Id,
+            ModRelativePath = relative,
+            Name = T("PersistentSlots.DefaultSlotName"),
+            IsModDefault = true,
+            Values = [.. values]
         });
         return true;
     }
@@ -118,7 +121,7 @@ public sealed partial class MainWindow
     // Called on a language change: untouched default slots take the new language's name.
     private void RelabelDefaultSlots()
     {
-        string[] names = [UiText.Chinese("PersistentSlots.DefaultSlotName"), UiText.English("PersistentSlots.DefaultSlotName")];
+        string[] names = UiText.Languages.Select(language => UiText.Get(language, "PersistentSlots.DefaultSlotName")).Distinct().ToArray();
         string wanted = T("PersistentSlots.DefaultSlotName");
         bool changed = false;
         foreach (ModPersistentSlot slot in _modPersistentSlots.Where(slot => slot.IsModDefault))

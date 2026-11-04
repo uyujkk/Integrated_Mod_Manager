@@ -15,6 +15,9 @@ public sealed class DownloadTaskItem
 
     public string Title { get; set; } = string.Empty;
 
+    // The status as a message while the app runs; StatusZh and StatusEn are what the history file keeps.
+    internal UiMessage? Status { get; set; }
+
     public string StatusZh { get; set; } = string.Empty;
 
     public string StatusEn { get; set; } = string.Empty;

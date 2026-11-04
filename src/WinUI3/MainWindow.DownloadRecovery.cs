@@ -62,7 +62,7 @@ public sealed partial class MainWindow
             if (!_onlineWindowClosed && !_downloadJournalWarningShown)
             {
                 _downloadJournalWarningShown = true;
-                ShowAppNotification("下载记录保存失败，当前任务重启后可能无法恢复。", "Download history could not be saved; current tasks may not be recoverable after restart.", Microsoft.UI.Xaml.Controls.InfoBarSeverity.Warning);
+                ShowAppNotification(T("DownloadRecovery.HistoryNotSaved"), Microsoft.UI.Xaml.Controls.InfoBarSeverity.Warning);
             }
         }
     }

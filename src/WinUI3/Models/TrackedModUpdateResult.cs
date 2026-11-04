@@ -20,7 +20,6 @@ public sealed class TrackedModUpdateResult
 
     public bool HasUpdate { get; set; }
 
-    public string StatusTextZh { get; set; } = string.Empty;
-
-    public string StatusTextEn { get; set; } = string.Empty;
+    // Shown on the row when a check failed; null when there is nothing to say.
+    internal UiMessage? Status { get; set; }
 }
