@@ -81,7 +81,16 @@ public sealed partial class SettingsViewModel : ObservableObject
     private IReadOnlyList<SettingInfoItem> _onlineInfo = [];
     private string _diagnosticsStatus = string.Empty;
 
+    private string _appVersion = string.Empty;
+
     public AppearanceSettingsViewModel Appearance { get; } = new();
+
+    /// <summary>The running version, shown under About.</summary>
+    public string AppVersion
+    {
+        get => _appVersion;
+        set => SetProperty(ref _appVersion, value ?? string.Empty);
+    }
 
     /// <summary>Raised when the user asks for something only the window can do.</summary>
     public event EventHandler<SettingsActionRequest>? ActionRequested;

@@ -16,6 +16,7 @@ public sealed partial class MainWindow
     private void InitializeSettingsHost()
     {
         SettingsView.SelfUpdateEnabled = AppSelfUpdateEnabled;
+        SettingsView.AppVersion = AppVersion;
         SettingsView.ActionRequested += OnSettingsActionRequested;
         SettingsView.PropertyChanged += OnSettingsViewChanged;
     }

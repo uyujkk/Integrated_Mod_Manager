@@ -1,4 +1,4 @@
-# 界面测试依赖的自动化名称 / UI automation names
+﻿# 界面测试依赖的自动化名称 / UI automation names
 
 2026-11-04，阶段 J0 第 2 项，基于 `f6c2800`。列出 `tests/UI.Tests`（`SmokeTests.cs`、`AppSession.cs`）定位界面元素用到的全部名称。阶段 J 拆分页面、换控件时，这些名称必须保持不变；确实要改的，在同一个 PR 里同时改测试并在 PR 说明里列出。见[界面结构拆分计划](./UI-Structure-Plan.md)和[界面外观优化方案](./UI-Fluent-Design-Plan.md)。
 
@@ -81,14 +81,14 @@ J3-b：`SelectorBar` 分三个视图后，“清除下载记录”只在“下�
 
 | AutomationId | 来源 | 定义位置 | 用到的测试 |
 | --- | --- | --- | --- |
-| `SettingsSection0` … `SettingsSection4` | 显式 `AutomationProperties.AutomationId` | `MainWindow.xaml:1728,1737,1746,1755,1764` | Settings_SectionButtonsShowOneCardAtATime、Settings_WideWindowShowsEveryCard（宽窗口应隐藏） |
-| `LanguageComboBox` | `x:Name` | `MainWindow.xaml:1793` | Settings_SectionButtonsShowOneCardAtATime、Settings_LanguageListComesFromTheFilesAndSwitchesTheWindow、Settings_WideWindowShowsEveryCard |
-| `CheckUpdatesButton` | `x:Name` | `MainWindow.xaml:1889` | Settings_SectionButtonsShowOneCardAtATime、Settings_WideWindowShowsEveryCard |
-| `EditOnlineRepositoryButton` | `x:Name` | `MainWindow.xaml:1948` | 同上 |
-| `ExportDiagnosticsButton` | `x:Name` | `MainWindow.xaml:1970` | 同上 |
-| `ProjectResourcesTitleTextBlock` | `x:Name` | `MainWindow.xaml:2009` | 同上 |
+| `LanguageComboBox` | `x:Name` | `Pages/SettingsPage.xaml` | Settings_NarrowWindowHasEveryGroupOnOnePage、Settings_LanguageListComesFromTheFilesAndSwitchesTheWindow、Settings_WideWindowShowsEveryCard |
+| `ThemeComboBox` | `x:Name` | `Pages/SettingsPage.xaml` | Settings_ThemeChoiceIsSaved（J2 新增的冒烟测试） |
+| `CheckUpdatesButton` | `x:Name` | `Pages/SettingsPage.xaml` | Settings_NarrowWindowHasEveryGroupOnOnePage、Settings_WideWindowShowsEveryCard |
+| `EditOnlineRepositoryButton` | `x:Name`（现在是可点击的 `SettingsCard`） | `Pages/SettingsPage.xaml` | 同上 |
+| `ExportDiagnosticsButton` | `x:Name`（现在是可点击的 `SettingsCard`） | `Pages/SettingsPage.xaml` | 同上 |
+| `ProjectResourcesTitleTextBlock` | `x:Name`（“关于”分组标题，不在折叠区里） | `Pages/SettingsPage.xaml` | 同上 |
 
-J2：已决定改成单列长页面、去掉分区按钮，所以 `SettingsSection0`–`4` 会消失。`Settings_SectionButtonsShowOneCardAtATime` 要改写成“1000×760 下五个分组都在页面里（可滚动到）”，`Settings_WideWindowShowsEveryCard` 去掉对 `SettingsSection0` 的断言。`ProjectResourcesTitleTextBlock` 在新“关于”`SettingsExpander` 里会默认折叠，需要换成标题行上的元素或在测试里先展开。
+J2 完成后：设置页是单列长页面，`SettingsSection0`–`4` 已删除；`Settings_SectionButtonsShowOneCardAtATime` 改写为 `Settings_NarrowWindowHasEveryGroupOnOnePage`（1000×760 下五个分组都在页面里，并确认分区按钮不在了），`Settings_WideWindowShowsEveryCard` 去掉了对 `SettingsSection0` 的断言。`ProjectResourcesTitleTextBlock` 成了“关于”分组的标题，所以默认折叠的“关于”`SettingsExpander` 不影响测试。
 
 ### 对话框（J8）
 
@@ -126,7 +126,7 @@ J8：对话框统一设置 `DefaultContentDialogStyle` 后，模板部件名 `Cl
 | 阶段 | 必须保留或同步改的名称 |
 | --- | --- |
 | J1 / J1N | 6 个 `*NavButton` |
-| J2 | `LanguageComboBox`、`CheckUpdatesButton`、`EditOnlineRepositoryButton`、`ExportDiagnosticsButton`、`ProjectResourcesTitleTextBlock`；改写两个设置页测试（`SettingsSection*` 删除） |
+| J2 | `LanguageComboBox`、`ThemeComboBox`、`CheckUpdatesButton`、`EditOnlineRepositoryButton`、`ExportDiagnosticsButton`、`ProjectResourcesTitleTextBlock`；两个设置页测试已改写（`SettingsSection*` 已删除） |
 | J3 / J3-b | `CheckModUpdatesButton`、`ClearDownloadTasksButton`、`ModUpdateIntervalComboBox`；J3-b 加视图切换 |
 | J4 / J4-b | `SourceTextBox`、`TargetTextBox`、文字 `Dashboard.SwitchToThisRepository`；J4-b 保留 `FirstRunGame_<Id>`、`FirstRun.Use`、`FirstRun.Later` |
 | J5 | `ShortcutInputModePicker`、`OverlayClickThroughButton`、文字 `ShortcutPanel.OverlayHotkeySummary`、`ShortcutPanel.VirtualKeysLegacyCompatibility`；改写按 `Expander` 类名展开的逻辑 |
