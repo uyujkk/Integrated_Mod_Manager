@@ -15,4 +15,7 @@ internal sealed class AppServices
     public DeploymentService Deployment { get; } = new(AppContext.BaseDirectory);
     public DownloadService Downloads { get; } = new(AppContext.BaseDirectory);
     public LaunchService Launch { get; } = new();
+
+    /// <summary>The Settings page's state; the window writes results here and answers its requests.</summary>
+    public SettingsViewModel Settings { get; } = new();
 }

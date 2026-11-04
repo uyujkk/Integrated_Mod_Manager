@@ -110,6 +110,28 @@ J0 结果（2026-11-04，分支 `claude/ui-j0-prep`）：
 3. **删除**：从 `MainWindow` 删掉对应的 partial 文件和字段；`MainWindow` 的行数应明显下降。
 4. **检查**：基线截图对比；界面测试通过，并为这一页加一个打开页面、做一次主要操作的冒烟测试。
 
+#### J2 牵连清单（设置页）
+
+设置页 `SettingsScrollViewer` 里有 82 个命名控件。除了 `MainWindow.Settings.cs` 本身，下面这些地方直接读写它们，或者设置页的代码读写别的页面：
+
+| 位置 | 做什么 | 改成 |
+| --- | --- | --- |
+| `MainWindow.RefinedWorkspace.cs` | 分区按钮、两栏总览、卡片排布（`SettingsLayoutPolicy`）；状态行无文字时折叠 | 移进 `SettingsPage`；`ReflowCards`/`Place` 仍留给仪表盘 |
+| `MainWindow.PageLayout.cs` | `AttachPageLayout(SettingsScrollViewer, …)`、`SettingsHeaderHeight` | 页面自己监听尺寸 |
+| `MainWindow.Localization.cs` | 设置页标题、外观卡、项目卡文字，三个按钮的提示和朗读名称；在线页那段也写 `EditOnlineRepositoryButton.Content` | 页面在 `LanguageService.LanguageChanged` 里自己写文字 |
+| `MainWindow.ProductivityFeatures.cs` | 启动时检查更新开关、三个更新按钮的排布、下载进度、诊断与反馈卡的文字和状态行、复制 QQ 群号 | 状态进 `SettingsViewModel`，文字和排布进页面，操作经 `ActionRequested` 回到窗口 |
+| `MainWindow.Updates.cs` | 更新状态行、检查间隔下拉框、最新版本说明、检查中禁用按钮、检测到本地更新包后改按钮文字 | 写 `SettingsViewModel`（`UpdateStatus`、`UpdateIntervalIndex`、`Release*`、`IsCheckingUpdates`、`SetInstallState`） |
+| `MainWindow.Tray.cs` | “最小化到托盘”一行的文字和开关 | 开关值进 `SettingsViewModel.MinimizeToTray`，文字进页面 |
+| `MainWindow.LocalLibrary.cs` | 部署时禁用语言、主题下拉框 | `SettingsViewModel.IsBusy` |
+| `MainWindow.ShortcutBindings.cs` | 重建快捷键页时顺带刷新设置页按钮文字 | 删掉：按钮文字由页面根据 ViewModel 决定 |
+| `MainWindow.xaml.cs` | `AppearanceSettings` 属性（设置页的 `x:Bind`）；把 `EditOnlineRepositoryButton` 的点击换成在线版本 | `AppServices.Settings.Appearance`；页面发 `EditOnlineRepository` 请求 |
+| `MainWindow.Shell.cs` | 页面宿主、进场动画对象 | 设置页直接是 `SettingsPage`，其他五页仍是包装页面 |
+| `MainWindow.Repositories.cs`、`AppearanceEvents.cs`、`Shell.cs` | 改仓库、换语言、切页面后 `RefreshSettingsPane()` | 保留调用，改为把仓库在线信息、更新状态推给 ViewModel |
+
+设置页代码访问的别的页面或外壳：`RefreshSettingsPane` 顺带刷新更新页的备份管理文字（`RefreshBackupManagerText`）和终末地桥接控件（`RefreshEndfieldBridgeControls`），这两处留在窗口；仓库在线信息需要 `GetEffectiveOnline*`（在线页的辅助方法），由窗口算好推给 ViewModel；“编辑仓库信息”“编辑角色映射”会刷新在线页，仍在窗口里处理；下载更新时切到设置页（`ApplyShellState`）也在窗口。`MainWindow.Settings.cs` 里不属于设置页的方法（在线页翻页按钮文字、冲突检测和链接部署开关、密度和语言切换）移到各自页面的 partial 文件。
+
+应用自更新的逻辑（检查、下载、校验、启动更新程序）仍在 `MainWindow.Updates.cs` 和 `ProductivityFeatures.cs`，因为它依赖窗口的配置保存、对话框和关闭窗口；它只通过 `SettingsViewModel` 改设置页。以后可以连同配置一起移进单独的服务。
+
 ### J8. 对话框与资源
 
 - 每种对话框一个类（`Dialogs/` 下），由 `DialogService` 统一设置 `XamlRoot` 并保证同一时间只有一个对话框。

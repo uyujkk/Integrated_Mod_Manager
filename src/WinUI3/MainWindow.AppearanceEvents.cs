@@ -1,4 +1,5 @@
 using IntegratedModManager.Core.Online;
+using Microsoft.UI.Xaml;
 
 namespace ModFolderCopier.WinUI;
 
@@ -47,5 +48,18 @@ public sealed partial class MainWindow
 
         appearance.DensityChanged += (_, _) => ApplyShellDensity();
         appearance.DensityChanged += (_, _) => ApplyWorkspaceDensity(appearance.IsCompact);
+    }
+
+    // Each page applies the density itself (MainWindow.AppearanceEvents.cs).
+    private void ApplyInterfaceDensity() => _services.Appearance.ApplyDensity(_interfaceDensity == InterfaceDensity.Compact);
+
+    // The navigation view keeps its own spacing; the density changes the page margins.
+    private void ApplyShellDensity() => ApplyPageMargins();
+
+    private void ApplyWorkspaceDensity(bool compact)
+    {
+        FirstLevelListView.Padding = new Thickness(compact ? 3 : 6);
+        SecondLevelListView.Padding = new Thickness(compact ? 3 : 6);
+        ShortcutRowsPanel.Spacing = compact ? 6 : 10;
     }
 }

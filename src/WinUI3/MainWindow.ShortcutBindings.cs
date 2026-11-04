@@ -27,7 +27,6 @@ public sealed partial class MainWindow
         OnlineSubtitleTextBlock.Text = T("ShortcutBindings.ThisPageNowFocusesOnThe");
         OnlinePreviewTitleTextBlock.Text = T("Common.OnlineModList");
         OnlinePreviewHintTextBlock.Text = T("ShortcutBindings.ThisPageLoadsDataFromAn");
-        RefreshSettingsButtonLabels();
         RefreshOnlineNavigationButtonLabels();
         OpenOnlineDetailPageButton.Content = T("Common.OpenOriginalPage");
         SelectOnlineDetailDownloadButton.Content = T("Common.SelectFile");

@@ -6,6 +6,12 @@ internal sealed class AppearanceService
     /// <summary>Whether the window shows the dark theme; set before the window recolours itself.</summary>
     public bool IsDark { get; set; }
 
+    /// <summary>Whether Windows uses a high-contrast theme; the window reads it at startup.</summary>
+    public bool IsHighContrast { get; set; }
+
+    /// <summary>The theme dictionary the window shows: "Light", "Dark" or "HighContrast".</summary>
+    public string ThemeKey => IsHighContrast ? "HighContrast" : IsDark ? "Dark" : "Light";
+
     public bool IsCompact { get; private set; }
 
     /// <summary>Raised after the window took the new theme; pages recolour what they drew in code.</summary>

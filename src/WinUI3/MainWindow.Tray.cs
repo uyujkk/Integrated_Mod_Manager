@@ -1,7 +1,6 @@
 using System.Runtime.InteropServices;
 using IntegratedModManager.Core.Repository;
 using Microsoft.UI.Windowing;
-using Microsoft.UI.Xaml;
 
 namespace ModFolderCopier.WinUI;
 
@@ -191,26 +190,10 @@ public sealed partial class MainWindow
         SetForegroundWindow(_trayWindowHandle);
     }
 
-    private void OnMinimizeToTrayToggled(object sender, RoutedEventArgs e)
-    {
-        if (_isApplyingTraySetting)
-        {
-            return;
-        }
-
-        _minimizeToTray = MinimizeToTrayToggleSwitch.IsOn;
-        SetTrayIconVisibility(_minimizeToTray);
-        SaveShellConfig();
-    }
-
     private void RefreshTraySetting()
     {
-        TraySettingRow.Title = T("Tray.MinimizeToSystemTray");
-        TraySettingRow.Description = T("Tray.KeepTheAppRunningInThe");
         _isApplyingTraySetting = true;
-        MinimizeToTrayToggleSwitch.IsOn = _minimizeToTray;
-        MinimizeToTrayToggleSwitch.OnContent = T("Common.On2");
-        MinimizeToTrayToggleSwitch.OffContent = T("Common.Off2");
+        SettingsView.MinimizeToTray = _minimizeToTray;
         _isApplyingTraySetting = false;
     }
 

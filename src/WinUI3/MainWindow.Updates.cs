@@ -85,7 +85,7 @@ public sealed partial class MainWindow
     private void SetUpdateStatus(UiMessage status)
     {
         _updateStatus = status;
-        UpdateStatusTextBlock.Text = T(status);
+        SettingsView.UpdateStatus = T(status);
     }
 
     private void SetModUpdateStatus(UiMessage status)
@@ -102,7 +102,7 @@ public sealed partial class MainWindow
         _isApplyingUpdateCheckIntervalSelection = true;
         try
         {
-            PopulateStableIntervalOptions(UpdateCheckIntervalComboBox, _updateCheckInterval);
+            SettingsView.UpdateIntervalIndex = (int)_updateCheckInterval;
         }
         finally
         {
@@ -114,9 +114,9 @@ public sealed partial class MainWindow
     {
         if (!AppSelfUpdateEnabled)
         {
-            LatestReleaseTitleTextBlock.Text = T("Updates.StandaloneBeta", AppVersion);
-            LatestReleaseMetaTextBlock.Text = T("Updates.ManualDownloadExtractSeparatelyFromThe");
-            UpdateNotesTextBlock.Text = T("Updates.ModUpdateTestBuildFixesInterval");
+            SettingsView.ReleaseTitle = T("Updates.StandaloneBeta", AppVersion);
+            SettingsView.ReleaseMeta = T("Updates.ManualDownloadExtractSeparatelyFromThe");
+            SettingsView.ReleaseNotes = T("Updates.ModUpdateTestBuildFixesInterval");
             return;
         }
         string latestTag = string.IsNullOrWhiteSpace(_latestReleaseTag) ? T("Updates.NotCheckedYet") : _latestReleaseTag!;
@@ -132,15 +132,13 @@ public sealed partial class MainWindow
             ? _lastUpdateCheckUtc.Value.ToLocalTime().ToString("yyyy-MM-dd HH:mm")
             : T("Updates.NotCheckedYet");
 
-        LatestReleaseTitleTextBlock.Text = T("Updates.LatestRelease", latestTag);
-        LatestReleaseMetaTextBlock.Text = T("Updates.TitlePublishedLastChecked", latestTitle, publishedText, lastCheckedText);
-        UpdateNotesTextBlock.Text = string.IsNullOrWhiteSpace(_latestReleaseBody)
+        SettingsView.ReleaseTitle = T("Updates.LatestRelease", latestTag);
+        SettingsView.ReleaseMeta = T("Updates.TitlePublishedLastChecked", latestTitle, publishedText, lastCheckedText);
+        SettingsView.ReleaseNotes = string.IsNullOrWhiteSpace(_latestReleaseBody)
             ? T("Updates.GitHubReleaseNotesWillAppearHere")
             : NormalizeUiText(_latestReleaseBody);
         // Before the first check there is nothing but placeholders, so the box stays one line.
-        Visibility details = string.IsNullOrWhiteSpace(_latestReleaseTag) ? Visibility.Collapsed : Visibility.Visible;
-        LatestReleaseMetaTextBlock.Visibility = details;
-        UpdateNotesScrollViewer.Visibility = details;
+        SettingsView.HasReleaseDetails = !string.IsNullOrWhiteSpace(_latestReleaseTag);
     }
 
     private void PopulateModUpdateIntervalOptions()
@@ -617,21 +615,6 @@ public sealed partial class MainWindow
         };
     }
 
-    private void OnUpdateCheckIntervalSelectionChanged(object sender, SelectionChangedEventArgs e)
-    {
-        if (!AppSelfUpdateEnabled || _isApplyingUpdateCheckIntervalSelection || UpdateCheckIntervalComboBox.SelectedItem is not ComboBoxItem { Tag: UpdateCheckInterval interval })
-        {
-            return;
-        }
-
-        try
-        {
-            _updateCheckInterval = interval;
-            SaveShellConfig();
-        }
-        catch (Exception ex) { ReportUiActionFailure(nameof(OnUpdateCheckIntervalSelectionChanged), ex); }
-    }
-
     private void OnModUpdateIntervalSelectionChanged(object sender, SelectionChangedEventArgs e)
     {
         if (_isApplyingModUpdateIntervalSelection || ModUpdateIntervalComboBox.SelectedItem is not ComboBoxItem { Tag: UpdateCheckInterval interval })
@@ -752,7 +735,7 @@ public sealed partial class MainWindow
             SetUpdateStatus(M("Updates.LocalPackageDetected", _localUpdatePackageVersion));
         }
 
-        RefreshSettingsButtonLabels();
+        RefreshAppUpdateInstallState();
     }
 
     private static bool TryParseVersion(string value, out Version version)
@@ -867,7 +850,7 @@ public sealed partial class MainWindow
         try
         {
             _isCheckingUpdates = true;
-            CheckUpdatesButton.IsEnabled = false;
+            SettingsView.IsCheckingUpdates = true;
             RefreshSettingsPane();
             SetUpdateStatus(M("Updates.CheckingGitHub"));
 
@@ -915,7 +898,7 @@ public sealed partial class MainWindow
         finally
         {
             _isCheckingUpdates = false;
-            CheckUpdatesButton.IsEnabled = AppSelfUpdateEnabled;
+            SettingsView.IsCheckingUpdates = false;
             RefreshSettingsPane();
         }
     }

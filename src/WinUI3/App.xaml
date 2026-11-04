@@ -80,14 +80,6 @@
                 <Setter Property="CornerRadius" Value="{StaticResource ControlCornerRadius}" />
             </Style>
 
-            <Style x:Key="SettingRowBorderStyle" TargetType="Border">
-                <Setter Property="Background" Value="{ThemeResource AppInsetBackgroundBrush}" />
-                <Setter Property="BorderBrush" Value="{ThemeResource AppCardBorderBrush}" />
-                <Setter Property="BorderThickness" Value="1" />
-                <Setter Property="CornerRadius" Value="{StaticResource ControlCornerRadius}" />
-                <Setter Property="Padding" Value="14,10" />
-            </Style>
-
             <Style x:Key="SoftBadgeBorderStyle" TargetType="Border">
                 <Setter Property="Background" Value="{ThemeResource AppAccentSoftBrush}" />
                 <Setter Property="CornerRadius" Value="{StaticResource ControlCornerRadius}" />

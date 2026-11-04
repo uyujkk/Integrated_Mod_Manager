@@ -1,4 +1,4 @@
-using System.Runtime.InteropServices;
+﻿using System.Runtime.InteropServices;
 using System.Text.Json.Nodes;
 using FlaUI.Core.AutomationElements;
 using FlaUI.Core.Input;
@@ -200,22 +200,19 @@ public sealed class SmokeTests
         app.AssertNoErrors();
     }
 
-    // One id inside each settings card, in section order.
+    // One id in each group of the settings page, from top to bottom.
     private static readonly string[] SettingsCardControls = ["LanguageComboBox", "CheckUpdatesButton", "EditOnlineRepositoryButton", "ExportDiagnosticsButton", "ProjectResourcesTitleTextBlock"];
 
+    // Stage J2: one long page instead of section buttons, so a narrow window has every group on it, to scroll to.
     [Fact]
-    public void Settings_SectionButtonsShowOneCardAtATime()
+    public void Settings_NarrowWindowHasEveryGroupOnOnePage()
     {
         using AppSession app = AppSession.Configured((shell, _) => shell["CurrentPrimarySection"] = "settings").Start();
         app.Resize(1000, 760);
 
-        for (int section = 0; section < SettingsCardControls.Length; section++)
-        {
-            AppSession.Invoke(app.Find("SettingsSection" + section));
-            for (int card = 0; card < SettingsCardControls.Length; card++)
-                Assert.True(app.Shows(SettingsCardControls[card]) == (card == section), $"Section {section}: {SettingsCardControls[card]}");
-        }
-        app.Capture(nameof(Settings_SectionButtonsShowOneCardAtATime));
+        Assert.All(SettingsCardControls, id => Assert.True(app.Shows(id), id));
+        Assert.False(app.Shows("SettingsSection0"));
+        app.Capture(nameof(Settings_NarrowWindowHasEveryGroupOnOnePage));
         app.AssertNoErrors();
     }
 
@@ -242,6 +239,25 @@ public sealed class SmokeTests
         app.AssertNoErrors();
     }
 
+    // Smoke test of the Settings page (stage J2): open it and change the theme, which is applied and saved.
+    [Fact]
+    public void Settings_ThemeChoiceIsSaved()
+    {
+        using AppSession app = AppSession.Configured((shell, _) => shell["CurrentPrimarySection"] = "settings").Start();
+        app.Resize(1700, 1000);
+
+        ComboBox themes = app.Find("ThemeComboBox").AsComboBox();
+        themes.Select(2);
+
+        Assert.True(SpinWait.SpinUntil(() => (string?)app.ShellConfig()["ThemePreference"] == "dark", TimeSpan.FromSeconds(5)),
+            (string?)app.ShellConfig()["ThemePreference"]);
+        themes.Select(1);
+        Assert.True(SpinWait.SpinUntil(() => (string?)app.ShellConfig()["ThemePreference"] == "light", TimeSpan.FromSeconds(5)),
+            (string?)app.ShellConfig()["ThemePreference"]);
+        app.Capture(nameof(Settings_ThemeChoiceIsSaved));
+        app.AssertNoErrors();
+    }
+
     [Fact]
     public void Settings_WideWindowShowsEveryCard()
     {
@@ -249,7 +265,6 @@ public sealed class SmokeTests
         app.Resize(1700, 1000);
 
         Assert.All(SettingsCardControls, id => Assert.True(app.Shows(id), id));
-        Assert.False(app.Shows("SettingsSection0"));
         app.Capture(nameof(Settings_WideWindowShowsEveryCard));
         app.AssertNoErrors();
     }

@@ -42,10 +42,7 @@ public sealed partial class MainWindow
 
         ToolTipService.SetToolTip(AddRepositoryButton, T("Localization.CreateRepository"));
         ToolTipService.SetToolTip(RenameRepositoryButton, T("Localization.EditCurrentRepository"));
-        ToolTipService.SetToolTip(OpenGitHubButton, T("Localization.OpenGitHubRepository"));
-        ToolTipService.SetToolTip(CheckUpdatesButton, T("Localization.CheckForAppUpdates"));
         ToolTipService.SetToolTip(CheckModUpdatesButton, T("Localization.CheckTrackedModUpdatesNow"));
-        ToolTipService.SetToolTip(EditOnlineRepositoryButton, T("Localization.EditCurrentRepositoryOnlineCategory"));
         ToolTipService.SetToolTip(RefreshOnlineButton, T("Localization.RefreshOnlineModList"));
         ToolTipService.SetToolTip(OnlinePrevPageButton, null);
         ToolTipService.SetToolTip(OnlineNextPageButton, null);
@@ -55,10 +52,7 @@ public sealed partial class MainWindow
         ToolTipService.SetToolTip(OnlineDetailHeroImage, T("Localization.ClickToViewFullSize"));
         AutomationProperties.SetName(AddRepositoryButton, T("Localization.CreateRepository"));
         AutomationProperties.SetName(RenameRepositoryButton, T("Localization.EditCurrentRepository"));
-        AutomationProperties.SetName(OpenGitHubButton, T("Localization.OpenGitHubRepository"));
-        AutomationProperties.SetName(CheckUpdatesButton, T("Localization.CheckForAppUpdates"));
         AutomationProperties.SetName(CheckModUpdatesButton, T("Localization.CheckTrackedModUpdatesNow"));
-        AutomationProperties.SetName(EditOnlineRepositoryButton, T("Localization.EditCurrentRepositoryOnlineCategory"));
         AutomationProperties.SetName(RefreshOnlineButton, T("Localization.RefreshOnlineModList"));
         AutomationProperties.SetName(OnlinePrevPageButton, T("Localization.PreviousPage"));
         AutomationProperties.SetName(OnlineNextPageButton, T("Localization.NextPage"));
@@ -91,21 +85,10 @@ public sealed partial class MainWindow
         OnlineSubtitleTextBlock.Text = T("Localization.ThisPageKeepsTheOnlineMod");
         OnlinePreviewTitleTextBlock.Text = T("Common.OnlineModList");
         OnlinePreviewHintTextBlock.Text = T("Localization.ThisPageLoadsDataFromAn");
-        EditOnlineRepositoryButton.Content = T("Localization.EditCurrentRepositoryOnlineCategory");
 
-        SettingsPageHeader.Title = T("Common.ApplicationSettings");
-        SettingsPageHeader.Description = T("Localization.ConfigureLanguageThemeUpdateChecksAnd");
-        SettingsAppearanceTitleTextBlock.Text = T("Common.AppearanceAndLanguage");
+        // The Settings page labels itself (Pages/SettingsPage.xaml.cs).
         RefreshAppearanceSettings();
-        SettingsProjectTitleTextBlock.Text = T("Common.ProjectLinksAndAppVersion");
-        SettingsProjectHintTextBlock.Text = T("Common.ThisSectionKeepsTheGitHubRepository");
-        RefreshProjectResourceText();
         RefreshSettingsOnlineConfigSummary();
-        OpenGitHubButton.Content = T("Common.OpenGitHubRepository");
-        CheckUpdatesButton.Content = _isCheckingUpdates ? T("Common.Checking") : T("Common.CheckAppUpdates");
-        UpdateStatusTextBlock.Text = string.IsNullOrWhiteSpace(UpdateStatusTextBlock.Text)
-            ? T("Localization.CurrentVersion", AppVersion)
-            : UpdateStatusTextBlock.Text;
 
         AppTitleBar.Title = T("Localization.IntegratedModManager");
         AppTitleBar.Subtitle = AppVersion;
