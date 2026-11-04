@@ -6,7 +6,7 @@
 
 ## 原则
 
-1. **移动和外观分开提交。** 每个 J 阶段的 PR 先有一个“纯移动”提交，截图与基线一致；外观改动放在其后的独立提交里，PR 说明列出“有意的截图差异”。外观工作量到 M 或以上的页面，另开一个 `Jn-b` PR（见各节），不和移动混在一个 PR 里评审。
+1. **移动和外观分开提交。** 每个 J 阶段的 PR 先有一个“纯移动”提交，截图与基线一致；外观改动放在其后的独立提交里，PR 说明列出“有意的截图差异”。S–M 的外观改动放在同一个 PR 里单独提交；M 以上的另开一个 `Jn-b` PR（见各节），不和移动混在一个 PR 里评审（已决定，见文末）。
 2. **先令牌，后页面。** 颜色、字号、圆角、按钮高度这些全局值改一次，会让所有页面的截图都变。所以把它们集中在新阶段 J1T（设计令牌），做完后**重新拍一次基线**；之后每页的外观提交只改这一页。
 3. **继续用 WinUI 3。** 只用 Windows App SDK 1.7 自带控件和 Windows Community Toolkit（`CommunityToolkit.WinUI.Controls.*`）。不换引擎，不引入其他控件库。
 4. **语言与窗口尺寸。** 每项改动都要在中文、英文、俄语，1400×900 和 1000×800 两种窗口下检查（深浅两种主题各一组）。俄语通常是中文的 2–3 倍长（例如“Mod 快捷键 / Mod shortcuts / Горячие клавиши мода”），按钮和导航项按俄语宽度定最小宽度，标签允许换两行或省略号加提示。
@@ -138,7 +138,7 @@ J4 的移动提交之后，外观放在同一 PR 的单独提交（S–M）。�
 ### 改动
 
 1. 顶部工具卡片换成 `CommandBar`：左边页面标题和仓库切换（同仪表盘的 `DropDownButton`），右边 `AppBarButton`：导入、刷新、运行启动器；视图切换（列表/封面）用 Toolkit `Segmented`（2 项，图标）；不常用命令进 `SecondaryCommands`（`…`）。计数文字移到 Mod 列标题旁。
-2. 三栏改为同一平面：去掉三张卡片的边框和各自背景，用 `GridSplitter`（Toolkit）分隔，列宽可拖动并保存；角色栏 `MinWidth=200`，详情栏 `MinWidth=320`。
+2. 三栏改为同一平面：去掉三张卡片的边框和各自背景，用 `GridSplitter`（Toolkit）分隔，列宽可拖动，保存在配置里并在下次打开时恢复；角色栏 `MinWidth=200`，详情栏 `MinWidth=320`。
 3. 角色栏：顶部 `AutoSuggestBox` 搜索（带清除按钮和 Ctrl+F），列表项高度 40，头像 24；加号和 `…` 放进栏标题行的小 `AppBarButton`。
 4. Mod 列表：详细信息视图用 `ListView`，列为缩略图、名称（含标签）、大小、状态，表头可点击排序；封面视图用 `ItemsView` + `UniformGridLayout`；多选时 `CommandBar` 出现批量操作（部署、移除、加标签）——与文件资源管理器的选择行为一致。删除移到右键菜单和 `CommandBar`，用 `DangerButton` 样式加确认对话框。状态筛选芯片用 Toolkit `Segmented`（全部/已部署/未部署）。
 5. 详情窗格：顶部是名称（`SubtitleTextBlockStyle`）、状态徽标和**主操作“部署/移除”**（`AccentButtonStyle`），紧接着“打开文件夹”和 `…`；`TabView` 换成 `SelectorBar`（预览/快捷键/状态槽位）；预览图高度按可用高度自适应（`MaxHeight` 320，最小 160），链接一行放在预览下方。状态槽位区里的 8 个控件（`:917-945`）按“当前文件/槽位选择/操作”分成三张 `SettingsCard`。
@@ -170,16 +170,13 @@ J7 本身是 L，外观改动也是 L，**必须单独开 J7-b PR**，在 J7 合
 2. 筛选：搜索下一行是筛选条——排序 `ComboBox`、“作品筛选” `DropDownButton`（勾选项）、已选筛选以可移除的标签（`Button` + ✕）显示、“清除全部”文字按钮。这一行可换行，俄语下不截断。
 3. 角色栏：顶部加一个小搜索框；项目改为 `ListView`（头像 28 + 名称 + 数量），选中态用系统 `ListViewItem` 样式；1000 宽时收成顶部的角色 `ComboBox`（代码里已有 `OnlineCharacterComboBox`，`:1162-1167`）。
 4. 结果：网格视图换 `ItemsView` + `UniformGridLayout`（`MinItemWidth=260`、`MinColumnSpacing=12`），瓦片圆角 8、封面 16:9、标题两行省略、作者和更新时间 Caption；列表视图项高 72。键盘：方向键移动，Enter 打开详情，空格加入批量下载。
-5. 详情：两种方案，需要拍板——
-   - **A（推荐）保留抽屉**，宽度改为内容区的 45%（最小 400、最大 600），用 `ThemeShadow` 和 `Translation` 取代手画渐变，背景 `AcrylicInAppFillColorDefaultBrush`；1000 宽时抽屉占满内容区并显示返回按钮。保持现在“不离开结果页”的行为。
-   - **B 改成详情页**，像 Store 一样整页显示，顶部 `BreadcrumbBar`，上一个/下一个按钮保留。更接近 Store，但要处理返回后的滚动位置。
-   两种方案的底部操作区都改成：主按钮“下载并安装”（`AccentButtonStyle`）、次按钮“选择文件”、超链接按钮“在网页中打开”。
+5. 详情（已决定：保留抽屉，即原方案 A）：宽度改为内容区的 45%（最小 400、最大 600），用 `ThemeShadow` 和 `Translation` 取代手画渐变，背景 `AcrylicInAppFillColorDefaultBrush`；1000 宽时抽屉占满内容区并显示返回按钮。保持现在“不离开结果页”的行为，上一个/下一个按钮保留。不做 Store 式的独立详情页。底部操作区改成：主按钮“下载并安装”（`AccentButtonStyle`）、次按钮“选择文件”、超链接按钮“在网页中打开”。
 6. 状态：加载用 `ProgressRing` + 与瓦片同尺寸的占位卡片（去掉三条假文字）；无结果用 `EmptyState`（“没有找到 Mod”+“清除筛选”）；网络或接口错误用结果区顶部的内联 `InfoBar`（Error，带“重试”）；离线缓存模式用 `InfoBar`（Informational）“正在显示缓存内容”。
 7. 分页：保留上一页/下一页（接口按页取），中间显示“第 3 / 12 页”；按钮最小宽度按俄语“Назад/Далее”定为 96。
 
 ### 阶段与工作量
 
-J6 本身是 L，外观改动 M–L，**单独开 J6-b PR**。详情方案 A 和 B 二选一后再开工。
+J6 本身是 L，外观改动 M–L，**单独开 J6-b PR**。
 
 ## 快捷键（J5）
 
@@ -225,7 +222,7 @@ J5 移动后的单独提交，M。`KeyVisual` 控件可先在 J5 里建，后续
 
 1. 页面顶部状态区（仿 Windows 更新的结构，不用其图标）：图标、“有 3 个 Mod 可更新 / 都是最新”、“上次检查：10 分钟前”Caption、主按钮“检查更新”；检查中显示不确定 `ProgressBar`。
 2. 下面用 `SelectorBar` 分三个视图：**Mod 更新**（默认）、**下载记录**、**安装与恢复**。去掉多栏和嵌套滚动，每个视图一个滚动区。
-   - Mod 更新：筛选 `Segmented`（全部/有更新/出错）+ 搜索框；列表行仿 Store 库：缩略图、名称、当前 → 新版本、状态、“更新”按钮；多个可更新时列表顶部有“全部更新”。检查间隔移到 `SettingsCard`（放在列表下方或设置页，见“需要拍板”）。
+   - Mod 更新：筛选 `Segmented`（全部/有更新/出错）+ 搜索框；列表行仿 Store 库：缩略图、名称、当前 → 新版本、状态、“更新”按钮；多个可更新时列表顶部有“全部更新”。检查间隔改为列表下方的一张 `SettingsCard`（它只影响 Mod 更新，留在本视图，不移到设置页）。
    - 下载记录：同样的行样式，带进度、失败原因和“重试/打开文件夹”，“清除”放在视图右上角。
    - 安装与恢复：`SettingsCard`“冲突检测”（开关）、`SettingsCard`“撤销上次安装”（按钮）、`SettingsExpander`“配置方案”（`ComboBox` 在标题行，展开后是保存/更新/删除与“包含组合状态”）、`SettingsExpander`“备份”（上限 `NumberBox` 在标题行，展开后是备份列表）。
 3. 空状态：Mod 更新“还没有跟踪的 Mod”+“浏览在线 Mod”；下载记录“没有下载记录”。
@@ -250,7 +247,7 @@ M。结构变化大（多栏 → 分视图），**单独开 J3-b PR**，在 J3 �
 
 ### 改动
 
-1. 去掉分区按钮和两栏总览，改为**单列长页面**：`MaxWidth="1000"`，左对齐，分组标题“外观”“应用更新”“在线 Mod”“诊断与反馈”“关于”。5 个分组都不长，单列滚动比分区切换更快；如需跳转，用命令面板（已能打开设置页）加分组锚点。（备选：保留左侧分区但用 `NavigationView` 的子项，见“需要拍板”。）
+1. 去掉分区按钮和两栏总览，改为**单列长页面**：`MaxWidth="1000"`，左对齐，分组标题“外观”“应用更新”“在线 Mod”“诊断与反馈”“关于”。5 个分组都不长，单列滚动比分区切换更快；如需跳转，用命令面板（已能打开设置页）加分组锚点。不保留分区导航（已决定）。
 2. 外观：语言、主题、密度（`ComboBox`）、减少动画、最小化到托盘（`ToggleSwitch`）各一张 `SettingsCard`，带 `HeaderIcon`（现有字形）。改语言后显示内联 `InfoBar`“部分文字重启后生效”（如适用）。
 3. 应用更新：仿“Windows 更新”的状态卡片（当前版本、最新版本、主按钮“检查更新/下载并安装”、进度），下面 `SettingsCard`“启动时检查更新”（开关）、`SettingsCard`“检查间隔”（`ComboBox`）、`SettingsExpander`“发行说明”（展开显示说明文字）、`SettingsCard`“在 GitHub 查看”（`IsClickEnabled`，外链图标）。
 4. 在线 Mod：`SettingsExpander`“仓库在线信息”，展开后每项一行只读 `SettingsCard`（可选择文字）；“编辑仓库信息”“编辑角色映射”两张可点击 `SettingsCard`。
@@ -287,15 +284,15 @@ J8 的对话框类拆出之后单独提交，S。
 
 | 阶段 | 内容 | 工作量 | 依赖 | 提交方式 |
 | --- | --- | --- | --- | --- |
-| J0 | 额外：基线截图加深色主题；确认 `CommunityToolkit.WinUI.Controls.Segmented`、`Sizers` 也能与 App SDK 1.7 一起打包 | +S | — | 原 J0 内 |
+| J0 | 额外：基线截图加深色主题，并固定截图用的壁纸；确认 `CommunityToolkit.WinUI.Controls.Segmented`、`Sizers` 也能与 App SDK 1.7 一起打包 | +S | — | 原 J0 内 |
 | J1 | 不改外观 | — | J0 | 原 J1 |
-| **J1T 设计令牌** | 新建 `Themes/Tokens.xaml`（相当于把 J8 的资源拆分提前一部分）：`App*Brush` 改为引用系统画刷，根背景透明露出 Mica，内容层 `LayerFillColorDefaultBrush`，圆角 4/8，按钮高度回到默认，标题/正文/说明改用系统字体样式，统一 `StatusBadge` 样式；做完重拍基线 | S–M | J1 | 新 PR |
+| **J1T 设计令牌** | 新建 `Themes/Tokens.xaml`（相当于把 J8 的资源拆分提前一部分）：`App*Brush` 改为引用系统画刷，根背景透明露出 Mica，内容层 `LayerFillColorDefaultBrush`，圆角 4/8，按钮高度回到默认，标题/正文/说明改用系统字体样式，统一 `StatusBadge` 样式；强调色跟随系统，删除品牌蓝；做完用固定壁纸重拍基线 | S–M | J1 | 新 PR |
 | **J1N 外壳外观** | `TitleBar` + 标题栏搜索框、`NavigationView` + `InfoBadge`、内容层、`InfoBar` 规则、命令面板材质与结果项 | M | J1T | 新 PR |
 | J2 | 移动 + `SettingsCard`（原计划）+ 单列设置页 | S–M | J1T | 同 PR，单独提交 |
 | J3 / J3-b | J3 移动；J3-b 状态区 + `SelectorBar` 三视图 | M / M | J1T | J3-b 新 PR |
 | J4 / J4-b | J4 移动 + 主卡片、快捷操作、路径折叠；J4-b 首次安装卡片 + `TeachingTip` | S–M / S | J1T | 外观同 PR 单独提交；J4-b 新 PR |
 | J5 | 移动 + `InfoBar`、`SettingsCard`、`KeyVisual` | M | J1T | 同 PR，单独提交 |
-| J6 / J6-b | J6 移动；J6-b 搜索与筛选、`ItemsView`、详情抽屉或详情页、状态 | L / M–L | J1T | J6-b 新 PR |
+| J6 / J6-b | J6 移动；J6-b 搜索与筛选、`ItemsView`、详情抽屉、状态 | L / M–L | J1T | J6-b 新 PR |
 | J7 / J7-b | J7 移动；J7-b `CommandBar`、三栏平面 + `GridSplitter`、详情窗格、窄窗口抽屉 | L / L | J1T | J7-b 新 PR |
 | J8 | 对话框类 + 统一样式与按钮文字 | S–M | 可穿插 | 同 PR，单独提交 |
 
@@ -305,23 +302,25 @@ J8 的对话框类拆出之后单独提交，S。
 
 每个外观提交或 `-b` PR：
 
-- 只用系统主题画刷和系统字体样式，不新增固定色值（品牌强调色若保留，只在 `Tokens.xaml` 定义一次）。
-- 中英俄三种语言 × 1400×900 / 1000×800 × 深浅主题，共 12 张截图；PR 里逐张说明与基线的差异。俄语下没有被截断且没有提示的按钮或标签。
+- 只用系统主题画刷和系统字体样式，不新增固定色值；强调色跟随系统，不再定义品牌蓝。
+- 中英俄三种语言 × 1400×900 / 1000×800 × 深浅主题，共 12 张截图（固定壁纸）；PR 里逐张说明与基线的差异。俄语下没有被截断且没有提示的按钮或标签。
 - 高对比度主题下能看清所有状态（截一张检查）。
 - 所有图标按钮有 `AutomationProperties.Name`；Tab 顺序与视觉顺序一致；用讲述人走一遍这一页的主要操作。
 - 界面测试通过；新增或替换控件保留原自动化 ID。
 
-## 需要拍板
+## 已决定（2026-11-04）
 
-1. **强调色**：跟随系统强调色（推荐，Fluent 默认，深浅和高对比度都由系统处理），还是保留现在的品牌蓝 `#2563EB`。
-2. **Mica 是否露出**：J1T 去掉不透明页面底色后，窗口在不同壁纸下颜色会略有变化；截图对比要用固定壁纸。
-3. **外观提交方式**：本方案默认“S–M 同 PR 单独提交，M 以上单独开 `-b` PR”；也可以全部改成单独 PR，评审更简单但 PR 数量翻倍。
-4. **J1T 的位置**：放在 J1 之后、J2 之前（推荐，后续每页只拍一次新基线），还是全部拆完（J7 之后）再统一换令牌（拆分期间截图对比最简单，但页面外观改动要等很久）。
-5. **导航**：换成 `NavigationView`（推荐，得到系统的展开/折叠、键盘和讲述人支持），还是保留自制按钮只改样式（界面测试改动最少）。
-6. **设置页结构**：单列长页面（推荐），还是保留分区导航。
-7. **更新页**：`SelectorBar` 分三视图（推荐），还是保留多栏只换卡片样式。
-8. **在线详情**：抽屉（方案 A，推荐）还是独立详情页（方案 B）。
-9. **工作区列宽**：允许用户用 `GridSplitter` 拖动并记住（推荐），还是保持代码分配的固定比例。
+维护者 2026-11-04 确认以下 9 项都按推荐执行，正文已按这些结论写定：
+
+1. **强调色**：跟随系统强调色，去掉品牌蓝 `#2563EB`（J1T 删除 `App.xaml` 里覆盖 `AccentFillColor*`、`AccentButton*` 的定义）。
+2. **Mica**：露出 Mica，去掉不透明页面底色；截图对比用固定壁纸（J0 记录所用壁纸，之后每次截图都用它）。
+3. **外观提交方式**：S–M 的外观改动放在同一个 PR 里单独提交，M 以上单独开 `-b` PR（这里“M 以上”指 M–L 和 L，即 J6-b、J7-b；J5 的外观为 M，留在 J5 的 PR 内）。J3-b（多栏改分视图，需要单独评审）和 J4-b（牵涉首次安装逻辑）按内容单独成 PR。
+4. **J1T 的位置**：放在 J1 之后、J2 之前。
+5. **导航**：换成 `NavigationView`，用 `AutomationProperties.AutomationId` 保留原来的控件名称（`DashboardNavButton` 等），界面测试照旧能定位。
+6. **设置页**：单列长页面，不保留分区导航。
+7. **更新页**：用 `SelectorBar` 分 Mod 更新、下载记录、安装与恢复三个视图。
+8. **在线详情**：保留右侧抽屉（原方案 A），不做独立详情页。
+9. **工作区列宽**：用 `GridSplitter` 拖动，列宽保存在配置里，下次打开恢复。
 
 ## 不在范围内
 
@@ -332,4 +331,4 @@ J8 的对话框类拆出之后单独提交，S。
 
 ## English summary
 
-This is the companion to the [UI structure plan](./UI-Structure-Plan.md) (stage J): that plan says how the `MainWindow` is split into pages without changing the look; this one says how each page's look is improved afterwards, following Microsoft's published Fluent guidance, WinUI 3 Gallery controls, Windows Community Toolkit controls and patterns from Windows 11 Settings, Microsoft Store, File Explorer and PowerToys (Dev Home, retired in May 2025, is a historical reference only). It stays on WinUI 3 and uses no Microsoft brand assets. Rules: pure moves and appearance changes are separate commits; appearance work of size M or more gets its own `-b` PR; every change is checked in Chinese, English and Russian at 1400×900 and 1000×800 (both show only the icon rail today, since the shell expands navigation at 1440), light and dark; automation IDs are kept. Cross-cutting problems — an opaque page brush that hides the Mica backdrop, about 30 fixed `App*Brush` colours with a hard-coded `#2563EB` accent overriding the system accent, 10–14 px corners, 40 px buttons, ad-hoc font sizes and opacity-based secondary text, hand-drawn status pills, descriptions hidden in tooltips — are fixed once in a new stage **J1T (design tokens)**, after which baselines are retaken. A new stage **J1N (shell)** moves to the 1.7 `TitleBar` with a search box, `NavigationView` with `InfoBadge` for downloads and updates, a content layer over Mica, rules for `InfoBar` severities and an Acrylic command palette with icons and grouped results. Per page: **Settings (J2)** becomes a single 1000 px column of `SettingsCard`/`SettingsExpander` groups like Windows Settings, with an update status card and an About expander; **Updates (J3-b)** gets a Windows-Update-style status header and a `SelectorBar` with Mod updates, download history and install & recovery views instead of nested scrolling columns; **Dashboard (J4)** gets one current-repository hero card, clickable quick-action cards, collapsed path settings with a warning `InfoBar`, an adaptive characters grid, and (J4-b) a getting-started card with `TeachingTip`s instead of first-run dialogs; **Shortcuts (J5)** gets a privilege `InfoBar`, `SettingsCard` targets, key-cap visuals and `SettingsExpander` options like PowerToys; **Online (J6-b)** gets Store-style search, removable filter chips, an `ItemsView` grid, skeleton loading, empty and error `InfoBar` states, and either a resized shadowed drawer (recommended) or a full detail page; **Mod workspace (J7-b)** follows File Explorer and the existing workbench canvas with a `CommandBar`, three flat panes split by `GridSplitter`, a details pane with Deploy as the primary action and a `SelectorBar` instead of `TabView`, and a drawer at 1000 px; **Dialogs (J8)** use `DefaultContentDialogStyle`, verb buttons and safe defaults. This adds about 4–6 weeks. Open decisions for the maintainer: system accent versus the brand blue, exposing Mica, commit/PR granularity, whether J1T comes before J2 or after J7, `NavigationView` versus restyled custom buttons, the Settings structure, the Updates views, drawer versus detail page for Online, and resizable workspace columns.
+This is the companion to the [UI structure plan](./UI-Structure-Plan.md) (stage J): that plan says how the `MainWindow` is split into pages without changing the look; this one says how each page's look is improved afterwards, following Microsoft's published Fluent guidance, WinUI 3 Gallery controls, Windows Community Toolkit controls and patterns from Windows 11 Settings, Microsoft Store, File Explorer and PowerToys (Dev Home, retired in May 2025, is a historical reference only). It stays on WinUI 3 and uses no Microsoft brand assets. Rules: pure moves and appearance changes are separate commits; S–M appearance work stays in the same PR as its own commit, larger work gets its own `-b` PR; every change is checked in Chinese, English and Russian at 1400×900 and 1000×800 (both show only the icon rail today, since the shell expands navigation at 1440), light and dark; automation IDs are kept. Cross-cutting problems — an opaque page brush that hides the Mica backdrop, about 30 fixed `App*Brush` colours with a hard-coded `#2563EB` accent overriding the system accent, 10–14 px corners, 40 px buttons, ad-hoc font sizes and opacity-based secondary text, hand-drawn status pills, descriptions hidden in tooltips — are fixed once in a new stage **J1T (design tokens)**, after which baselines are retaken. A new stage **J1N (shell)** moves to the 1.7 `TitleBar` with a search box, `NavigationView` with `InfoBadge` for downloads and updates, a content layer over Mica, rules for `InfoBar` severities and an Acrylic command palette with icons and grouped results. Per page: **Settings (J2)** becomes a single 1000 px column of `SettingsCard`/`SettingsExpander` groups like Windows Settings, with an update status card and an About expander; **Updates (J3-b)** gets a Windows-Update-style status header and a `SelectorBar` with Mod updates, download history and install & recovery views instead of nested scrolling columns; **Dashboard (J4)** gets one current-repository hero card, clickable quick-action cards, collapsed path settings with a warning `InfoBar`, an adaptive characters grid, and (J4-b) a getting-started card with `TeachingTip`s instead of first-run dialogs; **Shortcuts (J5)** gets a privilege `InfoBar`, `SettingsCard` targets, key-cap visuals and `SettingsExpander` options like PowerToys; **Online (J6-b)** gets Store-style search, removable filter chips, an `ItemsView` grid, skeleton loading, empty and error `InfoBar` states, and a resized details drawer with a system shadow (no separate detail page); **Mod workspace (J7-b)** follows File Explorer and the existing workbench canvas with a `CommandBar`, three flat panes split by `GridSplitter`, a details pane with Deploy as the primary action and a `SelectorBar` instead of `TabView`, and a drawer at 1000 px; **Dialogs (J8)** use `DefaultContentDialogStyle`, verb buttons and safe defaults. This adds about 4–6 weeks. Decided on 2026-11-04 (all as recommended): follow the system accent and drop the brand blue; expose Mica and take comparison screenshots on a fixed wallpaper; S–M appearance work as separate commits in the same PR, anything larger in its own `-b` PR (J3-b and J4-b are split by content); J1T comes after J1 and before J2; navigation moves to `NavigationView`, keeping the old names as automation IDs; Settings is a single long page; Updates uses a `SelectorBar` with three views; Online keeps the details drawer; workspace columns are resizable with `GridSplitter` and remembered.
