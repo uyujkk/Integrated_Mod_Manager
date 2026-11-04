@@ -343,6 +343,7 @@
                                     <GridView
                                         x:Name="DashboardCharactersGridView"
                                         Grid.Row="1"
+                                        Visibility="{x:Bind Dashboard.HasCharacters, Mode=OneWay}"
                                         IsItemClickEnabled="True"
                                         ItemClick="OnDashboardCharacterClicked"
                                         ItemsSource="{x:Bind Dashboard.Characters}"
