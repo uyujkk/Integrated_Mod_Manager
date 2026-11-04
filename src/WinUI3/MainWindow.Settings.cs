@@ -20,6 +20,7 @@ public sealed partial class MainWindow
         SettingsProjectHintTextBlock.Text = T("Common.ThisSectionKeepsTheGitHubRepository");
         RefreshProjectResourceText();
         UpdateCheckIntervalLabelTextBlock.Text = T("Settings.AppUpdateInterval");
+        UpdateCheckIntervalComboBox.PlaceholderText = T("Settings.SelectUpdateCheckInterval");
         UpdateCheckIntervalHintTextBlock.Text = T("Settings.ThisOnlyAffectsAppVersionChecks");
         if (!AppSelfUpdateEnabled)
         {

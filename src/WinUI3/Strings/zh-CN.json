@@ -1192,6 +1192,7 @@
   "Settings.AppTheme": "应用主题",
   "Settings.AppUpdateChecksAndAutomaticInstallation": "测试版已禁用软件更新检查及自动安装，不会替换稳定版。",
   "Settings.AppUpdateInterval": "软件更新频率",
+  "Settings.SelectUpdateCheckInterval": "选择更新检查频率",
   "Settings.BetaAppUpdatesDisabled": "测试版未接入自动更新",
   "Settings.CheckAndGetUpdate": "检查并获取更新",
   "Settings.Comfortable": "舒适",

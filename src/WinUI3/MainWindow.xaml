@@ -1156,7 +1156,6 @@
                                                     x:Name="OnlineSearchTextBox"
                                                     MinHeight="36"
                                                     Padding="12,7"
-                                                    PlaceholderText="Search this page: character, mod or author"
                                                     TextChanged="OnOnlineSearchTextChanged" />
                                                 <ComboBox
                                                     x:Name="OnlineCharacterComboBox"
@@ -1862,8 +1861,7 @@
                                                         x:Name="UpdateCheckIntervalComboBox"
                                                         Grid.Column="1"
                                                         MinHeight="42"
-                                                        SelectionChanged="OnUpdateCheckIntervalSelectionChanged"
-                                                        PlaceholderText="Select update check interval" />
+                                                        SelectionChanged="OnUpdateCheckIntervalSelectionChanged" />
                                                 </Grid>
                                                 <TextBlock x:Name="UpdateCheckIntervalHintTextBlock" Style="{StaticResource CaptionTextStyle}" MaxLines="2" TextWrapping="WrapWholeWords" TextTrimming="CharacterEllipsis" ToolTipService.ToolTip="{Binding Text, RelativeSource={RelativeSource Self}}" />
                                                 <Grid x:Name="AppUpdateActionsGrid" ColumnSpacing="12" RowSpacing="10">
