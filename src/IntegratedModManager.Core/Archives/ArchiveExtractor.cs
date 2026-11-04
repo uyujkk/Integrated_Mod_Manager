@@ -98,6 +98,10 @@ public sealed class ArchiveExtractor
                 ArchiveErrorKind.NoExtractableFiles);
         }
 
+        string fullDestination = Path.GetFullPath(destinationDirectory);
+        string destinationPrefix = Path.EndsInDirectorySeparator(fullDestination)
+            ? fullDestination
+            : fullDestination + Path.DirectorySeparatorChar;
         for (int index = 0; index < entries.Count; index++)
         {
             ZipArchiveEntry entry = entries[index];
@@ -106,9 +110,16 @@ public sealed class ArchiveExtractor
                 throw ArchiveErrors.Create(ArchiveErrorKind.ZipSymbolicLink, "The archive contains an unsupported symbolic link.");
             }
 
-            string destinationPath = PathSafety.ResolveInsideDirectory(
+            string destinationPath = Path.GetFullPath(PathSafety.ResolveInsideDirectory(
                 destinationDirectory,
-                entry.FullName.Replace('/', Path.DirectorySeparatorChar));
+                entry.FullName.Replace('/', Path.DirectorySeparatorChar)));
+            // ResolveInsideDirectory already rejects entries that leave the destination; this second check
+            // keeps the guard next to the write, where code scanning (cs/zipslip) can see it.
+            if (!destinationPath.StartsWith(destinationPrefix, StringComparison.OrdinalIgnoreCase))
+            {
+                throw new InvalidDataException("A path points outside the expected directory: " + entry.FullName);
+            }
+
             string? destinationFolder = Path.GetDirectoryName(destinationPath);
             if (!string.IsNullOrEmpty(destinationFolder))
             {
