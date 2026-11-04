@@ -242,6 +242,25 @@ public sealed class SmokeTests
         app.AssertNoErrors();
     }
 
+    // Smoke test of the Settings page (stage J2): open it and change the theme, which is applied and saved.
+    [Fact]
+    public void Settings_ThemeChoiceIsSaved()
+    {
+        using AppSession app = AppSession.Configured((shell, _) => shell["CurrentPrimarySection"] = "settings").Start();
+        app.Resize(1700, 1000);
+
+        ComboBox themes = app.Find("ThemeComboBox").AsComboBox();
+        themes.Select(2);
+
+        Assert.True(SpinWait.SpinUntil(() => (string?)app.ShellConfig()["ThemePreference"] == "dark", TimeSpan.FromSeconds(5)),
+            (string?)app.ShellConfig()["ThemePreference"]);
+        themes.Select(1);
+        Assert.True(SpinWait.SpinUntil(() => (string?)app.ShellConfig()["ThemePreference"] == "light", TimeSpan.FromSeconds(5)),
+            (string?)app.ShellConfig()["ThemePreference"]);
+        app.Capture(nameof(Settings_ThemeChoiceIsSaved));
+        app.AssertNoErrors();
+    }
+
     [Fact]
     public void Settings_WideWindowShowsEveryCard()
     {

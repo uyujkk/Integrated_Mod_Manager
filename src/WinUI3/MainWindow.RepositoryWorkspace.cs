@@ -1377,4 +1377,34 @@ public sealed partial class MainWindow
         Grid.SetRow(element, row); Grid.SetColumn(element, column); Grid.SetColumnSpan(element, 1); Grid.SetRowSpan(element, 1);
         parent.Children.Add(element);
     }
+
+    private void OnConflictDetectionToggled(object sender, RoutedEventArgs e)
+    {
+        if (ConflictDetectionToggleSwitch is null)
+        {
+            return;
+        }
+
+        _enableConflictDetection = ConflictDetectionToggleSwitch.IsOn;
+        SaveShellConfig();
+    }
+
+    private void OnLinkDeploymentToggled(object sender, RoutedEventArgs e)
+    {
+        if (_isApplyingRepositoryDeploymentMode || LinkDeploymentToggleSwitch is null)
+        {
+            return;
+        }
+
+        WorkspaceRepository? repository = GetSelectedRepository();
+        if (repository is null)
+        {
+            return;
+        }
+
+        repository.UseDirectoryLinks = LinkDeploymentToggleSwitch.IsOn;
+        SaveShellConfig();
+        RefreshLocalizedStates();
+        ApplySecondLevelSelectionState(GetSelectedSecondLevelItem(), preserveStatus: true);
+    }
 }

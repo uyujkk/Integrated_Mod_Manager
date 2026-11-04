@@ -167,4 +167,13 @@ public sealed partial class MainWindow
         if (_onlineWindowClosed) return;
         foreach (Action update in _onlineCardMetricRefreshers.ToArray()) update();
     }
+
+    private void RefreshOnlineNavigationButtonLabels()
+    {
+        RefreshOnlineButton.Content = _isLoadingOnlineMods
+            ? T("Common.Loading")
+            : T("Settings.RefreshOnlineList");
+        OnlinePrevPageButton.Content = T("Settings.Previous");
+        OnlineNextPageButton.Content = T("Settings.Next");
+    }
 }

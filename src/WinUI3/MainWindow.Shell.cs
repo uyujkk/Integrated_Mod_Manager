@@ -117,7 +117,7 @@ public sealed partial class MainWindow
 
     // Each page container stays alive in its wrapper, so switching keeps scroll positions,
     // selections and loading work, as when the hidden pages were only collapsed.
-    private readonly Dictionary<PrimarySection, WrapperPage> _pages = [];
+    private readonly Dictionary<PrimarySection, UserControl> _pages = [];
 
     private void InitializePageHost()
     {
@@ -127,13 +127,14 @@ public sealed partial class MainWindow
             (PrimarySection.Repository, WorkspacePageHost),
             (PrimarySection.Online, OnlineScrollViewer),
             (PrimarySection.Updates, UpdatesScrollViewer),
-            (PrimarySection.Settings, SettingsScrollViewer),
             (PrimarySection.Shortcuts, ShortcutsScrollViewer)
         })
         {
             PagesHostGrid.Children.Remove(container);
             _pages[section] = new WrapperPage(container);
         }
+        // Stage J2: the Settings page is a page of its own.
+        _pages[PrimarySection.Settings] = new SettingsPage(_services);
     }
 
     private UIElement GetActiveSectionElement()
@@ -145,7 +146,7 @@ public sealed partial class MainWindow
             PrimarySection.Online => OnlineScrollViewer,
             PrimarySection.Updates => UpdatesScrollViewer,
             PrimarySection.Shortcuts => ShortcutsScrollViewer,
-            _ => SettingsScrollViewer
+            _ => _pages[PrimarySection.Settings]
         };
     }
 
@@ -322,8 +323,7 @@ public sealed partial class MainWindow
     private Brush GetAppThemeBrush(string resourceKey)
     {
         // The App*Brush tokens of Themes/Tokens.xaml, in the theme the window shows.
-        string themeKey = _systemHighContrast ? "HighContrast" : _services.Appearance.IsDark ? "Dark" : "Light";
-        return ThemeTokens.Get(resourceKey, themeKey);
+        return ThemeTokens.Get(resourceKey, _services.Appearance.ThemeKey);
     }
 
     private void OnRepositoryNavClicked(object sender, RoutedEventArgs e)

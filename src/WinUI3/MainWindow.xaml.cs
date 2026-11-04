@@ -18,9 +18,6 @@ public sealed partial class MainWindow : Window
     // Shared state and file access; MainWindow forwards to these until each page owns its part.
     private readonly AppServices _services = new();
 
-    /// <summary>The Settings page binds its appearance choices to this view model.</summary>
-    public AppearanceSettingsViewModel AppearanceSettings { get; } = new();
-
     /// <summary>The dashboard's repository cards and current-repository status.</summary>
     public DashboardViewModel Dashboard { get; } = new();
     private static bool AppSelfUpdateEnabled => ApplicationReleasePolicy.ApplicationSelfUpdateEnabled;
@@ -190,6 +187,7 @@ public sealed partial class MainWindow : Window
         InitializeComponent();
         _services.Dialogs.Attach(() => RootGrid.XamlRoot);
         _services.Status.NotificationRequested += OnNotificationRequested;
+        InitializeSettingsHost();
         InitializePageHost();
         SubscribeToAppearanceEvents();
         ApplyWindowIcon();
@@ -198,8 +196,6 @@ public sealed partial class MainWindow : Window
         TraceStartupStage("Persistent data store initialized");
         InitializeAppTitleBar();
         InitializeCommandPaletteShortcut();
-        EditOnlineRepositoryButton.Click -= OnEditRepositoryDetailsClicked;
-        EditOnlineRepositoryButton.Click += OnEditOnlineRepositoryClicked;
         FirstLevelListView.ItemsSource = _characters.Visible;
         SecondLevelListView.ItemsSource = _secondLevelItems;
         OnlineVirtualizedListView.ItemsSource = _onlinePage.VisibleMods;

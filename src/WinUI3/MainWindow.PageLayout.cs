@@ -7,10 +7,10 @@ public sealed partial class MainWindow
     // Pages lay themselves out from their own size. The window's SizeChanged fires before the
     // pages are measured again, so a page's ActualWidth there still holds the previous size:
     // restoring a maximized window left the settings page laid out for the maximized width.
+    // The Settings page (Pages/SettingsPage.xaml) does the same itself.
     private void InitializePageLayouts()
     {
         AttachPageLayout(DashboardScrollViewer, UpdateDashboardLayout);
-        AttachPageLayout(SettingsScrollViewer, UpdateSettingsLayout);
         AttachPageLayout(UpdatesScrollViewer, UpdateUpdatesLayout);
         AttachPageLayout(ShortcutsScrollViewer, UpdateShortcutsLayout);
     }
@@ -30,7 +30,4 @@ public sealed partial class MainWindow
     // Hidden pages have no size yet, so they estimate from the window minus the navigation.
     private double PageWidth(FrameworkElement page)
         => page.ActualWidth > 0 ? page.ActualWidth : Math.Max(420, Bounds.Width - 240);
-
-    private double SettingsHeaderHeight()
-        => SettingsPageHeader.ActualHeight > 0 ? SettingsPageHeader.ActualHeight : 56;
 }

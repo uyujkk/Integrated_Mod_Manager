@@ -121,6 +121,7 @@ public sealed partial class MainWindow
     private void RefreshSystemAccessibilityPreferences()
     {
         _systemHighContrast = ReadHighContrastState();
+        _services.Appearance.IsHighContrast = _systemHighContrast;
         _systemAnimationsEnabled = ReadClientAreaAnimationState();
     }
 
@@ -256,20 +257,6 @@ public sealed partial class MainWindow
         }
     }
 
-    private void UpdateAppUpdateActionsLayout()
-    {
-        bool stackUpdateActions = AppUpdateActionsGrid.ActualWidth < 540;
-        AppUpdateActionColumn1.Width = new GridLength(1, GridUnitType.Star);
-        AppUpdateActionColumn2.Width = stackUpdateActions ? new GridLength(0) : new GridLength(1, GridUnitType.Star);
-        AppUpdateActionColumn3.Width = stackUpdateActions ? new GridLength(0) : new GridLength(1, GridUnitType.Star);
-        Grid.SetColumn(OpenGitHubButton, 0);
-        Grid.SetRow(OpenGitHubButton, 0);
-        Grid.SetColumn(CheckUpdatesButton, stackUpdateActions ? 0 : 1);
-        Grid.SetRow(CheckUpdatesButton, stackUpdateActions ? 1 : 0);
-        Grid.SetColumn(InstallUpdateButton, stackUpdateActions ? 0 : 2);
-        Grid.SetRow(InstallUpdateButton, stackUpdateActions ? 2 : 0);
-    }
-
     private bool IsFavoriteCharacter(string characterKey)
     {
         if (string.IsNullOrWhiteSpace(characterKey) || string.IsNullOrWhiteSpace(_onlineCharacterCatalogKey))
@@ -401,10 +388,7 @@ public sealed partial class MainWindow
         {
             _currentPrimarySection = PrimarySection.Settings;
             ApplyShellState(refreshRepository: false);
-            AppUpdateProgressPanel.Visibility = Visibility.Visible;
-            AppUpdateProgressBar.IsIndeterminate = true;
-            AppUpdateProgressBar.Value = 0;
-            AppUpdateProgressTextBlock.Text = T("ProductivityFeatures.PreparingUpdateDownload");
+            SettingsView.BeginDownload(T("ProductivityFeatures.PreparingUpdateDownload"));
 
             if (string.IsNullOrWhiteSpace(release.Sha256Url))
             {
@@ -414,20 +398,18 @@ public sealed partial class MainWindow
             using var timeout = new CancellationTokenSource(TimeSpan.FromMinutes(15));
             await ApplicationUpdateClient.DownloadAsync(_httpClient, release.PackageUrl, temporaryPath, (downloaded, totalBytes) =>
             {
-                AppUpdateProgressBar.IsIndeterminate = totalBytes is null;
                 if (totalBytes is { } total)
                 {
                     double progress = Math.Clamp(downloaded * 100d / total, 0, 100);
-                    AppUpdateProgressBar.Value = progress;
-                    AppUpdateProgressTextBlock.Text = T("ProductivityFeatures.DownloadingUpdate", progress, FormatStorageSize(downloaded), FormatStorageSize(total));
+                    SettingsView.ReportDownload(progress, T("ProductivityFeatures.DownloadingUpdate", progress, FormatStorageSize(downloaded), FormatStorageSize(total)));
                 }
-                else if (downloaded > 0)
+                else
                 {
-                    AppUpdateProgressTextBlock.Text = T("ProductivityFeatures.Downloaded", FormatStorageSize(downloaded));
+                    SettingsView.ReportDownload(null, downloaded > 0 ? T("ProductivityFeatures.Downloaded", FormatStorageSize(downloaded)) : null);
                 }
             }, timeout.Token);
 
-            AppUpdateProgressTextBlock.Text = T("ProductivityFeatures.VerifyingUpdatePackage");
+            SettingsView.ReportDownloadText(T("ProductivityFeatures.VerifyingUpdatePackage"));
             if (!await ApplicationUpdateClient.VerifyAsync(_httpClient, release.PackageUrl, release.Sha256Url, temporaryPath, timeout.Token))
             {
                 throw new InvalidDataException(T("ProductivityFeatures.TheUpdatePackageFailedSHA256"));
@@ -436,9 +418,7 @@ public sealed partial class MainWindow
             File.Move(temporaryPath, finalPath, true);
             _localUpdatePackagePath = finalPath;
             _localUpdatePackageVersion = releaseVersion;
-            AppUpdateProgressBar.IsIndeterminate = false;
-            AppUpdateProgressBar.Value = 100;
-            AppUpdateProgressTextBlock.Text = T("ProductivityFeatures.DownloadCompleteStartingUpdater");
+            SettingsView.ReportDownload(100, T("ProductivityFeatures.DownloadCompleteStartingUpdater"));
             await StartLocalUpdateAsync(finalPath);
         }
         catch (Exception ex)
@@ -455,75 +435,8 @@ public sealed partial class MainWindow
                 // Preserve the original update failure if a scanner still holds the temporary file.
             }
 
-            AppUpdateProgressBar.IsIndeterminate = false;
-            AppUpdateProgressPanel.Visibility = Visibility.Collapsed;
+            SettingsView.EndDownload();
             await ShowMessageAsync(T("ProductivityFeatures.FailedToDownloadOrInstallUpdate") + ex.Message, T("Common.UpdateFailed"));
-        }
-    }
-
-    private void OnStartupUpdateToggled(object sender, RoutedEventArgs e)
-    {
-        if (_isApplyingStartupUpdateSetting)
-        {
-            return;
-        }
-
-        _checkAppUpdatesOnStartup = ApplicationReleasePolicy.CanCheckApplicationUpdates(StartupUpdateToggleSwitch.IsOn);
-        SaveShellConfig();
-    }
-
-    private void RefreshProductivitySettingsText()
-    {
-        StartupUpdateTitleTextBlock.Text = T("ProductivityFeatures.CheckForAppUpdatesAtStartup");
-        StartupUpdateDescriptionTextBlock.Text = T("ProductivityFeatures.AskBeforeDownloadingANewVersion");
-        if (!AppSelfUpdateEnabled)
-        {
-            _checkAppUpdatesOnStartup = false;
-            StartupUpdateDescriptionTextBlock.Text = T("ProductivityFeatures.ThisLocalTestBuildDoesNot");
-        }
-        _isApplyingStartupUpdateSetting = true;
-        StartupUpdateToggleSwitch.IsOn = _checkAppUpdatesOnStartup;
-        StartupUpdateToggleSwitch.IsEnabled = AppSelfUpdateEnabled;
-        StartupUpdateToggleSwitch.OnContent = T("Common.On2");
-        StartupUpdateToggleSwitch.OffContent = T("Common.Off2");
-        _isApplyingStartupUpdateSetting = false;
-
-        DiagnosticsTitleTextBlock.Text = T("ProductivityFeatures.DiagnosticsAndIssueReport");
-        DiagnosticsHintTextBlock.Text = T("ProductivityFeatures.GenerateASanitizedReportWithoutPrivate");
-        ExportDiagnosticsButton.Content = T("ProductivityFeatures.ExportDiagnosticReport");
-        SubmitDiagnosticsButton.Content = T("ProductivityFeatures.ReportOnGitHub");
-        AutomationProperties.SetName(ExportDiagnosticsButton, ExportDiagnosticsButton.Content?.ToString() ?? string.Empty);
-        AutomationProperties.SetName(SubmitDiagnosticsButton, SubmitDiagnosticsButton.Content?.ToString() ?? string.Empty);
-        FeedbackGroupTitleTextBlock.Text = T("Settings.FeedbackGroup");
-        FeedbackGroupNumberTextBlock.Text = T("Settings.FeedbackGroupNumber", FeedbackQqGroup);
-        CopyFeedbackGroupButton.Content = T("Settings.CopyGroupNumber");
-        AutomationProperties.SetName(CopyFeedbackGroupButton, T("Settings.CopyGroupNumber") + " " + FeedbackQqGroup);
-        FeedbackDiscordTitleTextBlock.Text = T("Settings.FeedbackDiscord");
-        FeedbackDiscordHintTextBlock.Text = T("Settings.FeedbackDiscordHint");
-        OpenFeedbackDiscordButton.Content = T("Settings.OpenDiscord");
-        AutomationProperties.SetName(OpenFeedbackDiscordButton, T("Settings.OpenDiscord"));
-    }
-
-    // The QQ group users join to report problems and talk about the app.
-    private const string FeedbackQqGroup = "1041384622";
-    private const string FeedbackDiscordUrl = "https://discord.gg/G9nszEQgrV";
-
-    private async void OnOpenFeedbackDiscordClicked(object sender, RoutedEventArgs e) =>
-        await RunUiActionAsync("Open feedback Discord", () => OpenExternalUrlAsync(FeedbackDiscordUrl, T("Settings.FeedbackDiscord")));
-
-    private void OnCopyFeedbackGroupClicked(object sender, RoutedEventArgs e)
-    {
-        try
-        {
-            var package = new Windows.ApplicationModel.DataTransfer.DataPackage();
-            package.SetText(FeedbackQqGroup);
-            Windows.ApplicationModel.DataTransfer.Clipboard.SetContent(package);
-            DiagnosticsStatusTextBlock.Text = T("Settings.GroupNumberCopied", FeedbackQqGroup);
-        }
-        catch (Exception ex)
-        {
-            LogApplicationIssue("Copy feedback group number", ex);
-            DiagnosticsStatusTextBlock.Text = T("Settings.GroupNumberNotCopied", FeedbackQqGroup);
         }
     }
 
@@ -775,7 +688,7 @@ public sealed partial class MainWindow
         try
         {
             string path = await CreateDiagnosticReportAsync();
-            DiagnosticsStatusTextBlock.Text = T("ProductivityFeatures.Exported", Path.GetFileName(path));
+            SettingsView.DiagnosticsStatus = T("ProductivityFeatures.Exported", Path.GetFileName(path));
             Process.Start(new ProcessStartInfo { FileName = Path.GetDirectoryName(path)!, UseShellExecute = true });
         }
         catch (Exception ex)
