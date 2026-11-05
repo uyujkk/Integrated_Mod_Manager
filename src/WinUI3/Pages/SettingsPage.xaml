@@ -7,9 +7,11 @@
     IsTabStop="False"
     HorizontalContentAlignment="Stretch"
     VerticalContentAlignment="Stretch">
-    <!-- Stage J2 (docs/development/UI-Structure-Plan.md, UI-Fluent-Design-Plan.md "设置（J2）"): one column of
-         settings cards like Windows Settings, grouped under headings, at most 1000 px wide and left-aligned.
-         The page shows SettingsViewModel and sends clicks to the window through it. -->
+    <!-- Settings cards like Windows Settings, grouped under headings (stage J2). On a wide page the settings you
+         change are in the main column and what is mostly to look at (version and updates, the repository's online
+         information, diagnostics, about) is in a rail beside it, like the related settings beside Windows Settings;
+         on a narrow page the rail follows the main column. The page shows SettingsViewModel and sends clicks to
+         the window through it. -->
     <UserControl.Resources>
         <!-- A group heading: 30 px above, the cards 4 px apart below. -->
         <Style x:Key="SettingsGroupTitleStyle" TargetType="TextBlock" BasedOn="{StaticResource CardTitleTextStyle}">
@@ -27,14 +29,37 @@
         HorizontalScrollMode="Disabled"
         VerticalScrollBarVisibility="Auto"
         VerticalScrollMode="Auto">
-        <Grid Margin="2,2,12,24">
-            <!-- The star column stops at 1000 px and leaves the rest of a wide window empty on the right. -->
+        <!-- WideLayout and NarrowLayout follow the page's own width (SettingsPage.xaml.cs). -->
+        <VisualStateManager.VisualStateGroups>
+            <VisualStateGroup x:Name="SettingsLayoutStates">
+                <VisualState x:Name="WideLayout" />
+                <VisualState x:Name="NarrowLayout">
+                    <VisualState.Setters>
+                        <Setter Target="SettingsRailColumn.Width" Value="0" />
+                        <Setter Target="SettingsRailColumn.MinWidth" Value="0" />
+                        <Setter Target="SettingsLayoutGrid.ColumnSpacing" Value="0" />
+                        <Setter Target="SettingsRailPanel.(Grid.Row)" Value="2" />
+                        <Setter Target="SettingsRailPanel.(Grid.Column)" Value="0" />
+                        <Setter Target="SettingsAppUpdatesTitleTextBlock.Margin" Value="1,30,0,6" />                    </VisualState.Setters>
+                </VisualState>
+            </VisualStateGroup>
+        </VisualStateManager.VisualStateGroups>
+        <!-- Wide: the two columns share the page in proportion (the rail between 360 and 520 DIP), so a
+             maximized window has no empty half. The header spans both, so it lines up with the content. -->
+        <Grid x:Name="SettingsLayoutGrid" Margin="2,2,12,24" ColumnSpacing="24">
             <Grid.ColumnDefinitions>
-                <ColumnDefinition Width="*" MaxWidth="1000" />
+                <ColumnDefinition x:Name="SettingsMainColumn" Width="*" />
+                <ColumnDefinition x:Name="SettingsRailColumn" Width="0.42*" MinWidth="360" MaxWidth="520" />
             </Grid.ColumnDefinitions>
-            <StackPanel x:Name="SettingsRootPanel" Spacing="4">
-                <local:PageHeader x:Name="SettingsPageHeader" />
+            <Grid.RowDefinitions>
+                <RowDefinition Height="Auto" />
+                <RowDefinition Height="Auto" />
+                <RowDefinition Height="Auto" />
+            </Grid.RowDefinitions>
+            <local:PageHeader x:Name="SettingsPageHeader" Grid.ColumnSpan="2" Margin="0,0,0,4" />
 
+            <!-- Main column: what you change. -->
+            <StackPanel x:Name="SettingsMainPanel" Grid.Row="1" Spacing="4">
                 <!-- Appearance and language. -->
                 <TextBlock x:Name="SettingsAppearanceTitleTextBlock" Style="{StaticResource SettingsFirstGroupTitleStyle}" />
                 <toolkit:SettingsCard x:Name="LanguageSettingsCard">
@@ -82,25 +107,24 @@
                     <ToggleSwitch x:Name="MinimizeToTrayToggleSwitch" IsOn="{x:Bind ViewModel.MinimizeToTray, Mode=TwoWay}" />
                 </toolkit:SettingsCard>
 
-                <!-- App updates, like Windows Update: the state and its buttons first, then the options. -->
-                <TextBlock x:Name="SettingsAppUpdatesTitleTextBlock" Style="{StaticResource SettingsGroupTitleStyle}" />
-                <toolkit:SettingsCard x:Name="AppUpdateStatusCard" Header="{x:Bind ViewModel.UpdateStatus, Mode=OneWay}">
+                <!-- How the app looks for updates, and what the latest release says. -->
+                <TextBlock x:Name="SettingsUpdateOptionsTitleTextBlock" Style="{StaticResource SettingsGroupTitleStyle}" />
+                <toolkit:SettingsCard x:Name="StartupUpdateSettingsCard">
                     <toolkit:SettingsCard.HeaderIcon>
-                        <FontIcon Glyph="&#xE895;" />
+                        <FontIcon Glyph="&#xE7E8;" />
                     </toolkit:SettingsCard.HeaderIcon>
-                    <StackPanel Orientation="Horizontal" Spacing="8">
-                        <Button x:Name="CheckUpdatesButton" Click="OnCheckUpdatesClicked" IsEnabled="{x:Bind ViewModel.CanCheckUpdates, Mode=OneWay}" />
-                        <Button x:Name="InstallUpdateButton" Click="OnInstallUpdateClicked" Style="{StaticResource AccentButtonStyle}" />
-                    </StackPanel>
+                    <ToggleSwitch x:Name="StartupUpdateToggleSwitch"
+                                  IsOn="{x:Bind ViewModel.CheckOnStartup, Mode=TwoWay}" IsEnabled="{x:Bind ViewModel.SelfUpdateEnabled, Mode=OneWay}" />
                 </toolkit:SettingsCard>
-                <toolkit:SettingsCard x:Name="AppUpdateProgressCard" Header="{x:Bind ViewModel.DownloadText, Mode=OneWay}"
-                                      Visibility="{x:Bind ViewModel.IsDownloadingUpdate, Mode=OneWay}">
+                <toolkit:SettingsCard x:Name="UpdateCheckIntervalSettingsCard">
                     <toolkit:SettingsCard.HeaderIcon>
-                        <FontIcon Glyph="&#xE896;" />
+                        <FontIcon Glyph="&#xE823;" />
                     </toolkit:SettingsCard.HeaderIcon>
-                    <ProgressBar x:Name="AppUpdateProgressBar" Width="200" Minimum="0" Maximum="100"
-                                 IsIndeterminate="{x:Bind ViewModel.IsDownloadProgressIndeterminate, Mode=OneWay}"
-                                 Value="{x:Bind ViewModel.DownloadProgress, Mode=OneWay}" />
+                    <ComboBox
+                        x:Name="UpdateCheckIntervalComboBox"
+                        MinWidth="160"
+                        IsEnabled="{x:Bind ViewModel.SelfUpdateEnabled, Mode=OneWay}"
+                        SelectionChanged="OnUpdateCheckIntervalSelectionChanged" />
                 </toolkit:SettingsCard>
                 <toolkit:SettingsExpander x:Name="ReleaseNotesExpander"
                                           Header="{x:Bind ViewModel.ReleaseTitle, Mode=OneWay}">
@@ -118,22 +142,31 @@
                         </toolkit:SettingsCard>
                     </toolkit:SettingsExpander.Items>
                 </toolkit:SettingsExpander>
-                <toolkit:SettingsCard x:Name="StartupUpdateSettingsCard">
+            </StackPanel>
+
+            <!-- Rail: what is mostly to look at; below the main column on a narrow page. -->
+            <StackPanel x:Name="SettingsRailPanel" Grid.Row="1" Grid.Column="1" Spacing="4">
+                <!-- The version and its update state, with the buttons to check and install. -->
+                <TextBlock x:Name="SettingsAppUpdatesTitleTextBlock" Style="{StaticResource SettingsFirstGroupTitleStyle}" />
+                <!-- In the rail the two buttons do not fit beside the status (Russian), so they go below it, one per row. -->
+                <toolkit:SettingsCard x:Name="AppUpdateStatusCard" Header="{x:Bind ViewModel.UpdateStatus, Mode=OneWay}"
+                                      ContentAlignment="Vertical" HorizontalContentAlignment="Left">
                     <toolkit:SettingsCard.HeaderIcon>
-                        <FontIcon Glyph="&#xE7E8;" />
+                        <FontIcon Glyph="&#xE895;" />
                     </toolkit:SettingsCard.HeaderIcon>
-                    <ToggleSwitch x:Name="StartupUpdateToggleSwitch"
-                                  IsOn="{x:Bind ViewModel.CheckOnStartup, Mode=TwoWay}" IsEnabled="{x:Bind ViewModel.SelfUpdateEnabled, Mode=OneWay}" />
+                    <StackPanel x:Name="AppUpdateButtonsPanel" Orientation="Vertical" Spacing="8">
+                        <Button x:Name="CheckUpdatesButton" Click="OnCheckUpdatesClicked" IsEnabled="{x:Bind ViewModel.CanCheckUpdates, Mode=OneWay}" />
+                        <Button x:Name="InstallUpdateButton" Click="OnInstallUpdateClicked" Style="{StaticResource AccentButtonStyle}" />
+                    </StackPanel>
                 </toolkit:SettingsCard>
-                <toolkit:SettingsCard x:Name="UpdateCheckIntervalSettingsCard">
+                <toolkit:SettingsCard x:Name="AppUpdateProgressCard" Header="{x:Bind ViewModel.DownloadText, Mode=OneWay}"
+                                      Visibility="{x:Bind ViewModel.IsDownloadingUpdate, Mode=OneWay}">
                     <toolkit:SettingsCard.HeaderIcon>
-                        <FontIcon Glyph="&#xE823;" />
+                        <FontIcon Glyph="&#xE896;" />
                     </toolkit:SettingsCard.HeaderIcon>
-                    <ComboBox
-                        x:Name="UpdateCheckIntervalComboBox"
-                        MinWidth="160"
-                        IsEnabled="{x:Bind ViewModel.SelfUpdateEnabled, Mode=OneWay}"
-                        SelectionChanged="OnUpdateCheckIntervalSelectionChanged" />
+                    <ProgressBar x:Name="AppUpdateProgressBar" Width="200" Minimum="0" Maximum="100"
+                                 IsIndeterminate="{x:Bind ViewModel.IsDownloadProgressIndeterminate, Mode=OneWay}"
+                                 Value="{x:Bind ViewModel.DownloadProgress, Mode=OneWay}" />
                 </toolkit:SettingsCard>
                 <toolkit:SettingsCard x:Name="OpenGitHubButton" IsClickEnabled="True" Click="OnOpenGitHubClicked"
                                       Description="https://github.com/uyujkk/Integrated_Mod_Manager">
@@ -172,7 +205,6 @@
                         <FontIcon Glyph="&#xE716;" />
                     </toolkit:SettingsCard.HeaderIcon>
                 </toolkit:SettingsCard>
-
                 <!-- Diagnostics and feedback. -->
                 <TextBlock x:Name="DiagnosticsTitleTextBlock" Style="{StaticResource SettingsGroupTitleStyle}" />
                 <toolkit:SettingsCard x:Name="ExportDiagnosticsButton" IsClickEnabled="True" Click="OnExportDiagnosticsClicked">
@@ -205,7 +237,6 @@
                 </toolkit:SettingsCard>
                 <TextBlock x:Name="DiagnosticsStatusTextBlock" Margin="1,4,0,0" Style="{StaticResource CaptionTextStyle}" TextWrapping="Wrap"
                            Text="{x:Bind ViewModel.DiagnosticsStatus, Mode=OneWay}" Visibility="{x:Bind ViewModel.HasDiagnosticsStatus, Mode=OneWay}" />
-
                 <!-- About: the version, then the project and the open-source components it uses. -->
                 <TextBlock x:Name="ProjectResourcesTitleTextBlock" Style="{StaticResource SettingsGroupTitleStyle}" />
                 <toolkit:SettingsExpander x:Name="AboutExpander">

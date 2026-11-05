@@ -1,4 +1,4 @@
-using System.ComponentModel;
+﻿using System.ComponentModel;
 using CommunityToolkit.WinUI.Controls;
 using Microsoft.UI.Xaml;
 using Microsoft.UI.Xaml.Automation;
@@ -26,6 +26,11 @@ public sealed partial class SettingsPage : UserControl
         ViewModel.PropertyChanged += OnViewModelChanged;
         // The language is read from the settings after the page is made, so label again when it is shown.
         Loaded += (_, _) => ApplyLanguage();
+        // Two columns once the page itself is wide enough; the window size alone says little with the navigation pane.
+        SettingsScrollViewer.SizeChanged += (_, args) =>
+        {
+            if (args.NewSize.Width > 0) UpdateLayoutState(args.NewSize.Width);
+        };
         ApplyLanguage();
     }
 
@@ -64,6 +69,7 @@ public sealed partial class SettingsPage : UserControl
 
         // App updates.
         SettingsAppUpdatesTitleTextBlock.Text = T("RefinedWorkspace.AppUpdates");
+        SettingsUpdateOptionsTitleTextBlock.Text = T("Settings.UpdateOptions");
         // Without self-update the status card says why the buttons do nothing here.
         AppUpdateStatusCard.Description = selfUpdate ? null! : T("Settings.AppSelfUpdatesAreDisabledIn");
         SetCard(StartupUpdateSettingsCard, T("ProductivityFeatures.CheckForAppUpdatesAtStartup"), selfUpdate
@@ -216,4 +222,26 @@ public sealed partial class SettingsPage : UserControl
 
     private void OnExternalResourceClicked(object sender, RoutedEventArgs e)
         => ViewModel.Request(SettingsAction.OpenLink, (sender as FrameworkElement)?.Tag as string);
+
+    /// <summary>
+    /// The page width from which the settings and the information rail sit side by side: the rail's 360 DIP,
+    /// the 24 DIP between them, and a main column of about 800 DIP, which keeps Russian titles and their
+    /// controls on one row. 1400×900 windows (about 1300 DIP of page) get two columns, 1000×800 windows one.
+    /// </summary>
+    public const double TwoColumnWidth = 1180;
+
+    private bool? _twoColumns;
+
+    private void UpdateLayoutState(double pageWidth)
+    {
+        bool twoColumns = pageWidth >= TwoColumnWidth;
+        if (_twoColumns == twoColumns) return;
+        _twoColumns = twoColumns;
+        VisualStateManager.GoToState(this, twoColumns ? "WideLayout" : "NarrowLayout", false);
+        // The rail is too narrow for the status and both update buttons on one row (Russian), so there the
+        // buttons go below the status, one per row. Set here: a VisualState setter cannot convert ContentAlignment.
+        AppUpdateStatusCard.ContentAlignment = twoColumns ? ContentAlignment.Vertical : ContentAlignment.Right;
+        AppUpdateStatusCard.HorizontalContentAlignment = twoColumns ? HorizontalAlignment.Left : HorizontalAlignment.Right;
+        AppUpdateButtonsPanel.Orientation = twoColumns ? Orientation.Vertical : Orientation.Horizontal;
+    }
 }

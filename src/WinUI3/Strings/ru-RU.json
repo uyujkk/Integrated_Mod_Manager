@@ -1170,6 +1170,7 @@
   "Settings.AppTheme": "Тема приложения",
   "Settings.AppUpdateChecksAndAutomaticInstallation": "В этой бета-версии проверка и автоматическая установка обновлений приложения отключены. Она не заменяет стабильную версию.",
   "Settings.AppUpdateInterval": "Частота проверки",
+  "Settings.UpdateOptions": "Настройки обновлений",
   "Settings.SelectUpdateCheckInterval": "Выберите частоту проверки обновлений",
   "Settings.BetaAppUpdatesDisabled": "Обновления бета-версии отключены",
   "Settings.CheckAndGetUpdate": "Проверить и получить обновление",
