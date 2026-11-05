@@ -1,4 +1,4 @@
-using IntegratedModManager.Core.Archives;
+﻿using IntegratedModManager.Core.Archives;
 using IntegratedModManager.Core.Configuration;
 using IntegratedModManager.Core.Online;
 using IntegratedModManager.Core.Repository;
@@ -19,7 +19,9 @@ public sealed partial class MainWindow : Window
     private readonly AppServices _services = new();
 
     /// <summary>The dashboard's repository cards and current-repository status.</summary>
-    public DashboardViewModel Dashboard { get; } = new();
+    private DashboardViewModel Dashboard => _services.Dashboard;
+
+    private RepositoryPathsViewModel Paths => _services.Paths;
     private static bool AppSelfUpdateEnabled => ApplicationReleasePolicy.ApplicationSelfUpdateEnabled;
     private const string GitHubRepositoryUrl = "https://github.com/uyujkk/Integrated_Mod_Manager";
     private const string GitHubLatestReleaseApiUrl = "https://api.github.com/repos/uyujkk/Integrated_Mod_Manager/releases/latest";
@@ -117,7 +119,6 @@ public sealed partial class MainWindow : Window
     private bool _isLoadingModLink;
     private bool _hasPromptedForLocalUpdate;
     private bool _isApplyingOnlineCharacterSelection;
-    private bool _isApplyingDashboardRepositorySelection;
     private bool _isApplyingUpdateCheckIntervalSelection;
     private bool _isApplyingModUpdateIntervalSelection;
     private bool _isApplyingConfigurationProfileSelection;
@@ -188,6 +189,7 @@ public sealed partial class MainWindow : Window
         _services.Status.NotificationRequested += OnNotificationRequested;
         InitializeSettingsHost();
         InitializeUpdatesHost();
+        InitializeDashboardHost();
         InitializePageHost();
         SubscribeToAppearanceEvents();
         ApplyWindowIcon();
@@ -240,7 +242,7 @@ public sealed partial class MainWindow : Window
         RootGrid.Loaded += OnRootGridLoaded;
         Closed += OnWindowClosed;
 
-        if (Directory.Exists(SourceTextBox.Text))
+        if (Directory.Exists(Paths.Source))
         {
             _ = RefreshListsAsync();
         }

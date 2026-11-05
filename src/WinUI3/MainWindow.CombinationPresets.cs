@@ -27,9 +27,7 @@ public sealed partial class MainWindow
         ShellNavigationView.IsHitTestVisible = !busy;
         foreach (NavigationViewItem item in new[] { DashboardNavButton, RepositoryNavButton, OnlineNavButton, UpdatesNavButton, SettingsNavButton })
             item.IsEnabled = !busy;
-        SourceTextBox.IsEnabled = !busy;
-        TargetTextBox.IsEnabled = !busy;
-        LauncherTextBox.IsEnabled = !busy;
+        Paths.ArePathsEditable = !busy;
         RefreshButton.IsEnabled = !busy;
         ImportZipButton.IsEnabled = !busy;
         RunLauncherButton.IsEnabled = !busy;

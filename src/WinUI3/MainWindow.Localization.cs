@@ -40,8 +40,6 @@ public sealed partial class MainWindow
 
         ApplyPrimaryNavigationContent();
 
-        ToolTipService.SetToolTip(AddRepositoryButton, T("Localization.CreateRepository"));
-        ToolTipService.SetToolTip(RenameRepositoryButton, T("Localization.EditCurrentRepository"));
         ToolTipService.SetToolTip(RefreshOnlineButton, T("Localization.RefreshOnlineModList"));
         ToolTipService.SetToolTip(OnlinePrevPageButton, null);
         ToolTipService.SetToolTip(OnlineNextPageButton, null);
@@ -49,8 +47,6 @@ public sealed partial class MainWindow
         ToolTipService.SetToolTip(OnlineSortComboBox, T("Localization.ChangeTheSortOrderForThe"));
         ToolTipService.SetToolTip(PreviewImage, T("Localization.ClickToViewFullSize"));
         ToolTipService.SetToolTip(OnlineDetailHeroImage, T("Localization.ClickToViewFullSize"));
-        AutomationProperties.SetName(AddRepositoryButton, T("Localization.CreateRepository"));
-        AutomationProperties.SetName(RenameRepositoryButton, T("Localization.EditCurrentRepository"));
         AutomationProperties.SetName(RefreshOnlineButton, T("Localization.RefreshOnlineModList"));
         AutomationProperties.SetName(OnlinePrevPageButton, T("Localization.PreviousPage"));
         AutomationProperties.SetName(OnlineNextPageButton, T("Localization.NextPage"));
@@ -60,23 +56,7 @@ public sealed partial class MainWindow
         AutomationProperties.SetName(OnlineDetailHeroImage, T("Localization.OpenFullSizeOnlineModImage"));
         InitializeOnlineControls();
 
-        DashboardPageHeader.Title = T("Localization.RepositoryDashboard");
-        DashboardPageHeader.Description = T("Localization.SwitchRepositoriesCreatePresetsReviewPath");
-        DashboardAddRepositoryTextBlock.Text = T("Localization.NewRepository");
-        DashboardEditRepositoryTextBlock.Text = T("Localization.EditCurrent");
-        DashboardCurrentRepositoryLabelTextBlock.Text = T("Localization.ActiveRepository");
-        DashboardOpenRepositoryButton.Content = T("Localization.OpenModManagement");
-        DashboardRepositoriesTitleTextBlock.Text = T("Common.AllRepositories");
-        DashboardRepositoriesHintTextBlock.Text = T("Localization.CardsMarkTheActiveRepositoryAnd");
-        DashboardCharactersTitleTextBlock.Text = T("Dashboard.Characters");
-        DashboardCharactersHintTextBlock.Text = T("Dashboard.ClickACharacterToManage");
-        DashboardQuickActionsTitleTextBlock.Text = T("Dashboard.QuickActions");
-        DashboardBrowseOnlineTextBlock.Text = T("Dashboard.BrowseOnline");
-        DashboardCheckUpdatesTextBlock.Text = T("Dashboard.CheckModUpdates");
-        DashboardRunLauncherTextBlock.Text = T("Dashboard.RunLauncher");
-        ToolTipService.SetToolTip(DashboardRunLauncherButton, T("Dashboard.RunLauncherHint"));
-        ToolTipService.SetToolTip(DashboardRepositoryComboBox, T("Localization.SwitchTheActiveRepository"));
-        ToolTipService.SetToolTip(DashboardOpenRepositoryButton, T("Localization.OpenModManagementForTheActive"));
+        // The dashboard labels itself (Pages/DashboardPage.xaml.cs).
         RefreshDashboard();
 
         OnlineTitleTextBlock.Text = T("Common.OnlineModBrowser");
@@ -92,22 +72,6 @@ public sealed partial class MainWindow
         AppTitleBar.Subtitle = AppVersion;
 
 
-        PathSectionTitleTextBlock.Text = T("Localization.PathsAndLauncher");
-        PathSectionSubtitleTextBlock.Text = T("Localization.KeepTheSourceFolderTargetFolder");
-        SourceLabelTextBlock.Text = T("Localization.Source");
-        TargetLabelTextBlock.Text = T("Localization.Target");
-        LauncherLabelTextBlock.Text = T("Common.Launcher");
-        PickSourceButton.Content = T("Localization.Browse");
-        PickTargetButton.Content = T("Localization.Browse");
-        PickLauncherButton.Content = T("Localization.BrowseEXE");
-        OpenSourceButton.Content = T("Localization.OpenSource");
-        OpenTargetButton.Content = T("Localization.OpenTarget");
-        OpenLauncherButton.Content = T("Localization.OpenLauncherFolder");
-        LauncherTextBox.PlaceholderText = T("Localization.SelectXXMILauncherExeOrAnother");
-        PathHintTextBlock.Text = T("Localization.LinkModeSharesOneSetOf");
-        LinkDeploymentToggleSwitch.Header = T("Localization.DeployModsWithDirectoryJunctions");
-        LinkDeploymentToggleSwitch.OnContent = T("Localization.Link");
-        LinkDeploymentToggleSwitch.OffContent = T("Localization.Copy");
         RefreshButton.Content = T("Localization.Refresh");
         ImportZipButton.Content = T("Localization.ImportMod");
         ToolTipService.SetToolTip(ImportZipButton, T("Localization.ImportIntoTheSelectedFolder"));
@@ -172,12 +136,6 @@ public sealed partial class MainWindow
 
     private void ApplyTextOverrides()
     {
-        PathSectionSubtitleTextBlock.Text = T("Localization.KeepTheModStorageFolderTarget");
-        SourceLabelTextBlock.Text = T("Localization.ModStorage");
-        TargetLabelTextBlock.Text = T("Localization.TargetFolder");
-        OpenSourceButton.Content = T("Localization.OpenModStorage");
-        OpenTargetButton.Content = T("Localization.OpenTargetFolder");
-        PathHintTextBlock.Text = T("Localization.LinkModeSharesRepositoryFilesLinking");
         ImportZipButton.Content = T("Localization.ImportMod");
 
         FirstCountHintTextBlock.Text = T("Localization.NumberOfCategoriesInTheMod");
@@ -227,7 +185,7 @@ public sealed partial class MainWindow
 
     private void RefreshLocalizedStates()
     {
-        string targetDir = (TargetTextBox.Text ?? string.Empty).Trim();
+        string targetDir = Paths.Target.Trim();
         foreach (FirstLevelFolderItem first in _characters.Visible)
         {
             foreach (SecondLevelFolderItem second in first.Children)

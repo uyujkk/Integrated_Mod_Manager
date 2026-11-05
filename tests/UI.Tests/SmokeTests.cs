@@ -203,6 +203,24 @@ public sealed class SmokeTests
         app.AssertNoErrors();
     }
 
+    // Smoke test of the dashboard page (stage J4): its path boxes edit the repository the rest of the app uses.
+    [Fact]
+    public void Dashboard_EditedTargetPathIsSavedWithTheRepository()
+    {
+        using AppSession app = AppSession.Configured().Start();
+        string newTarget = Path.Combine(app.TestData, "Loader");
+
+        app.Find("TargetTextBox").Patterns.Value.Pattern.SetValue(newTarget);
+        AppSession.Invoke(app.Find("RepositoryNavButton"));
+
+        Assert.True(SpinWait.SpinUntil(() => (string?)app.ShellConfig()["Repositories"]![0]!["TargetPath"] == newTarget, TimeSpan.FromSeconds(5)),
+            (string?)app.ShellConfig()["Repositories"]![0]!["TargetPath"]);
+        AppSession.Invoke(app.Find("DashboardNavButton"));
+        Assert.Equal(newTarget, app.Find("TargetTextBox").Patterns.Value.Pattern.Value.Value);
+        app.Capture(nameof(Dashboard_EditedTargetPathIsSavedWithTheRepository));
+        app.AssertNoErrors();
+    }
+
     [Fact]
     public void Repository_ShowsTheCharacterAndItsMods()
     {

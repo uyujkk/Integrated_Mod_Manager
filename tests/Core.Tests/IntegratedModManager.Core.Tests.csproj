@@ -21,6 +21,9 @@
     <Compile Include="..\..\src\WinUI3\ViewModels\ShortcutPageViewModel.cs" Link="WindowAdapters\ShortcutPageViewModel.cs" />
     <Compile Include="..\..\src\WinUI3\ViewModels\SettingsViewModel.cs" Link="WindowAdapters\SettingsViewModel.cs" />
     <Compile Include="..\..\src\WinUI3\ViewModels\UpdatesViewModel.cs" Link="WindowAdapters\UpdatesViewModel.cs" />
+    <Compile Include="..\..\src\WinUI3\ViewModels\RepositoryPathsViewModel.cs" Link="WindowAdapters\RepositoryPathsViewModel.cs" />
+    <Compile Include="..\..\src\WinUI3\Models\RepositoryPresetMatching.cs" Link="WindowAdapters\RepositoryPresetMatching.cs" />
+    <Compile Include="..\..\src\WinUI3\Models\RepositoryPresetInfo.cs" Link="WindowAdapters\RepositoryPresetInfo.cs" />
     <Compile Include="..\..\src\WinUI3\ViewModels\AppearanceSettingsViewModel.cs" Link="WindowAdapters\AppearanceSettingsViewModel.cs" />
     <Compile Include="..\..\src\WinUI3\Models\SettingInfoItem.cs" Link="WindowAdapters\SettingInfoItem.cs" />
     <None Update="Configuration\Samples\*.json" CopyToOutputDirectory="PreserveNewest" />

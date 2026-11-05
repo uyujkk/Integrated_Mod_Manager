@@ -10,7 +10,6 @@ public sealed partial class MainWindow
     // The Settings page (Pages/SettingsPage.xaml) does the same itself.
     private void InitializePageLayouts()
     {
-        AttachPageLayout(DashboardScrollViewer, UpdateDashboardLayout);
         AttachPageLayout(ShortcutsScrollViewer, UpdateShortcutsLayout);
     }
 

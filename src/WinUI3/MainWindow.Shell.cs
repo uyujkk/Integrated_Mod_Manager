@@ -19,9 +19,11 @@ public sealed partial class MainWindow
 {
     private void RegisterTrackedTextInputs()
     {
-        AttachTrackedTextInput(SourceTextBox);
-        AttachTrackedTextInput(TargetTextBox);
-        AttachTrackedTextInput(LauncherTextBox);
+        // The dashboard's path boxes are on its page (stage J4).
+        foreach (TextBox box in ((DashboardPage)_pages[PrimarySection.Dashboard]).PathTextBoxes)
+        {
+            AttachTrackedTextInput(box);
+        }
         AttachTrackedTextInput(FirstLevelSearchTextBox);
         AttachTrackedTextInput(ModLinkTextBox);
     }
@@ -123,7 +125,6 @@ public sealed partial class MainWindow
     {
         foreach ((PrimarySection section, FrameworkElement container) in new (PrimarySection, FrameworkElement)[]
         {
-            (PrimarySection.Dashboard, DashboardScrollViewer),
             (PrimarySection.Repository, WorkspacePageHost),
             (PrimarySection.Online, OnlineScrollViewer),
             (PrimarySection.Shortcuts, ShortcutsScrollViewer)
@@ -134,6 +135,8 @@ public sealed partial class MainWindow
         }
         // Stage J2: the Settings page is a page of its own.
         _pages[PrimarySection.Settings] = new SettingsPage(_services);
+        // Stage J4: the dashboard.
+        _pages[PrimarySection.Dashboard] = new DashboardPage(_services);
         // Stage J3: the Updates page too.
         _pages[PrimarySection.Updates] = new UpdatesPage(_services);
     }
@@ -142,7 +145,7 @@ public sealed partial class MainWindow
     {
         return _currentPrimarySection switch
         {
-            PrimarySection.Dashboard => DashboardScrollViewer,
+            PrimarySection.Dashboard => _pages[PrimarySection.Dashboard],
             PrimarySection.Repository => WorkspacePageHost,
             PrimarySection.Online => OnlineScrollViewer,
             PrimarySection.Updates => _pages[PrimarySection.Updates],
@@ -180,7 +183,7 @@ public sealed partial class MainWindow
     private void RefreshRepositoryActionButtons()
     {
         // Deleting lives in each repository card's menu, which disables it for the last repository.
-        RenameRepositoryButton.IsEnabled = GetSelectedRepository() is not null && _services.Repositories.SelectedId is not null;
+        Dashboard.CanEditRepository = GetSelectedRepository() is not null && _services.Repositories.SelectedId is not null;
     }
 
     private void OnWindowSizeChanged(object sender, Microsoft.UI.Xaml.WindowSizeChangedEventArgs args)

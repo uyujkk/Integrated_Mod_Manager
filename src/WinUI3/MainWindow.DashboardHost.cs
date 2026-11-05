@@ -1,11 +1,49 @@
 using IntegratedModManager.Core.Repository;
 using Microsoft.UI.Xaml;
-using Microsoft.UI.Xaml.Controls;
 
 namespace ModFolderCopier.WinUI;
 
+// The window's side of the dashboard (Pages/DashboardPage.xaml): it keeps DashboardViewModel's cards,
+// characters and choices in step with the repositories and answers the page's requests.
 public sealed partial class MainWindow
 {
+    private void InitializeDashboardHost()
+    {
+        Dashboard.ActionRequested += OnDashboardActionRequested;
+        _services.EndfieldBridge.LogIssue = LogApplicationIssue;
+        _services.EndfieldBridge.BusyChanged += (_, _) =>
+        {
+            if (!_onlineWindowClosed) RefreshEndfieldBridgeControls();
+        };
+        Paths.PropertyChanged += (_, args) =>
+        {
+            if (args.PropertyName == nameof(RepositoryPathsViewModel.UseDirectoryLinks)) OnLinkDeploymentChanged();
+        };
+    }
+
+    private void OnDashboardActionRequested(object? sender, DashboardActionRequest request)
+    {
+        var args = new RoutedEventArgs();
+        switch (request.Action)
+        {
+            case DashboardAction.SwitchRepository when request.Argument is { } id: SwitchRepository(id, openManager: false); break;
+            case DashboardAction.NewRepository when request.Argument is { } presetId: CreateRepositoryFromPreset(presetId); break;
+            case DashboardAction.NewRepository: OnAddRepositoryDetailsClicked(this, args); break;
+            case DashboardAction.EditRepository: OnEditRepositoryDetailsClicked(this, args); break;
+            case DashboardAction.OpenRepository: OpenCurrentRepository(); break;
+            case DashboardAction.PickSource: OnPickSourceClicked(this, args); break;
+            case DashboardAction.PickTarget: OnPickTargetClicked(this, args); break;
+            case DashboardAction.PickLauncher: OnPickLauncherClicked(this, args); break;
+            case DashboardAction.OpenSource: OnOpenSourceClicked(this, args); break;
+            case DashboardAction.OpenTarget: OnOpenTargetClicked(this, args); break;
+            case DashboardAction.OpenLauncher: OnOpenLauncherClicked(this, args); break;
+            case DashboardAction.BridgeOptions: OnBridgeOptionsClicked(this, args); break;
+            case DashboardAction.BrowseOnline: OnOnlineNavClicked(this, args); break;
+            case DashboardAction.CheckModUpdates: CheckModUpdatesFromDashboard(); break;
+            case DashboardAction.RunLauncher: OnRunLauncherClicked(this, args); break;
+        }
+    }
+
     // Folder counts per repository id from the last background scan. Cards show these
     // (or "counting") at once; a newer scan replaces them without blocking the page.
     private readonly Dictionary<string, RepositoryContentSummary> _repositorySummaries = new(StringComparer.Ordinal);
@@ -21,17 +59,11 @@ public sealed partial class MainWindow
 
     private void RefreshDashboard()
     {
-        if (DashboardRepositoryComboBox is null)
-        {
-            return;
-        }
-
         if (_services.Repositories.SelectedId is null && _services.Repositories.Items.Count > 0)
         {
             _services.Repositories.SelectedId = _services.Repositories.Items[0].Id;
         }
 
-        PopulateDashboardRepositorySwitcher();
         RefreshNewRepositoryMenu();
 
         var labels = new RepositoryCardLabels(
@@ -69,77 +101,12 @@ public sealed partial class MainWindow
         }
         Dashboard.RemoveExcept(ids);
 
-        DashboardOpenRepositoryButton.IsEnabled = GetSelectedRepository() is not null;
+        Dashboard.CanOpenRepository = GetSelectedRepository() is not null;
+        Dashboard.CurrentRepositoryName = GetSelectedRepository()?.Name ?? string.Empty;
         RefreshDashboardCurrentStatus();
-        RefreshRefinedDashboardPathHeader();
-        UpdatePathStatusIcons();
         RefreshTrayStatus();
+        Dashboard.NotifyRefreshed();
         _ = ScanRepositorySummariesAsync();
-    }
-
-    // One icon inside each path box shows whether the folder (or the launcher file) exists, so
-    // "needs setup" points at the box to fix. The launcher is optional and shows nothing when empty.
-    private (TextBox Box, FontIcon Icon, bool ExpectFile)[] _pathStatusIcons = [];
-
-    private void InitializePathStatusIcons()
-    {
-        _pathStatusIcons =
-        [
-            (SourceTextBox, AttachPathStatusIcon(SourceTextBox), false),
-            (TargetTextBox, AttachPathStatusIcon(TargetTextBox), false),
-            (LauncherTextBox, AttachPathStatusIcon(LauncherTextBox), true)
-        ];
-        foreach ((TextBox box, _, _) in _pathStatusIcons)
-        {
-            box.TextChanged += (_, _) => UpdatePathStatusIcons();
-        }
-        UpdatePathStatusIcons();
-    }
-
-    // The box sits in a Border of its path row. Parent is not reliable before the page is
-    // loaded, so the Border is found among the row's children.
-    private FontIcon AttachPathStatusIcon(TextBox box)
-    {
-        var icon = new FontIcon { FontSize = 14, Margin = new Thickness(0, 0, 12, 0), VerticalAlignment = VerticalAlignment.Center };
-        Border? border = WorkspacePathRows
-            .SelectMany(row => row.Children.OfType<Border>())
-            .FirstOrDefault(candidate => ReferenceEquals(candidate.Child, box));
-        if (border is not null)
-        {
-            var host = new Grid();
-            host.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(1, GridUnitType.Star) });
-            host.ColumnDefinitions.Add(new ColumnDefinition { Width = GridLength.Auto });
-            border.Child = null;
-            host.Children.Add(box);
-            Grid.SetColumn(icon, 1);
-            host.Children.Add(icon);
-            border.Child = host;
-        }
-        return icon;
-    }
-
-    private void UpdatePathStatusIcons()
-    {
-        foreach ((TextBox box, FontIcon icon, bool expectFile) in _pathStatusIcons)
-        {
-            PathFieldStatus status = PathFieldStatuses.Evaluate(box.Text, expectFile);
-            bool ready = status == PathFieldStatus.Ready;
-            icon.Visibility = status == PathFieldStatus.Empty && expectFile ? Visibility.Collapsed : Visibility.Visible;
-            icon.Glyph = ready ? "" : "";
-            icon.Foreground = GetAppThemeBrush(ready ? "AppSuccessBrush" : "AppDangerBrush");
-            string tip = status switch
-            {
-                PathFieldStatus.Ready => T("Dashboard.PathFound"),
-                PathFieldStatus.Missing => T("Dashboard.PathNotFound"),
-                _ => T("Dashboard.PathNotSet")
-            };
-            ToolTipService.SetToolTip(icon, tip);
-            Microsoft.UI.Xaml.Automation.AutomationProperties.SetName(icon, tip);
-            if (expectFile)
-            {
-                DashboardRunLauncherButton.IsEnabled = ready;
-            }
-        }
     }
 
     private WorkspaceRepository? FindRepository(string id)
@@ -241,21 +208,11 @@ public sealed partial class MainWindow
         SelectFirstLevelByPath(path);
     }
 
-    private void OnDashboardCharacterClicked(object sender, ItemClickEventArgs e)
-    {
-        if (e.ClickedItem is CharacterChipViewModel character)
-        {
-            character.OpenCommand.Execute(null);
-        }
-    }
-
-    private void OnDashboardBrowseOnlineClicked(object sender, RoutedEventArgs e) => OnOnlineNavClicked(sender, e);
-
-    private void OnDashboardCheckUpdatesClicked(object sender, RoutedEventArgs e)
+    private void CheckModUpdatesFromDashboard()
     {
         SaveSelectedRepositoryFromInputs();
         NavigateToPrimarySection(PrimarySection.Updates);
-        OnCheckModUpdatesClicked(sender, e);
+        OnCheckModUpdatesClicked(this, new RoutedEventArgs());
     }
 
     private async Task ScanRepositorySummariesAsync()
@@ -295,73 +252,30 @@ public sealed partial class MainWindow
         }
     }
 
-    private void PopulateDashboardRepositorySwitcher()
-    {
-        _isApplyingDashboardRepositorySelection = true;
-        try
-        {
-            DashboardRepositoryComboBox.Items.Clear();
-            foreach (WorkspaceRepository repository in _services.Repositories.Items)
-            {
-                DashboardRepositoryComboBox.Items.Add(new ComboBoxItem
-                {
-                    Content = repository.Name,
-                    Tag = repository.Id
-                });
-            }
-
-            DashboardRepositoryComboBox.SelectedItem = DashboardRepositoryComboBox.Items
-                .OfType<ComboBoxItem>()
-                .FirstOrDefault(item => string.Equals(item.Tag as string, _services.Repositories.SelectedId, StringComparison.Ordinal));
-        }
-        finally
-        {
-            _isApplyingDashboardRepositorySelection = false;
-        }
-    }
-
     // "New repository" offers a blank repository and the built-in game presets; a preset that
     // already has a repository is marked and switches to it instead of creating a second one.
     private void RefreshNewRepositoryMenu()
     {
-        NewRepositoryMenu.Items.Clear();
-        var blank = new MenuFlyoutItem { Text = T("Dashboard.BlankRepository"), Icon = new FontIcon { Glyph = "" } };
-        blank.Click += OnAddRepositoryDetailsClicked;
-        NewRepositoryMenu.Items.Add(blank);
-        NewRepositoryMenu.Items.Add(new MenuFlyoutSeparator());
+        var choices = new List<NewRepositoryChoice> { new(null, T("Dashboard.BlankRepository"), "", null) };
         foreach (RepositoryPresetInfo preset in BuiltInRepositoryPresets)
         {
             string name = IsChineseUi ? preset.DisplayNameZh : preset.DisplayNameEn;
             WorkspaceRepository? existing = FindRepositoryForPreset(preset);
-            var item = new MenuFlyoutItem
-            {
-                Text = existing is null ? name : T("Dashboard.PresetAlreadyAdded", name),
-                Tag = preset.Id,
-                Icon = new FontIcon { Glyph = existing is null ? "" : "" }
-            };
-            ToolTipService.SetToolTip(item, $"GameBanana · {preset.CategoryId}");
-            item.Click += OnRepositoryPresetClicked;
-            NewRepositoryMenu.Items.Add(item);
+            choices.Add(new NewRepositoryChoice(preset.Id,
+                existing is null ? name : T("Dashboard.PresetAlreadyAdded", name),
+                existing is null ? "" : "",
+                $"GameBanana · {preset.CategoryId}"));
         }
+        Dashboard.SetNewRepositoryChoices(choices);
     }
 
     private WorkspaceRepository? FindRepositoryForPreset(RepositoryPresetInfo preset)
     {
-        return _services.Repositories.Items.FirstOrDefault(repository =>
-            string.Equals(repository.OnlineSourceSite, DefaultOnlineSourceSite, StringComparison.OrdinalIgnoreCase)
-            && IsRepositoryForPreset(repository, preset));
+        return RepositoryPresetMatching.FindExisting(_services.Repositories.Items, preset, DefaultOnlineSourceSite);
     }
 
     private static bool IsRepositoryForPreset(WorkspaceRepository repository, RepositoryPresetInfo preset)
-    {
-        string categoryId = repository.OnlineCategoryId?.Trim() ?? string.Empty;
-        string gameName = repository.OnlineGameName?.Trim() ?? string.Empty;
-        return string.Equals(categoryId, preset.CategoryId, StringComparison.OrdinalIgnoreCase)
-            || (string.Equals(preset.Id, "genshin", StringComparison.OrdinalIgnoreCase)
-                && string.Equals(categoryId, "17510", StringComparison.OrdinalIgnoreCase))
-            || string.Equals(gameName, preset.DisplayNameEn, StringComparison.OrdinalIgnoreCase)
-            || string.Equals(gameName, preset.DisplayNameZh, StringComparison.OrdinalIgnoreCase);
-    }
+        => RepositoryPresetMatching.IsForPreset(repository, preset);
 
     private async Task EditRepositoryFromCardAsync(string id)
     {
@@ -380,16 +294,6 @@ public sealed partial class MainWindow
         }
     }
 
-    private static string TrimPreviewPath(string? path)
-    {
-        if (string.IsNullOrWhiteSpace(path))
-        {
-            return "-";
-        }
-
-        return path.Length > 48 ? "..." + path[^45..] : path;
-    }
-
     private void OnDashboardNavClicked(object sender, RoutedEventArgs e)
     {
         SaveSelectedRepositoryFromInputs();
@@ -397,18 +301,7 @@ public sealed partial class MainWindow
         ApplyShellState(refreshRepository: false);
     }
 
-    private void OnDashboardRepositorySelectionChanged(object sender, SelectionChangedEventArgs e)
-    {
-        if (_isApplyingDashboardRepositorySelection
-            || DashboardRepositoryComboBox.SelectedItem is not ComboBoxItem { Tag: string repositoryId })
-        {
-            return;
-        }
-
-        SwitchRepository(repositoryId, openManager: false);
-    }
-
-    private void OnDashboardOpenRepositoryClicked(object sender, RoutedEventArgs e)
+    private void OpenCurrentRepository()
     {
         if (_services.Repositories.SelectedId is not null)
         {

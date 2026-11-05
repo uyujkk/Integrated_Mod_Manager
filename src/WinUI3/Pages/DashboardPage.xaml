@@ -1,0 +1,408 @@
+﻿<UserControl
+    x:Class="ModFolderCopier.WinUI.DashboardPage"
+    xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+    xmlns:local="using:ModFolderCopier.WinUI"
+    IsTabStop="False"
+    HorizontalContentAlignment="Stretch"
+    VerticalContentAlignment="Stretch">
+    <!-- Stage J4 (docs/development/UI-Structure-Plan.md): the dashboard, moved out of MainWindow.xaml.
+         It shows DashboardViewModel and RepositoryPathsViewModel and sends clicks to the window through them. -->
+    <ScrollViewer x:Name="DashboardScrollViewer" VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled">
+        <StackPanel x:Name="DashboardRootPanel" Margin="2,2,8,20" Spacing="12">
+            <local:PageHeader x:Name="DashboardPageHeader">
+                <local:PageHeader.Actions>
+                    <!-- New repository: blank, or from a game preset. Presets no longer take a card on the page. -->
+                    <DropDownButton x:Name="AddRepositoryButton" Padding="12,6">
+                        <StackPanel Orientation="Horizontal" Spacing="8">
+                            <FontIcon Glyph="&#xE710;" FontSize="14" />
+                            <TextBlock x:Name="DashboardAddRepositoryTextBlock" />
+                        </StackPanel>
+                        <DropDownButton.Flyout>
+                            <MenuFlyout x:Name="NewRepositoryMenu" Placement="BottomEdgeAlignedRight" />
+                        </DropDownButton.Flyout>
+                    </DropDownButton>
+                </local:PageHeader.Actions>
+            </local:PageHeader>
+
+            <!-- The current repository in one strip: picker, status, counts and its actions. -->
+            <Border x:Name="DashboardRepositorySelectorCard" Style="{StaticResource CardBorderStyle}" Padding="16,12">
+                <Grid x:Name="DashboardStripGrid" ColumnSpacing="16" RowSpacing="10">
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="Auto" />
+                        <ColumnDefinition Width="*" />
+                        <ColumnDefinition Width="Auto" />
+                        <ColumnDefinition Width="Auto" />
+                    </Grid.ColumnDefinitions>
+                    <Grid.RowDefinitions>
+                        <RowDefinition Height="Auto" />
+                        <RowDefinition Height="Auto" />
+                    </Grid.RowDefinitions>
+                    <Border Width="44" Height="44" CornerRadius="12" Background="{ThemeResource AppSecondarySelectedBrush}" VerticalAlignment="Center">
+                        <FontIcon Glyph="&#xE8B7;" FontSize="20" Foreground="{ThemeResource AppSecondarySelectedForegroundBrush}" />
+                    </Border>
+                    <StackPanel Grid.Column="1" Spacing="4" VerticalAlignment="Center">
+                        <TextBlock x:Name="DashboardCurrentRepositoryLabelTextBlock" Style="{StaticResource CaptionTextStyle}" />
+                        <ComboBox
+                            x:Name="DashboardRepositoryComboBox"
+                            MinWidth="220"
+                            MaxWidth="560"
+                            HorizontalAlignment="Left"
+                            SelectionChanged="OnDashboardRepositorySelectionChanged" />
+                    </StackPanel>
+                    <StackPanel x:Name="DashboardStripStatus" Grid.Column="2" Spacing="4" VerticalAlignment="Center">
+                        <Grid HorizontalAlignment="Left">
+                            <Border Style="{StaticResource StatusBadgeSuccessBorderStyle}" Visibility="{x:Bind ViewModel.CurrentIsReady, Mode=OneWay}">
+                                <TextBlock Text="{x:Bind ViewModel.CurrentStatusText, Mode=OneWay}" Style="{StaticResource StatusBadgeSuccessTextStyle}" FontWeight="SemiBold" />
+                            </Border>
+                            <Border Style="{StaticResource StatusBadgeDangerBorderStyle}" Visibility="{x:Bind ViewModel.CurrentNeedsSetup, Mode=OneWay}">
+                                <TextBlock Text="{x:Bind ViewModel.CurrentStatusText, Mode=OneWay}" Style="{StaticResource StatusBadgeDangerTextStyle}" FontWeight="SemiBold" />
+                            </Border>
+                        </Grid>
+                        <TextBlock Text="{x:Bind ViewModel.CurrentSummary, Mode=OneWay}" Style="{StaticResource CaptionTextStyle}" />
+                    </StackPanel>
+                    <StackPanel x:Name="DashboardStripActions" Grid.Column="3" Orientation="Horizontal" Spacing="8" VerticalAlignment="Center">
+                        <Button x:Name="RenameRepositoryButton" Click="OnEditRepositoryDetailsClicked" Style="{StaticResource SecondaryButtonStyle}"
+                                IsEnabled="{x:Bind ViewModel.CanEditRepository, Mode=OneWay}">
+                            <StackPanel Orientation="Horizontal" Spacing="8">
+                                <FontIcon Glyph="&#xE70F;" FontSize="14" />
+                                <TextBlock x:Name="DashboardEditRepositoryTextBlock" />
+                            </StackPanel>
+                        </Button>
+                        <Button x:Name="DashboardOpenRepositoryButton" Click="OnDashboardOpenRepositoryClicked" Style="{StaticResource PrimaryButtonStyle}"
+                                IsEnabled="{x:Bind ViewModel.CanOpenRepository, Mode=OneWay}" />
+                    </StackPanel>
+                </Grid>
+            </Border>
+
+            <Grid x:Name="DashboardMainGrid" ColumnSpacing="12" RowSpacing="12">
+                <!-- Left: paths, then the character overview filling the rest of the page. -->
+                <Grid x:Name="DashboardLeftColumn" RowSpacing="12">
+                <Grid.RowDefinitions>
+                    <RowDefinition Height="Auto" />
+                    <RowDefinition Height="*" />
+                </Grid.RowDefinitions>
+                <!-- The path boxes edit RepositoryPathsViewModel, which the rest of the window reads. -->
+                <Border x:Name="DashboardPathsCard" Style="{StaticResource CardBorderStyle}" VerticalAlignment="Top">
+                    <StackPanel Spacing="10">
+                        <StackPanel Spacing="4">
+                            <TextBlock x:Name="DashboardPathsTitleTextBlock" Style="{StaticResource SectionTitleTextStyle}" />
+                            <TextBlock x:Name="DashboardPathsHintTextBlock" Style="{StaticResource CaptionTextStyle}" TextWrapping="Wrap" />
+                        </StackPanel>
+                        <ContentControl x:Name="DashboardPathsHost" HorizontalContentAlignment="Stretch">
+                            <Grid x:Name="WorkspacePathsGrid" RowSpacing="12" VerticalAlignment="Top">
+                                <Grid.RowDefinitions>
+                                    <RowDefinition Height="Auto" />
+                                    <RowDefinition Height="Auto" />
+                                    <RowDefinition Height="Auto" />
+                                    <RowDefinition Height="Auto" />
+                                    <RowDefinition Height="Auto" />
+                                    <RowDefinition Height="Auto" />
+                                    <RowDefinition Height="Auto" />
+                                </Grid.RowDefinitions>
+
+                                <StackPanel Spacing="6" Visibility="Collapsed">
+                                    <TextBlock x:Name="PathSectionTitleTextBlock" Style="{StaticResource SectionTitleTextStyle}" />
+                                    <TextBlock x:Name="PathSectionSubtitleTextBlock" Style="{StaticResource CaptionTextStyle}" TextWrapping="Wrap" />
+                                </StackPanel>
+
+                                <Grid x:Name="SourcePathRow" Grid.Row="1" ColumnSpacing="12">
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="132" />
+                                        <ColumnDefinition Width="*" />
+                                        <ColumnDefinition Width="112" />
+                                        <ColumnDefinition Width="172" />
+                                    </Grid.ColumnDefinitions>
+                                    <TextBlock x:Name="SourceLabelTextBlock" VerticalAlignment="Center" />
+                                    <Border Grid.Column="1" Style="{StaticResource InsetBorderStyle}">
+                                        <!-- The icon says whether the folder (or the launcher file) exists. -->
+                                        <Grid>
+                                            <Grid.ColumnDefinitions>
+                                                <ColumnDefinition Width="*" />
+                                                <ColumnDefinition Width="Auto" />
+                                            </Grid.ColumnDefinitions>
+                                            <TextBox x:Name="SourceTextBox" Padding="12,8" BorderThickness="0"
+                                                         Text="{x:Bind Paths.Source, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" IsEnabled="{x:Bind Paths.ArePathsEditable, Mode=OneWay}" />
+                                            <FontIcon x:Name="SourceStatusIcon" Grid.Column="1" FontSize="14" Margin="0,0,12,0" VerticalAlignment="Center" />
+                                        </Grid>
+                                    </Border>
+                                    <Button x:Name="PickSourceButton" Grid.Column="2" Click="OnPickSourceClicked" Style="{StaticResource SecondaryButtonStyle}" />
+                                    <Button x:Name="OpenSourceButton" Grid.Column="3" Click="OnOpenSourceClicked" Style="{StaticResource SecondaryButtonStyle}" />
+                                </Grid>
+
+                                <Grid x:Name="TargetPathRow" Grid.Row="2" ColumnSpacing="12">
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="132" />
+                                        <ColumnDefinition Width="*" />
+                                        <ColumnDefinition Width="112" />
+                                        <ColumnDefinition Width="172" />
+                                    </Grid.ColumnDefinitions>
+                                    <TextBlock x:Name="TargetLabelTextBlock" VerticalAlignment="Center" />
+                                    <Border Grid.Column="1" Style="{StaticResource InsetBorderStyle}">
+                                        <!-- The icon says whether the folder (or the launcher file) exists. -->
+                                        <Grid>
+                                            <Grid.ColumnDefinitions>
+                                                <ColumnDefinition Width="*" />
+                                                <ColumnDefinition Width="Auto" />
+                                            </Grid.ColumnDefinitions>
+                                            <TextBox x:Name="TargetTextBox" Padding="12,8" BorderThickness="0"
+                                                         Text="{x:Bind Paths.Target, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" IsEnabled="{x:Bind Paths.ArePathsEditable, Mode=OneWay}" />
+                                            <FontIcon x:Name="TargetStatusIcon" Grid.Column="1" FontSize="14" Margin="0,0,12,0" VerticalAlignment="Center" />
+                                        </Grid>
+                                    </Border>
+                                    <Button x:Name="PickTargetButton" Grid.Column="2" Click="OnPickTargetClicked" Style="{StaticResource SecondaryButtonStyle}" />
+                                    <Button x:Name="OpenTargetButton" Grid.Column="3" Click="OnOpenTargetClicked" Style="{StaticResource SecondaryButtonStyle}" />
+                                </Grid>
+
+                                <Grid x:Name="LauncherPathRow" Grid.Row="3" ColumnSpacing="12">
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="132" />
+                                        <ColumnDefinition Width="*" />
+                                        <ColumnDefinition Width="112" />
+                                        <ColumnDefinition Width="172" />
+                                    </Grid.ColumnDefinitions>
+                                    <TextBlock x:Name="LauncherLabelTextBlock" VerticalAlignment="Center" />
+                                    <Border Grid.Column="1" Style="{StaticResource InsetBorderStyle}">
+                                        <!-- The icon says whether the folder (or the launcher file) exists. -->
+                                        <Grid>
+                                            <Grid.ColumnDefinitions>
+                                                <ColumnDefinition Width="*" />
+                                                <ColumnDefinition Width="Auto" />
+                                            </Grid.ColumnDefinitions>
+                                            <TextBox x:Name="LauncherTextBox" Padding="12,8" BorderThickness="0"
+                                                         Text="{x:Bind Paths.Launcher, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" IsEnabled="{x:Bind Paths.ArePathsEditable, Mode=OneWay}" />
+                                            <FontIcon x:Name="LauncherStatusIcon" Grid.Column="1" FontSize="14" Margin="0,0,12,0" VerticalAlignment="Center" />
+                                        </Grid>
+                                    </Border>
+                                    <Button x:Name="PickLauncherButton" Grid.Column="2" Click="OnPickLauncherClicked" Style="{StaticResource SecondaryButtonStyle}" />
+                                    <Button x:Name="OpenLauncherButton" Grid.Column="3" Click="OnOpenLauncherClicked" Style="{StaticResource SecondaryButtonStyle}" />
+                                </Grid>
+
+                                <Button x:Name="BridgeOptionsButton" Grid.Row="4" Click="OnBridgeOptionsClicked"
+                                        Visibility="{x:Bind ViewModel.BridgeVisible, Mode=OneWay}" IsEnabled="{x:Bind ViewModel.BridgeEnabled, Mode=OneWay}" HorizontalAlignment="Stretch" HorizontalContentAlignment="Left"
+                                        Padding="10,6" Style="{StaticResource SecondaryButtonStyle}" />
+
+                                <Border Grid.Row="5" Padding="14,10" Style="{StaticResource InsetBorderStyle}">
+                                    <Grid ColumnSpacing="20">
+                                        <Grid.ColumnDefinitions>
+                                            <ColumnDefinition Width="Auto" />
+                                            <ColumnDefinition Width="*" />
+                                        </Grid.ColumnDefinitions>
+                                        <ToggleSwitch
+                                            x:Name="LinkDeploymentToggleSwitch"
+                                            VerticalAlignment="Center"
+                                            IsOn="{x:Bind Paths.UseDirectoryLinks, Mode=TwoWay}"
+                                            IsEnabled="{x:Bind Paths.IsLinkDeploymentEditable, Mode=OneWay}" />
+                                        <TextBlock
+                                            x:Name="PathHintTextBlock"
+                                            Grid.Column="1"
+                                            VerticalAlignment="Center"
+                                            Style="{StaticResource MutedTextStyle}"
+                                            TextWrapping="Wrap" />
+                                    </Grid>
+                                </Border>
+                            </Grid>
+                        </ContentControl>
+                    </StackPanel>
+                </Border>
+
+                <Border x:Name="DashboardCharactersCard" Grid.Row="1" Style="{StaticResource CardBorderStyle}">
+                    <Grid RowSpacing="10">
+                        <Grid.RowDefinitions>
+                            <RowDefinition Height="Auto" />
+                            <RowDefinition Height="*" />
+                        </Grid.RowDefinitions>
+                        <StackPanel Spacing="4">
+                            <TextBlock x:Name="DashboardCharactersTitleTextBlock" Style="{StaticResource SectionTitleTextStyle}" />
+                            <TextBlock x:Name="DashboardCharactersHintTextBlock" Style="{StaticResource CaptionTextStyle}" TextWrapping="Wrap" />
+                        </StackPanel>
+                        <TextBlock
+                            Grid.Row="1"
+                            Text="{x:Bind ViewModel.CharactersEmptyText, Mode=OneWay}"
+                            Style="{StaticResource MutedTextStyle}"
+                            TextWrapping="Wrap"
+                            Visibility="{x:Bind ViewModel.HasCharactersEmptyText, Mode=OneWay}" />
+                        <GridView
+                            x:Name="DashboardCharactersGridView"
+                            Grid.Row="1"
+                            Visibility="{x:Bind ViewModel.HasCharacters, Mode=OneWay}"
+                            IsItemClickEnabled="True"
+                            ItemClick="OnDashboardCharacterClicked"
+                            ItemsSource="{x:Bind ViewModel.Characters}"
+                            SelectionMode="None">
+                            <GridView.ItemsPanel>
+                                <ItemsPanelTemplate>
+                                    <ItemsWrapGrid Orientation="Horizontal" ItemWidth="196" ItemHeight="60" />
+                                </ItemsPanelTemplate>
+                            </GridView.ItemsPanel>
+                            <GridView.ItemTemplate>
+                                <DataTemplate x:DataType="local:CharacterChipViewModel">
+                                    <Grid Width="186" Height="52" Padding="8,6" ColumnSpacing="10" CornerRadius="10" Background="{ThemeResource AppInsetBackgroundBrush}">
+                                        <Grid.ColumnDefinitions>
+                                            <ColumnDefinition Width="Auto" />
+                                            <ColumnDefinition Width="*" />
+                                        </Grid.ColumnDefinitions>
+                                        <Border Width="36" Height="36" CornerRadius="18" Background="{ThemeResource AppSecondarySelectedBrush}" VerticalAlignment="Center">
+                                            <Grid>
+                                                <TextBlock Text="{x:Bind Initial}" Foreground="{ThemeResource AppSecondarySelectedForegroundBrush}" FontWeight="SemiBold" HorizontalAlignment="Center" VerticalAlignment="Center" />
+                                                <Ellipse Width="36" Height="36" Visibility="{x:Bind HasAvatar, Mode=OneWay}">
+                                                    <Ellipse.Fill>
+                                                        <ImageBrush ImageSource="{x:Bind Avatar, Mode=OneWay}" Stretch="UniformToFill" />
+                                                    </Ellipse.Fill>
+                                                </Ellipse>
+                                            </Grid>
+                                        </Border>
+                                        <StackPanel Grid.Column="1" VerticalAlignment="Center" Spacing="1">
+                                            <TextBlock Text="{x:Bind Name}" FontWeight="SemiBold" TextTrimming="CharacterEllipsis" ToolTipService.ToolTip="{x:Bind Name}" />
+                                            <TextBlock Text="{x:Bind Detail}" Style="{StaticResource CaptionTextStyle}" />
+                                        </StackPanel>
+                                    </Grid>
+                                </DataTemplate>
+                            </GridView.ItemTemplate>
+                        </GridView>
+                    </Grid>
+                </Border>
+                </Grid>
+
+                <!-- Right: every repository, then the actions people reach for most. -->
+                <Grid x:Name="DashboardRightColumn" RowSpacing="12">
+                <Grid.RowDefinitions>
+                    <RowDefinition Height="*" />
+                    <RowDefinition Height="Auto" />
+                </Grid.RowDefinitions>
+                <Border x:Name="DashboardRepositoriesCard" Style="{StaticResource CardBorderStyle}">
+                    <StackPanel Spacing="12">
+                        <StackPanel Spacing="4">
+                            <TextBlock x:Name="DashboardRepositoriesTitleTextBlock" Style="{StaticResource SectionTitleTextStyle}" />
+                            <TextBlock x:Name="DashboardRepositoriesHintTextBlock" Style="{StaticResource CaptionTextStyle}" TextWrapping="Wrap" />
+                        </StackPanel>
+                        <ItemsRepeater x:Name="DashboardRepositoriesRepeater" ItemsSource="{x:Bind ViewModel.Repositories}">
+                            <ItemsRepeater.Layout>
+                                <!-- UniformGridLayout divides by zero when measured narrower than one item while the page re-lays out. -->
+                                <StackLayout Spacing="10" />
+                            </ItemsRepeater.Layout>
+                            <ItemsRepeater.ItemTemplate>
+                                <DataTemplate x:DataType="local:RepositoryCardViewModel">
+                                    <Grid>
+                                        <Border Style="{StaticResource InsetBorderStyle}" Padding="14,12">
+                                            <Grid RowSpacing="8">
+                                                <Grid.RowDefinitions>
+                                                    <RowDefinition Height="Auto" />
+                                                    <RowDefinition Height="Auto" />
+                                                    <RowDefinition Height="Auto" />
+                                                </Grid.RowDefinitions>
+                                                <Grid ColumnSpacing="10">
+                                                    <Grid.ColumnDefinitions>
+                                                        <ColumnDefinition Width="*" />
+                                                        <ColumnDefinition Width="Auto" />
+                                                    </Grid.ColumnDefinitions>
+                                                    <StackPanel Spacing="2">
+                                                        <TextBlock Text="{x:Bind Name, Mode=OneWay}" FontSize="16" FontWeight="SemiBold" TextTrimming="CharacterEllipsis" />
+                                                        <TextBlock Text="{x:Bind Subtitle, Mode=OneWay}" Style="{StaticResource CaptionTextStyle}" TextTrimming="CharacterEllipsis" />
+                                                    </StackPanel>
+                                                    <Grid Grid.Column="1" VerticalAlignment="Top">
+                                                        <Border Style="{StaticResource StatusBadgeSuccessBorderStyle}" Visibility="{x:Bind IsReady, Mode=OneWay}">
+                                                            <TextBlock Text="{x:Bind StatusText, Mode=OneWay}" Style="{StaticResource StatusBadgeSuccessTextStyle}" />
+                                                        </Border>
+                                                        <Border Style="{StaticResource StatusBadgeDangerBorderStyle}" Visibility="{x:Bind NeedsSetup, Mode=OneWay}">
+                                                            <TextBlock Text="{x:Bind StatusText, Mode=OneWay}" Style="{StaticResource StatusBadgeDangerTextStyle}" />
+                                                        </Border>
+                                                    </Grid>
+                                                </Grid>
+                                                <TextBlock Grid.Row="1" Text="{x:Bind Summary, Mode=OneWay}" Style="{StaticResource MutedTextStyle}" />
+                                                <Grid Grid.Row="2" ColumnSpacing="8">
+                                                    <Grid.ColumnDefinitions>
+                                                        <ColumnDefinition Width="*" />
+                                                        <ColumnDefinition Width="Auto" />
+                                                        <ColumnDefinition Width="Auto" />
+                                                    </Grid.ColumnDefinitions>
+                                                    <Button
+                                                        HorizontalAlignment="Stretch"
+                                                        Command="{x:Bind SwitchToCommand}"
+                                                        Content="{x:Bind Labels.SwitchTo, Mode=OneWay}"
+                                                        Style="{StaticResource SecondaryButtonStyle}"
+                                                        Visibility="{x:Bind IsOther, Mode=OneWay}" />
+                                                    <TextBlock
+                                                        Text="{x:Bind Labels.Current, Mode=OneWay}"
+                                                        VerticalAlignment="Center"
+                                                        Foreground="{ThemeResource AppAccentBrush}"
+                                                        FontWeight="SemiBold"
+                                                        Visibility="{x:Bind IsCurrent, Mode=OneWay}" />
+                                                    <Button Grid.Column="1" Command="{x:Bind ManageCommand}" Content="{x:Bind Labels.Manage, Mode=OneWay}" Style="{StaticResource SecondaryButtonStyle}" />
+                                                    <Button
+                                                        Grid.Column="2"
+                                                        Width="40"
+                                                        Padding="0"
+                                                        AutomationProperties.Name="{x:Bind Labels.More, Mode=OneWay}"
+                                                        ToolTipService.ToolTip="{x:Bind Labels.More, Mode=OneWay}"
+                                                        Style="{StaticResource SecondaryButtonStyle}">
+                                                        <FontIcon Glyph="&#xE712;" FontSize="14" />
+                                                        <Button.Flyout>
+                                                            <MenuFlyout Placement="BottomEdgeAlignedRight">
+                                                                <MenuFlyoutItem Text="{x:Bind Labels.Edit, Mode=OneWay}" Command="{x:Bind EditCommand}">
+                                                                    <MenuFlyoutItem.Icon><FontIcon Glyph="&#xE70F;" /></MenuFlyoutItem.Icon>
+                                                                </MenuFlyoutItem>
+                                                                <MenuFlyoutItem Text="{x:Bind Labels.OpenWiki, Mode=OneWay}" Command="{x:Bind OpenWikiCommand}">
+                                                                    <MenuFlyoutItem.Icon><FontIcon Glyph="&#xE774;" /></MenuFlyoutItem.Icon>
+                                                                </MenuFlyoutItem>
+                                                                <MenuFlyoutSeparator />
+                                                                <MenuFlyoutItem Text="{x:Bind Labels.Delete, Mode=OneWay}" Command="{x:Bind DeleteCommand}">
+                                                                    <MenuFlyoutItem.Icon><FontIcon Glyph="&#xE74D;" /></MenuFlyoutItem.Icon>
+                                                                </MenuFlyoutItem>
+                                                            </MenuFlyout>
+                                                        </Button.Flyout>
+                                                    </Button>
+                                                </Grid>
+                                            </Grid>
+                                        </Border>
+                                        <!-- The current repository is outlined in the accent colour. -->
+                                        <Border
+                                            BorderBrush="{ThemeResource AppNavSelectedBorderBrush}"
+                                            BorderThickness="2"
+                                            CornerRadius="10"
+                                            IsHitTestVisible="False"
+                                            Visibility="{x:Bind IsCurrent, Mode=OneWay}" />
+                                    </Grid>
+                                </DataTemplate>
+                            </ItemsRepeater.ItemTemplate>
+                        </ItemsRepeater>
+                    </StackPanel>
+                </Border>
+                <Border x:Name="DashboardQuickActionsCard" Grid.Row="1" Style="{StaticResource CardBorderStyle}">
+                    <StackPanel Spacing="10">
+                        <TextBlock x:Name="DashboardQuickActionsTitleTextBlock" Style="{StaticResource SectionTitleTextStyle}" />
+                        <Grid ColumnSpacing="8">
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="*" />
+                                <ColumnDefinition Width="*" />
+                                <ColumnDefinition Width="*" />
+                            </Grid.ColumnDefinitions>
+                            <Button x:Name="DashboardBrowseOnlineButton" HorizontalAlignment="Stretch" VerticalAlignment="Stretch" Click="OnDashboardBrowseOnlineClicked" Style="{StaticResource SecondaryButtonStyle}">
+                                <Grid ColumnSpacing="8">
+                                    <Grid.ColumnDefinitions><ColumnDefinition Width="Auto" /><ColumnDefinition Width="*" /></Grid.ColumnDefinitions>
+                                    <FontIcon Glyph="&#xE774;" FontSize="14" VerticalAlignment="Center" />
+                                    <TextBlock x:Name="DashboardBrowseOnlineTextBlock" Grid.Column="1" VerticalAlignment="Center" TextWrapping="WrapWholeWords" MaxLines="2" TextTrimming="CharacterEllipsis" />
+                                </Grid>
+                            </Button>
+                            <Button x:Name="DashboardCheckUpdatesButton" Grid.Column="1" HorizontalAlignment="Stretch" VerticalAlignment="Stretch" Click="OnDashboardCheckUpdatesClicked" Style="{StaticResource SecondaryButtonStyle}">
+                                <Grid ColumnSpacing="8">
+                                    <Grid.ColumnDefinitions><ColumnDefinition Width="Auto" /><ColumnDefinition Width="*" /></Grid.ColumnDefinitions>
+                                    <FontIcon Glyph="&#xE895;" FontSize="14" VerticalAlignment="Center" />
+                                    <TextBlock x:Name="DashboardCheckUpdatesTextBlock" Grid.Column="1" VerticalAlignment="Center" TextWrapping="WrapWholeWords" MaxLines="2" TextTrimming="CharacterEllipsis" />
+                                </Grid>
+                            </Button>
+                            <Button x:Name="DashboardRunLauncherButton" Grid.Column="2" HorizontalAlignment="Stretch" VerticalAlignment="Stretch" Click="OnRunLauncherClicked" IsEnabled="{x:Bind Paths.CanRunLauncher, Mode=OneWay}" Style="{StaticResource SecondaryButtonStyle}">
+                                <Grid ColumnSpacing="8">
+                                    <Grid.ColumnDefinitions><ColumnDefinition Width="Auto" /><ColumnDefinition Width="*" /></Grid.ColumnDefinitions>
+                                    <FontIcon Glyph="&#xE768;" FontSize="14" VerticalAlignment="Center" />
+                                    <TextBlock x:Name="DashboardRunLauncherTextBlock" Grid.Column="1" VerticalAlignment="Center" TextWrapping="WrapWholeWords" MaxLines="2" TextTrimming="CharacterEllipsis" />
+                                </Grid>
+                            </Button>
+                        </Grid>
+                    </StackPanel>
+                </Border>
+                </Grid>
+            </Grid>
+        </StackPanel>
+    </ScrollViewer>
+</UserControl>

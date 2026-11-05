@@ -1,4 +1,4 @@
-using System.Diagnostics;
+﻿using System.Diagnostics;
 using System.Globalization;
 using IntegratedModManager.Core.Online;
 using Microsoft.UI.Xaml;
@@ -22,9 +22,9 @@ public sealed partial class MainWindow
             return;
         }
 
-        repository.SourcePath = SourceTextBox.Text ?? string.Empty;
-        repository.TargetPath = TargetTextBox.Text ?? string.Empty;
-        repository.LauncherPath = LauncherTextBox.Text ?? string.Empty;
+        repository.SourcePath = Paths.Source;
+        repository.TargetPath = Paths.Target;
+        repository.LauncherPath = Paths.Launcher;
     }
 
     private void ApplySelectedRepositoryToInputs()
@@ -33,21 +33,21 @@ public sealed partial class MainWindow
         if (repository is null)
         {
             _isApplyingRepositoryDeploymentMode = true;
-            LinkDeploymentToggleSwitch.IsOn = false;
+            Paths.UseDirectoryLinks = false;
             _isApplyingRepositoryDeploymentMode = false;
             RefreshPersistentSlotControls();
             return;
         }
 
-        SourceTextBox.Text = repository.SourcePath;
-        TargetTextBox.Text = repository.TargetPath;
-        LauncherTextBox.Text = repository.LauncherPath;
+        Paths.Source = repository.SourcePath;
+        Paths.Target = repository.TargetPath;
+        Paths.Launcher = repository.LauncherPath;
         RefreshEndfieldBridgeControls();
         RefreshPersistentSlotControls();
         _isApplyingRepositoryDeploymentMode = true;
         try
         {
-            LinkDeploymentToggleSwitch.IsOn = repository.UseDirectoryLinks;
+            Paths.UseDirectoryLinks = repository.UseDirectoryLinks;
         }
         finally
         {
@@ -93,15 +93,11 @@ public sealed partial class MainWindow
         ResetOnlineDetailPaneToPlaceholder();
     }
 
-    private async void OnRepositoryPresetClicked(object sender, RoutedEventArgs e)
+    // A game preset from the dashboard's "New repository" menu.
+    private async void CreateRepositoryFromPreset(string presetId)
     {
         try
         {
-            if (sender is not FrameworkElement { Tag: string presetId })
-            {
-                return;
-            }
-
             RepositoryPresetInfo? preset = BuiltInRepositoryPresets.FirstOrDefault(item =>
                 string.Equals(item.Id, presetId, StringComparison.OrdinalIgnoreCase));
             if (preset is null)
@@ -128,7 +124,7 @@ public sealed partial class MainWindow
                 Notes = T("Repositories.BuiltInGameRepositoryPresetConfigure")
             };
 
-            RepositoryEditorResult? result = await PromptForRepositoryAsync(
+            RepositoryEditorResult? result = await RepositoryEditorDialog.ShowAsync(_services, 
                 T("Repositories.TheOnlineCategoryAndWikiAre"),
                 T("Repositories.CreateRepository2", preset.DisplayNameZh, preset.DisplayNameEn),
                 draftRepository);
@@ -275,12 +271,12 @@ public sealed partial class MainWindow
             WorkspaceRepository draftRepository = new()
             {
                 Name = string.Empty,
-                SourcePath = SourceTextBox.Text ?? string.Empty,
-                TargetPath = TargetTextBox.Text ?? string.Empty,
-                LauncherPath = LauncherTextBox.Text ?? string.Empty
+                SourcePath = Paths.Source,
+                TargetPath = Paths.Target,
+                LauncherPath = Paths.Launcher
             };
 
-            RepositoryEditorResult? result = await PromptForRepositoryAsync(
+            RepositoryEditorResult? result = await RepositoryEditorDialog.ShowAsync(_services, 
                 T("Repositories.CreateANewCustomRepositoryAnd"),
                 T("Repositories.CreateRepository"),
                 draftRepository);
@@ -334,7 +330,7 @@ public sealed partial class MainWindow
 
         SaveSelectedRepositoryFromInputs();
 
-        RepositoryEditorResult? result = await PromptForRepositoryAsync(
+        RepositoryEditorResult? result = await RepositoryEditorDialog.ShowAsync(_services, 
             T("Repositories.EditTheCurrentRepositoryNamePaths"),
             T("Repositories.EditRepository"),
             repository);
@@ -378,7 +374,7 @@ public sealed partial class MainWindow
                 return;
             }
 
-            OnlineRepositoryConfigResult? result = await PromptForOnlineRepositoryConfigAsync(repository);
+            OnlineRepositoryConfigResult? result = await OnlineRepositoryConfigDialog.ShowAsync(_services, repository);
             if (result is null)
             {
                 return;
@@ -526,9 +522,9 @@ public sealed partial class MainWindow
                 Text = T("Repositories.WhenWikiAndGameBananaNamesDiffer"),
                 TextWrapping = TextWrapping.Wrap
             });
-            panel.Children.Add(CreateLabeledEditor(T("Repositories.WikiCharacter"), wikiCharacterBox));
-            panel.Children.Add(CreateLabeledEditor(T("Repositories.DiscoveredCategory"), gameBananaCategoryBox));
-            panel.Children.Add(CreateLabeledEditor(T("Common.CategoryID"), categoryIdBox));
+            panel.Children.Add(DialogLayout.LabeledEditor(T("Repositories.WikiCharacter"), wikiCharacterBox));
+            panel.Children.Add(DialogLayout.LabeledEditor(T("Repositories.DiscoveredCategory"), gameBananaCategoryBox));
+            panel.Children.Add(DialogLayout.LabeledEditor(T("Common.CategoryID"), categoryIdBox));
             panel.Children.Add(mappingStatus);
 
             ContentDialog dialog = new()
