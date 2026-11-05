@@ -11,7 +11,11 @@ param(
     # updates-downloads and updates-recovery are the Updates page's other two views (stage J3-b).
     [string[]]$Pages = @('dashboard', 'repository', 'online', 'shortcuts', 'updates', 'updates-downloads', 'updates-recovery', 'settings', 'whatsnew', 'firstrun'),
     # How long to wait after the window appears before taking the picture.
-    [int]$SettleSeconds = 7
+    [int]$SettleSeconds = 7,
+    # Point the repository's game folder at a folder that does not exist, to show the "setup needed" states.
+    [switch]$MissingGameFolder,
+    # Add the synthetic tracked Mods, download history and install backups of tests\TestData\SampleState.
+    [switch]$SampleData
 )
 
 # Baseline screenshots for stage J (docs/development/UI-Baseline-Screenshots.md).
@@ -113,7 +117,7 @@ function Reset-State {
 
 function Write-Configuration([string]$page, [string]$language, [string]$theme, [int]$width, [int]$height) {
     $mods = Join-Path $testData 'ModRepository'
-    $target = Join-Path $testData 'Loader\Mods'
+    $target = Join-Path $testData $(if ($MissingGameFolder) { 'Loader\NoSuchFolder' } else { 'Loader\Mods' })
     $shell = [ordered]@{
         SelectedRepositoryId = 'ui-repository'
         CurrentPrimarySection = $(if ($page -eq 'whatsnew') { 'dashboard' } elseif ($page -like 'updates-*') { 'updates' } else { $page })
@@ -132,6 +136,30 @@ function Write-Configuration([string]$page, [string]$language, [string]$theme, [
     [IO.File]::WriteAllLines((Join-Path $appFolder 'config.ini'), [string[]]@(
         "source_dir=$(Encode $mods)", "target_dir=$(Encode $target)", 'launcher_path=',
         "theme=$(Encode $theme)", "language=$(Encode (ConfigLanguage $language))"))
+    if ($SampleData) { Add-SampleData }
+}
+
+# tests\TestData\SampleState: synthetic tracked Mods, download history and install backups (see its README).
+function Add-SampleData {
+    $sample = Join-Path $testData 'SampleState'
+    $tab = "`t"
+    $lines = foreach ($mod in (Get-Content -Raw (Join-Path $sample 'tracked-mods.json') | ConvertFrom-Json)) {
+        $fields = @((Join-Path $testData ($mod.Path -replace '/', '\')), 'GameBanana', [string]$mod.ItemId, $mod.Title, $mod.ProfileUrl, '', $mod.LastKnownUpdatedAt, '', '')
+        'mod_origin=' + (($fields | ForEach-Object { Encode $_ }) -join $tab)
+    }
+    [IO.File]::AppendAllLines((Join-Path $appFolder 'config.ini'), [string[]]$lines)
+    $backups = Join-Path $appFolder 'backups'
+    if (Test-Path -LiteralPath $backups) { Remove-Item -LiteralPath $backups -Recurse -Force }
+    $escaped = $testData.Replace('\', '\\')
+    foreach ($file in Get-ChildItem -LiteralPath $sample -Recurse -Filter '*.json' | Where-Object { $_.Name -ne 'tracked-mods.json' }) {
+        $relative = $file.FullName.Substring($sample.Length + 1)
+        $destination = Join-Path $backups $relative
+        New-Item -ItemType Directory -Force (Split-Path $destination) | Out-Null
+        # The sample's paths use forward slashes; the copy gets the TestData folder and Windows separators (escaped for JSON).
+        $text = [regex]::Replace((Get-Content -Raw -Encoding UTF8 -LiteralPath $file.FullName), '"\{TestData\}([^"]*)"',
+            { param($m) '"' + $escaped + $m.Groups[1].Value.Replace('/', '\\') + '"' })
+        [IO.File]::WriteAllText($destination, $text, [Text.UTF8Encoding]::new($false))
+    }
 }
 
 function Capture([string]$name, [int]$width, [int]$height) {

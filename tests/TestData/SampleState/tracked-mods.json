@@ -1,0 +1,4 @@
+[
+  { "Path": "ModRepository/TestCharacter/TestModA", "Title": "Test Mod A (sample)", "ItemId": 900001, "ProfileUrl": "https://example.invalid/mods/900001", "LastKnownUpdatedAt": "2026-10-01T08:30:00+00:00" },
+  { "Path": "ModRepository/TestCharacter/TestModB", "Title": "Test Mod B (sample)", "ItemId": 900002, "ProfileUrl": "https://example.invalid/mods/900002", "LastKnownUpdatedAt": "2026-09-12T19:05:00+00:00" }
+]

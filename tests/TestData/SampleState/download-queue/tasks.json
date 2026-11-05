@@ -1,0 +1,5 @@
+{"Version":1,"Tasks":[
+{"Id":"sample-completed","Title":"Test Mod A (sample)","SourceIdentity":"sample|900001","DestinationPath":"{TestData}/ModRepository/TestCharacter/TestModA","State":5,"Progress":100,"StatusZh":"已下载并解压。","StatusEn":"Downloaded and extracted.","Request":null,"ArchivePath":"","Interrupted":false},
+{"Id":"sample-failed","Title":"Test Mod C (sample)","SourceIdentity":"sample|900003","DestinationPath":"{TestData}/ModRepository/TestCharacter","State":6,"Progress":40,"StatusZh":"下载失败：连接被重置（示例）。","StatusEn":"Download failed: the connection was reset (sample).","Request":null,"ArchivePath":"","Interrupted":false},
+{"Id":"sample-canceled","Title":"Test Mod D (sample)","SourceIdentity":"sample|900004","DestinationPath":"{TestData}/ModRepository/TestCharacter","State":7,"Progress":12,"StatusZh":"已取消。","StatusEn":"Canceled.","Request":null,"ArchivePath":"","Interrupted":false}
+]}

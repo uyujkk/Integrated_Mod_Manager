@@ -1,4 +1,4 @@
-# 界面基线截图 / UI baseline screenshots
+﻿# 界面基线截图 / UI baseline screenshots
 
 2026-11-04，阶段 J0 第 1 项。阶段 J 每个 PR 都要和这组截图对比：“纯移动”提交应与基线一致，外观提交在 PR 里逐张说明差异。见[界面结构拆分计划](./UI-Structure-Plan.md)和[界面外观优化方案](./UI-Fluent-Design-Plan.md)。
 
@@ -21,6 +21,8 @@ powershell.exe -NoProfile -ExecutionPolicy Bypass -File .\tools\ui-baseline\Capt
 | `-Themes` | `light,dark` | 应用自己的主题设置 |
 | `-Pages` | `dashboard,repository,online,shortcuts,updates,updates-downloads,updates-recovery,settings,whatsnew,firstrun` | `whatsnew` 是带“新功能”对话框的仪表盘；`firstrun` 是首次安装弹窗；`updates-downloads`、`updates-recovery` 是更新页的另外两个视图（J3-b 起，通过 `UpdatesView` 设置） |
 | `-SettleSeconds` | `7` | 窗口出现后等待多久再截图 |
+| `-SampleData` | 关 | 加入 `tests\TestData\SampleState` 里合成的已跟踪 Mod、下载记录和安装备份（J4 起），用来拍更新页等页面“有数据”的样子；地址都是 `example.invalid`，不联网 |
+| `-MissingGameFolder` | 关 | 把仓库的游戏 Mod 目录指向不存在的文件夹，用来拍“需要设置”的样子 |
 
 例如只重拍俄语设置页：`-Languages ru-RU -Pages settings`。
 
