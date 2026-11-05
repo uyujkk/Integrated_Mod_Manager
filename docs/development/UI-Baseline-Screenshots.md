@@ -17,7 +17,7 @@ powershell.exe -NoProfile -ExecutionPolicy Bypass -File .\tools\ui-baseline\Capt
 | `-Application` | `artifacts\verification\ReleaseSource` | 含 `WinUI3\ModFolderCopier.WinUI.exe` 的文件夹 |
 | `-OutputDirectory` | `artifacts\ui-baseline\<时间>` | 相对仓库根目录 |
 | `-Languages` | `zh-CN,en-US,ru-RU` | |
-| `-Sizes` | `1400x900,1000x800` | 窗口外框大小，单位是 DIP（与界面测试的 `Resize` 一致），脚本按系统 DPI 换算成像素 |
+| `-Sizes` | `1400x900,1000x800` | 窗口外框大小，单位是 DIP（与界面测试的 `Resize` 一致），脚本按系统 DPI 换算成像素；`maximized` 表示最大化窗口（如 `-Sizes 1400x900,maximized`） |
 | `-Themes` | `light,dark` | 应用自己的主题设置 |
 | `-Pages` | `dashboard,repository,online,shortcuts,updates,updates-downloads,updates-recovery,settings,whatsnew,firstrun` | `whatsnew` 是带“新功能”对话框的仪表盘；`firstrun` 是首次安装弹窗；`updates-downloads`、`updates-recovery` 是更新页的另外两个视图（J3-b 起，通过 `UpdatesView` 设置） |
 | `-SettleSeconds` | `7` | 窗口出现后等待多久再截图 |

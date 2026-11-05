@@ -63,6 +63,14 @@ public static class ImmCapture
         SetForegroundWindow(window);
     }
 
+    // A maximized window keeps its size; it is only brought to the top.
+    public static void Maximize(IntPtr window)
+    {
+        ShowWindow(window, 3); // SW_MAXIMIZE
+        SetWindowPos(window, new IntPtr(-1), 0, 0, 0, 0, 0x0043);
+        SetForegroundWindow(window);
+    }
+
     public static void Release(IntPtr window) { SetWindowPos(window, new IntPtr(-2), 0, 0, 0, 0, 0x0013); }
 
     public static Rect Bounds(IntPtr window)
@@ -122,7 +130,8 @@ function Write-Configuration([string]$page, [string]$language, [string]$theme, [
         WhatsNewSeenVersion = $(if ($page -eq 'whatsnew') { '' } else { $whatsNewSet })
         RepositoryGamesExplicit = $true
         ThemePreference = $theme
-        WindowX = 40; WindowY = 40; WindowWidth = $width; WindowHeight = $height; WindowMaximized = $false
+        WindowX = 40; WindowY = 40; WindowWidth = $(if ($width -eq 0) { 1400 } else { $width }); WindowHeight = $(if ($height -eq 0) { 900 } else { $height })
+        WindowMaximized = ($width -eq 0)
         Repositories = @([ordered]@{
             Id = 'ui-repository'; Name = 'UI repository'; SourcePath = $mods; TargetPath = $target
             PersistentUserIniPath = (Join-Path $testData 'Loader\d3dx_user.ini'); OnlineSourceSite = 'GameBanana'
@@ -142,9 +151,10 @@ function Capture([string]$name, [int]$width, [int]$height) {
         if ($process.MainWindowHandle -eq 0) { throw "No window for $name" }
         $handle = $process.MainWindowHandle
         Start-Sleep -Seconds 2
-        [ImmCapture]::Place($handle, 40, 40, $width, $height)
+        # Size 0 x 0 is "maximized" (-Sizes maximized).
+        if ($width -eq 0) { [ImmCapture]::Maximize($handle) } else { [ImmCapture]::Place($handle, 40, 40, $width, $height) }
         Start-Sleep -Seconds $SettleSeconds
-        [ImmCapture]::Place($handle, 40, 40, $width, $height)
+        if ($width -eq 0) { [ImmCapture]::Maximize($handle) } else { [ImmCapture]::Place($handle, 40, 40, $width, $height) }
         Start-Sleep -Milliseconds 800
         $size = [ImmCapture]::Save($handle, (Join-Path $output "$name.png"))
         [ImmCapture]::Release($handle)
@@ -164,8 +174,11 @@ function Capture([string]$name, [int]$width, [int]$height) {
 $results = @()
 try {
     foreach ($sizeText in $Sizes) {
-        $dip = $sizeText -split 'x'
-        $width = [int][Math]::Round([int]$dip[0] * $scale); $height = [int][Math]::Round([int]$dip[1] * $scale)
+        if ($sizeText -eq 'maximized') { $width = 0; $height = 0 }
+        else {
+            $dip = $sizeText -split 'x'
+            $width = [int][Math]::Round([int]$dip[0] * $scale); $height = [int][Math]::Round([int]$dip[1] * $scale)
+        }
         foreach ($page in $Pages) {
             if ($page -eq 'firstrun') {
                 # A first install has no settings: language and theme follow Windows, so one picture per size.
