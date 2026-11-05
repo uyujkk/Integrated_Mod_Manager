@@ -79,7 +79,7 @@ J6-b：搜索框换 `AutoSuggestBox` 后，AutomationId 落在外层控件上，
 
 J3 之后这几个控件都在 `Pages/UpdatesPage.xaml`，名称不变。
 
-J3-b：`SelectorBar` 分三个视图后，“清除下载记录”只在“下载记录”视图里，`Shows("ClearDownloadTasksButton")` 在默认视图会失败。测试要先切到对应视图（给 `SelectorBarItem` 设 AutomationId，例如 `UpdatesViewMods`、`UpdatesViewDownloads`、`UpdatesViewRecovery`）。
+J3-b 完成后：页面顶部是状态区，下面 `SelectorBar` 分三个视图，`SelectorBarItem` 的名称是 `UpdatesViewMods`、`UpdatesViewDownloads`、`UpdatesViewRecovery`（讲述人读的是视图名称）。没选中的视图是折叠的，不在自动化树里，所以 `Updates_ShowsItsSectionsAndSavesTheCheckInterval` 先切到“下载记录”再找 `ClearDownloadTasksButton`，`Updates_ConflictDetectionSwitchIsSaved` 先切到“安装与恢复”。`RollbackLastInstallButton`、`OpenCombinationPresetsButton` 现在是可点击的 `SettingsCard`，名称不变；“刷新备份列表”按钮在折叠的“备份”`SettingsExpander` 里，AutomationId 仍是 `RefreshBackupsButton`。新测试 `Updates_ViewsSwitchByKeyboardAndAreSaved` 用 Tab 进入选择栏、方向键和空格切换视图，并检查视图会保存（`beta-shell.json` 的 `UpdatesView`）。
 
 ### 设置（J2）
 

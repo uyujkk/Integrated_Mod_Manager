@@ -30,6 +30,9 @@ public sealed class BetaShellConfig
     public OnlineWorkspacePreferences? OnlinePreferences { get; set; }
 
     public string RepositoryWorkspaceView { get; set; } = "list";
+
+    /// <summary>The Updates page's view: "mods", "downloads" or "recovery".</summary>
+    public string? UpdatesView { get; set; }
     public string? CurrentPrimarySection { get; set; }
 
     public string? SelectedRepositoryId { get; set; }

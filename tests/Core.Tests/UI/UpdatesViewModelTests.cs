@@ -1,4 +1,4 @@
-using IntegratedModManager.Core.Updates;
+﻿using IntegratedModManager.Core.Updates;
 using ModFolderCopier.WinUI;
 
 namespace IntegratedModManager.Core.Tests;
@@ -152,5 +152,70 @@ public sealed class UpdatesViewModelTests
 
         Assert.Equal([new UpdatesActionRequest(UpdatesAction.RestoreBackup, @"D:\b1"), new UpdatesActionRequest(UpdatesAction.CheckModUpdates)], requests);
         Assert.Equal(1, refreshed);
+    }
+
+    [Fact]
+    public void CheckState_FollowsTheCheckAndItsResults()
+    {
+        var updates = new UpdatesViewModel();
+        Assert.Equal(ModUpdateCheckState.NothingTracked, updates.CheckState);
+
+        updates.SetTrackedMods([Row("a", TrackedModStatus.NotChecked)]);
+        Assert.Equal(ModUpdateCheckState.NotChecked, updates.CheckState);
+
+        updates.IsCheckingModUpdates = true;
+        Assert.Equal(ModUpdateCheckState.Checking, updates.CheckState);
+
+        updates.IsCheckingModUpdates = false;
+        updates.HasChecked = true;
+        updates.SetTrackedMods([Row("a", TrackedModStatus.UpToDate)]);
+        Assert.Equal(ModUpdateCheckState.UpToDate, updates.CheckState);
+
+        updates.SetTrackedMods([Row("a", TrackedModStatus.UpToDate), Row("b", TrackedModStatus.Failed)]);
+        Assert.Equal(ModUpdateCheckState.SomeFailed, updates.CheckState);
+
+        updates.SetTrackedMods([Row("a", TrackedModStatus.Update), Row("b", TrackedModStatus.Failed)]);
+        Assert.Equal(ModUpdateCheckState.UpdatesAvailable, updates.CheckState);
+
+        updates.CheckError = "No connection";
+        Assert.Equal(ModUpdateCheckState.CheckFailed, updates.CheckState);
+        updates.CheckError = " ";
+        Assert.Null(updates.CheckError);
+    }
+
+    [Fact]
+    public void CheckState_IsAnnouncedWithItsCauses()
+    {
+        var updates = new UpdatesViewModel();
+        int announced = 0;
+        updates.PropertyChanged += (_, args) => { if (args.PropertyName == nameof(UpdatesViewModel.CheckState)) announced++; };
+
+        updates.IsCheckingModUpdates = true;
+        updates.CheckError = "x";
+        updates.HasChecked = true;
+        updates.SetTrackedMods([Row("a", TrackedModStatus.Update)]);
+
+        Assert.Equal(4, announced);
+    }
+
+    [Theory]
+    [InlineData("downloads", UpdatesPageView.Downloads)]
+    [InlineData("RECOVERY", UpdatesPageView.Recovery)]
+    [InlineData("mods", UpdatesPageView.Mods)]
+    [InlineData(null, UpdatesPageView.Mods)]
+    [InlineData("7", UpdatesPageView.Mods)]
+    [InlineData("bogus", UpdatesPageView.Mods)]
+    public void ParseView_FallsBackToModUpdates(string? value, UpdatesPageView expected)
+        => Assert.Equal(expected, UpdatesViewModel.ParseView(value));
+
+    [Fact]
+    public void View_RoundTripsAndIgnoresUndefinedValues()
+    {
+        var updates = new UpdatesViewModel { View = UpdatesPageView.Recovery };
+        updates.View = (UpdatesPageView)9;
+
+        Assert.Equal(UpdatesPageView.Recovery, updates.View);
+        Assert.Equal("recovery", UpdatesViewModel.FormatView(updates.View));
+        Assert.Equal(updates.View, UpdatesViewModel.ParseView(UpdatesViewModel.FormatView(updates.View)));
     }
 }

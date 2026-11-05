@@ -93,6 +93,10 @@ public sealed partial class MainWindow
                 _ => RepositoryWorkspaceView.List
             };
             _lastUpdateCheckUtc = TryParseDateTimeOffset(config?.LastUpdateCheckUtc);
+            // Restoring the view is not a change to save.
+            _restoringUpdatesView = true;
+            _services.Updates.View = UpdatesViewModel.ParseView(config?.UpdatesView);
+            _restoringUpdatesView = false;
             _modUpdateCheckInterval = ParseUpdateCheckInterval(config?.ModUpdateCheckInterval);
             _shortcuts.LoadSettings(config?.ShortcutInputMode, config?.ShortcutOverlayOpacity, config?.ShortcutHideUnsupported,
                 config?.ShortcutPanelHotkeyEnabled ?? true, config?.ShortcutPanelHotkeyModifiers ?? ShortcutPageViewModel.DefaultHotkeyModifiers,
@@ -290,6 +294,7 @@ public sealed partial class MainWindow
                 InterfaceDensity = _interfaceDensity == InterfaceDensity.Compact ? "compact" : "comfortable",
                 OnlineCardLayout = _onlinePage.CardLayoutMode == OnlineCardLayoutMode.Grid ? "grid" : "list",
                 RepositoryWorkspaceView = _modList.View.ToString().ToLowerInvariant(),
+                UpdatesView = UpdatesViewModel.FormatView(_services.Updates.View),
                 SelectedConfigurationProfileId = _selectedConfigurationProfileId,
                 EnableConflictDetection = _enableConflictDetection,
                 LastInstallTransactionPath = _lastInstallTransactionPath,
