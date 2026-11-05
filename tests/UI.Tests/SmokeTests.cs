@@ -197,6 +197,8 @@ public sealed class SmokeTests
     public void Dashboard_ShowsTheRepositoryPaths()
     {
         using AppSession app = AppSession.Configured().Start();
+        // Stage J4: the paths are folded into an expander while they are all set.
+        app.Expand("DashboardPathsExpander");
 
         Assert.EndsWith("ModRepository", app.Find("SourceTextBox").Patterns.Value.Pattern.Value.Value);
         Assert.True(app.Shows("TargetTextBox"));
@@ -209,6 +211,7 @@ public sealed class SmokeTests
     {
         using AppSession app = AppSession.Configured().Start();
         string newTarget = Path.Combine(app.TestData, "Loader");
+        app.Expand("DashboardPathsExpander");
 
         app.Find("TargetTextBox").Patterns.Value.Pattern.SetValue(newTarget);
         AppSession.Invoke(app.Find("RepositoryNavButton"));
@@ -216,6 +219,7 @@ public sealed class SmokeTests
         Assert.True(SpinWait.SpinUntil(() => (string?)app.ShellConfig()["Repositories"]![0]!["TargetPath"] == newTarget, TimeSpan.FromSeconds(5)),
             (string?)app.ShellConfig()["Repositories"]![0]!["TargetPath"]);
         AppSession.Invoke(app.Find("DashboardNavButton"));
+        app.Expand("DashboardPathsExpander");
         Assert.Equal(newTarget, app.Find("TargetTextBox").Patterns.Value.Pattern.Value.Value);
         app.Capture(nameof(Dashboard_EditedTargetPathIsSavedWithTheRepository));
         app.AssertNoErrors();

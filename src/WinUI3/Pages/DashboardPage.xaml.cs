@@ -1,4 +1,5 @@
 using System.ComponentModel;
+using CommunityToolkit.WinUI.Controls;
 using IntegratedModManager.Core.Layout;
 using IntegratedModManager.Core.Repository;
 using Microsoft.UI.Xaml;
@@ -9,18 +10,17 @@ using Microsoft.UI.Xaml.Media;
 namespace ModFolderCopier.WinUI;
 
 /// <summary>
-/// The dashboard (stage J4, docs/development/UI-Structure-Plan.md): the current repository, its paths,
-/// the character overview, every repository and the quick actions. It labels and lays itself out,
-/// shows <see cref="DashboardViewModel"/> and <see cref="RepositoryPathsViewModel"/>, and sends clicks
-/// out as requests.
+/// The dashboard (stages J4, docs/development/UI-Structure-Plan.md and UI-Fluent-Design-Plan.md): the
+/// current repository with its main actions, the quick actions, the paths in one expander, the
+/// characters and every repository. It labels and lays itself out, shows <see cref="DashboardViewModel"/>
+/// and <see cref="RepositoryPathsViewModel"/>, and sends clicks out as requests.
 /// </summary>
 public sealed partial class DashboardPage : UserControl
 {
     private readonly AppServices _services;
     private readonly (TextBox Box, FontIcon Icon, bool ExpectFile)[] _pathStatusIcons;
-    private bool _isApplyingRepositorySelection;
     private int _layoutMode = -1;
-    private int _pathColumns = -1;
+    private string? _autoExpandedFor;
 
     internal DashboardPage(AppServices services)
     {
@@ -40,11 +40,11 @@ public sealed partial class DashboardPage : UserControl
         {
             if (args.NewSize.Width > 0) UpdateDashboardLayout();
         };
-        Paths.PropertyChanged += (_, _) => UpdatePathStatusIcons();
+        Paths.PropertyChanged += (_, _) => RefreshPathsState();
         ViewModel.Refreshed += (_, _) => OnRefreshed();
         ViewModel.PropertyChanged += OnViewModelChanged;
         services.Language.LanguageChanged += (_, _) => ApplyLanguage();
-        services.Appearance.ThemeChanged += (_, _) => UpdatePathStatusIcons();
+        services.Appearance.ThemeChanged += (_, _) => RefreshPathsState();
         // The language is read from the settings after the page is made, so label again when it is shown.
         Loaded += (_, _) => ApplyLanguage();
         ApplyLanguage();
@@ -63,8 +63,6 @@ public sealed partial class DashboardPage : UserControl
 
     private Brush ThemeBrush(string token) => ThemeTokens.Get(token, _services.Appearance.ThemeKey);
 
-    private Grid[] PathRows => [SourcePathRow, TargetPathRow, LauncherPathRow];
-
     private void ApplyLanguage()
     {
         ToolTipService.SetToolTip(AddRepositoryButton, T("Localization.CreateRepository"));
@@ -77,24 +75,28 @@ public sealed partial class DashboardPage : UserControl
         DashboardEditRepositoryTextBlock.Text = T("Localization.EditCurrent");
         DashboardCurrentRepositoryLabelTextBlock.Text = T("Localization.ActiveRepository");
         DashboardOpenRepositoryButton.Content = T("Localization.OpenModManagement");
+        ToolTipService.SetToolTip(DashboardOpenRepositoryButton, T("Localization.OpenModManagementForTheActive"));
+        ToolTipService.SetToolTip(DashboardRepositorySwitcher, T("Localization.SwitchTheActiveRepository"));
+        AutomationProperties.SetName(DashboardRepositorySwitcher, T("Localization.SwitchTheActiveRepository"));
         DashboardRepositoriesTitleTextBlock.Text = T("Common.AllRepositories");
         DashboardRepositoriesHintTextBlock.Text = T("Localization.CardsMarkTheActiveRepositoryAnd");
         DashboardCharactersTitleTextBlock.Text = T("Dashboard.Characters");
         DashboardCharactersHintTextBlock.Text = T("Dashboard.ClickACharacterToManage");
+
+        // Quick actions: the card's title and one line of what it does; it is its own Narrator name.
         DashboardQuickActionsTitleTextBlock.Text = T("Dashboard.QuickActions");
-        DashboardBrowseOnlineTextBlock.Text = T("Dashboard.BrowseOnline");
-        DashboardCheckUpdatesTextBlock.Text = T("Dashboard.CheckModUpdates");
-        DashboardRunLauncherTextBlock.Text = T("Dashboard.RunLauncher");
-        ToolTipService.SetToolTip(DashboardRunLauncherButton, T("Dashboard.RunLauncherHint"));
-        ToolTipService.SetToolTip(DashboardRepositoryComboBox, T("Localization.SwitchTheActiveRepository"));
-        ToolTipService.SetToolTip(DashboardOpenRepositoryButton, T("Localization.OpenModManagementForTheActive"));
+        SetCard(DashboardBrowseOnlineButton, T("Dashboard.BrowseOnline"), T("Dashboard.BrowseOnlineHint"));
+        SetCard(DashboardCheckUpdatesButton, T("Dashboard.CheckModUpdates"), T("Dashboard.CheckModUpdatesHint"));
+        SetCard(DashboardRunLauncherButton, T("Dashboard.RunLauncher"), T("Dashboard.RunLauncherHint"));
 
         // Paths.
-        PathSectionTitleTextBlock.Text = T("Localization.PathsAndLauncher");
-        PathSectionSubtitleTextBlock.Text = T("Localization.KeepTheModStorageFolderTarget");
-        SourceLabelTextBlock.Text = T("Localization.ModStorage");
-        TargetLabelTextBlock.Text = T("Localization.TargetFolder");
-        LauncherLabelTextBlock.Text = T("Common.Launcher");
+        DashboardPathsExpander.Header = T("RefinedWorkspace.CurrentRepositoryPaths");
+        SetCard(SourcePathCard, T("Localization.ModStorage"), null);
+        SetCard(TargetPathCard, T("Localization.TargetFolder"), null);
+        SetCard(LauncherPathCard, T("Common.Launcher"), null);
+        AutomationProperties.SetName(SourceTextBox, T("Localization.ModStorage"));
+        AutomationProperties.SetName(TargetTextBox, T("Localization.TargetFolder"));
+        AutomationProperties.SetName(LauncherTextBox, T("Common.Launcher"));
         PickSourceButton.Content = T("Localization.Browse");
         PickTargetButton.Content = T("Localization.Browse");
         PickLauncherButton.Content = T("Localization.BrowseEXE");
@@ -102,15 +104,26 @@ public sealed partial class DashboardPage : UserControl
         OpenTargetButton.Content = T("Localization.OpenTargetFolder");
         OpenLauncherButton.Content = T("Localization.OpenLauncherFolder");
         LauncherTextBox.PlaceholderText = T("Localization.SelectXXMILauncherExeOrAnother");
-        PathHintTextBlock.Text = T("Localization.LinkModeSharesRepositoryFilesLinking");
-        LinkDeploymentToggleSwitch.Header = T("Localization.DeployModsWithDirectoryJunctions");
+        SetCard(LinkDeploymentSettingsCard, T("Localization.DeployModsWithDirectoryJunctions"), T("Localization.LinkModeSharesRepositoryFilesLinking"));
         LinkDeploymentToggleSwitch.OnContent = T("Localization.Link");
         LinkDeploymentToggleSwitch.OffContent = T("Localization.Copy");
+        AutomationProperties.SetName(LinkDeploymentToggleSwitch, T("Localization.DeployModsWithDirectoryJunctions"));
+        DashboardPathsInfoBar.Title = T("Dashboard.ModFolderNotSet");
+        DashboardSetPathsButton.Content = T("Dashboard.SetPaths");
         RefreshPathsHeader();
         RefreshBridgeButton();
-        UpdatePathStatusIcons();
+        RefreshPathsState();
         OnRefreshed();
         UpdateDashboardLayout();
+    }
+
+    // The header is also the card's Narrator name.
+    private static void SetCard(SettingsCard card, string header, string? description)
+    {
+        card.Header = header;
+        // No description (null) hides the line under the header.
+        card.Description = description!;
+        AutomationProperties.SetName(card, header);
     }
 
     private void OnViewModelChanged(object? sender, PropertyChangedEventArgs e)
@@ -119,6 +132,7 @@ public sealed partial class DashboardPage : UserControl
         {
             case nameof(DashboardViewModel.CurrentRepositoryName):
                 RefreshPathsHeader();
+                RefreshPathsState();
                 break;
             case nameof(DashboardViewModel.BridgeLabel):
                 RefreshBridgeButton();
@@ -126,30 +140,26 @@ public sealed partial class DashboardPage : UserControl
         }
     }
 
-    // The window refreshed the cards: the repository picker and the "New repository" menu follow them.
+    // The window refreshed the cards: the repository switcher and the "New repository" menu follow them.
     private void OnRefreshed()
     {
-        PopulateRepositorySwitcher();
+        RefreshRepositorySwitcher();
         RefreshNewRepositoryMenu();
     }
 
-    private void PopulateRepositorySwitcher()
+    // The current repository's name opens a menu of every repository, the current one checked.
+    private void RefreshRepositorySwitcher()
     {
-        _isApplyingRepositorySelection = true;
-        try
+        RepositoryCardViewModel? current = ViewModel.Repositories.FirstOrDefault(card => card.IsCurrent);
+        DashboardCurrentRepositoryNameTextBlock.Text = current?.Name ?? T("Common.NoRepositorySelected");
+        ToolTipService.SetToolTip(DashboardCurrentRepositoryNameTextBlock, current?.Name);
+        DashboardRepositoryMenu.Items.Clear();
+        foreach (RepositoryCardViewModel repository in ViewModel.Repositories)
         {
-            DashboardRepositoryComboBox.Items.Clear();
-            foreach (RepositoryCardViewModel repository in ViewModel.Repositories)
-            {
-                DashboardRepositoryComboBox.Items.Add(new ComboBoxItem { Content = repository.Name, Tag = repository.Id });
-            }
-            DashboardRepositoryComboBox.SelectedItem = DashboardRepositoryComboBox.Items
-                .OfType<ComboBoxItem>()
-                .FirstOrDefault(item => ViewModel.Repositories.FirstOrDefault(card => card.Id == item.Tag as string)?.IsCurrent == true);
-        }
-        finally
-        {
-            _isApplyingRepositorySelection = false;
+            var item = new ToggleMenuFlyoutItem { Text = repository.Name, IsChecked = repository.IsCurrent };
+            string id = repository.Id;
+            item.Click += (_, _) => ViewModel.Request(DashboardAction.SwitchRepository, id);
+            DashboardRepositoryMenu.Items.Add(item);
         }
     }
 
@@ -172,27 +182,28 @@ public sealed partial class DashboardPage : UserControl
         string repositoryName = string.IsNullOrEmpty(ViewModel.CurrentRepositoryName)
             ? T("Common.NoRepositorySelected")
             : ViewModel.CurrentRepositoryName;
-        DashboardPathsTitleTextBlock.Text = T("RefinedWorkspace.CurrentRepositoryPaths");
-        DashboardPathsHintTextBlock.Text = T("RefinedWorkspace.ThesePathsBelongOnlyToSwitching", repositoryName);
+        DashboardPathsExpander.Description = T("RefinedWorkspace.ThesePathsBelongOnlyToSwitching", repositoryName);
     }
 
     private void RefreshBridgeButton()
     {
-        BridgeOptionsButton.Content = new TextBlock { Text = ViewModel.BridgeLabel, TextWrapping = TextWrapping.Wrap };
+        SetCard(BridgeOptionsButton, ViewModel.BridgeLabel, null);
         ToolTipService.SetToolTip(BridgeOptionsButton, T("EndfieldBridge.AppliesOnlyToThisEndfieldRepository"));
     }
 
-    // One icon inside each path box shows whether the folder (or the launcher file) exists, so
-    // "needs setup" points at the box to fix. The launcher is optional and shows nothing when empty.
-    private void UpdatePathStatusIcons()
+    // Each path's icon says whether the folder (or the launcher file) exists; the expander's header says how many
+    // are set. A missing Mod folder or game folder opens the paths once per repository, and a missing Mod folder
+    // also shows the warning at the top.
+    private void RefreshPathsState()
     {
         foreach ((TextBox box, FontIcon icon, bool expectFile) in _pathStatusIcons)
         {
             PathFieldStatus status = PathFieldStatuses.Evaluate(box.Text, expectFile);
             bool ready = status == PathFieldStatus.Ready;
-            icon.Visibility = status == PathFieldStatus.Empty && expectFile ? Visibility.Collapsed : Visibility.Visible;
-            icon.Glyph = ready ? "" : "";
-            icon.Foreground = ThemeBrush(ready ? "AppSuccessBrush" : "AppDangerBrush");
+            icon.Glyph = status == PathFieldStatus.Empty && expectFile ? "" : ready ? "" : "";
+            icon.Foreground = status == PathFieldStatus.Empty && expectFile
+                ? ThemeBrush("AppSecondaryDefaultForegroundBrush")
+                : ThemeBrush(ready ? "AppSuccessBrush" : "AppDangerBrush");
             string tip = status switch
             {
                 PathFieldStatus.Ready => T("Dashboard.PathFound"),
@@ -202,15 +213,31 @@ public sealed partial class DashboardPage : UserControl
             ToolTipService.SetToolTip(icon, tip);
             AutomationProperties.SetName(icon, tip);
         }
+
+        int missing = Paths.MissingRequiredCount;
+        DashboardPathsSummaryTextBlock.Text = missing > 0 ? T("Dashboard.PathsMissing", missing) : T("Dashboard.PathsReady", Paths.ReadyCount);
+        DashboardPathsSummaryTextBlock.Foreground = ThemeBrush(missing > 0 ? "AppDangerBrush" : "AppSecondaryDefaultForegroundBrush");
+        bool hasRepository = !string.IsNullOrEmpty(ViewModel.CurrentRepositoryName);
+        DashboardPathsInfoBar.IsOpen = hasRepository && Paths.SourceStatus != PathFieldStatus.Ready;
+        // Opened only once the page is on screen: opening the expander before it is loaded leaves the window blank.
+        if (hasRepository && missing > 0 && IsLoaded && _autoExpandedFor != ViewModel.CurrentRepositoryName)
+        {
+            _autoExpandedFor = ViewModel.CurrentRepositoryName;
+            DashboardPathsExpander.IsExpanded = true;
+        }
+    }
+
+    private void OnSetPathsClicked(object sender, RoutedEventArgs e)
+    {
+        DashboardPathsExpander.IsExpanded = true;
+        DispatcherQueue.TryEnqueue(() =>
+        {
+            DashboardPathsExpander.StartBringIntoView();
+            SourceTextBox.Focus(FocusState.Programmatic);
+        });
     }
 
     // Clicks the window answers.
-    private void OnDashboardRepositorySelectionChanged(object sender, SelectionChangedEventArgs e)
-    {
-        if (_isApplyingRepositorySelection || DashboardRepositoryComboBox.SelectedItem is not ComboBoxItem { Tag: string repositoryId }) return;
-        ViewModel.Request(DashboardAction.SwitchRepository, repositoryId);
-    }
-
     private void OnEditRepositoryDetailsClicked(object sender, RoutedEventArgs e) => ViewModel.Request(DashboardAction.EditRepository);
 
     private void OnDashboardOpenRepositoryClicked(object sender, RoutedEventArgs e) => ViewModel.Request(DashboardAction.OpenRepository);
@@ -243,7 +270,7 @@ public sealed partial class DashboardPage : UserControl
         }
     }
 
-    // Layout: two columns (paths and characters beside the repositories) on wide pages, stacked otherwise.
+    // Layout: quick actions in a row and characters beside the repositories on wide pages, stacked on narrow ones.
     private double PageWidth()
         => DashboardScrollViewer.ActualWidth > 0 ? DashboardScrollViewer.ActualWidth : Math.Max(420, (XamlRoot?.Size.Width ?? 0) - 240);
 
@@ -252,32 +279,6 @@ public sealed partial class DashboardPage : UserControl
         double available = PageWidth();
         bool twoColumns = DashboardLayoutPolicy.UsesTwoColumns(available);
         bool oneRowStrip = DashboardLayoutPolicy.StripFitsOneRow(available);
-
-        // Two columns reach the bottom of the window: the character overview and the repository
-        // list take the height left after the header and the strip, instead of leaving it empty.
-        double above = DashboardPageHeader.ActualHeight + DashboardRepositorySelectorCard.ActualHeight
-            + 2 * DashboardRootPanel.Spacing + DashboardRootPanel.Margin.Top + DashboardRootPanel.Margin.Bottom;
-        DashboardMainGrid.MinHeight = twoColumns && DashboardScrollViewer.ActualHeight > 0
-            ? Math.Max(0, DashboardScrollViewer.ActualHeight - above)
-            : 0;
-
-        // Each path row puts its label, box and both buttons on one line when the page is wide enough.
-        int pathColumns = available >= 1040 ? 4 : available >= 620 ? 2 : 1;
-        if (_pathColumns != pathColumns)
-        {
-            _pathColumns = pathColumns;
-            foreach (Grid pathRow in PathRows)
-            {
-                ReflowCards(pathRow, pathColumns);
-                if (pathColumns == 4)
-                {
-                    pathRow.ColumnDefinitions[0].Width = new GridLength(112);
-                    pathRow.ColumnDefinitions[2].Width = new GridLength(112);
-                    pathRow.ColumnDefinitions[3].Width = new GridLength(180);
-                }
-            }
-        }
-
         int mode = (twoColumns ? 2 : 0) + (oneRowStrip ? 1 : 0);
         if (_layoutMode == mode)
         {
@@ -285,46 +286,40 @@ public sealed partial class DashboardPage : UserControl
         }
         _layoutMode = mode;
 
-        // Paths and characters beside the repository list on wide pages, stacked above it otherwise.
+        Arrange(DashboardQuickActionsGrid, twoColumns ? 3 : 1);
         DashboardMainGrid.ColumnDefinitions.Clear();
         DashboardMainGrid.RowDefinitions.Clear();
         if (twoColumns)
         {
             DashboardMainGrid.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(1.3, GridUnitType.Star) });
             DashboardMainGrid.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(1, GridUnitType.Star) });
-            Place(DashboardLeftColumn, 0, 0);
-            Place(DashboardRightColumn, 0, 1);
         }
         else
         {
             DashboardMainGrid.RowDefinitions.Add(new RowDefinition { Height = GridLength.Auto });
             DashboardMainGrid.RowDefinitions.Add(new RowDefinition { Height = GridLength.Auto });
-            Place(DashboardLeftColumn, 0, 0);
-            Place(DashboardRightColumn, 1, 0);
         }
+        Place(DashboardCharactersCard, 0, 0);
+        Place(DashboardRepositoriesCard, twoColumns ? 0 : 1, twoColumns ? 1 : 0);
 
-        // On narrow pages the status and buttons wrap under the repository picker.
-        DashboardStripGrid.RowSpacing = oneRowStrip ? 0 : 10;
-        Grid.SetRow(DashboardStripStatus, oneRowStrip ? 0 : 1);
-        Grid.SetColumn(DashboardStripStatus, oneRowStrip ? 2 : 1);
+        // On narrow pages the actions move under the repository's name.
         Grid.SetRow(DashboardStripActions, oneRowStrip ? 0 : 1);
-        Grid.SetColumn(DashboardStripActions, oneRowStrip ? 3 : 2);
-        Grid.SetColumnSpan(DashboardStripActions, oneRowStrip ? 1 : 2);
+        Grid.SetColumn(DashboardStripActions, oneRowStrip ? 2 : 1);
+        DashboardStripGrid.RowSpacing = oneRowStrip ? 0 : 12;
+        DashboardStripActions.HorizontalAlignment = oneRowStrip ? HorizontalAlignment.Right : HorizontalAlignment.Left;
     }
 
     private static void Place(FrameworkElement child, int row, int column)
     {
         Grid.SetRow(child, row);
         Grid.SetColumn(child, column);
-        Grid.SetColumnSpan(child, 1);
     }
 
-    private static void ReflowCards(Grid grid, int columns)
+    // Equal columns, filled row by row.
+    private static void Arrange(Grid grid, int columns)
     {
         grid.ColumnDefinitions.Clear();
         grid.RowDefinitions.Clear();
-        grid.RowSpacing = 8;
-        grid.ColumnSpacing = 8;
         for (int column = 0; column < columns; column++)
         {
             grid.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(1, GridUnitType.Star) });
@@ -336,14 +331,11 @@ public sealed partial class DashboardPage : UserControl
         }
         for (int slot = 0; slot < count; slot++)
         {
-            FrameworkElement child = (FrameworkElement)grid.Children[slot];
+            var child = (FrameworkElement)grid.Children[slot];
             Grid.SetRow(child, slot / columns);
             Grid.SetColumn(child, slot % columns);
-            Grid.SetColumnSpan(child, 1);
-            if (child is Button button)
-            {
-                button.HorizontalAlignment = HorizontalAlignment.Stretch;
-            }
+            // Cards in one row take the height of the tallest.
+            child.VerticalAlignment = VerticalAlignment.Stretch;
         }
     }
 }

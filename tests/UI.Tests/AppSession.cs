@@ -131,6 +131,22 @@ public sealed class AppSession : IDisposable
     public Window? FindWindow(Func<Window, bool> match) =>
         _application?.GetAllTopLevelWindows(_automation).FirstOrDefault(window => window.Properties.ProcessId.ValueOrDefault == _application.ProcessId && match(window));
 
+    /// <summary>
+    /// Opens a folded section: an Expander, or a Toolkit SettingsExpander, whose expand pattern is on the
+    /// Expander inside it. Folded content is not in the automation tree until it is open.
+    /// </summary>
+    public void Expand(string automationId)
+    {
+        AutomationElement element = Find(automationId);
+        AutomationElement target = element.Patterns.ExpandCollapse.IsSupported
+            ? element
+            : element.FindFirstDescendant(cf => cf.ByClassName("Microsoft.UI.Xaml.Controls.Expander"))
+                ?? throw new InvalidOperationException(automationId + " has nothing to expand");
+        if (target.Patterns.ExpandCollapse.Pattern.ExpandCollapseState.Value != FlaUI.Core.Definitions.ExpandCollapseState.Expanded)
+            target.Patterns.ExpandCollapse.Pattern.Expand();
+        Thread.Sleep(600);
+    }
+
     public static void Invoke(AutomationElement element)
     {
         if (element.Patterns.Invoke.IsSupported) element.Patterns.Invoke.Pattern.Invoke();

@@ -51,6 +51,21 @@ public sealed class DashboardModelsTests : IDisposable
     }
 
     [Fact]
+    public void Paths_CountWhatIsSetAndWhatIsMissing()
+    {
+        var paths = new RepositoryPathsViewModel();
+        Assert.Equal((0, 2), (paths.ReadyCount, paths.MissingRequiredCount));
+
+        paths.Source = _folder;
+        Assert.Equal((1, 1), (paths.ReadyCount, paths.MissingRequiredCount));
+
+        // A launcher that is missing is not counted as set, but it is not required either.
+        paths.Target = _folder;
+        paths.Launcher = Path.Combine(_folder, "missing.exe");
+        Assert.Equal((2, 0), (paths.ReadyCount, paths.MissingRequiredCount));
+    }
+
+    [Fact]
     public void Paths_KeepNullsOutAndTrimOnRequest()
     {
         var paths = new RepositoryPathsViewModel { Source = null!, Target = "  D:\\Game\\Mods  " };

@@ -78,6 +78,12 @@ public sealed partial class RepositoryPathsViewModel : ObservableObject
 
     public bool CanRunLauncher => LauncherStatus == PathFieldStatus.Ready;
 
+    /// <summary>How many of the three paths point at something that exists.</summary>
+    public int ReadyCount => new[] { SourceStatus, TargetStatus, LauncherStatus }.Count(status => status == PathFieldStatus.Ready);
+
+    /// <summary>How many of the two required paths (Mod folder, game folder) are empty or missing; the launcher is optional.</summary>
+    public int MissingRequiredCount => new[] { SourceStatus, TargetStatus }.Count(status => status != PathFieldStatus.Ready);
+
     /// <summary>The paths as typed, without surrounding spaces.</summary>
     public string TrimmedSource => _source.Trim();
 
