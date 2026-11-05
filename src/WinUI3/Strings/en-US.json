@@ -1168,6 +1168,7 @@
   "Settings.AppTheme": "App theme",
   "Settings.AppUpdateChecksAndAutomaticInstallation": "App update checks and automatic installation are disabled in this beta. It does not replace the stable app.",
   "Settings.AppUpdateInterval": "App update interval",
+  "Settings.UpdateOptions": "Update settings",
   "Settings.SelectUpdateCheckInterval": "Select update check interval",
   "Settings.BetaAppUpdatesDisabled": "Beta app updates disabled",
   "Settings.CheckAndGetUpdate": "Check and Get Update",
