@@ -32,7 +32,7 @@ J1N：每个 `NavigationViewItem` 设 `AutomationProperties.AutomationId` 为上
 | `SourceTextBox` | `x:Name` | `MainWindow.xaml:280` | Dashboard_ShowsTheRepositoryPaths（读取值，应以 `ModRepository` 结尾） |
 | `TargetTextBox` | `x:Name` | `MainWindow.xaml:295` | Dashboard_ShowsTheRepositoryPaths |
 
-注意：J4 外观改动把路径收进默认折叠的 `SettingsExpander`。折叠的内容不在自动化树里，测试会失败；路径未设置时才自动展开。J4 需要在测试里先展开“仓库路径”，或让 `SettingsCard` 把路径同时显示在标题行（外观方案第 3 条）。
+J4 完成后：路径收进默认折叠的“仓库路径”`SettingsExpander`（AutomationId `DashboardPathsExpander`），折叠的内容不在自动化树里；必填路径缺失时它会自动展开。`Dashboard_ShowsTheRepositoryPaths` 和新的冒烟测试 `Dashboard_EditedTargetPathIsSavedWithTheRepository` 先用 `AppSession.Expand` 展开它（Toolkit 控件的展开模式在它里面的 `Expander` 上）。`SourceTextBox`、`TargetTextBox`、`LauncherTextBox` 名称不变；快捷操作 `DashboardBrowseOnlineButton`、`DashboardCheckUpdatesButton`、`DashboardRunLauncherButton` 现在是可点击的 `SettingsCard`；仓库下拉框 `DashboardRepositoryComboBox` 换成仓库名旁的 `DashboardRepositorySwitcher` 菜单（没有测试用到它）。
 
 ### Mod 工作区（J7 / J7-b）
 

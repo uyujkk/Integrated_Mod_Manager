@@ -1,4 +1,4 @@
-# 界面基线截图 / UI baseline screenshots
+﻿# 界面基线截图 / UI baseline screenshots
 
 2026-11-04，阶段 J0 第 1 项。阶段 J 每个 PR 都要和这组截图对比：“纯移动”提交应与基线一致，外观提交在 PR 里逐张说明差异。见[界面结构拆分计划](./UI-Structure-Plan.md)和[界面外观优化方案](./UI-Fluent-Design-Plan.md)。
 
@@ -21,6 +21,8 @@ powershell.exe -NoProfile -ExecutionPolicy Bypass -File .\tools\ui-baseline\Capt
 | `-Themes` | `light,dark` | 应用自己的主题设置 |
 | `-Pages` | `dashboard,repository,online,shortcuts,updates,updates-downloads,updates-recovery,settings,whatsnew,firstrun` | `whatsnew` 是带“新功能”对话框的仪表盘；`firstrun` 是首次安装弹窗；`updates-downloads`、`updates-recovery` 是更新页的另外两个视图（J3-b 起，通过 `UpdatesView` 设置） |
 | `-SettleSeconds` | `7` | 窗口出现后等待多久再截图 |
+| `-SampleData` | 关 | 加入 `tests\TestData\SampleState` 里合成的已跟踪 Mod、下载记录和安装备份（J4 起），用来拍更新页等页面“有数据”的样子；地址都是 `example.invalid`，不联网 |
+| `-MissingGameFolder` | 关 | 把仓库的游戏 Mod 目录指向不存在的文件夹，用来拍“需要设置”的样子 |
 
 例如只重拍俄语设置页：`-Languages ru-RU -Pages settings`。
 
@@ -121,6 +123,13 @@ J1N（外壳）换了标题栏和导航，所有页面的可用宽度都变了�
 - **安装与恢复**：冲突检测、撤销上次改动、打开组合工作区三张 `SettingsCard`，备份是一个 `SettingsExpander`（上限在标题行，展开后是汇总、刷新和每个备份）。
 
 测试数据没有已跟踪 Mod、下载记录和备份，所以截图里列表都是空状态；有数据的行样式和加载、失败状态没有截图。俄语两种尺寸三个视图都没有截断。
+
+## J4 仪表盘
+
+- 纯移动（`4ad94d9`）后拍仪表盘、首次安装、“新功能”和 Mod 工作区（`artifacts\ui-baseline\j4move\`），和 `j1n-8f09993` 比：除窗口右上角 1–9 个像素外都一致。
+- 外观提交（`dca9c5d`）后拍仪表盘和首次安装（`artifacts\ui-baseline\j4cards\`，14 张），和 `j4move` 比全部不同（3–8% 的像素），都是有意的改动：当前仓库一张主卡片（仓库名旁的菜单代替下拉框，“进入 Mod 管理”用强调色）、三张可点击的快捷操作卡片（宽时一排，窄时一列）、默认折叠的“当前仓库路径”`SettingsExpander`（标题行显示“已设置/缺几项”），下面左“角色一览”右“全部仓库”。
+- 俄语：折叠状态两种尺寸都没有截断；展开后的路径名称和“Открыть…”按钮也完整显示（用临时界面测试截的图，不在基线里）。原来路径行标签和按钮被截断、快捷操作按钮末尾显示“…”的问题都没有了。
+- 用 `-MissingGameFolder` 拍时，不论 J4 之前还是之后的构建，窗口都只画出一片白（进程有响应、界面元素都在），原因没查，记为遗留问题。
 
 ## 对比方法
 

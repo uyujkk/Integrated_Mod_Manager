@@ -55,7 +55,7 @@ public sealed partial class MainWindow
             string? picked = await PickFolderAsync();
             if (!string.IsNullOrEmpty(picked))
             {
-                SourceTextBox.Text = picked;
+                Paths.Source = picked;
                 SaveConfig();
                 await RefreshListsAsync();
             }
@@ -73,7 +73,7 @@ public sealed partial class MainWindow
             string? picked = await PickFolderAsync();
             if (!string.IsNullOrEmpty(picked))
             {
-                TargetTextBox.Text = picked;
+                Paths.Target = picked;
                 SaveConfig();
                 await RefreshListsAsync();
             }
@@ -91,7 +91,7 @@ public sealed partial class MainWindow
             string? picked = await PickFileAsync([".exe", ".bat", ".cmd"]);
             if (!string.IsNullOrEmpty(picked))
             {
-                LauncherTextBox.Text = picked;
+                Paths.Launcher = picked;
                 SaveConfig();
             }
         }
@@ -101,11 +101,11 @@ public sealed partial class MainWindow
         }
     }
 
-    private void OnOpenSourceClicked(object sender, RoutedEventArgs e) => OpenDirectory(SourceTextBox.Text, T("LocalLibrary.SourceFolder"));
+    private void OnOpenSourceClicked(object sender, RoutedEventArgs e) => OpenDirectory(Paths.Source, T("LocalLibrary.SourceFolder"));
 
-    private void OnOpenTargetClicked(object sender, RoutedEventArgs e) => OpenDirectory(TargetTextBox.Text, T("LocalLibrary.TargetFolder"));
+    private void OnOpenTargetClicked(object sender, RoutedEventArgs e) => OpenDirectory(Paths.Target, T("LocalLibrary.TargetFolder"));
 
-    private void OnOpenLauncherClicked(object sender, RoutedEventArgs e) => OpenFileLocation(LauncherTextBox.Text, T("LocalLibrary.Launcher"));
+    private void OnOpenLauncherClicked(object sender, RoutedEventArgs e) => OpenFileLocation(Paths.Launcher, T("LocalLibrary.Launcher"));
 
     private async void OnRunLauncherClicked(object sender, RoutedEventArgs e) => await RunUiActionAsync("OnRunLauncherClicked", RunRepositoryLauncherAsync);
 
@@ -215,7 +215,7 @@ public sealed partial class MainWindow
     {
         try
         {
-            string sourceDir = (SourceTextBox.Text ?? string.Empty).Trim();
+            string sourceDir = Paths.Source.Trim();
             if (string.IsNullOrWhiteSpace(sourceDir) || !Directory.Exists(sourceDir))
             {
                 await ShowMessageAsync(
@@ -451,7 +451,7 @@ public sealed partial class MainWindow
                 return;
             }
 
-            string loaderRoot = (GetSelectedRepository()?.TargetPath ?? TargetTextBox.Text ?? string.Empty).Trim();
+            string loaderRoot = (GetSelectedRepository()?.TargetPath ?? Paths.Target).Trim();
             IReadOnlyList<string> deployedLinks = [];
             try
             {
@@ -673,8 +673,8 @@ public sealed partial class MainWindow
         ClearPreview();
         UpdateProgress(0, T("Common.NoActiveCopyTask"));
 
-        string sourceDir = (SourceTextBox.Text ?? string.Empty).Trim();
-        string targetDir = (TargetTextBox.Text ?? string.Empty).Trim();
+        string sourceDir = Paths.Source.Trim();
+        string targetDir = Paths.Target.Trim();
         if (string.IsNullOrWhiteSpace(sourceDir) || !Directory.Exists(sourceDir))
         {
             StatusTextBlock.Text = T("LocalLibrary.ChooseAValidModStorageFolder");
@@ -701,8 +701,8 @@ public sealed partial class MainWindow
             }, cancellation.Token);
 
             if (cancellation.IsCancellationRequested || generation != _folderRefreshGeneration
-                || !string.Equals(sourceDir, (SourceTextBox.Text ?? string.Empty).Trim(), StringComparison.OrdinalIgnoreCase)
-                || !string.Equals(targetDir, (TargetTextBox.Text ?? string.Empty).Trim(), StringComparison.OrdinalIgnoreCase)) return;
+                || !string.Equals(sourceDir, Paths.Source.Trim(), StringComparison.OrdinalIgnoreCase)
+                || !string.Equals(targetDir, Paths.Target.Trim(), StringComparison.OrdinalIgnoreCase)) return;
             _characters.Load(loaded.Items);
             timing?.SetCounts(loaded.SecondCount);
             ApplyFirstLevelFilter();
@@ -822,7 +822,7 @@ public sealed partial class MainWindow
 
     private async Task ToggleDirectoryCopyAsync(SecondLevelFolderItem item)
     {
-        string targetDir = (TargetTextBox.Text ?? string.Empty).Trim();
+        string targetDir = Paths.Target.Trim();
         if (string.IsNullOrWhiteSpace(targetDir) || !Directory.Exists(targetDir))
         {
             await ShowMessageAsync(
@@ -1099,7 +1099,7 @@ public sealed partial class MainWindow
     private void SetBusyState(bool busy)
     {
         SettingsView.IsBusy = busy;
-        LinkDeploymentToggleSwitch.IsEnabled = !busy;
+        Paths.IsLinkDeploymentEditable = !busy;
         FirstLevelListView.IsEnabled = !busy;
         SecondLevelListView.IsEnabled = !busy;
         OpenModLinkButton.IsEnabled = !busy && !string.IsNullOrWhiteSpace(ModLinkTextBox.Text);

@@ -23,4 +23,13 @@ internal sealed class AppServices
     public UpdatesViewModel Updates { get; } = new();
 
     public ImageService Images { get; } = new();
+
+    /// <summary>The dashboard's state (stage J4).</summary>
+    public DashboardViewModel Dashboard { get; } = new();
+
+    /// <summary>The current repository's paths as edited on the dashboard; the window reads them here.</summary>
+    public RepositoryPathsViewModel Paths { get; } = new();
+
+    /// <summary>The integrated Endfield launch, used by the dashboard and the Mod workspace.</summary>
+    public EndfieldBridgeService EndfieldBridge { get; } = new();
 }

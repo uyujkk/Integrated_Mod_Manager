@@ -244,7 +244,10 @@ public sealed partial class MainWindow
         _repositoryTargetStatus = RepositoryText(12);
         _repositoryTargetStatus.VerticalAlignment = VerticalAlignment.Center;
         Grid.SetColumn(_repositoryTargetStatus, 3); line.Children.Add(_repositoryTargetStatus);
-        TargetTextBox.TextChanged += (_, _) => RefreshRepositoryStatusV4();
+        Paths.PropertyChanged += (_, args) =>
+        {
+            if (args.PropertyName == nameof(RepositoryPathsViewModel.Target)) RefreshRepositoryStatusV4();
+        };
         Grid.SetRow(AuthorTextBlock, 0); Grid.SetColumn(AuthorTextBlock, 4); line.Children.Add(AuthorTextBlock);
         footer.Children.Add(line);
 
@@ -282,7 +285,7 @@ public sealed partial class MainWindow
         AuthorTextBlock.Visibility = width > 0 && width < 620 ? Visibility.Collapsed : Visibility.Visible;
         if (_repositoryTargetStatus is not null)
         {
-            string target = (TargetTextBox.Text ?? string.Empty).Trim();
+            string target = Paths.Target.Trim();
             bool connected = target.Length > 0 && Directory.Exists(target);
             _repositoryTargetStatus.Text = connected ? T("RepositoryWorkspace.TargetConnected") : T("RepositoryWorkspace.TargetMissing");
             _repositoryTargetStatus.Foreground = GetAppThemeBrush(connected ? "AppSuccessBrush" : "AppDangerBrush");
@@ -877,9 +880,9 @@ public sealed partial class MainWindow
         panel.Children.Add(_repositorySetupProgress);
         RoutedEventHandler[] handlers =
         [
-            (_, args) => OnEditRepositoryDetailsClicked(RenameRepositoryButton, args),
-            (_, args) => OnPickSourceClicked(PickSourceButton, args),
-            (_, args) => OnPickTargetClicked(PickTargetButton, args)
+            (_, args) => OnEditRepositoryDetailsClicked(this, args),
+            (_, args) => OnPickSourceClicked(this, args),
+            (_, args) => OnPickTargetClicked(this, args)
         ];
         _repositorySetupSteps = handlers.Select((handler, index) =>
         {
@@ -922,8 +925,8 @@ public sealed partial class MainWindow
     private RepositorySetup CurrentRepositorySetup()
     {
         WorkspaceRepository? repository = GetSelectedRepository();
-        string source = (SourceTextBox.Text ?? string.Empty).Trim();
-        string target = (TargetTextBox.Text ?? string.Empty).Trim();
+        string source = Paths.Source.Trim();
+        string target = Paths.Target.Trim();
         // The game counts as chosen when the repository has one, its own or the default preset.
         return new RepositorySetup(
             repository is not null && !string.IsNullOrWhiteSpace(GetEffectiveOnlineGameName(repository)),
@@ -936,7 +939,7 @@ public sealed partial class MainWindow
         _repositorySetupTitle!.Text = T("RepositoryWorkspace.SetupTitle");
         _repositorySetupProgress!.Text = T("RepositoryWorkspace.SetupProgress", setup.Done, RepositorySetup.Total);
         WorkspaceRepository? repository = GetSelectedRepository();
-        string source = (SourceTextBox.Text ?? string.Empty).Trim();
+        string source = Paths.Source.Trim();
         (bool Done, string Title, string Detail, string Action)[] steps =
         [
             (setup.HasGame, T("RepositoryWorkspace.SetupGame"),
@@ -1040,7 +1043,7 @@ public sealed partial class MainWindow
     {
         if (_repositorySelectedPath is null) return;
         var mod = GetSelectedSecondLevelItem();
-        _repositorySelectedPath.Text = mod is null ? T("RepositoryWorkspace.SelectAMod") : RepositoryWorkspacePolicy.DisplayPath(SourceTextBox.Text, mod.Path);
+        _repositorySelectedPath.Text = mod is null ? T("RepositoryWorkspace.SelectAMod") : RepositoryWorkspacePolicy.DisplayPath(Paths.Source, mod.Path);
         ToolTipService.SetToolTip(_repositorySelectedPath, mod?.Path);
         RepositoryOpenModFolderButton.IsEnabled = mod is not null && !_repositoryWorkspaceBusy;
         _repositoryCopyModPath!.IsEnabled = mod is not null;
@@ -1363,9 +1366,10 @@ public sealed partial class MainWindow
         parent.Children.Add(element);
     }
 
-    private void OnLinkDeploymentToggled(object sender, RoutedEventArgs e)
+    // The dashboard's copy/link switch.
+    private void OnLinkDeploymentChanged()
     {
-        if (_isApplyingRepositoryDeploymentMode || LinkDeploymentToggleSwitch is null)
+        if (_isApplyingRepositoryDeploymentMode)
         {
             return;
         }
@@ -1376,7 +1380,7 @@ public sealed partial class MainWindow
             return;
         }
 
-        repository.UseDirectoryLinks = LinkDeploymentToggleSwitch.IsOn;
+        repository.UseDirectoryLinks = Paths.UseDirectoryLinks;
         SaveShellConfig();
         RefreshLocalizedStates();
         ApplySecondLevelSelectionState(GetSelectedSecondLevelItem(), preserveStatus: true);

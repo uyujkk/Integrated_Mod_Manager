@@ -24,9 +24,9 @@ public sealed partial class MainWindow
         {
             Id = Guid.NewGuid().ToString("N"),
             Name = T("Configuration.DefaultRepositoryName"),
-            SourcePath = SourceTextBox.Text ?? string.Empty,
-            TargetPath = TargetTextBox.Text ?? string.Empty,
-            LauncherPath = LauncherTextBox.Text ?? string.Empty,
+            SourcePath = Paths.Source,
+            TargetPath = Paths.Target,
+            LauncherPath = Paths.Launcher,
             OnlineSourceSite = DefaultOnlineSourceSite,
             OnlineGameName = _firstInstall ? string.Empty : DefaultOnlineGameName,
             OnlineCategoryId = _firstInstall ? string.Empty : DefaultOnlineCategoryId,
@@ -407,9 +407,9 @@ public sealed partial class MainWindow
         try
         {
             LegacyConfig config = LegacyConfigFile.Parse(ReadConfigurationTextWithRecovery(_services.ShellConfig.ConfigPath, LegacyConfigFile.IsValid));
-            if (config.SourceDirectory is not null) SourceTextBox.Text = config.SourceDirectory;
-            if (config.TargetDirectory is not null) TargetTextBox.Text = config.TargetDirectory;
-            if (config.LauncherPath is not null) LauncherTextBox.Text = config.LauncherPath;
+            if (config.SourceDirectory is not null) Paths.Source = config.SourceDirectory;
+            if (config.TargetDirectory is not null) Paths.Target = config.TargetDirectory;
+            if (config.LauncherPath is not null) Paths.Launcher = config.LauncherPath;
             _legacyDarkTheme = config.DarkTheme;
             if (config.Language is not null)
             {
@@ -443,9 +443,9 @@ public sealed partial class MainWindow
 
             var config = new LegacyConfig
             {
-                SourceDirectory = SourceTextBox.Text ?? string.Empty,
-                TargetDirectory = TargetTextBox.Text ?? string.Empty,
-                LauncherPath = LauncherTextBox.Text ?? string.Empty,
+                SourceDirectory = Paths.Source,
+                TargetDirectory = Paths.Target,
+                LauncherPath = Paths.Launcher,
                 DarkTheme = _services.Appearance.IsDark,
                 Language = UiLanguagePolicy.ToConfig(_services.Language.Current)
             };

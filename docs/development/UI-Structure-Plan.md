@@ -1,4 +1,4 @@
-# 界面结构拆分计划 / UI structure plan
+﻿# 界面结构拆分计划 / UI structure plan
 
 2026-11-04，基于 v4.7.3 之后的 main（`5dfe728`）。这是计划，不是已实现功能。工作量粗估：S ≈ 1–2 天，M ≈ 3–5 天，L ≈ 2 周以上。路线图里记为阶段 J，见 [Roadmap](./Roadmap.md)。
 
@@ -150,6 +150,26 @@ J0 结果（2026-11-04，分支 `claude/ui-j0-prep`）：
 | 空状态的“浏览在线 Mod”、恢复行的“打开组合工作区” | 直接调 `OnOnlineNavClicked`、`OnOpenCombinationPresetsClicked` | 页面发 `BrowseOnline`、`OpenCombinationPresets` 请求，由窗口导航 |
 
 检查更新、下载替换、回滚和恢复备份的逻辑仍在窗口里：它们依赖配置保存、对话框、部署和在线页的状态。已跟踪 Mod 的数据（`_trackedModOrigins`、`_trackedModUpdateResults`）也还在窗口，在线页下载时会写它们；窗口把它们转成 `TrackedModRow` 交给页面。`PopulateStableIntervalOptions` 不再有人用，已删除。
+
+#### J4 牵连清单（仪表盘）
+
+仪表盘 `DashboardScrollViewer` 里有 59 个命名控件。最大的牵连是三个路径框：它们不只属于仪表盘，整个窗口都把 `SourceTextBox.Text`、`TargetTextBox.Text`、`LauncherTextBox.Text` 当作当前仓库的路径来读写（8 个 partial 文件、约 60 处）。
+
+| 位置 | 做什么 | 改成 |
+| --- | --- | --- |
+| `Configuration.cs`、`Repositories.cs`、`LocalLibrary.cs`、`RepositoryWorkspace.cs`、`Localization.cs`、`xaml.cs` | 读写三个路径框的文字：加载和保存配置、切换仓库时填入、部署和扫描时读取、浏览后写入 | 新的 `RepositoryPathsViewModel`（`AppServices.Paths`）是路径的唯一来源；仪表盘的路径框双向绑定它，窗口只读写它 |
+| `CombinationPresets.cs`、`LocalLibrary.cs` | 应用组合预设、部署时禁用路径框和“复制/链接”开关 | `Paths.ArePathsEditable`、`Paths.IsLinkDeploymentEditable` |
+| `Repositories.cs`、`RepositoryWorkspace.cs` | 切换仓库时设置“复制/链接”开关；开关的处理；目标路径变化时刷新工作区状态 | `Paths.UseDirectoryLinks` 和它的变化事件 |
+| `EndfieldBridge.cs` | 终末地启动设置按钮的显示、文字、可用；运行启动器时读写启动器路径 | 按钮状态写进 `DashboardViewModel.Bridge*`；判断、默认 XXMI 位置、启动配置、旧版桥接设置迁移、等待启动结果和“进行中”状态拆成 `EndfieldBridgeService`（仪表盘和 Mod 工作区都用它，所以不放进某一页）；设置对话框和状态栏文字仍在窗口，J8 再把对话框做成类 |
+| `Shell.cs` | “编辑当前仓库”按钮的可用；把路径框登记为“记住最后聚焦的文本框”；页面宿主 | `DashboardViewModel.CanEditRepository`；窗口从 `DashboardPage.PathTextBoxes` 登记；仪表盘直接是 `DashboardPage` |
+| `RefinedWorkspace.cs`、`PageLayout.cs` | 仪表盘两栏排布、路径行列宽、当前仓库条；路径卡片标题里的仓库名 | 页面按自己的尺寸排布；仓库名用 `DashboardViewModel.CurrentRepositoryName` |
+| `Dashboard.cs` | 仓库下拉框、“新建仓库”菜单、路径状态图标、按钮点击 | 页面自己从 `DashboardViewModel.Repositories` 建下拉框，菜单项来自 `NewRepositoryChoices`，状态图标在页面 XAML 里；点击变成 `DashboardAction` 请求；窗口剩下的部分在 `MainWindow.DashboardHost.cs` |
+| `RepositoryWorkspace.cs` | Mod 工作区空状态的“编辑仓库”“选择文件夹”按钮把仪表盘按钮当作 sender | 改成窗口自己 |
+| `Dialogs.cs`、`FirstRun.cs` | 仓库编辑、在线分类编辑和首次安装三个对话框 | 移到 `Dialogs/RepositoryEditorDialog.cs`、`OnlineRepositoryConfigDialog.cs`、`FirstRunDialog.cs`（`DialogLayout` 放共用的“标签+编辑框”）；选好之后怎么改仓库仍在窗口 |
+
+仪表盘代码访问的别的页面：角色卡片打开 Mod 工作区（`OpenCharacterFromDashboardAsync`，通过卡片自己的命令）；“检查更新”切到更新页并开始检查；“浏览在线”切到在线页；这些都由窗口处理请求。#102 的修复（`HasCharacters` 隐藏空的角色列表）在页面 XAML 里保留。
+
+“预设是否对应某个仓库”的判断移到 `RepositoryPresetMatching`，和路径的状态一起补了单元测试。仪表盘的统计、扫描、仓库卡片的数据仍由窗口计算，因为它们用到在线页的分类信息和工作区已加载的角色。
 
 ### J8. 对话框与资源
 

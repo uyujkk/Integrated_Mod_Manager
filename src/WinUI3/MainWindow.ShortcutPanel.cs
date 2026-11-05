@@ -1200,7 +1200,7 @@ public sealed partial class MainWindow
         if (_shortcutTargetPicker?.SelectedItem is not ShortcutTarget target)
         {
             // Only an Endfield repository gets the Endfield-specific explanation.
-            _shortcutPrivilegeNotice.Text = CanUseEndfieldBridge(GetSelectedRepository())
+            _shortcutPrivilegeNotice.Text = EndfieldBridgeService.CanUse(GetSelectedRepository())
                 ? T("ShortcutPanel.EndfieldRunsAsAdministratorInputFrom")
                 : T("ShortcutPanel.ElevatedGameNeedsElevatedManager");
             return;
@@ -1216,7 +1216,7 @@ public sealed partial class MainWindow
         try
         {
             // The new process waits for this one to exit before taking the single-instance key.
-            Process.Start(new ProcessStartInfo(LaunchExecutablePath, $"{Program.RestartAfterArgument} {Environment.ProcessId}")
+            Process.Start(new ProcessStartInfo(EndfieldBridgeService.LaunchExecutablePath, $"{Program.RestartAfterArgument} {Environment.ProcessId}")
             {
                 UseShellExecute = true,
                 Verb = "runas",

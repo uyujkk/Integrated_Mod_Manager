@@ -7,6 +7,34 @@ namespace ModFolderCopier.WinUI;
 /// The dashboard: one card per repository plus the current repository's status for the strip
 /// at the top. The window keeps the cards in step with its repository list and localizes text.
 /// </summary>
+/// <summary>What the dashboard asks the window to do; <see cref="DashboardActionRequest.Argument"/> names a repository or preset.</summary>
+public enum DashboardAction
+{
+    /// <summary>Argument: the repository id.</summary>
+    SwitchRepository,
+
+    /// <summary>Argument: the preset id, or null for a blank repository.</summary>
+    NewRepository,
+
+    EditRepository,
+    OpenRepository,
+    PickSource,
+    PickTarget,
+    PickLauncher,
+    OpenSource,
+    OpenTarget,
+    OpenLauncher,
+    BridgeOptions,
+    BrowseOnline,
+    CheckModUpdates,
+    RunLauncher
+}
+
+public sealed record DashboardActionRequest(DashboardAction Action, string? Argument = null);
+
+/// <summary>One entry of the "New repository" menu: a blank repository (no preset) or a game preset.</summary>
+public sealed record NewRepositoryChoice(string? PresetId, string Label, string Glyph, string? ToolTip);
+
 public sealed partial class DashboardViewModel : ObservableObject
 {
     private string _currentStatusText = string.Empty;
@@ -64,6 +92,47 @@ public sealed partial class DashboardViewModel : ObservableObject
     }
 
     public bool CurrentNeedsSetup => !_currentIsReady;
+
+    // Stage J4: what the page shows besides the cards, and what it asks the window to do.
+    private string _currentRepositoryName = string.Empty;
+    private bool _canEditRepository;
+    private bool _canOpenRepository;
+    private bool _bridgeVisible;
+    private bool _bridgeEnabled = true;
+    private string _bridgeLabel = string.Empty;
+    private IReadOnlyList<NewRepositoryChoice> _newRepositoryChoices = [];
+
+    /// <summary>Raised when the user asks for something only the window can do.</summary>
+    public event EventHandler<DashboardActionRequest>? ActionRequested;
+
+    /// <summary>Raised after the window refreshed the cards and choices; the page relabels its own controls.</summary>
+    public event EventHandler? Refreshed;
+
+    public void Request(DashboardAction action, string? argument = null) => ActionRequested?.Invoke(this, new DashboardActionRequest(action, argument));
+
+    public void NotifyRefreshed() => Refreshed?.Invoke(this, EventArgs.Empty);
+
+    /// <summary>The current repository's name; empty when none is selected.</summary>
+    public string CurrentRepositoryName { get => _currentRepositoryName; set => SetProperty(ref _currentRepositoryName, value ?? string.Empty); }
+
+    public bool CanEditRepository { get => _canEditRepository; set => SetProperty(ref _canEditRepository, value); }
+
+    public bool CanOpenRepository { get => _canOpenRepository; set => SetProperty(ref _canOpenRepository, value); }
+
+    /// <summary>The Endfield launch settings button, shown for Endfield repositories (EndfieldBridgeService).</summary>
+    public bool BridgeVisible { get => _bridgeVisible; set => SetProperty(ref _bridgeVisible, value); }
+
+    public bool BridgeEnabled { get => _bridgeEnabled; set => SetProperty(ref _bridgeEnabled, value); }
+
+    public string BridgeLabel { get => _bridgeLabel; set => SetProperty(ref _bridgeLabel, value ?? string.Empty); }
+
+    public IReadOnlyList<NewRepositoryChoice> NewRepositoryChoices => _newRepositoryChoices;
+
+    public void SetNewRepositoryChoices(IReadOnlyList<NewRepositoryChoice> choices)
+    {
+        _newRepositoryChoices = choices ?? [];
+        OnPropertyChanged(nameof(NewRepositoryChoices));
+    }
 
     /// <summary>Reuses the card for an id that is already shown, so a refresh does not rebuild the list.</summary>
     public RepositoryCardViewModel GetOrAdd(string id, int index, Func<RepositoryCardViewModel> create)

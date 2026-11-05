@@ -1,0 +1,1 @@
+{"Id":"sample-install-2","Description":"Deploy Test Mod B (sample)","RepositoryId":"ui-repository","CreatedAtUtc":"2026-10-28T09:15:00+00:00","Entries":[{"TargetPath":"{TestData}/Loader/Mods/TestModB","ExistedBefore":false,"BackupRelativePath":"","LinkTarget":null}]}
