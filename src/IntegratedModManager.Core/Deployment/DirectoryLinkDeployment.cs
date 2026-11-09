@@ -12,6 +12,29 @@ namespace IntegratedModManager.Core.Deployment;
 /// <summary>A deployed link whose target is missing. <see cref="Target"/> is null when unreadable.</summary>
 public sealed record BrokenDirectoryLink(string LinkPath, string? Target);
 
+/// <summary>How a search for links into a Mod went; see <see cref="DirectoryLinkDeployment.ScanLinksTargeting"/>.</summary>
+public enum LinkScanStatus
+{
+    /// <summary>The loader folder was read; <see cref="LinkScanResult.Links"/> is complete.</summary>
+    Scanned,
+
+    /// <summary>No loader folder is set, so nothing can link to the Mod.</summary>
+    NotConfigured,
+
+    /// <summary>A loader folder is set but cannot be reached now.</summary>
+    Unavailable,
+
+    /// <summary>Reading the loader folder failed.</summary>
+    Failed
+}
+
+/// <param name="Detail">The unreachable folder, or the error, when the scan could not complete.</param>
+public sealed record LinkScanResult(LinkScanStatus Status, IReadOnlyList<string> Links, string? Detail)
+{
+    /// <summary>Deleting the Mod cannot leave links behind that nobody knows of.</summary>
+    public bool IsComplete => Status is LinkScanStatus.Scanned or LinkScanStatus.NotConfigured;
+}
+
 public static class DirectoryLinkDeployment
 {
     private const uint GenericWrite = 0x40000000;
@@ -194,6 +217,28 @@ public static class DirectoryLinkDeployment
 
         broken.Sort((left, right) => StringComparer.OrdinalIgnoreCase.Compare(left.LinkPath, right.LinkPath));
         return broken;
+    }
+
+    /// <summary>
+    /// The links into <paramref name="sourcePath"/> before it is deleted (issue #109). An empty list is trustworthy
+    /// only when the loader folder was scanned or none is configured; a configured folder that cannot be reached
+    /// (a disconnected drive, a moved folder) or a failed scan must stop the delete, or links would be left pointing
+    /// at a deleted folder.
+    /// </summary>
+    public static LinkScanResult ScanLinksTargeting(string sourcePath, string? loaderRoot)
+    {
+        ArgumentException.ThrowIfNullOrWhiteSpace(sourcePath);
+        if (string.IsNullOrWhiteSpace(loaderRoot)) return new LinkScanResult(LinkScanStatus.NotConfigured, [], null);
+        string root = loaderRoot.Trim();
+        try
+        {
+            if (!Directory.Exists(root)) return new LinkScanResult(LinkScanStatus.Unavailable, [], root);
+            return new LinkScanResult(LinkScanStatus.Scanned, FindLinksTargeting(sourcePath, root), null);
+        }
+        catch (Exception ex) when (ex is IOException or UnauthorizedAccessException or ArgumentException)
+        {
+            return new LinkScanResult(LinkScanStatus.Failed, [], ex.Message);
+        }
     }
 
     /// <summary>

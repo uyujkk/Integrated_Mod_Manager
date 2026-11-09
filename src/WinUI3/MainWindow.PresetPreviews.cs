@@ -424,7 +424,13 @@ public sealed partial class MainWindow
         string?[] kept = [.. config.ModPersistentSlots.Select(slot => slot.PreviewFile), .. config.ConfigurationProfiles.Select(profile => profile.PreviewFile)];
         _ = Task.Run(() =>
         {
-            try { _presetPreviews.RemoveOrphans(kept); }
+            try
+            {
+                PreviewCleanupResult result = _presetPreviews.RemoveOrphans(kept);
+                // What it left in place, and why: a link it will not delete through, or a file it did not write.
+                foreach (PreviewCleanupSkip skip in result.Skipped)
+                    LogApplicationIssue("Preset preview cleanup", new IOException($"Left in place ({skip.Reason}): {skip.Path}" + (skip.Link is null ? string.Empty : $" · link {skip.Link}")));
+            }
             catch (Exception ex) when (ex is IOException or UnauthorizedAccessException) { LogApplicationIssue("Preset preview cleanup", ex); }
         });
     }

@@ -1,3 +1,4 @@
+using IntegratedModManager.Core.Deployment;
 using IntegratedModManager.Core.Online;
 using IntegratedModManager.Core.Presets;
 
@@ -8,9 +9,15 @@ public sealed class PresetPreviewStoreTests : IDisposable
     private readonly string _root = Path.Combine(Path.GetTempPath(), "imm-preview-" + Guid.NewGuid().ToString("N"));
     private PresetPreviewStore Store => new(_root);
 
-    public void Dispose()
+    public void Dispose() => DeleteTree(_root);
+
+    // Links first, without following them: deleting a junction's folder recursively is refused.
+    private static void DeleteTree(string root)
     {
-        if (Directory.Exists(_root)) Directory.Delete(_root, recursive: true);
+        if (!Directory.Exists(root)) return;
+        if (DirectoryLinkDeployment.IsDirectoryLink(root)) { DirectoryLinkDeployment.RemoveLink(root); return; }
+        foreach (string folder in Directory.GetDirectories(root)) DeleteTree(folder);
+        Directory.Delete(root, recursive: true);
     }
 
     [Fact]
@@ -73,7 +80,7 @@ public sealed class PresetPreviewStoreTests : IDisposable
         string otherRepository = Store.Write("gone", "orphan", [1]);
         File.WriteAllBytes(Store.Resolve(kept) + ".tmp", [1]);
 
-        int removed = Store.RemoveOrphans([kept, null, "../ignored.jpg"]);
+        int removed = Store.RemoveOrphans([kept, null, "../ignored.jpg"]).Removed;
 
         Assert.Equal(3, removed);
         Assert.True(File.Exists(Store.Resolve(kept)));
@@ -82,7 +89,83 @@ public sealed class PresetPreviewStoreTests : IDisposable
     }
 
     [Fact]
-    public void RemoveOrphans_WithoutAFolderDoesNothing() => Assert.Equal(0, Store.RemoveOrphans([]));
+    public void RemoveOrphans_WithoutAFolderDoesNothing() => Assert.Equal(0, Store.RemoveOrphans([]).Removed);
+
+    // Issue #106: a junction under the preview folder leads outside it; nothing there may be deleted.
+    [Fact]
+    public void RemoveOrphans_DoesNotDeleteThroughASubfolderJunction()
+    {
+        string outside = Path.Combine(Path.GetTempPath(), "imm-preview-outside-" + Guid.NewGuid().ToString("N"));
+        Directory.CreateDirectory(outside);
+        try
+        {
+            File.WriteAllText(Path.Combine(outside, "unrelated.txt"), "keep");
+            File.WriteAllBytes(Path.Combine(outside, "unrelated.jpg"), [1]);
+            Directory.CreateDirectory(_root);
+            MakeJunction(Path.Combine(_root, "linked"), outside);
+
+            PreviewCleanupResult result = Store.RemoveOrphans([]);
+
+            Assert.Equal(0, result.Removed);
+            Assert.True(File.Exists(Path.Combine(outside, "unrelated.txt")));
+            Assert.True(File.Exists(Path.Combine(outside, "unrelated.jpg")));
+            Assert.Contains(result.Skipped, skip => skip.Reason == PreviewCleanupSkipReason.LinkedFolder);
+        }
+        finally
+        {
+            DeleteTree(_root);
+            DeleteTree(outside);
+        }
+    }
+
+    // Issue #106: the preview folder itself redirected elsewhere: the cleanup stops before touching anything.
+    [Fact]
+    public void RemoveOrphans_StopsWhenThePreviewFolderIsALink()
+    {
+        string real = Path.Combine(Path.GetTempPath(), "imm-preview-real-" + Guid.NewGuid().ToString("N"));
+        Directory.CreateDirectory(Path.Combine(real, "repo"));
+        try
+        {
+            File.WriteAllBytes(Path.Combine(real, "repo", "orphan.jpg"), [1]);
+            MakeJunction(_root, real);
+
+            PreviewCleanupResult result = Store.RemoveOrphans([]);
+
+            Assert.Equal(0, result.Removed);
+            Assert.True(File.Exists(Path.Combine(real, "repo", "orphan.jpg")));
+            Assert.Equal(PreviewCleanupSkipReason.LinkedFolder, Assert.Single(result.Skipped).Reason);
+        }
+        finally
+        {
+            DirectoryLinkDeployment.RemoveLink(_root);
+            DeleteTree(real);
+        }
+    }
+
+    // Issue #106: only files this store writes are removed; anything else in its folders stays.
+    [Fact]
+    public void RemoveOrphans_KeepsFilesItDidNotWrite()
+    {
+        string orphan = Store.Write("repo", "orphan", [1]);
+        string referenced = Store.Write("repo", "kept", [1]);
+        string folder = Path.GetDirectoryName(Store.Resolve(orphan))!;
+        File.WriteAllText(Path.Combine(folder, "notes.txt"), "keep");
+        File.WriteAllBytes(Path.Combine(folder, "holiday photo.jpg"), [1]);
+        Directory.CreateDirectory(Path.Combine(_root, "not a repository"));
+        File.WriteAllText(Path.Combine(_root, "not a repository", "x.jpg"), "keep");
+
+        PreviewCleanupResult result = Store.RemoveOrphans([referenced]);
+
+        Assert.Equal(1, result.Removed);
+        Assert.False(File.Exists(Store.Resolve(orphan)));
+        Assert.True(File.Exists(Store.Resolve(referenced)));
+        Assert.True(File.Exists(Path.Combine(folder, "notes.txt")));
+        Assert.True(File.Exists(Path.Combine(folder, "holiday photo.jpg")));
+        Assert.True(File.Exists(Path.Combine(_root, "not a repository", "x.jpg")));
+        Assert.All(result.Skipped, skip => Assert.Equal(PreviewCleanupSkipReason.NotAPreview, skip.Reason));
+    }
+
+    private static void MakeJunction(string junction, string target) => DirectoryLinkDeployment.CreateJunction(junction, target);
 
     [Theory]
     [InlineData(1920, 1080, 640, 360)]

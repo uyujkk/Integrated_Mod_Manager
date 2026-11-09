@@ -114,19 +114,19 @@ public sealed partial class MainWindow
     {
         string loaderRoot = (repository.TargetPath ?? string.Empty).Trim();
         var links = new Dictionary<SecondLevelFolderItem, IReadOnlyList<string>>();
-        // A Mod whose links could not be listed is kept: deleting it could leave links to a missing folder.
+        // A Mod whose links could not be listed is kept: deleting it could leave links to a missing folder. That
+        // includes a loader folder that is set but cannot be reached right now (issue #109).
         var unverified = new List<string>();
         foreach (SecondLevelFolderItem mod in mods)
         {
-            try
+            LinkScanResult scan = await Task.Run(() => DirectoryLinkDeployment.ScanLinksTargeting(mod.Path, loaderRoot));
+            if (scan.IsComplete)
             {
-                links[mod] = string.IsNullOrWhiteSpace(loaderRoot) ? [] : await Task.Run(() => DirectoryLinkDeployment.FindLinksTargeting(mod.Path, loaderRoot));
+                links[mod] = scan.Links;
+                continue;
             }
-            catch (Exception ex) when (ex is IOException or UnauthorizedAccessException or ArgumentException)
-            {
-                LogApplicationIssue("Find deployed links before delete", ex);
-                unverified.Add(mod.Name + ": " + ex.Message);
-            }
+            LogApplicationIssue("Find deployed links before delete", new IOException($"{scan.Status}: {scan.Detail}"));
+            unverified.Add(mod.Name + ": " + (scan.Status == LinkScanStatus.Unavailable ? T("BatchMods.LoaderUnavailable", scan.Detail) : scan.Detail));
         }
         SecondLevelFolderItem[] deletable = mods.Where(links.ContainsKey).ToArray();
         string unverifiedNote = unverified.Count == 0 ? string.Empty : T("BatchMods.LinksUnknown", string.Join("\n", unverified));

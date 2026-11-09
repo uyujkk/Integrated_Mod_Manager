@@ -4,6 +4,21 @@ namespace IntegratedModManager.Core.Presets;
 
 public readonly record struct PixelRect(int X, int Y, int Width, int Height);
 
+/// <summary>Why the preview cleanup left something in place.</summary>
+public enum PreviewCleanupSkipReason
+{
+    /// <summary>A junction or symbolic link: the cleanup never deletes through one.</summary>
+    LinkedFolder,
+
+    /// <summary>Not a file this store writes.</summary>
+    NotAPreview
+}
+
+/// <param name="Link">The link that made the cleanup stop, when that was the reason.</param>
+public sealed record PreviewCleanupSkip(string Path, PreviewCleanupSkipReason Reason, string? Link);
+
+public sealed record PreviewCleanupResult(int Removed, IReadOnlyList<PreviewCleanupSkip> Skipped);
+
 /// <summary>Preview images of presets, stored as "repository/preset.jpg" under one folder. Encoding is left to the window layer.</summary>
 public sealed class PresetPreviewStore(string root)
 {
@@ -41,22 +56,77 @@ public sealed class PresetPreviewStore(string root)
         if (Resolve(previewFile) is string path) File.Delete(path);
     }
 
-    /// <summary>Removes previews no preset refers to, and files left by an interrupted write. Returns how many were removed.</summary>
-    public int RemoveOrphans(IEnumerable<string?> kept)
+    /// <summary>
+    /// Removes previews no preset refers to, and files left by an interrupted write. It deletes only what this store
+    /// writes ("repository/preset.jpg" and its ".jpg.tmp"), never follows a junction or symbolic link (the folder
+    /// itself, one of its parents or a repository folder), and keeps everything else; the result says what it left
+    /// and why, for the log.
+    /// </summary>
+    public PreviewCleanupResult RemoveOrphans(IEnumerable<string?> kept)
     {
-        if (!Directory.Exists(_root)) return 0;
+        var skipped = new List<PreviewCleanupSkip>();
+        if (!Directory.Exists(_root)) return new PreviewCleanupResult(0, skipped);
+        if (LinkInPath(_root) is string link)
+        {
+            skipped.Add(new PreviewCleanupSkip(_root, PreviewCleanupSkipReason.LinkedFolder, link));
+            return new PreviewCleanupResult(0, skipped);
+        }
         var keep = kept.Select(Resolve).OfType<string>().ToHashSet(StringComparer.OrdinalIgnoreCase);
         int removed = 0;
         foreach (string folder in Directory.GetDirectories(_root))
         {
-            foreach (string file in Directory.GetFiles(folder).Where(file => !keep.Contains(file)))
+            if (IsLink(folder))
             {
-                File.Delete(file);
+                skipped.Add(new PreviewCleanupSkip(folder, PreviewCleanupSkipReason.LinkedFolder, folder));
+                continue;
+            }
+            if (!IsSegment(Path.GetFileName(folder)))
+            {
+                skipped.Add(new PreviewCleanupSkip(folder, PreviewCleanupSkipReason.NotAPreview, null));
+                continue;
+            }
+            foreach (string entry in Directory.GetFileSystemEntries(folder))
+            {
+                if (Directory.Exists(entry))
+                {
+                    skipped.Add(new PreviewCleanupSkip(entry, IsLink(entry) ? PreviewCleanupSkipReason.LinkedFolder : PreviewCleanupSkipReason.NotAPreview, null));
+                    continue;
+                }
+                if (keep.Contains(entry)) continue;
+                if (!IsOwnedFile(Path.GetFileName(entry)) || IsLink(entry))
+                {
+                    skipped.Add(new PreviewCleanupSkip(entry, PreviewCleanupSkipReason.NotAPreview, null));
+                    continue;
+                }
+                File.Delete(entry);
                 removed++;
             }
             if (!Directory.EnumerateFileSystemEntries(folder).Any()) Directory.Delete(folder);
         }
-        return removed;
+        return new PreviewCleanupResult(removed, skipped);
+    }
+
+    // A preview this store writes, or the temporary file of an interrupted write.
+    private static bool IsOwnedFile(string name)
+    {
+        if (name.EndsWith(Extension + ".tmp", StringComparison.Ordinal)) name = name[..^".tmp".Length];
+        return name.EndsWith(Extension, StringComparison.Ordinal) && IsSegment(name[..^Extension.Length]);
+    }
+
+    private static bool IsLink(string path)
+    {
+        try { return (File.GetAttributes(path) & FileAttributes.ReparsePoint) != 0; }
+        catch (Exception ex) when (ex is IOException or UnauthorizedAccessException) { return true; }
+    }
+
+    // The first junction or symbolic link on the way to the folder (the folder included), or null.
+    private static string? LinkInPath(string folder)
+    {
+        for (DirectoryInfo? current = new(folder); current is not null; current = current.Parent)
+        {
+            if (current.Exists && IsLink(current.FullName)) return current.FullName;
+        }
+        return null;
     }
 
     public static (int Width, int Height) ThumbnailSize(int width, int height)

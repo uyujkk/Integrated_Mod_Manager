@@ -452,21 +452,22 @@ public sealed partial class MainWindow
             }
 
             string loaderRoot = (GetSelectedRepository()?.TargetPath ?? Paths.Target).Trim();
-            IReadOnlyList<string> deployedLinks = [];
-            try
+            // Without the full list of links, deleting the folder could leave links to a missing folder (issue #109):
+            // a loader folder that is set but cannot be reached stops the delete like a failed scan.
+            LinkScanResult scan = await Task.Run(() => DirectoryLinkDeployment.ScanLinksTargeting(item.Path, loaderRoot));
+            if (scan.Status == LinkScanStatus.Unavailable)
             {
-                if (!string.IsNullOrWhiteSpace(loaderRoot))
-                {
-                    deployedLinks = await Task.Run(() => DirectoryLinkDeployment.FindLinksTargeting(item.Path, loaderRoot));
-                }
-            }
-            catch (Exception ex) when (ex is IOException or UnauthorizedAccessException or ArgumentException)
-            {
-                // Without the list of links, deleting the folder could leave links to a missing folder.
-                LogApplicationIssue("Find deployed links before delete", ex);
-                await ShowMessageAsync(T("LocalLibrary.LinksUnknown", item.Name, ex.Message), T("LocalLibrary.DeleteFailed"));
+                LogApplicationIssue("Find deployed links before delete", new DirectoryNotFoundException(scan.Detail));
+                await ShowMessageAsync(T("LocalLibrary.LoaderUnavailableBeforeDelete", scan.Detail, item.Name), T("LocalLibrary.DeleteFailed"));
                 return;
             }
+            if (scan.Status == LinkScanStatus.Failed)
+            {
+                LogApplicationIssue("Find deployed links before delete", new IOException(scan.Detail));
+                await ShowMessageAsync(T("LocalLibrary.LinksUnknown", item.Name, scan.Detail), T("LocalLibrary.DeleteFailed"));
+                return;
+            }
+            IReadOnlyList<string> deployedLinks = scan.Links;
 
             string linkNote = deployedLinks.Count == 0
                 ? string.Empty
@@ -840,6 +841,14 @@ public sealed partial class MainWindow
         }
         repository.TargetPath = targetDir;
 
+        // Issue #105: a loader folder inside the repository (or the other way round, or the same folder through a
+        // link) would make this Mod's deployed folder its own source; stop before any backup, copy or delete.
+        if (FindDeploymentOverlap(repository.SourcePath, targetDir, item.Path, targetPath) is (string source, string target))
+        {
+            await ShowMessageAsync(T("LocalLibrary.PathsOverlap", source, target), T("LocalLibrary.CannotContinue"));
+            return;
+        }
+
         if (!await OfferBrokenLinkCleanupAsync(targetDir))
         {
             return;
@@ -1139,6 +1148,14 @@ public sealed partial class MainWindow
         string[] files = Directory.GetFiles(directory);
         Array.Sort(files, StringComparer.CurrentCultureIgnoreCase);
         return files.ToList();
+    }
+
+    // The first overlapping pair: the repository and loader folders, then the Mod and its deployed folder.
+    private static (string Source, string Target)? FindDeploymentOverlap(string? sourceRoot, string targetRoot, string modPath, string deployedPath)
+    {
+        if (!string.IsNullOrWhiteSpace(sourceRoot) && DeploymentPathSeparation.Compare(sourceRoot, targetRoot) != PathOverlap.None)
+            return (sourceRoot, targetRoot);
+        return DeploymentPathSeparation.Compare(modPath, deployedPath) != PathOverlap.None ? (modPath, deployedPath) : null;
     }
 
     private static string GetTargetDirectoryPath(string targetDir, string sourceDirectoryPath)
