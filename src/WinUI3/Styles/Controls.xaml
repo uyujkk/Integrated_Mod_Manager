@@ -1,0 +1,82 @@
+﻿<ResourceDictionary
+    xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
+    <!-- Control styles shared by all pages: text, status badges, buttons, lists and inputs. Colours come from Themes/Tokens.xaml. -->
+
+    <!-- One status pill everywhere (ready, needs setup, deployed, idle): a neutral, success or danger tint. -->
+    <Style x:Key="StatusBadgeBorderStyle" TargetType="Border">
+        <Setter Property="Background" Value="{ThemeResource AppSecondaryDefaultBrush}" />
+        <Setter Property="CornerRadius" Value="{StaticResource ControlCornerRadius}" />
+        <Setter Property="Padding" Value="8,2" />
+    </Style>
+
+    <Style x:Key="StatusBadgeSuccessBorderStyle" TargetType="Border" BasedOn="{StaticResource StatusBadgeBorderStyle}">
+        <Setter Property="Background" Value="{ThemeResource AppSuccessSoftBrush}" />
+    </Style>
+
+    <Style x:Key="StatusBadgeDangerBorderStyle" TargetType="Border" BasedOn="{StaticResource StatusBadgeBorderStyle}">
+        <Setter Property="Background" Value="{ThemeResource AppDangerSoftBrush}" />
+    </Style>
+
+    <Style x:Key="StatusBadgeTextStyle" TargetType="TextBlock">
+        <Setter Property="FontSize" Value="12" />
+        <Setter Property="Foreground" Value="{ThemeResource TextFillColorSecondaryBrush}" />
+    </Style>
+
+    <Style x:Key="StatusBadgeSuccessTextStyle" TargetType="TextBlock" BasedOn="{StaticResource StatusBadgeTextStyle}">
+        <Setter Property="Foreground" Value="{ThemeResource AppSuccessBrush}" />
+    </Style>
+
+    <Style x:Key="StatusBadgeDangerTextStyle" TargetType="TextBlock" BasedOn="{StaticResource StatusBadgeTextStyle}">
+        <Setter Property="Foreground" Value="{ThemeResource AppDangerBrush}" />
+    </Style>
+
+    <!-- Sizes from the Windows type ramp (Caption 12, Body 14, Subtitle 20, Title 28). They are
+         not based on the system TextBlock styles, which turn on wrapping and would change layouts.
+         Secondary text uses the secondary text colour instead of opacity, which reads poorly on Mica. -->
+    <Style x:Key="PageTitleTextStyle" TargetType="TextBlock">
+        <Setter Property="FontSize" Value="20" />
+        <Setter Property="FontWeight" Value="SemiBold" />
+    </Style>
+
+    <Style x:Key="SectionTitleTextStyle" TargetType="TextBlock">
+        <Setter Property="FontSize" Value="20" />
+        <Setter Property="FontWeight" Value="SemiBold" />
+    </Style>
+
+    <Style x:Key="CardTitleTextStyle" TargetType="TextBlock">
+        <Setter Property="FontSize" Value="14" />
+        <Setter Property="FontWeight" Value="SemiBold" />
+    </Style>
+
+    <Style x:Key="MutedTextStyle" TargetType="TextBlock">
+        <Setter Property="Foreground" Value="{ThemeResource TextFillColorSecondaryBrush}" />
+    </Style>
+
+    <Style x:Key="CaptionTextStyle" TargetType="TextBlock" BasedOn="{StaticResource MutedTextStyle}">
+        <Setter Property="FontSize" Value="12" />
+    </Style>
+
+    <!-- Buttons keep the Windows heights and padding; the accent comes from the system. -->
+    <Style x:Key="PrimaryButtonStyle" TargetType="Button" BasedOn="{StaticResource AccentButtonStyle}">
+        <Setter Property="CornerRadius" Value="{StaticResource ControlCornerRadius}" />
+    </Style>
+
+    <Style x:Key="SecondaryButtonStyle" TargetType="Button" BasedOn="{StaticResource DefaultButtonStyle}">
+        <Setter Property="CornerRadius" Value="{StaticResource ControlCornerRadius}" />
+    </Style>
+
+    <Style x:Key="DangerButtonStyle" TargetType="Button" BasedOn="{StaticResource SecondaryButtonStyle}">
+        <Setter Property="Foreground" Value="{ThemeResource AppDangerBrush}" />
+        <Setter Property="Background" Value="{ThemeResource AppDangerSoftBrush}" />
+        <Setter Property="BorderBrush" Value="{ThemeResource AppDangerBrush}" />
+    </Style>
+
+    <Style x:Key="ShortcutInputTextBoxStyle" TargetType="TextBox">
+        <Setter Property="Background" Value="Transparent" />
+        <Setter Property="BorderBrush" Value="Transparent" />
+        <Setter Property="BorderThickness" Value="0" />
+        <Setter Property="Foreground" Value="{ThemeResource TextFillColorPrimaryBrush}" />
+        <Setter Property="Padding" Value="10,8" />
+    </Style>
+</ResourceDictionary>

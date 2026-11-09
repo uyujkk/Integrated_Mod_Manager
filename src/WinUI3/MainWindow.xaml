@@ -15,6 +15,60 @@
 
     <Grid x:Name="RootGrid" Background="{ThemeResource AppPageBackgroundBrush}" KeyDown="OnRootKeyDown" PointerPressed="OnRootGridPointerPressed">
         <Grid.Resources>
+            <!-- Styles only this window's pages use (moved from App.xaml in stage J8). -->
+            <Style x:Key="CommandSurfaceBorderStyle" TargetType="Border">
+                <Setter Property="Background" Value="{ThemeResource AppCommandSurfaceBrush}" />
+                <Setter Property="BorderBrush" Value="{ThemeResource AppCardBorderBrush}" />
+                <Setter Property="BorderThickness" Value="1" />
+                <Setter Property="CornerRadius" Value="{StaticResource OverlayCornerRadius}" />
+                <Setter Property="Padding" Value="16,14" />
+            </Style>
+
+            <!-- Opaque, because it floats over other content. -->
+            <Style x:Key="DetailPaneBorderStyle" TargetType="Border" BasedOn="{StaticResource CardBorderStyle}">
+                <Setter Property="Background" Value="{ThemeResource AppElevatedBackgroundBrush}" />
+                <Setter Property="BorderBrush" Value="{ThemeResource AppStrongBorderBrush}" />
+                <Setter Property="Padding" Value="18" />
+            </Style>
+
+            <Style x:Key="StickyActionBorderStyle" TargetType="Border">
+                <Setter Property="Background" Value="{ThemeResource AppElevatedBackgroundBrush}" />
+                <Setter Property="BorderBrush" Value="{ThemeResource AppCardBorderBrush}" />
+                <Setter Property="BorderThickness" Value="1,1,1,0" />
+                <Setter Property="CornerRadius" Value="{StaticResource OverlayCornerRadius}" />
+                <Setter Property="Padding" Value="12" />
+            </Style>
+
+            <Style x:Key="MetricValueTextStyle" TargetType="TextBlock">
+                <Setter Property="FontSize" Value="28" />
+                <Setter Property="FontWeight" Value="SemiBold" />
+            </Style>
+
+            <Style x:Key="MetricCardStyle" TargetType="Border" BasedOn="{StaticResource CardBorderStyle}">
+                <Setter Property="Padding" Value="18" />
+            </Style>
+
+            <Style x:Key="AppListViewStyle" TargetType="ListView">
+                <Setter Property="Padding" Value="6" />
+                <Setter Property="BorderThickness" Value="0" />
+                <Setter Property="Background" Value="Transparent" />
+                <Setter Property="SelectionMode" Value="Single" />
+                <Setter Property="IsItemClickEnabled" Value="False" />
+            </Style>
+
+            <Style x:Key="AppListViewItemStyle" TargetType="ListViewItem" BasedOn="{StaticResource DefaultListViewItemStyle}">
+                <Setter Property="HorizontalContentAlignment" Value="Stretch" />
+                <Setter Property="CornerRadius" Value="{StaticResource ControlCornerRadius}" />
+                <Setter Property="Margin" Value="0,2" />
+                <Setter Property="MinHeight" Value="44" />
+                <Setter Property="UseSystemFocusVisuals" Value="True" />
+            </Style>
+
+            <!-- Narrow side lists (the workspace's characters): less item padding, so names keep more room. -->
+            <Style x:Key="CompactListViewItemStyle" TargetType="ListViewItem" BasedOn="{StaticResource AppListViewItemStyle}">
+                <Setter Property="Padding" Value="6,0,6,0" />
+            </Style>
+
             <DataTemplate x:Key="RepositoryCoverTemplate" x:DataType="local:SecondLevelFolderItem">
                 <Button Click="OnRepositoryCoverClicked" DoubleTapped="OnSecondLevelDoubleTapped"
                         RightTapped="OnSecondLevelItemRightTapped" Padding="0"
