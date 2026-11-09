@@ -254,7 +254,7 @@ public sealed partial class MainWindow
             IsPrimaryButtonEnabled = import.CanInstall, DefaultButton = ContentDialogButton.Close
         };
         dialog.Resources["ContentDialogMaxWidth"] = viewport.MaxWidth;
-        return (await dialog.ShowAsync() == ContentDialogResult.Primary, restore.IsChecked == true);
+        return (await _services.Dialogs.ShowAsync(dialog) == ContentDialogResult.Primary, restore.IsChecked == true);
     }
 
     private async Task ReportBundleErrorAsync(Exception ex, bool committed)

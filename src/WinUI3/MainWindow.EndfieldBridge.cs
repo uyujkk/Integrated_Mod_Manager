@@ -330,7 +330,7 @@ public sealed partial class MainWindow
                 }
             };
 
-            ContentDialogResult result = await dialog.ShowAsync();
+            ContentDialogResult result = await _services.Dialogs.ShowAsync(dialog);
             if (result == ContentDialogResult.Primary)
             {
                 repository.UseEndfieldBridge = integrated.IsOn;

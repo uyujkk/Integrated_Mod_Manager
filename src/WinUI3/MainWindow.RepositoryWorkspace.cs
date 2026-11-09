@@ -1250,7 +1250,7 @@ public sealed partial class MainWindow
         };
         PreviewCard.Child = previewScroll;
         var dialog = new ContentDialog { XamlRoot = RootGrid.XamlRoot, Content = WorkspaceDetailHost, CloseButtonText = T("Common.Close"), RequestedTheme = RootGrid.ActualTheme };
-        try { await dialog.ShowAsync(); }
+        try { await _services.Dialogs.ShowAsync(dialog); }
         finally
         {
             dialog.Content = null;

@@ -1156,7 +1156,7 @@ public sealed partial class MainWindow
         fileList.SelectionChanged += (_, _) =>
             dialog.IsPrimaryButtonEnabled = fileList.SelectedItem is ListViewItem { IsEnabled: true };
 
-        ContentDialogResult result = await dialog.ShowAsync();
+        ContentDialogResult result = await _services.Dialogs.ShowAsync(dialog);
         return result == ContentDialogResult.Primary
             && fileList.SelectedItem is ListViewItem { Tag: OnlineDownloadCandidate selected }
                 ? selected

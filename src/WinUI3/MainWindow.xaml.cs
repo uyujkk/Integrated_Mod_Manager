@@ -185,7 +185,7 @@ public sealed partial class MainWindow : Window
             new OnlineMetadataCacheAdapter(_appDataStore, _onlineDetailsCachePath, LogApplicationIssue),
             diagnostics: LogApplicationIssue);
         InitializeComponent();
-        _services.Dialogs.Attach(() => RootGrid.XamlRoot);
+        _services.Dialogs.Attach(() => RootGrid.XamlRoot, () => RootGrid.ActualTheme);
         _services.Status.NotificationRequested += OnNotificationRequested;
         InitializeSettingsHost();
         InitializeUpdatesHost();

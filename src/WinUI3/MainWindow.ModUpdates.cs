@@ -34,7 +34,7 @@ public sealed partial class MainWindow
                 PrimaryButtonText = T("ModUpdates.ViewUpdates"), CloseButtonText = T("ModUpdates.Later"),
                 DefaultButton = ContentDialogButton.Close, XamlRoot = RootGrid.XamlRoot, RequestedTheme = RootGrid.ActualTheme
             };
-            if (await dialog.ShowAsync() == ContentDialogResult.Primary)
+            if (await _services.Dialogs.ShowAsync(dialog) == ContentDialogResult.Primary)
             {
                 _currentPrimarySection = PrimarySection.Updates;
                 ApplyShellState(refreshRepository: false);
@@ -82,7 +82,7 @@ public sealed partial class MainWindow
                 XamlRoot = RootGrid.XamlRoot, RequestedTheme = RootGrid.ActualTheme
             };
             picker.SelectionChanged += (_, _) => dialog.IsPrimaryButtonEnabled = picker.SelectedItem is not null;
-            if (await dialog.ShowAsync() != ContentDialogResult.Primary) return;
+            if (await _services.Dialogs.ShowAsync(dialog) != ContentDialogResult.Primary) return;
             if (picker.SelectedItem is not ComboBoxItem { Tag: OnlineDownloadCandidate selected }) return;
             OnlineModCard effective = WithSelectedDownloadFile(mod, selected);
             task = CreateDownloadTask(effective, result.Path);

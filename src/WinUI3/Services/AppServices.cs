@@ -6,11 +6,16 @@ namespace ModFolderCopier.WinUI;
 /// </summary>
 internal sealed class AppServices
 {
+    public AppServices()
+    {
+        Dialogs = new(Language);
+    }
+
     public LanguageService Language { get; } = new();
     public AppearanceService Appearance { get; } = new();
     public ShellConfigService ShellConfig { get; } = new(AppContext.BaseDirectory);
     public RepositoryService Repositories { get; } = new();
-    public DialogService Dialogs { get; } = new();
+    public DialogService Dialogs { get; }
     public StatusService Status { get; } = new();
     public DeploymentService Deployment { get; } = new(AppContext.BaseDirectory);
     public DownloadService Downloads { get; } = new(AppContext.BaseDirectory);

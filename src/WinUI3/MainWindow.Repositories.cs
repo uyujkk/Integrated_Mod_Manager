@@ -538,7 +538,7 @@ public sealed partial class MainWindow
                 XamlRoot = RootGrid.XamlRoot
             };
 
-            ContentDialogResult result = await dialog.ShowAsync();
+            ContentDialogResult result = await _services.Dialogs.ShowAsync(dialog);
             if (wikiCharacterBox.SelectedItem is not ComboBoxItem { Tag: OnlineCharacterOption selectedCharacter })
             {
                 return;

@@ -291,7 +291,7 @@ public sealed partial class MainWindow
                 choice = CombinationRestoreChoice.TakeOver;
                 dialog.Hide();
             };
-        if (await dialog.ShowAsync() == ContentDialogResult.Primary) choice = CombinationRestoreChoice.Restore;
+        if (await _services.Dialogs.ShowAsync(dialog) == ContentDialogResult.Primary) choice = CombinationRestoreChoice.Restore;
         return choice;
 
         void AddTab(string header, IEnumerable<CombinationPreviewRow> rows)

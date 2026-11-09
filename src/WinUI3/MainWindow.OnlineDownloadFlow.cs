@@ -782,7 +782,7 @@ public sealed partial class MainWindow
             };
             dialog.Resources["ContentDialogMaxWidth"] = viewport.MaxWidth;
 
-            ContentDialogResult result = await dialog.ShowAsync();
+            ContentDialogResult result = await _services.Dialogs.ShowAsync(dialog);
             if (result == ContentDialogResult.Primary)
             {
                 object? tag = (folderComboBox.SelectedItem as ComboBoxItem)?.Tag;

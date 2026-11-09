@@ -50,7 +50,7 @@ public sealed partial class MainWindow
             if (!checks.Any(item => item.Check.IsChecked == true)) { validation.Text = T("LocalTags.SelectAtLeastOneMod"); args.Cancel = true; }
             else if (action.SelectedIndex == 0 && profile.SelectedItem is null) { validation.Text = T("BatchMods.ChooseAPreset"); args.Cancel = true; }
         };
-        if (await dialog.ShowAsync() != ContentDialogResult.Primary || !ReferenceEquals(GetSelectedRepository(), repository)) return;
+        if (await _services.Dialogs.ShowAsync(dialog) != ContentDialogResult.Primary || !ReferenceEquals(GetSelectedRepository(), repository)) return;
         SecondLevelFolderItem[] chosen = checks.Where(item => item.Check.IsChecked == true).Select(item => item.Mod).ToArray();
         switch (action.SelectedIndex)
         {

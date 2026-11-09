@@ -64,7 +64,7 @@ public sealed partial class MainWindow
             DefaultButton = ContentDialogButton.Close
         };
         overlay.SetKeyboardInputEnabled(true);
-        try { return await dialog.ShowAsync() == ContentDialogResult.Primary && !_onlineWindowClosed; }
+        try { return await _services.Dialogs.ShowAsync(dialog) == ContentDialogResult.Primary && !_onlineWindowClosed; }
         finally
         {
             if (ReferenceEquals(_overlay.Window, overlay)) overlay.SetKeyboardInputEnabled(false);

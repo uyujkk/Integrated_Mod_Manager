@@ -21,7 +21,7 @@ public sealed partial class MainWindow
             body.Children.Add(concurrency); body.Children.Add(remember);
             body.Children.Add(new TextBlock { Text = T("OnlineDownloads.RememberedFoldersMustStillBeInside"), TextWrapping = TextWrapping.Wrap, MaxWidth = 440 });
             var dialog = new ContentDialog { Title = T("Common.DownloadOptions"), Content = body, PrimaryButtonText = T("Common.Save"), CloseButtonText = T("Common.Cancel"), XamlRoot = RootGrid.XamlRoot, RequestedTheme = RootGrid.ActualTheme };
-            if (await dialog.ShowAsync() != ContentDialogResult.Primary) return;
+            if (await _services.Dialogs.ShowAsync(dialog) != ContentDialogResult.Primary) return;
             _onlinePreferences.ConcurrentDownloads = (int)concurrency.SelectedItem;
             _onlinePreferences.RememberDownloadFolders = remember.IsChecked == true;
             _onlineDownloadScheduler.Limit = _onlinePreferences.ConcurrentDownloads;
@@ -88,7 +88,7 @@ public sealed partial class MainWindow
         var dialog = new ContentDialog { Title = T("OnlineDownloads.ExistingInstallationFound"), Content = body,
             PrimaryButtonText = T("OnlineDownloads.DownloadASeparateCopy"), CloseButtonText = T("Common.Cancel"),
             DefaultButton = ContentDialogButton.Close, XamlRoot = RootGrid.XamlRoot, RequestedTheme = RootGrid.ActualTheme };
-        return await dialog.ShowAsync() == ContentDialogResult.Primary;
+        return await _services.Dialogs.ShowAsync(dialog) == ContentDialogResult.Primary;
     }
 
     private async Task RetryOnlineDownloadAsync(DownloadTaskItem task)

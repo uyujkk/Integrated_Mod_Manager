@@ -366,77 +366,11 @@ public sealed partial class MainWindow
         }
     }
 
-    private async Task ShowMessageAsync(string content, string title)
-    {
-        DialogViewport viewport = DialogViewportPolicy.Selection(RootGrid.ActualWidth, RootGrid.ActualHeight);
-        var dialog = new ContentDialog
-        {
-            Title = title,
-            Content = new ScrollViewer
-            {
-                MaxHeight = viewport.ContentHeight,
-                HorizontalScrollBarVisibility = ScrollBarVisibility.Disabled,
-                Content = new TextBlock { Text = content, TextWrapping = TextWrapping.Wrap }
-            },
-            CloseButtonText = T("Dialogs.OK"),
-            RequestedTheme = RootGrid.ActualTheme,
-            XamlRoot = RootGrid.XamlRoot
-        };
+    // The common dialogs, shown by DialogService (stage J8).
+    private Task ShowMessageAsync(string content, string title) => _services.Dialogs.MessageAsync(title, content);
 
-        await dialog.ShowAsync();
-    }
+    private Task<string?> PromptForTextAsync(string content, string title, string defaultValue)
+        => _services.Dialogs.PromptAsync(title, content, defaultValue);
 
-    private async Task<string?> PromptForTextAsync(string content, string title, string defaultValue)
-    {
-        var textBox = new TextBox
-        {
-            Text = defaultValue,
-            PlaceholderText = T("Dialogs.EnterAName"),
-            Name = "PromptTextBox",
-            Margin = new Thickness(0, 12, 0, 0)
-        };
-
-        var panel = new StackPanel { Spacing = 8 };
-        panel.Children.Add(new TextBlock
-        {
-            Text = content,
-            TextWrapping = TextWrapping.Wrap
-        });
-        panel.Children.Add(textBox);
-
-        var dialog = new ContentDialog
-        {
-            Title = title,
-            Content = panel,
-            PrimaryButtonText = T("Dialogs.OK"),
-            CloseButtonText = T("Common.Cancel"),
-            DefaultButton = ContentDialogButton.Primary,
-            XamlRoot = RootGrid.XamlRoot
-        };
-
-        ContentDialogResult result = await dialog.ShowAsync();
-        return result == ContentDialogResult.Primary ? textBox.Text : null;
-    }
-
-    private async Task<bool> ShowConfirmAsync(string content, string title)
-    {
-        DialogViewport viewport = DialogViewportPolicy.Selection(RootGrid.ActualWidth, RootGrid.ActualHeight);
-        var dialog = new ContentDialog
-        {
-            Title = title,
-            Content = new ScrollViewer
-            {
-                MaxHeight = viewport.ContentHeight,
-                HorizontalScrollBarVisibility = ScrollBarVisibility.Disabled,
-                Content = new TextBlock { Text = content, TextWrapping = TextWrapping.Wrap }
-            },
-            PrimaryButtonText = T("Dialogs.Confirm"),
-            CloseButtonText = T("Common.Cancel"),
-            DefaultButton = ContentDialogButton.Close,
-            RequestedTheme = RootGrid.ActualTheme,
-            XamlRoot = RootGrid.XamlRoot
-        };
-
-        return await dialog.ShowAsync() == ContentDialogResult.Primary;
-    }
+    private Task<bool> ShowConfirmAsync(string content, string title) => _services.Dialogs.ConfirmAsync(title, content);
 }

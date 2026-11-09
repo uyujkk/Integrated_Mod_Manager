@@ -64,7 +64,7 @@ public sealed partial class MainWindow
         sourceBox.TextChanged += (_, _) => choice.IsPrimaryButtonEnabled = Directory.Exists(sourceBox.Text.Trim());
         while (true)
         {
-            ContentDialogResult result = await choice.ShowAsync();
+            ContentDialogResult result = await _services.Dialogs.ShowAsync(choice);
             if (result == ContentDialogResult.Primary) break;
             if (result != ContentDialogResult.Secondary) return;
             string? selectedSource = await PickFolderAsync();
@@ -92,20 +92,20 @@ public sealed partial class MainWindow
                 Content = new ScrollViewer { Content = previewBody, MaxHeight = Math.Max(180, RootGrid.ActualHeight - 250), MaxWidth = 620 },
                 PrimaryButtonText = T("ExistingModImport.CopyAndImport"), IsPrimaryButtonEnabled = plan.Items.All(item => item.Conflict is null),
                 CloseButtonText = T("Common.Cancel"), XamlRoot = RootGrid.XamlRoot, RequestedTheme = RootGrid.ActualTheme };
-            if (await preview.ShowAsync() != ContentDialogResult.Primary) return;
+            if (await _services.Dialogs.ShowAsync(preview) != ContentDialogResult.Primary) return;
             string manifest = Path.Combine(ExistingImportRecordsRoot, Guid.NewGuid().ToString("N") + ".json");
             _onlinePreferences.LastImportManifest = manifest;
             SaveShellConfig();
             var status = new TextBlock { Text = T("ExistingModImport.ValidatingPreviewAndCopying"), TextWrapping = TextWrapping.Wrap, MaxWidth = 500 };
             var operation = new ContentDialog { Title = T("ExistingModImport.Importing"), Content = status, CloseButtonText = T("ExistingModImport.CancelTask"), XamlRoot = RootGrid.XamlRoot, RequestedTheme = RootGrid.ActualTheme };
             operation.CloseButtonClick += (_, args) => { cancellation.Cancel(); args.Cancel = true; status.Text = T("ExistingModImport.CancelingWaitingForTheCurrentFile"); };
-            Task<ContentDialogResult> shown = operation.ShowAsync().AsTask();
+            Task<ContentDialogResult> shown = _services.Dialogs.ShowAsync(operation);
             try
             {
                 await Task.Run(() => ExistingModImportService.ExecuteAsync(plan, manifest,
                     (done, total) => DispatcherQueue.TryEnqueue(() => status.Text = T("ExistingModImport.CopiedMods", done, total)), cancellation.Token));
             }
-            finally { operation.Hide(); await shown; }
+            finally { _services.Dialogs.Close(operation); await shown; }
             if (GetSelectedRepository()?.Id == context.RepositoryId) await RefreshListsAsync();
             ShowAppNotification(T("ExistingModImport.Imported"));
         }
@@ -138,7 +138,7 @@ public sealed partial class MainWindow
                 Content = new TextBlock { Text = T("ExistingModImport.OnlyUnchangedCopiesFromThisImport"), TextWrapping = TextWrapping.Wrap, MaxWidth = 500 },
                 PrimaryButtonText = T("ExistingModImport.UndoImport"), CloseButtonText = T("Common.Cancel"), DefaultButton = ContentDialogButton.Close,
                 XamlRoot = RootGrid.XamlRoot, RequestedTheme = RootGrid.ActualTheme };
-            if (await dialog.ShowAsync() != ContentDialogResult.Primary) return;
+            if (await _services.Dialogs.ShowAsync(dialog) != ContentDialogResult.Primary) return;
             _existingModImportBusy = true;
             ExistingModImportUndoResult result = await Task.Run(() => ExistingModImportService.Undo(manifest, record.DestinationRoot));
             await RefreshListsAsync();
@@ -169,7 +169,7 @@ public sealed partial class MainWindow
             var dialog = new ContentDialog { Title = T("ExistingModImport.ReviewInterruptedImport"), Content = records,
                 PrimaryButtonText = T("ExistingModImport.CheckAndRegister"), CloseButtonText = T("Common.Cancel"),
                 XamlRoot = RootGrid.XamlRoot, RequestedTheme = RootGrid.ActualTheme };
-            if (await dialog.ShowAsync() != ContentDialogResult.Primary) return;
+            if (await _services.Dialogs.ShowAsync(dialog) != ContentDialogResult.Primary) return;
             string manifest = (string)((ComboBoxItem)records.SelectedItem).Tag;
             if (!IsPathInsideDirectory(manifest, ExistingImportRecordsRoot)) throw new InvalidDataException("Import record is outside the application records folder.");
             var record = RecoveryJsonFile.Read<ExistingModImportManifest>(manifest);

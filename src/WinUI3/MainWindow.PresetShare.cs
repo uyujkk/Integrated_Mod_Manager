@@ -72,7 +72,7 @@ public sealed partial class MainWindow
             IsPrimaryButtonEnabled = preview.Matched.Count > 0, XamlRoot = RootGrid.XamlRoot, RequestedTheme = RootGrid.ActualTheme
         };
         nameBox.TextChanged += (_, _) => dialog.IsPrimaryButtonEnabled = preview.Matched.Count > 0 && nameBox.Text.Trim().Length > 0;
-        if (await dialog.ShowAsync() != ContentDialogResult.Primary || !ReferenceEquals(GetSelectedRepository(), repository)) return;
+        if (await _services.Dialogs.ShowAsync(dialog) != ContentDialogResult.Primary || !ReferenceEquals(GetSelectedRepository(), repository)) return;
 
         string name = UniqueBundleProfileName(nameBox.Text.Trim());
         var profile = new ModConfigurationProfile

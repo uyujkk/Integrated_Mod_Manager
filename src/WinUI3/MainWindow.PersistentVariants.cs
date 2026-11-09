@@ -321,7 +321,7 @@ public sealed partial class MainWindow
         panel.Children.Add(hotReload);
         closed.Checked += (_, _) => dialog.IsPrimaryButtonEnabled = true;
         closed.Unchecked += (_, _) => dialog.IsPrimaryButtonEnabled = hotReload.IsChecked == true;
-        if (await dialog.ShowAsync() != ContentDialogResult.Primary || choices.SelectedItem is not ComboBoxItem { Tag: UserIniSnapshot chosen }) return;
+        if (await _services.Dialogs.ShowAsync(dialog) != ContentDialogResult.Primary || choices.SelectedItem is not ComboBoxItem { Tag: UserIniSnapshot chosen }) return;
 
         try
         {

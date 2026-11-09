@@ -79,6 +79,6 @@ public sealed partial class MainWindow
             PrimaryButtonText = T("DownloadRecovery.ConfirmRestart"), CloseButtonText = T("Common.Cancel"),
             DefaultButton = ContentDialogButton.Close, XamlRoot = RootGrid.XamlRoot, RequestedTheme = RootGrid.ActualTheme
         };
-        return await dialog.ShowAsync() == ContentDialogResult.Primary;
+        return await _services.Dialogs.ShowAsync(dialog) == ContentDialogResult.Primary;
     }
 }

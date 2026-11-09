@@ -51,7 +51,7 @@ public sealed partial class MainWindow
         };
         _whatsNewSeenVersion = WhatsNewFeatureSet;
         SaveShellConfig();
-        if (await dialog.ShowAsync() == ContentDialogResult.Primary)
+        if (await _services.Dialogs.ShowAsync(dialog) == ContentDialogResult.Primary)
         {
             OpenWhatsNewDetails();
         }

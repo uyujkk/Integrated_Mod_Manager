@@ -65,7 +65,7 @@ public sealed partial class MainWindow
             dialog.Opened += (_, _) => nameBox.Focus(FocusState.Programmatic);
             overlay.SetKeyboardInputEnabled(true);
             ContentDialogResult result;
-            try { result = await dialog.ShowAsync(); }
+            try { result = await _services.Dialogs.ShowAsync(dialog); }
             finally
             {
                 if (ReferenceEquals(_overlay.Window, overlay)) overlay.SetKeyboardInputEnabled(false);

@@ -31,7 +31,7 @@ public sealed partial class MainWindow
             XamlRoot = RootGrid.XamlRoot, RequestedTheme = RootGrid.ActualTheme };
         bool prepared = false;
         progressDialog.Closing += (_, _) => { if (!prepared) cancellation.Cancel(); };
-        var showing = progressDialog.ShowAsync();
+        var showing = _services.Dialogs.ShowAsync(progressDialog);
         var rows = new List<PreparedSavedDownload>();
         try
         {
@@ -54,7 +54,7 @@ public sealed partial class MainWindow
             prepared = true;
         }
         catch (OperationCanceledException) { }
-        finally { progressDialog.Hide(); await showing; }
+        finally { _services.Dialogs.Close(progressDialog); await showing; }
         if (!prepared || cancellation.IsCancellationRequested || _onlineWindowClosed || contextKey != GetOnlineDetailContextKey()) return;
 
         var body = new StackPanel { Spacing = 14, MinWidth = 320, MaxWidth = 620 };
@@ -143,7 +143,7 @@ public sealed partial class MainWindow
         }
         allowDuplicates.Click += (_, _) => Validate();
         Validate();
-        if (await dialog.ShowAsync() != ContentDialogResult.Primary || _onlineWindowClosed || contextKey != GetOnlineDetailContextKey()) return;
+        if (await _services.Dialogs.ShowAsync(dialog) != ContentDialogResult.Primary || _onlineWindowClosed || contextKey != GetOnlineDetailContextKey()) return;
         var chosen = plans.Where(plan => plan.Include.IsChecked == true && plan.Include.IsEnabled).Select(plan => (
             plan.Data, File: (OnlineDownloadCandidate)((ComboBoxItem)plan.File.SelectedItem).Tag,
             Choice: ((ComboBoxItem)plan.Folder.SelectedItem).Tag)).ToArray();

@@ -60,7 +60,7 @@ public sealed partial class MainWindow
             CloseButtonText = T("Common.Cancel"),
             DefaultButton = ContentDialogButton.Primary
         };
-        ContentDialogResult result = await dialog.ShowAsync();
+        ContentDialogResult result = await _services.Dialogs.ShowAsync(dialog);
         if (result == ContentDialogResult.None)
         {
             return false;
@@ -137,7 +137,7 @@ public sealed partial class MainWindow
             DefaultButton = ContentDialogButton.Close,
             XamlRoot = RootGrid.XamlRoot
         };
-        return await dialog.ShowAsync() == ContentDialogResult.Primary;
+        return await _services.Dialogs.ShowAsync(dialog) == ContentDialogResult.Primary;
     }
 
     private async Task<string> CreateInstallTransactionAsync(string description, WorkspaceRepository repository, IEnumerable<string> affectedTargets)

@@ -114,7 +114,7 @@ public sealed partial class MainWindow
                 library.TagsFor(WorkspaceIdentity.Relative(repo.SourcePath, item.Mod.Path)).Concat(requested).Distinct(StringComparer.OrdinalIgnoreCase).Count() > 16))
             { validation.Text = T("LocalTags.SomeModsWouldExceed16Tags"); args.Cancel = true; }
         };
-        if (await dialog.ShowAsync() != ContentDialogResult.Primary) return;
+        if (await _services.Dialogs.ShowAsync(dialog) != ContentDialogResult.Primary) return;
         if (GetSelectedRepository() is not { } current
             || WorkspaceIdentity.Library(current.Id, current.SourcePath) != repoKey) return;
         var tags = input.Text.Split([',', '，', ';', '；', '\n'], StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries);

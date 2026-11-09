@@ -40,7 +40,7 @@ internal static class FirstRunDialog
             DefaultButton = ContentDialogButton.Primary, IsPrimaryButtonEnabled = false
         };
         games.SelectionChanged += (_, _) => dialog.IsPrimaryButtonEnabled = games.SelectedItem is not null;
-        if (await dialog.ShowAsync() != ContentDialogResult.Primary) return null;
+        if (await services.Dialogs.ShowAsync(dialog) != ContentDialogResult.Primary) return null;
         return presets.FirstOrDefault(preset => preset.Id == (games.SelectedItem as GridViewItem)?.Tag as string);
     }
 

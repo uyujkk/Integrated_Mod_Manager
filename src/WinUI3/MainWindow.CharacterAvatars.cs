@@ -248,7 +248,7 @@ public sealed partial class MainWindow
             RequestedTheme = RootGrid.ActualTheme,
             XamlRoot = RootGrid.XamlRoot
         };
-        if (await dialog.ShowAsync() != ContentDialogResult.Primary)
+        if (await _services.Dialogs.ShowAsync(dialog) != ContentDialogResult.Primary)
         {
             return false;
         }

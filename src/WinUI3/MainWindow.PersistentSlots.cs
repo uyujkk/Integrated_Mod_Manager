@@ -329,7 +329,7 @@ public sealed partial class MainWindow
                 content.Children.Add(hotReload);
                 closedCheck.Checked += (_, _) => dialog.IsPrimaryButtonEnabled = true;
                 closedCheck.Unchecked += (_, _) => dialog.IsPrimaryButtonEnabled = hotReload.IsChecked == true;
-                if (await dialog.ShowAsync() != ContentDialogResult.Primary) return;
+                if (await _services.Dialogs.ShowAsync(dialog) != ContentDialogResult.Primary) return;
                 string? backup = await Task.Run(() => ModPersistentPresetEngine.ApplyRuntimeRestore(plan));
                 slot.ActivatedAtUtc = DateTimeOffset.UtcNow;
                 repository.PersistentUserIniPath = userIni;

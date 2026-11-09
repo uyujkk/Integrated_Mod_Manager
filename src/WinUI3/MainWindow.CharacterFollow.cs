@@ -148,7 +148,7 @@ public sealed partial class MainWindow
             };
             dialog.Resources["ContentDialogMaxWidth"] = 900d;
             dialog.PrimaryButtonClick += (_, e) => { if (chosen?.IsValid != true) e.Cancel = true; };
-            if (await dialog.ShowAsync() == ContentDialogResult.Primary && chosen?.IsValid == true)
+            if (await _services.Dialogs.ShowAsync(dialog) == ContentDialogResult.Primary && chosen?.IsValid == true)
             {
                 _characterProfile.Region = chosen;
                 _characterProfile.Templates.Clear(); // Different geometry invalidates all old references.

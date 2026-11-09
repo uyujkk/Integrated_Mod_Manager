@@ -28,7 +28,7 @@ public sealed partial class MainWindow
             Title = T("SlotCapture.MenuStateTitle"), Content = content, XamlRoot = RootGrid.XamlRoot, RequestedTheme = RootGrid.ActualTheme,
             PrimaryButtonText = T("SlotCapture.Continue"), CloseButtonText = T("Common.Cancel"), DefaultButton = ContentDialogButton.Primary
         };
-        if (await dialog.ShowAsync() != ContentDialogResult.Primary) return null;
+        if (await _services.Dialogs.ShowAsync(dialog) != ContentDialogResult.Primary) return null;
         HashSet<ModPersistentValue> keepAnyway = [.. transient.Where((_, index) => checks[index].IsChecked == true)];
         return values.Where(value => !transient.Contains(value) || keepAnyway.Contains(value)).ToArray();
     }

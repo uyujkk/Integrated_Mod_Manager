@@ -129,7 +129,7 @@ public sealed partial class MainWindow
         };
         batch.Click += (_, _) => { var snapshot = selected.ToArray(); next = () => PrepareSavedBatchAsync(snapshot, repo); dialog.Hide(); };
         RefreshSaved();
-        await dialog.ShowAsync();
+        await _services.Dialogs.ShowAsync(dialog);
         SaveShellConfig();
         if (next is not null && !_onlineWindowClosed && contextKey == GetOnlineDetailContextKey()) await next();
     }
