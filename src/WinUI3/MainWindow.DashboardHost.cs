@@ -41,6 +41,7 @@ public sealed partial class MainWindow
             case DashboardAction.BrowseOnline: OnOnlineNavClicked(this, args); break;
             case DashboardAction.CheckModUpdates: CheckModUpdatesFromDashboard(); break;
             case DashboardAction.RunLauncher: OnRunLauncherClicked(this, args); break;
+            case DashboardAction.GettingStartedTipsClosed: OnGettingStartedTipsClosed(); break;
         }
     }
 

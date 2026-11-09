@@ -1,9 +1,13 @@
-﻿namespace ModFolderCopier.WinUI;
+﻿using IntegratedModManager.Core.Configuration;
 
-// The first start after installing: the app supports several games, so it asks instead of assuming one.
+namespace ModFolderCopier.WinUI;
+
+// The first start after installing: the app supports several games, so it asks instead of assuming one,
+// then the getting-started tips point at the dashboard's main places (stage J4-b).
 public sealed partial class MainWindow
 {
     private bool _firstInstall;
+    private GettingStartedTips _gettingStartedTips = GettingStartedTips.Load(firstInstall: false, savedPending: false);
 
     private async Task ChooseFirstInstallGameAsync()
     {
@@ -24,5 +28,27 @@ public sealed partial class MainWindow
         SaveShellConfig();
         RefreshDashboard();
         RefreshRepositoryActionButtons();
+    }
+
+    /// <summary>
+    /// Hands the pending tips to the dashboard once the startup dialogs (the game, what's new, an update
+    /// prompt) are closed; the dashboard shows them while it is on screen.
+    /// </summary>
+    private async Task ShowGettingStartedTipsAsync()
+    {
+        if (!_gettingStartedTips.IsPending) return;
+        await Task.Delay(1500);
+        for (int attempt = 0; attempt < 300 && IsContentDialogOpen(); attempt++)
+        {
+            await Task.Delay(1000);
+        }
+        if (_onlineWindowClosed || !_gettingStartedTips.IsPending) return;
+        _services.Dashboard.GettingStarted = _gettingStartedTips;
+    }
+
+    private void OnGettingStartedTipsClosed()
+    {
+        _services.Dashboard.GettingStarted = null;
+        SaveShellConfig();
     }
 }

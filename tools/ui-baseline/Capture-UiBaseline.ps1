@@ -8,7 +8,9 @@ param(
     # Outer window sizes in device-independent pixels (the same sizes the UI tests use).
     [string[]]$Sizes = @('1400x900', '1000x800'),
     [string[]]$Themes = @('light', 'dark'),
-    # updates-downloads and updates-recovery are the Updates page's other two views (stage J3-b).
+    # updates-downloads and updates-recovery are the Updates page's other two views (stage J3-b);
+    # gettingstarted is the dashboard with the tips a first install shows, nosearch the dashboard with the title
+    # bar's search box turned off (stage J4-b; neither is in the default set).
     [string[]]$Pages = @('dashboard', 'repository', 'online', 'shortcuts', 'updates', 'updates-downloads', 'updates-recovery', 'settings', 'whatsnew', 'firstrun'),
     # How long to wait after the window appears before taking the picture.
     [int]$SettleSeconds = 7,
@@ -128,11 +130,13 @@ function Write-Configuration([string]$page, [string]$language, [string]$theme, [
     $target = Join-Path $testData $(if ($MissingGameFolder) { 'Loader\NoSuchFolder' } else { 'Loader\Mods' })
     $shell = [ordered]@{
         SelectedRepositoryId = 'ui-repository'
-        CurrentPrimarySection = $(if ($page -eq 'whatsnew') { 'dashboard' } elseif ($page -like 'updates-*') { 'updates' } else { $page })
+        CurrentPrimarySection = $(if ($page -in 'whatsnew', 'gettingstarted', 'nosearch') { 'dashboard' } elseif ($page -like 'updates-*') { 'updates' } else { $page })
         UpdatesView = $(if ($page -like 'updates-*') { $page.Substring('updates-'.Length) } else { 'mods' })
         CheckAppUpdatesOnStartup = $false
         WhatsNewSeenVersion = $(if ($page -eq 'whatsnew') { '' } else { $whatsNewSet })
         RepositoryGamesExplicit = $true
+        GettingStartedTipsPending = ($page -eq 'gettingstarted')
+        ShowTitleBarSearch = ($page -ne 'nosearch')
         ThemePreference = $theme
         WindowX = 40; WindowY = 40; WindowWidth = $(if ($width -eq 0) { 1400 } else { $width }); WindowHeight = $(if ($height -eq 0) { 900 } else { $height })
         WindowMaximized = ($width -eq 0)

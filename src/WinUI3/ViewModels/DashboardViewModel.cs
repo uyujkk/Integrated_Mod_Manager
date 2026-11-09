@@ -1,5 +1,6 @@
 using System.Collections.ObjectModel;
 using CommunityToolkit.Mvvm.ComponentModel;
+using IntegratedModManager.Core.Configuration;
 
 namespace ModFolderCopier.WinUI;
 
@@ -27,7 +28,10 @@ public enum DashboardAction
     BridgeOptions,
     BrowseOnline,
     CheckModUpdates,
-    RunLauncher
+    RunLauncher,
+
+    /// <summary>The getting-started tips were closed or finished; the window saves that.</summary>
+    GettingStartedTipsClosed
 }
 
 public sealed record DashboardActionRequest(DashboardAction Action, string? Argument = null);
@@ -111,6 +115,18 @@ public sealed partial class DashboardViewModel : ObservableObject
     public void Request(DashboardAction action, string? argument = null) => ActionRequested?.Invoke(this, new DashboardActionRequest(action, argument));
 
     public void NotifyRefreshed() => Refreshed?.Invoke(this, EventArgs.Empty);
+
+    private GettingStartedTips? _gettingStarted;
+
+    /// <summary>
+    /// The getting-started tips to show (stage J4-b), or null. The window sets them once no startup
+    /// dialog is open; the page walks them and asks for <see cref="DashboardAction.GettingStartedTipsClosed"/>.
+    /// </summary>
+    public GettingStartedTips? GettingStarted
+    {
+        get => _gettingStarted;
+        set => SetProperty(ref _gettingStarted, value);
+    }
 
     /// <summary>The current repository's name; empty when none is selected.</summary>
     public string CurrentRepositoryName { get => _currentRepositoryName; set => SetProperty(ref _currentRepositoryName, value ?? string.Empty); }

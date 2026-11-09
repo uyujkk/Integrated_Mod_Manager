@@ -52,8 +52,9 @@ public sealed partial class SettingsPage : UserControl
         SetCard(ThemeSettingsCard, T("Settings.AppTheme"), T("Settings.SwitchBetweenLightAndDarkFluent"));
         SetCard(DensitySettingsCard, T("Settings.InterfaceDensity"), T("Settings.CompactModeShowsMoreContentOn"));
         SetCard(MotionSettingsCard, T("Settings.ReduceMotion"), T("Settings.DisablePageSlideInAndImage"));
+        SetCard(TitleBarSearchSettingsCard, T("Settings.ShowTitleBarSearch"), T("Settings.ShowTitleBarSearchDescription"));
         SetCard(TraySettingsCard, T("Tray.MinimizeToSystemTray"), T("Tray.KeepTheAppRunningInThe"));
-        foreach (ToggleSwitch toggle in new[] { ReduceMotionToggleSwitch, MinimizeToTrayToggleSwitch, StartupUpdateToggleSwitch })
+        foreach (ToggleSwitch toggle in new[] { ReduceMotionToggleSwitch, TitleBarSearchToggleSwitch, MinimizeToTrayToggleSwitch, StartupUpdateToggleSwitch })
         {
             toggle.OnContent = T("Common.On2");
             toggle.OffContent = T("Common.Off2");
@@ -65,6 +66,7 @@ public sealed partial class SettingsPage : UserControl
         AutomationProperties.SetName(ThemeComboBox, T("Settings.AppTheme"));
         AutomationProperties.SetName(DensityComboBox, T("Settings.InterfaceDensity"));
         AutomationProperties.SetName(ReduceMotionToggleSwitch, T("Settings.ReduceMotion"));
+        AutomationProperties.SetName(TitleBarSearchToggleSwitch, T("Settings.ShowTitleBarSearch"));
         AutomationProperties.SetName(MinimizeToTrayToggleSwitch, T("Tray.MinimizeToSystemTray"));
 
         // App updates.

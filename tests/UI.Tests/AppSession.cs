@@ -93,6 +93,20 @@ public sealed class AppSession : IDisposable
         return this;
     }
 
+    /// <summary>Closes the app the way a user does (so it saves its settings) and starts the same copy again.</summary>
+    public AppSession Restart()
+    {
+        if (_application is { HasExited: false })
+        {
+            using Process process = Process.GetProcessById(_application.ProcessId);
+            _application.Close();
+            if (!process.WaitForExit(15000)) throw new InvalidOperationException("The app did not close for the restart.");
+        }
+        _application?.Dispose();
+        _application = null;
+        return Start();
+    }
+
     public bool IsRunning => _application is { HasExited: false };
 
     // Text in the language this session's app shows: Chinese once configured, the system's choice on a first install.
