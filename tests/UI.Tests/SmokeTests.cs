@@ -188,6 +188,36 @@ public sealed class SmokeTests
         app.AssertNoErrors();
     }
 
+    // Stage J5: the global hotkey is a switch; there is no Apply button to forget.
+    [Fact]
+    public void Shortcuts_GlobalHotkeySwitchTurnsTheHotkeyOffAndOn()
+    {
+        using AppSession app = AppSession.Configured().Start();
+        AppSession.Invoke(app.Find("ShortcutsNavButton"));
+        // The overlay settings are below the bindings; their rows exist only once open and on screen.
+        var bounds = app.Find("ShortcutsScrollViewer").BoundingRectangle;
+        Mouse.MoveTo(new System.Drawing.Point(bounds.X + bounds.Width / 2, bounds.Y + bounds.Height / 2));
+        app.Expand("ShortcutsOverlayExpander");
+        AutomationElement? toggle = null;
+        for (int step = 0; step < 12 && toggle is null; step++)
+        {
+            toggle = app.MainWindow.FindFirstDescendant(cf => cf.ByAutomationId("ShortcutHotkeyToggle"))
+                ?? app.MainWindow.FindFirstDescendant(cf => cf.ByName(app.Text("ShortcutPanel.GlobalHotkey")).And(cf.ByControlType(FlaUI.Core.Definitions.ControlType.Button)));
+            if (toggle is null)
+            {
+                Mouse.Scroll(-2);
+                Thread.Sleep(400);
+            }
+        }
+        Assert.NotNull(toggle);
+
+        AppSession.Invoke(toggle);
+        Assert.False(app.ShellConfig()["ShortcutPanelHotkeyEnabled"]!.GetValue<bool>());
+        AppSession.Invoke(toggle);
+        Assert.True(app.ShellConfig()["ShortcutPanelHotkeyEnabled"]!.GetValue<bool>());
+        app.AssertNoErrors();
+    }
+
     [Fact]
     public void Shortcuts_InputMethodIsSaved()
     {

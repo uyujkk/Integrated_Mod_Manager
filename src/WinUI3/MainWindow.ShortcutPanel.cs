@@ -143,6 +143,7 @@ public sealed partial class MainWindow
             case ShortcutPageAction.SendNumLock: _ = SendNumLockAsync(); break;
             case ShortcutPageAction.RestartElevated: RestartManagerElevated(); break;
             case ShortcutPageAction.SetHotkey when request.Argument is (uint modifiers, uint key): SetShortcutHotkey(modifiers, key); break;
+            case ShortcutPageAction.OpenDashboard: OnDashboardNavClicked(this, new RoutedEventArgs()); break;
             case ShortcutPageAction.DisableHotkey:
                 _shortcutPanelHotkey?.Disable();
                 _shortcuts.HotkeyEnabled = false;
@@ -178,8 +179,9 @@ public sealed partial class MainWindow
         string? previous = _shortcuts.SelectedMod?.Path ?? _currentSecondLevelPath;
         int revision = ++_shortcuts.ScanRevision;
         _shortcuts.InputEnabled = false;
-        _shortcuts.Detected = [];
+        _shortcuts.ModsRead = false;
         _shortcuts.LoadedPath = string.Empty;
+        _shortcuts.Detected = [];
         RenderShortcutButtons();
         _shortcuts.StatusText = T("ShortcutPanel.ReadingCurrentRepository");
         ShortcutModOption[] options = await Task.Run(() => ReadShortcutModOptions(repository));
@@ -187,6 +189,7 @@ public sealed partial class MainWindow
         // A new list clears the choice, as replacing a ComboBox's items did; the choice below loads the bindings again.
         _shortcuts.ModOptions = options;
         _shortcuts.SelectedMod = null;
+        _shortcuts.ModsRead = true;
         _ = RefreshShortcutDeployedModsAsync();
         LoadCharacterFollowProfile(repository);
         _shortcuts.SelectedMod = options.FirstOrDefault(p => string.Equals(p.Path, previous, StringComparison.OrdinalIgnoreCase)) ?? options.FirstOrDefault();
@@ -202,8 +205,9 @@ public sealed partial class MainWindow
     private async Task LoadShortcutSelectionAsync(bool force = false)
     {
         int revision = ++_shortcuts.ScanRevision;
-        _shortcuts.Detected = [];
+        // The path before the bindings: the page reads both when the bindings change.
         _shortcuts.LoadedPath = string.Empty;
+        _shortcuts.Detected = [];
         RenderShortcutButtons();
         if (_shortcuts.SelectedMod is not ShortcutModOption mod) { RefreshShortcutOverlay(bindingsChanged: true); return; }
         try
@@ -211,8 +215,8 @@ public sealed partial class MainWindow
             _shortcuts.StatusText = T("ShortcutPanel.ReadingINI");
             var detected = await Task.Run(() => _shortcutScanCache.Scan(mod.Path, force));
             if (_onlineWindowClosed || revision != _shortcuts.ScanRevision) return;
-            _shortcuts.Detected = detected;
             _shortcuts.LoadedPath = mod.Path;
+            _shortcuts.Detected = detected;
             _shortcuts.StatusText = T("ShortcutPanel.ReadBindingsInGameConditionsAre", detected.Count);
             RenderShortcutButtons();
         }

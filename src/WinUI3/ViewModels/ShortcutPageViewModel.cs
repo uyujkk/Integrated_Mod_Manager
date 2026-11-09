@@ -17,7 +17,10 @@ public enum ShortcutPageAction
 
     /// <summary>Argument: the hotkey as (modifiers, key); the window registers it or reports <see cref="ShortcutPageViewModel.HotkeyRejected"/>.</summary>
     SetHotkey,
-    DisableHotkey
+    DisableHotkey,
+
+    /// <summary>The repository has no Mods: go to the dashboard to set its folders.</summary>
+    OpenDashboard
 }
 
 public sealed record ShortcutPageRequest(ShortcutPageAction Action, object? Argument = null);
@@ -54,11 +57,15 @@ public sealed partial class ShortcutPageViewModel : ObservableObject
     private bool _isElevated;
     private bool _privilegeWarning;
     private bool _hotkeyRejected;
+    private bool _modsRead;
 
     /// <summary>Raised when the page asks for something only the window can do.</summary>
     public event EventHandler<ShortcutPageRequest>? ActionRequested;
 
     public void Request(ShortcutPageAction action, object? argument = null) => ActionRequested?.Invoke(this, new ShortcutPageRequest(action, argument));
+
+    /// <summary>The Mod folders were read, so an empty list means the repository has none (not that it is still being read).</summary>
+    public bool ModsRead { get => _modsRead; set => SetProperty(ref _modsRead, value); }
 
     /// <summary>The current repository's Mod folders.</summary>
     public IReadOnlyList<ShortcutModOption> ModOptions { get => _modOptions; set => SetProperty(ref _modOptions, value ?? []); }

@@ -116,11 +116,12 @@ public sealed partial class ShortcutsPage : UserControl
 
         ShortcutsOverlayExpander.Header = T("ShortcutPanel.OverlaySettings");
         ShortcutsOpenOverlayButton.Content = T("ShortcutPanel.OpenOverlay");
-        ShortcutsHotkeyCard.Header = T("ShortcutPanel.HotkeyGroup");
-        ShortcutHotkeyModifiersPicker.Header = T("ShortcutPanel.ShowHideOverlay");
-        ShortcutHotkeyKeyPicker.Header = T("ShortcutPanel.Key2");
-        ShortcutHotkeyApplyButton.Content = T("Common.Apply");
-        ShortcutHotkeyDisableButton.Content = T("ShortcutPanel.Disable");
+        ShortcutsHotkeyCard.Header = T("ShortcutPanel.GlobalHotkey");
+        SetToggleText(ShortcutHotkeyToggle, T("ShortcutPanel.GlobalHotkey"));
+        ShortcutsHotkeyChordCard.Header = T("ShortcutPanel.ShowHideOverlay");
+        AutomationProperties.SetName(ShortcutHotkeyModifiersPicker, T("ShortcutPanel.ShowHideOverlay"));
+        AutomationProperties.SetName(ShortcutHotkeyKeyPicker, T("ShortcutPanel.Key2"));
+        ShortcutsStatusRefreshButton.Content = T("ShortcutPanel.RefreshWindows");
         ShortcutsOverlayAppearanceTitleTextBlock.Text = T("ShortcutPanel.AppearanceGroup");
         ShortcutsOverlayBehaviorTitleTextBlock.Text = T("ShortcutPanel.BehaviorGroup");
         ShortcutsOverlayBehaviorNoteTextBlock.Text = T("ShortcutPanel.TheOverlaySupportsWindowedBorderlessMode");
@@ -191,7 +192,20 @@ public sealed partial class ShortcutsPage : UserControl
 
     private void OnNumLockClicked(object sender, RoutedEventArgs e) => ViewModel.Request(ShortcutPageAction.SendNumLock);
 
-    private void OnHotkeyDisableClicked(object sender, RoutedEventArgs e) => ViewModel.Request(ShortcutPageAction.DisableHotkey);
+    // Turning the switch on registers the chord shown; off releases it.
+    private void OnHotkeyToggled(object sender, RoutedEventArgs e)
+    {
+        if (_syncing) return;
+        if (ShortcutHotkeyToggle.IsOn) ApplyHotkeyChoice();
+        else ViewModel.Request(ShortcutPageAction.DisableHotkey);
+        SyncHotkeyStatus();
+    }
+
+    private void OnEmptyStateActionClicked(object sender, RoutedEventArgs e)
+    {
+        if (ViewModel.ModOptions.Count == 0) ViewModel.Request(ShortcutPageAction.OpenDashboard);
+        else ViewModel.Request(ShortcutPageAction.OpenIni);
+    }
 
     private void OnModPickerChanged(object sender, SelectionChangedEventArgs e)
     {
@@ -228,10 +242,8 @@ public sealed partial class ShortcutsPage : UserControl
         else ViewModel.HoldDuration = sender.Value;
     }
 
-    // A choice takes effect at once; Apply remains to turn the hotkey back on after Disable.
+    // A chord takes effect as soon as it is chosen, and turns the hotkey on; there is nothing to apply.
     private void OnHotkeyPickerChanged(object sender, SelectionChangedEventArgs e) => ApplyHotkeyChoice();
-
-    private void OnHotkeyApplyClicked(object sender, RoutedEventArgs e) => ApplyHotkeyChoice();
 
     private void ApplyHotkeyChoice()
     {
@@ -255,17 +267,22 @@ public sealed partial class ShortcutsPage : UserControl
             case nameof(ShortcutPageViewModel.Targets):
             case nameof(ShortcutPageViewModel.SelectedTarget):
                 SyncTargetPicker();
+                SyncStatus();
                 break;
             case nameof(ShortcutPageViewModel.InputEnabled):
                 SyncInputToggle();
+                SyncStatus();
                 break;
             case nameof(ShortcutPageViewModel.StatusText):
+            case nameof(ShortcutPageViewModel.OverlayVisible):
                 SyncStatus();
                 break;
             case nameof(ShortcutPageViewModel.Detected):
             case nameof(ShortcutPageViewModel.HideUnsupported):
+            case nameof(ShortcutPageViewModel.ModsRead):
                 SyncBindingsHeader();
                 RenderBindings();
+                SyncEmptyState();
                 break;
             case nameof(ShortcutPageViewModel.PrivilegeText):
             case nameof(ShortcutPageViewModel.IsElevated):
@@ -287,6 +304,7 @@ public sealed partial class ShortcutsPage : UserControl
             case nameof(ShortcutPageViewModel.TapDuration):
             case nameof(ShortcutPageViewModel.HoldDuration):
                 SyncSending();
+                SyncStatus();
                 break;
         }
     }
@@ -301,6 +319,7 @@ public sealed partial class ShortcutsPage : UserControl
         SyncSending();
         SyncStatus();
         SyncBindingsHeader();
+        SyncEmptyState();
     }
 
     private void SyncModPicker()
@@ -332,11 +351,40 @@ public sealed partial class ShortcutsPage : UserControl
         finally { _syncing = false; }
     }
 
+    // One line on where keys go now, then the last result: ready (input on), waiting for the user, or no window.
     private void SyncStatus()
     {
-        ShortcutsStatusTextBlock.Text = ViewModel.StatusText;
-        // The full message stays available when trimmed.
-        ToolTipService.SetToolTip(ShortcutsStatusTextBlock, string.IsNullOrEmpty(ViewModel.StatusText) ? null : ViewModel.StatusText);
+        string mode = ViewModel.InputMode == ShortcutInputMode.VirtualKey ? T("ShortcutPanel.VirtualKeys") : T("ShortcutPanel.ScanCodes");
+        ShortcutsStatusInfoBar.Title = T("ShortcutPanel.StatusSummary",
+            ViewModel.SelectedTarget?.Label ?? T("ShortcutPanel.NoTargetYet"),
+            ViewModel.InputEnabled ? T("Common.On2") : T("Common.Off2"),
+            mode,
+            ViewModel.OverlayVisible ? T("ShortcutPanel.OverlayShown") : T("ShortcutPanel.OverlayHidden"));
+        ShortcutsStatusInfoBar.Message = ViewModel.StatusText;
+        ShortcutsStatusInfoBar.Severity = ViewModel.SelectedTarget is null ? InfoBarSeverity.Warning
+            : ViewModel.InputEnabled ? InfoBarSeverity.Success : InfoBarSeverity.Informational;
+        // Without a window the next step is to look for it again.
+        ShortcutsStatusRefreshButton.Visibility = ViewModel.SelectedTarget is null ? Visibility.Visible : Visibility.Collapsed;
+    }
+
+    // No Mods in the repository, or a Mod without bindings: say what to do instead of showing an empty list.
+    private void SyncEmptyState()
+    {
+        bool noMods = ViewModel.ModsRead && ViewModel.ModOptions.Count == 0;
+        bool noBindings = !noMods && ViewModel.SelectedMod is { } mod && ViewModel.LoadedPath == mod.Path && ViewModel.Detected.Count == 0;
+        ShortcutsEmptyState.Visibility = noMods || noBindings ? Visibility.Visible : Visibility.Collapsed;
+        if (noMods)
+        {
+            ShortcutsEmptyState.Title = T("ShortcutPanel.NoModsTitle");
+            ShortcutsEmptyState.Hint = T("ShortcutPanel.NoModsHint");
+            ShortcutsEmptyStateButton.Content = T("ShortcutPanel.OpenDashboard");
+        }
+        else if (noBindings)
+        {
+            ShortcutsEmptyState.Title = T("ShortcutPanel.NoBindingsTitle");
+            ShortcutsEmptyState.Hint = T("ShortcutPanel.NoBindingsHint");
+            ShortcutsEmptyStateButton.Content = T("ShortcutPanel.OpenIni");
+        }
     }
 
     private void SyncBindingsHeader()
@@ -369,12 +417,14 @@ public sealed partial class ShortcutsPage : UserControl
     private void SyncHotkeyStatus()
     {
         SyncHotkeyPickers();
+        _syncing = true;
+        try { ShortcutHotkeyToggle.IsOn = ViewModel.HotkeyRegistered; }
+        finally { _syncing = false; }
         (string modifiers, string key) = ViewModel.HotkeyLabel();
-        // A working hotkey is already on the expander's description; the line below explains only problems.
-        ShortcutHotkeyStatusTextBlock.Text = ViewModel.HotkeyRejected
+        // A working hotkey is already on the expander's description; the card explains only problems.
+        ShortcutsHotkeyCard.Description = ViewModel.HotkeyRejected
             ? T("ShortcutPanel.HotkeyUnavailablePreviousSettingsRetainedChoose")
-            : ViewModel.HotkeyRegistered ? string.Empty : T("ShortcutPanel.GlobalHotkeyDisabledOrUnavailableChoose");
-        ShortcutHotkeyStatusTextBlock.Visibility = ShortcutHotkeyStatusTextBlock.Text.Length > 0 ? Visibility.Visible : Visibility.Collapsed;
+            : ViewModel.HotkeyRegistered ? null! : T("ShortcutPanel.HotkeyOffTurnOn");
         ShortcutsOverlayExpander.Description = ViewModel.HotkeyRegistered
             ? T("ShortcutPanel.OverlayHotkeySummary", modifiers, key)
             : T("ShortcutPanel.OverlayHotkeyOff");

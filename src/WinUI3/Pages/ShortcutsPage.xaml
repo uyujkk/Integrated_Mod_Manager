@@ -67,6 +67,14 @@
                 </toolkit:SettingsCard>
             </StackPanel>
 
+            <!-- Where keys go right now: the window, whether input is on, the input method and the overlay; the
+                 message is the last read, send or capture result. -->
+            <InfoBar x:Name="ShortcutsStatusInfoBar" IsOpen="True" IsClosable="False">
+                <InfoBar.ActionButton>
+                    <Button x:Name="ShortcutsStatusRefreshButton" Click="OnRefreshWindowsClicked" />
+                </InfoBar.ActionButton>
+            </InfoBar>
+
             <!-- The bindings, then the settings: one column at every width, so the setting cards have room. -->
             <StackPanel x:Name="ShortcutsBodyPanel" Spacing="12">
                 <StackPanel x:Name="ShortcutsBindingsPanel" Spacing="4">
@@ -92,9 +100,14 @@
                         </Button>
                     </Grid>
                     <TextBlock x:Name="ShortcutsReadOnlyHintTextBlock" Style="{StaticResource ShortcutsCaptionStyle}" />
-                    <TextBlock x:Name="ShortcutsStatusTextBlock" Margin="0,4,0,0" MinHeight="40" TextWrapping="Wrap" MaxLines="2" TextTrimming="CharacterEllipsis" />
                     <TextBlock x:Name="ShortcutsHiddenNoteTextBlock" Style="{StaticResource ShortcutsCaptionStyle}" Visibility="Collapsed" />
                     <StackPanel x:Name="ShortcutBindingsList" Spacing="4" Margin="0,4,0,0" />
+                    <!-- Nothing to show: say what to do next. -->
+                    <local:EmptyState x:Name="ShortcutsEmptyState" Glyph="&#xE765;" Visibility="Collapsed">
+                        <local:EmptyState.Actions>
+                            <Button x:Name="ShortcutsEmptyStateButton" Click="OnEmptyStateActionClicked" />
+                        </local:EmptyState.Actions>
+                    </local:EmptyState>
                 </StackPanel>
 
                 <StackPanel x:Name="ShortcutsSettingsColumn" Spacing="4">
@@ -104,17 +117,14 @@
                         </toolkit:SettingsExpander.HeaderIcon>
                         <Button x:Name="ShortcutsOpenOverlayButton" Click="OnOpenOverlayClicked" />
                         <toolkit:SettingsExpander.Items>
-                            <toolkit:SettingsCard x:Name="ShortcutsHotkeyCard" ContentAlignment="Vertical" HorizontalContentAlignment="Left">
-                                <StackPanel Spacing="8">
-                                    <StackPanel Orientation="Horizontal" Spacing="8">
-                                        <ComboBox x:Name="ShortcutHotkeyModifiersPicker" SelectionChanged="OnHotkeyPickerChanged" />
-                                        <ComboBox x:Name="ShortcutHotkeyKeyPicker" SelectionChanged="OnHotkeyPickerChanged" />
-                                    </StackPanel>
-                                    <StackPanel Orientation="Horizontal" Spacing="8">
-                                        <Button x:Name="ShortcutHotkeyApplyButton" Click="OnHotkeyApplyClicked" />
-                                        <Button x:Name="ShortcutHotkeyDisableButton" Click="OnHotkeyDisableClicked" />
-                                    </StackPanel>
-                                    <TextBlock x:Name="ShortcutHotkeyStatusTextBlock" Style="{StaticResource ShortcutsCaptionStyle}" Visibility="Collapsed" />
+                            <!-- The global hotkey: on or off, and the chord, which takes effect as soon as it is chosen. -->
+                            <toolkit:SettingsCard x:Name="ShortcutsHotkeyCard">
+                                <ToggleSwitch x:Name="ShortcutHotkeyToggle" Toggled="OnHotkeyToggled" />
+                            </toolkit:SettingsCard>
+                            <toolkit:SettingsCard x:Name="ShortcutsHotkeyChordCard">
+                                <StackPanel Orientation="Horizontal" Spacing="8">
+                                    <ComboBox x:Name="ShortcutHotkeyModifiersPicker" SelectionChanged="OnHotkeyPickerChanged" />
+                                    <ComboBox x:Name="ShortcutHotkeyKeyPicker" SelectionChanged="OnHotkeyPickerChanged" />
                                 </StackPanel>
                             </toolkit:SettingsCard>
                         </toolkit:SettingsExpander.Items>
