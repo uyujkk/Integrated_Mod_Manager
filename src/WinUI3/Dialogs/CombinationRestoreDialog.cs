@@ -51,8 +51,26 @@ internal static class CombinationRestoreDialog
         var tabs = new TabView { IsAddTabButtonVisible = false, CanReorderTabs = false, CanDragTabs = false };
         Grid.SetRow(tabs, 1);
         panel.Children.Add(tabs);
-        AddTab(T("CombinationPresets.Mods", preview.Mods.Count), preview.Mods.Select(mod =>
-            new CombinationPreviewRow(mod.ModRelativePath, mod.Path, ActionText(services, mod.Action))));
+        // The Mods grouped by what the restore does with them (J8): added, removed, kept, skipped.
+        CombinationPreviewRow Row(CombinationModPreview mod) => new(mod.ModRelativePath, mod.Path, ActionText(services, mod.Action));
+        PreviewGroup Group(Func<int, string> header, params CombinationModAction[] actions)
+        {
+            var rows = preview.Mods.Where(mod => actions.Contains(mod.Action)).Select(Row).ToArray();
+            return new PreviewGroup(header(rows.Length), rows);
+        }
+        tabs.TabItems.Add(new TabViewItem
+        {
+            Header = T("CombinationPresets.Mods", preview.Mods.Count), IsClosable = false,
+            Content = preview.Mods.Count == 0
+                ? new TextBlock { Text = T("CombinationPresets.NoItems"), Margin = new Thickness(8) }
+                : DialogLayout.GroupedPreview(
+                [
+                    Group(n => T("Dialogs.PreviewAdded", n), CombinationModAction.Install),
+                    Group(n => T("Dialogs.PreviewRemoved", n), CombinationModAction.Remove),
+                    Group(n => T("Dialogs.PreviewKept", n), CombinationModAction.Keep, CombinationModAction.PreserveExternal, CombinationModAction.UnownedCopy),
+                    Group(n => T("Dialogs.PreviewSkipped", n), CombinationModAction.Pending, CombinationModAction.Unavailable)
+                ], DialogLayout.PreviewRowTemplate())
+        });
         AddTab(T("CombinationPresets.Parameters", preview.Parameters.Count), preview.Parameters
             .OrderBy(item => item.Change.Kind).Select(item => new CombinationPreviewRow(
                 item.ModRelativePath + " · " + item.Change.Saved.Variable,

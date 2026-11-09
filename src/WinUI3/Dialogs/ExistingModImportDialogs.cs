@@ -41,12 +41,24 @@ internal static class ExistingModImportDialogs
     public static async Task<bool> PreviewAsync(AppServices services, ExistingModImportPlan plan, string destination, string size, double windowHeight)
     {
         string T(string key, params object?[] values) => services.Language.T(key, values);
-        var previewBody = new StackPanel { Spacing = 8 };
+        var previewBody = new Grid { RowSpacing = 12, MaxWidth = 620 };
+        previewBody.RowDefinitions.Add(new RowDefinition { Height = GridLength.Auto });
+        previewBody.RowDefinitions.Add(new RowDefinition { Height = new GridLength(1, GridUnitType.Star) });
         previewBody.Children.Add(new TextBlock { Text = T("ExistingModImport.ModsDestination", plan.Items.Length, size, destination), TextWrapping = TextWrapping.Wrap });
-        foreach (ExistingModImportItem item in plan.Items)
-            previewBody.Children.Add(new TextBlock { Text = $"{item.SourceName} → {item.DestinationName}" + (item.Conflict is null ? string.Empty : T("ExistingModImport.ConflictCannotImport")), TextWrapping = TextWrapping.Wrap });
+        // Grouped (J8): what is copied, and what a conflict keeps out.
+        CombinationPreviewRow Row(ExistingModImportItem item) => new($"{item.SourceName} → {item.DestinationName}", "",
+            item.Conflict is null ? string.Empty : T("ExistingModImport.ConflictCannotImport").Trim(' ', '(', ')', '（', '）', '—', '-'));
+        var added = plan.Items.Where(item => item.Conflict is null).Select(Row).ToArray();
+        var skipped = plan.Items.Where(item => item.Conflict is not null).Select(Row).ToArray();
+        ListView list = DialogLayout.GroupedPreview(
+        [
+            new PreviewGroup(T("Dialogs.PreviewAdded", added.Length), added),
+            new PreviewGroup(T("Dialogs.PreviewSkipped", skipped.Length), skipped)
+        ], DialogLayout.PreviewRowTemplate());
+        Grid.SetRow(list, 1);
+        previewBody.Children.Add(list);
         var preview = new ContentDialog { Title = T("ExistingModImport.OrganizedImportPreview"),
-            Content = new ScrollViewer { Content = previewBody, MaxHeight = Math.Max(180, windowHeight - 250), MaxWidth = 620 },
+            Content = new Border { Child = previewBody, MaxHeight = Math.Min(DialogService.MaxContentHeight + 60, Math.Max(180, windowHeight - 250)) },
             PrimaryButtonText = T("ExistingModImport.CopyAndImport"), IsPrimaryButtonEnabled = plan.Items.All(item => item.Conflict is null),
             CloseButtonText = T("Common.Cancel") };
         return await services.Dialogs.ShowAsync(preview) == ContentDialogResult.Primary;

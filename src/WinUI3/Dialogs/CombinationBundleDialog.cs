@@ -2,7 +2,6 @@
 using IntegratedModManager.Core.Presets;
 using Microsoft.UI.Xaml;
 using Microsoft.UI.Xaml.Controls;
-using Microsoft.UI.Xaml.Markup;
 
 namespace ModFolderCopier.WinUI;
 
@@ -25,24 +24,21 @@ internal static class CombinationBundleDialog
             summary += T("CombinationBundles.WarningGameLabelDiffersFromThis");
         if (manifest.Mods.Count == 0) summary += T("CombinationBundles.EmptySetRestoringItRemovesRecognized");
         panel.Children.Add(new TextBlock { Text = summary, TextWrapping = TextWrapping.Wrap });
-        var list = new ListView
+        // Grouped by what installing does with each file (J8): added, kept (identical files reused), skipped (conflicts).
+        PreviewGroup Group(Func<int, string> header, string action, CombinationBundleDisposition? disposition)
         {
-            SelectionMode = ListViewSelectionMode.None, HorizontalContentAlignment = HorizontalAlignment.Stretch,
-            ItemsSource = import.Preview.Select(item => new CombinationPreviewRow(item.RelativePath, "", item.Disposition switch
-            {
-                CombinationBundleDisposition.Install => T("CombinationBundles.NewInstall"),
-                CombinationBundleDisposition.Reuse => T("CombinationBundles.IdenticalFilesReuse"),
-                _ => T("CombinationBundles.PathContentConflictBlocked")
-            })).ToArray(),
-            ItemTemplate = (DataTemplate)XamlReader.Load("""
-                <DataTemplate xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation">
-                  <StackPanel Padding="8" Spacing="4">
-                    <TextBlock Text="{Binding Title}" TextWrapping="Wrap"/>
-                    <TextBlock Text="{Binding ValueText}" FontSize="12" TextWrapping="Wrap"/>
-                  </StackPanel>
-                </DataTemplate>
-                """)
-        };
+            var rows = import.Preview.Where(item => disposition is null
+                    ? item.Disposition is not (CombinationBundleDisposition.Install or CombinationBundleDisposition.Reuse)
+                    : item.Disposition == disposition)
+                .Select(item => new CombinationPreviewRow(item.RelativePath, "", action)).ToArray();
+            return new PreviewGroup(header(rows.Length), rows);
+        }
+        ListView list = DialogLayout.GroupedPreview(
+        [
+            Group(n => T("Dialogs.PreviewAdded", n), T("CombinationBundles.NewInstall"), CombinationBundleDisposition.Install),
+            Group(n => T("Dialogs.PreviewKept", n), T("CombinationBundles.IdenticalFilesReuse"), CombinationBundleDisposition.Reuse),
+            Group(n => T("Dialogs.PreviewSkipped", n), T("CombinationBundles.PathContentConflictBlocked"), null)
+        ], DialogLayout.PreviewRowTemplate());
         Grid.SetRow(list, 1); panel.Children.Add(list);
         var restore = new CheckBox { Content = T("CombinationBundles.ReviewDeploymentAndStateRestoreAfter"),
             IsChecked = true, IsEnabled = import.CanInstall };
