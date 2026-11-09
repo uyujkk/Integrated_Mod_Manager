@@ -244,7 +244,7 @@ public sealed partial class MainWindow
             string? name = await PromptForTextAsync(
                 T("PersistentSlots.FoundVariablesNameThisSlot", values.Count),
                 T("PersistentSlots.SaveInternalState"),
-                T("PersistentSlots.State1"));
+                T("PersistentSlots.State1"), T("Common.Save"));
             name = name?.Trim();
             if (string.IsNullOrWhiteSpace(name)) return;
 
@@ -345,9 +345,9 @@ public sealed partial class MainWindow
         {
             if (_restoringPersistentRuntime) return;
             ModPersistentSlot? slot = GetSelectedPersistentSlot();
-            if (slot is null || !await ShowConfirmAsync(
+            if (slot is null || !await ShowDangerConfirmAsync(
                 T("PersistentSlots.DeleteSlotModINIsWillNot", slot.Name),
-                T("PersistentSlots.DeleteStateSlot"))) return;
+                T("PersistentSlots.DeleteStateSlot"), T("Dialogs.Delete"))) return;
 
             _modPersistentSlots.Remove(slot);
             _selectedModPersistentSlotId = null;

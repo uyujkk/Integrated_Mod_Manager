@@ -368,8 +368,12 @@ public sealed partial class MainWindow
     // The common dialogs, shown by DialogService (stage J8).
     private Task ShowMessageAsync(string content, string title) => _services.Dialogs.MessageAsync(title, content);
 
-    private Task<string?> PromptForTextAsync(string content, string title, string defaultValue)
-        => _services.Dialogs.PromptAsync(title, content, defaultValue);
+    private Task<string?> PromptForTextAsync(string content, string title, string defaultValue, string primaryText)
+        => _services.Dialogs.PromptAsync(title, content, defaultValue, primaryText);
 
-    private Task<bool> ShowConfirmAsync(string content, string title) => _services.Dialogs.ConfirmAsync(title, content);
+    private Task<bool> ShowConfirmAsync(string content, string title, string primaryText) => _services.Dialogs.ConfirmAsync(title, content, primaryText);
+
+    // Delete, remove, overwrite: the red button, and Cancel is the default.
+    private Task<bool> ShowDangerConfirmAsync(string content, string title, string primaryText)
+        => _services.Dialogs.DangerConfirmAsync(title, content, primaryText);
 }

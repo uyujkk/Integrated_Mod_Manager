@@ -428,7 +428,7 @@ public sealed partial class MainWindow
                 return;
             }
 
-            if (!await ShowConfirmAsync(T("ProductivityFeatures.RestoringThisBackupReplacesTheCurrent"), T("ProductivityFeatures.RestoreInstallBackup")))
+            if (!await ShowDangerConfirmAsync(T("ProductivityFeatures.RestoringThisBackupReplacesTheCurrent"), T("ProductivityFeatures.RestoreInstallBackup"), T("Dialogs.Restore")))
             {
                 return;
             }
@@ -539,7 +539,7 @@ public sealed partial class MainWindow
             string path = await CreateDiagnosticReportAsync();
             bool confirmed = await ShowConfirmAsync(
                 T("ProductivityFeatures.DiagnosticReportCreatedGitHubSNew", Path.GetFileName(path)),
-                T("ProductivityFeatures.ReportAnIssue"));
+                T("ProductivityFeatures.ReportAnIssue"), T("Dialogs.OpenIssuePage"));
             if (!confirmed)
             {
                 return;

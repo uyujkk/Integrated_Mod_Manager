@@ -43,7 +43,7 @@ public sealed partial class MainWindow
         {
             (int mods, int count)? saved = await CaptureCombinationProfileAsync(repository, name, existing, includeState, userIni,
                 () => ShowConfirmAsync(T("CombinationPresets.NoEnabledRepositoryModsWereRecognized"),
-                    T("CombinationPresets.EmptyCombination")));
+                    T("CombinationPresets.EmptyCombination"), T("Common.Save")));
             if (saved is (int mods, int count))
                 ShowAppNotification(T("CombinationPresets.Saved", name, mods, count));
         }

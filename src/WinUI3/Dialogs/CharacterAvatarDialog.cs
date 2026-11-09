@@ -31,7 +31,7 @@ internal static class CharacterAvatarDialog
         {
             Title = T("CharacterAvatars.BindToCharacter"),
             Content = panel,
-            PrimaryButtonText = T("Dialogs.OK"),
+            PrimaryButtonText = T("Dialogs.Bind"),
             CloseButtonText = T("Common.Cancel"),
             DefaultButton = ContentDialogButton.Primary
         };

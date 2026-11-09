@@ -99,6 +99,6 @@ public sealed partial class MainWindow
             repository.SourcePath, modSourcePaths, repository.AllowMultipleModsPerCharacter, repository.CharacterSelectionOverrides);
         return characters.Count == 0 || await ShowConfirmAsync(
             T("CombinationPresets.SingleSelectionCharactersHaveSeveralMods", string.Join("\n", characters)),
-            T("CombinationPresets.SeveralModsForOneCharacter"));
+            T("CombinationPresets.SeveralModsForOneCharacter"), T("Dialogs.Restore"));
     }
 }

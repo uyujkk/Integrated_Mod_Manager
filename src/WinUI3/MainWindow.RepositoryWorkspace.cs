@@ -1084,9 +1084,10 @@ public sealed partial class MainWindow
     private void UpdateDeployButtonLabel()
     {
         SecondLevelFolderItem? mod = GetSelectedSecondLevelItem();
-        ToggleCopyButton.Content = mod is not null && ModTone(mod) == ModStateTone.Deployed
-            ? T("LocalLibrary.RemoveFromTarget")
-            : T("Localization.DeployMod");
+        bool removes = mod is not null && ModTone(mod) == ModStateTone.Deployed;
+        ToggleCopyButton.Content = removes ? T("LocalLibrary.RemoveFromTarget") : T("Localization.DeployMod");
+        // Removing uses the fixed red danger colour, deploying the accent colour (J8).
+        ToggleCopyButton.Style = (Style)Application.Current.Resources[removes ? "DangerAccentButtonStyle" : "PrimaryButtonStyle"];
     }
 
     private void UpdateRepositoryInfoSource()

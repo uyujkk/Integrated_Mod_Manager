@@ -25,7 +25,7 @@ public sealed partial class MainWindow
     // Screenshots can show a UID, a nickname or chat: pictures are taken only after the user agrees.
     private async Task EnablePresetPreviewsAsync()
     {
-        if (await ShowConfirmAsync(T("PresetPreview.PrivacyNotice"), T("PresetPreview.CaptureWhenSaving")))
+        if (await ShowConfirmAsync(T("PresetPreview.PrivacyNotice"), T("PresetPreview.CaptureWhenSaving"), T("Dialogs.TurnOn")))
             _shortcuts.CapturePresetPreviews = true;
     }
 

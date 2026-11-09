@@ -65,7 +65,7 @@ public sealed partial class MainWindow
         int? current = LoaderAutoSaveSetting.Read(text);
         if (current == seconds) return;
         if (current is null || LoaderAutoSaveSetting.Write(text, seconds) is not { } updated
-            || !await ShowConfirmAsync(T("SlotCapture.ConfirmAutoSave", path, current, seconds), T("SlotCapture.AutoSaveInterval")))
+            || !await ShowConfirmAsync(T("SlotCapture.ConfirmAutoSave", path, current, seconds), T("SlotCapture.AutoSaveInterval"), T("Dialogs.Change")))
         {
             RefreshLoaderAutoSave();
             return;

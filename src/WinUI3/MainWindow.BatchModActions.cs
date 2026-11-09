@@ -106,7 +106,7 @@ public sealed partial class MainWindow
         int linkCount = deletable.Sum(mod => links[mod].Count);
         string names = string.Join("\n", deletable.Select(mod => mod.Name));
         string confirm = T("BatchMods.ConfirmDelete", deletable.Length, linkCount, names) + (unverified.Count == 0 ? string.Empty : "\n\n" + unverifiedNote);
-        if (!await ShowConfirmAsync(confirm, T("LocalLibrary.ConfirmDelete"))) return;
+        if (!await ShowDangerConfirmAsync(confirm, T("LocalLibrary.ConfirmDelete"), T("Dialogs.Delete"))) return;
 
         string selectedFirstLevelPath = _characters.Selected?.Path ?? string.Empty;
         var failed = new List<string>();

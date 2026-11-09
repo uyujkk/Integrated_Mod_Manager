@@ -101,7 +101,7 @@ public sealed partial class MainWindow
         SetCombinationBusy(true);
         try
         {
-            if (!await ShowConfirmAsync(confirmation, T("CombinationBundles.ExportBundle"))) return;
+            if (!await ShowConfirmAsync(confirmation, T("CombinationBundles.ExportBundle"), T("Dialogs.Export"))) return;
             cancellation.Token.ThrowIfCancellationRequested();
             string? folder = await PickFolderAsync();
             cancellation.Token.ThrowIfCancellationRequested();

@@ -21,6 +21,9 @@ internal sealed class DialogService(LanguageService language)
 
     public XamlRoot? Root => _root();
 
+    /// <summary>The most a dialog's content shows before it scrolls.</summary>
+    public const double MaxContentHeight = 400;
+
     private string T(string key) => language.T(key);
 
     /// <summary>Called once the window exists.</summary>
@@ -82,21 +85,43 @@ internal sealed class DialogService(LanguageService language)
         await MessageAsync(title, content);
     }
 
-    public async Task<bool> ConfirmAsync(string title, string content, string? primaryText = null)
+    /// <summary>A confirmation; the primary button says what happens (a verb, not "OK").</summary>
+    public async Task<bool> ConfirmAsync(string title, string content, string primaryText)
         => await ShowAsync(new ContentDialog
         {
             Title = title,
             Content = TextContent(content),
-            PrimaryButtonText = primaryText ?? T("Dialogs.Confirm"),
+            PrimaryButtonText = primaryText,
             CloseButtonText = T("Common.Cancel"),
-            DefaultButton = ContentDialogButton.Close
+            DefaultButton = ContentDialogButton.Primary
         }) == ContentDialogResult.Primary;
 
-    /// <summary>A confirmation of something that cannot be undone: Cancel is the default button.</summary>
-    public async Task<bool> DangerConfirmAsync(string title, string content, string? primaryText = null)
-        => await ConfirmAsync(title, content, primaryText);
+    /// <summary>A confirmation of something that cannot be undone (delete, remove, overwrite): see <see cref="MarkDangerous"/>.</summary>
+    public async Task<bool> DangerConfirmAsync(string title, string content, string primaryText)
+    {
+        var dialog = new ContentDialog
+        {
+            Title = title,
+            Content = TextContent(content),
+            PrimaryButtonText = primaryText,
+            CloseButtonText = T("Common.Cancel")
+        };
+        MarkDangerous(dialog);
+        return await ShowAsync(dialog) == ContentDialogResult.Primary;
+    }
 
-    public async Task<string?> PromptAsync(string title, string content, string defaultValue, string? primaryText = null)
+    /// <summary>
+    /// The primary button gets the fixed red danger style, Cancel stays a plain button and is the default, so Enter
+    /// and Esc both cancel and the danger button never looks like an accent-coloured one.
+    /// </summary>
+    public static void MarkDangerous(ContentDialog dialog)
+    {
+        dialog.PrimaryButtonStyle = (Style)Application.Current.Resources["DangerAccentButtonStyle"];
+        dialog.CloseButtonStyle = (Style)Application.Current.Resources["DefaultButtonStyle"];
+        dialog.DefaultButton = ContentDialogButton.Close;
+    }
+
+    public async Task<string?> PromptAsync(string title, string content, string defaultValue, string primaryText)
     {
         var textBox = new TextBox
         {
@@ -112,16 +137,17 @@ internal sealed class DialogService(LanguageService language)
         {
             Title = title,
             Content = panel,
-            PrimaryButtonText = primaryText ?? T("Dialogs.OK"),
+            PrimaryButtonText = primaryText,
             CloseButtonText = T("Common.Cancel"),
             DefaultButton = ContentDialogButton.Primary
         });
         return result == ContentDialogResult.Primary ? textBox.Text : null;
     }
 
+    // Text longer than the dialog scrolls, at most 400 high like the dialogs of Windows Settings.
     private ScrollViewer TextContent(string content) => new()
     {
-        MaxHeight = Viewport.ContentHeight,
+        MaxHeight = Math.Min(MaxContentHeight, Viewport.ContentHeight),
         HorizontalScrollBarVisibility = ScrollBarVisibility.Disabled,
         Content = new TextBlock { Text = content, TextWrapping = TextWrapping.Wrap }
     };

@@ -450,9 +450,9 @@ public sealed partial class MainWindow
 
     private async Task RemoveTrackedModRecordAsync(TrackedModUpdateResult result)
     {
-        bool confirmed = await ShowConfirmAsync(
+        bool confirmed = await ShowDangerConfirmAsync(
             T("OnlineDownloadFlow.RemoveTheUpdateTrackingRecordFor", result.Title),
-            T("OnlineDownloadFlow.RemoveTracking"));
+            T("OnlineDownloadFlow.RemoveTracking"), T("Dialogs.Remove"));
         if (!confirmed)
         {
             return;

@@ -200,9 +200,9 @@ public sealed partial class MainWindow
                 return;
             }
 
-            if (!await ShowConfirmAsync(
+            if (!await ShowDangerConfirmAsync(
                 T("InstallTransactions.UndoTheMostRecentModCopy"),
-                T("InstallTransactions.UndoModChange")))
+                T("InstallTransactions.UndoModChange"), T("Dialogs.Undo")))
             {
                 return;
             }

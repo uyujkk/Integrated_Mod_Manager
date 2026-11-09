@@ -91,8 +91,8 @@ public sealed partial class MainWindow
         }
         if (await ChooseSlotValuesAsync(values) is not { } chosen) return;
         values = chosen;
-        if (!await ShowConfirmAsync(T("PersistentVariants.ReplaceSlotValues", context.Slot.Name, context.Slot.Values.Count, values.Count),
-                T("PersistentVariants.UpdateSelectedSlot")))
+        if (!await ShowDangerConfirmAsync(T("PersistentVariants.ReplaceSlotValues", context.Slot.Name, context.Slot.Values.Count, values.Count),
+                T("PersistentVariants.UpdateSelectedSlot"), T("Dialogs.Replace")))
         {
             return;
         }
@@ -111,7 +111,7 @@ public sealed partial class MainWindow
     private async Task RenameSelectedPersistentSlotAsync()
     {
         if (SelectedSlotContext() is not { } context) return;
-        string? name = (await PromptForTextAsync(T("PersistentVariants.EnterANewSlotName"), T("PersistentVariants.RenameSelectedSlot"), context.Slot.Name))?.Trim();
+        string? name = (await PromptForTextAsync(T("PersistentVariants.EnterANewSlotName"), T("PersistentVariants.RenameSelectedSlot"), context.Slot.Name, T("Dialogs.Rename")))?.Trim();
         if (string.IsNullOrWhiteSpace(name) || name == context.Slot.Name) return;
         context.Slot.Name = name;
         SaveShellConfig();
@@ -153,8 +153,8 @@ public sealed partial class MainWindow
         }
 
         string files = string.Join("\n", plans.SelectMany(plan => plan.Edits).Select(edit => edit.Path));
-        if (!await ShowConfirmAsync(T("PersistentVariants.ConfirmWriteModDefaults", context.Slot.Name, plans[0].ChangedCount, files),
-                T("PersistentVariants.WriteSlotAsModDefaults")))
+        if (!await ShowDangerConfirmAsync(T("PersistentVariants.ConfirmWriteModDefaults", context.Slot.Name, plans[0].ChangedCount, files),
+                T("PersistentVariants.WriteSlotAsModDefaults"), T("Dialogs.Write")))
         {
             return;
         }
@@ -269,7 +269,7 @@ public sealed partial class MainWindow
         WorkspaceRepository? repository = GetSelectedRepository();
         if (repository is null || await RequireUserIniPathAsync(T("PersistentVariants.SaveUserIniSnapshot")) is not { } userIni) return;
         string? name = (await PromptForTextAsync(T("PersistentVariants.NameThisSnapshot"), T("PersistentVariants.SaveUserIniSnapshot"),
-            DateTime.Now.ToString("yyyy-MM-dd HH.mm", System.Globalization.CultureInfo.InvariantCulture)))?.Trim();
+            DateTime.Now.ToString("yyyy-MM-dd HH.mm", System.Globalization.CultureInfo.InvariantCulture), T("Common.Save")))?.Trim();
         if (string.IsNullOrWhiteSpace(name)) return;
 
         try

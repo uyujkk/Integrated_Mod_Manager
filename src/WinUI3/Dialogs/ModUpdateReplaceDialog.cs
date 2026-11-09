@@ -29,8 +29,9 @@ internal static class ModUpdateReplaceDialog
         {
             Title = T("ModUpdates.DownloadAndReplaceMod"), Content = body,
             PrimaryButtonText = T("Common.DownloadAndReplace"), CloseButtonText = T("Common.Cancel"),
-            IsPrimaryButtonEnabled = picker.SelectedItem is not null, DefaultButton = ContentDialogButton.Close
+            IsPrimaryButtonEnabled = picker.SelectedItem is not null
         };
+        DialogService.MarkDangerous(dialog);
         picker.SelectionChanged += (_, _) => dialog.IsPrimaryButtonEnabled = picker.SelectedItem is not null;
         if (await services.Dialogs.ShowAsync(dialog) != ContentDialogResult.Primary) return null;
         return picker.SelectedItem is ComboBoxItem { Tag: OnlineDownloadCandidate selected } ? selected : null;

@@ -27,8 +27,8 @@ internal static class BrokenLinksDialog
             PrimaryButtonText = T("InstallTransactions.RemoveBrokenLinks"),
             SecondaryButtonText = T("InstallTransactions.ContinueWithoutCleanup"),
             CloseButtonText = T("Common.Cancel"),
-            DefaultButton = ContentDialogButton.Primary
         };
+        DialogService.MarkDangerous(dialog);
         return await services.Dialogs.ShowAsync(dialog);
     }
 }

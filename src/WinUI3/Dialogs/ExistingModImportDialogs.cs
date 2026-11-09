@@ -67,7 +67,8 @@ internal static class ExistingModImportDialogs
         string T(string key) => services.Language.T(key);
         var dialog = new ContentDialog { Title = T("ExistingModImport.UndoOrganizedImport"),
             Content = new TextBlock { Text = T("ExistingModImport.OnlyUnchangedCopiesFromThisImport"), TextWrapping = TextWrapping.Wrap, MaxWidth = 500 },
-            PrimaryButtonText = T("ExistingModImport.UndoImport"), CloseButtonText = T("Common.Cancel"), DefaultButton = ContentDialogButton.Close };
+            PrimaryButtonText = T("ExistingModImport.UndoImport"), CloseButtonText = T("Common.Cancel") };
+        DialogService.MarkDangerous(dialog);
         return await services.Dialogs.ShowAsync(dialog) == ContentDialogResult.Primary;
     }
 

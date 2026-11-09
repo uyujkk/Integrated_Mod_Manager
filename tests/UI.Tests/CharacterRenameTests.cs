@@ -41,7 +41,7 @@ public sealed class CharacterRenameTests
         AppSession.Invoke(app.Find("CharacterMoreButton"));
         AppSession.Invoke(app.FindByName(app.Text("LocalLibrary.Rename"), TimeSpan.FromSeconds(10)));
         app.Find("PromptTextBox", TimeSpan.FromSeconds(10)).Patterns.Value.Pattern.SetValue("RenamedCharacter");
-        AppSession.Invoke(app.FindByName(app.Text("Dialogs.OK")));
+        AppSession.Invoke(app.FindByName(app.Text("Dialogs.Rename")));
         Wait(() => Directory.Exists(newSource) && Target(junction).Equals(newSource, StringComparison.OrdinalIgnoreCase)
             && (string?)app.ShellConfig()["ConfigurationProfiles"]![0]!["ModRelativePaths"]![0] == @"RenamedCharacter\TestModA");
 

@@ -148,7 +148,7 @@ public sealed partial class MainWindow
         var library = SelectedLocalLibrary();
         if (repo is null || library is null || _characters.Selected is not { } role) return;
         var snapshot = new LocalModFilter { Character = WorkspaceIdentity.Relative(repo.SourcePath, role.Path), Search = _repositoryModSearch!.Text, Tag = _localTagFilter };
-        string? name = await PromptForTextAsync(T("LocalTags.NameThisFilterUpTo64"), T("LocalTags.SaveFilter"), "");
+        string? name = await PromptForTextAsync(T("LocalTags.NameThisFilterUpTo64"), T("LocalTags.SaveFilter"), "", T("Common.Save"));
         if (string.IsNullOrWhiteSpace(name)) return;
         if (name.Trim().Length > 64) { await ShowMessageAsync(T("LocalTags.NamesCanContainUpTo64"), T("LocalTags.NameTooLong")); return; }
         snapshot.Name = name; library.SaveFilter(snapshot); SaveShellConfig();

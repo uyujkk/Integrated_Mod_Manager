@@ -194,7 +194,7 @@ public sealed partial class MainWindow
             string? repositoryName = await PromptForTextAsync(
                 T("Repositories.EnterARepositoryNameYouCan"),
                 T("Repositories.CreateRepository"),
-                T("Repositories.ForExampleGIMainZZZTest"));
+                T("Repositories.ForExampleGIMainZZZTest"), T("Dialogs.Create"));
 
             if (string.IsNullOrWhiteSpace(repositoryName))
             {
@@ -243,7 +243,7 @@ public sealed partial class MainWindow
             string? repositoryName = await PromptForTextAsync(
                 T("Repositories.EnterANewRepositoryName"),
                 T("Repositories.RenameRepository"),
-                repository.Name);
+                repository.Name, T("Dialogs.Rename"));
 
             if (string.IsNullOrWhiteSpace(repositoryName))
             {
@@ -499,17 +499,17 @@ public sealed partial class MainWindow
                 return;
             }
 
-            bool confirmed = await ShowConfirmAsync(
+            bool confirmed = await ShowDangerConfirmAsync(
                 T("Repositories.DeleteThisRepositoryTheRepositoryConfiguration", repository.Name),
-                T("Repositories.FirstConfirmation"));
+                T("Repositories.FirstConfirmation"), T("Dialogs.Delete"));
             if (!confirmed)
             {
                 return;
             }
 
-            bool confirmedAgain = await ShowConfirmAsync(
+            bool confirmedAgain = await ShowDangerConfirmAsync(
                 T("Repositories.PleaseConfirmAgainToDeleteRepository", repository.Name),
-                T("Repositories.SecondConfirmation"));
+                T("Repositories.SecondConfirmation"), T("Dialogs.Delete"));
             if (!confirmedAgain)
             {
                 return;
