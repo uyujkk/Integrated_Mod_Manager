@@ -11,7 +11,7 @@ internal static class SingleModPresetDialog
     {
         string T(string key) => services.Language.T(key);
         var nameBox = new TextBox { Header = T("ShortcutPanel.SinglePresetName"), MaxLength = 120 };
-        var error = new TextBlock { TextWrapping = TextWrapping.Wrap };
+        TextBlock error = DialogLayout.FieldError();
         var content = new StackPanel { Spacing = 10 };
         content.Children.Add(new TextBlock { Text = relative, TextWrapping = TextWrapping.Wrap });
         content.Children.Add(new TextBlock { Text = T("ShortcutPanel.SinglePresetHint"), TextWrapping = TextWrapping.Wrap });

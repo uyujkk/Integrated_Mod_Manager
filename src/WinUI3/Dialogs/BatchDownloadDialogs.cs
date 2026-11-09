@@ -1,4 +1,4 @@
-using IntegratedModManager.Core.Online;
+﻿using IntegratedModManager.Core.Online;
 using Microsoft.UI.Xaml;
 using Microsoft.UI.Xaml.Automation;
 using Microsoft.UI.Xaml.Controls;
@@ -20,9 +20,10 @@ internal static class BatchDownloadDialogs
     /// <summary>"Reading file lists": shown while the window reads them; closing it cancels unless they are read.</summary>
     public static (ContentDialog Dialog, TextBlock Progress) Preparing(AppServices services)
     {
-        string T(string key) => services.Language.T(key);
+        string T(string key, params object?[] values) => services.Language.T(key, values);
         var progress = new TextBlock { Text = T("BatchDownloads.ReadingFileLists"), TextWrapping = TextWrapping.Wrap };
-        var progressDialog = new ContentDialog { Title = T("BatchDownloads.PrepareBatchDownloads"), Content = progress, CloseButtonText = T("Common.Cancel") };
+        var progressDialog = new ContentDialog { Title = T("BatchDownloads.PrepareBatchDownloads"), CloseButtonText = T("Common.Cancel"),
+            Content = new StackPanel { Spacing = 8, Children = { DialogLayout.Step(T("Dialogs.StepOf", 1, 2)), progress, new ProgressBar { IsIndeterminate = true } } } };
         return (progressDialog, progress);
     }
 
@@ -32,6 +33,7 @@ internal static class BatchDownloadDialogs
     {
         string T(string key, params object?[] values) => services.Language.T(key, values);
         var body = new StackPanel { Spacing = 14, MinWidth = 320, MaxWidth = 620 };
+        body.Children.Add(DialogLayout.Step(T("Dialogs.StepOf", 2, 2)));
         body.Children.Add(new TextBlock { Text = T("BatchDownloads.RepositoryReviewFilesAndDestinationsBefore", repositoryName, repositoryPath), TextWrapping = TextWrapping.Wrap });
         var allowDuplicates = new CheckBox { Content = T("BatchDownloads.AllowSeparateCopiesOfInstalledEntries") };
         body.Children.Add(allowDuplicates);

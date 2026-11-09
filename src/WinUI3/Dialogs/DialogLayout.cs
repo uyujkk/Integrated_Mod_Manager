@@ -21,6 +21,48 @@ internal static class DialogLayout
     }
 
     /// <summary>
+    /// A group of settings in a dialog, drawn as a card like a SettingsCard group in Windows Settings: a title,
+    /// an optional description and the controls.
+    /// </summary>
+    public static Border Section(string title, UIElement content, string? description = null)
+    {
+        var panel = new StackPanel { Spacing = 10 };
+        panel.Children.Add(new TextBlock { Text = title, Style = (Style)Application.Current.Resources["BodyStrongTextBlockStyle"], TextWrapping = TextWrapping.Wrap });
+        if (description is not null) panel.Children.Add(Hint(description));
+        panel.Children.Add(content);
+        return new Border { Style = (Style)Application.Current.Resources["CardBorderStyle"], Child = panel };
+    }
+
+    /// <summary>Secondary text under a control: caption size in the secondary text colour.</summary>
+    public static TextBlock Hint(string text = "") => new()
+    {
+        Text = text, TextWrapping = TextWrapping.Wrap,
+        Style = (Style)Application.Current.Resources["CaptionTextBlockStyle"],
+        Foreground = (Microsoft.UI.Xaml.Media.Brush)Application.Current.Resources["TextFillColorSecondaryBrush"]
+    };
+
+    /// <summary>The error of one field, shown right under it in the critical colour; hidden while empty.</summary>
+    public static TextBlock FieldError()
+    {
+        var error = new TextBlock
+        {
+            TextWrapping = TextWrapping.Wrap, Visibility = Visibility.Collapsed,
+            Style = (Style)Application.Current.Resources["CaptionTextBlockStyle"],
+            Foreground = (Microsoft.UI.Xaml.Media.Brush)Application.Current.Resources["SystemFillColorCriticalBrush"]
+        };
+        error.RegisterPropertyChangedCallback(TextBlock.TextProperty,
+            (_, _) => error.Visibility = string.IsNullOrEmpty(error.Text) ? Visibility.Collapsed : Visibility.Visible);
+        return error;
+    }
+
+    /// <summary>"Step 2 of 3" above a dialog's content, for flows that go through several dialogs.</summary>
+    public static TextBlock Step(string text) => new()
+    {
+        Text = text, Style = (Style)Application.Current.Resources["CaptionTextBlockStyle"],
+        Foreground = (Microsoft.UI.Xaml.Media.Brush)Application.Current.Resources["TextFillColorSecondaryBrush"]
+    };
+
+    /// <summary>
     /// A preview list grouped by what happens to each item (added, removed, kept, skipped), each group headed with
     /// its count, like the change lists of Windows Settings. Empty groups are left out; the list virtualizes.
     /// </summary>

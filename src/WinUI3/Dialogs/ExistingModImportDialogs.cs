@@ -1,4 +1,4 @@
-using IntegratedModManager.Core.Deployment;
+﻿using IntegratedModManager.Core.Deployment;
 using Microsoft.UI.Xaml;
 using Microsoft.UI.Xaml.Controls;
 
@@ -14,18 +14,25 @@ internal static class ExistingModImportDialogs
     public static async Task<(string Source, string Destination)?> ChooseAsync(AppServices services, IReadOnlyList<string> characters,
         string? selectedCharacter, Func<Task<string?>> pickFolder)
     {
-        string T(string key) => services.Language.T(key);
+        string T(string key, params object?[] values) => services.Language.T(key, values);
         var sourceBox = new TextBox { Header = T("ExistingModImport.ExistingModLibraryFolder"),
             PlaceholderText = T("ExistingModImport.PasteAFolderPathOrChoose"), HorizontalAlignment = HorizontalAlignment.Stretch };
         var target = new ComboBox { Header = T("ExistingModImport.CopyIntoCharacterFolder"), HorizontalAlignment = HorizontalAlignment.Stretch };
         foreach (string character in characters) target.Items.Add(new ComboBoxItem { Content = Path.GetFileName(character), Tag = character });
         target.SelectedItem = target.Items.Cast<ComboBoxItem>().FirstOrDefault(item => item.Tag as string == selectedCharacter)
             ?? target.Items[0];
+        TextBlock sourceError = DialogLayout.FieldError();
         var choice = new ContentDialog { Title = T("ExistingModImport.ChooseImportDestination"), Content = new StackPanel { Spacing = 12, MinWidth = 320, Children =
-            { new TextBlock { Text = T("ExistingModImport.ImmediateSubfoldersContainingINIFilesAre"), TextWrapping = TextWrapping.Wrap, MaxWidth = 500 }, sourceBox, target } },
+            { DialogLayout.Step(T("Dialogs.StepOf", 1, 3)), new TextBlock { Text = T("ExistingModImport.ImmediateSubfoldersContainingINIFilesAre"), TextWrapping = TextWrapping.Wrap, MaxWidth = 500 },
+              new StackPanel { Spacing = 4, Children = { sourceBox, sourceError } }, target } },
             PrimaryButtonText = T("ExistingModImport.Preview"), SecondaryButtonText = T("ExistingModImport.BrowseSource"), IsPrimaryButtonEnabled = false,
             CloseButtonText = T("Common.Cancel") };
-        sourceBox.TextChanged += (_, _) => choice.IsPrimaryButtonEnabled = Directory.Exists(sourceBox.Text.Trim());
+        sourceBox.TextChanged += (_, _) =>
+        {
+            string path = sourceBox.Text.Trim();
+            choice.IsPrimaryButtonEnabled = Directory.Exists(path);
+            sourceError.Text = path.Length == 0 || choice.IsPrimaryButtonEnabled ? string.Empty : T("Dialogs.FolderNotFound");
+        };
         while (true)
         {
             ContentDialogResult result = await services.Dialogs.ShowAsync(choice);
@@ -44,7 +51,11 @@ internal static class ExistingModImportDialogs
         var previewBody = new Grid { RowSpacing = 12, MaxWidth = 620 };
         previewBody.RowDefinitions.Add(new RowDefinition { Height = GridLength.Auto });
         previewBody.RowDefinitions.Add(new RowDefinition { Height = new GridLength(1, GridUnitType.Star) });
-        previewBody.Children.Add(new TextBlock { Text = T("ExistingModImport.ModsDestination", plan.Items.Length, size, destination), TextWrapping = TextWrapping.Wrap });
+        previewBody.Children.Add(new StackPanel { Spacing = 6, Children =
+        {
+            DialogLayout.Step(T("Dialogs.StepOf", 2, 3)),
+            new TextBlock { Text = T("ExistingModImport.ModsDestination", plan.Items.Length, size, destination), TextWrapping = TextWrapping.Wrap }
+        } });
         // Grouped (J8): what is copied, and what a conflict keeps out.
         CombinationPreviewRow Row(ExistingModImportItem item) => new($"{item.SourceName} → {item.DestinationName}", "",
             item.Conflict is null ? string.Empty : T("ExistingModImport.ConflictCannotImport").Trim(' ', '(', ')', '（', '）', '—', '-'));
@@ -67,16 +78,17 @@ internal static class ExistingModImportDialogs
     /// <summary>The running copy; Cancel asks the copy to stop and the dialog stays until it has.</summary>
     public static (ContentDialog Dialog, TextBlock Status) Progress(AppServices services, CancellationTokenSource cancellation)
     {
-        string T(string key) => services.Language.T(key);
+        string T(string key, params object?[] values) => services.Language.T(key, values);
         var status = new TextBlock { Text = T("ExistingModImport.ValidatingPreviewAndCopying"), TextWrapping = TextWrapping.Wrap, MaxWidth = 500 };
-        var operation = new ContentDialog { Title = T("ExistingModImport.Importing"), Content = status, CloseButtonText = T("ExistingModImport.CancelTask") };
+        var operation = new ContentDialog { Title = T("ExistingModImport.Importing"), CloseButtonText = T("ExistingModImport.CancelTask"),
+            Content = new StackPanel { Spacing = 8, Children = { DialogLayout.Step(T("Dialogs.StepOf", 3, 3)), status, new ProgressBar { IsIndeterminate = true } } } };
         operation.CloseButtonClick += (_, args) => { cancellation.Cancel(); args.Cancel = true; status.Text = T("ExistingModImport.CancelingWaitingForTheCurrentFile"); };
         return (operation, status);
     }
 
     public static async Task<bool> ConfirmUndoAsync(AppServices services)
     {
-        string T(string key) => services.Language.T(key);
+        string T(string key, params object?[] values) => services.Language.T(key, values);
         var dialog = new ContentDialog { Title = T("ExistingModImport.UndoOrganizedImport"),
             Content = new TextBlock { Text = T("ExistingModImport.OnlyUnchangedCopiesFromThisImport"), TextWrapping = TextWrapping.Wrap, MaxWidth = 500 },
             PrimaryButtonText = T("ExistingModImport.UndoImport"), CloseButtonText = T("Common.Cancel") };
@@ -87,7 +99,7 @@ internal static class ExistingModImportDialogs
     /// <summary>The interrupted import record to check, or null when cancelled.</summary>
     public static async Task<string?> ChooseInterruptedAsync(AppServices services, IReadOnlyList<string> candidates)
     {
-        string T(string key) => services.Language.T(key);
+        string T(string key, params object?[] values) => services.Language.T(key, values);
         var records = new ComboBox { Header = T("ExistingModImport.SelectAnInterruptedImport"), HorizontalAlignment = HorizontalAlignment.Stretch };
         foreach (string candidate in candidates)
             records.Items.Add(new ComboBoxItem { Content = File.GetLastWriteTime(candidate).ToString("yyyy-MM-dd HH:mm:ss") + " · " + Path.GetFileName(candidate), Tag = candidate });

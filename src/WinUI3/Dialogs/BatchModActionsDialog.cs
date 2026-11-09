@@ -27,7 +27,7 @@ internal static class BatchModActionsDialog
         var body = new StackPanel { Spacing = 10, MinWidth = 300, MaxWidth = 580 };
         body.Children.Add(action);
         body.Children.Add(profile);
-        var validation = new TextBlock { TextWrapping = TextWrapping.Wrap };
+        TextBlock validation = DialogLayout.FieldError();
         body.Children.Add(validation);
         var selectAll = new CheckBox { Content = T("LocalTags.SelectAllListedMods") };
         body.Children.Add(selectAll);

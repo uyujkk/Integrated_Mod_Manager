@@ -351,6 +351,8 @@
   "Dialogs.PreviewRemoved": "Removed · {0}",
   "Dialogs.PreviewKept": "Kept · {0}",
   "Dialogs.PreviewSkipped": "Skipped · {0}",
+  "Dialogs.StepOf": "Step {0} of {1}",
+  "Dialogs.FolderNotFound": "This folder does not exist.",
   "Dialogs.DeployWithDirectoryJunctionsRepositoryAnd": "Deploy with directory junctions (repository and loader share the same Mod files)",
   "Dialogs.DoesNotExistPleaseChooseIt": " does not exist. Please choose it again.",
   "Dialogs.EditCurrentRepositoryOnlineCategory": "Edit Current Repository Online Category",

@@ -351,6 +351,8 @@
   "Dialogs.PreviewRemoved": "Будет удалено · {0}",
   "Dialogs.PreviewKept": "Останется · {0}",
   "Dialogs.PreviewSkipped": "Пропущено · {0}",
+  "Dialogs.StepOf": "Шаг {0} из {1}",
+  "Dialogs.FolderNotFound": "Такой папки нет.",
   "Dialogs.DeployWithDirectoryJunctionsRepositoryAnd": "Развёртывать через соединения каталогов (репозиторий и загрузчик используют одни и те же файлы модов)",
   "Dialogs.DoesNotExistPleaseChooseIt": " не существует. Выберите заново.",
   "Dialogs.EditCurrentRepositoryOnlineCategory": "Изменить онлайн-категорию текущего репозитория",

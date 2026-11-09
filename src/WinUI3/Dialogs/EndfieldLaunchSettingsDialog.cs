@@ -75,6 +75,8 @@ internal static class EndfieldLaunchSettingsDialog
         outputGrid.Children.Add(outputViewer);
         var outputBorder = new Border { Style = (Style)Application.Current.Resources["InsetBorderStyle"], Padding = new Thickness(12, 8, 8, 10), Child = outputGrid, Visibility = Visibility.Collapsed };
         outputClose.Click += (_, _) => outputBorder.Visibility = Visibility.Collapsed;
+        // A launch profile the integrated launch cannot save is reported here, beside the launch settings (J8).
+        TextBlock saveError = DialogLayout.FieldError();
         var consent = new CheckBox
         {
             Content = new TextBlock { Text = T("EndfieldBridge.IUnderstandTheAdditionalAccountRisk"), TextWrapping = TextWrapping.Wrap },
@@ -155,7 +157,8 @@ internal static class EndfieldLaunchSettingsDialog
         launch.Children.Add(integrated);
         launch.Children.Add(launchHint);
         launch.Children.Add(consent);
-        body.Children.Add(launch);
+        launch.Children.Add(saveError);
+        body.Children.Add(DialogLayout.Section(T("EndfieldBridge.LaunchMethod"), launch));
 
         var paths = new Grid { ColumnSpacing = 10, RowSpacing = 10 };
         paths.ColumnDefinitions.Add(new ColumnDefinition { Width = GridLength.Auto });
@@ -166,14 +169,12 @@ internal static class EndfieldLaunchSettingsDialog
         AddPathRow(paths, 2, T("EndfieldBridge.XXMILauncher"), loaderBox, ".exe");
         AddPathRow(paths, 3, T("EndfieldBridge.GameArguments"), argumentsBox, null);
         var settings = new StackPanel { Spacing = 10 };
-        settings.Children.Add(SectionTitle(T("EndfieldBridge.GameAndLoader")));
         settings.Children.Add(paths);
         settings.Children.Add(modsSwitch);
         settings.Children.Add(modsHint);
-        body.Children.Add(new Border { Style = (Style)Application.Current.Resources["InsetBorderStyle"], Padding = new Thickness(14, 12, 14, 14), Child = settings });
+        body.Children.Add(DialogLayout.Section(T("EndfieldBridge.GameAndLoader"), settings));
 
         var actions = new StackPanel { Spacing = 8 };
-        actions.Children.Add(SectionTitle(T("EndfieldBridge.ChecksAndEFMISetup")));
         var actionRow = new ButtonGrid(3);
         actionRow.Add(ActionButton(T("EndfieldBridge.Check"), async () =>
         {
@@ -226,7 +227,7 @@ internal static class EndfieldLaunchSettingsDialog
             return Task.CompletedTask;
         }));
         actions.Children.Add(actionRow.Panel);
-        body.Children.Add(new Border { Style = (Style)Application.Current.Resources["InsetBorderStyle"], Padding = new Thickness(14, 12, 14, 14), Child = actions });
+        body.Children.Add(DialogLayout.Section(T("EndfieldBridge.ChecksAndEFMISetup"), actions));
 
         var legal = new StackPanel { Spacing = 8 };
         legal.Children.Add(new TextBlock
@@ -296,12 +297,15 @@ internal static class EndfieldLaunchSettingsDialog
             if (!integrated.IsOn) return;
             try
             {
+                saveError.Text = string.Empty;
                 service.SaveSettings(CurrentProfile());
             }
             catch (Exception ex)
             {
                 args.Cancel = true;
-                Show(ex is EndfieldLaunchException known ? known.Text : LaunchText.Both(ex.Message), failure: true);
+                LaunchText text = ex is EndfieldLaunchException known ? known.Text : LaunchText.Both(ex.Message);
+                saveError.Text = T("EndfieldBridge.NotCompleted") + text.For(english);
+                Show(text, failure: true);
             }
         };
 
@@ -310,9 +314,7 @@ internal static class EndfieldLaunchSettingsDialog
 
         TextBox PathBox(string text, string placeholder) => new() { Text = text, PlaceholderText = placeholder, MinWidth = 220 };
 
-        TextBlock SectionTitle(string text) => new() { Text = text, FontWeight = Microsoft.UI.Text.FontWeights.SemiBold };
-
-        TextBlock HintText() => new() { TextWrapping = TextWrapping.Wrap, Opacity = .75, FontSize = 12 };
+        TextBlock HintText() => DialogLayout.Hint();
 
         void AddPathRow(Grid grid, int row, string label, TextBox box, string? extension)
         {

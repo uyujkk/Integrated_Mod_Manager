@@ -34,7 +34,7 @@ internal static class LocalTagsDialog
         selectAll.Click += (_, _) => { foreach (var item in checks) item.Check.IsChecked = selectAll.IsChecked == true; };
         var dialog = new ContentDialog { Title = T("LocalTags.EditLocalTags"), Content = new ScrollViewer { Content = body, MaxHeight = Math.Max(180, windowHeight - 280) },
             PrimaryButtonText = T("Common.Save"), CloseButtonText = T("Common.Cancel") };
-        var validation = new TextBlock { TextWrapping = TextWrapping.Wrap };
+        TextBlock validation = DialogLayout.FieldError();
         body.Children.Insert(3, validation);
         dialog.PrimaryButtonClick += (_, args) =>
         {

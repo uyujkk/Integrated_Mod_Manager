@@ -351,6 +351,8 @@
   "Dialogs.PreviewRemoved": "将移除 · {0}",
   "Dialogs.PreviewKept": "保留 · {0}",
   "Dialogs.PreviewSkipped": "跳过 · {0}",
+  "Dialogs.StepOf": "第 {0} 步，共 {1} 步",
+  "Dialogs.FolderNotFound": "找不到这个文件夹。",
   "Dialogs.DeployWithDirectoryJunctionsRepositoryAnd": "使用目录联接部署（仓库与加载器共享同一份 Mod 文件）",
   "Dialogs.DoesNotExistPleaseChooseIt": "不存在，请重新选择。",
   "Dialogs.EditCurrentRepositoryOnlineCategory": "编辑当前仓库在线分类",
