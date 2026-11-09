@@ -218,6 +218,22 @@ public sealed class SmokeTests
         app.AssertNoErrors();
     }
 
+    // Stage J5b: the overlay is its own class; its compact view goes through the page's settings and is saved.
+    [Fact]
+    public void Overlay_CompactViewIsSaved()
+    {
+        using AppSession app = AppSession.Configured().Start();
+        PressHotkey();
+        Window overlay = Retry(() => app.FindWindow(window => window.Title.StartsWith("IMM ", StringComparison.Ordinal)))
+            ?? throw new InvalidOperationException("The overlay did not open.");
+
+        AppSession.Invoke(AppSession.FindIn(overlay, cf => cf.ByAutomationId("OverlayCompactButton"), "compact button"));
+        Thread.Sleep(600);
+
+        Assert.True(app.ShellConfig()["OverlayCompactView"]!.GetValue<bool>());
+        app.AssertNoErrors();
+    }
+
     [Fact]
     public void Shortcuts_SummaryShowsTheSavedHotkey()
     {
@@ -229,16 +245,68 @@ public sealed class SmokeTests
         app.AssertNoErrors();
     }
 
+    // Stage J5: the page reads the selected Mod's bindings, and a page setting reaches the window and is saved.
+    [Fact]
+    public void Shortcuts_PageReadsTheBindingsAndSavesItsSettings()
+    {
+        using AppSession app = AppSession.Configured().Start();
+        AppSession.Invoke(app.Find("ShortcutsNavButton"));
+
+        app.FindByName(string.Format(app.Text("ShortcutPanel.ReadBindingsInGameConditionsAre"), 2), TimeSpan.FromSeconds(15));
+        AppSession.Invoke(app.Find("ShortcutHideUnsupportedToggle"));
+        Thread.Sleep(600);
+
+        Assert.True(app.ShellConfig()["ShortcutHideUnsupported"]!.GetValue<bool>());
+        app.AssertNoErrors();
+    }
+
+    // Stage J5: the global hotkey is a switch; there is no Apply button to forget.
+    [Fact]
+    public void Shortcuts_GlobalHotkeySwitchTurnsTheHotkeyOffAndOn()
+    {
+        using AppSession app = AppSession.Configured().Start();
+        AppSession.Invoke(app.Find("ShortcutsNavButton"));
+        // The overlay settings are below the bindings; their rows exist only once open and on screen.
+        var bounds = app.Find("ShortcutsScrollViewer").BoundingRectangle;
+        Mouse.MoveTo(new System.Drawing.Point(bounds.X + bounds.Width / 2, bounds.Y + bounds.Height / 2));
+        app.Expand("ShortcutsOverlayExpander");
+        AutomationElement? toggle = null;
+        for (int step = 0; step < 12 && toggle is null; step++)
+        {
+            toggle = app.MainWindow.FindFirstDescendant(cf => cf.ByAutomationId("ShortcutHotkeyToggle"))
+                ?? app.MainWindow.FindFirstDescendant(cf => cf.ByName(app.Text("ShortcutPanel.GlobalHotkey")).And(cf.ByControlType(FlaUI.Core.Definitions.ControlType.Button)));
+            if (toggle is null)
+            {
+                Mouse.Scroll(-2);
+                Thread.Sleep(400);
+            }
+        }
+        Assert.NotNull(toggle);
+
+        AppSession.Invoke(toggle);
+        Assert.False(app.ShellConfig()["ShortcutPanelHotkeyEnabled"]!.GetValue<bool>());
+        AppSession.Invoke(toggle);
+        Assert.True(app.ShellConfig()["ShortcutPanelHotkeyEnabled"]!.GetValue<bool>());
+        app.AssertNoErrors();
+    }
+
     [Fact]
     public void Shortcuts_InputMethodIsSaved()
     {
         using AppSession app = AppSession.Configured().Start();
         AppSession.Invoke(app.Find("ShortcutsNavButton"));
 
-        // The settings sit in collapsed sections, which are not in the automation tree until opened.
-        foreach (AutomationElement section in app.MainWindow.FindAllDescendants(cf => cf.ByClassName("Microsoft.UI.Xaml.Controls.Expander")))
-            if (section.Patterns.ExpandCollapse.IsSupported) section.Patterns.ExpandCollapse.Pattern.Expand();
-        Thread.Sleep(800);
+        // The sending settings are at the bottom of the page, folded; their rows exist only once on screen and open.
+        void ScrollToEnd()
+        {
+            var bounds = app.Find("ShortcutsScrollViewer").BoundingRectangle;
+            Mouse.MoveTo(new System.Drawing.Point(bounds.X + bounds.Width / 2, bounds.Y + bounds.Height / 2));
+            Mouse.Scroll(-40);
+            Thread.Sleep(600);
+        }
+        ScrollToEnd();
+        app.Expand("ShortcutsSendingExpander");
+        ScrollToEnd();
         AutomationElement picker = app.Find("ShortcutInputModePicker");
         picker.Patterns.ExpandCollapse.Pattern.Expand();
         Thread.Sleep(500);

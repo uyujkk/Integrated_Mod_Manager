@@ -190,6 +190,7 @@ public sealed partial class MainWindow : Window
         InitializeSettingsHost();
         InitializeUpdatesHost();
         InitializeDashboardHost();
+        AttachShortcutServices();
         InitializePageHost();
         SubscribeToAppearanceEvents();
         ApplyWindowIcon();
@@ -211,6 +212,7 @@ public sealed partial class MainWindow : Window
         if (_firstInstall) _services.Language.Load(UiLanguagePolicy.ForSystem(System.Globalization.CultureInfo.CurrentUICulture.Name, UiText.Languages));
         LoadConfig();
         LoadShellConfig();
+        ListenToShortcutState();
         if (_firstInstall) SaveConfig();
         InitializeTraySupport();
         InitializeShortcutPanelHotkey();

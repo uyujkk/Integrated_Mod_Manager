@@ -19,6 +19,9 @@
     <Compile Include="..\..\src\WinUI3\Models\WorkspaceRepository.cs" Link="WindowAdapters\WorkspaceRepository.cs" />
     <Compile Include="..\..\src\WinUI3\Models\RepositoryGameMigration.cs" Link="WindowAdapters\RepositoryGameMigration.cs" />
     <Compile Include="..\..\src\WinUI3\ViewModels\ShortcutPageViewModel.cs" Link="WindowAdapters\ShortcutPageViewModel.cs" />
+    <Compile Include="..\..\src\WinUI3\ViewModels\ShortcutPageViewModel.Overlay.cs" Link="WindowAdapters\ShortcutPageViewModel.Overlay.cs" />
+    <Compile Include="..\..\src\WinUI3\Models\ShortcutModOption.cs" Link="WindowAdapters\ShortcutModOption.cs" />
+    <Compile Include="..\..\src\WinUI3\Models\ShortcutTarget.cs" Link="WindowAdapters\ShortcutTarget.cs" />
     <Compile Include="..\..\src\WinUI3\ViewModels\SettingsViewModel.cs" Link="WindowAdapters\SettingsViewModel.cs" />
     <Compile Include="..\..\src\WinUI3\ViewModels\UpdatesViewModel.cs" Link="WindowAdapters\UpdatesViewModel.cs" />
     <Compile Include="..\..\src\WinUI3\ViewModels\RepositoryPathsViewModel.cs" Link="WindowAdapters\RepositoryPathsViewModel.cs" />

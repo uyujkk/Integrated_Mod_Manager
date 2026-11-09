@@ -171,6 +171,29 @@ J0 结果（2026-11-04，分支 `claude/ui-j0-prep`）：
 
 “预设是否对应某个仓库”的判断移到 `RepositoryPresetMatching`，和路径的状态一起补了单元测试。仪表盘的统计、扫描、仓库卡片的数据仍由窗口计算，因为它们用到在线页的分类信息和工作区已加载的角色。
 
+#### J5 牵连清单（快捷键页和浮窗）
+
+快捷键页在 `MainWindow.xaml` 里只有一个空容器（`ShortcutsScrollViewer` > `ShortcutPaneContent`），整页由 `MainWindow.ShortcutPanel.cs`（1249 行）在代码里搭建，控件存在窗口字段里（约 40 个）。浮窗 `ShortcutOverlayWindow` 本身不调用窗口，但它的内容（`BuildShortcutOverlayContent`）也由窗口搭建，按钮直接调窗口方法，而且和页面共用同一组控件和状态。页面的设置栏有六块是别的 partial 文件往里加的。
+
+| 位置 | 做什么 | 打算改成 |
+| --- | --- | --- |
+| `ShortcutPanel.cs` | 搭建整页（标题、工具栏、绑定卡片、设置栏）、排布、扫描 INI、发送按键、浮窗内容、全局热键、权限提示、以管理员身份重启 | 页面控件进 `Pages/ShortcutsPage`；扫描、发送、热键、重启留在窗口或服务，经 `ShortcutPageViewModel` 和请求事件交互 |
+| 页面和浮窗共用的控件 | 浮窗的 Mod 下拉框把选择转给页面的 `_shortcutModPicker`；浮窗的“输入”开关改页面的 `_shortcutEnabledToggle`；浮窗读页面的目标窗口和状态行；两个透明度滑块互相同步 | 共用状态进 ViewModel：Mod 列表和当前 Mod、目标窗口、`InputEnabled`、`StatusText`、`OverlayOpacity`；页面和浮窗都只绑定 ViewModel |
+| `HotReload.cs`、`PresetPreviews.cs`、`ShortcutCapture.cs`、`ShortcutPresets.cs`、`OverlayAppearance.cs`（共 5 个文件，约 20 处） | 写页面的状态行 `_shortcutStatus.Text`，读页面选中的 Mod 和目标窗口 | 改写 `ShortcutPageViewModel.StatusText`、读 ViewModel |
+| 同上加 `PersistentSlots.cs`（约 20 处） | `RefreshShortcutOverlay(...)` 刷新浮窗 | 浮窗接口的 `Refresh(bindingsChanged)` |
+| `OverlayAppearance.cs`、`OverlayAutoContrast.cs`、`HotReload.cs`、`PresetPreviews.cs`、`SlotCapture.cs`、`CharacterFollow.cs` | 各自往设置栏里加一块控件（外观预设、元素透明度、文字颜色、自动对比度、状态槽位热切换、预设预览、槽位截图区域、角色跟随），控件的事件直接改窗口字段并保存配置 | 设置进 ViewModel（每项一个属性），页面用 `SettingsCard`/`SettingsExpander` 显示；窗口监听属性变化后照旧应用到浮窗并保存 |
+| `AppearanceEvents.cs` | 换语言时整页和浮窗重建；换主题时清掉绑定卡片缓存 | 页面自己在 `LanguageChanged`、`ThemeChanged` 里重写文字；浮窗经接口重建 |
+| `Shell.cs`、`PageLayout.cs` | 第一次打开时 `BuildShortcutPane` 和刷新；`AttachPageLayout(ShortcutsScrollViewer, UpdateShortcutsLayout)`；关窗口时 `CloseShortcutPanel` | 快捷键页直接是 `ShortcutsPage`，页面按自己的尺寸排布；关闭仍在窗口 |
+| `Configuration.cs` | 读写快捷键和浮窗的 15 项设置 | 读写 ViewModel |
+| 全局热键（`ShortcutPanelHotkey`） | 窗口注册，按下时 `ToggleShortcutOverlay`；页面的两个下拉框改热键 | 留在窗口；页面改 ViewModel 的热键属性，窗口尝试注册，失败时把属性改回 |
+| 托盘 | 不碰快捷键页和浮窗 | 不变，留在外壳 |
+
+不属于这一页的：`ShortcutBindings.cs`（710 行）是 Mod 工作区“快捷键”标签页的编辑器，J7 随工作区一起移。
+
+浮窗接口（打算）：`IShortcutOverlay`，窗口和页面只通过它打开、隐藏、切换、刷新浮窗和查询是否可见、是否点击穿透；浮窗内容改为单独的类，它需要的操作（发送绑定、切换状态槽位、保存预设、从磁盘刷新、选 Mod、开关输入）由 `IShortcutOverlayActions` 提供，窗口实现这个接口。
+
+范围：上面这些合计约 3100 行、10 个文件，比阶段表里估的 M 大。
+
 ### J8. 对话框与资源
 
 - 每种对话框一个类（`Dialogs/` 下），由 `DialogService` 统一设置 `XamlRoot` 并保证同一时间只有一个对话框。

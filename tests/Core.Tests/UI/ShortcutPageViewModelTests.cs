@@ -58,7 +58,7 @@ public sealed class ShortcutPageViewModelTests
     [Fact]
     public void Properties_RaiseChangeNotifications()
     {
-        var page = new ShortcutPageViewModel();
+        var page = new ShortcutPageViewModel { SelectedTarget = Target(1) };
         var changed = new List<string?>();
         page.PropertyChanged += (_, e) => changed.Add(e.PropertyName);
 
@@ -67,5 +67,52 @@ public sealed class ShortcutPageViewModelTests
         page.OverlayOpacity = 50;
 
         Assert.Equal([nameof(ShortcutPageViewModel.InputEnabled), nameof(ShortcutPageViewModel.SendInProgress), nameof(ShortcutPageViewModel.OverlayOpacity)], changed);
+    }
+
+    private static ShortcutTarget Target(nint handle) => new(handle, 100, 1, "Game");
+
+    [Fact]
+    public void InputEnabled_NeedsATargetWindow()
+    {
+        var page = new ShortcutPageViewModel();
+
+        page.InputEnabled = true;
+        Assert.False(page.InputEnabled);
+
+        page.SelectedTarget = Target(1);
+        page.InputEnabled = true;
+        Assert.True(page.InputEnabled);
+    }
+
+    [Fact]
+    public void SelectedTarget_ChangingItDisarmsInput()
+    {
+        var page = new ShortcutPageViewModel { SelectedTarget = Target(1) };
+        page.InputEnabled = true;
+
+        page.SelectedTarget = Target(2);
+
+        Assert.False(page.InputEnabled);
+    }
+
+    [Theory]
+    [InlineData(double.NaN, double.NaN, 200, 300)]
+    [InlineData(150d, 900d, 150, 900)]
+    public void Durations_FallBackToTheDefaultsWhenCleared(double tap, double hold, int tapMs, int holdMs)
+    {
+        var page = new ShortcutPageViewModel { TapDuration = tap, HoldDuration = hold };
+        Assert.Equal((tapMs, holdMs), (page.TapMilliseconds, page.HoldMilliseconds));
+    }
+
+    [Fact]
+    public void Request_ReachesTheWindow()
+    {
+        var page = new ShortcutPageViewModel();
+        ShortcutPageRequest? seen = null;
+        page.ActionRequested += (_, request) => seen = request;
+
+        page.Request(ShortcutPageAction.SetHotkey, (3u, 0x4Bu));
+
+        Assert.Equal(new ShortcutPageRequest(ShortcutPageAction.SetHotkey, (3u, 0x4Bu)), seen);
     }
 }

@@ -17,56 +17,23 @@ namespace ModFolderCopier.WinUI;
 // nickname or chat, so this stays off until the user agrees, and they never go into diagnostic reports.
 public sealed partial class MainWindow
 {
-    private bool _capturePresetPreviews;
-    private bool _overlayCompactSlots;
     private bool _presetPreviewFrameLocked;
     private CharacterScreenRegion? _presetPreviewDefaultRegion;
     private CharacterScreenRegion? _presetPreviewLastRegion;
     private readonly PresetPreviewStore _presetPreviews = new(Path.Combine(AppContext.BaseDirectory, "snapshots", "preset-previews"));
 
-    private void AddPresetPreviewSetting(StackPanel pane)
+    // Screenshots can show a UID, a nickname or chat: pictures are taken only after the user agrees.
+    private async Task EnablePresetPreviewsAsync()
     {
-        var toggle = new ToggleSwitch
-        {
-            OnContent = T("Common.On2"), OffContent = T("Common.Off2"),
-            Header = T("PresetPreview.CaptureWhenSaving"), IsOn = _capturePresetPreviews
-        };
-        bool reverting = false;
-        toggle.Toggled += async (_, _) =>
-        {
-            if (reverting) return;
-            if (toggle.IsOn && !await ShowConfirmAsync(T("PresetPreview.PrivacyNotice"), T("PresetPreview.CaptureWhenSaving")))
-            {
-                reverting = true;
-                toggle.IsOn = false;
-                reverting = false;
-                return;
-            }
-            _capturePresetPreviews = toggle.IsOn;
-            SaveShellConfig();
-        };
-        pane.Children.Add(toggle);
-        var compact = new ToggleSwitch
-        {
-            OnContent = T("Common.On2"), OffContent = T("Common.Off2"),
-            Header = T("PresetPreview.CompactSlotList"), IsOn = _overlayCompactSlots
-        };
-        compact.Toggled += (_, _) =>
-        {
-            _overlayCompactSlots = compact.IsOn;
-            SaveShellConfig();
-            _overlaySlotSignature = string.Empty;
-            RefreshShortcutOverlay(bindingsChanged: true);
-        };
-        pane.Children.Add(compact);
-        var clearRegion = new Button { Content = T("PresetPreview.ClearDefaultRegion") };
-        clearRegion.Click += (_, _) =>
-        {
-            _presetPreviewDefaultRegion = null;
-            SaveShellConfig();
-            StatusTextBlock.Text = T("PresetPreview.DefaultRegionCleared");
-        };
-        pane.Children.Add(clearRegion);
+        if (await ShowConfirmAsync(T("PresetPreview.PrivacyNotice"), T("PresetPreview.CaptureWhenSaving")))
+            _shortcuts.CapturePresetPreviews = true;
+    }
+
+    private void ClearPresetPreviewRegion()
+    {
+        _presetPreviewDefaultRegion = null;
+        SaveShellConfig();
+        StatusTextBlock.Text = T("PresetPreview.DefaultRegionCleared");
     }
 
     // A saved slot shows the same part of the game every time, once the user has set a default region.
@@ -81,8 +48,8 @@ public sealed partial class MainWindow
     // Taken before F10, which briefly disturbs the picture. A failure only means no preview.
     private async Task<CharacterFrame?> CapturePresetPreviewAsync()
     {
-        if (!_capturePresetPreviews || _shortcutOverlay is not { } overlay
-            || _shortcutTargetPicker?.SelectedItem is not ShortcutTarget target) return null;
+        if (!_shortcuts.CapturePresetPreviews || _overlay.Window is not { } overlay
+            || _shortcuts.SelectedTarget is not ShortcutTarget target) return null;
         return await CaptureTargetFrameAsync(target, overlay);
     }
 
@@ -104,7 +71,7 @@ public sealed partial class MainWindow
         }
         finally
         {
-            if (overlay is not null && ReferenceEquals(_shortcutOverlay, overlay)) overlay.EndCaptureExclusion();
+            if (overlay is not null && ReferenceEquals(_overlay.Window, overlay)) overlay.EndCaptureExclusion();
         }
     }
 
@@ -112,18 +79,18 @@ public sealed partial class MainWindow
     private async Task FrameCurrentSlotPreviewAsync()
     {
         if (_savingOverlaySinglePreset || _restoringPersistentRuntime || _applyingCombinationProfile || _shortcuts.SendInProgress
-            || _shortcutOverlay is not { } overlay) return;
-        ModPersistentSlot? slot = _modPersistentSlots.FirstOrDefault(item => item.Id == _overlayCurrentSlotId);
+            || _overlay.Window is not { } overlay) return;
+        ModPersistentSlot? slot = _modPersistentSlots.FirstOrDefault(item => item.Id == _overlay.CurrentSlotId);
         if (slot is null)
         {
-            _shortcutStatus!.Text = T("PresetPreview.SwitchToASlotFirst");
+            _shortcuts.StatusText = T("PresetPreview.SwitchToASlotFirst");
             RefreshShortcutOverlay(bindingsChanged: true);
             return;
         }
-        if (_shortcutTargetPicker?.SelectedItem is not ShortcutTarget target
+        if (_shortcuts.SelectedTarget is not ShortcutTarget target
             || CharacterScreenCapture.ClientScreenRect(target.Handle) is not { } game)
         {
-            _shortcutStatus!.Text = T("PresetPreview.SelectGameWindow");
+            _shortcuts.StatusText = T("PresetPreview.SelectGameWindow");
             RefreshShortcutOverlay(bindingsChanged: true);
             return;
         }
@@ -140,7 +107,7 @@ public sealed partial class MainWindow
                 start = remembered with { X = game.X + remembered.X, Y = game.Y + remembered.Y };
             var text = new RegionSelectionText(T("PresetPreview.FrameHint"), T("PresetPreview.LockFrameSize"), T("PresetPreview.UseAsDefaultRegion"), T("PresetPreview.Capture"), T("Common.Cancel"));
             RegionSelection? selection = await overlay.SelectRegionAsync(start, text, _presetPreviewFrameLocked, _presetPreviewDefaultRegion is not null, animate);
-            if (selection is null || _onlineWindowClosed || !ReferenceEquals(_shortcutOverlay, overlay)) return;
+            if (selection is null || _onlineWindowClosed || !ReferenceEquals(_overlay.Window, overlay)) return;
             string? stored = null;
             PixelRect? clipped = PresetPreviewStore.ClipToGame(game, selection.Area);
             _presetPreviewFrameLocked = selection.LockSize;
@@ -163,20 +130,20 @@ public sealed partial class MainWindow
                 slot.PreviewFile = stored;
                 SaveShellConfig();
             }
-            _shortcutStatus!.Text = stored is null ? T("PresetPreview.CannotUse") : T("PresetPreview.Framed", slot.Name);
+            _shortcuts.StatusText = stored is null ? T("PresetPreview.CannotUse") : T("PresetPreview.Framed", slot.Name);
         }
         catch (Exception ex)
         {
             LogApplicationIssue("Preset preview framing", ex);
-            if (!_onlineWindowClosed) _shortcutStatus!.Text = T("PresetPreview.CannotUse");
+            if (!_onlineWindowClosed) _shortcuts.StatusText = T("PresetPreview.CannotUse");
         }
         finally
         {
             _savingOverlaySinglePreset = false;
-            if (ReferenceEquals(_shortcutOverlay, overlay)) await overlay.LeaveLayerAsync(animate);
+            if (ReferenceEquals(_overlay.Window, overlay)) await overlay.LeaveLayerAsync(animate);
             if (!_onlineWindowClosed)
             {
-                _overlaySlotSignature = string.Empty;
+                _overlay.InvalidateSlots();
                 RefreshShortcutOverlay(bindingsChanged: true);
                 RefreshPersistentSlotControls();
             }
@@ -186,10 +153,10 @@ public sealed partial class MainWindow
     // In game: the slots of the overlay's Mod as a row of pictures in the middle of the screen. Choosing one switches to it.
     private async Task ShowOverlaySlotGalleryAsync()
     {
-        if (_shortcutOverlay is not { } overlay || _savingOverlaySinglePreset || _applyingCombinationProfile) return;
+        if (_overlay.Window is not { } overlay || _savingOverlaySinglePreset || _applyingCombinationProfile) return;
         if (_restoringPersistentRuntime || _shortcuts.SendInProgress)
         {
-            _shortcutStatus!.Text = T("HotReload.StillApplying");
+            _shortcuts.StatusText = T("HotReload.StillApplying");
             RefreshShortcutOverlay(bindingsChanged: true);
             return;
         }
@@ -214,13 +181,13 @@ public sealed partial class MainWindow
             {
                 card.Children.Add(new TextBlock
                 {
-                    Text = T("PresetPreview.NoPicture"), Height = imageHeight, Foreground = _overlayTextBrush, TextAlignment = TextAlignment.Center,
+                    Text = T("PresetPreview.NoPicture"), Height = imageHeight, Foreground = _overlay.TextBrush, TextAlignment = TextAlignment.Center,
                     Padding = new Thickness(0, imageHeight / 2 - 10, 0, 0)
                 });
             }
             card.Children.Add(new TextBlock
             {
-                Text = ReferenceEquals(slot, current) ? "● " + slot.Name : slot.Name, Foreground = _overlayTextBrush,
+                Text = ReferenceEquals(slot, current) ? "● " + slot.Name : slot.Name, Foreground = _overlay.TextBrush,
                 TextAlignment = TextAlignment.Center, TextTrimming = TextTrimming.CharacterEllipsis
             });
             var button = new Button { Content = card, AllowFocusOnInteraction = false, Padding = new Thickness(8), VerticalAlignment = VerticalAlignment.Top };
@@ -240,12 +207,12 @@ public sealed partial class MainWindow
             scroll.ChangeView(scroll.HorizontalOffset - e.GetCurrentPoint(scroll).Properties.MouseWheelDelta, null, null);
             e.Handled = true;
         };
-        var cancel = new Button { Content = T("Common.Cancel"), Foreground = _overlayTextBrush, AllowFocusOnInteraction = false, HorizontalAlignment = HorizontalAlignment.Right };
+        var cancel = new Button { Content = T("Common.Cancel"), Foreground = _overlay.TextBrush, AllowFocusOnInteraction = false, HorizontalAlignment = HorizontalAlignment.Right };
         cancel.Click += (_, _) => chosen.TrySetResult(null);
         var layer = new Grid { RowSpacing = 8, Padding = new Thickness(14, 0, 14, 12) };
         layer.RowDefinitions.Add(new RowDefinition { Height = new GridLength(1, GridUnitType.Star) });
         layer.RowDefinitions.Add(new RowDefinition { Height = GridLength.Auto });
-        ApplyOverlayElementResources(layer);
+        _overlay.ApplyElementResources(layer);
         Grid.SetRow(cancel, 1);
         layer.Children.Add(scroll);
         layer.Children.Add(cancel);
@@ -263,7 +230,7 @@ public sealed partial class MainWindow
         }
         finally { _savingOverlaySinglePreset = false; }
         // Switch while the window goes back: waiting for the animation would only delay the game.
-        Task leaving = ReferenceEquals(_shortcutOverlay, overlay) ? overlay.LeaveLayerAsync(animate) : Task.CompletedTask;
+        Task leaving = ReferenceEquals(_overlay.Window, overlay) ? overlay.LeaveLayerAsync(animate) : Task.CompletedTask;
         if (selected is not null && !_onlineWindowClosed) await SwitchSlotFromOverlayAsync(selected, modPath);
         await leaving;
     }
@@ -282,13 +249,13 @@ public sealed partial class MainWindow
         }
         Add(T("PresetPreview.FromGame"), async () =>
         {
-            if (_shortcutTargetPicker?.SelectedItem is not ShortcutTarget target)
+            if (_shortcuts.SelectedTarget is not ShortcutTarget target)
             {
                 await ShowMessageAsync(T("PresetPreview.SelectGameWindow"), T("PresetPreview.SetPreview"));
                 return;
             }
             ShortcutInputService.FocusTarget(target);
-            CharacterFrame? frame = await CaptureTargetFrameAsync(target, _shortcutOverlay);
+            CharacterFrame? frame = await CaptureTargetFrameAsync(target, _overlay.Window);
             Activate();
             await ReplacePresetPreviewAsync(repositoryId, presetId, frame, previewFile, assign, refresh);
         });
@@ -372,7 +339,7 @@ public sealed partial class MainWindow
     }
 
     private string PresetPreviewNote(string? previewFile) =>
-        _capturePresetPreviews && previewFile is null ? T("PresetPreview.NotCaptured") : string.Empty;
+        _shortcuts.CapturePresetPreviews && previewFile is null ? T("PresetPreview.NotCaptured") : string.Empty;
 
     private static async Task<byte[]> EncodePresetPreviewAsync(CharacterFrame frame)
     {

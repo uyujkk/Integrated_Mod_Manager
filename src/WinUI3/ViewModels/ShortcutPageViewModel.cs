@@ -3,10 +3,45 @@ using IntegratedModManager.Core.Shortcuts;
 
 namespace ModFolderCopier.WinUI;
 
+/// <summary>What the Shortcuts page asks the window to do; <see cref="ShortcutPageRequest.Argument"/> carries the binding or hotkey.</summary>
+public enum ShortcutPageAction
+{
+    RefreshWindows,
+    ReloadIni,
+    OpenIni,
+
+    /// <summary>Argument: the <see cref="DetectedModShortcut"/> to send.</summary>
+    SendShortcut,
+    SendNumLock,
+    RestartElevated,
+
+    /// <summary>Argument: the hotkey as (modifiers, key); the window registers it or reports <see cref="ShortcutPageViewModel.HotkeyRejected"/>.</summary>
+    SetHotkey,
+    DisableHotkey,
+
+    /// <summary>The repository has no Mods: go to the dashboard to set its folders.</summary>
+    OpenDashboard,
+
+    /// <summary>Save the settings now (the overlay text colour, once its picker closes).</summary>
+    SaveSettings,
+
+    /// <summary>Turn on preset pictures after the privacy notice; the window sets CapturePresetPreviews when agreed.</summary>
+    EnablePresetPreviews,
+    ClearPresetPreviewRegion,
+    SelectCharacterRegion,
+    SaveCharacterReference,
+    RefreshLoaderAutoSave,
+
+    /// <summary>Argument: the loader auto-save interval in seconds; the window asks before writing d3dx.ini.</summary>
+    SetLoaderAutoSave
+}
+
+public sealed record ShortcutPageRequest(ShortcutPageAction Action, object? Argument = null);
+
 /// <summary>
-/// The Shortcuts page and its overlay: the saved settings, whether input may be sent, and which bindings the
-/// selected Mod has. The window still builds the controls, scans INI files and sends keys; it keeps this
-/// state here instead of in its own fields.
+/// The Shortcuts page and its overlay: the saved settings, the Mod and window to send to, whether input may be
+/// sent, the bindings the selected Mod has and the last status. The page (Pages/ShortcutsPage) and the overlay
+/// show this; the window scans INI files, sends keys and answers the page's requests (stage J5).
 /// </summary>
 public sealed partial class ShortcutPageViewModel : ObservableObject
 {
@@ -25,6 +60,69 @@ public sealed partial class ShortcutPageViewModel : ObservableObject
     private bool _sendInProgress;
     private bool _overlayVisible;
     private IReadOnlyList<DetectedModShortcut> _detected = [];
+    private IReadOnlyList<ShortcutModOption> _modOptions = [];
+    private ShortcutModOption? _selectedMod;
+    private IReadOnlyList<ShortcutTarget> _targets = [];
+    private ShortcutTarget? _selectedTarget;
+    private string _statusText = string.Empty;
+    private double _tapDuration = 200, _holdDuration = 300;
+    private string _privilegeText = string.Empty;
+    private bool _isElevated;
+    private bool _privilegeWarning;
+    private bool _hotkeyRejected;
+    private bool _modsRead;
+
+    /// <summary>Raised when the page asks for something only the window can do.</summary>
+    public event EventHandler<ShortcutPageRequest>? ActionRequested;
+
+    public void Request(ShortcutPageAction action, object? argument = null) => ActionRequested?.Invoke(this, new ShortcutPageRequest(action, argument));
+
+    /// <summary>The Mod folders were read, so an empty list means the repository has none (not that it is still being read).</summary>
+    public bool ModsRead { get => _modsRead; set => SetProperty(ref _modsRead, value); }
+
+    /// <summary>The current repository's Mod folders.</summary>
+    public IReadOnlyList<ShortcutModOption> ModOptions { get => _modOptions; set => SetProperty(ref _modOptions, value ?? []); }
+
+    /// <summary>The Mod whose bindings are shown and sent; the page and the overlay both choose it.</summary>
+    public ShortcutModOption? SelectedMod { get => _selectedMod; set => SetProperty(ref _selectedMod, value); }
+
+    /// <summary>Windows that can receive keys.</summary>
+    public IReadOnlyList<ShortcutTarget> Targets { get => _targets; set => SetProperty(ref _targets, value ?? []); }
+
+    /// <summary>The game window. Choosing another one always disarms input, so it is re-armed deliberately.</summary>
+    public ShortcutTarget? SelectedTarget
+    {
+        get => _selectedTarget;
+        set
+        {
+            if (SetProperty(ref _selectedTarget, value)) InputEnabled = false;
+        }
+    }
+
+    /// <summary>The last read, send or capture result, shown on the page and the overlay.</summary>
+    public string StatusText { get => _statusText; set => SetProperty(ref _statusText, value ?? string.Empty); }
+
+    /// <summary>How long a key is pressed, in ms; a cleared box is NaN and sending falls back to 200.</summary>
+    public double TapDuration { get => _tapDuration; set => SetProperty(ref _tapDuration, value); }
+
+    /// <summary>How long a "hold" binding is held, in ms; NaN falls back to 300.</summary>
+    public double HoldDuration { get => _holdDuration; set => SetProperty(ref _holdDuration, value); }
+
+    public int TapMilliseconds => (int)(double.IsFinite(_tapDuration) ? _tapDuration : 200);
+
+    public int HoldMilliseconds => (int)(double.IsFinite(_holdDuration) ? _holdDuration : 300);
+
+    /// <summary>Whether keys can reach the selected window, in words.</summary>
+    public string PrivilegeText { get => _privilegeText; set => SetProperty(ref _privilegeText, value ?? string.Empty); }
+
+    /// <summary>The manager already runs elevated, so restarting as administrator is not offered.</summary>
+    public bool IsElevated { get => _isElevated; set => SetProperty(ref _isElevated, value); }
+
+    /// <summary>The selected window runs with more rights than the manager, so keys would not reach it.</summary>
+    public bool PrivilegeWarning { get => _privilegeWarning; set => SetProperty(ref _privilegeWarning, value); }
+
+    /// <summary>The last hotkey choice could not be registered; the previous one stays in effect.</summary>
+    public bool HotkeyRejected { get => _hotkeyRejected; set => SetProperty(ref _hotkeyRejected, value); }
 
     // Saved settings.
     public ShortcutInputMode InputMode { get => _inputMode; set => SetProperty(ref _inputMode, Enum.IsDefined(value) ? value : ShortcutInputMode.ScanCode); }
@@ -45,8 +143,8 @@ public sealed partial class ShortcutPageViewModel : ObservableObject
     // Runtime state.
     public bool HotkeyRegistered { get => _hotkeyRegistered; set => SetProperty(ref _hotkeyRegistered, value); }
 
-    /// <summary>The user armed sending; nothing reaches a game without it.</summary>
-    public bool InputEnabled { get => _inputEnabled; set => SetProperty(ref _inputEnabled, value); }
+    /// <summary>The user armed sending; nothing reaches a game without it, and it needs a target window.</summary>
+    public bool InputEnabled { get => _inputEnabled; set => SetProperty(ref _inputEnabled, value && _selectedTarget is not null); }
 
     /// <summary>A key, a slot switch or a capture owns the input or d3dx_user.ini right now.</summary>
     public bool SendInProgress { get => _sendInProgress; set => SetProperty(ref _sendInProgress, value); }

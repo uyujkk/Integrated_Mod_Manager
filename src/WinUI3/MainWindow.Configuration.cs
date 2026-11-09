@@ -103,19 +103,17 @@ public sealed partial class MainWindow
             _shortcuts.LoadSettings(config?.ShortcutInputMode, config?.ShortcutOverlayOpacity, config?.ShortcutHideUnsupported,
                 config?.ShortcutPanelHotkeyEnabled ?? true, config?.ShortcutPanelHotkeyModifiers ?? ShortcutPageViewModel.DefaultHotkeyModifiers,
                 config?.ShortcutPanelHotkeyKey ?? ShortcutPageViewModel.DefaultHotkeyKey);
-            _overlayElementOpacity = OverlayAppearancePolicy.ClampElementOpacity(config?.ShortcutOverlayElementOpacity);
-            _overlaySlotSwitchEnabled = config?.OverlaySlotSwitchEnabled ?? false;
-            _capturePresetPreviews = config?.CapturePresetPreviews ?? false;
-            _overlayCompactSlots = config?.OverlayCompactSlots ?? false;
-            _overlayCompactView = config?.OverlayCompactView ?? false;
-            _keepMenuStateVariables = config?.KeepMenuStateVariables ?? false;
+            _shortcuts.OverlayElementOpacity = OverlayAppearancePolicy.ClampElementOpacity(config?.ShortcutOverlayElementOpacity);
+            _shortcuts.OverlaySlotSwitchEnabled = config?.OverlaySlotSwitchEnabled ?? false;
+            _shortcuts.CapturePresetPreviews = config?.CapturePresetPreviews ?? false;
+            _shortcuts.OverlayCompactSlots = config?.OverlayCompactSlots ?? false;
+            _shortcuts.OverlayCompactView = config?.OverlayCompactView ?? false;
+            _shortcuts.KeepMenuStateVariables = config?.KeepMenuStateVariables ?? false;
             _loaderAutoSaveOriginals = new Dictionary<string, int>(config?.LoaderAutoSaveOriginals ?? [], StringComparer.OrdinalIgnoreCase);
             _presetPreviewFrameLocked = config?.PresetPreviewFrameLocked ?? false;
             _presetPreviewDefaultRegion = config?.PresetPreviewDefaultRegion is { IsValid: true } region ? region : null;
-            _overlayTextBrush.Color = ParseOverlayTextColor(config?.ShortcutOverlayTextColor);
-            _overlayUserTextColor = _overlayTextBrush.Color;
-            _overlayAutoContrast = config?.OverlayAutoContrast ?? false;
-            UpdateOverlayContrastTimer();
+            _shortcuts.OverlayTextColor = ShortcutOverlayController.FormatTextColor(ShortcutOverlayController.ParseTextColor(config?.ShortcutOverlayTextColor));
+            _shortcuts.OverlayAutoContrast = config?.OverlayAutoContrast ?? false;
             _lastModUpdateCheckUtc = TryParseDateTimeOffset(config?.LastModUpdateCheckUtc);
             _latestReleaseTag = config?.LatestReleaseTag;
             _latestReleaseTitle = config?.LatestReleaseTitle;
@@ -275,18 +273,18 @@ public sealed partial class MainWindow
                 ShortcutPanelHotkeyEnabled = _shortcuts.HotkeyEnabled,
                 ShortcutInputMode = _shortcuts.InputMode.ToString(),
                 ShortcutOverlayOpacity = _shortcuts.OverlayOpacity,
-                ShortcutOverlayElementOpacity = _overlayElementOpacity,
+                ShortcutOverlayElementOpacity = _shortcuts.OverlayElementOpacity,
                 ShortcutHideUnsupported = _shortcuts.HideUnsupported,
-                OverlaySlotSwitchEnabled = _overlaySlotSwitchEnabled,
-                CapturePresetPreviews = _capturePresetPreviews,
-                OverlayCompactSlots = _overlayCompactSlots,
-                OverlayCompactView = _overlayCompactView,
-                OverlayAutoContrast = _overlayAutoContrast,
-                KeepMenuStateVariables = _keepMenuStateVariables,
+                OverlaySlotSwitchEnabled = _shortcuts.OverlaySlotSwitchEnabled,
+                CapturePresetPreviews = _shortcuts.CapturePresetPreviews,
+                OverlayCompactSlots = _shortcuts.OverlayCompactSlots,
+                OverlayCompactView = _shortcuts.OverlayCompactView,
+                OverlayAutoContrast = _shortcuts.OverlayAutoContrast,
+                KeepMenuStateVariables = _shortcuts.KeepMenuStateVariables,
                 LoaderAutoSaveOriginals = _loaderAutoSaveOriginals.Count == 0 ? null : new Dictionary<string, int>(_loaderAutoSaveOriginals),
                 PresetPreviewFrameLocked = _presetPreviewFrameLocked,
                 PresetPreviewDefaultRegion = _presetPreviewDefaultRegion,
-                ShortcutOverlayTextColor = OverlayTextColorValue,
+                ShortcutOverlayTextColor = _shortcuts.OverlayTextColor,
                 LastModUpdateCheckUtc = _lastModUpdateCheckUtc?.ToString("O"),
                 LatestReleaseTag = _latestReleaseTag,
                 LatestReleaseTitle = _latestReleaseTitle,
