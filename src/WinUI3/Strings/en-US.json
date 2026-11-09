@@ -1426,6 +1426,8 @@
   "ShortcutPanel.SelectTheTargetGameWindowIn": "Select the target game window in the main window before arming input.",
   "ShortcutPanel.SendingSettings": "Sending",
   "ShortcutPanel.SendingSummary": "{0} · tap {1} ms · hold {2} ms",
+  "ShortcutPanel.SendKey": "Send",
+  "ShortcutPanel.MoreActions": "More actions",
   "ShortcutPanel.ScanCodes": "Scan codes",
   "ShortcutPanel.VirtualKeys": "Virtual keys",
   "ShortcutPanel.ShowHideOverlay": "Show/hide overlay",

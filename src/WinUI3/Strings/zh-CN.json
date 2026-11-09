@@ -1426,6 +1426,8 @@
   "ShortcutPanel.SelectTheTargetGameWindowIn": "请先在主窗口选择目标游戏窗口，再开启发送。",
   "ShortcutPanel.SendingSettings": "发送方式",
   "ShortcutPanel.SendingSummary": "{0} · 点按 {1} ms · 长按 {2} ms",
+  "ShortcutPanel.SendKey": "发送",
+  "ShortcutPanel.MoreActions": "更多操作",
   "ShortcutPanel.ScanCodes": "扫描码",
   "ShortcutPanel.VirtualKeys": "虚拟键",
   "ShortcutPanel.ShowHideOverlay": "显示／隐藏浮窗",

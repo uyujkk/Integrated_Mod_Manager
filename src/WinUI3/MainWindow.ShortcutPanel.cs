@@ -820,6 +820,7 @@ public sealed partial class MainWindow
         ShortcutSecurity own = ShortcutProcessSecurity.Current;
         bool elevated = own.UiAccess || ShortcutPrivilegePolicy.IsElevated(own.Integrity);
         _shortcuts.IsElevated = elevated;
+        _shortcuts.PrivilegeWarning = false;
         if (elevated)
         {
             _shortcuts.PrivilegeText = T("ShortcutPanel.TheManagerIsElevatedAndCan");
@@ -834,7 +835,9 @@ public sealed partial class MainWindow
             return;
         }
         ShortcutSecurity destination = ShortcutProcessSecurity.Read(target.ProcessId);
-        _shortcuts.PrivilegeText = ShortcutPrivilegePolicy.Evaluate(own.Integrity, own.UiAccess, destination.Integrity, destination.Error) == ShortcutPrivilegeVerdict.Allowed
+        bool allowed = ShortcutPrivilegePolicy.Evaluate(own.Integrity, own.UiAccess, destination.Integrity, destination.Error) == ShortcutPrivilegeVerdict.Allowed;
+        _shortcuts.PrivilegeWarning = !allowed;
+        _shortcuts.PrivilegeText = allowed
             ? T("ShortcutPanel.TheSelectedWindowRunsAtThe")
             : T("ShortcutPanel.TheSelectedWindowRunsAsAdministrator");
     }

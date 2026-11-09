@@ -1426,6 +1426,8 @@
   "ShortcutPanel.SelectTheTargetGameWindowIn": "Перед включением ввода выберите окно игры в главном окне.",
   "ShortcutPanel.SendingSettings": "Отправка",
   "ShortcutPanel.SendingSummary": "{0} · нажатие {1} мс · удержание {2} мс",
+  "ShortcutPanel.SendKey": "Отправить",
+  "ShortcutPanel.MoreActions": "Другие действия",
   "ShortcutPanel.ScanCodes": "Скан-коды",
   "ShortcutPanel.VirtualKeys": "Виртуальные клавиши",
   "ShortcutPanel.ShowHideOverlay": "Показать/скрыть оверлей",

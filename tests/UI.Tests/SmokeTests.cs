@@ -181,7 +181,7 @@ public sealed class SmokeTests
         AppSession.Invoke(app.Find("ShortcutsNavButton"));
 
         app.FindByName(string.Format(app.Text("ShortcutPanel.ReadBindingsInGameConditionsAre"), 2), TimeSpan.FromSeconds(15));
-        AppSession.Invoke(app.FindByName(app.Text("ShortcutPanel.HideBindingsThatCannotBeSent")));
+        AppSession.Invoke(app.Find("ShortcutHideUnsupportedToggle"));
         Thread.Sleep(600);
 
         Assert.True(app.ShellConfig()["ShortcutHideUnsupported"]!.GetValue<bool>());
@@ -194,10 +194,17 @@ public sealed class SmokeTests
         using AppSession app = AppSession.Configured().Start();
         AppSession.Invoke(app.Find("ShortcutsNavButton"));
 
-        // The settings sit in collapsed sections, which are not in the automation tree until opened.
-        foreach (AutomationElement section in app.MainWindow.FindAllDescendants(cf => cf.ByClassName("Microsoft.UI.Xaml.Controls.Expander")))
-            if (section.Patterns.ExpandCollapse.IsSupported) section.Patterns.ExpandCollapse.Pattern.Expand();
-        Thread.Sleep(800);
+        // The sending settings are at the bottom of the page, folded; their rows exist only once on screen and open.
+        void ScrollToEnd()
+        {
+            var bounds = app.Find("ShortcutsScrollViewer").BoundingRectangle;
+            Mouse.MoveTo(new System.Drawing.Point(bounds.X + bounds.Width / 2, bounds.Y + bounds.Height / 2));
+            Mouse.Scroll(-40);
+            Thread.Sleep(600);
+        }
+        ScrollToEnd();
+        app.Expand("ShortcutsSendingExpander");
+        ScrollToEnd();
         AutomationElement picker = app.Find("ShortcutInputModePicker");
         picker.Patterns.ExpandCollapse.Pattern.Expand();
         Thread.Sleep(500);

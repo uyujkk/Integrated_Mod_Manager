@@ -52,6 +52,7 @@ public sealed partial class ShortcutPageViewModel : ObservableObject
     private double _tapDuration = 200, _holdDuration = 300;
     private string _privilegeText = string.Empty;
     private bool _isElevated;
+    private bool _privilegeWarning;
     private bool _hotkeyRejected;
 
     /// <summary>Raised when the page asks for something only the window can do.</summary>
@@ -96,6 +97,9 @@ public sealed partial class ShortcutPageViewModel : ObservableObject
 
     /// <summary>The manager already runs elevated, so restarting as administrator is not offered.</summary>
     public bool IsElevated { get => _isElevated; set => SetProperty(ref _isElevated, value); }
+
+    /// <summary>The selected window runs with more rights than the manager, so keys would not reach it.</summary>
+    public bool PrivilegeWarning { get => _privilegeWarning; set => SetProperty(ref _privilegeWarning, value); }
 
     /// <summary>The last hotkey choice could not be registered; the previous one stays in effect.</summary>
     public bool HotkeyRejected { get => _hotkeyRejected; set => SetProperty(ref _hotkeyRejected, value); }
