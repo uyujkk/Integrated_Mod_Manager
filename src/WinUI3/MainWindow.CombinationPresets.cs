@@ -3,7 +3,6 @@ using IntegratedModManager.Core.Presets;
 using IntegratedModManager.Core.Repository;
 using Microsoft.UI.Xaml;
 using Microsoft.UI.Xaml.Controls;
-using Microsoft.UI.Xaml.Markup;
 
 namespace ModFolderCopier.WinUI;
 

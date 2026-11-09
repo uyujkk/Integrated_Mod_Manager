@@ -1,7 +1,5 @@
 using IntegratedModManager.Core.Deployment;
 using IntegratedModManager.Core.Online;
-using Microsoft.UI.Xaml;
-using Microsoft.UI.Xaml.Automation;
 using Microsoft.UI.Xaml.Controls;
 
 namespace ModFolderCopier.WinUI;
@@ -26,9 +24,7 @@ public sealed partial class MainWindow
         if (!Directory.Exists(context.RepositoryPath))
         { await ShowMessageAsync(T("BatchDownloads.TheRepositoryFolderIsUnavailableCorrect"), T("BatchDownloads.CannotDownloadBatch")); return; }
         using var cancellation = new CancellationTokenSource();
-        var progress = new TextBlock { Text = T("BatchDownloads.ReadingFileLists"), TextWrapping = TextWrapping.Wrap };
-        var progressDialog = new ContentDialog { Title = T("BatchDownloads.PrepareBatchDownloads"), Content = progress, CloseButtonText = T("Common.Cancel"),
-            XamlRoot = RootGrid.XamlRoot, RequestedTheme = RootGrid.ActualTheme };
+        (ContentDialog progressDialog, TextBlock progress) = BatchDownloadDialogs.Preparing(_services);
         bool prepared = false;
         progressDialog.Closing += (_, _) => { if (!prepared) cancellation.Cancel(); };
         var showing = _services.Dialogs.ShowAsync(progressDialog);
@@ -57,60 +53,26 @@ public sealed partial class MainWindow
         finally { _services.Dialogs.Close(progressDialog); await showing; }
         if (!prepared || cancellation.IsCancellationRequested || _onlineWindowClosed || contextKey != GetOnlineDetailContextKey()) return;
 
-        var body = new StackPanel { Spacing = 14, MinWidth = 320, MaxWidth = 620 };
-        body.Children.Add(new TextBlock { Text = T("BatchDownloads.RepositoryReviewFilesAndDestinationsBefore", context.RepositoryName, context.RepositoryPath), TextWrapping = TextWrapping.Wrap });
-        var allowDuplicates = new CheckBox { Content = T("BatchDownloads.AllowSeparateCopiesOfInstalledEntries") };
-        body.Children.Add(allowDuplicates);
-        var summary = new TextBlock { TextWrapping = TextWrapping.Wrap }; body.Children.Add(summary);
-        var plans = new List<(PreparedSavedDownload Data, CheckBox Include, ComboBox File, ComboBox Folder, TextBlock Status)>();
-        var dialog = new ContentDialog { Title = T("BatchDownloads.ReviewBatchDownloads"), PrimaryButtonText = T("BatchDownloads.AddToDownloadQueue"), CloseButtonText = T("Common.Cancel"),
-            Content = new ScrollViewer { Content = body, MaxHeight = Math.Max(180, RootGrid.ActualHeight - 280) }, XamlRoot = RootGrid.XamlRoot, RequestedTheme = RootGrid.ActualTheme };
-        dialog.Resources["ContentDialogMaxWidth"] = Math.Min(760, Math.Max(400, RootGrid.ActualWidth - 80));
         string[] folders = Directory.GetDirectories(context.RepositoryPath).Order(StringComparer.CurrentCultureIgnoreCase).Prepend(context.RepositoryPath).ToArray();
-        void Validate()
-        {
-            int count = 0, duplicateCount = 0;
-            foreach (var plan in plans)
-            {
-                var file = (plan.File.SelectedItem as ComboBoxItem)?.Tag as OnlineDownloadCandidate;
-                var kind = GetOnlineDuplicateKind(plan.Data.Mod, file, context);
-                plan.Status.Text = plan.Data.Error ?? (file is null ? T("BatchDownloads.NoSupportedArchiveSkipped") : kind switch
-                {
-                    OnlineDuplicateKind.SameFile => T("BatchDownloads.SameFileInstalledASeparateCopy"),
-                    OnlineDuplicateKind.OtherFile => T("BatchDownloads.AnotherFileOrVariantIsInstalled"),
-                    OnlineDuplicateKind.UnknownFile => T("BatchDownloads.EntryInstalledTheOlderRecordCannot"),
-                    _ => T("BatchDownloads.Ready")
-                });
-                if (plan.Include.IsChecked != true || !plan.Include.IsEnabled) continue;
-                count++;
-                if (kind != OnlineDuplicateKind.None) duplicateCount++;
-            }
-            summary.Text = T("BatchDownloads.SelectedHaveExistingInstallations", count, duplicateCount);
-            dialog.IsPrimaryButtonEnabled = count > 0 && (duplicateCount == 0 || allowDuplicates.IsChecked == true);
-        }
+        var reviewRows = new List<BatchDownloadDialogs.Row>();
         foreach (var data in rows)
         {
-            var panel = new StackPanel { Spacing = 6 };
-            var file = new ComboBox { Header = T("BatchDownloads.DownloadFile"), HorizontalAlignment = HorizontalAlignment.Stretch };
             var candidates = OnlineDownloadSelectionPolicy.OrderForManualSelection(data.Mod.DownloadFiles).Where(candidate => candidate.IsSupportedArchive).ToArray();
             if (candidates.Length == 0 && data.Mod.DownloadFiles.Count == 0 && IsSupportedArchiveFile(data.Mod.DownloadFileName) && !string.IsNullOrWhiteSpace(data.Mod.DownloadUrl))
                 candidates = [new OnlineDownloadCandidate { FileId = data.Mod.DownloadFileId, FileName = data.Mod.DownloadFileName, DownloadUrl = data.Mod.DownloadUrl, IsSupportedArchive = true }];
-            foreach (var candidate in candidates) file.Items.Add(new ComboBoxItem { Content = candidate.FileName + (candidate.IsArchived ? T("BatchDownloads.Archived") : ""), Tag = candidate });
-            if (file.Items.Count > 0) file.SelectedIndex = 0;
-            var include = new CheckBox { Content = data.Mod.Title, IsEnabled = data.Error is null && candidates.Length > 0,
-                IsChecked = data.Error is null && candidates.Length > 0 && !_onlineDownloadActions.IsActive(context, GetOnlineDownloadIdentity(data.Mod)) };
-            if (_onlineDownloadActions.IsActive(context, GetOnlineDownloadIdentity(data.Mod))) { include.IsEnabled = false; include.Content += T("BatchDownloads.TaskActive"); }
-            panel.Children.Add(include); panel.Children.Add(file);
-            var folder = new ComboBox { Header = T("BatchDownloads.DownloadAndExtractInto"), HorizontalAlignment = HorizontalAlignment.Stretch };
-            foreach (string path in folders) folder.Items.Add(new ComboBoxItem { Content = path == context.RepositoryPath ? T("BatchDownloads.RepositoryRoot") : Path.GetFileName(path), Tag = path });
+            var files = candidates.Select(candidate => (candidate.FileName + (candidate.IsArchived ? T("BatchDownloads.Archived") : ""), candidate)).ToArray();
+            bool active = _onlineDownloadActions.IsActive(context, GetOnlineDownloadIdentity(data.Mod));
+            bool enabled = data.Error is null && candidates.Length > 0 && !active;
+            bool isChecked = data.Error is null && candidates.Length > 0 && !active;
+            var options = folders.Select(path => (path == context.RepositoryPath ? T("BatchDownloads.RepositoryRoot") : Path.GetFileName(path), (object)path)).ToList();
             // Issue #6: reuse a matching character folder, or offer to create one; nothing is created until approval.
             CharacterFolderPlan? folderPlan = data.Error is null ? PlanCharacterFolder(data.Mod, context.RepositoryPath, data.Aliases) : null;
             string? preferred = folderPlan?.Action == CharacterFolderAction.UseExisting ? folderPlan.Path : null;
-            ComboBoxItem? createItem = null;
+            int createIndex = -1;
             if (folderPlan?.Action == CharacterFolderAction.Create)
             {
-                createItem = new ComboBoxItem { Content = T("BatchDownloads.New", Path.GetFileName(folderPlan.Path)), Tag = new NewCharacterFolderChoice(folderPlan.Path!) };
-                folder.Items.Insert(1, createItem);
+                options.Insert(1, (T("BatchDownloads.New", Path.GetFileName(folderPlan.Path)), new NewCharacterFolderChoice(folderPlan.Path!)));
+                createIndex = 1;
             }
             string folderKey = DownloadFolderKey(context, data.Mod);
             bool usesRemembered = false;
@@ -118,38 +80,29 @@ public sealed partial class MainWindow
             {
                 preferred = remembered;
                 usesRemembered = true;
-                if (!folders.Contains(remembered, StringComparer.OrdinalIgnoreCase)) folder.Items.Add(new ComboBoxItem { Content = remembered, Tag = remembered });
+                if (!folders.Contains(remembered, StringComparer.OrdinalIgnoreCase)) options.Add((remembered, remembered));
             }
-            folder.SelectedItem = folder.Items.OfType<ComboBoxItem>().FirstOrDefault(item => string.Equals(item.Tag as string, preferred, StringComparison.OrdinalIgnoreCase))
-                ?? (usesRemembered ? null : createItem) ?? folder.Items[0];
-            panel.Children.Add(folder);
+            int folderIndex = options.FindIndex(option => string.Equals(option.Item2 as string, preferred, StringComparison.OrdinalIgnoreCase));
+            if (folderIndex < 0) folderIndex = usesRemembered || createIndex < 0 ? 0 : createIndex;
+            string? note = null;
             if (folderPlan is { Action: not CharacterFolderAction.UseExisting })
             {
                 string character = GetOnlineCharacterDisplayName(data.Mod.CharacterName);
-                panel.Children.Add(new TextBlock
-                {
-                    Text = folderPlan.Action == CharacterFolderAction.Create
-                        ? T("BatchDownloads.CreatedAfterApproval", folderPlan.Path)
-                        : CharacterFolderReasonText(folderPlan, character),
-                    TextWrapping = TextWrapping.Wrap, FontSize = 12, Opacity = .75
-                });
+                note = folderPlan.Action == CharacterFolderAction.Create
+                    ? T("BatchDownloads.CreatedAfterApproval", folderPlan.Path)
+                    : CharacterFolderReasonText(folderPlan, character);
             }
-            var status = new TextBlock { TextWrapping = TextWrapping.Wrap }; panel.Children.Add(status);
-            AutomationProperties.SetName(file, T("BatchDownloads.DownloadFile2") + data.Mod.Title);
-            AutomationProperties.SetName(folder, T("BatchDownloads.DownloadDestination") + data.Mod.Title);
-            plans.Add((data, include, file, folder, status));
-            include.Click += (_, _) => Validate(); file.SelectionChanged += (_, _) => Validate();
-            body.Children.Add(new Border { Child = panel, Padding = new Thickness(12), BorderThickness = new Thickness(1), CornerRadius = new CornerRadius(6), BorderBrush = GetAppThemeBrush("AppNavSelectedBorderBrush") });
+            reviewRows.Add(new BatchDownloadDialogs.Row(data, data.Mod.Title, data.Mod.Title + (active ? T("BatchDownloads.TaskActive") : ""), data.Error,
+                enabled, isChecked, files, options, folderIndex, note));
         }
-        allowDuplicates.Click += (_, _) => Validate();
-        Validate();
-        if (await _services.Dialogs.ShowAsync(dialog) != ContentDialogResult.Primary || _onlineWindowClosed || contextKey != GetOnlineDetailContextKey()) return;
-        var chosen = plans.Where(plan => plan.Include.IsChecked == true && plan.Include.IsEnabled).Select(plan => (
-            plan.Data, File: (OnlineDownloadCandidate)((ComboBoxItem)plan.File.SelectedItem).Tag,
-            Choice: ((ComboBoxItem)plan.Folder.SelectedItem).Tag)).ToArray();
+        if (await BatchDownloadDialogs.ReviewAsync(_services, context.RepositoryName, context.RepositoryPath, reviewRows,
+                (key, file) => GetOnlineDuplicateKind(((PreparedSavedDownload)key).Mod, file, context), GetAppThemeBrush("AppNavSelectedBorderBrush"),
+                RootGrid.ActualWidth, RootGrid.ActualHeight) is not { } review
+            || _onlineWindowClosed || contextKey != GetOnlineDetailContextKey()) return;
+        var chosen = review.Rows.Select(plan => (Data: (PreparedSavedDownload)plan.Key, plan.File, Choice: plan.Folder)).ToArray();
         if (chosen.Any(plan => plan.Choice is string folder && !IsUsableRememberedFolder(folder, context)))
         { await ShowMessageAsync(T("BatchDownloads.ADestinationIsNoLongerAvailable"), T("BatchDownloads.DestinationChanged")); return; }
-        if (allowDuplicates.IsChecked != true && chosen.Any(plan => GetOnlineDuplicateKind(plan.Data.Mod, plan.File, context) != OnlineDuplicateKind.None)) return;
+        if (!review.AllowDuplicates && chosen.Any(plan => GetOnlineDuplicateKind(plan.Data.Mod, plan.File, context) != OnlineDuplicateKind.None)) return;
         // Only approved rows create folders; Mods of the same character share one creation.
         var created = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
         try

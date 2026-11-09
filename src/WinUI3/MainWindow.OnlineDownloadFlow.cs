@@ -3,9 +3,7 @@ using IntegratedModManager.Core.Archives;
 using IntegratedModManager.Core.Configuration;
 using IntegratedModManager.Core.Deployment;
 using IntegratedModManager.Core.Infrastructure;
-using IntegratedModManager.Core.Layout;
 using IntegratedModManager.Core.Online;
-using Microsoft.UI.Xaml;
 using Microsoft.UI.Xaml.Controls;
 using Windows.Graphics.Imaging;
 using Windows.Storage.Streams;
@@ -351,7 +349,7 @@ public sealed partial class MainWindow
         return OnlineDownloadFilePolicy.MoveWithoutOverwrite(archivePath, archivePath + detectedExtension);
     }
 
-    private static string FormatFileSize(long bytes)
+    internal static string FormatFileSize(long bytes)
     {
         string[] units = ["B", "KB", "MB", "GB"];
         double size = bytes;
@@ -701,26 +699,11 @@ public sealed partial class MainWindow
             CharacterFolderPlan plan = PlanCharacterFolder(mod, repository.SourcePath, characterAliases);
             string? suggestedFolder = plan.Action == CharacterFolderAction.UseExisting ? plan.Path : null;
 
-            DialogViewport viewport = DialogViewportPolicy.Selection(RootGrid.ActualWidth, RootGrid.ActualHeight);
-            ComboBox folderComboBox = new()
-            {
-                HorizontalAlignment = HorizontalAlignment.Stretch,
-                MinHeight = 40
-            };
-            folderComboBox.Items.Add(new ComboBoxItem
-            {
-                Content = T("OnlineDownloadFlow.UseTheRepositoryRootFolder"),
-                Tag = repository.SourcePath
-            });
-
+            var options = new List<(string Label, object Tag)> { (T("OnlineDownloadFlow.UseTheRepositoryRootFolder"), repository.SourcePath) };
             int suggestedIndex = 0;
             if (plan.Action == CharacterFolderAction.Create)
             {
-                folderComboBox.Items.Add(new ComboBoxItem
-                {
-                    Content = T("OnlineDownloadFlow.NewCharacterFolderRecommended", Path.GetFileName(plan.Path)),
-                    Tag = new NewCharacterFolderChoice(plan.Path!)
-                });
+                options.Add((T("OnlineDownloadFlow.NewCharacterFolderRecommended", Path.GetFileName(plan.Path)), new NewCharacterFolderChoice(plan.Path!)));
                 suggestedIndex = 1;
             }
 
@@ -728,20 +711,14 @@ public sealed partial class MainWindow
             {
                 bool isSuggested = !string.IsNullOrWhiteSpace(suggestedFolder)
                     && string.Equals(childFolder, suggestedFolder, StringComparison.OrdinalIgnoreCase);
-                folderComboBox.Items.Add(new ComboBoxItem
-                {
-                    Content = isSuggested
-                        ? T("OnlineDownloadFlow.Recommended", Path.GetFileName(childFolder))
-                        : Path.GetFileName(childFolder),
-                    Tag = childFolder
-                });
+                options.Add((isSuggested
+                    ? T("OnlineDownloadFlow.Recommended", Path.GetFileName(childFolder))
+                    : Path.GetFileName(childFolder), childFolder));
                 if (isSuggested)
                 {
-                    suggestedIndex = folderComboBox.Items.Count - 1;
+                    suggestedIndex = options.Count - 1;
                 }
             }
-
-            folderComboBox.SelectedIndex = suggestedIndex;
 
             string characterDisplayName = GetOnlineCharacterDisplayName(mod.CharacterName);
             string destinationHint = plan.Action switch
@@ -751,41 +728,9 @@ public sealed partial class MainWindow
                 _ => CharacterFolderReasonText(plan, characterDisplayName)
             };
 
-            ContentDialog dialog = new()
-            {
-                Title = T("OnlineDownloadFlow.ChooseDownloadLocation"),
-                Content = new ScrollViewer
-                {
-                    MaxHeight = viewport.ContentHeight,
-                    HorizontalScrollBarVisibility = ScrollBarVisibility.Disabled,
-                    Content = new StackPanel
-                    {
-                        Width = Math.Min(620, viewport.MaxWidth - 48),
-                        Spacing = 10,
-                        Children =
-                        {
-                            new TextBlock
-                            {
-                                Text = T("OnlineDownloadFlow.CurrentModRepositoryFolderASeparate", repository.SourcePath, destinationHint),
-                                TextWrapping = TextWrapping.Wrap
-                            },
-                            folderComboBox
-                        }
-                    }
-                },
-                PrimaryButtonText = T("OnlineDownloadFlow.UseSelectedFolder"),
-                SecondaryButtonText = T("OnlineDownloadFlow.ChooseAnotherLocation"),
-                CloseButtonText = T("Common.Cancel"),
-                DefaultButton = ContentDialogButton.Primary,
-                XamlRoot = RootGrid.XamlRoot,
-                RequestedTheme = RootGrid.ActualTheme
-            };
-            dialog.Resources["ContentDialogMaxWidth"] = viewport.MaxWidth;
-
-            ContentDialogResult result = await _services.Dialogs.ShowAsync(dialog);
+            (ContentDialogResult result, object? tag) = await DownloadLocationDialog.ShowAsync(_services, repository.SourcePath, destinationHint, options, suggestedIndex);
             if (result == ContentDialogResult.Primary)
             {
-                object? tag = (folderComboBox.SelectedItem as ComboBoxItem)?.Tag;
                 if (tag is NewCharacterFolderChoice choice)
                 {
                     try

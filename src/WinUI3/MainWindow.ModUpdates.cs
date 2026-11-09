@@ -3,8 +3,6 @@ using IntegratedModManager.Core.Archives;
 using IntegratedModManager.Core.Configuration;
 using IntegratedModManager.Core.Online;
 using IntegratedModManager.Core.Updates;
-using Microsoft.UI.Xaml;
-using Microsoft.UI.Xaml.Controls;
 
 namespace ModFolderCopier.WinUI;
 
@@ -48,29 +46,7 @@ public sealed partial class MainWindow
                 ?? throw new IOException(T("ModUpdates.CouldNotLoadCurrentDownloadFiles"));
             var candidates = mod.DownloadFiles.Where(file => file.IsSupportedArchive && !file.IsArchived && !string.IsNullOrWhiteSpace(file.DownloadUrl)).ToArray();
             if (candidates.Length == 0) throw new IOException(T("ModUpdates.NoSupportedArchivesAreAvailableReview"));
-            var picker = new ComboBox { Header = T("ModUpdates.ChooseUpdateFileVariant"), HorizontalAlignment = HorizontalAlignment.Stretch };
-            foreach (var file in candidates)
-                picker.Items.Add(new ComboBoxItem { Content = $"{file.FileName} ({FormatFileSize(file.FileSizeBytes)})", Tag = file });
-            picker.SelectedItem = picker.Items.OfType<ComboBoxItem>().FirstOrDefault(item => item.Tag is OnlineDownloadCandidate file
-                && !string.IsNullOrWhiteSpace(origin.DownloadFileId) && file.FileId == origin.DownloadFileId);
-            if (picker.SelectedItem is null && picker.Items.Count == 1) picker.SelectedIndex = 0;
-            var body = new StackPanel { Spacing = 12, MaxWidth = 560 };
-            body.Children.Add(new TextBlock
-            {
-                Text = result.Path + T("ModUpdates.TheEntireLocalModFolderWill"),
-                TextWrapping = TextWrapping.Wrap
-            });
-            body.Children.Add(picker);
-            var dialog = new ContentDialog
-            {
-                Title = T("ModUpdates.DownloadAndReplaceMod"), Content = body,
-                PrimaryButtonText = T("Common.DownloadAndReplace"), CloseButtonText = T("Common.Cancel"),
-                IsPrimaryButtonEnabled = picker.SelectedItem is not null, DefaultButton = ContentDialogButton.Close,
-                XamlRoot = RootGrid.XamlRoot, RequestedTheme = RootGrid.ActualTheme
-            };
-            picker.SelectionChanged += (_, _) => dialog.IsPrimaryButtonEnabled = picker.SelectedItem is not null;
-            if (await _services.Dialogs.ShowAsync(dialog) != ContentDialogResult.Primary) return;
-            if (picker.SelectedItem is not ComboBoxItem { Tag: OnlineDownloadCandidate selected }) return;
+            if (await ModUpdateReplaceDialog.ChooseAsync(_services, result.Path, candidates, origin.DownloadFileId, FormatFileSize) is not { } selected) return;
             OnlineModCard effective = WithSelectedDownloadFile(mod, selected);
             task = CreateDownloadTask(effective, result.Path);
             // Recovery must never replay a replacement as an ordinary separate installation.

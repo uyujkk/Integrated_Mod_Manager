@@ -1,0 +1,87 @@
+using IntegratedModManager.Core.Deployment;
+using Microsoft.UI.Xaml;
+using Microsoft.UI.Xaml.Controls;
+
+namespace ModFolderCopier.WinUI;
+
+/// <summary>
+/// The dialogs of the organized import of an existing Mod library: where from and to, the preview, the running copy,
+/// undo and the check of interrupted imports (moved from the window in stage J8).
+/// </summary>
+internal static class ExistingModImportDialogs
+{
+    /// <summary>The library folder and the character folder to copy into, or null when cancelled.</summary>
+    public static async Task<(string Source, string Destination)?> ChooseAsync(AppServices services, IReadOnlyList<string> characters,
+        string? selectedCharacter, Func<Task<string?>> pickFolder)
+    {
+        string T(string key) => services.Language.T(key);
+        var sourceBox = new TextBox { Header = T("ExistingModImport.ExistingModLibraryFolder"),
+            PlaceholderText = T("ExistingModImport.PasteAFolderPathOrChoose"), HorizontalAlignment = HorizontalAlignment.Stretch };
+        var target = new ComboBox { Header = T("ExistingModImport.CopyIntoCharacterFolder"), HorizontalAlignment = HorizontalAlignment.Stretch };
+        foreach (string character in characters) target.Items.Add(new ComboBoxItem { Content = Path.GetFileName(character), Tag = character });
+        target.SelectedItem = target.Items.Cast<ComboBoxItem>().FirstOrDefault(item => item.Tag as string == selectedCharacter)
+            ?? target.Items[0];
+        var choice = new ContentDialog { Title = T("ExistingModImport.ChooseImportDestination"), Content = new StackPanel { Spacing = 12, MinWidth = 320, Children =
+            { new TextBlock { Text = T("ExistingModImport.ImmediateSubfoldersContainingINIFilesAre"), TextWrapping = TextWrapping.Wrap, MaxWidth = 500 }, sourceBox, target } },
+            PrimaryButtonText = T("ExistingModImport.Preview"), SecondaryButtonText = T("ExistingModImport.BrowseSource"), IsPrimaryButtonEnabled = false,
+            CloseButtonText = T("Common.Cancel") };
+        sourceBox.TextChanged += (_, _) => choice.IsPrimaryButtonEnabled = Directory.Exists(sourceBox.Text.Trim());
+        while (true)
+        {
+            ContentDialogResult result = await services.Dialogs.ShowAsync(choice);
+            if (result == ContentDialogResult.Primary) break;
+            if (result != ContentDialogResult.Secondary) return null;
+            string? selectedSource = await pickFolder();
+            if (selectedSource is not null) sourceBox.Text = selectedSource;
+        }
+        return (sourceBox.Text.Trim(), (string)((ComboBoxItem)target.SelectedItem).Tag);
+    }
+
+    /// <summary>What will be copied where; true to copy.</summary>
+    public static async Task<bool> PreviewAsync(AppServices services, ExistingModImportPlan plan, string destination, string size, double windowHeight)
+    {
+        string T(string key, params object?[] values) => services.Language.T(key, values);
+        var previewBody = new StackPanel { Spacing = 8 };
+        previewBody.Children.Add(new TextBlock { Text = T("ExistingModImport.ModsDestination", plan.Items.Length, size, destination), TextWrapping = TextWrapping.Wrap });
+        foreach (ExistingModImportItem item in plan.Items)
+            previewBody.Children.Add(new TextBlock { Text = $"{item.SourceName} → {item.DestinationName}" + (item.Conflict is null ? string.Empty : T("ExistingModImport.ConflictCannotImport")), TextWrapping = TextWrapping.Wrap });
+        var preview = new ContentDialog { Title = T("ExistingModImport.OrganizedImportPreview"),
+            Content = new ScrollViewer { Content = previewBody, MaxHeight = Math.Max(180, windowHeight - 250), MaxWidth = 620 },
+            PrimaryButtonText = T("ExistingModImport.CopyAndImport"), IsPrimaryButtonEnabled = plan.Items.All(item => item.Conflict is null),
+            CloseButtonText = T("Common.Cancel") };
+        return await services.Dialogs.ShowAsync(preview) == ContentDialogResult.Primary;
+    }
+
+    /// <summary>The running copy; Cancel asks the copy to stop and the dialog stays until it has.</summary>
+    public static (ContentDialog Dialog, TextBlock Status) Progress(AppServices services, CancellationTokenSource cancellation)
+    {
+        string T(string key) => services.Language.T(key);
+        var status = new TextBlock { Text = T("ExistingModImport.ValidatingPreviewAndCopying"), TextWrapping = TextWrapping.Wrap, MaxWidth = 500 };
+        var operation = new ContentDialog { Title = T("ExistingModImport.Importing"), Content = status, CloseButtonText = T("ExistingModImport.CancelTask") };
+        operation.CloseButtonClick += (_, args) => { cancellation.Cancel(); args.Cancel = true; status.Text = T("ExistingModImport.CancelingWaitingForTheCurrentFile"); };
+        return (operation, status);
+    }
+
+    public static async Task<bool> ConfirmUndoAsync(AppServices services)
+    {
+        string T(string key) => services.Language.T(key);
+        var dialog = new ContentDialog { Title = T("ExistingModImport.UndoOrganizedImport"),
+            Content = new TextBlock { Text = T("ExistingModImport.OnlyUnchangedCopiesFromThisImport"), TextWrapping = TextWrapping.Wrap, MaxWidth = 500 },
+            PrimaryButtonText = T("ExistingModImport.UndoImport"), CloseButtonText = T("Common.Cancel"), DefaultButton = ContentDialogButton.Close };
+        return await services.Dialogs.ShowAsync(dialog) == ContentDialogResult.Primary;
+    }
+
+    /// <summary>The interrupted import record to check, or null when cancelled.</summary>
+    public static async Task<string?> ChooseInterruptedAsync(AppServices services, IReadOnlyList<string> candidates)
+    {
+        string T(string key) => services.Language.T(key);
+        var records = new ComboBox { Header = T("ExistingModImport.SelectAnInterruptedImport"), HorizontalAlignment = HorizontalAlignment.Stretch };
+        foreach (string candidate in candidates)
+            records.Items.Add(new ComboBoxItem { Content = File.GetLastWriteTime(candidate).ToString("yyyy-MM-dd HH:mm:ss") + " · " + Path.GetFileName(candidate), Tag = candidate });
+        records.SelectedIndex = 0;
+        var dialog = new ContentDialog { Title = T("ExistingModImport.ReviewInterruptedImport"), Content = records,
+            PrimaryButtonText = T("ExistingModImport.CheckAndRegister"), CloseButtonText = T("Common.Cancel") };
+        if (await services.Dialogs.ShowAsync(dialog) != ContentDialogResult.Primary) return null;
+        return (string)((ComboBoxItem)records.SelectedItem).Tag;
+    }
+}

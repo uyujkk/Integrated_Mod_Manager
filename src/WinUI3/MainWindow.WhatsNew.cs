@@ -1,6 +1,5 @@
 using System.Diagnostics;
 using IntegratedModManager.Core.Configuration;
-using Microsoft.UI.Xaml;
 using Microsoft.UI.Xaml.Controls;
 
 namespace ModFolderCopier.WinUI;

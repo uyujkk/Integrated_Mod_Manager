@@ -1,7 +1,6 @@
 using IntegratedModManager.Core.Presets;
 using IntegratedModManager.Core.Shortcuts;
 using Microsoft.UI.Xaml;
-using Microsoft.UI.Xaml.Controls;
 
 namespace ModFolderCopier.WinUI;
 

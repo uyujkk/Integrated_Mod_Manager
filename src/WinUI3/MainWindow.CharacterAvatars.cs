@@ -222,33 +222,7 @@ public sealed partial class MainWindow
         repository.CharacterAvatarBindings ??= new(StringComparer.OrdinalIgnoreCase);
         string? current = repository.CharacterAvatarBindings
             .FirstOrDefault(binding => string.Equals(binding.Key, item.Name, StringComparison.OrdinalIgnoreCase)).Value;
-        var choices = new ComboBox { HorizontalAlignment = HorizontalAlignment.Stretch };
-        choices.Items.Add(new ComboBoxItem { Content = T("CharacterAvatars.AutomaticByFolderName"), Tag = string.Empty });
-        foreach (OnlineCharacterOption character in catalog)
-        {
-            string label = string.Equals(character.DisplayNameZh, character.DisplayNameEn, StringComparison.OrdinalIgnoreCase)
-                ? character.DisplayNameZh
-                : $"{character.DisplayNameZh} / {character.DisplayNameEn}";
-            choices.Items.Add(new ComboBoxItem { Content = label, Tag = character.Key });
-        }
-        choices.SelectedItem = choices.Items.Cast<ComboBoxItem>()
-            .FirstOrDefault(choice => string.Equals((string)choice.Tag, current ?? string.Empty, StringComparison.OrdinalIgnoreCase))
-            ?? choices.Items[0];
-
-        var panel = new StackPanel { Spacing = 10 };
-        panel.Children.Add(new TextBlock { Text = T("CharacterAvatars.ChooseTheCharacterForFolder", item.Name), TextWrapping = TextWrapping.Wrap });
-        panel.Children.Add(choices);
-        var dialog = new ContentDialog
-        {
-            Title = T("CharacterAvatars.BindToCharacter"),
-            Content = panel,
-            PrimaryButtonText = T("Dialogs.OK"),
-            CloseButtonText = T("Common.Cancel"),
-            DefaultButton = ContentDialogButton.Primary,
-            RequestedTheme = RootGrid.ActualTheme,
-            XamlRoot = RootGrid.XamlRoot
-        };
-        if (await _services.Dialogs.ShowAsync(dialog) != ContentDialogResult.Primary)
+        if (await CharacterAvatarDialog.ChooseAsync(_services, item.Name, catalog, current) is not { } chosenKey)
         {
             return false;
         }
@@ -257,9 +231,9 @@ public sealed partial class MainWindow
         {
             repository.CharacterAvatarBindings.Remove(folderName);
         }
-        if (choices.SelectedItem is ComboBoxItem { Tag: string characterKey } && characterKey.Length > 0)
+        if (chosenKey.Length > 0)
         {
-            repository.CharacterAvatarBindings[item.Name] = characterKey;
+            repository.CharacterAvatarBindings[item.Name] = chosenKey;
         }
         SaveShellConfig();
         return true;

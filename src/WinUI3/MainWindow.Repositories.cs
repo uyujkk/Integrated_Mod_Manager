@@ -441,105 +441,9 @@ public sealed partial class MainWindow
                 .OrderBy(character => character.DisplayNameEn, StringComparer.CurrentCultureIgnoreCase)
                 .ToList();
 
-            ComboBox wikiCharacterBox = new()
-            {
-                HorizontalAlignment = HorizontalAlignment.Stretch,
-                PlaceholderText = T("Repositories.SelectAWikiCharacter")
-            };
-            foreach (OnlineCharacterOption character in wikiCharacters)
-            {
-                wikiCharacterBox.Items.Add(new ComboBoxItem
-                {
-                    Content = $"{character.DisplayNameZh} / {character.DisplayNameEn}",
-                    Tag = character
-                });
-            }
-
-            ComboBox gameBananaCategoryBox = new()
-            {
-                HorizontalAlignment = HorizontalAlignment.Stretch,
-                PlaceholderText = categoryCandidates.Count == 0
-                    ? T("Repositories.NoCategoriesDiscoveredEnterAnID")
-                    : T("Repositories.SelectADiscoveredGameBananaCategory")
-            };
-            foreach (OnlineCharacterOption candidate in categoryCandidates)
-            {
-                gameBananaCategoryBox.Items.Add(new ComboBoxItem
-                {
-                    Content = $"{candidate.DisplayNameEn} · {candidate.CategoryId}",
-                    Tag = candidate
-                });
-            }
-
-            TextBox categoryIdBox = new()
-            {
-                HorizontalAlignment = HorizontalAlignment.Stretch,
-                PlaceholderText = T("Repositories.GameBananaCharacterCategoryID")
-            };
-            TextBlock mappingStatus = new()
-            {
-                Style = (Style)Application.Current.Resources["CaptionTextStyle"],
-                TextWrapping = TextWrapping.Wrap
-            };
-
-            void SyncSelectedWikiCharacter()
-            {
-                if (wikiCharacterBox.SelectedItem is not ComboBoxItem { Tag: OnlineCharacterOption character })
-                {
-                    categoryIdBox.Text = string.Empty;
-                    mappingStatus.Text = T("Repositories.SelectTheWikiCharacterToCorrect");
-                    return;
-                }
-
-                string mappingKey = OnlineCharacterCatalogMatcher.MappingKey(character);
-                bool hasManualMapping = repository.CharacterCategoryMappings.TryGetValue(mappingKey, out string? mappedCategoryId)
-                    && !string.IsNullOrWhiteSpace(mappedCategoryId);
-                categoryIdBox.Text = hasManualMapping ? mappedCategoryId! : character.CategoryId;
-                gameBananaCategoryBox.SelectedItem = gameBananaCategoryBox.Items
-                    .OfType<ComboBoxItem>()
-                    .FirstOrDefault(item => item.Tag is OnlineCharacterOption candidate
-                        && string.Equals(candidate.CategoryId, categoryIdBox.Text, StringComparison.OrdinalIgnoreCase));
-                mappingStatus.Text = hasManualMapping
-                    ? T("Repositories.AManualMappingIsActiveAnd")
-                    : string.IsNullOrWhiteSpace(character.CategoryId)
-                        ? T("Repositories.NoCategoryHasBeenMatchedAutomatically")
-                        : T("Repositories.ThisIsAnAutomaticMatchSaving");
-            }
-
-            wikiCharacterBox.SelectionChanged += (_, _) => SyncSelectedWikiCharacter();
-            gameBananaCategoryBox.SelectionChanged += (_, _) =>
-            {
-                if (gameBananaCategoryBox.SelectedItem is ComboBoxItem { Tag: OnlineCharacterOption candidate })
-                {
-                    categoryIdBox.Text = candidate.CategoryId;
-                }
-            };
-            wikiCharacterBox.SelectedIndex = 0;
-
-            StackPanel panel = new() { Spacing = 10, MinWidth = 520, MaxWidth = 620 };
-            panel.Children.Add(new TextBlock
-            {
-                Text = T("Repositories.WhenWikiAndGameBananaNamesDiffer"),
-                TextWrapping = TextWrapping.Wrap
-            });
-            panel.Children.Add(DialogLayout.LabeledEditor(T("Repositories.WikiCharacter"), wikiCharacterBox));
-            panel.Children.Add(DialogLayout.LabeledEditor(T("Repositories.DiscoveredCategory"), gameBananaCategoryBox));
-            panel.Children.Add(DialogLayout.LabeledEditor(T("Common.CategoryID"), categoryIdBox));
-            panel.Children.Add(mappingStatus);
-
-            ContentDialog dialog = new()
-            {
-                Title = T("Common.CharacterCategoryMapping"),
-                Content = panel,
-                PrimaryButtonText = T("Repositories.SaveMapping"),
-                SecondaryButtonText = T("Repositories.ClearMapping"),
-                CloseButtonText = T("Common.Cancel"),
-                DefaultButton = ContentDialogButton.Primary,
-                XamlRoot = RootGrid.XamlRoot
-            };
-
-            ContentDialogResult result = await _services.Dialogs.ShowAsync(dialog);
-            if (wikiCharacterBox.SelectedItem is not ComboBoxItem { Tag: OnlineCharacterOption selectedCharacter })
+            (ContentDialogResult result, OnlineCharacterOption? selectedCharacter, string chosenCategoryId) =
+                await CharacterCategoryMappingDialog.ShowAsync(_services, repository.CharacterCategoryMappings, wikiCharacters, categoryCandidates);
+            if (selectedCharacter is null)
             {
                 return;
             }
@@ -547,7 +451,7 @@ public sealed partial class MainWindow
             string selectedMappingKey = OnlineCharacterCatalogMatcher.MappingKey(selectedCharacter);
             if (result == ContentDialogResult.Primary)
             {
-                string categoryId = categoryIdBox.Text.Trim();
+                string categoryId = chosenCategoryId.Trim();
                 if (!int.TryParse(categoryId, NumberStyles.None, CultureInfo.InvariantCulture, out int parsedCategoryId)
                     || parsedCategoryId <= 0)
                 {
