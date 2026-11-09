@@ -12,10 +12,7 @@ namespace ModFolderCopier.WinUI;
 /// </summary>
 internal sealed class DialogService(LanguageService language)
 {
-    private readonly SemaphoreSlim _gate = new(1, 1);
-    // Dialogs closed (Close) while still waiting in the queue: they are skipped instead of shown.
-    private readonly HashSet<ContentDialog> _withdrawn = [];
-    private ContentDialog? _current;
+    private readonly DialogQueue<ContentDialog> _queue = new();
     private Func<XamlRoot?> _root = () => null;
     private Func<ElementTheme> _theme = () => ElementTheme.Default;
 
@@ -36,7 +33,7 @@ internal sealed class DialogService(LanguageService language)
     }
 
     /// <summary>A dialog is open or waiting to open.</summary>
-    public bool IsDialogOpen => _gate.CurrentCount == 0 || Root is XamlRoot root
+    public bool IsDialogOpen => _queue.IsBusy || Root is XamlRoot root
         && VisualTreeHelper.GetOpenPopupsForXamlRoot(root).Any(popup => popup.Child is ContentDialog);
 
     /// <summary>The space a dialog's content may use in the current window.</summary>
@@ -48,28 +45,17 @@ internal sealed class DialogService(LanguageService language)
     /// Shows the dialog once no other dialog is open. A dialog closed with <see cref="Close"/> before its turn is
     /// not shown and returns <see cref="ContentDialogResult.None"/>.
     /// </summary>
-    public async Task<ContentDialogResult> ShowAsync(ContentDialog dialog)
-    {
-        await _gate.WaitAsync();
-        try
+    public Task<ContentDialogResult> ShowAsync(ContentDialog dialog)
+        => _queue.ShowAsync(dialog, async shown =>
         {
-            if (_withdrawn.Remove(dialog)) return ContentDialogResult.None;
-            Prepare(dialog);
-            _current = dialog;
-            return await dialog.ShowAsync();
-        }
-        finally
-        {
-            if (ReferenceEquals(_current, dialog)) _current = null;
-            _gate.Release();
-        }
-    }
+            Prepare(shown);
+            return await shown.ShowAsync();
+        }, ContentDialogResult.None);
 
     /// <summary>Closes a dialog shown with <see cref="ShowAsync"/>, or keeps it from opening if it is still queued.</summary>
     public void Close(ContentDialog dialog)
     {
-        if (ReferenceEquals(_current, dialog)) dialog.Hide();
-        else _withdrawn.Add(dialog);
+        if (_queue.Close(dialog)) dialog.Hide();
     }
 
     public async Task MessageAsync(string title, string content)
@@ -166,6 +152,22 @@ internal sealed class DialogService(LanguageService language)
         dialog.PrimaryButtonStyle = (Style)Application.Current.Resources["DangerAccentButtonStyle"];
         dialog.CloseButtonStyle = (Style)Application.Current.Resources["DefaultButtonStyle"];
         dialog.DefaultButton = ContentDialogButton.Close;
+        // The default button is the one Enter invokes; the focus goes to Cancel too, so a stray key press never deletes.
+        dialog.Opened += (_, _) =>
+        {
+            if (FindButton(dialog, "CloseButton") is Button cancel) cancel.Focus(FocusState.Programmatic);
+        };
+    }
+
+    private static Button? FindButton(DependencyObject parent, string name)
+    {
+        for (int i = 0; i < VisualTreeHelper.GetChildrenCount(parent); i++)
+        {
+            DependencyObject child = VisualTreeHelper.GetChild(parent, i);
+            if (child is Button { Name: var found } button && found == name) return button;
+            if (FindButton(child, name) is Button nested) return nested;
+        }
+        return null;
     }
 
     public async Task<string?> PromptAsync(string title, string content, string defaultValue, string primaryText)
