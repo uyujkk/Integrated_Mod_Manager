@@ -199,6 +199,28 @@ J0 结果（2026-11-04，分支 `claude/ui-j0-prep`）：
 - 每种对话框一个类（`Dialogs/` 下），由 `DialogService` 统一设置 `XamlRoot` 并保证同一时间只有一个对话框。
 - `App.xaml` 拆成 `Themes/Colors.xaml`、`Styles/Controls.xaml`、`Styles/Pages.xaml`；页面专用样式放进页面自己的资源。
 
+#### J8 范围（2026-11-09 清点，main `e9def8b`）
+
+代码里共 39 处建 `ContentDialog`（`new ContentDialog` 35 处，`ContentDialog dialog = new()` 4 处），分布在 29 个文件；另外 36 处直接调用 `dialog.ShowAsync()`，各自设置 `XamlRoot`，没有排队。
+
+| 类别 | 数量 | 位置 |
+| --- | --- | --- |
+| 已是独立类 | 3 | `Dialogs/FirstRunDialog`、`RepositoryEditorDialog`、`OnlineRepositoryConfigDialog` |
+| 共用的三种（`MainWindow.Dialogs.cs`） | 3 | `ShowMessageAsync`（115 处调用）、`ShowConfirmAsync`（22 处）、`PromptForTextAsync`（10 处） |
+| 简短确认、提示 | 9 | 重新开始恢复的下载、在线重复安装、安装冲突、读取已有文件（快捷键）、状态槽位、Mod 更新提醒、新功能、仓库详情、下载选项 |
+| 改动前的预览 | 8 | 组合预设恢复、组合包安装、失效联接清理、加载器状态恢复、user.ini 快照恢复、撤销整理导入、恢复中断的导入、导入分享的预设 |
+| 表单、多步流程 | 16 | 本地标签、角色头像绑定、保存单 Mod 预设、选择下载文件、在线安装位置、Wiki 分类对应、整理导入（选目标、预览、进行中 3 个）、批量下载（准备、确认 2 个）、批量 Mod 操作、下载并替换 Mod、角色区域选择、作者与收藏、终末地启动设置（363 行，J4 留下） |
+
+在 `MainWindow` 的 partial 文件里直接搭建的有 33 个，所在的方法共约 2,200 行；最大的是终末地启动设置（363 行）、批量下载（159 行）、选择下载文件（121 行）。这比计划里的“约 25 处、S–M”大，加上积压到 J8 的外观和流程改动（危险样式、动词按钮、“查看详情”、命令面板分组和投影、1000 宽标题栏），整体约为 L，所以拆成三步：
+
+| 步骤 | 内容 | 工作量 |
+| --- | --- | --- |
+| J8a 对话框服务和资源 | `DialogService`（统一 `XamlRoot`、`DefaultContentDialogStyle`、排队，提供提示、确认、危险确认、错误、输入五种接口）；共用的三种改走服务，其余 36 处 `ShowAsync` 改成 `Dialogs.ShowAsync(dialog)`（只改这一行）；`App.xaml` 拆分；单独提交的外观：22 个确认和 10 个输入框的主按钮改成动词，删除、移除、覆盖类改用危险样式、默认焦点在“取消”，工作区“从目标文件夹移除”同样处理；加 Esc 测试 | S–M |
+| J8b 对话框类 | 纯移动：33 个对话框按上表三类分三次提交移到 `Dialogs/`，含终末地启动设置；之后单独提交的外观：内容超过两段的用 `ScrollViewer`，最大高 400 | M |
+| J8c 错误详情和命令面板 | 错误 `InfoBar` 和错误对话框加“查看详情”（展开、复制异常和日志路径）；命令面板按页面、角色、Mod、命令分组并加投影；1000 宽时标题栏搜索框缩成图标按钮 | S–M |
+
+J8b、J8c 都用到 J8a 的服务，两者之间没有依赖。
+
 ## 完成标准
 
 每个阶段：
