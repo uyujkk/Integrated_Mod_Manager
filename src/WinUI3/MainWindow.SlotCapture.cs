@@ -17,19 +17,7 @@ public sealed partial class MainWindow
         if (_shortcuts.KeepMenuStateVariables) return values;
         var (kept, transient) = TransientVariablePolicy.Split(values);
         if (transient.Count == 0) return values;
-        var checks = transient.Select(value => new CheckBox { Content = $"{value.Variable} = {value.Value}  ·  {value.RelativeIniPath}" }).ToArray();
-        var list = new StackPanel { Spacing = 2 };
-        foreach (CheckBox check in checks) list.Children.Add(check);
-        var content = new StackPanel { Spacing = 10, MaxWidth = 560 };
-        content.Children.Add(new TextBlock { Text = T("SlotCapture.MenuStateFound", transient.Count, kept.Count), TextWrapping = TextWrapping.Wrap });
-        content.Children.Add(new ScrollViewer { Content = list, MaxHeight = Math.Max(160, RootGrid.ActualHeight - 360) });
-        var dialog = new ContentDialog
-        {
-            Title = T("SlotCapture.MenuStateTitle"), Content = content, XamlRoot = RootGrid.XamlRoot, RequestedTheme = RootGrid.ActualTheme,
-            PrimaryButtonText = T("SlotCapture.Continue"), CloseButtonText = T("Common.Cancel"), DefaultButton = ContentDialogButton.Primary
-        };
-        if (await _services.Dialogs.ShowAsync(dialog) != ContentDialogResult.Primary) return null;
-        HashSet<ModPersistentValue> keepAnyway = [.. transient.Where((_, index) => checks[index].IsChecked == true)];
+        if (await MenuStateDialog.ChooseAsync(_services, transient, kept.Count, Math.Max(160, RootGrid.ActualHeight - 360)) is not { } keepAnyway) return null;
         return values.Where(value => !transient.Contains(value) || keepAnyway.Contains(value)).ToArray();
     }
 

@@ -13,17 +13,10 @@ public sealed partial class MainWindow
     {
         try
         {
-            var concurrency = new ComboBox { Header = T("OnlineDownloads.ConcurrentDownloadTasks"), HorizontalAlignment = HorizontalAlignment.Stretch };
-            foreach (int value in Enumerable.Range(1, 4)) concurrency.Items.Add(value);
-            concurrency.SelectedItem = _onlinePreferences.ConcurrentDownloads;
-            var remember = new CheckBox { Content = T("OnlineDownloads.RememberConfirmedDownloadFoldersPerRepository"), IsChecked = _onlinePreferences.RememberDownloadFolders };
-            var body = new StackPanel { Spacing = 12, MinWidth = 300 };
-            body.Children.Add(concurrency); body.Children.Add(remember);
-            body.Children.Add(new TextBlock { Text = T("OnlineDownloads.RememberedFoldersMustStillBeInside"), TextWrapping = TextWrapping.Wrap, MaxWidth = 440 });
-            var dialog = new ContentDialog { Title = T("Common.DownloadOptions"), Content = body, PrimaryButtonText = T("Common.Save"), CloseButtonText = T("Common.Cancel"), XamlRoot = RootGrid.XamlRoot, RequestedTheme = RootGrid.ActualTheme };
-            if (await _services.Dialogs.ShowAsync(dialog) != ContentDialogResult.Primary) return;
-            _onlinePreferences.ConcurrentDownloads = (int)concurrency.SelectedItem;
-            _onlinePreferences.RememberDownloadFolders = remember.IsChecked == true;
+            if (await DownloadOptionsDialog.ShowAsync(_services, _onlinePreferences.ConcurrentDownloads, _onlinePreferences.RememberDownloadFolders)
+                is not { } options) return;
+            _onlinePreferences.ConcurrentDownloads = options.Concurrency;
+            _onlinePreferences.RememberDownloadFolders = options.RememberFolders;
             _onlineDownloadScheduler.Limit = _onlinePreferences.ConcurrentDownloads;
             SaveShellConfig();
         }
@@ -83,12 +76,7 @@ public sealed partial class MainWindow
             OnlineDuplicateKind.OtherFile => T("OnlineDownloads.ThisRepositoryContainsAnotherFileFrom"),
             _ => T("OnlineDownloads.ThisRepositoryContainsThisEntryBut")
         };
-        var body = new TextBlock { Text = summary + "\n\n" + string.Join("\n", installed.Take(5).Select(item => item.Path))
-            + T("OnlineDownloads.ContinuingCreatesASeparateCopy"), TextWrapping = TextWrapping.Wrap, MaxWidth = 560 };
-        var dialog = new ContentDialog { Title = T("OnlineDownloads.ExistingInstallationFound"), Content = body,
-            PrimaryButtonText = T("OnlineDownloads.DownloadASeparateCopy"), CloseButtonText = T("Common.Cancel"),
-            DefaultButton = ContentDialogButton.Close, XamlRoot = RootGrid.XamlRoot, RequestedTheme = RootGrid.ActualTheme };
-        return await _services.Dialogs.ShowAsync(dialog) == ContentDialogResult.Primary;
+        return await OnlineDuplicateDialog.ConfirmAsync(_services, summary, installed.Select(item => item.Path));
     }
 
     private async Task RetryOnlineDownloadAsync(DownloadTaskItem task)

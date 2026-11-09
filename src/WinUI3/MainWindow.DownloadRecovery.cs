@@ -72,13 +72,6 @@ public sealed partial class MainWindow
                 && string.Equals(repository.SourcePath, request.Context.RepositoryPath, StringComparison.OrdinalIgnoreCase)))
             throw new InvalidDataException(T("DownloadRecovery.TheOriginalRepositoryWasRemovedOr"));
         if (!task.RestoredFromJournal) return true;
-        var dialog = new ContentDialog
-        {
-            Title = T("DownloadRecovery.RestartARestoredDownload"),
-            Content = new TextBlock { Text = T("DownloadRecovery.RepositoryFolderFileDownloadsAgainAfter", request.Context.RepositoryName, request.Destination, request.File?.FileName ?? request.Mod.DownloadFileName), TextWrapping = Microsoft.UI.Xaml.TextWrapping.Wrap, MaxWidth = 560 },
-            PrimaryButtonText = T("DownloadRecovery.ConfirmRestart"), CloseButtonText = T("Common.Cancel"),
-            DefaultButton = ContentDialogButton.Close, XamlRoot = RootGrid.XamlRoot, RequestedTheme = RootGrid.ActualTheme
-        };
-        return await _services.Dialogs.ShowAsync(dialog) == ContentDialogResult.Primary;
+return await RestoredDownloadDialog.ConfirmAsync(_services, request.Context.RepositoryName, request.Destination, request.File?.FileName ?? request.Mod.DownloadFileName);
     }
 }

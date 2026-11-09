@@ -119,25 +119,7 @@ public sealed partial class MainWindow
         IReadOnlyList<(string? Candidate, ModIniConflictSummary Summary)> iniConflicts)
     {
         string text = BuildInstallConflictText(fileConflicts, iniConflicts);
-        var dialog = new ContentDialog
-        {
-            Title = T("InstallTransactions.PotentialModConflictsDetected"),
-            Content = new ScrollViewer
-            {
-                MaxHeight = 420,
-                Content = new TextBlock
-                {
-                    Text = text,
-                    TextWrapping = TextWrapping.Wrap,
-                    IsTextSelectionEnabled = true
-                }
-            },
-            PrimaryButtonText = T("InstallTransactions.ContinueAnyway"),
-            CloseButtonText = T("Common.Cancel"),
-            DefaultButton = ContentDialogButton.Close,
-            XamlRoot = RootGrid.XamlRoot
-        };
-        return await _services.Dialogs.ShowAsync(dialog) == ContentDialogResult.Primary;
+        return await InstallConflictsDialog.ConfirmAsync(_services, text);
     }
 
     private async Task<string> CreateInstallTransactionAsync(string description, WorkspaceRepository repository, IEnumerable<string> affectedTargets)

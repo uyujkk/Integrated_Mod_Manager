@@ -21,20 +21,7 @@ public sealed partial class MainWindow
         _showingModUpdateNotification = true;
         try
         {
-            var dialog = new ContentDialog
-            {
-                Title = T("ModUpdates.ModUpdatesAvailable"),
-                Content = new TextBlock
-                {
-                    Text = T("ModUpdates.UpdatesFoundForMods", updates.Length)
-                        + "\n\n" + string.Join("\n", updates.Take(6).Select(item => "• " + item.Title))
-                        + T("ModUpdates.ChooseAFileAndConfirmDownload"),
-                    TextWrapping = TextWrapping.Wrap, MaxWidth = 520
-                },
-                PrimaryButtonText = T("ModUpdates.ViewUpdates"), CloseButtonText = T("ModUpdates.Later"),
-                DefaultButton = ContentDialogButton.Close, XamlRoot = RootGrid.XamlRoot, RequestedTheme = RootGrid.ActualTheme
-            };
-            if (await _services.Dialogs.ShowAsync(dialog) == ContentDialogResult.Primary)
+            if (await ModUpdatesAvailableDialog.ShowAsync(_services, updates.Select(item => item.Title).ToArray()))
             {
                 _currentPrimarySection = PrimarySection.Updates;
                 ApplyShellState(refreshRepository: false);

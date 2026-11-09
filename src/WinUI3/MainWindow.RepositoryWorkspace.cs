@@ -1249,11 +1249,9 @@ public sealed partial class MainWindow
             VerticalScrollBarVisibility = ScrollBarVisibility.Auto
         };
         PreviewCard.Child = previewScroll;
-        var dialog = new ContentDialog { XamlRoot = RootGrid.XamlRoot, Content = WorkspaceDetailHost, CloseButtonText = T("Common.Close"), RequestedTheme = RootGrid.ActualTheme };
-        try { await _services.Dialogs.ShowAsync(dialog); }
+        try { await ModDetailsDialog.ShowAsync(_services, WorkspaceDetailHost); }
         finally
         {
-            dialog.Content = null;
             previewScroll.Content = null;
             PreviewCard.Child = previewContent;
             WorkspaceDetailHost.Height = double.NaN;
