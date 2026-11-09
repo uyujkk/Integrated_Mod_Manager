@@ -107,6 +107,9 @@ public sealed class BetaShellConfig
     /// <summary>False in configs from before an empty game meant "no game" (see <see cref="RepositoryGameMigration"/>).</summary>
     public bool RepositoryGamesExplicit { get; set; }
 
+    /// <summary>True from a first install until the getting-started tips are closed or finished.</summary>
+    public bool GettingStartedTipsPending { get; set; }
+
     // Fields written by a newer version survive being saved by this one, so going back and forth loses nothing.
     [JsonExtensionData]
     public Dictionary<string, JsonElement>? ExtensionData { get; set; }

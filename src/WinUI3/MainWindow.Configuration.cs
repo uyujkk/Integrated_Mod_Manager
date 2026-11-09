@@ -38,6 +38,7 @@ public sealed partial class MainWindow
             fallbackRepository = TryCreatePersistentDemoRepository() ?? fallbackRepository;
             _services.Repositories.Items.Add(fallbackRepository);
             _services.Repositories.SelectedId = fallbackRepository.Id;
+            _gettingStartedTips = GettingStartedTips.Load(_firstInstall, savedPending: false);
             SaveShellConfig();
             ApplySelectedRepositoryToInputs();
             return;
@@ -170,9 +171,11 @@ public sealed partial class MainWindow
             _savedWindowHeight = config?.WindowHeight;
             _savedWindowMaximized = config?.WindowMaximized ?? false;
             _whatsNewSeenVersion = config?.WhatsNewSeenVersion;
+            _gettingStartedTips = GettingStartedTips.Load(_firstInstall, config?.GettingStartedTipsPending ?? false);
         }
         catch
         {
+            _gettingStartedTips = GettingStartedTips.Load(_firstInstall, savedPending: false);
             _services.Repositories.Items.Add(fallbackRepository);
             _services.Repositories.SelectedId = fallbackRepository.Id;
             _currentPrimarySection = PrimarySection.Dashboard;
@@ -310,6 +313,7 @@ public sealed partial class MainWindow
                 WhatsNewSeenVersion = _whatsNewSeenVersion,
                 Repositories = [.. _services.Repositories.Items],
                 RepositoryGamesExplicit = true,
+                GettingStartedTipsPending = _gettingStartedTips.IsPending,
                 ExtensionData = _services.ShellConfig.ExtensionData
             };
 
