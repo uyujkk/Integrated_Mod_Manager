@@ -392,6 +392,7 @@ public sealed partial class MainWindow
         {
             Text = defaultValue,
             PlaceholderText = T("Dialogs.EnterAName"),
+            Name = "PromptTextBox",
             Margin = new Thickness(0, 12, 0, 0)
         };
 

@@ -290,37 +290,32 @@ public sealed partial class MainWindow
                 return;
             }
 
+            WorkspaceRepository repository = GetSelectedRepository()!;
+            string? loader = string.IsNullOrWhiteSpace(repository.TargetPath) ? null : repository.TargetPath;
+            CharacterRenamePlan plan = await Task.Run(() => CharacterRename.Prepare(item.Path, trimmed, loader));
+            if (!plan.CanRename)
+            {
+                await ShowMessageAsync(CharacterRenameBlockText(plan, repository), T("LocalLibrary.RenameFailed"));
+                return;
+            }
+
             try
             {
-                string? parentDir = Path.GetDirectoryName(item.Path);
-                if (string.IsNullOrWhiteSpace(parentDir))
-                {
-                    throw new InvalidOperationException(T("LocalLibrary.CouldNotDetermineTheParentDirectory"));
-                }
-
-                string newPath = Path.Combine(parentDir, trimmed);
-                if (Directory.Exists(newPath))
-                {
-                    await ShowMessageAsync(
-                        T("LocalLibrary.TheTargetNameAlreadyExistsChoose"),
-                        T("LocalLibrary.RenameFailed"));
-                    return;
-                }
-
-                var tagLibrary = SelectedLocalLibrary();
-                string oldRoleRelative = WorkspaceIdentity.Relative(GetSelectedRepository()!.SourcePath, item.Path);
-                Directory.Move(item.Path, newPath);
-                tagLibrary?.RenameCharacter(oldRoleRelative, WorkspaceIdentity.Relative(GetSelectedRepository()!.SourcePath, newPath));
-                SaveShellConfig();
+                // The folder, the links into it and every saved path move together, or none of them do (#108).
+                CharacterRename.Execute(plan, new CharacterRenameReferences(this, repository));
                 await RefreshListsAsync();
-                SelectFirstLevelByPath(newPath);
+                SelectFirstLevelByPath(plan.NewPath);
                 StatusTextBlock.Text = T("LocalLibrary.RenamedFirstLevelFolderTo", trimmed);
             }
-            catch (Exception ex)
+            catch (CharacterRenameException ex)
             {
+                LogApplicationIssue("Rename character", ex);
                 await ShowMessageAsync(
-                    T("LocalLibrary.FailedToRenameTheFirstLevel") + ex.Message,
+                    ex.RolledBack
+                        ? T("LocalLibrary.RenameUndone", ex.Message)
+                        : T("LocalLibrary.RenameNotFullyUndone", ex.Message, string.Join(Environment.NewLine, ex.Unrestored)),
                     T("LocalLibrary.RenameFailed"));
+                await RefreshListsAsync();
             }
         }
         catch (Exception ex)

@@ -1,6 +1,4 @@
 using System.Runtime.InteropServices.WindowsRuntime;
-using System.Security.Cryptography;
-using System.Text;
 using System.Text.Json;
 using IntegratedModManager.Core.Online;
 using Microsoft.UI.Xaml.Controls;
@@ -77,8 +75,7 @@ public sealed partial class MainWindow
         _characterMatcher.Reset();
         _characterProfile = new();
         _characterPreferredMods.Clear();
-        string name = Convert.ToHexString(SHA256.HashData(Encoding.UTF8.GetBytes(repository.ToUpperInvariant())))[..24];
-        _characterProfilePath = Path.Combine(AppContext.BaseDirectory, "character-references", name + ".json");
+        _characterProfilePath = CharacterFollowProfilePath(repository);
         try
         {
             if (File.Exists(_characterProfilePath) && new FileInfo(_characterProfilePath).Length < 2 * 1024 * 1024)
