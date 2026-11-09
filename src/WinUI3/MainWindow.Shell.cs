@@ -209,6 +209,7 @@ public sealed partial class MainWindow
         }
 
         UpdateOnlineResponsiveLayout(width);
+        ApplyTitleBarSearchVisibility();
         // The Settings and Updates pages lay themselves out when their own size changes.
         UpdateRefinedWorkspaceLayout();
 
@@ -250,6 +251,8 @@ public sealed partial class MainWindow
         string searchName = T("CommandPalette.Placeholder") + " (Ctrl+K)";
         TitleBarSearchBox.PlaceholderText = searchName;
         AutomationProperties.SetName(TitleBarSearchBox, searchName);
+        AutomationProperties.SetName(TitleBarSearchButton, searchName);
+        ToolTipService.SetToolTip(TitleBarSearchButton, searchName);
         RefreshNavTasks();
     }
 

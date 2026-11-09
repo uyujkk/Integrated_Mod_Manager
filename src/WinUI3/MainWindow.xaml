@@ -121,8 +121,16 @@
                 <TitleBar.IconSource>
                     <ImageIconSource ImageSource="Assets/AppIcon.png" />
                 </TitleBar.IconSource>
-                <AutoSuggestBox x:Name="TitleBarSearchBox" MinWidth="200" MaxWidth="440" VerticalAlignment="Center"
-                                QueryIcon="Find" GotFocus="OnTitleBarSearchGotFocus" />
+                <!-- Below 1120 px the box becomes a search button, so the title bar keeps room (J8). -->
+                <Grid>
+                    <AutoSuggestBox x:Name="TitleBarSearchBox" MinWidth="200" MaxWidth="440" VerticalAlignment="Center"
+                                    QueryIcon="Find" GotFocus="OnTitleBarSearchGotFocus" />
+                    <Button x:Name="TitleBarSearchButton" Visibility="Collapsed" HorizontalAlignment="Right" VerticalAlignment="Center"
+                            Width="40" Height="32" Padding="0" Background="Transparent" BorderThickness="0"
+                            Click="OnTitleBarSearchButtonClicked">
+                        <FontIcon Glyph="&#xE721;" FontSize="16" />
+                    </Button>
+                </Grid>
             </TitleBar>
 
             <!-- Left navigation like Windows Settings: labelled from 1440 px wide (unless the user
