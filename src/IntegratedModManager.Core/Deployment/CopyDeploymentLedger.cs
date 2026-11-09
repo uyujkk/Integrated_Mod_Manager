@@ -1,3 +1,5 @@
+using IntegratedModManager.Core.Repository;
+
 namespace IntegratedModManager.Core.Deployment;
 
 /// <summary>
@@ -82,6 +84,23 @@ public sealed class CopyDeploymentLedger
             {
                 _records.Remove(record);
                 Changed = true;
+            }
+        }
+    }
+
+    /// <summary>
+    /// A character of the repository was renamed (issue #108): its records now name the new source path, and a copy
+    /// inside the character folder its new place. Each change goes into <paramref name="log"/>, so a failed rename
+    /// puts the records back. Other repositories and characters are left alone.
+    /// </summary>
+    public static void RenameCharacter(IList<CopyDeploymentRecord> records, string repositoryId, CharacterRenamePlan plan, ReferenceUndoLog log)
+    {
+        lock (records)
+        {
+            foreach (CopyDeploymentRecord record in records.Where(record => string.Equals(record.RepositoryId, repositoryId, StringComparison.Ordinal)))
+            {
+                log.Rewrite(() => record.SourceRelativePath, value => record.SourceRelativePath = value, plan.MapRelative);
+                log.Rewrite(() => record.DeployedPath, value => record.DeployedPath = value, plan.MapFullPath);
             }
         }
     }

@@ -52,11 +52,13 @@ public sealed class CharacterRenameTests : IDisposable
         public int SaveFailures { get; set; } = int.MaxValue;
         public int Saves { get; private set; }
         public List<string> SavedPresetPaths { get; private set; } = [];
+        public List<CopyDeploymentRecord> CopyRecords { get; } = [];
 
         public void Migrate(CharacterRenamePlan plan)
         {
             _log.RewriteAll(PresetPaths, plan.MapRelative);
             _log.Rekey(Links, plan.MapFullPath);
+            CopyDeploymentLedger.RenameCharacter(CopyRecords, "repo", plan, _log);
         }
 
         public void Revert() => _log.Undo();
@@ -86,6 +88,69 @@ public sealed class CharacterRenameTests : IDisposable
         Assert.True(File.Exists(Path.Combine(link, "mod.ini")));
         Assert.Equal([@"RenamedCharacter\TestModA", @"OtherCharacter\OtherMod"], references.SavedPresetPaths);
         Assert.True(references.Links.ContainsKey(Path.Combine(NewCharacter, "TestModA")));
+    }
+
+    // Copy-mode records (#107) of the repository; only those of the renamed character change.
+    private void AddCopyRecords(FakeReferences references)
+    {
+        CopyDeploymentRecord Record(string repository, string source, string deployed)
+            => new() { RepositoryId = repository, SourceRelativePath = source, DeployedPath = Path.Combine(Loader, deployed) };
+        references.CopyRecords.AddRange(
+        [
+            Record("repo", @"TestCharacter\TestModB", "TestModB"),
+            Record("repo", @"OtherCharacter\OtherMod", "OtherMod"),
+            Record("repo", @"TestCharacterTwo\TestModB", "TestModB2"),
+            Record("other-repo", @"TestCharacter\TestModB", "Elsewhere")
+        ]);
+    }
+
+    private static string[] Sources(FakeReferences references) => [.. references.CopyRecords.Select(record => record.RepositoryId + ":" + record.SourceRelativePath)];
+
+    [Fact]
+    public void Execute_MovesTheCopyRecordsOfThisCharacterOnly()
+    {
+        var references = new FakeReferences();
+        AddCopyRecords(references);
+
+        CharacterRename.Execute(CharacterRename.Prepare(OldCharacter, "RenamedCharacter", Loader), references);
+
+        Assert.Equal(
+        [
+            @"repo:RenamedCharacter\TestModB", @"repo:OtherCharacter\OtherMod",
+            @"repo:TestCharacterTwo\TestModB", @"other-repo:TestCharacter\TestModB"
+        ], Sources(references));
+        // The copies themselves stay where they are in the loader folder.
+        Assert.Equal(Path.Combine(Loader, "TestModB"), references.CopyRecords[0].DeployedPath);
+    }
+
+    [Fact]
+    public void Execute_AFailedRenamePutsTheCopyRecordsBack()
+    {
+        var references = new FakeReferences { SaveError = new IOException("disk full"), SaveFailures = 1 };
+        AddCopyRecords(references);
+        string[] before = Sources(references);
+
+        var error = Assert.Throws<CharacterRenameException>(() =>
+            CharacterRename.Execute(CharacterRename.Prepare(OldCharacter, "RenamedCharacter", Loader), references));
+
+        Assert.True(error.RolledBack);
+        Assert.Equal(before, Sources(references));
+        Assert.True(Directory.Exists(OldCharacter));
+    }
+
+    [Fact]
+    public void CopyRecords_ACopyInsideTheCharacterFolderMovesWithIt()
+    {
+        CharacterRenamePlan plan = CharacterRename.Prepare(OldCharacter, "RenamedCharacter", null);
+        var record = new CopyDeploymentRecord { RepositoryId = "repo", SourceRelativePath = @"TestCharacter\TestModA", DeployedPath = Path.Combine(OldCharacter, "Deployed") };
+        var log = new ReferenceUndoLog();
+
+        CopyDeploymentLedger.RenameCharacter([record], "repo", plan, log);
+
+        Assert.Equal(Path.Combine(NewCharacter, "Deployed"), record.DeployedPath);
+        log.Undo();
+        Assert.Equal(Path.Combine(OldCharacter, "Deployed"), record.DeployedPath);
+        Assert.Equal(@"TestCharacter\TestModA", record.SourceRelativePath);
     }
 
     [Fact]
