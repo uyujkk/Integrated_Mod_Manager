@@ -38,6 +38,62 @@ public sealed class SmokeTests
         app.AssertNoErrors();
     }
 
+    // Stage J4-b: after a first install (and no "what's new") the dashboard's getting-started tips show until closed. They
+    // take the keyboard focus, so Narrator reads the step; closing the app keeps them, Esc closes them for good.
+    [Fact]
+    public void FirstInstall_GettingStartedTipsShowUntilClosed()
+    {
+        using AppSession app = AppSession.FirstInstall().Start();
+        AppSession.Invoke(app.FindByName(app.Text("FirstRun.Later"), TimeSpan.FromSeconds(20)));
+
+        // A first install has no "what's new" dialog: the tips come straight after the game.
+        AutomationElement next = app.Find("GettingStartedNextButton", TimeSpan.FromSeconds(20));
+        Assert.Null(app.MainWindow.FindFirstDescendant(cf => cf.ByName(app.Text("WhatsNew.Close"))));
+        Assert.Contains(app.Text("GettingStarted.NewRepository.Title"), next.HelpText);
+        Assert.True(FlaUI.Core.Tools.Retry.WhileFalse(() => next.Properties.HasKeyboardFocus.ValueOrDefault, TimeSpan.FromSeconds(3)).Result,
+            "The tip should take the keyboard focus");
+        AppSession.Invoke(next);
+        Assert.Contains(app.Text("GettingStarted.Paths.Title"), app.Find("GettingStartedNextButton").HelpText);
+
+        // Closing the app is not closing the tips: they come back, from the start.
+        app.Restart();
+        next = app.Find("GettingStartedNextButton", TimeSpan.FromSeconds(20));
+        Assert.Contains(app.Text("GettingStarted.NewRepository.Title"), next.HelpText);
+
+        Keyboard.Type(VirtualKeyShort.ESCAPE);
+        Thread.Sleep(1000);
+        Assert.False(app.Shows("GettingStartedNextButton"), "Esc should close the tips");
+        Assert.False(app.ShellConfig()["GettingStartedTipsPending"]!.GetValue<bool>());
+
+        app.Restart();
+        Thread.Sleep(5000);
+        Assert.False(app.Shows("GettingStartedNextButton"), "Closed tips should not come back");
+        app.AssertNoErrors();
+    }
+
+    // The title bar's search box can be turned off; Ctrl+K still opens the palette, and the choice survives a restart.
+    [Fact]
+    public void Settings_TitleBarSearchCanBeHidden()
+    {
+        using AppSession app = AppSession.Configured().Start();
+        Assert.True(app.Shows("TitleBarSearchBox"));
+
+        AppSession.Invoke(app.Find("SettingsNavButton"));
+        AppSession.Invoke(app.Find("TitleBarSearchToggleSwitch"));
+        Thread.Sleep(600);
+        Assert.False(app.Shows("TitleBarSearchBox"), "The search box should be hidden");
+        Assert.False(app.ShellConfig()["ShowTitleBarSearch"]!.GetValue<bool>());
+
+        app.MainWindow.Focus();
+        Keyboard.TypeSimultaneously(VirtualKeyShort.CONTROL, VirtualKeyShort.KEY_K);
+        app.FindByName(app.Text("CommandPalette.Placeholder"), TimeSpan.FromSeconds(5));
+        Keyboard.Type(VirtualKeyShort.ESCAPE);
+
+        app.Restart();
+        Assert.False(app.Shows("TitleBarSearchBox"), "The hidden search box should stay hidden after a restart");
+        app.AssertNoErrors();
+    }
+
     [Fact]
     public void Navigation_EveryPageOpensWithoutErrors()
     {

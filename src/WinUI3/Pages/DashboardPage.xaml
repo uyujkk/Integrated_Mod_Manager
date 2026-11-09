@@ -50,6 +50,22 @@
                     <Border Width="56" Height="56" CornerRadius="12" Background="{ThemeResource AppSecondarySelectedBrush}" VerticalAlignment="Center">
                         <FontIcon Glyph="&#xE8B7;" FontSize="26" Foreground="{ThemeResource AppSecondarySelectedForegroundBrush}" />
                     </Border>
+                    <!-- Getting started after a first install (stage J4-b): one tip that moves from the new-repository
+                         button to the paths to "Open Mod management". It takes no room here; it opens in a popup.
+                         Esc or Skip closes it for good; focus moves into it, so the keyboard and Narrator reach it. -->
+                    <TeachingTip x:Name="GettingStartedTip" PreferredPlacement="Auto" IsLightDismissEnabled="False" Closed="OnGettingStartedTipClosed">
+                        <TeachingTip.IconSource>
+                            <FontIconSource Glyph="&#xE82F;" />
+                        </TeachingTip.IconSource>
+                        <StackPanel x:Name="GettingStartedTipPanel" Spacing="12" Margin="0,8,0,0" KeyDown="OnGettingStartedTipKeyDown">
+                            <TextBlock x:Name="GettingStartedStepTextBlock" Style="{StaticResource CaptionTextBlockStyle}"
+                                       Foreground="{ThemeResource TextFillColorSecondaryBrush}" />
+                            <StackPanel Orientation="Horizontal" Spacing="8" HorizontalAlignment="Right">
+                                <Button x:Name="GettingStartedSkipButton" Click="OnGettingStartedSkipClicked" />
+                                <Button x:Name="GettingStartedNextButton" Click="OnGettingStartedNextClicked" Style="{StaticResource AccentButtonStyle}" />
+                            </StackPanel>
+                        </StackPanel>
+                    </TeachingTip>
                     <StackPanel x:Name="DashboardStripStatus" Grid.Column="1" Spacing="4" VerticalAlignment="Center">
                         <TextBlock x:Name="DashboardCurrentRepositoryLabelTextBlock" Style="{StaticResource CaptionTextStyle}" />
                         <!-- The name is the switcher: it lists every repository. -->

@@ -100,6 +100,12 @@
                     </toolkit:SettingsCard.HeaderIcon>
                     <ToggleSwitch x:Name="ReduceMotionToggleSwitch" IsOn="{x:Bind ViewModel.Appearance.ReduceMotion, Mode=TwoWay}" />
                 </toolkit:SettingsCard>
+                <toolkit:SettingsCard x:Name="TitleBarSearchSettingsCard">
+                    <toolkit:SettingsCard.HeaderIcon>
+                        <FontIcon Glyph="&#xE721;" />
+                    </toolkit:SettingsCard.HeaderIcon>
+                    <ToggleSwitch x:Name="TitleBarSearchToggleSwitch" IsOn="{x:Bind ViewModel.ShowTitleBarSearch, Mode=TwoWay}" />
+                </toolkit:SettingsCard>
                 <toolkit:SettingsCard x:Name="TraySettingsCard">
                     <toolkit:SettingsCard.HeaderIcon>
                         <FontIcon Glyph="&#xE8B7;" />

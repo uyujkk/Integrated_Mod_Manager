@@ -1,4 +1,5 @@
 using System.Diagnostics;
+using IntegratedModManager.Core.Configuration;
 using Microsoft.UI.Xaml;
 using Microsoft.UI.Xaml.Controls;
 
@@ -15,7 +16,8 @@ public sealed partial class MainWindow
 
     private async Task ShowWhatsNewOnceAsync()
     {
-        if (string.Equals(_whatsNewSeenVersion, WhatsNewFeatureSet, StringComparison.Ordinal))
+        // A first install counts the current set as seen (WhatsNewPolicy), so it goes straight to the tips.
+        if (!WhatsNewPolicy.ShouldShow(_whatsNewSeenVersion, WhatsNewFeatureSet))
         {
             return;
         }

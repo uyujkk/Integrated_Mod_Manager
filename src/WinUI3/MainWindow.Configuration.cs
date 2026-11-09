@@ -38,6 +38,8 @@ public sealed partial class MainWindow
             fallbackRepository = TryCreatePersistentDemoRepository() ?? fallbackRepository;
             _services.Repositories.Items.Add(fallbackRepository);
             _services.Repositories.SelectedId = fallbackRepository.Id;
+            _gettingStartedTips = GettingStartedTips.Load(_firstInstall, savedPending: false);
+            _whatsNewSeenVersion = WhatsNewPolicy.SeenAfterLoad(null, WhatsNewFeatureSet, _firstInstall);
             SaveShellConfig();
             ApplySelectedRepositoryToInputs();
             return;
@@ -128,6 +130,7 @@ public sealed partial class MainWindow
             _reduceMotion = config?.ReduceMotion ?? false;
             _storedThemePreference = config?.ThemePreference;
             _minimizeToTray = config?.MinimizeToTray ?? false;
+            _showTitleBarSearch = config?.ShowTitleBarSearch ?? true;
             _interfaceDensity = string.Equals(config?.InterfaceDensity, "compact", StringComparison.OrdinalIgnoreCase)
                 ? InterfaceDensity.Compact
                 : InterfaceDensity.Comfortable;
@@ -169,10 +172,12 @@ public sealed partial class MainWindow
             _savedWindowWidth = config?.WindowWidth;
             _savedWindowHeight = config?.WindowHeight;
             _savedWindowMaximized = config?.WindowMaximized ?? false;
-            _whatsNewSeenVersion = config?.WhatsNewSeenVersion;
+            _whatsNewSeenVersion = WhatsNewPolicy.SeenAfterLoad(config?.WhatsNewSeenVersion, WhatsNewFeatureSet, _firstInstall);
+            _gettingStartedTips = GettingStartedTips.Load(_firstInstall, config?.GettingStartedTipsPending ?? false);
         }
         catch
         {
+            _gettingStartedTips = GettingStartedTips.Load(_firstInstall, savedPending: false);
             _services.Repositories.Items.Add(fallbackRepository);
             _services.Repositories.SelectedId = fallbackRepository.Id;
             _currentPrimarySection = PrimarySection.Dashboard;
@@ -290,6 +295,7 @@ public sealed partial class MainWindow
                 ReduceMotion = _reduceMotion,
                 ThemePreference = ThemePreferences.Format(_themePreference),
                 MinimizeToTray = _minimizeToTray,
+                ShowTitleBarSearch = _showTitleBarSearch,
                 NavigationCollapsed = _navigationCollapsed,
                 InterfaceDensity = _interfaceDensity == InterfaceDensity.Compact ? "compact" : "comfortable",
                 OnlineCardLayout = _onlinePage.CardLayoutMode == OnlineCardLayoutMode.Grid ? "grid" : "list",
@@ -310,6 +316,7 @@ public sealed partial class MainWindow
                 WhatsNewSeenVersion = _whatsNewSeenVersion,
                 Repositories = [.. _services.Repositories.Items],
                 RepositoryGamesExplicit = true,
+                GettingStartedTipsPending = _gettingStartedTips.IsPending,
                 ExtensionData = _services.ShellConfig.ExtensionData
             };
 

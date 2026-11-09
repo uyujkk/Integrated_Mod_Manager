@@ -65,6 +65,7 @@ public sealed partial class SettingsViewModel : ObservableObject
     private bool _checkOnStartup;
     private int _updateIntervalIndex;
     private bool _minimizeToTray;
+    private bool _showTitleBarSearch = true;
     private string _updateStatus = string.Empty;
     private string _releaseTitle = string.Empty;
     private string _releaseMeta = string.Empty;
@@ -159,6 +160,13 @@ public sealed partial class SettingsViewModel : ObservableObject
     {
         get => _minimizeToTray;
         set => SetProperty(ref _minimizeToTray, value);
+    }
+
+    /// <summary>Whether the title bar shows the search box; Ctrl+K opens the palette either way.</summary>
+    public bool ShowTitleBarSearch
+    {
+        get => _showTitleBarSearch;
+        set => SetProperty(ref _showTitleBarSearch, value);
     }
 
     public string UpdateStatus
