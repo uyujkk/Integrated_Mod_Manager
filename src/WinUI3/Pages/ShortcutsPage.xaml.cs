@@ -137,6 +137,8 @@ public sealed partial class ShortcutsPage : UserControl
         AutomationProperties.SetName(ShortcutHotkeyKeyPicker, T("ShortcutPanel.Key2"));
         ShortcutsStatusRefreshButton.Content = T("ShortcutPanel.RefreshWindows");
         ShortcutsOverlayBehaviorNoteTextBlock.Text = T("ShortcutPanel.TheOverlaySupportsWindowedBorderlessMode");
+        ShortcutsOverlayLookExpander.Header = T("ShortcutPanel.OverlayLookTitle");
+        ShortcutsSlotsExpander.Header = T("ShortcutPanel.SlotsAndPresetsTitle");
         ShortcutsOverlayPresetCard.Header = T("ShortcutPanel.AppearanceGroup");
         ShortcutsOverlayPresetButtons.Children.Clear();
         foreach (OverlayAppearancePreset preset in OverlayAppearancePreset.All)
@@ -446,6 +448,13 @@ public sealed partial class ShortcutsPage : UserControl
             ShortcutAutoSavePicker.SelectedItem = ViewModel.LoaderAutoSaveChoices.FirstOrDefault(choice => choice.Seconds == ViewModel.LoaderAutoSaveSeconds);
             ShortcutAutoSavePicker.IsEnabled = ViewModel.LoaderAutoSaveSeconds is not null;
             ShortcutsAutoSaveCard.Description = ViewModel.LoaderAutoSaveNote;
+            // Text-only slots only matter while the overlay shows slots.
+            ShortcutsCompactSlotsCard.IsEnabled = ViewModel.OverlaySlotSwitchEnabled;
+            ShortcutsOverlayLookExpander.Description = T("ShortcutPanel.OverlayLookSummary",
+                ViewModel.OverlayOpacity, ViewModel.OverlayElementOpacity, ViewModel.OverlayTextColor);
+            ShortcutsSlotsExpander.Description = T("ShortcutPanel.SlotsSummary",
+                ViewModel.OverlaySlotSwitchEnabled ? T("Common.On2") : T("Common.Off2"),
+                ViewModel.CapturePresetPreviews ? T("Common.On2") : T("Common.Off2"));
         }
         finally { _syncing = false; }
     }

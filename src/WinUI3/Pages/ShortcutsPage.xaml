@@ -127,7 +127,18 @@
                                     <ComboBox x:Name="ShortcutHotkeyKeyPicker" SelectionChanged="OnHotkeyPickerChanged" />
                                 </StackPanel>
                             </toolkit:SettingsCard>
-                            <!-- Appearance (stage J5b: settings of ShortcutPageViewModel). -->
+                        </toolkit:SettingsExpander.Items>
+                        <toolkit:SettingsExpander.ItemsFooter>
+                            <TextBlock x:Name="ShortcutsOverlayBehaviorNoteTextBlock" Margin="58,10,44,12" Style="{StaticResource ShortcutsCaptionStyle}" />
+                        </toolkit:SettingsExpander.ItemsFooter>
+                    </toolkit:SettingsExpander>
+
+                    <!-- How the overlay looks in game; the description sums it up while folded. -->
+                    <toolkit:SettingsExpander x:Name="ShortcutsOverlayLookExpander">
+                        <toolkit:SettingsExpander.HeaderIcon>
+                            <FontIcon Glyph="&#xE790;" />
+                        </toolkit:SettingsExpander.HeaderIcon>
+                        <toolkit:SettingsExpander.Items>
                             <toolkit:SettingsCard x:Name="ShortcutsOverlayPresetCard">
                                 <StackPanel x:Name="ShortcutsOverlayPresetButtons" Orientation="Horizontal" Spacing="6" />
                             </toolkit:SettingsCard>
@@ -159,7 +170,15 @@
                             <toolkit:SettingsCard x:Name="ShortcutsOverlayAutoContrastCard">
                                 <ToggleSwitch x:Name="ShortcutOverlayAutoContrastToggle" Toggled="OnOverlaySettingToggled" />
                             </toolkit:SettingsCard>
-                            <!-- Behaviour: state slots in the overlay, preset pictures and slot capture. -->
+                        </toolkit:SettingsExpander.Items>
+                    </toolkit:SettingsExpander>
+
+                    <!-- State slots and presets used from the overlay: hot switching, pictures and what a slot keeps. -->
+                    <toolkit:SettingsExpander x:Name="ShortcutsSlotsExpander">
+                        <toolkit:SettingsExpander.HeaderIcon>
+                            <FontIcon Glyph="&#xE8F1;" />
+                        </toolkit:SettingsExpander.HeaderIcon>
+                        <toolkit:SettingsExpander.Items>
                             <toolkit:SettingsCard x:Name="ShortcutsSlotSwitchCard">
                                 <ToggleSwitch x:Name="ShortcutSlotSwitchToggle" Toggled="OnOverlaySettingToggled" />
                             </toolkit:SettingsCard>
@@ -179,9 +198,6 @@
                                 <ComboBox x:Name="ShortcutAutoSavePicker" MinWidth="160" SelectionChanged="OnAutoSaveChanged" />
                             </toolkit:SettingsCard>
                         </toolkit:SettingsExpander.Items>
-                        <toolkit:SettingsExpander.ItemsFooter>
-                            <TextBlock x:Name="ShortcutsOverlayBehaviorNoteTextBlock" Margin="58,10,44,12" Style="{StaticResource ShortcutsCaptionStyle}" />
-                        </toolkit:SettingsExpander.ItemsFooter>
                     </toolkit:SettingsExpander>
 
                     <toolkit:SettingsExpander x:Name="ShortcutsFollowExpander">

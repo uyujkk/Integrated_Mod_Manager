@@ -230,12 +230,13 @@ internal sealed class ShortcutOverlayController : IShortcutOverlay
         _bindingControls.Clear();
         _textShadows.Clear();
         // The overlay window draws the (translucent) background; this content stays transparent.
-        var root = new Grid { Padding = new Thickness(14, 4, 14, 14), RowSpacing = 10, RequestedTheme = ElementTheme.Dark };
+        // Spacing on the 4/8/12 grid of the J1T tokens (docs/development/UI-Fluent-Design-Plan.md).
+        var root = new Grid { Padding = new Thickness(12, 4, 12, 12), RowSpacing = 12, RequestedTheme = ElementTheme.Dark };
         ApplyElementResources(root);
         ApplyAppearance();
         root.RowDefinitions.Add(new RowDefinition { Height = GridLength.Auto });
         root.RowDefinitions.Add(new RowDefinition { Height = new GridLength(1, GridUnitType.Star) });
-        var panel = new StackPanel { Spacing = 6 };
+        var panel = new StackPanel { Spacing = 8 };
         // Every header row has a fixed height so status changes never shift the list (row 1).
         // Only in-game-safe actions live here: switching Mod, arming input and a read-only preset save.
         // Restoring presets needs the game closed and stays in the main window. State slots can be
@@ -248,12 +249,13 @@ internal sealed class ShortcutOverlayController : IShortcutOverlay
             if (_syncing || _modPicker.SelectedItem is not ShortcutModOption chosen) return;
             if (!ReferenceEquals(_shortcuts.SelectedMod, chosen)) _shortcuts.SelectedMod = chosen;
         };
-        _targetText = FixedStatusText(lines: 1, fontSize: 11);
-        _statusText = FixedStatusText(lines: 2, fontSize: 11);
+        // Caption size (12) of the type ramp.
+        _targetText = FixedStatusText(lines: 1, fontSize: 12);
+        _statusText = FixedStatusText(lines: 2, fontSize: 12);
         _targetText.Foreground = _statusText.Foreground = TextBrush;
         var targetRow = Label(_targetText);
         panel.Children.Add(_modPicker); panel.Children.Add(CreateViewRow()); panel.Children.Add(targetRow);
-        var actions = new Grid { ColumnSpacing = 6 };
+        var actions = new Grid { ColumnSpacing = 8 };
         for (int i = 0; i < 3; i++) actions.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(1, GridUnitType.Star) });
         _inputToggle = new ToggleButton { HorizontalAlignment = HorizontalAlignment.Stretch, Foreground = TextBrush };
         ToolTipService.SetToolTip(_inputToggle, T("ShortcutPanel.ArmOrPauseInputToThe"));
@@ -277,7 +279,7 @@ internal sealed class ShortcutOverlayController : IShortcutOverlay
         saveSingle.HorizontalAlignment = HorizontalAlignment.Stretch;
         var refresh = ActionButton(T("ShortcutCapture.Refresh"), () => _ = _actions.RunAsync("Refresh overlay", _actions.RefreshFromDiskAsync));
         refresh.Foreground = TextBrush;
-        var secondaryActions = new Grid { ColumnSpacing = 6 };
+        var secondaryActions = new Grid { ColumnSpacing = 8 };
         secondaryActions.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(1, GridUnitType.Star) });
         secondaryActions.ColumnDefinitions.Add(new ColumnDefinition { Width = GridLength.Auto });
         Grid.SetColumn(refresh, 1);
@@ -401,12 +403,13 @@ internal sealed class ShortcutOverlayController : IShortcutOverlay
         ShortcutUnsupportedReason reason = ShortcutKeyPlan.Explain(shortcut.RawKey);
         bool supported = reason == ShortcutUnsupportedReason.None;
         var content = new StackPanel { Spacing = 3 };
-        var title = new TextBlock { Text = shortcut.Shortcut, FontSize = 18, FontWeight = Microsoft.UI.Text.FontWeights.SemiBold, TextWrapping = TextWrapping.Wrap };
+        // The keys at the subtitle size (20) of the type ramp, the rest at body and caption size.
+        var title = new TextBlock { Text = shortcut.Shortcut, FontSize = 20, FontWeight = Microsoft.UI.Text.FontWeights.SemiBold, TextWrapping = TextWrapping.Wrap };
         var description = new TextBlock { Text = ModShortcutDescriptionFormatter.Describe(shortcut, useEnglish: !_language.IsChinese), TextWrapping = TextWrapping.Wrap };
         string source = $"{shortcut.SourceFile} · [{shortcut.Section}]";
         if (shortcut.Condition.Length > 0) source += " · " + T("ShortcutPanel.Condition") + shortcut.Condition;
         if (shortcut.Behavior.Equals("hold", StringComparison.OrdinalIgnoreCase)) source += " · " + T("ShortcutPanel.HoldForConfiguredDuration");
-        var sourceText = new TextBlock { Text = source, FontSize = 11, Opacity = .65, TextWrapping = TextWrapping.Wrap };
+        var sourceText = new TextBlock { Text = source, FontSize = 12, Opacity = .65, TextWrapping = TextWrapping.Wrap };
         title.Foreground = description.Foreground = sourceText.Foreground = TextBrush;
         content.Children.Add(WithTextShadow(title));
         content.Children.Add(WithTextShadow(description));
@@ -415,7 +418,7 @@ internal sealed class ShortcutOverlayController : IShortcutOverlay
             content.Children.Add(new TextBlock
             {
                 Text = T("ShortcutPanel.CannotSend") + UnsupportedReasonText(reason) + T("ShortcutPanel.Key", shortcut.RawKey),
-                FontSize = 11, TextWrapping = TextWrapping.Wrap,
+                FontSize = 12, TextWrapping = TextWrapping.Wrap,
                 Foreground = new SolidColorBrush(Color.FromArgb(255, 230, 150, 60))
             });
         var button = new Button
@@ -480,8 +483,8 @@ internal sealed class ShortcutOverlayController : IShortcutOverlay
     /// <summary>A text on its own backing, readable over any scene.</summary>
     public Border Label(TextBlock text) => new()
     {
-        Child = WithTextShadow(text), Background = ElementBrush, CornerRadius = new CornerRadius(4),
-        Padding = new Thickness(6, 2, 6, 2), VerticalAlignment = text.VerticalAlignment
+        Child = WithTextShadow(text), Background = ElementBrush, CornerRadius = (CornerRadius)Application.Current.Resources["ControlCornerRadius"],
+        Padding = new Thickness(8, 2, 8, 2), VerticalAlignment = text.VerticalAlignment
     };
 
     private FrameworkElement WithTextShadow(TextBlock text)
@@ -532,7 +535,7 @@ internal sealed class ShortcutOverlayController : IShortcutOverlay
         ToolTipService.SetToolTip(_clickThroughButton, T("OverlayView.ClickThroughHint"));
         AutomationProperties.SetAutomationId(_clickThroughButton, "OverlayClickThroughButton");
         _clickThroughButton.Click += (_, _) => SetClickThrough(true);
-        var row = new Grid { ColumnSpacing = 6 };
+        var row = new Grid { ColumnSpacing = 8 };
         row.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(1, GridUnitType.Star) });
         row.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(1, GridUnitType.Star) });
         Grid.SetColumn(_clickThroughButton, 1);
@@ -632,7 +635,7 @@ internal sealed class ShortcutOverlayController : IShortcutOverlay
         _galleryButton = ActionButton(T("PresetPreview.PickByPicture"), () => _ = _actions.RunAsync("Overlay slot gallery", _actions.ShowSlotGalleryAsync));
         _frameButton = ActionButton(T("PresetPreview.FrameCharacter"), () => _ = _actions.RunAsync("Frame slot preview", _actions.FrameCurrentSlotPictureAsync));
         ToolTipService.SetToolTip(_frameButton, T("PresetPreview.FrameCharacterHint"));
-        _slotActions = new Grid { ColumnSpacing = 6 };
+        _slotActions = new Grid { ColumnSpacing = 8 };
         _slotActions.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(1, GridUnitType.Star) });
         _slotActions.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(1, GridUnitType.Star) });
         Grid.SetColumn(_frameButton, 1);

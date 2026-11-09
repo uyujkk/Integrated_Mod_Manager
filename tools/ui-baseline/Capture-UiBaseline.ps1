@@ -8,7 +8,8 @@ param(
     # Outer window sizes in device-independent pixels (the same sizes the UI tests use).
     [string[]]$Sizes = @('1400x900', '1000x800'),
     [string[]]$Themes = @('light', 'dark'),
-    # updates-downloads and updates-recovery are the Updates page's other two views (stage J3-b).
+    # updates-downloads and updates-recovery are the Updates page's other two views (stage J3-b); overlay is the
+    # Shortcuts page with its overlay opened by the hotkey (stage J5b, not in the default set).
     [string[]]$Pages = @('dashboard', 'repository', 'online', 'shortcuts', 'updates', 'updates-downloads', 'updates-recovery', 'settings', 'whatsnew', 'firstrun'),
     # How long to wait after the window appears before taking the picture.
     [int]$SettleSeconds = 7,
@@ -53,6 +54,12 @@ public static class ImmCapture
     [DllImport("user32.dll")] static extern bool SetForegroundWindow(IntPtr window);
     [DllImport("user32.dll")] static extern bool GetWindowRect(IntPtr window, out Rect rect);
     [DllImport("dwmapi.dll")] static extern int DwmGetWindowAttribute(IntPtr window, int attribute, out Rect rect, int size);
+    [DllImport("user32.dll")] static extern void keybd_event(byte key, byte scan, uint flags, UIntPtr extra);
+    delegate bool EnumProc(IntPtr window, IntPtr data);
+    [DllImport("user32.dll")] static extern bool EnumWindows(EnumProc proc, IntPtr data);
+    [DllImport("user32.dll")] static extern uint GetWindowThreadProcessId(IntPtr window, out uint processId);
+    [DllImport("user32.dll", CharSet = CharSet.Unicode)] static extern int GetWindowText(IntPtr window, System.Text.StringBuilder text, int count);
+    [DllImport("user32.dll")] static extern bool IsWindowVisible(IntPtr window);
 
     [StructLayout(LayoutKind.Sequential)] public struct Rect { public int Left, Top, Right, Bottom; }
 
@@ -76,6 +83,33 @@ public static class ImmCapture
     }
 
     public static void Release(IntPtr window) { SetWindowPos(window, new IntPtr(-2), 0, 0, 0, 0, 0x0013); }
+
+    // The overlay's default global hotkey, Ctrl+Alt+K.
+    public static void PressOverlayHotkey()
+    {
+        byte[] keys = { 0x11, 0x12, 0x4B };
+        foreach (byte key in keys) keybd_event(key, 0, 0, UIntPtr.Zero);
+        System.Threading.Thread.Sleep(80);
+        for (int i = keys.Length - 1; i >= 0; i--) keybd_event(keys[i], 0, 2, UIntPtr.Zero);
+    }
+
+    // The overlay of this process: a visible top-level window titled "IMM ...".
+    public static IntPtr FindOverlay(int processId)
+    {
+        IntPtr found = IntPtr.Zero;
+        EnumWindows((window, data) =>
+        {
+            uint owner;
+            GetWindowThreadProcessId(window, out owner);
+            if (owner != processId || !IsWindowVisible(window)) return true;
+            var text = new System.Text.StringBuilder(256);
+            GetWindowText(window, text, text.Capacity);
+            if (!text.ToString().StartsWith("IMM ")) return true;
+            found = window;
+            return false;
+        }, IntPtr.Zero);
+        return found;
+    }
 
     public static Rect Bounds(IntPtr window)
     {
@@ -128,7 +162,7 @@ function Write-Configuration([string]$page, [string]$language, [string]$theme, [
     $target = Join-Path $testData $(if ($MissingGameFolder) { 'Loader\NoSuchFolder' } else { 'Loader\Mods' })
     $shell = [ordered]@{
         SelectedRepositoryId = 'ui-repository'
-        CurrentPrimarySection = $(if ($page -eq 'whatsnew') { 'dashboard' } elseif ($page -like 'updates-*') { 'updates' } else { $page })
+        CurrentPrimarySection = $(if ($page -eq 'whatsnew') { 'dashboard' } elseif ($page -eq 'overlay') { 'shortcuts' } elseif ($page -like 'updates-*') { 'updates' } else { $page })
         UpdatesView = $(if ($page -like 'updates-*') { $page.Substring('updates-'.Length) } else { 'mods' })
         CheckAppUpdatesOnStartup = $false
         WhatsNewSeenVersion = $(if ($page -eq 'whatsnew') { '' } else { $whatsNewSet })
@@ -186,6 +220,15 @@ function Capture([string]$name, [int]$width, [int]$height) {
         Start-Sleep -Milliseconds 800
         $size = [ImmCapture]::Save($handle, (Join-Path $output "$name.png"))
         [ImmCapture]::Release($handle)
+        if ($name -like 'overlay-*') {
+            # The overlay is its own window: open it with the hotkey and take a second picture of it alone.
+            [ImmCapture]::PressOverlayHotkey()
+            $overlayWindow = [IntPtr]::Zero
+            for ($i = 0; $i -lt 20 -and $overlayWindow -eq [IntPtr]::Zero; $i++) { Start-Sleep -Milliseconds 300; $overlayWindow = [ImmCapture]::FindOverlay($process.Id) }
+            if ($overlayWindow -eq [IntPtr]::Zero) { throw "No overlay for $name" }
+            Start-Sleep -Seconds 2
+            $size = [ImmCapture]::Save($overlayWindow, (Join-Path $output "$name-window.png"))
+        }
         $errors = @()
         foreach ($log in 'startup.log', 'app-errors.log') {
             $path = Join-Path $appFolder $log
