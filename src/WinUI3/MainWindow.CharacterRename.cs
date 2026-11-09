@@ -2,13 +2,14 @@ using System.Security.Cryptography;
 using System.Text;
 using System.Text.Json;
 using IntegratedModManager.Core.Configuration;
+using IntegratedModManager.Core.Deployment;
 using IntegratedModManager.Core.Repository;
 
 namespace ModFolderCopier.WinUI;
 
 // Issue #108: a character rename moves everything that names the character or a path inside it, as one operation
 // (CharacterRename): the links in the loader folder, presets, state slots, default slots, bindings, links, origins,
-// tags, per-character settings and the character-follow references. A failure puts all of it back.
+// tags, per-character settings, copy-mode records and the character-follow references. A failure puts all of it back.
 public sealed partial class MainWindow
 {
     private sealed class CharacterRenameReferences(MainWindow window, WorkspaceRepository repository) : ICharacterRenameReferences
@@ -59,6 +60,7 @@ public sealed partial class MainWindow
 
         log.Rekey(repository.CharacterAvatarBindings, plan.MapName);
         log.Rekey(repository.CharacterSelectionOverrides, plan.MapName);
+        CopyDeploymentLedger.RenameCharacter(_copyDeployments, repository.Id, plan, log);
         if (_localLibraries.TryGetValue(WorkspaceIdentity.Library(repository.Id, repository.SourcePath), out LocalLibraryState? tags))
         {
             log.Rekey(tags.ModTags, plan.MapRelative);

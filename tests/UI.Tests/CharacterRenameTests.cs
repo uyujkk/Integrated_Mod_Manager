@@ -11,7 +11,7 @@ public sealed class CharacterRenameTests
     [Fact]
     public void Reproduce_RenameCharacterLeavesDeployedJunctionAndProfileAtOldPath()
     {
-        using AppSession app = AppSession.Configured((shell, _) =>
+        using AppSession app = AppSession.Configured((shell, session) =>
         {
             shell["CurrentPrimarySection"] = "repository";
             shell["Repositories"]![0]!["UseDirectoryLinks"] = true;
@@ -20,6 +20,12 @@ public sealed class CharacterRenameTests
                 ["Id"] = "with-a", ["RepositoryId"] = "ui-repository", ["Name"] = "With A",
                 ["ModRelativePaths"] = new JsonArray(@"TestCharacter\TestModA"),
                 ["IncludesPersistentState"] = false, ["PersistentStates"] = new JsonArray()
+            });
+            // TestModB was deployed as a copy (#107): its record names the source by the character's name.
+            shell["CopyDeployments"] = new JsonArray(new JsonObject
+            {
+                ["RepositoryId"] = "ui-repository", ["SourceRelativePath"] = @"TestCharacter\TestModB",
+                ["DeployedPath"] = Path.Combine(session.TestData, "Loader", "Mods", "TestModB"), ["Origin"] = "copied"
             });
         });
         string oldSource = Path.Combine(app.TestData, "ModRepository", "TestCharacter", "TestModA");
@@ -44,6 +50,7 @@ public sealed class CharacterRenameTests
         Assert.Equal(newSource, Target(junction), StringComparer.OrdinalIgnoreCase);
         Assert.True(File.Exists(Path.Combine(junction, "mod.ini")));
         Assert.Equal(@"RenamedCharacter\TestModA", (string?)app.ShellConfig()["ConfigurationProfiles"]![0]!["ModRelativePaths"]![0]);
+        Assert.Equal(@"RenamedCharacter\TestModB", CopySource(app));
 
         // After a restart and a rescan the junction still works and the preset still finds the same Mod.
         app.Restart();
@@ -51,9 +58,12 @@ public sealed class CharacterRenameTests
         app.FindByName("TestModA");
         Assert.Equal(newSource, Target(junction), StringComparer.OrdinalIgnoreCase);
         Assert.Equal(@"RenamedCharacter\TestModA", (string?)app.ShellConfig()["ConfigurationProfiles"]![0]!["ModRelativePaths"]![0]);
+        Assert.Equal(@"RenamedCharacter\TestModB", CopySource(app));
         Assert.True(app.IsRunning);
         app.AssertNoErrors();
     }
+
+    private static string? CopySource(AppSession app) => (string?)app.ShellConfig()["CopyDeployments"]![0]!["SourceRelativePath"];
 
     private static string Target(string link) => (new DirectoryInfo(link).LinkTarget ?? string.Empty).Replace(@"\??\", string.Empty);
 
