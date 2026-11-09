@@ -144,7 +144,7 @@ public sealed partial class MainWindow
             cancellation.Token.ThrowIfCancellationRequested();
             if (_onlineWindowClosed) return;
             CombinationBundleManifest manifest = import.Manifest;
-            var confirmation = await ConfirmBundleInstallAsync(import, repository.OnlineGameName);
+            var confirmation = await CombinationBundleDialog.ConfirmInstallAsync(_services, import, repository.OnlineGameName);
             cancellation.Token.ThrowIfCancellationRequested();
             if (!confirmation.Install || _onlineWindowClosed) return;
             if (GetSelectedRepository() is not { } current || current.Id != repositoryId || current.SourcePath != root)
@@ -207,54 +207,6 @@ public sealed partial class MainWindow
         var used = GetCurrentRepositoryProfiles().Select(profile => profile.Name).ToHashSet(StringComparer.OrdinalIgnoreCase);
         if (!used.Contains(name)) return name;
         for (int i = 2; ; i++) if (!used.Contains($"{name} ({i})")) return $"{name} ({i})";
-    }
-
-    private async Task<(bool Install, bool Restore)> ConfirmBundleInstallAsync(CombinationBundleImport import, string currentGame)
-    {
-        var manifest = import.Manifest;
-        DialogViewport viewport = DialogViewportPolicy.Selection(RootGrid.ActualWidth, RootGrid.ActualHeight);
-        var panel = new Grid { RowSpacing = 10, MaxWidth = viewport.MaxWidth, Height = viewport.ContentHeight };
-        panel.RowDefinitions.Add(new() { Height = GridLength.Auto });
-        panel.RowDefinitions.Add(new() { Height = new GridLength(1, GridUnitType.Star) });
-        panel.RowDefinitions.Add(new() { Height = GridLength.Auto });
-        string summary = T("CombinationBundles.ModsValues", manifest.Name, manifest.Mods.Count, manifest.Mods.Sum(mod => mod.Values.Count));
-        summary += T("CombinationBundles.InstallIntoTheCurrentRepositoryAnd");
-        if (manifest.Game.Length > 0) summary += "\n" + T("CombinationBundles.BundleGame") + manifest.Game;
-        if (manifest.Game.Length > 0 && currentGame.Length > 0 && !manifest.Game.Equals(currentGame, StringComparison.OrdinalIgnoreCase))
-            summary += T("CombinationBundles.WarningGameLabelDiffersFromThis");
-        if (manifest.Mods.Count == 0) summary += T("CombinationBundles.EmptySetRestoringItRemovesRecognized");
-        panel.Children.Add(new TextBlock { Text = summary, TextWrapping = TextWrapping.Wrap });
-        var list = new ListView
-        {
-            SelectionMode = ListViewSelectionMode.None, HorizontalContentAlignment = HorizontalAlignment.Stretch,
-            ItemsSource = import.Preview.Select(item => new CombinationPreviewRow(item.RelativePath, "", item.Disposition switch
-            {
-                CombinationBundleDisposition.Install => T("CombinationBundles.NewInstall"),
-                CombinationBundleDisposition.Reuse => T("CombinationBundles.IdenticalFilesReuse"),
-                _ => T("CombinationBundles.PathContentConflictBlocked")
-            })).ToArray(),
-            ItemTemplate = (DataTemplate)XamlReader.Load("""
-                <DataTemplate xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation">
-                  <StackPanel Padding="8" Spacing="4">
-                    <TextBlock Text="{Binding Title}" TextWrapping="Wrap"/>
-                    <TextBlock Text="{Binding ValueText}" FontSize="12" TextWrapping="Wrap"/>
-                  </StackPanel>
-                </DataTemplate>
-                """)
-        };
-        Grid.SetRow(list, 1); panel.Children.Add(list);
-        var restore = new CheckBox { Content = T("CombinationBundles.ReviewDeploymentAndStateRestoreAfter"),
-            IsChecked = true, IsEnabled = import.CanInstall };
-        Grid.SetRow(restore, 2); panel.Children.Add(restore);
-        var dialog = new ContentDialog
-        {
-            XamlRoot = RootGrid.XamlRoot, RequestedTheme = RootGrid.ActualTheme,
-            Title = T("CombinationBundles.BundleInstallationPreview"), Content = panel,
-            PrimaryButtonText = T("CombinationBundles.InstallAndSavePreset"), CloseButtonText = T("Common.Cancel"),
-            IsPrimaryButtonEnabled = import.CanInstall, DefaultButton = ContentDialogButton.Close
-        };
-        dialog.Resources["ContentDialogMaxWidth"] = viewport.MaxWidth;
-        return (await _services.Dialogs.ShowAsync(dialog) == ContentDialogResult.Primary, restore.IsChecked == true);
     }
 
     private async Task ReportBundleErrorAsync(Exception ex, bool committed)

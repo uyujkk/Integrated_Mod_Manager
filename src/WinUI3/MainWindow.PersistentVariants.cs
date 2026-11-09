@@ -295,39 +295,14 @@ public sealed partial class MainWindow
             return;
         }
 
-        var choices = new ComboBox { HorizontalAlignment = HorizontalAlignment.Stretch };
-        foreach (UserIniSnapshot snapshot in snapshots)
-        {
-            choices.Items.Add(new ComboBoxItem { Content = $"{snapshot.SavedAt.LocalDateTime:yyyy-MM-dd HH:mm} · {snapshot.Name}", Tag = snapshot });
-        }
-        choices.SelectedIndex = 0;
-        var closed = new CheckBox { Content = T("Common.IHaveFullyClosedTheGame") };
-        var panel = new StackPanel { Spacing = 10 };
-        panel.Children.Add(new TextBlock { Text = T("PersistentVariants.RestoreSnapshotExplanation", userIni), TextWrapping = TextWrapping.Wrap });
-        panel.Children.Add(choices);
-        panel.Children.Add(closed);
-        var dialog = new ContentDialog
-        {
-            Title = T("PersistentVariants.RestoreUserIniSnapshot"),
-            Content = panel,
-            PrimaryButtonText = T("PersistentSlots.BackUpAndRestore"),
-            CloseButtonText = T("Common.Cancel"),
-            DefaultButton = ContentDialogButton.Close,
-            IsPrimaryButtonEnabled = false,
-            RequestedTheme = RootGrid.ActualTheme,
-            XamlRoot = RootGrid.XamlRoot
-        };
-        CheckBox hotReload = CreateHotReloadOption(closed, dialog);
-        panel.Children.Add(hotReload);
-        closed.Checked += (_, _) => dialog.IsPrimaryButtonEnabled = true;
-        closed.Unchecked += (_, _) => dialog.IsPrimaryButtonEnabled = hotReload.IsChecked == true;
-        if (await _services.Dialogs.ShowAsync(dialog) != ContentDialogResult.Primary || choices.SelectedItem is not ComboBoxItem { Tag: UserIniSnapshot chosen }) return;
+        (UserIniSnapshot? chosen, bool hotReload) = await LoaderStateRestoreDialog.ChooseSnapshotAsync(_services, snapshots, userIni, CanHotReloadLoader);
+        if (chosen is null) return;
 
         try
         {
             string backup = await Task.Run(() => UserIniSnapshots.Restore(chosen, userIni, DateTimeOffset.Now));
             PersistentSlotStatusTextBlock.Text = T("PersistentVariants.SnapshotRestored", chosen.Name, backup);
-            if (hotReload.IsChecked == true)
+            if (hotReload)
                 PersistentSlotStatusTextBlock.Text += "\n" + await HotReloadLoaderAsync(userIni);
         }
         catch (Exception ex) when (ex is IOException or UnauthorizedAccessException or InvalidDataException)

@@ -38,29 +38,7 @@ public sealed partial class MainWindow
             list += T("InstallTransactions.AndMore", broken.Count - 20);
         }
 
-        DialogViewport viewport = DialogViewportPolicy.Selection(RootGrid.ActualWidth, RootGrid.ActualHeight);
-        var dialog = new ContentDialog
-        {
-            XamlRoot = RootGrid.XamlRoot,
-            RequestedTheme = RootGrid.ActualTheme,
-            Title = T("InstallTransactions.BrokenModLinksFound"),
-            Content = new ScrollViewer
-            {
-                MaxHeight = viewport.ContentHeight,
-                HorizontalScrollBarVisibility = ScrollBarVisibility.Disabled,
-                Content = new TextBlock
-                {
-                    TextWrapping = TextWrapping.Wrap,
-                    IsTextSelectionEnabled = true,
-                    Text = T("InstallTransactions.LinkSInTheLoaderFolder", broken.Count, list)
-                }
-            },
-            PrimaryButtonText = T("InstallTransactions.RemoveBrokenLinks"),
-            SecondaryButtonText = T("InstallTransactions.ContinueWithoutCleanup"),
-            CloseButtonText = T("Common.Cancel"),
-            DefaultButton = ContentDialogButton.Primary
-        };
-        ContentDialogResult result = await _services.Dialogs.ShowAsync(dialog);
+        ContentDialogResult result = await BrokenLinksDialog.ShowAsync(_services, broken.Count, list);
         if (result == ContentDialogResult.None)
         {
             return false;
