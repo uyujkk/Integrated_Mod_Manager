@@ -445,20 +445,7 @@ public sealed partial class MainWindow
         try
         {
             SaveSelectedRepositoryFromInputs();
-
-            var config = new LegacyConfig
-            {
-                SourceDirectory = Paths.Source,
-                TargetDirectory = Paths.Target,
-                LauncherPath = Paths.Launcher,
-                DarkTheme = _services.Appearance.IsDark,
-                Language = UiLanguagePolicy.ToConfig(_services.Language.Current)
-            };
-            foreach ((string modPath, List<ShortcutBinding> bindings) in _modBindings) config.Bindings[modPath] = bindings;
-            foreach ((string modPath, string link) in _modLinks) config.ModLinks[modPath] = link;
-            foreach ((string modPath, TrackedModOrigin origin) in _trackedModOrigins) config.ModOrigins[modPath] = origin;
-
-            WriteConfigurationTextWithBackup(_services.ShellConfig.ConfigPath, LegacyConfigFile.Format(config));
+            WriteLegacyConfig();
             SaveShellConfig();
             return true;
         }
@@ -468,6 +455,24 @@ public sealed partial class MainWindow
             StatusTextBlock.Text = T("Configuration.FailedToSaveConfigButThe");
             return false;
         }
+    }
+
+    // config.ini: paths, language, and the Mod bindings, links and origins. Throws when it cannot be written.
+    private void WriteLegacyConfig()
+    {
+        var config = new LegacyConfig
+        {
+            SourceDirectory = Paths.Source,
+            TargetDirectory = Paths.Target,
+            LauncherPath = Paths.Launcher,
+            DarkTheme = _services.Appearance.IsDark,
+            Language = UiLanguagePolicy.ToConfig(_services.Language.Current)
+        };
+        foreach ((string modPath, List<ShortcutBinding> bindings) in _modBindings) config.Bindings[modPath] = bindings;
+        foreach ((string modPath, string link) in _modLinks) config.ModLinks[modPath] = link;
+        foreach ((string modPath, TrackedModOrigin origin) in _trackedModOrigins) config.ModOrigins[modPath] = origin;
+
+        WriteConfigurationTextWithBackup(_services.ShellConfig.ConfigPath, LegacyConfigFile.Format(config));
     }
 
     private string ReadConfigurationTextWithRecovery(string filePath, Func<string, bool> validator)
