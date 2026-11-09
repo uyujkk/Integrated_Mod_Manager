@@ -38,6 +38,38 @@ public sealed class SmokeTests
         app.AssertNoErrors();
     }
 
+    // Stage J4-b: after a first install the dashboard's getting-started tips show until they are closed. They
+    // take the keyboard focus, so Narrator reads the step; closing the app keeps them, Esc closes them for good.
+    [Fact]
+    public void FirstInstall_GettingStartedTipsShowUntilClosed()
+    {
+        using AppSession app = AppSession.FirstInstall().Start();
+        AppSession.Invoke(app.FindByName(app.Text("FirstRun.Later"), TimeSpan.FromSeconds(20)));
+        AppSession.Invoke(app.FindByName(app.Text("WhatsNew.Close"), TimeSpan.FromSeconds(20)));
+
+        AutomationElement next = app.Find("GettingStartedNextButton", TimeSpan.FromSeconds(20));
+        Assert.Contains(app.Text("GettingStarted.NewRepository.Title"), next.HelpText);
+        Assert.True(FlaUI.Core.Tools.Retry.WhileFalse(() => next.Properties.HasKeyboardFocus.ValueOrDefault, TimeSpan.FromSeconds(3)).Result,
+            "The tip should take the keyboard focus");
+        AppSession.Invoke(next);
+        Assert.Contains(app.Text("GettingStarted.Paths.Title"), app.Find("GettingStartedNextButton").HelpText);
+
+        // Closing the app is not closing the tips: they come back, from the start.
+        app.Restart();
+        next = app.Find("GettingStartedNextButton", TimeSpan.FromSeconds(20));
+        Assert.Contains(app.Text("GettingStarted.NewRepository.Title"), next.HelpText);
+
+        Keyboard.Type(VirtualKeyShort.ESCAPE);
+        Thread.Sleep(1000);
+        Assert.False(app.Shows("GettingStartedNextButton"), "Esc should close the tips");
+        Assert.False(app.ShellConfig()["GettingStartedTipsPending"]!.GetValue<bool>());
+
+        app.Restart();
+        Thread.Sleep(5000);
+        Assert.False(app.Shows("GettingStartedNextButton"), "Closed tips should not come back");
+        app.AssertNoErrors();
+    }
+
     [Fact]
     public void Navigation_EveryPageOpensWithoutErrors()
     {
