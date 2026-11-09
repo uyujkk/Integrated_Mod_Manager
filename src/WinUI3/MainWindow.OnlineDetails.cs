@@ -52,7 +52,7 @@ public sealed partial class MainWindow
             },
             ex => ReportOnlineActionErrorAsync(
                 T("OnlineDetails.FailedToOpenModDetails") + ex.Message,
-                T("OnlineDetails.DetailsLoadFailed")),
+                T("OnlineDetails.DetailsLoadFailed"), ex),
             () => !_onlineWindowClosed && ReferenceEquals(_activeOnlineDetailMod, mod)
                 && string.Equals(contextKey, GetOnlineDetailContextKey(), StringComparison.Ordinal),
             loading =>
@@ -1023,7 +1023,7 @@ public sealed partial class MainWindow
             {
                 LogApplicationIssue("Select online download file", ex);
                 await ReportOnlineActionErrorAsync(T("OnlineDetails.FailedToSelectDownloadFile") + ex.Message,
-                    T("Common.OnlineDownloadFailed"));
+                    T("Common.OnlineDownloadFailed"), ex);
             }
             finally
             {

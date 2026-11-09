@@ -211,6 +211,6 @@ public sealed partial class MainWindow
     {
         LogApplicationIssue("Combination bundle", ex);
         await ReportOnlineActionErrorAsync((committed ? T("CombinationBundles.InstalledButRefreshFailed") : T("CombinationBundles.OperationNotFinished")) + "\n" + ex.Message,
-            T("CombinationBundles.CombinationBundle"));
+            T("CombinationBundles.CombinationBundle"), ex);
     }
 }

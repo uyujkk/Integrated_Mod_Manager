@@ -111,7 +111,7 @@ public sealed partial class MainWindow
             await ShowMessageAsync(T("ExistingModImport.RemovedUnchangedCopiesPreservedModifiedOr", result.Removed.Length, result.Preserved.Length)
                 + "\n" + string.Join("\n", result.Preserved), T("ExistingModImport.UndoResult"));
         }
-        catch (Exception ex) { await ReportOnlineActionErrorAsync(ex.Message, T("ExistingModImport.CannotUndoImport")); }
+        catch (Exception ex) { await ReportOnlineActionErrorAsync(ex.Message, T("ExistingModImport.CannotUndoImport"), ex); }
         finally { _existingModImportBusy = false; }
     }
 
@@ -139,7 +139,7 @@ public sealed partial class MainWindow
             await ShowMessageAsync(T("ExistingModImport.RegisteredCompleteCopiesPreservedAmbiguousOr", result.Recovered.Length, result.Preserved.Length, result.StagingFolders.Length)
                 + "\n" + string.Join("\n", result.Preserved.Concat(result.StagingFolders)), T("ExistingModImport.ImportRecoveryCheck"));
         }
-        catch (Exception ex) { LogApplicationIssue("Recover organized import", ex); await ReportOnlineActionErrorAsync(ex.Message, T("ExistingModImport.CannotInspectImportRecord")); }
+        catch (Exception ex) { LogApplicationIssue("Recover organized import", ex); await ReportOnlineActionErrorAsync(ex.Message, T("ExistingModImport.CannotInspectImportRecord"), ex); }
         finally { _existingModImportBusy = false; }
     }
 

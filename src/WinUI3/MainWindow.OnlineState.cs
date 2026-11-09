@@ -64,10 +64,10 @@ public sealed partial class MainWindow
         }
     }
 
-    private async Task ReportOnlineActionErrorAsync(string message, string title)
+    private async Task ReportOnlineActionErrorAsync(string message, string title, Exception? error = null)
     {
         if (_onlineWindowClosed) return;
-        try { await ShowMessageAsync(message, title); }
+        try { await _services.Dialogs.ErrorAsync(title, message, error); }
         catch (Exception ex) { LogApplicationIssue("Report online action error", ex); }
     }
 }

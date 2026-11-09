@@ -139,7 +139,7 @@ public sealed partial class MainWindow
         catch (Exception ex)
         {
             LogApplicationIssue("Author and saved workspace", ex);
-            await ReportOnlineActionErrorAsync(ex.Message, T("OnlineLibrary.CannotCompleteAction"));
+            await ReportOnlineActionErrorAsync(ex.Message, T("OnlineLibrary.CannotCompleteAction"), ex);
         }
     }
 }

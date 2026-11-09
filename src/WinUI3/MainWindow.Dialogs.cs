@@ -215,8 +215,8 @@ public sealed partial class MainWindow
     }
 
     // Any page can ask for a notification through the status service; the window shows it.
-    private void ShowAppNotification(string message, InfoBarSeverity severity = InfoBarSeverity.Success)
-        => _services.Status.Notify(message, severity);
+    private void ShowAppNotification(string message, InfoBarSeverity severity = InfoBarSeverity.Success, Exception? error = null)
+        => _services.Status.Notify(message, severity, error);
 
     private async void OnNotificationRequested(object? sender, StatusNotification notification)
     {
@@ -234,6 +234,18 @@ public sealed partial class MainWindow
                 _ => T("Dialogs.Completed")
             };
             AppInfoBar.Message = message;
+            // An error with the failure behind it offers its details, to read or copy for a report (J8).
+            if (notification.Error is Exception error)
+            {
+                var details = new HyperlinkButton { Content = T("Dialogs.ViewDetails") };
+                details.Click += async (_, _) => await RunUiActionAsync("Show error details",
+                    () => _services.Dialogs.ErrorAsync(AppInfoBar.Title, message, error));
+                AppInfoBar.ActionButton = details;
+            }
+            else
+            {
+                AppInfoBar.ActionButton = null;
+            }
             AppInfoBar.IsOpen = true;
 
             // Done and for-your-information notes close themselves; warnings and errors stay until closed.

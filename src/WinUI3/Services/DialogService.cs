@@ -26,6 +26,8 @@ internal sealed class DialogService(LanguageService language)
 
     private string T(string key) => language.T(key);
 
+    private string T(string key, params object?[] values) => language.T(key, values);
+
     /// <summary>Called once the window exists.</summary>
     public void Attach(Func<XamlRoot?> root, Func<ElementTheme>? theme = null)
     {
@@ -78,11 +80,56 @@ internal sealed class DialogService(LanguageService language)
             CloseButtonText = T("Dialogs.OK")
         });
 
-    /// <summary>An error; <paramref name="exception"/> is the failure behind it, when there is one.</summary>
+    /// <summary>
+    /// An error. With the failure behind it, "View details" expands its type, code, message and stack and the path of
+    /// the error log, which the user can copy for a report (J8).
+    /// </summary>
     public async Task ErrorAsync(string title, string content, Exception? exception = null)
     {
-        _ = exception;
-        await MessageAsync(title, content);
+        var panel = new StackPanel { Spacing = 12 };
+        panel.Children.Add(new TextBlock { Text = content, TextWrapping = TextWrapping.Wrap, IsTextSelectionEnabled = true });
+        if (exception is not null) panel.Children.Add(ErrorDetails(exception));
+        await ShowAsync(new ContentDialog
+        {
+            Title = title,
+            Content = new ScrollViewer { Content = panel, MaxHeight = Math.Min(MaxContentHeight, Viewport.ContentHeight), HorizontalScrollBarVisibility = ScrollBarVisibility.Disabled },
+            CloseButtonText = T("Common.Close"),
+            DefaultButton = ContentDialogButton.Close
+        });
+    }
+
+    /// <summary>The error log the app writes (see MainWindow.LogApplicationIssue).</summary>
+    public static string ErrorLogPath => Path.Combine(AppContext.BaseDirectory, "app-errors.log");
+
+    /// <summary>The text "View details" shows and copies.</summary>
+    public static string DetailsText(Exception exception, string logLabel)
+        => $"{exception.GetType().FullName} (0x{exception.HResult:X8})\n{exception.Message}\n\n{exception.StackTrace}".TrimEnd()
+            + "\n\n" + logLabel;
+
+    private Expander ErrorDetails(Exception exception)
+    {
+        string details = DetailsText(exception, T("Dialogs.ErrorLog", ErrorLogPath));
+        var text = new TextBox
+        {
+            Text = details, IsReadOnly = true, TextWrapping = TextWrapping.Wrap, AcceptsReturn = true,
+            FontFamily = new Microsoft.UI.Xaml.Media.FontFamily("Consolas"), FontSize = 12, MaxHeight = 200
+        };
+        Microsoft.UI.Xaml.Automation.AutomationProperties.SetName(text, T("Dialogs.ViewDetails"));
+        var copy = new Button { Content = T("Dialogs.CopyDetails") };
+        copy.Click += (_, _) =>
+        {
+            var package = new Windows.ApplicationModel.DataTransfer.DataPackage();
+            package.SetText(details);
+            Windows.ApplicationModel.DataTransfer.Clipboard.SetContent(package);
+        };
+        var body = new StackPanel { Spacing = 8 };
+        body.Children.Add(text);
+        body.Children.Add(copy);
+        return new Expander
+        {
+            Header = T("Dialogs.ViewDetails"), Content = body,
+            HorizontalAlignment = HorizontalAlignment.Stretch, HorizontalContentAlignment = HorizontalAlignment.Stretch
+        };
     }
 
     /// <summary>A confirmation; the primary button says what happens (a verb, not "OK").</summary>

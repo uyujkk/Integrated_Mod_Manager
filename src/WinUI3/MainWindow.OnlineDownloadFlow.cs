@@ -108,7 +108,7 @@ public sealed partial class MainWindow
         {
             LogApplicationIssue("Prepare online download", ex);
             await ReportOnlineActionErrorAsync(T("OnlineDownloadFlow.FailedToPrepareDownload") + ex.Message,
-                T("Common.OnlineDownloadFailed"));
+                T("Common.OnlineDownloadFailed"), ex);
         }
         finally
         {

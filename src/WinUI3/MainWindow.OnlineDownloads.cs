@@ -90,7 +90,7 @@ public sealed partial class MainWindow
                 capturedContext: request.Context, capturedEndfieldMetadata: request.EndfieldMetadata,
                 capturedCharacterAliases: request.CharacterAliases, confirmedDestination: request.Destination);
         }
-        catch (Exception ex) { await ReportOnlineActionErrorAsync(ex.Message, T("OnlineDownloads.CannotRestartDownload")); }
+        catch (Exception ex) { await ReportOnlineActionErrorAsync(ex.Message, T("OnlineDownloads.CannotRestartDownload"), ex); }
         finally { task.RetryInProgress = false; if (!_onlineWindowClosed) RefreshDownloadTaskCard(task); }
     }
 }
