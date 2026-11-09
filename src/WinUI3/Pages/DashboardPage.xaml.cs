@@ -23,6 +23,8 @@ public sealed partial class DashboardPage : UserControl
     private readonly (TextBox Box, FontIcon Icon, bool ExpectFile)[] _pathStatusIcons;
     private int _layoutMode = -1;
     private string? _autoExpandedFor;
+    // Each new step cancels the opening of the one before (it opens after the page has scrolled to its target).
+    private int _gettingStartedTipVersion;
 
     internal DashboardPage(AppServices services)
     {
@@ -364,11 +366,6 @@ public sealed partial class DashboardPage : UserControl
         };
         // Moving to another target: close first, so the tip opens again beside the new one.
         GettingStartedTip.IsOpen = false;
-        GettingStartedTip.Target = target;
-        // The new-repository button is at the top right: opening below it keeps the title bar's search box clear.
-        GettingStartedTip.PreferredPlacement = tips.Current == GettingStartedStep.NewRepository
-            ? TeachingTipPlacementMode.BottomLeft
-            : TeachingTipPlacementMode.Auto;
         GettingStartedTip.Title = title;
         GettingStartedTip.Subtitle = body;
         GettingStartedStepTextBlock.Text = T("GettingStarted.Step", tips.Number, GettingStartedTips.Steps.Count);
@@ -379,10 +376,51 @@ public sealed partial class DashboardPage : UserControl
         // The Next button is focused, so Narrator reads the step with it.
         string announcement = T("GettingStarted.Announcement", title, body);
         AutomationProperties.SetHelpText(GettingStartedNextButton, announcement);
-        target.StartBringIntoView(new BringIntoViewOptions { AnimationDesired = false, VerticalAlignmentRatio = 0.3 });
-        GettingStartedTip.IsOpen = true;
-        _ = FocusGettingStartedTipAsync(announcement);
+        // The tip is placed against where its target is when it opens. So the page scrolls the target into view
+        // first, without animation, the layout is brought up to date, and only then is the tip placed and opened.
+        // Step 2 used to open while the page was still moving to the path settings, beside where they had been.
+        int version = ++_gettingStartedTipVersion;
+        bool belowLeft = tips.Current == GettingStartedStep.NewRepository;
+        DispatcherQueue.TryEnqueue(() =>
+        {
+            if (version != _gettingStartedTipVersion || ViewModel.GettingStarted?.IsPending != true || XamlRoot is null) return;
+            UpdateLayout();
+            double top = target.TransformToVisual(DashboardRootPanel).TransformPoint(new Windows.Foundation.Point(0, 0)).Y;
+            // The target sits at least a tip's height below the top, so a tall one can be pointed at from above.
+            double lead = Math.Max(DashboardScrollViewer.ViewportHeight * 0.3, GettingStartedTipHeight + 24);
+            double offset = Math.Clamp(top - lead, 0, DashboardScrollViewer.ScrollableHeight);
+            if (Math.Abs(offset - DashboardScrollViewer.VerticalOffset) >= 1)
+            {
+                DashboardScrollViewer.ChangeView(null, offset, null, disableAnimation: true);
+                UpdateLayout();
+            }
+            PlaceGettingStartedTip(target, belowLeft);
+            GettingStartedTip.IsOpen = true;
+            _ = FocusGettingStartedTipAsync(announcement);
+        });
     }
+
+    // Below or above the target when the tip fits there, otherwise in the middle of the page pointing at nothing;
+    // never beside a wide target, where it used to leave the window (J8 follow-up).
+    private void PlaceGettingStartedTip(FrameworkElement target, bool belowLeft)
+    {
+        Windows.Foundation.Rect bounds = target.TransformToVisual(null)
+            .TransformBounds(new Windows.Foundation.Rect(0, 0, target.ActualWidth, target.ActualHeight));
+        TipPlacement placement = TipPlacementPolicy.Choose(bounds.X, bounds.Y, bounds.Width, bounds.Height,
+            XamlRoot.Size.Width, XamlRoot.Size.Height, GettingStartedTipWidth, GettingStartedTipHeight, belowLeft);
+        GettingStartedTip.Target = placement == TipPlacement.Center ? null : target;
+        GettingStartedTip.PreferredPlacement = placement switch
+        {
+            TipPlacement.BottomLeft => TeachingTipPlacementMode.BottomLeft,
+            TipPlacement.Bottom => TeachingTipPlacementMode.Bottom,
+            TipPlacement.Top => TeachingTipPlacementMode.Top,
+            _ => TeachingTipPlacementMode.Center
+        };
+    }
+
+    // A teaching tip is at most 336 wide; with its tail and the longest (Russian) step text it stays within these.
+    private const double GettingStartedTipWidth = 360;
+    private const double GettingStartedTipHeight = 300;
 
     // The tip's popup is laid out a moment after it opens; until then its buttons cannot take the focus.
     private async Task FocusGettingStartedTipAsync(string announcement)
