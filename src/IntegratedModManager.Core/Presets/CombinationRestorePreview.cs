@@ -5,18 +5,24 @@ using IntegratedModManager.Core.Infrastructure;
 namespace IntegratedModManager.Core.Presets;
 
 public sealed record CombinationPresetState(string ModRelativePath, IReadOnlyList<ModPersistentValue> Values);
+/// <param name="OwnsCopy">Whether a copied folder is the manager's copy of a source Mod (CopyDeploymentLedger.Owns).</param>
 public sealed record CombinationRestoreRequest(
     string SourceRoot, string TargetRoot, IReadOnlyList<string> ModRelativePaths,
-    bool UseLinks, bool IncludeState, IReadOnlyList<CombinationPresetState> States, string UserIniPath);
+    bool UseLinks, bool IncludeState, IReadOnlyList<CombinationPresetState> States, string UserIniPath,
+    Func<string, string, bool>? OwnsCopy = null);
 
 public enum CombinationPreviewIssueCode
 {
     SourceUnavailable, TargetUnavailable, UnsafeRoots, UnsafeModPath, MissingMod,
     DisabledMod, LinkedSource, DuplicateMod, AmbiguousTargetName, SnapshotMismatch,
-    ParameterMismatch, LoaderStateInvalid, DeploymentBlocked, ReadFailure
+    ParameterMismatch, LoaderStateInvalid, DeploymentBlocked, ReadFailure,
+
+    /// <summary>A copied folder the manager does not recognise has the name a wanted Mod needs (issue #107).</summary>
+    UnownedCopyInTheWay
 }
 public sealed record CombinationPreviewIssue(CombinationPreviewIssueCode Code, string Subject, Exception? Error = null);
-public enum CombinationModAction { Install, Keep, Remove, PreserveExternal, Unavailable, Pending }
+/// <summary><see cref="UnownedCopy"/>: a folder named like a repository Mod but not recognised as its copy; kept.</summary>
+public enum CombinationModAction { Install, Keep, Remove, PreserveExternal, Unavailable, Pending, UnownedCopy }
 public sealed record CombinationModPreview(string ModRelativePath, string Path, CombinationModAction Action);
 public sealed record CombinationParameterPreview(string ModRelativePath, ModPersistentValueChange Change);
 public sealed record CombinationRestorePreview(
@@ -129,17 +135,24 @@ public static class CombinationRestorePreviewService
         if (issues.Count > 0) return Result();
         try
         {
-            deployment = ModCombinationDeploymentPolicy.Plan(sourceRoot, targetRoot, sources.Keys.ToArray(), request.UseLinks);
+            deployment = ModCombinationDeploymentPolicy.Plan(sourceRoot, targetRoot, sources.Keys.ToArray(), request.UseLinks, request.OwnsCopy);
             var install = deployment.InstallSources.ToHashSet(StringComparer.OrdinalIgnoreCase);
             mods = deployment.DesiredSources.Select(path => new CombinationModPreview(
                 Path.GetRelativePath(sourceRoot, path), path,
                 install.Contains(path) ? CombinationModAction.Install : CombinationModAction.Keep)).ToList();
             mods.AddRange(deployment.RemoveTargets.Select(path => new CombinationModPreview(
                 Path.GetFileName(path), path, CombinationModAction.Remove)));
-            var enabledTargets = ModCombinationDeploymentPolicy.Capture(sourceRoot, targetRoot)
+            var enabledTargets = ModCombinationDeploymentPolicy.Capture(sourceRoot, targetRoot, request.OwnsCopy)
                 .Select(relative => Path.GetFileName(relative)).ToHashSet(StringComparer.OrdinalIgnoreCase);
+            var unowned = deployment.Unowned.ToHashSet(StringComparer.OrdinalIgnoreCase);
+            mods.AddRange(deployment.Unowned.Select(path => new CombinationModPreview(Path.GetFileName(path), path, CombinationModAction.UnownedCopy)));
+            foreach (string source in deployment.DesiredSources)
+            {
+                string target = ModDeploymentLayout.DeployedPath(targetRoot, source);
+                if (unowned.Contains(target)) issues.Add(new(CombinationPreviewIssueCode.UnownedCopyInTheWay, target));
+            }
             mods.AddRange(Directory.GetDirectories(targetRoot)
-                .Where(path => !enabledTargets.Contains(Path.GetFileName(path)))
+                .Where(path => !enabledTargets.Contains(Path.GetFileName(path)) && !unowned.Contains(path))
                 .OrderBy(path => path, StringComparer.CurrentCultureIgnoreCase)
                 .Select(path => new CombinationModPreview(Path.GetFileName(path), path, CombinationModAction.PreserveExternal)));
             // Copies may have different declarations from their repository source.

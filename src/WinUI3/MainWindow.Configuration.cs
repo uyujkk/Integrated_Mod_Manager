@@ -171,6 +171,11 @@ public sealed partial class MainWindow
             _savedWindowHeight = config?.WindowHeight;
             _savedWindowMaximized = config?.WindowMaximized ?? false;
             _whatsNewSeenVersion = WhatsNewPolicy.SeenAfterLoad(config?.WhatsNewSeenVersion, WhatsNewFeatureSet, _firstInstall);
+            lock (_copyDeployments)
+            {
+                _copyDeployments.Clear();
+                _copyDeployments.AddRange(config?.CopyDeployments ?? []);
+            }
             _gettingStartedTips = GettingStartedTips.Load(_firstInstall, config?.GettingStartedTipsPending ?? false);
         }
         catch
@@ -304,6 +309,7 @@ public sealed partial class MainWindow
                 LastInstallTransactionPath = _lastInstallTransactionPath,
                 ConfigurationProfiles = [.. _configurationProfiles],
                 ModPersistentSlots = [.. _modPersistentSlots],
+                CopyDeployments = CopyRecordsSnapshot(),
                 DefaultSlotSeeds = _defaultSlotSeeds.ToDictionary(pair => pair.Key, pair => pair.Value.Order(StringComparer.OrdinalIgnoreCase).ToList()),
                 DefaultSlotsBackfilled = [.. _defaultSlotsBackfilled.Order(StringComparer.Ordinal)],
                 WindowX = _savedWindowX,

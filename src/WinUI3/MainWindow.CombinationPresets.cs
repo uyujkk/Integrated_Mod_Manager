@@ -79,7 +79,7 @@ public sealed partial class MainWindow
             .ToArray();
         if (copies.Any(state => state.Values.Count > 0) && !repository.UseDirectoryLinks)
             await Task.Run(() => ModPersistentPresetEngine.PlanCombinationRuntimeRestore(copies, userIni));
-        var stillEnabled = await Task.Run(() => ModCombinationDeploymentPolicy.Capture(repository.SourcePath, repository.TargetPath));
+        var stillEnabled = await Task.Run(() => ModCombinationDeploymentPolicy.Capture(repository.SourcePath, repository.TargetPath, OwnsCopy(repository)));
         if (!stillEnabled.ToHashSet(StringComparer.OrdinalIgnoreCase).SetEquals(paths))
             throw new IOException(T("CombinationPresets.DeploymentChangedDuringCaptureTheCombination"));
 
@@ -108,18 +108,30 @@ public sealed partial class MainWindow
         string userIni = CombinationUserIniTextBox.Text.Trim();
         string? transaction = null, stateBackup = null;
         ModPersistentRuntimeRestorePlan? runtimePlan = null;
-        bool started = false, committed = false;
+        bool started = false, committed = false, adopted = false;
+        // The copy records go back with the folders when the restore is rolled back.
+        List<CopyDeploymentRecord> copyRecords = CopyRecordsSnapshot();
         SetCombinationBusy(true);
         try
         {
             // Freeze the selected preset: asynchronous dialogs must not read a mutable profile.
             var request = new CombinationRestoreRequest(repository.SourcePath, repository.TargetPath,
                 profile.ModRelativePaths.ToArray(), repository.UseDirectoryLinks, profile.IncludesPersistentState,
-                profile.PersistentStates.Select(state => new CombinationPresetState(state.ModRelativePath, state.Values.ToArray())).ToArray(), userIni);
+                profile.PersistentStates.Select(state => new CombinationPresetState(state.ModRelativePath, state.Values.ToArray())).ToArray(), userIni,
+                OwnsCopy(repository));
             CombinationRestorePreview preview = await Task.Run(() => CombinationRestorePreviewService.Prepare(request));
+            SaveCopyRecordsIfChanged();
             foreach (var issue in preview.Issues.Where(issue => issue.Error is not null))
                 LogApplicationIssue("Combination preview: " + issue.Code, issue.Error!);
-            if (!await ConfirmCombinationRestoreAsync(profile.Name, preview, profile.PreviewFile)) return;
+            CombinationRestoreChoice choice = await ConfirmCombinationRestoreAsync(profile.Name, preview, profile.PreviewFile);
+            if (choice == CombinationRestoreChoice.TakeOver)
+            {
+                // The user recognises the external folders as old copies: record them and show the preview again.
+                AdoptCopies(repository, preview.Deployment!.Unowned);
+                adopted = true;
+                return;
+            }
+            if (choice != CombinationRestoreChoice.Restore) return;
             if (repository.UseDirectoryLinks
                 && !await ConfirmSingleSelectionViolationsAsync(repository, preview.Deployment!.DesiredSources)) return;
             ModCombinationDeploymentPlan deployment = preview.Deployment!;
@@ -149,13 +161,19 @@ public sealed partial class MainWindow
             if (affected.Length > 0)
                 transaction = await CreateInstallTransactionAsync(T("CombinationPresets.RestoreCombination", profile.Name), repository, affected);
             started = true;
-            foreach (string target in deployment.RemoveTargets) await Task.Run(() => DeleteDirectoryTreeSafely(target));
+            CopyDeploymentLedger ledger = CopyLedger(repository);
+            foreach (string target in deployment.RemoveTargets)
+            {
+                await Task.Run(() => DeleteDirectoryTreeSafely(target));
+                ledger.Forget(target);
+            }
             foreach (string source in deployment.InstallSources)
             {
                 await DeployModAsync(source, ModDeploymentLayout.DeployedPath(repository.TargetPath, source), repository,
                     new Progress<ProgressInfo>(info => UpdateProgress(info.Percent, T("CombinationPresets.RestoringCombination") + Path.GetFileName(source))));
             }
-            var actual = await Task.Run(() => ModCombinationDeploymentPolicy.Capture(repository.SourcePath, repository.TargetPath));
+            SaveShellConfig();
+            var actual = await Task.Run(() => ModCombinationDeploymentPolicy.Capture(repository.SourcePath, repository.TargetPath, OwnsCopy(repository)));
             if (!actual.ToHashSet(StringComparer.OrdinalIgnoreCase).SetEquals(deployment.DesiredSources.Select(source => Path.GetRelativePath(request.SourceRoot, source))))
                 throw new IOException(T("CombinationPresets.DeploymentDoesNotMatchThePreset"));
             if (runtimePlan is not null)
@@ -191,6 +209,7 @@ public sealed partial class MainWindow
                     try { await RollbackInstallTransactionAsync(transaction, clearLastTransaction: true); }
                     catch (Exception rollback) { errors.Add(T("CombinationPresets.DeploymentRollbackFailedInspectBackup") + rollback.Message); }
                 }
+                RestoreCopyRecords(copyRecords);
             }
             await ShowMessageAsync(string.Join("\n", errors) + T("CombinationPresets.KeepTheLoaderClosedAndInspect"), T("CombinationPresets.CombinationRestoreIncomplete"));
         }
@@ -199,12 +218,16 @@ public sealed partial class MainWindow
             if (started) await RefreshListsAsync();
             SetCombinationBusy(false);
         }
+        if (adopted) await RestoreCombinationProfileAsync();
     }
+
+    private enum CombinationRestoreChoice { Cancel, Restore, TakeOver }
 
     public sealed record CombinationPreviewRow(string Title, string Detail, string ValueText);
 
-    private async Task<bool> ConfirmCombinationRestoreAsync(string name, CombinationRestorePreview preview, string? previewFile)
+    private async Task<CombinationRestoreChoice> ConfirmCombinationRestoreAsync(string name, CombinationRestorePreview preview, string? previewFile)
     {
+        CombinationRestoreChoice choice = CombinationRestoreChoice.Cancel;
         var closed = new CheckBox { Content = T("Common.IHaveFullyClosedTheGame") };
         var panel = new Grid { RowSpacing = 12, MinWidth = 320,
             Height = Math.Clamp(RootGrid.ActualHeight - 260, 280, 580) };
@@ -221,6 +244,16 @@ public sealed partial class MainWindow
         if (CreatePresetPreviewImage(previewFile, 240, 135) is { } savedLook) heading.Children.Add(savedLook);
         heading.Children.Add(new TextBlock { Text = summary, TextWrapping = TextWrapping.Wrap });
         panel.Children.Add(heading);
+        // Issue #107: same-named folders the manager cannot recognise are kept; the user may take them over.
+        IReadOnlyList<string> unowned = preview.Deployment?.Unowned ?? [];
+        Button? takeOver = null;
+        if (unowned.Count > 0)
+        {
+            takeOver = new Button { Content = T("CombinationPresets.TakeOverExternalFolders", unowned.Count) };
+            ToolTipService.SetToolTip(takeOver, T("CombinationPresets.TakeOverExternalFoldersHint"));
+            heading.Children.Add(new TextBlock { Text = T("CombinationPresets.ExternalFoldersFound", unowned.Count), TextWrapping = TextWrapping.Wrap });
+            heading.Children.Add(takeOver);
+        }
         var tabs = new TabView { IsAddTabButtonVisible = false, CanReorderTabs = false, CanDragTabs = false };
         Grid.SetRow(tabs, 1);
         panel.Children.Add(tabs);
@@ -252,7 +285,14 @@ public sealed partial class MainWindow
         dialog.Resources["ContentDialogMaxWidth"] = Math.Clamp(RootGrid.ActualWidth - 100, 360, 960);
         closed.Checked += (_, _) => dialog.IsPrimaryButtonEnabled = preview.CanRestore;
         closed.Unchecked += (_, _) => dialog.IsPrimaryButtonEnabled = false;
-        return await dialog.ShowAsync() == ContentDialogResult.Primary;
+        if (takeOver is not null)
+            takeOver.Click += (_, _) =>
+            {
+                choice = CombinationRestoreChoice.TakeOver;
+                dialog.Hide();
+            };
+        if (await dialog.ShowAsync() == ContentDialogResult.Primary) choice = CombinationRestoreChoice.Restore;
+        return choice;
 
         void AddTab(string header, IEnumerable<CombinationPreviewRow> rows)
         {
@@ -282,6 +322,7 @@ public sealed partial class MainWindow
         CombinationModAction.Keep => T("CombinationPresets.KeepEnabled"),
         CombinationModAction.Remove => T("CombinationPresets.RemoveDeploymentKeepRepositorySource"),
         CombinationModAction.PreserveExternal => T("CombinationPresets.ExternalUnrecognizedFolderKeepUntouched"),
+        CombinationModAction.UnownedCopy => T("CombinationPresets.UnownedCopyKept"),
         CombinationModAction.Pending => T("CombinationPresets.DeploymentUncheckedResolveBlockingIssuesFirst"),
         _ => T("CombinationPresets.Unavailable")
     };
@@ -301,6 +342,7 @@ public sealed partial class MainWindow
         CombinationPreviewIssueCode.ParameterMismatch => T("CombinationPresets.ModOrDeployedCopyDeclarationsChanged"),
         CombinationPreviewIssueCode.LoaderStateInvalid => T("CombinationPresets.CannotSafelyReadLoaderStateCheck"),
         CombinationPreviewIssueCode.DeploymentBlocked => T("CombinationPresets.DeploymentBlockedCheckAmbiguousNamesFiles"),
+        CombinationPreviewIssueCode.UnownedCopyInTheWay => T("CombinationPresets.UnownedCopyInTheWay"),
         _ => T("CombinationPresets.ReadFailedCheckPermissionsAndRetry")
     };
 }

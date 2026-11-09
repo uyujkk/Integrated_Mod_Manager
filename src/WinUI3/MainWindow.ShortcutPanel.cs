@@ -329,7 +329,7 @@ public sealed partial class MainWindow
         {
             (fresh, deployed) = await Task.Run(() => (ReadShortcutModOptions(source),
                 string.IsNullOrEmpty(source) || string.IsNullOrEmpty(target) ? new HashSet<string>(StringComparer.OrdinalIgnoreCase)
-                    : ModCombinationDeploymentPolicy.Capture(source, target).ToHashSet(StringComparer.OrdinalIgnoreCase)));
+                    : ModCombinationDeploymentPolicy.Capture(source, target, OwnsCopy(repository!)).ToHashSet(StringComparer.OrdinalIgnoreCase)));
         }
         catch (Exception ex) when (ex is IOException or UnauthorizedAccessException or InvalidDataException or ArgumentException)
         {
