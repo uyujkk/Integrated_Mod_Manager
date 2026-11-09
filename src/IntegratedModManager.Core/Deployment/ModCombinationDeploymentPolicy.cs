@@ -1,5 +1,3 @@
-using IntegratedModManager.Core.Infrastructure;
-
 namespace IntegratedModManager.Core.Deployment;
 
 public sealed record ModCombinationDeploymentPlan(
@@ -88,11 +86,8 @@ public static class ModCombinationDeploymentPolicy
         if (DirectoryLinkDeployment.IsDirectoryLink(targetRoot)) throw new InvalidDataException("The target Mods root cannot itself be a directory link.");
     }
 
-    private static void ValidateSeparateRoots(string sourceRoot, string targetRoot)
-    {
-        if (PathSafety.IsSameOrInside(sourceRoot, targetRoot) || PathSafety.IsSameOrInside(targetRoot, sourceRoot))
-            throw new InvalidDataException("Repository and loader Mods folders must be separate, non-nested directories.");
-    }
+    // The same check as single-Mod deployment (DeploymentPathSeparation), links included.
+    private static void ValidateSeparateRoots(string sourceRoot, string targetRoot) => DeploymentPathSeparation.EnsureSeparate(sourceRoot, targetRoot);
 
     private static bool LinkMatches(string source, string target)
     {
