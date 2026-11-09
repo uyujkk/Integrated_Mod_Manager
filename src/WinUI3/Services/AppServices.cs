@@ -32,4 +32,13 @@ internal sealed class AppServices
 
     /// <summary>The integrated Endfield launch, used by the dashboard and the Mod workspace.</summary>
     public EndfieldBridgeService EndfieldBridge { get; } = new();
+
+    /// <summary>The Shortcuts page and overlay state (stage J5).</summary>
+    public ShortcutPageViewModel Shortcuts { get; } = new();
+
+    /// <summary>The Shortcuts overlay; the window attaches it at startup.</summary>
+    public IShortcutOverlay Overlay { get; set; } = null!;
+
+    /// <summary>Stage J5a bridge to the settings blocks the window still builds; see IShortcutPageSettings.</summary>
+    public IShortcutPageSettings ShortcutSettings { get; set; } = null!;
 }

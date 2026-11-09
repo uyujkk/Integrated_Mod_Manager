@@ -12,7 +12,6 @@ public sealed partial class MainWindow
     // fills the repository cards afterwards.
     private void InitializeRefinedWorkspace()
     {
-        InitializePageLayouts();
         _refinedWorkspaceReady = true;
         RootGrid.SizeChanged += (_, _) => UpdateRefinedWorkspaceLayout();
         UpdateRefinedWorkspaceLanguage();

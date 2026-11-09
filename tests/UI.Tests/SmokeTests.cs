@@ -173,6 +173,21 @@ public sealed class SmokeTests
         app.AssertNoErrors();
     }
 
+    // Stage J5: the page reads the selected Mod's bindings, and a page setting reaches the window and is saved.
+    [Fact]
+    public void Shortcuts_PageReadsTheBindingsAndSavesItsSettings()
+    {
+        using AppSession app = AppSession.Configured().Start();
+        AppSession.Invoke(app.Find("ShortcutsNavButton"));
+
+        app.FindByName(string.Format(app.Text("ShortcutPanel.ReadBindingsInGameConditionsAre"), 2), TimeSpan.FromSeconds(15));
+        AppSession.Invoke(app.FindByName(app.Text("ShortcutPanel.HideBindingsThatCannotBeSent")));
+        Thread.Sleep(600);
+
+        Assert.True(app.ShellConfig()["ShortcutHideUnsupported"]!.GetValue<bool>());
+        app.AssertNoErrors();
+    }
+
     [Fact]
     public void Shortcuts_InputMethodIsSaved()
     {

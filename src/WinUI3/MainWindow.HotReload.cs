@@ -25,12 +25,12 @@ public sealed partial class MainWindow
     private string? _overlayCurrentSlotId;
     private string _overlaySlotSignature = string.Empty;
 
-    private bool CanHotReloadLoader => _shortcuts.InputEnabled && _shortcutTargetPicker?.SelectedItem is ShortcutTarget;
+    private bool CanHotReloadLoader => _shortcuts.InputEnabled && _shortcuts.SelectedTarget is ShortcutTarget;
 
     // Sends F10 with d3dx_user.ini kept read-only and describes the outcome.
     private async Task<string> HotReloadLoaderAsync(string userIni, Action? keySent = null)
     {
-        if (!CanHotReloadLoader || _shortcutTargetPicker?.SelectedItem is not ShortcutTarget target)
+        if (!CanHotReloadLoader || _shortcuts.SelectedTarget is not ShortcutTarget target)
         {
             return T("HotReload.NotArmed");
         }
@@ -163,7 +163,7 @@ public sealed partial class MainWindow
     private ModPersistentSlot[] OverlaySlots(out string? modPath)
     {
         WorkspaceRepository? repository = GetSelectedRepository();
-        modPath = (_shortcutModPicker?.SelectedItem as ShortcutModOption)?.Path;
+        modPath = _shortcuts.SelectedMod?.Path;
         string? relative = TryGetCurrentModRelativePath(repository, modPath);
         return !_overlaySlotSwitchEnabled || repository is null || relative is null ? [] : _modPersistentSlots
             .Where(slot => slot.RepositoryId == repository.Id && string.Equals(slot.ModRelativePath, relative, StringComparison.OrdinalIgnoreCase))
@@ -176,7 +176,7 @@ public sealed partial class MainWindow
         if (_savingOverlaySinglePreset || _applyingCombinationProfile) return;
         if (_restoringPersistentRuntime || _shortcuts.SendInProgress)
         {
-            _shortcutStatus!.Text = T("HotReload.StillApplying");
+            _shortcuts.StatusText = T("HotReload.StillApplying");
             RefreshShortcutOverlay(bindingsChanged: true);
             return;
         }
@@ -185,13 +185,13 @@ public sealed partial class MainWindow
         string? userIni = repository?.PersistentUserIniPath is { Length: > 0 } configured ? configured : TryGetDefaultPersistentIniPath(repository);
         if (repository is null || slot is null || userIni is null || !File.Exists(userIni))
         {
-            _shortcutStatus!.Text = T("HotReload.SetTheUserIniFirst");
+            _shortcuts.StatusText = T("HotReload.SetTheUserIniFirst");
             RefreshShortcutOverlay(bindingsChanged: true);
             return;
         }
         if (!CanHotReloadLoader)
         {
-            _shortcutStatus!.Text = T("HotReload.NotArmed");
+            _shortcuts.StatusText = T("HotReload.NotArmed");
             RefreshShortcutOverlay(bindingsChanged: true);
             return;
         }
@@ -212,10 +212,10 @@ public sealed partial class MainWindow
             SaveShellConfig();
             long written = clock.ElapsedMilliseconds;
             // The file stays read-only for a few seconds after the key, so report the switch as soon as the key is out.
-            _shortcutStatus!.Text = $"{slot.Name} · " + await HotReloadLoaderAsync(userIni, () =>
+            _shortcuts.StatusText = $"{slot.Name} · " + await HotReloadLoaderAsync(userIni, () =>
             {
                 TraceStartupStage($"Slot switch: values written {written} ms, reload key sent {clock.ElapsedMilliseconds} ms");
-                _shortcutStatus!.Text = $"{slot.Name} · " + T("HotReload.Applying");
+                _shortcuts.StatusText = $"{slot.Name} · " + T("HotReload.Applying");
                 _overlaySlotSignature = string.Empty;
                 RefreshShortcutOverlay(bindingsChanged: true);
             });
@@ -223,7 +223,7 @@ public sealed partial class MainWindow
         catch (Exception ex)
         {
             LogApplicationIssue("Overlay slot switch", ex);
-            _shortcutStatus!.Text = T("HotReload.SwitchFailed", slot.Name) + ex.Message;
+            _shortcuts.StatusText = T("HotReload.SwitchFailed", slot.Name) + ex.Message;
         }
         finally
         {

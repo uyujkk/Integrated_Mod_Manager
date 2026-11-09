@@ -81,7 +81,7 @@ public sealed partial class MainWindow
 
     private string? SelectedShortcutRole()
     {
-        if (_shortcutModPicker?.SelectedItem is not ShortcutModOption mod) return null;
+        if (_shortcuts.SelectedMod is not ShortcutModOption mod) return null;
         return mod.Label.Split(Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar)[0];
     }
 
@@ -120,7 +120,7 @@ public sealed partial class MainWindow
 
     private async Task<CharacterFrame> CaptureCharacterReferenceAsync()
     {
-        if (_shortcutTargetPicker?.SelectedItem is not ShortcutTarget target) throw new InvalidOperationException(T("CharacterFollow.SelectAGameWindow"));
+        if (_shortcuts.SelectedTarget is not ShortcutTarget target) throw new InvalidOperationException(T("CharacterFollow.SelectAGameWindow"));
         _shortcutOverlay?.AppWindow.Hide();
         if (!ShortcutInputService.FocusTarget(target)) throw new InvalidOperationException(T("CharacterFollow.CouldNotFocusTheGameWindow"));
         await Task.Delay(300);
@@ -192,7 +192,7 @@ public sealed partial class MainWindow
             byte[] feature = CharacterImageMatcher.Extract(frame.Bgra, frame.Width, frame.Height, region);
             if (!CharacterImageMatcher.HasDetail(feature)) throw new InvalidOperationException(T("CharacterFollow.TheRegionIsTooUniformOr"));
             _characterProfile.Templates[role] = feature;
-            if (_shortcutModPicker?.SelectedItem is ShortcutModOption selected) _characterPreferredMods[role] = selected.Path;
+            if (_shortcuts.SelectedMod is ShortcutModOption selected) _characterPreferredMods[role] = selected.Path;
             SaveCharacterFollowProfile();
             Activate();
             _characterFollowStatus!.Text = T("CharacterFollow.SavedReferenceForTotal", role, _characterProfile.Templates.Count);
@@ -204,7 +204,7 @@ public sealed partial class MainWindow
     private async Task ObserveCharacterAsync()
     {
         if (_characterCaptureBusy || _onlineWindowClosed || _characterFollowToggle?.IsOn != true
-            || _shortcuts.SendInProgress || _shortcutTargetPicker?.SelectedItem is not ShortcutTarget target
+            || _shortcuts.SendInProgress || _shortcuts.SelectedTarget is not ShortcutTarget target
             || _characterProfile.Region is not CharacterScreenRegion region) return;
         if (!ShortcutInputService.IsTargetForeground(target))
         {
@@ -221,7 +221,7 @@ public sealed partial class MainWindow
             { _characterMatcher.Reset(); _characterFollowStatus!.Text = T("CharacterFollow.MoveTheOverlayAwayFromThe"); return; }
             CharacterFrame frame = await Task.Run(() => CharacterScreenCapture.Capture(target, _services.Language.Current));
             if (_onlineWindowClosed || _characterFollowToggle?.IsOn != true) return;
-            if (_shortcutTargetPicker?.SelectedItem is not ShortcutTarget current
+            if (_shortcuts.SelectedTarget is not ShortcutTarget current
                 || current.Handle != target.Handle || current.StartTicks != target.StartTicks)
             { _characterMatcher.Reset(); return; }
             byte[] feature = CharacterImageMatcher.Extract(frame.Bgra, frame.Width, frame.Height, region);
@@ -230,7 +230,7 @@ public sealed partial class MainWindow
                 ? T("CharacterFollow.WaitingForStableRecognition", confidence)
                 : T("CharacterFollow.CurrentCharacter", role, confidence);
             if (role is null || role.Equals(SelectedShortcutRole(), StringComparison.OrdinalIgnoreCase)) return;
-            var candidates = _shortcutModPicker!.ItemsSource as ShortcutModOption[] ?? [];
+            var candidates = _shortcuts.ModOptions as ShortcutModOption[] ?? [];
             var matching = candidates.Where(p => p.Label.Split(Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar)[0].Equals(role, StringComparison.OrdinalIgnoreCase)).ToArray();
             // Only an enabled Mod can react in game; prefer those when the role has any.
             var enabled = matching.Where(IsShortcutModDeployed).ToArray();
@@ -241,7 +241,7 @@ public sealed partial class MainWindow
                 _characterFollowStatus.Text = T("CharacterFollow.HasMultipleModsChooseOneManually", role);
             if (selected is null) return;
             _characterAutoSelecting = true;
-            try { _shortcutModPicker.SelectedItem = selected; }
+            try { _shortcuts.SelectedMod = selected; }
             finally { _characterAutoSelecting = false; }
         }
         catch (Exception ex) { _characterMatcher.Reset(); if (!_onlineWindowClosed) _characterFollowStatus!.Text = ex.Message; }

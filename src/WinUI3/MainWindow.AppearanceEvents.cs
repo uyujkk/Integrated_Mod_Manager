@@ -37,14 +37,8 @@ public sealed partial class MainWindow
         appearance.ThemeChanged += (_, _) => RenderModSummary();
         // Shell: the selected navigation item.
         appearance.ThemeChanged += (_, _) => RefreshPrimaryNavigationVisuals();
-        // Shortcuts: binding cards take their key-cap colours when created; drop them so they are rebuilt.
-        appearance.ThemeChanged += (_, _) =>
-        {
-            UpdateShortcutKeyFocusVisuals();
-            _mainShortcutControls.Clear();
-            _mainBindings = [];
-            RenderShortcutButtons();
-        };
+        // Mod workspace: the shortcut editor's key boxes (the Shortcuts page redraws its own cards).
+        appearance.ThemeChanged += (_, _) => UpdateShortcutKeyFocusVisuals();
 
         appearance.DensityChanged += (_, _) => ApplyShellDensity();
         appearance.DensityChanged += (_, _) => ApplyWorkspaceDensity(appearance.IsCompact);
