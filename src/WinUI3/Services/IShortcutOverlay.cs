@@ -1,5 +1,3 @@
-using Microsoft.UI.Xaml.Controls;
-
 namespace ModFolderCopier.WinUI;
 
 /// <summary>
@@ -24,20 +22,4 @@ internal interface IShortcutOverlay
 
     /// <summary>Updates the overlay from the page's state; <paramref name="bindingsChanged"/> also rebuilds its bindings and slots.</summary>
     void Refresh(bool bindingsChanged = false);
-}
-
-/// <summary>
-/// Stage J5a bridge: the settings blocks of the Shortcuts page that still belong to the window (appearance,
-/// overlay behaviour and character follow). Stage J5b replaces them with ShortcutPageViewModel properties.
-/// </summary>
-internal interface IShortcutPageSettings
-{
-    /// <summary>Adds the overlay appearance rows, placing the page's background-opacity slider among them.</summary>
-    void AddOverlayAppearance(StackPanel group, Slider backgroundOpacity);
-
-    /// <summary>Adds the overlay behaviour rows: slot hot switching, preset previews and slot capture.</summary>
-    void AddOverlayBehavior(StackPanel group);
-
-    /// <summary>Adds the character follow controls; returns the on/off switch for the row header and the summary text.</summary>
-    (ToggleSwitch Toggle, TextBlock Summary) AddCharacterFollow(StackPanel body);
 }

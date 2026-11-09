@@ -218,6 +218,22 @@ public sealed class SmokeTests
         app.AssertNoErrors();
     }
 
+    // Stage J5b: the overlay is its own class; its compact view goes through the page's settings and is saved.
+    [Fact]
+    public void Overlay_CompactViewIsSaved()
+    {
+        using AppSession app = AppSession.Configured().Start();
+        PressHotkey();
+        Window overlay = Retry(() => app.FindWindow(window => window.Title.StartsWith("IMM ", StringComparison.Ordinal)))
+            ?? throw new InvalidOperationException("The overlay did not open.");
+
+        AppSession.Invoke(AppSession.FindIn(overlay, cf => cf.ByAutomationId("OverlayCompactButton"), "compact button"));
+        Thread.Sleep(600);
+
+        Assert.True(app.ShellConfig()["OverlayCompactView"]!.GetValue<bool>());
+        app.AssertNoErrors();
+    }
+
     [Fact]
     public void Shortcuts_SummaryShowsTheSavedHotkey()
     {

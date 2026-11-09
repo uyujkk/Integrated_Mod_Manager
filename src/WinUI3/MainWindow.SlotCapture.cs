@@ -8,31 +8,13 @@ namespace ModFolderCopier.WinUI;
 // d3dx_user.ini holds the values to capture.
 public sealed partial class MainWindow
 {
-    private bool _keepMenuStateVariables;
     private Dictionary<string, int> _loaderAutoSaveOriginals = new(StringComparer.OrdinalIgnoreCase);
-
-    private void AddSlotCaptureSettings(StackPanel pane)
-    {
-        var keep = new ToggleSwitch
-        {
-            OnContent = T("Common.On2"), OffContent = T("Common.Off2"),
-            Header = T("SlotCapture.KeepMenuState"), IsOn = _keepMenuStateVariables
-        };
-        ToolTipService.SetToolTip(keep, T("SlotCapture.KeepMenuStateHint"));
-        keep.Toggled += (_, _) =>
-        {
-            _keepMenuStateVariables = keep.IsOn;
-            SaveShellConfig();
-        };
-        pane.Children.Add(keep);
-        pane.Children.Add(CreateLoaderAutoSaveSetting());
-    }
 
     // Main window: the user sees which menu-state values would be left out and can keep any of them.
     // Returns null when the user cancels.
     private async Task<IReadOnlyList<ModPersistentValue>?> ChooseSlotValuesAsync(IReadOnlyList<ModPersistentValue> values)
     {
-        if (_keepMenuStateVariables) return values;
+        if (_shortcuts.KeepMenuStateVariables) return values;
         var (kept, transient) = TransientVariablePolicy.Split(values);
         if (transient.Count == 0) return values;
         var checks = transient.Select(value => new CheckBox { Content = $"{value.Variable} = {value.Value}  ·  {value.RelativeIniPath}" }).ToArray();
@@ -54,7 +36,7 @@ public sealed partial class MainWindow
     // The overlay cannot ask: it leaves menu state out and says how many.
     private (IReadOnlyList<ModPersistentValue> Values, int Left) FilterSlotValues(IReadOnlyList<ModPersistentValue> values)
     {
-        if (_keepMenuStateVariables) return (values, 0);
+        if (_shortcuts.KeepMenuStateVariables) return (values, 0);
         var (kept, transient) = TransientVariablePolicy.Split(values);
         return (kept, transient.Count);
     }
@@ -66,59 +48,49 @@ public sealed partial class MainWindow
         return folder is null ? null : Path.Combine(folder, "d3dx.ini");
     }
 
-    private FrameworkElement CreateLoaderAutoSaveSetting()
+    // The loader's auto-save interval in its d3dx.ini, shown on the Shortcuts page with the intervals to choose.
+    private void RefreshLoaderAutoSave()
     {
-        var picker = new ComboBox { Header = T("SlotCapture.AutoSaveInterval"), HorizontalAlignment = HorizontalAlignment.Stretch };
-        var note = new TextBlock { TextWrapping = TextWrapping.Wrap, Style = (Style)Application.Current.Resources["CaptionTextStyle"] };
-        var panel = new StackPanel { Spacing = 4 };
-        panel.Children.Add(picker);
-        panel.Children.Add(note);
-        bool filling = false;
-        void Fill()
+        string? path = LoaderSettingsPath(GetSelectedRepository());
+        int? current = null;
+        try { current = path is not null && File.Exists(path) ? LoaderAutoSaveSetting.Read(File.ReadAllText(path)) : null; }
+        catch (Exception ex) when (ex is IOException or UnauthorizedAccessException) { LogApplicationIssue("Read loader auto-save interval", ex); }
+        _shortcuts.LoaderAutoSaveNote = current is null ? T("SlotCapture.AutoSaveUnavailable") : T("SlotCapture.AutoSaveNote", path!);
+        if (current is null)
         {
-            filling = true;
-            picker.Items.Clear();
-            string? path = LoaderSettingsPath(GetSelectedRepository());
-            int? current = null;
-            try { current = path is not null && File.Exists(path) ? LoaderAutoSaveSetting.Read(File.ReadAllText(path)) : null; }
-            catch (Exception ex) when (ex is IOException or UnauthorizedAccessException) { LogApplicationIssue("Read loader auto-save interval", ex); }
-            picker.IsEnabled = current is not null;
-            note.Text = current is null ? T("SlotCapture.AutoSaveUnavailable") : T("SlotCapture.AutoSaveNote", path!);
-            if (current is null) { filling = false; return; }
-            foreach (int seconds in LoaderAutoSaveSetting.Choices.Append(current.Value).Distinct().Order())
-                picker.Items.Add(new ComboBoxItem { Content = T("SlotCapture.Seconds", seconds), Tag = seconds });
-            if (_loaderAutoSaveOriginals.TryGetValue(path!, out int original) && original != current)
-                picker.Items.Add(new ComboBoxItem { Content = T("SlotCapture.RestoreOriginal", original), Tag = original });
-            picker.SelectedItem = picker.Items.OfType<ComboBoxItem>().First(item => (int)item.Tag == current);
-            filling = false;
+            _shortcuts.LoaderAutoSaveChoices = [];
+            _shortcuts.LoaderAutoSaveSeconds = null;
+            return;
         }
-        picker.Loaded += (_, _) => Fill();
-        picker.SelectionChanged += async (_, _) =>
+        var choices = LoaderAutoSaveSetting.Choices.Append(current.Value).Distinct().Order()
+            .Select(seconds => new LoaderAutoSaveChoice(seconds, T("SlotCapture.Seconds", seconds))).ToList();
+        if (_loaderAutoSaveOriginals.TryGetValue(path!, out int original) && original != current)
+            choices.Add(new LoaderAutoSaveChoice(original, T("SlotCapture.RestoreOriginal", original)));
+        _shortcuts.LoaderAutoSaveChoices = choices;
+        _shortcuts.LoaderAutoSaveSeconds = current;
+    }
+
+    // Writes the chosen interval into d3dx.ini after the user confirms, keeping a backup and the original value.
+    private async Task SetLoaderAutoSaveAsync(int seconds)
+    {
+        string? path = LoaderSettingsPath(GetSelectedRepository());
+        if (path is null || !File.Exists(path)) { RefreshLoaderAutoSave(); return; }
+        string text = await File.ReadAllTextAsync(path);
+        int? current = LoaderAutoSaveSetting.Read(text);
+        if (current == seconds) return;
+        if (current is null || LoaderAutoSaveSetting.Write(text, seconds) is not { } updated
+            || !await ShowConfirmAsync(T("SlotCapture.ConfirmAutoSave", path, current, seconds), T("SlotCapture.AutoSaveInterval")))
         {
-            if (filling || picker.SelectedItem is not ComboBoxItem { Tag: int seconds }) return;
-            await RunUiActionAsync("Change loader auto-save interval", async () =>
-            {
-                string? path = LoaderSettingsPath(GetSelectedRepository());
-                if (path is null || !File.Exists(path)) { Fill(); return; }
-                string text = await File.ReadAllTextAsync(path);
-                int? current = LoaderAutoSaveSetting.Read(text);
-                if (current == seconds) return;
-                if (current is null || LoaderAutoSaveSetting.Write(text, seconds) is not { } updated
-                    || !await ShowConfirmAsync(T("SlotCapture.ConfirmAutoSave", path, current, seconds), T("SlotCapture.AutoSaveInterval")))
-                {
-                    Fill();
-                    return;
-                }
-                string backup = $"{path}.imm-autosave-{DateTime.Now:yyyyMMdd-HHmmss}.bak";
-                File.Copy(path, backup);
-                await File.WriteAllTextAsync(path, updated, new System.Text.UTF8Encoding(false));
-                _loaderAutoSaveOriginals.TryAdd(path, current.Value);
-                if (_loaderAutoSaveOriginals[path] == seconds) _loaderAutoSaveOriginals.Remove(path);
-                SaveShellConfig();
-                StatusTextBlock.Text = T("SlotCapture.AutoSaveChanged", seconds, backup);
-                Fill();
-            });
-        };
-        return panel;
+            RefreshLoaderAutoSave();
+            return;
+        }
+        string backup = $"{path}.imm-autosave-{DateTime.Now:yyyyMMdd-HHmmss}.bak";
+        File.Copy(path, backup);
+        await File.WriteAllTextAsync(path, updated, new System.Text.UTF8Encoding(false));
+        _loaderAutoSaveOriginals.TryAdd(path, current.Value);
+        if (_loaderAutoSaveOriginals[path] == seconds) _loaderAutoSaveOriginals.Remove(path);
+        SaveShellConfig();
+        StatusTextBlock.Text = T("SlotCapture.AutoSaveChanged", seconds, backup);
+        RefreshLoaderAutoSave();
     }
 }

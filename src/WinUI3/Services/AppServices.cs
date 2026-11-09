@@ -38,7 +38,4 @@ internal sealed class AppServices
 
     /// <summary>The Shortcuts overlay; the window attaches it at startup.</summary>
     public IShortcutOverlay Overlay { get; set; } = null!;
-
-    /// <summary>Stage J5a bridge to the settings blocks the window still builds; see IShortcutPageSettings.</summary>
-    public IShortcutPageSettings ShortcutSettings { get; set; } = null!;
 }

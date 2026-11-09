@@ -1,5 +1,6 @@
 using System.ComponentModel;
 using CommunityToolkit.WinUI.Controls;
+using IntegratedModManager.Core.Layout;
 using IntegratedModManager.Core.Shortcuts;
 using Microsoft.UI.Xaml;
 using Microsoft.UI.Xaml.Automation;
@@ -11,8 +12,8 @@ namespace ModFolderCopier.WinUI;
 /// The Shortcuts page (stage J5, docs/development/UI-Structure-Plan.md and UI-Fluent-Design-Plan.md): which Mod and
 /// game window to send to, the Mod's key bindings and the settings of the overlay, character follow and sending. It
 /// shows <see cref="ShortcutPageViewModel"/>, opens the overlay through <see cref="IShortcutOverlay"/> and sends
-/// everything else to the window as requests. The settings blocks the window still builds (IShortcutPageSettings)
-/// are added on first use, like the whole page before the move.
+/// everything else to the window as requests. Since stage J5b the overlay's look and behaviour, character follow and
+/// slot capture are view model settings too, shown here as setting cards.
 /// </summary>
 public sealed partial class ShortcutsPage : UserControl
 {
@@ -21,7 +22,8 @@ public sealed partial class ShortcutsPage : UserControl
     private DetectedModShortcut[] _shownBindings = [];
     private bool _built;
     private bool _syncing;
-    private Slider? _opacitySlider;
+    // Sliders raise ValueChanged while their template loads (observed resetting to the minimum); only live ones count.
+    private readonly HashSet<Slider> _liveSliders = [];
 
     internal ShortcutsPage(AppServices services)
     {
@@ -41,6 +43,31 @@ public sealed partial class ShortcutsPage : UserControl
             RenderBindings();
         };
         Loaded += (_, _) => RenderBindings();
+        // The loader's d3dx.ini may have changed while the page was away.
+        Loaded += (_, _) => { if (_built) ViewModel.Request(ShortcutPageAction.RefreshLoaderAutoSave); };
+        ShortcutOverlayOpacitySlider.Minimum = ShortcutOverlayWindow.MinimumOpacity;
+        foreach (Slider slider in new[] { ShortcutOverlayOpacitySlider, ShortcutOverlayElementOpacitySlider })
+        {
+            slider.Loaded += (_, _) =>
+            {
+                if (_liveSliders.Contains(slider)) return;
+                SyncOverlaySettings();
+                _liveSliders.Add(slider);
+            };
+        }
+        foreach (string hex in new[] { "#FFFFFF", "#FFE8A3", "#B8F5C0", "#A8D8FF", "#FFC0DA", "#202020" })
+        {
+            Windows.UI.Color color = ShortcutOverlayController.ParseTextColor(hex);
+            var swatch = new Button
+            {
+                Width = 30, Height = 30, Padding = new Thickness(0), Background = new Microsoft.UI.Xaml.Media.SolidColorBrush(color),
+                BorderBrush = new Microsoft.UI.Xaml.Media.SolidColorBrush(Windows.UI.Color.FromArgb(120, 128, 128, 128)), BorderThickness = new Thickness(1)
+            };
+            ToolTipService.SetToolTip(swatch, hex);
+            AutomationProperties.SetName(swatch, hex);
+            swatch.Click += (_, _) => ShortcutOverlayTextColorPicker.Color = color;
+            ShortcutOverlayTextColorPresets.Children.Add(swatch);
+        }
     }
 
     public ShortcutPageViewModel ViewModel { get; }
@@ -70,19 +97,6 @@ public sealed partial class ShortcutsPage : UserControl
     {
         _built = true;
         ApplyLanguage();
-
-        // The blocks the window still builds (stage J5b moves them into the view model).
-        ShortcutsOverlayAppearancePanel.Children.Clear();
-        ShortcutsOverlayBehaviorPanel.Children.Clear();
-        ShortcutsFollowPanel.Children.Clear();
-        _opacitySlider = CreateOpacitySlider(T("ShortcutPanel.OverlayOpacity"));
-        _services.ShortcutSettings.AddOverlayAppearance(ShortcutsOverlayAppearancePanel, _opacitySlider);
-        _services.ShortcutSettings.AddOverlayBehavior(ShortcutsOverlayBehaviorPanel);
-        (ToggleSwitch followToggle, TextBlock followSummary) = _services.ShortcutSettings.AddCharacterFollow(ShortcutsFollowPanel);
-        ShortcutsFollowToggleHost.Content = followToggle;
-        // The summary is kept up to date by the window; the expander shows its text.
-        ShortcutsFollowExpander.Description = followSummary.Text;
-        followSummary.RegisterPropertyChangedCallback(TextBlock.TextProperty, (_, _) => ShortcutsFollowExpander.Description = followSummary.Text);
 
         SyncAll();
         RenderBindings();
@@ -122,11 +136,54 @@ public sealed partial class ShortcutsPage : UserControl
         AutomationProperties.SetName(ShortcutHotkeyModifiersPicker, T("ShortcutPanel.ShowHideOverlay"));
         AutomationProperties.SetName(ShortcutHotkeyKeyPicker, T("ShortcutPanel.Key2"));
         ShortcutsStatusRefreshButton.Content = T("ShortcutPanel.RefreshWindows");
-        ShortcutsOverlayAppearanceTitleTextBlock.Text = T("ShortcutPanel.AppearanceGroup");
-        ShortcutsOverlayBehaviorTitleTextBlock.Text = T("ShortcutPanel.BehaviorGroup");
         ShortcutsOverlayBehaviorNoteTextBlock.Text = T("ShortcutPanel.TheOverlaySupportsWindowedBorderlessMode");
+        ShortcutsOverlayLookExpander.Header = T("ShortcutPanel.OverlayLookTitle");
+        ShortcutsSlotsExpander.Header = T("ShortcutPanel.SlotsAndPresetsTitle");
+        ShortcutsOverlayPresetCard.Header = T("ShortcutPanel.AppearanceGroup");
+        ShortcutsOverlayPresetButtons.Children.Clear();
+        foreach (OverlayAppearancePreset preset in OverlayAppearancePreset.All)
+        {
+            string label = preset.Id switch
+            {
+                "clear" => T("OverlayView.Preset.clear"),
+                "balanced" => T("OverlayView.Preset.balanced"),
+                _ => T("OverlayView.Preset.minimal")
+            };
+            var button = new Button { Content = label };
+            button.Click += (_, _) => ViewModel.ApplyOverlayPreset(preset);
+            ShortcutsOverlayPresetButtons.Children.Add(button);
+        }
+        ShortcutsOverlayOpacityCard.Header = T("ShortcutPanel.OverlayOpacity");
+        AutomationProperties.SetName(ShortcutOverlayOpacitySlider, T("ShortcutPanel.OverlayOpacity"));
+        ShortcutsOverlayElementOpacityCard.Header = T("ShortcutPanel.OverlayElementOpacity");
+        AutomationProperties.SetName(ShortcutOverlayElementOpacitySlider, T("ShortcutPanel.OverlayElementOpacity"));
+        ShortcutsOverlayTextColorCard.Header = T("ShortcutPanel.OverlayTextColor");
+        AutomationProperties.SetName(ShortcutOverlayTextColorButton, T("ShortcutPanel.OverlayTextColor"));
+        ShortcutOverlayTextColorPresetsTextBlock.Text = T("ShortcutPanel.Presets");
+        ShortcutsOverlayAutoContrastCard.Header = T("OverlayView.AutoContrast");
+        ShortcutsOverlayAutoContrastCard.Description = ShortcutOverlayWindow.CanExcludeFromCapture ? T("OverlayView.AutoContrastHint") : T("OverlayView.AutoContrastUnsupported");
+        ShortcutOverlayAutoContrastToggle.IsEnabled = ShortcutOverlayWindow.CanExcludeFromCapture;
+        SetToggleText(ShortcutOverlayAutoContrastToggle, T("OverlayView.AutoContrast"));
+        ShortcutsSlotSwitchCard.Header = T("HotReload.SwitchSlotsInTheOverlay");
+        SetToggleText(ShortcutSlotSwitchToggle, T("HotReload.SwitchSlotsInTheOverlay"));
+        ShortcutsCompactSlotsCard.Header = T("PresetPreview.CompactSlotList");
+        SetToggleText(ShortcutCompactSlotsToggle, T("PresetPreview.CompactSlotList"));
+        ShortcutsPresetPicturesCard.Header = T("PresetPreview.CaptureWhenSaving");
+        SetToggleText(ShortcutPresetPicturesToggle, T("PresetPreview.CaptureWhenSaving"));
+        ShortcutsClearRegionCard.Header = T("PresetPreview.ClearDefaultRegion");
+        ShortcutClearRegionButton.Content = T("PresetPreview.ClearDefaultRegion");
+        ShortcutsKeepMenuStateCard.Header = T("SlotCapture.KeepMenuState");
+        ShortcutsKeepMenuStateCard.Description = T("SlotCapture.KeepMenuStateHint");
+        SetToggleText(ShortcutKeepMenuStateToggle, T("SlotCapture.KeepMenuState"));
+        ShortcutsAutoSaveCard.Header = T("SlotCapture.AutoSaveInterval");
+        AutomationProperties.SetName(ShortcutAutoSavePicker, T("SlotCapture.AutoSaveInterval"));
 
         ShortcutsFollowExpander.Header = T("CharacterFollow.Title");
+        SetToggleText(ShortcutCharacterFollowToggle, T("CharacterFollow.AutomaticallyFollowCharacterShortcuts"));
+        ToolTipService.SetToolTip(ShortcutCharacterFollowToggle, T("CharacterFollow.AutomaticallyFollowCharacterShortcuts"));
+        ShortcutsFollowSetupCard.Description = T("CharacterFollow.SelectAHUDRegionThatChanges");
+        ShortcutSelectRegionButton.Content = T("CharacterFollow.SelectHUDRegion");
+        ShortcutSaveReferenceButton.Content = T("CharacterFollow.SaveCharacterReference");
 
         ShortcutsSendingExpander.Header = T("ShortcutPanel.SendingSettings");
         ShortcutsInputModeCard.Header = T("ShortcutPanel.InputMethod");
@@ -156,30 +213,6 @@ public sealed partial class ShortcutsPage : UserControl
         AutomationProperties.SetName(toggle, name);
     }
 
-    private Slider CreateOpacitySlider(string header)
-    {
-        var slider = new Slider
-        {
-            Header = header, Minimum = ShortcutOverlayWindow.MinimumOpacity, Maximum = 100, StepFrequency = 5,
-            SmallChange = 5, Value = ViewModel.OverlayOpacity
-        };
-        // WinUI raises ValueChanged while the template loads (observed resetting to the minimum);
-        // only react to changes after the slider is live, and restore the saved value first.
-        bool live = false;
-        slider.Loaded += (_, _) =>
-        {
-            if (live) return;
-            slider.Value = ViewModel.OverlayOpacity;
-            live = true;
-        };
-        slider.ValueChanged += (_, e) =>
-        {
-            if (!live || _syncing || (int)Math.Round(e.NewValue) == ViewModel.OverlayOpacity) return;
-            ViewModel.OverlayOpacity = (int)Math.Round(e.NewValue);
-        };
-        return slider;
-    }
-
     private void OnRefreshWindowsClicked(object sender, RoutedEventArgs e) => ViewModel.Request(ShortcutPageAction.RefreshWindows);
 
     private void OnReloadIniClicked(object sender, RoutedEventArgs e) => ViewModel.Request(ShortcutPageAction.ReloadIni);
@@ -191,6 +224,64 @@ public sealed partial class ShortcutsPage : UserControl
     private void OnOpenOverlayClicked(object sender, RoutedEventArgs e) => _services.Overlay.Open();
 
     private void OnNumLockClicked(object sender, RoutedEventArgs e) => ViewModel.Request(ShortcutPageAction.SendNumLock);
+
+    private void OnClearRegionClicked(object sender, RoutedEventArgs e) => ViewModel.Request(ShortcutPageAction.ClearPresetPreviewRegion);
+
+    private void OnSelectRegionClicked(object sender, RoutedEventArgs e) => ViewModel.Request(ShortcutPageAction.SelectCharacterRegion);
+
+    private void OnSaveReferenceClicked(object sender, RoutedEventArgs e) => ViewModel.Request(ShortcutPageAction.SaveCharacterReference);
+
+    private void OnOverlayOpacityChanged(object sender, Microsoft.UI.Xaml.Controls.Primitives.RangeBaseValueChangedEventArgs e)
+    {
+        if (_syncing || !_liveSliders.Contains(ShortcutOverlayOpacitySlider) || (int)Math.Round(e.NewValue) == ViewModel.OverlayOpacity) return;
+        ViewModel.OverlayOpacity = (int)Math.Round(e.NewValue);
+    }
+
+    private void OnOverlayElementOpacityChanged(object sender, Microsoft.UI.Xaml.Controls.Primitives.RangeBaseValueChangedEventArgs e)
+    {
+        if (_syncing || !_liveSliders.Contains(ShortcutOverlayElementOpacitySlider) || (int)Math.Round(e.NewValue) == ViewModel.OverlayElementOpacity) return;
+        ViewModel.OverlayElementOpacity = (int)Math.Round(e.NewValue);
+    }
+
+    private void OnTextColorPicked(ColorPicker sender, ColorChangedEventArgs args)
+    {
+        if (!_syncing) ViewModel.OverlayTextColor = ShortcutOverlayController.FormatTextColor(args.NewColor);
+    }
+
+    // Saved once the picker closes, not for every colour it passes through.
+    private void OnTextColorFlyoutClosed(object sender, object e) => ViewModel.Request(ShortcutPageAction.SaveSettings);
+
+    private void OnOverlaySettingToggled(object sender, RoutedEventArgs e)
+    {
+        if (_syncing || sender is not ToggleSwitch toggle) return;
+        if (toggle == ShortcutOverlayAutoContrastToggle) ViewModel.OverlayAutoContrast = toggle.IsOn;
+        else if (toggle == ShortcutSlotSwitchToggle) ViewModel.OverlaySlotSwitchEnabled = toggle.IsOn;
+        else if (toggle == ShortcutCompactSlotsToggle) ViewModel.OverlayCompactSlots = toggle.IsOn;
+        else if (toggle == ShortcutKeepMenuStateToggle) ViewModel.KeepMenuStateVariables = toggle.IsOn;
+    }
+
+    // Pictures can show a UID, a nickname or chat: the window asks first and turns them on only when the user agrees.
+    private void OnPresetPicturesToggled(object sender, RoutedEventArgs e)
+    {
+        if (_syncing) return;
+        if (ShortcutPresetPicturesToggle.IsOn && !ViewModel.CapturePresetPreviews) ViewModel.Request(ShortcutPageAction.EnablePresetPreviews);
+        else ViewModel.CapturePresetPreviews = ShortcutPresetPicturesToggle.IsOn;
+        SyncOverlaySettings();
+    }
+
+    private void OnAutoSaveChanged(object sender, SelectionChangedEventArgs e)
+    {
+        if (!_syncing && ShortcutAutoSavePicker.SelectedItem is LoaderAutoSaveChoice choice && choice.Seconds != ViewModel.LoaderAutoSaveSeconds)
+            ViewModel.Request(ShortcutPageAction.SetLoaderAutoSave, choice.Seconds);
+    }
+
+    // The window turns it back off when no region or reference is set up yet.
+    private void OnCharacterFollowToggled(object sender, RoutedEventArgs e)
+    {
+        if (_syncing) return;
+        ViewModel.CharacterFollowEnabled = ShortcutCharacterFollowToggle.IsOn;
+        SyncOverlaySettings();
+    }
 
     // Turning the switch on registers the chord shown; off releases it.
     private void OnHotkeyToggled(object sender, RoutedEventArgs e)
@@ -296,9 +387,20 @@ public sealed partial class ShortcutsPage : UserControl
                 SyncHotkeyStatus();
                 break;
             case nameof(ShortcutPageViewModel.OverlayOpacity):
-                _syncing = true;
-                try { if (_opacitySlider is not null) _opacitySlider.Value = ViewModel.OverlayOpacity; }
-                finally { _syncing = false; }
+            case nameof(ShortcutPageViewModel.OverlayElementOpacity):
+            case nameof(ShortcutPageViewModel.OverlayTextColor):
+            case nameof(ShortcutPageViewModel.OverlayAutoContrast):
+            case nameof(ShortcutPageViewModel.OverlaySlotSwitchEnabled):
+            case nameof(ShortcutPageViewModel.OverlayCompactSlots):
+            case nameof(ShortcutPageViewModel.CapturePresetPreviews):
+            case nameof(ShortcutPageViewModel.KeepMenuStateVariables):
+            case nameof(ShortcutPageViewModel.CharacterFollowEnabled):
+            case nameof(ShortcutPageViewModel.CharacterFollowStatus):
+            case nameof(ShortcutPageViewModel.CharacterFollowSummary):
+            case nameof(ShortcutPageViewModel.LoaderAutoSaveChoices):
+            case nameof(ShortcutPageViewModel.LoaderAutoSaveSeconds):
+            case nameof(ShortcutPageViewModel.LoaderAutoSaveNote):
+                SyncOverlaySettings();
                 break;
             case nameof(ShortcutPageViewModel.InputMode):
             case nameof(ShortcutPageViewModel.TapDuration):
@@ -320,6 +422,41 @@ public sealed partial class ShortcutsPage : UserControl
         SyncStatus();
         SyncBindingsHeader();
         SyncEmptyState();
+        SyncOverlaySettings();
+    }
+
+    private void SyncOverlaySettings()
+    {
+        _syncing = true;
+        try
+        {
+            ShortcutOverlayOpacitySlider.Value = ViewModel.OverlayOpacity;
+            ShortcutOverlayElementOpacitySlider.Value = ViewModel.OverlayElementOpacity;
+            Windows.UI.Color color = ShortcutOverlayController.ParseTextColor(ViewModel.OverlayTextColor);
+            ShortcutOverlayTextColorSwatch.Background = new Microsoft.UI.Xaml.Media.SolidColorBrush(color);
+            ShortcutOverlayTextColorTextBlock.Text = ViewModel.OverlayTextColor;
+            if (ShortcutOverlayTextColorPicker.Color != color) ShortcutOverlayTextColorPicker.Color = color;
+            ShortcutOverlayAutoContrastToggle.IsOn = ViewModel.OverlayAutoContrast;
+            ShortcutSlotSwitchToggle.IsOn = ViewModel.OverlaySlotSwitchEnabled;
+            ShortcutCompactSlotsToggle.IsOn = ViewModel.OverlayCompactSlots;
+            ShortcutPresetPicturesToggle.IsOn = ViewModel.CapturePresetPreviews;
+            ShortcutKeepMenuStateToggle.IsOn = ViewModel.KeepMenuStateVariables;
+            ShortcutCharacterFollowToggle.IsOn = ViewModel.CharacterFollowEnabled;
+            ShortcutsFollowExpander.Description = ViewModel.CharacterFollowSummary;
+            ShortcutsFollowStatusCard.Header = ViewModel.CharacterFollowStatus;
+            if (!ReferenceEquals(ShortcutAutoSavePicker.ItemsSource, ViewModel.LoaderAutoSaveChoices)) ShortcutAutoSavePicker.ItemsSource = ViewModel.LoaderAutoSaveChoices;
+            ShortcutAutoSavePicker.SelectedItem = ViewModel.LoaderAutoSaveChoices.FirstOrDefault(choice => choice.Seconds == ViewModel.LoaderAutoSaveSeconds);
+            ShortcutAutoSavePicker.IsEnabled = ViewModel.LoaderAutoSaveSeconds is not null;
+            ShortcutsAutoSaveCard.Description = ViewModel.LoaderAutoSaveNote;
+            // Text-only slots only matter while the overlay shows slots.
+            ShortcutsCompactSlotsCard.IsEnabled = ViewModel.OverlaySlotSwitchEnabled;
+            ShortcutsOverlayLookExpander.Description = T("ShortcutPanel.OverlayLookSummary",
+                ViewModel.OverlayOpacity, ViewModel.OverlayElementOpacity, ViewModel.OverlayTextColor);
+            ShortcutsSlotsExpander.Description = T("ShortcutPanel.SlotsSummary",
+                ViewModel.OverlaySlotSwitchEnabled ? T("Common.On2") : T("Common.Off2"),
+                ViewModel.CapturePresetPreviews ? T("Common.On2") : T("Common.Off2"));
+        }
+        finally { _syncing = false; }
     }
 
     private void SyncModPicker()

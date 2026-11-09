@@ -128,31 +128,92 @@
                                 </StackPanel>
                             </toolkit:SettingsCard>
                         </toolkit:SettingsExpander.Items>
-                        <!-- Blocks the window still builds (until stage J5b). They are plain rows in the footer: every item of
-                             a SettingsExpander must be a setting card, and a setting card restyles their switches. -->
                         <toolkit:SettingsExpander.ItemsFooter>
-                            <StackPanel Padding="58,12,44,14" Spacing="16">
-                                <StackPanel Spacing="10">
-                                    <TextBlock x:Name="ShortcutsOverlayAppearanceTitleTextBlock" Style="{StaticResource BodyStrongTextBlockStyle}" />
-                                    <StackPanel x:Name="ShortcutsOverlayAppearancePanel" Spacing="10" />
-                                </StackPanel>
-                                <StackPanel Spacing="10">
-                                    <TextBlock x:Name="ShortcutsOverlayBehaviorTitleTextBlock" Style="{StaticResource BodyStrongTextBlockStyle}" />
-                                    <TextBlock x:Name="ShortcutsOverlayBehaviorNoteTextBlock" Style="{StaticResource ShortcutsCaptionStyle}" />
-                                    <StackPanel x:Name="ShortcutsOverlayBehaviorPanel" Spacing="10" />
-                                </StackPanel>
-                            </StackPanel>
+                            <TextBlock x:Name="ShortcutsOverlayBehaviorNoteTextBlock" Margin="58,10,44,12" Style="{StaticResource ShortcutsCaptionStyle}" />
                         </toolkit:SettingsExpander.ItemsFooter>
+                    </toolkit:SettingsExpander>
+
+                    <!-- How the overlay looks in game; the description sums it up while folded. -->
+                    <toolkit:SettingsExpander x:Name="ShortcutsOverlayLookExpander">
+                        <toolkit:SettingsExpander.HeaderIcon>
+                            <FontIcon Glyph="&#xE790;" />
+                        </toolkit:SettingsExpander.HeaderIcon>
+                        <toolkit:SettingsExpander.Items>
+                            <toolkit:SettingsCard x:Name="ShortcutsOverlayPresetCard">
+                                <StackPanel x:Name="ShortcutsOverlayPresetButtons" Orientation="Horizontal" Spacing="6" />
+                            </toolkit:SettingsCard>
+                            <toolkit:SettingsCard x:Name="ShortcutsOverlayOpacityCard">
+                                <Slider x:Name="ShortcutOverlayOpacitySlider" Width="200" StepFrequency="5" SmallChange="5" Maximum="100" ValueChanged="OnOverlayOpacityChanged" />
+                            </toolkit:SettingsCard>
+                            <toolkit:SettingsCard x:Name="ShortcutsOverlayElementOpacityCard">
+                                <Slider x:Name="ShortcutOverlayElementOpacitySlider" Width="200" StepFrequency="5" SmallChange="5" Minimum="0" Maximum="100" ValueChanged="OnOverlayElementOpacityChanged" />
+                            </toolkit:SettingsCard>
+                            <toolkit:SettingsCard x:Name="ShortcutsOverlayTextColorCard">
+                                <Button x:Name="ShortcutOverlayTextColorButton">
+                                    <StackPanel Orientation="Horizontal" Spacing="8">
+                                        <Border x:Name="ShortcutOverlayTextColorSwatch" Width="18" Height="18" CornerRadius="3" BorderThickness="1"
+                                                BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}" />
+                                        <TextBlock x:Name="ShortcutOverlayTextColorTextBlock" VerticalAlignment="Center" />
+                                    </StackPanel>
+                                    <Button.Flyout>
+                                        <Flyout x:Name="ShortcutOverlayTextColorFlyout" Closed="OnTextColorFlyoutClosed">
+                                            <StackPanel Spacing="10">
+                                                <TextBlock x:Name="ShortcutOverlayTextColorPresetsTextBlock" />
+                                                <StackPanel x:Name="ShortcutOverlayTextColorPresets" Orientation="Horizontal" Spacing="6" />
+                                                <ColorPicker x:Name="ShortcutOverlayTextColorPicker" IsAlphaEnabled="False" IsMoreButtonVisible="False"
+                                                             IsColorChannelTextInputVisible="False" IsHexInputVisible="True" ColorChanged="OnTextColorPicked" />
+                                            </StackPanel>
+                                        </Flyout>
+                                    </Button.Flyout>
+                                </Button>
+                            </toolkit:SettingsCard>
+                            <toolkit:SettingsCard x:Name="ShortcutsOverlayAutoContrastCard">
+                                <ToggleSwitch x:Name="ShortcutOverlayAutoContrastToggle" Toggled="OnOverlaySettingToggled" />
+                            </toolkit:SettingsCard>
+                        </toolkit:SettingsExpander.Items>
+                    </toolkit:SettingsExpander>
+
+                    <!-- State slots and presets used from the overlay: hot switching, pictures and what a slot keeps. -->
+                    <toolkit:SettingsExpander x:Name="ShortcutsSlotsExpander">
+                        <toolkit:SettingsExpander.HeaderIcon>
+                            <FontIcon Glyph="&#xE8F1;" />
+                        </toolkit:SettingsExpander.HeaderIcon>
+                        <toolkit:SettingsExpander.Items>
+                            <toolkit:SettingsCard x:Name="ShortcutsSlotSwitchCard">
+                                <ToggleSwitch x:Name="ShortcutSlotSwitchToggle" Toggled="OnOverlaySettingToggled" />
+                            </toolkit:SettingsCard>
+                            <toolkit:SettingsCard x:Name="ShortcutsCompactSlotsCard">
+                                <ToggleSwitch x:Name="ShortcutCompactSlotsToggle" Toggled="OnOverlaySettingToggled" />
+                            </toolkit:SettingsCard>
+                            <toolkit:SettingsCard x:Name="ShortcutsPresetPicturesCard">
+                                <ToggleSwitch x:Name="ShortcutPresetPicturesToggle" Toggled="OnPresetPicturesToggled" />
+                            </toolkit:SettingsCard>
+                            <toolkit:SettingsCard x:Name="ShortcutsClearRegionCard">
+                                <Button x:Name="ShortcutClearRegionButton" Click="OnClearRegionClicked" />
+                            </toolkit:SettingsCard>
+                            <toolkit:SettingsCard x:Name="ShortcutsKeepMenuStateCard">
+                                <ToggleSwitch x:Name="ShortcutKeepMenuStateToggle" Toggled="OnOverlaySettingToggled" />
+                            </toolkit:SettingsCard>
+                            <toolkit:SettingsCard x:Name="ShortcutsAutoSaveCard">
+                                <ComboBox x:Name="ShortcutAutoSavePicker" MinWidth="160" SelectionChanged="OnAutoSaveChanged" />
+                            </toolkit:SettingsCard>
+                        </toolkit:SettingsExpander.Items>
                     </toolkit:SettingsExpander>
 
                     <toolkit:SettingsExpander x:Name="ShortcutsFollowExpander">
                         <toolkit:SettingsExpander.HeaderIcon>
                             <FontIcon Glyph="&#xE77B;" />
                         </toolkit:SettingsExpander.HeaderIcon>
-                        <ContentControl x:Name="ShortcutsFollowToggleHost" IsTabStop="False" />
-                        <toolkit:SettingsExpander.ItemsFooter>
-                            <StackPanel x:Name="ShortcutsFollowPanel" Padding="58,12,44,14" Spacing="10" />
-                        </toolkit:SettingsExpander.ItemsFooter>
+                        <ToggleSwitch x:Name="ShortcutCharacterFollowToggle" Toggled="OnCharacterFollowToggled" />
+                        <toolkit:SettingsExpander.Items>
+                            <toolkit:SettingsCard x:Name="ShortcutsFollowSetupCard">
+                                <StackPanel Orientation="Horizontal" Spacing="8">
+                                    <Button x:Name="ShortcutSelectRegionButton" Click="OnSelectRegionClicked" />
+                                    <Button x:Name="ShortcutSaveReferenceButton" Click="OnSaveReferenceClicked" />
+                                </StackPanel>
+                            </toolkit:SettingsCard>
+                            <toolkit:SettingsCard x:Name="ShortcutsFollowStatusCard" />
+                        </toolkit:SettingsExpander.Items>
                     </toolkit:SettingsExpander>
 
                     <toolkit:SettingsExpander x:Name="ShortcutsSendingExpander">
