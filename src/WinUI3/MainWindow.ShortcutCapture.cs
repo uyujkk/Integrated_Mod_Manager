@@ -54,7 +54,7 @@ public sealed partial class MainWindow
     // Asks in the overlay whether to save from the parameter file as it is on disk.
     private async Task<bool> AskToReadExistingFileAsync(string title, string message)
     {
-        var overlay = _shortcutOverlay;
+        var overlay = _overlay.Window;
         if (overlay?.Content is not FrameworkElement root) return false;
         var dialog = new ContentDialog
         {
@@ -67,7 +67,7 @@ public sealed partial class MainWindow
         try { return await dialog.ShowAsync() == ContentDialogResult.Primary && !_onlineWindowClosed; }
         finally
         {
-            if (ReferenceEquals(_shortcutOverlay, overlay)) overlay.SetKeyboardInputEnabled(false);
+            if (ReferenceEquals(_overlay.Window, overlay)) overlay.SetKeyboardInputEnabled(false);
             if (_shortcuts.SelectedTarget is ShortcutTarget target) ShortcutInputService.FocusTarget(target);
         }
     }

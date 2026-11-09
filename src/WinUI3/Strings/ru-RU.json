@@ -1398,7 +1398,6 @@
   "ShortcutPanel.OverlayHotkeyOff": "Горячая клавиша выкл.",
   "ShortcutPanel.OverlayHotkeySummary": "{0}+{1} показывает или скрывает его",
   "ShortcutPanel.AppearanceGroup": "Внешний вид",
-  "ShortcutPanel.BehaviorGroup": "Поведение",
   "ShortcutPanel.OverlayTextColor": "Цвет текста оверлея",
   "ShortcutPanel.PresetNotSaved": "Пресет не сохранён: ",
   "ShortcutPanel.Presets": "Пресеты",

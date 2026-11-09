@@ -1,60 +1,70 @@
+using IntegratedModManager.Core.Shortcuts;
 using Microsoft.UI.Xaml.Controls;
 
 namespace ModFolderCopier.WinUI;
 
-// Stage J5a: the window's side of the Shortcuts page. The page (Pages/ShortcutsPage) shows ShortcutPageViewModel and
-// asks for work through it; the overlay is reached through IShortcutOverlay. Until J5b the window still owns the
-// overlay's content and the settings blocks it builds for the page (IShortcutPageSettings).
-public sealed partial class MainWindow : IShortcutOverlay, IShortcutPageSettings
+// Stage J5: the window's side of the Shortcuts page and overlay. The page (Pages/ShortcutsPage) shows
+// ShortcutPageViewModel and asks for work through it; the overlay (Overlay/ShortcutOverlayController) shows the
+// same view model and asks through IShortcutOverlayActions, implemented here with the window's existing code, so
+// sending keys, F10, slot switching, captures and preset saves did not change when the overlay moved out (J5b).
+public sealed partial class MainWindow : IShortcutOverlayActions
 {
     private void AttachShortcutServices()
     {
-        _services.Overlay = this;
-        _services.ShortcutSettings = this;
+        _overlay = new ShortcutOverlayController(_shortcuts, _services.Language, this, DispatcherQueue);
+        _services.Overlay = _overlay;
         _shortcuts.ActionRequested += OnShortcutPageRequested;
     }
 
     // After the settings are loaded, so loading them is not taken for the user's changes.
     private void ListenToShortcutState() => _shortcuts.PropertyChanged += OnShortcutStateChanged;
 
-    bool IShortcutOverlay.IsVisible => _shortcuts.OverlayVisible;
+    bool IShortcutOverlayActions.IsClosing => _onlineWindowClosed;
 
-    bool IShortcutOverlay.IsClickThrough => _overlayClickThrough;
+    bool IShortcutOverlayActions.IsSavingFromOverlay => _savingOverlaySinglePreset;
 
-    void IShortcutOverlay.Open() => OpenShortcutOverlay();
+    bool IShortcutOverlayActions.HotkeyAvailable => _shortcutPanelHotkey is not null;
 
-    void IShortcutOverlay.Hide()
+    async Task IShortcutOverlayActions.EnsureShortcutsReadAsync()
     {
-        _shortcutOverlay?.AppWindow.Hide();
-        _shortcuts.OverlayVisible = false;
+        if (_shortcutsPrepared) return;
+        PrepareShortcuts();
+        await RefreshShortcutModsAsync();
     }
 
-    void IShortcutOverlay.Toggle() => ToggleShortcutOverlay();
+    void IShortcutOverlayActions.RefreshTargets() => RefreshShortcutTargets();
 
-    void IShortcutOverlay.Refresh(bool bindingsChanged) => RefreshShortcutOverlay(bindingsChanged);
+    Task IShortcutOverlayActions.RefreshDeployedModsAsync() => RefreshShortcutDeployedModsAsync();
 
-    void IShortcutPageSettings.AddOverlayAppearance(StackPanel group, Slider backgroundOpacity)
-    {
-        group.Children.Add(CreateOverlayAppearancePresetRow());
-        AddOverlayAutoContrastSetting(group);
-        group.Children.Add(backgroundOpacity);
-        _overlayElementSlider = CreateOverlayElementOpacitySlider();
-        group.Children.Add(_overlayElementSlider);
-        group.Children.Add(BuildOverlayTextColorButton());
-    }
+    bool IShortcutOverlayActions.IsModDeployed(ShortcutModOption option) => IsShortcutModDeployed(option);
 
-    void IShortcutPageSettings.AddOverlayBehavior(StackPanel group)
-    {
-        AddOverlaySlotSwitchSetting(group);
-        AddPresetPreviewSetting(group);
-        AddSlotCaptureSettings(group);
-    }
+    Task IShortcutOverlayActions.SendShortcutAsync(DetectedModShortcut shortcut) => SendShortcutFromPanelAsync(shortcut);
 
-    (ToggleSwitch Toggle, TextBlock Summary) IShortcutPageSettings.AddCharacterFollow(StackPanel body)
-    {
-        _characterFollowSummary = new TextBlock();
-        BuildCharacterFollowControls(body);
-        UpdateCharacterFollowSummary();
-        return (_characterFollowToggle!, _characterFollowSummary);
-    }
+    void IShortcutOverlayActions.SetInputEnabled(bool enable) => SetShortcutInputFromOverlay(enable);
+
+    Task IShortcutOverlayActions.SaveCombinationPresetAsync() => QuickSaveCombinationFromOverlayAsync();
+
+    Task IShortcutOverlayActions.SaveSingleModPresetAsync() => SaveSingleModPresetFromOverlayAsync();
+
+    Task IShortcutOverlayActions.RefreshFromDiskAsync() => RefreshOverlayFromDiskAsync();
+
+    ModPersistentSlot[] IShortcutOverlayActions.OverlaySlots(out string? modPath) => OverlaySlots(out modPath);
+
+    ModPersistentSlot? IShortcutOverlayActions.CurrentSlot(ModPersistentSlot[] slots) => CurrentPersistentSlot(slots);
+
+    string? IShortcutOverlayActions.ModRelativePath(string? modPath) => TryGetCurrentModRelativePath(GetSelectedRepository(), modPath);
+
+    Task IShortcutOverlayActions.SwitchSlotAsync(string slotId, string modPath) => SwitchSlotFromOverlayAsync(slotId, modPath);
+
+    Task IShortcutOverlayActions.ShowSlotGalleryAsync() => ShowOverlaySlotGalleryAsync();
+
+    Task IShortcutOverlayActions.FrameCurrentSlotPictureAsync() => FrameCurrentSlotPreviewAsync();
+
+    Image? IShortcutOverlayActions.CreatePresetPreviewImage(string? previewFile, double width, double height) => CreatePresetPreviewImage(previewFile, width, height);
+
+    Task IShortcutOverlayActions.RunAsync(string operation, Func<Task> action) => RunUiActionAsync(operation, action);
+
+    void IShortcutOverlayActions.ReportFailure(string operation, Exception error) => ReportUiActionFailure(operation, error);
+
+    void IShortcutOverlayActions.LogIssue(string operation, Exception error) => LogApplicationIssue(operation, error);
 }

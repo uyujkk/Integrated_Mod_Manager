@@ -1398,7 +1398,6 @@
   "ShortcutPanel.OverlayHotkeyOff": "快捷键未启用",
   "ShortcutPanel.OverlayHotkeySummary": "{0}+{1} 显示／隐藏",
   "ShortcutPanel.AppearanceGroup": "外观",
-  "ShortcutPanel.BehaviorGroup": "行为",
   "ShortcutPanel.OverlayTextColor": "浮窗字体颜色",
   "ShortcutPanel.PresetNotSaved": "未保存预设：",
   "ShortcutPanel.Presets": "常用颜色",

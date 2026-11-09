@@ -12,12 +12,12 @@ public sealed partial class MainWindow
     private async Task SaveSingleModPresetFromOverlayAsync()
     {
         if (_savingOverlaySinglePreset || _applyingCombinationProfile || (_shortcuts.SendInProgress && !_restoringPersistentRuntime)) return;
-        var overlay = _shortcutOverlay;
+        var overlay = _overlay.Window;
         if (overlay?.Content is not FrameworkElement root) return;
         // Freeze the repository and Mod at click time, independently of the main repository selection
         // and automatic character following. The dialog identifies exactly this Mod.
         WorkspaceRepository? repository = GetSelectedRepository();
-        string? modPath = (_overlayModPicker?.SelectedItem as ShortcutModOption)?.Path;
+        string? modPath = _overlay.ModOnOverlay?.Path;
         string? relative = TryGetCurrentModRelativePath(repository, modPath);
         if (repository is null || modPath is null || relative is null)
         {
@@ -68,7 +68,7 @@ public sealed partial class MainWindow
             try { result = await dialog.ShowAsync(); }
             finally
             {
-                if (ReferenceEquals(_shortcutOverlay, overlay)) overlay.SetKeyboardInputEnabled(false);
+                if (ReferenceEquals(_overlay.Window, overlay)) overlay.SetKeyboardInputEnabled(false);
                 if (_shortcuts.SelectedTarget is ShortcutTarget target) ShortcutInputService.FocusTarget(target);
             }
             if (result != ContentDialogResult.Primary || _onlineWindowClosed) return;

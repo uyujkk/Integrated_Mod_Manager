@@ -1398,7 +1398,6 @@
   "ShortcutPanel.OverlayHotkeyOff": "Hotkey off",
   "ShortcutPanel.OverlayHotkeySummary": "{0}+{1} shows or hides it",
   "ShortcutPanel.AppearanceGroup": "Appearance",
-  "ShortcutPanel.BehaviorGroup": "Behavior",
   "ShortcutPanel.OverlayTextColor": "Overlay text color",
   "ShortcutPanel.PresetNotSaved": "Preset not saved: ",
   "ShortcutPanel.Presets": "Presets",

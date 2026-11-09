@@ -3,7 +3,6 @@ using System.Security.Cryptography;
 using System.Text;
 using System.Text.Json;
 using IntegratedModManager.Core.Online;
-using Microsoft.UI.Xaml;
 using Microsoft.UI.Xaml.Controls;
 using Microsoft.UI.Xaml.Media;
 using Microsoft.UI.Xaml.Media.Imaging;
@@ -24,55 +23,41 @@ public sealed partial class MainWindow
     private readonly CharacterImageMatcher _characterMatcher = new();
     private CharacterFollowProfile _characterProfile = new();
     private string? _characterProfilePath;
-    private ToggleSwitch? _characterFollowToggle;
-    private TextBlock? _characterFollowStatus;
-    private TextBlock? _characterFollowSummary;
     private System.Threading.Timer? _characterFollowTimer;
     private bool _characterCaptureBusy;
     private bool _characterAutoSelecting;
     private readonly Dictionary<string, string> _characterPreferredMods = new(StringComparer.OrdinalIgnoreCase);
 
-    // The on/off switch is left for the caller to place: it sits on the module row's header.
-    private void BuildCharacterFollowControls(StackPanel pane)
+    // Character follow runs once the Shortcuts page or the overlay was used; the page shows its switch and state.
+    private void StartCharacterFollow()
     {
-        pane.Children.Add(new TextBlock
-        {
-            Text = T("CharacterFollow.SelectAHUDRegionThatChanges"),
-            TextWrapping = TextWrapping.Wrap, Style = (Style)Application.Current.Resources["CaptionTextStyle"]
-        });
-        var buttons = new StackPanel { Orientation = Orientation.Horizontal, Spacing = 8 };
-        buttons.Children.Add(ShortcutButton(T("CharacterFollow.SelectHUDRegion"), () => _ = SelectCharacterRegionAsync()));
-        buttons.Children.Add(ShortcutButton(T("CharacterFollow.SaveCharacterReference"), () => _ = SaveCharacterReferenceAsync()));
-        pane.Children.Add(buttons);
-        _characterFollowToggle = new ToggleSwitch { OnContent = T("Common.On2"), OffContent = T("Common.Off2"), MinWidth = 0 };
-        ToolTipService.SetToolTip(_characterFollowToggle, T("CharacterFollow.AutomaticallyFollowCharacterShortcuts"));
-        _characterFollowToggle.Toggled += (_, _) =>
-        {
-            _characterMatcher.Reset();
-            if (_characterFollowToggle.IsOn && (_characterProfile.Region?.IsValid != true || _characterProfile.Templates.Count == 0))
-            {
-                _characterFollowToggle.IsOn = false;
-                _characterFollowStatus!.Text = T("CharacterFollow.SelectARegionAndSaveReferences");
-                return;
-            }
-            _characterFollowStatus!.Text = _characterFollowToggle.IsOn
-                ? T("CharacterFollow.WaitingForForegroundGameSwitchesAfter")
-                : T("CharacterFollow.AutomaticFollowingPaused");
-            UpdateCharacterFollowSummary();
-        };
-        // Updated every recognition tick; a fixed height keeps the shortcut list below it still.
-        _characterFollowStatus = FixedStatusText(lines: 2, fontSize: 14);
-        _characterFollowStatus.Text = T("CharacterFollow.NotConfiguredReferencesRemainLocal");
-        pane.Children.Add(_characterFollowStatus);
+        if (_characterFollowTimer is not null) return;
+        _shortcuts.CharacterFollowStatus = T("CharacterFollow.NotConfiguredReferencesRemainLocal");
+        UpdateCharacterFollowSummary();
         _characterFollowTimer = new System.Threading.Timer(_ =>
             DispatcherQueue.TryEnqueue(() => _ = ObserveCharacterAsync()), null, 700, 700);
     }
 
-    // The one line shown on the collapsed module row.
+    // The switch: turning it on needs a region and references, else it turns itself back off.
+    private void OnCharacterFollowToggled()
+    {
+        _characterMatcher.Reset();
+        if (_shortcuts.CharacterFollowEnabled && (_characterProfile.Region?.IsValid != true || _characterProfile.Templates.Count == 0))
+        {
+            _shortcuts.CharacterFollowEnabled = false;
+            _shortcuts.CharacterFollowStatus = T("CharacterFollow.SelectARegionAndSaveReferences");
+            return;
+        }
+        _shortcuts.CharacterFollowStatus = _shortcuts.CharacterFollowEnabled
+            ? T("CharacterFollow.WaitingForForegroundGameSwitchesAfter")
+            : T("CharacterFollow.AutomaticFollowingPaused");
+        UpdateCharacterFollowSummary();
+    }
+
+    // The one line shown on the folded row.
     private void UpdateCharacterFollowSummary()
     {
-        if (_characterFollowSummary is null) return;
-        _characterFollowSummary.Text = _characterFollowToggle?.IsOn == true
+        _shortcuts.CharacterFollowSummary = _shortcuts.CharacterFollowEnabled
             ? T("CharacterFollow.SummaryFollowing")
             : _characterProfile.Region?.IsValid == true && _characterProfile.Templates.Count > 0
                 ? T("CharacterFollow.SummaryReady", _characterProfile.Templates.Count)
@@ -87,8 +72,8 @@ public sealed partial class MainWindow
 
     private void LoadCharacterFollowProfile(string repository)
     {
-        if (_characterFollowToggle is null) return;
-        _characterFollowToggle.IsOn = false;
+        if (_characterFollowTimer is null) return;
+        _shortcuts.CharacterFollowEnabled = false;
         _characterMatcher.Reset();
         _characterProfile = new();
         _characterPreferredMods.Clear();
@@ -101,9 +86,9 @@ public sealed partial class MainWindow
             _characterProfile.Templates ??= new();
             _characterProfile.PreferredMods ??= new();
             foreach (var pair in _characterProfile.PreferredMods) _characterPreferredMods[pair.Key] = pair.Value;
-            _characterFollowStatus!.Text = T("CharacterFollow.LoadedCharacterReferencesAutoFollowStarts", _characterProfile.Templates.Count);
+            _shortcuts.CharacterFollowStatus = T("CharacterFollow.LoadedCharacterReferencesAutoFollowStarts", _characterProfile.Templates.Count);
         }
-        catch (Exception ex) { _characterFollowStatus!.Text = ex.Message; _characterProfile = new(); }
+        catch (Exception ex) { _shortcuts.CharacterFollowStatus = ex.Message; _characterProfile = new(); }
         UpdateCharacterFollowSummary();
     }
 
@@ -121,7 +106,7 @@ public sealed partial class MainWindow
     private async Task<CharacterFrame> CaptureCharacterReferenceAsync()
     {
         if (_shortcuts.SelectedTarget is not ShortcutTarget target) throw new InvalidOperationException(T("CharacterFollow.SelectAGameWindow"));
-        _shortcutOverlay?.AppWindow.Hide();
+        _overlay.Window?.AppWindow.Hide();
         if (!ShortcutInputService.FocusTarget(target)) throw new InvalidOperationException(T("CharacterFollow.CouldNotFocusTheGameWindow"));
         await Task.Delay(300);
         return await Task.Run(() => CharacterScreenCapture.Capture(target, _services.Language.Current));
@@ -131,7 +116,7 @@ public sealed partial class MainWindow
     {
         if (_characterCaptureBusy) return;
         _characterCaptureBusy = true;
-        _characterFollowToggle!.IsOn = false;
+        _shortcuts.CharacterFollowEnabled = false;
         try
         {
             CharacterFrame frame = await CaptureCharacterReferenceAsync();
@@ -171,18 +156,18 @@ public sealed partial class MainWindow
                 _characterProfile.Region = chosen;
                 _characterProfile.Templates.Clear(); // Different geometry invalidates all old references.
                 SaveCharacterFollowProfile();
-                _characterFollowStatus!.Text = T("CharacterFollow.RegionSavedSaveReferencesForEach");
+                _shortcuts.CharacterFollowStatus = T("CharacterFollow.RegionSavedSaveReferencesForEach");
             }
         }
-        catch (Exception ex) { if (!_onlineWindowClosed) _characterFollowStatus!.Text = ex.Message; }
-        finally { _characterCaptureBusy = false; if (!_onlineWindowClosed && _shortcuts.OverlayVisible) _shortcutOverlay?.ShowPanel(); }
+        catch (Exception ex) { if (!_onlineWindowClosed) _shortcuts.CharacterFollowStatus = ex.Message; }
+        finally { _characterCaptureBusy = false; if (!_onlineWindowClosed && _shortcuts.OverlayVisible) _overlay.Window?.ShowPanel(); }
     }
 
     private async Task SaveCharacterReferenceAsync()
     {
         if (_characterCaptureBusy) return;
         _characterCaptureBusy = true;
-        _characterFollowToggle!.IsOn = false;
+        _shortcuts.CharacterFollowEnabled = false;
         try
         {
             string role = SelectedShortcutRole() ?? throw new InvalidOperationException(T("CharacterFollow.SelectAModForThisCharacter"));
@@ -195,38 +180,38 @@ public sealed partial class MainWindow
             if (_shortcuts.SelectedMod is ShortcutModOption selected) _characterPreferredMods[role] = selected.Path;
             SaveCharacterFollowProfile();
             Activate();
-            _characterFollowStatus!.Text = T("CharacterFollow.SavedReferenceForTotal", role, _characterProfile.Templates.Count);
+            _shortcuts.CharacterFollowStatus = T("CharacterFollow.SavedReferenceForTotal", role, _characterProfile.Templates.Count);
         }
-        catch (Exception ex) { if (!_onlineWindowClosed) _characterFollowStatus!.Text = ex.Message; }
-        finally { _characterCaptureBusy = false; if (!_onlineWindowClosed && _shortcuts.OverlayVisible) _shortcutOverlay?.ShowPanel(); }
+        catch (Exception ex) { if (!_onlineWindowClosed) _shortcuts.CharacterFollowStatus = ex.Message; }
+        finally { _characterCaptureBusy = false; if (!_onlineWindowClosed && _shortcuts.OverlayVisible) _overlay.Window?.ShowPanel(); }
     }
 
     private async Task ObserveCharacterAsync()
     {
-        if (_characterCaptureBusy || _onlineWindowClosed || _characterFollowToggle?.IsOn != true
+        if (_characterCaptureBusy || _onlineWindowClosed || !_shortcuts.CharacterFollowEnabled
             || _shortcuts.SendInProgress || _shortcuts.SelectedTarget is not ShortcutTarget target
             || _characterProfile.Region is not CharacterScreenRegion region) return;
         if (!ShortcutInputService.IsTargetForeground(target))
         {
             _characterMatcher.Reset();
-            _characterFollowStatus!.Text = T("CharacterFollow.WaitingForTheSelectedGameTo");
+            _shortcuts.CharacterFollowStatus = T("CharacterFollow.WaitingForTheSelectedGameTo");
             return;
         }
         _characterCaptureBusy = true;
         try
         {
             // If our panel covers the chosen HUD region, never match the panel itself.
-            if (_shortcuts.OverlayVisible && _shortcutOverlay is not null
-                && CharacterScreenCapture.OverlapsRegion(WinRT.Interop.WindowNative.GetWindowHandle(_shortcutOverlay), target, region))
-            { _characterMatcher.Reset(); _characterFollowStatus!.Text = T("CharacterFollow.MoveTheOverlayAwayFromThe"); return; }
+            if (_shortcuts.OverlayVisible && _overlay.Window is not null
+                && CharacterScreenCapture.OverlapsRegion(WinRT.Interop.WindowNative.GetWindowHandle(_overlay.Window), target, region))
+            { _characterMatcher.Reset(); _shortcuts.CharacterFollowStatus = T("CharacterFollow.MoveTheOverlayAwayFromThe"); return; }
             CharacterFrame frame = await Task.Run(() => CharacterScreenCapture.Capture(target, _services.Language.Current));
-            if (_onlineWindowClosed || _characterFollowToggle?.IsOn != true) return;
+            if (_onlineWindowClosed || !_shortcuts.CharacterFollowEnabled) return;
             if (_shortcuts.SelectedTarget is not ShortcutTarget current
                 || current.Handle != target.Handle || current.StartTicks != target.StartTicks)
             { _characterMatcher.Reset(); return; }
             byte[] feature = CharacterImageMatcher.Extract(frame.Bgra, frame.Width, frame.Height, region);
             string? role = _characterMatcher.Observe(feature, _characterProfile.Templates, out double confidence);
-            _characterFollowStatus!.Text = role is null
+            _shortcuts.CharacterFollowStatus = role is null
                 ? T("CharacterFollow.WaitingForStableRecognition", confidence)
                 : T("CharacterFollow.CurrentCharacter", role, confidence);
             if (role is null || role.Equals(SelectedShortcutRole(), StringComparison.OrdinalIgnoreCase)) return;
@@ -238,13 +223,13 @@ public sealed partial class MainWindow
             var selected = matching.FirstOrDefault(p => _characterPreferredMods.TryGetValue(role, out string? preferred) && p.Path == preferred)
                 ?? (matching.Length == 1 ? matching[0] : null);
             if (selected is null && matching.Length > 1)
-                _characterFollowStatus.Text = T("CharacterFollow.HasMultipleModsChooseOneManually", role);
+                _shortcuts.CharacterFollowStatus = T("CharacterFollow.HasMultipleModsChooseOneManually", role);
             if (selected is null) return;
             _characterAutoSelecting = true;
             try { _shortcuts.SelectedMod = selected; }
             finally { _characterAutoSelecting = false; }
         }
-        catch (Exception ex) { _characterMatcher.Reset(); if (!_onlineWindowClosed) _characterFollowStatus!.Text = ex.Message; }
+        catch (Exception ex) { _characterMatcher.Reset(); if (!_onlineWindowClosed) _shortcuts.CharacterFollowStatus = ex.Message; }
         finally { _characterCaptureBusy = false; }
     }
 }

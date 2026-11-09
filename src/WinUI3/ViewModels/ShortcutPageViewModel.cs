@@ -20,7 +20,20 @@ public enum ShortcutPageAction
     DisableHotkey,
 
     /// <summary>The repository has no Mods: go to the dashboard to set its folders.</summary>
-    OpenDashboard
+    OpenDashboard,
+
+    /// <summary>Save the settings now (the overlay text colour, once its picker closes).</summary>
+    SaveSettings,
+
+    /// <summary>Turn on preset pictures after the privacy notice; the window sets CapturePresetPreviews when agreed.</summary>
+    EnablePresetPreviews,
+    ClearPresetPreviewRegion,
+    SelectCharacterRegion,
+    SaveCharacterReference,
+    RefreshLoaderAutoSave,
+
+    /// <summary>Argument: the loader auto-save interval in seconds; the window asks before writing d3dx.ini.</summary>
+    SetLoaderAutoSave
 }
 
 public sealed record ShortcutPageRequest(ShortcutPageAction Action, object? Argument = null);
