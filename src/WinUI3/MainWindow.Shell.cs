@@ -377,6 +377,7 @@ public sealed partial class MainWindow
             InitializeAccessibilityFeatures();
             TraceStartupStage("Accessibility initialized");
             ApplyTheme(_services.Appearance.IsDark);
+            ApplyTitleBarSearchVisibility();
             RestoreWindowPlacement();
             UpdateOnlineWorkspaceWidthConstraint();
             DispatcherQueue.TryEnqueue(UpdateOnlineWorkspaceWidthConstraint);

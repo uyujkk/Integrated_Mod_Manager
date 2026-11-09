@@ -365,6 +365,10 @@ public sealed partial class DashboardPage : UserControl
         // Moving to another target: close first, so the tip opens again beside the new one.
         GettingStartedTip.IsOpen = false;
         GettingStartedTip.Target = target;
+        // The new-repository button is at the top right: opening below it keeps the title bar's search box clear.
+        GettingStartedTip.PreferredPlacement = tips.Current == GettingStartedStep.NewRepository
+            ? TeachingTipPlacementMode.BottomLeft
+            : TeachingTipPlacementMode.Auto;
         GettingStartedTip.Title = title;
         GettingStartedTip.Subtitle = body;
         GettingStartedStepTextBlock.Text = T("GettingStarted.Step", tips.Number, GettingStartedTips.Steps.Count);
@@ -373,10 +377,11 @@ public sealed partial class DashboardPage : UserControl
         AutomationProperties.SetName(GettingStartedTip, title);
         AutomationProperties.SetHelpText(GettingStartedTip, body);
         // The Next button is focused, so Narrator reads the step with it.
-        AutomationProperties.SetHelpText(GettingStartedNextButton, title + ". " + body);
+        string announcement = T("GettingStarted.Announcement", title, body);
+        AutomationProperties.SetHelpText(GettingStartedNextButton, announcement);
         target.StartBringIntoView(new BringIntoViewOptions { AnimationDesired = false, VerticalAlignmentRatio = 0.3 });
         GettingStartedTip.IsOpen = true;
-        _ = FocusGettingStartedTipAsync(title + ". " + body);
+        _ = FocusGettingStartedTipAsync(announcement);
     }
 
     // The tip's popup is laid out a moment after it opens; until then its buttons cannot take the focus.
