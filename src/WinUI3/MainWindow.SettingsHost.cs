@@ -47,6 +47,7 @@ public sealed partial class MainWindow
     private void RefreshAppearanceSettings()
     {
         RefreshTraySetting();
+        RefreshTitleBarSearchSetting();
         UpdateTrayLanguage();
         ApplyInterfaceDensity();
     }
@@ -165,6 +166,12 @@ public sealed partial class MainWindow
                 if (_isApplyingTraySetting) return;
                 _minimizeToTray = SettingsView.MinimizeToTray;
                 SetTrayIconVisibility(_minimizeToTray);
+                SaveShellConfig();
+                break;
+            case nameof(SettingsViewModel.ShowTitleBarSearch):
+                if (_isApplyingTitleBarSearchSetting) return;
+                _showTitleBarSearch = SettingsView.ShowTitleBarSearch;
+                ApplyTitleBarSearchVisibility();
                 SaveShellConfig();
                 break;
         }

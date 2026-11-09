@@ -379,6 +379,7 @@ public sealed partial class MainWindow
             InitializeAccessibilityFeatures();
             TraceStartupStage("Accessibility initialized");
             ApplyTheme(_services.Appearance.IsDark);
+            ApplyTitleBarSearchVisibility();
             RestoreWindowPlacement();
             UpdateOnlineWorkspaceWidthConstraint();
             DispatcherQueue.TryEnqueue(UpdateOnlineWorkspaceWidthConstraint);
@@ -390,8 +391,13 @@ public sealed partial class MainWindow
                 ShowAppNotification(T("Shell.InterruptedTasksRestored", _restoredInterruptedDownloads));
             await NotifyInterruptedImportsAsync();
             await ChooseFirstInstallGameAsync();
-            // Waits for any startup dialog (including the update prompt below) before showing.
-            _ = RunUiActionAsync("Show what's new", ShowWhatsNewOnceAsync);
+            // Waits for any startup dialog (including the update prompt below) before showing; the
+            // getting-started tips come after what's new, so they never sit under a dialog.
+            _ = RunUiActionAsync("Show what's new", async () =>
+            {
+                await ShowWhatsNewOnceAsync();
+                await ShowGettingStartedTipsAsync();
+            });
 
             if (_localUpdatePackageVersion is not null && !_hasPromptedForLocalUpdate)
             {
