@@ -141,7 +141,7 @@ public sealed partial class MainWindow
         // Without the hotkey the user could not get the mouse back, short of closing the app.
         if (enabled && (!_shortcuts.HotkeyEnabled || _shortcutPanelHotkey is null))
         {
-            _shortcutStatus!.Text = T("OverlayView.ClickThroughNeedsHotkey");
+            _shortcuts.StatusText = T("OverlayView.ClickThroughNeedsHotkey");
             if (_overlayCompactView) { _overlayCompactView = false; ApplyOverlayCompactView(); _overlayCompactToggle!.IsChecked = false; }
             RefreshShortcutOverlay(bindingsChanged: true);
             return;
@@ -150,7 +150,7 @@ public sealed partial class MainWindow
         _shortcutOverlay.SetClickThrough(enabled);
         // The status row is hidden in the compact view, and this is the one thing that must stay visible.
         _overlayClickThroughButton!.Content = enabled ? T("OverlayView.ClickThroughActive") : T("OverlayView.ClickThrough");
-        _shortcutStatus!.Text = enabled ? T("OverlayView.ClickThroughOn") : T("OverlayView.ClickThroughOff");
+        _shortcuts.StatusText = enabled ? T("OverlayView.ClickThroughOn") : T("OverlayView.ClickThroughOff");
         RefreshShortcutOverlay(bindingsChanged: true);
     }
 
@@ -181,9 +181,8 @@ public sealed partial class MainWindow
         ApplyOverlayAppearance();
         ApplyOverlayCompactView();
         if (_overlayCompactToggle is not null) _overlayCompactToggle.IsChecked = _overlayCompactView;
-        // The sliders ignore a value that already matches the field, so moving them changes nothing twice.
-        if (_shortcutOpacitySlider is not null) _shortcutOpacitySlider.Value = _shortcuts.OverlayOpacity;
-        if (_overlayOpacitySlider is not null) _overlayOpacitySlider.Value = _shortcuts.OverlayOpacity;
+        // The background sliders follow the view model's opacity (OnShortcutStateChanged); the element slider
+        // ignores a value that already matches the field, so moving it changes nothing twice.
         if (_overlayElementSlider is not null) _overlayElementSlider.Value = _overlayElementOpacity;
         SaveShellConfig();
     }

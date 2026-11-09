@@ -1078,9 +1078,6 @@
                     </Grid>
                 </Grid>
 
-                <ScrollViewer x:Name="ShortcutsScrollViewer" VerticalScrollBarVisibility="Auto" Visibility="Collapsed">
-                    <StackPanel x:Name="ShortcutPaneContent" Margin="16" Spacing="14" />
-                </ScrollViewer>
                 <!-- The combination preset controls. They used to sit on the Updates page; the Mod workspace's
                      Presets view takes them at startup (MainWindow.RepositoryWorkspace.cs), so this holder
                      never shows. They move with the workspace in stage J7. -->

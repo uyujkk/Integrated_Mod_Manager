@@ -17,7 +17,7 @@ public sealed partial class MainWindow
     private async Task<bool> PrepareOverlayCaptureAsync(string userIni)
     {
         bool canSend = CanHotReloadLoader;
-        if (_shortcutTargetPicker?.SelectedItem is ShortcutTarget target)
+        if (_shortcuts.SelectedTarget is ShortcutTarget target)
         {
             var own = ShortcutProcessSecurity.Read((uint)Environment.ProcessId);
             var destination = ShortcutProcessSecurity.Read(target.ProcessId);
@@ -25,12 +25,12 @@ public sealed partial class MainWindow
                 == ShortcutPrivilegeVerdict.Allowed;
         }
         if (!canSend) return await AskToReadExistingFileAsync(T("ShortcutCapture.CannotSend"), T("ShortcutCapture.ReadExistingWarning"));
-        _shortcutStatus!.Text = T("ShortcutCapture.Waiting");
+        _shortcuts.StatusText = T("ShortcutCapture.Waiting");
         RefreshShortcutOverlay();
         _shortcuts.SendInProgress = true;
         try
         {
-            var chosen = (ShortcutTarget)_shortcutTargetPicker!.SelectedItem;
+            var chosen = _shortcuts.SelectedTarget!;
             await LoaderStateCapture.FlushAsync(userIni,
                 _ => _shortcutInput.SendAsync(chosen, new ShortcutKeyPlan([LoaderReloadKey], []), 120, _shortcuts.InputMode, _services.Language.Current));
             return !_onlineWindowClosed;
@@ -45,7 +45,7 @@ public sealed partial class MainWindow
             && await AskToReadExistingFileAsync(T("ShortcutCapture.NoNewWrite"), T("ShortcutCapture.NoNewWriteWarning"));
         if (!readExisting && !_onlineWindowClosed)
         {
-            _shortcutStatus.Text = T("ShortcutPanel.PresetNotSaved") + T("ShortcutCapture.TimedOut");
+            _shortcuts.StatusText = T("ShortcutPanel.PresetNotSaved") + T("ShortcutCapture.TimedOut");
             RefreshShortcutOverlay();
         }
         return readExisting;
@@ -68,7 +68,7 @@ public sealed partial class MainWindow
         finally
         {
             if (ReferenceEquals(_shortcutOverlay, overlay)) overlay.SetKeyboardInputEnabled(false);
-            if (_shortcutTargetPicker?.SelectedItem is ShortcutTarget target) ShortcutInputService.FocusTarget(target);
+            if (_shortcuts.SelectedTarget is ShortcutTarget target) ShortcutInputService.FocusTarget(target);
         }
     }
 
@@ -84,7 +84,7 @@ public sealed partial class MainWindow
         if (_applyingCombinationProfile || _restoringPersistentRuntime || _shortcuts.SendInProgress) return;
         await RefreshShortcutDeployedModsAsync();
         await LoadShortcutSelectionAsync(force: true);
-        if (_shortcutModPicker?.SelectedItem is null) _shortcutStatus!.Text = T("ShortcutCapture.CurrentRemoved");
+        if (_shortcuts.SelectedMod is null) _shortcuts.StatusText = T("ShortcutCapture.CurrentRemoved");
         RefreshPersistentSlotControls();
         RefreshShortcutOverlay(bindingsChanged: true);
     }

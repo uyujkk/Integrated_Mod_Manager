@@ -88,7 +88,8 @@ public sealed partial class MainWindow
         PageContentHost.Content = _pages[_currentPrimarySection];
         if (_currentPrimarySection == PrimarySection.Shortcuts)
         {
-            BuildShortcutPane();
+            _shortcutsPage!.EnsureBuilt();
+            PrepareShortcuts();
             _ = RefreshShortcutPaneSafelyAsync();
         }
 
@@ -126,8 +127,7 @@ public sealed partial class MainWindow
         foreach ((PrimarySection section, FrameworkElement container) in new (PrimarySection, FrameworkElement)[]
         {
             (PrimarySection.Repository, WorkspacePageHost),
-            (PrimarySection.Online, OnlineScrollViewer),
-            (PrimarySection.Shortcuts, ShortcutsScrollViewer)
+            (PrimarySection.Online, OnlineScrollViewer)
         })
         {
             PagesHostGrid.Children.Remove(container);
@@ -139,6 +139,8 @@ public sealed partial class MainWindow
         _pages[PrimarySection.Dashboard] = new DashboardPage(_services);
         // Stage J3: the Updates page too.
         _pages[PrimarySection.Updates] = new UpdatesPage(_services);
+        // Stage J5: the Shortcuts page.
+        _pages[PrimarySection.Shortcuts] = _shortcutsPage = new ShortcutsPage(_services);
     }
 
     private UIElement GetActiveSectionElement()
@@ -149,7 +151,7 @@ public sealed partial class MainWindow
             PrimarySection.Repository => WorkspacePageHost,
             PrimarySection.Online => OnlineScrollViewer,
             PrimarySection.Updates => _pages[PrimarySection.Updates],
-            PrimarySection.Shortcuts => ShortcutsScrollViewer,
+            PrimarySection.Shortcuts => _pages[PrimarySection.Shortcuts],
             _ => _pages[PrimarySection.Settings]
         };
     }

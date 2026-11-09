@@ -82,7 +82,7 @@ public sealed partial class MainWindow
     private async Task<CharacterFrame?> CapturePresetPreviewAsync()
     {
         if (!_capturePresetPreviews || _shortcutOverlay is not { } overlay
-            || _shortcutTargetPicker?.SelectedItem is not ShortcutTarget target) return null;
+            || _shortcuts.SelectedTarget is not ShortcutTarget target) return null;
         return await CaptureTargetFrameAsync(target, overlay);
     }
 
@@ -116,14 +116,14 @@ public sealed partial class MainWindow
         ModPersistentSlot? slot = _modPersistentSlots.FirstOrDefault(item => item.Id == _overlayCurrentSlotId);
         if (slot is null)
         {
-            _shortcutStatus!.Text = T("PresetPreview.SwitchToASlotFirst");
+            _shortcuts.StatusText = T("PresetPreview.SwitchToASlotFirst");
             RefreshShortcutOverlay(bindingsChanged: true);
             return;
         }
-        if (_shortcutTargetPicker?.SelectedItem is not ShortcutTarget target
+        if (_shortcuts.SelectedTarget is not ShortcutTarget target
             || CharacterScreenCapture.ClientScreenRect(target.Handle) is not { } game)
         {
-            _shortcutStatus!.Text = T("PresetPreview.SelectGameWindow");
+            _shortcuts.StatusText = T("PresetPreview.SelectGameWindow");
             RefreshShortcutOverlay(bindingsChanged: true);
             return;
         }
@@ -163,12 +163,12 @@ public sealed partial class MainWindow
                 slot.PreviewFile = stored;
                 SaveShellConfig();
             }
-            _shortcutStatus!.Text = stored is null ? T("PresetPreview.CannotUse") : T("PresetPreview.Framed", slot.Name);
+            _shortcuts.StatusText = stored is null ? T("PresetPreview.CannotUse") : T("PresetPreview.Framed", slot.Name);
         }
         catch (Exception ex)
         {
             LogApplicationIssue("Preset preview framing", ex);
-            if (!_onlineWindowClosed) _shortcutStatus!.Text = T("PresetPreview.CannotUse");
+            if (!_onlineWindowClosed) _shortcuts.StatusText = T("PresetPreview.CannotUse");
         }
         finally
         {
@@ -189,7 +189,7 @@ public sealed partial class MainWindow
         if (_shortcutOverlay is not { } overlay || _savingOverlaySinglePreset || _applyingCombinationProfile) return;
         if (_restoringPersistentRuntime || _shortcuts.SendInProgress)
         {
-            _shortcutStatus!.Text = T("HotReload.StillApplying");
+            _shortcuts.StatusText = T("HotReload.StillApplying");
             RefreshShortcutOverlay(bindingsChanged: true);
             return;
         }
@@ -282,7 +282,7 @@ public sealed partial class MainWindow
         }
         Add(T("PresetPreview.FromGame"), async () =>
         {
-            if (_shortcutTargetPicker?.SelectedItem is not ShortcutTarget target)
+            if (_shortcuts.SelectedTarget is not ShortcutTarget target)
             {
                 await ShowMessageAsync(T("PresetPreview.SelectGameWindow"), T("PresetPreview.SetPreview"));
                 return;

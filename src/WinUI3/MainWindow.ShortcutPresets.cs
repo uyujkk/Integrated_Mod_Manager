@@ -21,7 +21,7 @@ public sealed partial class MainWindow
         string? relative = TryGetCurrentModRelativePath(repository, modPath);
         if (repository is null || modPath is null || relative is null)
         {
-            _shortcutStatus!.Text = T("ShortcutPanel.SelectAMod");
+            _shortcuts.StatusText = T("ShortcutPanel.SelectAMod");
             RefreshShortcutOverlay();
             return;
         }
@@ -69,14 +69,14 @@ public sealed partial class MainWindow
             finally
             {
                 if (ReferenceEquals(_shortcutOverlay, overlay)) overlay.SetKeyboardInputEnabled(false);
-                if (_shortcutTargetPicker?.SelectedItem is ShortcutTarget target) ShortcutInputService.FocusTarget(target);
+                if (_shortcuts.SelectedTarget is ShortcutTarget target) ShortcutInputService.FocusTarget(target);
             }
             if (result != ContentDialogResult.Primary || _onlineWindowClosed) return;
 
             CharacterFrame? preview = await CapturePresetPreviewAsync();
             if (!await PrepareOverlayCaptureAsync(userIni)) return;
             string name = nameBox.Text.Trim();
-            _shortcutStatus!.Text = T("ShortcutPanel.SavingSinglePreset");
+            _shortcuts.StatusText = T("ShortcutPanel.SavingSinglePreset");
             RefreshShortcutOverlay();
             // Use the strict snapshot reader for one Mod: missing values or a concurrent loader
             // write fail rather than quietly producing a partial preset or capturing defaults.
@@ -98,13 +98,13 @@ public sealed partial class MainWindow
             try { SaveShellConfig(throwOnError: true); }
             catch { _modPersistentSlots.Remove(slot); DeletePresetPreview(slot.PreviewFile); throw; }
             _selectedModPersistentSlotId = slot.Id;
-            _shortcutStatus.Text = T("ShortcutPanel.SinglePresetSaved", name, values.Count) + PresetPreviewNote(slot.PreviewFile)
+            _shortcuts.StatusText = T("ShortcutPanel.SinglePresetSaved", name, values.Count) + PresetPreviewNote(slot.PreviewFile)
                 + (menuStateLeft > 0 ? T("SlotCapture.MenuStateLeftOut", menuStateLeft) : string.Empty);
         }
         catch (Exception ex)
         {
             LogApplicationIssue("Overlay single Mod preset capture", ex);
-            if (!_onlineWindowClosed) _shortcutStatus!.Text = T("ShortcutPanel.PresetNotSaved") + OverlayCaptureError(ex);
+            if (!_onlineWindowClosed) _shortcuts.StatusText = T("ShortcutPanel.PresetNotSaved") + OverlayCaptureError(ex);
         }
         finally
         {

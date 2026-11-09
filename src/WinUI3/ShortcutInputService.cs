@@ -9,11 +9,6 @@ namespace ModFolderCopier.WinUI;
 
 internal sealed class ShortcutPrivilegeException(string message) : InvalidOperationException(message);
 
-internal sealed record ShortcutTarget(nint Handle, uint ProcessId, long StartTicks, string Label, string ProcessName = "")
-{
-    public override string ToString() => Label;
-}
-
 /// <summary>User-triggered foreground keyboard input. No hooks or game-process access.</summary>
 internal sealed class ShortcutInputService : IDisposable
 {

@@ -1,0 +1,183 @@
+﻿<UserControl
+    x:Class="ModFolderCopier.WinUI.ShortcutsPage"
+    xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+    xmlns:local="using:ModFolderCopier.WinUI"
+    xmlns:toolkit="using:CommunityToolkit.WinUI.Controls"
+    IsTabStop="False"
+    HorizontalContentAlignment="Stretch"
+    VerticalContentAlignment="Stretch">
+    <!-- Stage J5 (docs/development/UI-Fluent-Design-Plan.md, "快捷键（J5）"), like the PowerToys keyboard and settings
+         pages: a privilege InfoBar, setting cards for what to send where, one row per binding with its keys as key caps
+         (KeyVisual), and the overlay, character follow and sending settings in expanders. The page shows
+         ShortcutPageViewModel and sends clicks to the window through it. -->
+    <UserControl.Resources>
+        <Style x:Key="ShortcutsGroupTitleStyle" TargetType="TextBlock" BasedOn="{StaticResource BodyStrongTextBlockStyle}">
+            <Setter Property="Margin" Value="1,8,0,4" />
+            <Setter Property="TextWrapping" Value="WrapWholeWords" />
+        </Style>
+        <Style x:Key="ShortcutsCaptionStyle" TargetType="TextBlock" BasedOn="{StaticResource CaptionTextBlockStyle}">
+            <Setter Property="Foreground" Value="{ThemeResource TextFillColorSecondaryBrush}" />
+            <Setter Property="TextWrapping" Value="WrapWholeWords" />
+        </Style>
+    </UserControl.Resources>
+
+    <ScrollViewer x:Name="ShortcutsScrollViewer" VerticalScrollBarVisibility="Auto">
+        <StackPanel x:Name="ShortcutPaneContent" Margin="6" Spacing="12">
+            <local:PageHeader x:Name="ShortcutsPageHeader">
+                <local:PageHeader.Actions>
+                    <StackPanel Orientation="Horizontal" Spacing="8">
+                        <Button x:Name="ShortcutsRefreshWindowsButton" Click="OnRefreshWindowsClicked" />
+                        <Button x:Name="ShortcutsReloadIniButton" Click="OnReloadIniClicked" />
+                    </StackPanel>
+                </local:PageHeader.Actions>
+            </local:PageHeader>
+
+            <!-- Whether keys can reach the game; a warning with the restart button when they cannot. -->
+            <InfoBar x:Name="ShortcutsPrivilegeInfoBar" IsOpen="True" IsClosable="False">
+                <InfoBar.ActionButton>
+                    <Button x:Name="ShortcutsElevateButton" Click="OnElevateClicked" />
+                </InfoBar.ActionButton>
+            </InfoBar>
+
+            <!-- What to send to which window. -->
+            <StackPanel x:Name="ShortcutsTargetGroup" Spacing="4">
+                <toolkit:SettingsCard x:Name="ShortcutsModCard">
+                    <toolkit:SettingsCard.HeaderIcon>
+                        <FontIcon Glyph="&#xE8B7;" />
+                    </toolkit:SettingsCard.HeaderIcon>
+                    <ComboBox x:Name="ShortcutModPicker" MinWidth="240" MaxWidth="420" SelectionChanged="OnModPickerChanged" />
+                </toolkit:SettingsCard>
+                <toolkit:SettingsCard x:Name="ShortcutsTargetCard">
+                    <toolkit:SettingsCard.HeaderIcon>
+                        <FontIcon Glyph="&#xE7F4;" />
+                    </toolkit:SettingsCard.HeaderIcon>
+                    <StackPanel Orientation="Horizontal" Spacing="8">
+                        <ComboBox x:Name="ShortcutTargetPicker" MinWidth="240" MaxWidth="420" SelectionChanged="OnTargetPickerChanged" />
+                        <Button x:Name="ShortcutsRefreshTargetsButton" Click="OnRefreshWindowsClicked">
+                            <FontIcon Glyph="&#xE72C;" FontSize="14" />
+                        </Button>
+                    </StackPanel>
+                </toolkit:SettingsCard>
+                <toolkit:SettingsCard x:Name="ShortcutsInputCard">
+                    <toolkit:SettingsCard.HeaderIcon>
+                        <FontIcon Glyph="&#xE765;" />
+                    </toolkit:SettingsCard.HeaderIcon>
+                    <ToggleSwitch x:Name="ShortcutInputToggle" Toggled="OnInputToggled" />
+                </toolkit:SettingsCard>
+            </StackPanel>
+
+            <!-- Where keys go right now: the window, whether input is on, the input method and the overlay; the
+                 message is the last read, send or capture result. -->
+            <InfoBar x:Name="ShortcutsStatusInfoBar" IsOpen="True" IsClosable="False">
+                <InfoBar.ActionButton>
+                    <Button x:Name="ShortcutsStatusRefreshButton" Click="OnRefreshWindowsClicked" />
+                </InfoBar.ActionButton>
+            </InfoBar>
+
+            <!-- The bindings, then the settings: one column at every width, so the setting cards have room. -->
+            <StackPanel x:Name="ShortcutsBodyPanel" Spacing="12">
+                <StackPanel x:Name="ShortcutsBindingsPanel" Spacing="4">
+                    <Grid ColumnSpacing="8">
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="*" />
+                            <ColumnDefinition Width="Auto" />
+                            <ColumnDefinition Width="Auto" />
+                        </Grid.ColumnDefinitions>
+                        <TextBlock x:Name="ShortcutsBindingsTitleTextBlock" Style="{StaticResource ShortcutsGroupTitleStyle}" VerticalAlignment="Center" />
+                        <ToggleSwitch x:Name="ShortcutHideUnsupportedToggle" Grid.Column="1" MinWidth="0" Toggled="OnHideUnsupportedToggled" />
+                        <Button x:Name="ShortcutsBindingsMoreButton" Grid.Column="2" VerticalAlignment="Center" Background="Transparent" BorderThickness="0">
+                            <FontIcon Glyph="&#xE712;" FontSize="16" />
+                            <Button.Flyout>
+                                <MenuFlyout Placement="BottomEdgeAlignedRight">
+                                    <MenuFlyoutItem x:Name="ShortcutsOpenIniMenuItem" Click="OnOpenIniClicked">
+                                        <MenuFlyoutItem.Icon>
+                                            <FontIcon Glyph="&#xE8A5;" />
+                                        </MenuFlyoutItem.Icon>
+                                    </MenuFlyoutItem>
+                                </MenuFlyout>
+                            </Button.Flyout>
+                        </Button>
+                    </Grid>
+                    <TextBlock x:Name="ShortcutsReadOnlyHintTextBlock" Style="{StaticResource ShortcutsCaptionStyle}" />
+                    <TextBlock x:Name="ShortcutsHiddenNoteTextBlock" Style="{StaticResource ShortcutsCaptionStyle}" Visibility="Collapsed" />
+                    <StackPanel x:Name="ShortcutBindingsList" Spacing="4" Margin="0,4,0,0" />
+                    <!-- Nothing to show: say what to do next. -->
+                    <local:EmptyState x:Name="ShortcutsEmptyState" Glyph="&#xE765;" Visibility="Collapsed">
+                        <local:EmptyState.Actions>
+                            <Button x:Name="ShortcutsEmptyStateButton" Click="OnEmptyStateActionClicked" />
+                        </local:EmptyState.Actions>
+                    </local:EmptyState>
+                </StackPanel>
+
+                <StackPanel x:Name="ShortcutsSettingsColumn" Spacing="4">
+                    <toolkit:SettingsExpander x:Name="ShortcutsOverlayExpander">
+                        <toolkit:SettingsExpander.HeaderIcon>
+                            <FontIcon Glyph="&#xE7F4;" />
+                        </toolkit:SettingsExpander.HeaderIcon>
+                        <Button x:Name="ShortcutsOpenOverlayButton" Click="OnOpenOverlayClicked" />
+                        <toolkit:SettingsExpander.Items>
+                            <!-- The global hotkey: on or off, and the chord, which takes effect as soon as it is chosen. -->
+                            <toolkit:SettingsCard x:Name="ShortcutsHotkeyCard">
+                                <ToggleSwitch x:Name="ShortcutHotkeyToggle" Toggled="OnHotkeyToggled" />
+                            </toolkit:SettingsCard>
+                            <toolkit:SettingsCard x:Name="ShortcutsHotkeyChordCard">
+                                <StackPanel Orientation="Horizontal" Spacing="8">
+                                    <ComboBox x:Name="ShortcutHotkeyModifiersPicker" SelectionChanged="OnHotkeyPickerChanged" />
+                                    <ComboBox x:Name="ShortcutHotkeyKeyPicker" SelectionChanged="OnHotkeyPickerChanged" />
+                                </StackPanel>
+                            </toolkit:SettingsCard>
+                        </toolkit:SettingsExpander.Items>
+                        <!-- Blocks the window still builds (until stage J5b). They are plain rows in the footer: every item of
+                             a SettingsExpander must be a setting card, and a setting card restyles their switches. -->
+                        <toolkit:SettingsExpander.ItemsFooter>
+                            <StackPanel Padding="58,12,44,14" Spacing="16">
+                                <StackPanel Spacing="10">
+                                    <TextBlock x:Name="ShortcutsOverlayAppearanceTitleTextBlock" Style="{StaticResource BodyStrongTextBlockStyle}" />
+                                    <StackPanel x:Name="ShortcutsOverlayAppearancePanel" Spacing="10" />
+                                </StackPanel>
+                                <StackPanel Spacing="10">
+                                    <TextBlock x:Name="ShortcutsOverlayBehaviorTitleTextBlock" Style="{StaticResource BodyStrongTextBlockStyle}" />
+                                    <TextBlock x:Name="ShortcutsOverlayBehaviorNoteTextBlock" Style="{StaticResource ShortcutsCaptionStyle}" />
+                                    <StackPanel x:Name="ShortcutsOverlayBehaviorPanel" Spacing="10" />
+                                </StackPanel>
+                            </StackPanel>
+                        </toolkit:SettingsExpander.ItemsFooter>
+                    </toolkit:SettingsExpander>
+
+                    <toolkit:SettingsExpander x:Name="ShortcutsFollowExpander">
+                        <toolkit:SettingsExpander.HeaderIcon>
+                            <FontIcon Glyph="&#xE77B;" />
+                        </toolkit:SettingsExpander.HeaderIcon>
+                        <ContentControl x:Name="ShortcutsFollowToggleHost" IsTabStop="False" />
+                        <toolkit:SettingsExpander.ItemsFooter>
+                            <StackPanel x:Name="ShortcutsFollowPanel" Padding="58,12,44,14" Spacing="10" />
+                        </toolkit:SettingsExpander.ItemsFooter>
+                    </toolkit:SettingsExpander>
+
+                    <toolkit:SettingsExpander x:Name="ShortcutsSendingExpander">
+                        <toolkit:SettingsExpander.HeaderIcon>
+                            <FontIcon Glyph="&#xE765;" />
+                        </toolkit:SettingsExpander.HeaderIcon>
+                        <toolkit:SettingsExpander.Items>
+                            <toolkit:SettingsCard x:Name="ShortcutsInputModeCard">
+                                <ComboBox x:Name="ShortcutInputModePicker" MinWidth="200" SelectionChanged="OnInputModeChanged" />
+                            </toolkit:SettingsCard>
+                            <toolkit:SettingsCard x:Name="ShortcutsTapDurationCard">
+                                <NumberBox x:Name="ShortcutTapDurationBox" Minimum="100" Maximum="2000" SmallChange="100" MinWidth="120"
+                                           SpinButtonPlacementMode="Compact" ValueChanged="OnDurationChanged" />
+                            </toolkit:SettingsCard>
+                            <toolkit:SettingsCard x:Name="ShortcutsHoldDurationCard">
+                                <NumberBox x:Name="ShortcutHoldDurationBox" Minimum="100" Maximum="2000" SmallChange="100" MinWidth="120"
+                                           SpinButtonPlacementMode="Compact" ValueChanged="OnDurationChanged" />
+                            </toolkit:SettingsCard>
+                            <toolkit:SettingsCard x:Name="ShortcutsNumLockCard">
+                                <Button x:Name="ShortcutNumLockButton" Click="OnNumLockClicked" />
+                            </toolkit:SettingsCard>
+                        </toolkit:SettingsExpander.Items>
+                    </toolkit:SettingsExpander>
+                </StackPanel>
+            </StackPanel>
+        </StackPanel>
+    </ScrollViewer>
+</UserControl>
