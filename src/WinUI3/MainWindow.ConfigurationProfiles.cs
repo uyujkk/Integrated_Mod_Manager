@@ -88,7 +88,7 @@ public sealed partial class MainWindow
     {
         WorkspaceRepository? repository = GetSelectedRepository();
         if (repository is null) throw new InvalidOperationException("Select a repository first.");
-        return [.. ModCombinationDeploymentPolicy.Capture(repository.SourcePath, repository.TargetPath)];
+        return [.. ModCombinationDeploymentPolicy.Capture(repository.SourcePath, repository.TargetPath, OwnsCopy(repository))];
     }
 
     private async void OnCreateConfigurationProfileClicked(object sender, RoutedEventArgs e)

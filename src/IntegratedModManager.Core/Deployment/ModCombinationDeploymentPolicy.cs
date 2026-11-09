@@ -2,14 +2,23 @@ using IntegratedModManager.Core.Infrastructure;
 
 namespace IntegratedModManager.Core.Deployment;
 
+/// <param name="UnownedTargets">
+/// Copied folders with a repository Mod's name that the manager cannot recognise as its own (issue #107): they are
+/// never removed or replaced; one in the way of a wanted Mod blocks the restore until the user takes it over.
+/// </param>
 public sealed record ModCombinationDeploymentPlan(
-    IReadOnlyList<string> DesiredSources, IReadOnlyList<string> InstallSources, IReadOnlyList<string> RemoveTargets);
+    IReadOnlyList<string> DesiredSources, IReadOnlyList<string> InstallSources, IReadOnlyList<string> RemoveTargets,
+    IReadOnlyList<string>? UnownedTargets = null)
+{
+    public IReadOnlyList<string> Unowned => UnownedTargets ?? [];
+}
 
 // Repository convention: character/Mod, deployed as Mods/Mod. Unknown target
-// folders are not removed; ambiguous names and foreign junctions fail closed.
+// folders are not removed; ambiguous names and foreign junctions fail closed. A copied folder counts as a
+// deployment only when ownsCopy (the CopyDeploymentLedger) recognises it; without it every same-named copy does.
 public static class ModCombinationDeploymentPolicy
 {
-    public static IReadOnlyList<string> Capture(string sourceRoot, string targetRoot)
+    public static IReadOnlyList<string> Capture(string sourceRoot, string targetRoot, Func<string, string, bool>? ownsCopy = null)
     {
         ValidateSeparateRoots(sourceRoot, targetRoot);
         var known = EnumerateMods(sourceRoot);
@@ -20,7 +29,8 @@ public static class ModCombinationDeploymentPolicy
             string target = Path.Combine(targetRoot, group.Key!);
             if (!Directory.Exists(target)) continue;
             string[] matches = DirectoryLinkDeployment.IsDirectoryLink(target)
-                ? group.Where(source => LinkMatches(source, target)).ToArray() : group.ToArray();
+                ? group.Where(source => LinkMatches(source, target)).ToArray()
+                : group.Where(source => ownsCopy is null || ownsCopy(source, target)).ToArray();
             if (matches.Length > 1) throw new InvalidDataException("More than one repository Mod has the deployed folder name: " + group.Key);
             if (matches.Length == 1) enabled.Add(Path.GetRelativePath(sourceRoot, matches[0]));
         }
@@ -28,7 +38,7 @@ public static class ModCombinationDeploymentPolicy
     }
 
     public static ModCombinationDeploymentPlan Plan(
-        string sourceRoot, string targetRoot, IReadOnlyList<string> relativePaths, bool useLinks)
+        string sourceRoot, string targetRoot, IReadOnlyList<string> relativePaths, bool useLinks, Func<string, string, bool>? ownsCopy = null)
     {
         ValidateSeparateRoots(sourceRoot, targetRoot);
         var known = EnumerateMods(sourceRoot);
@@ -49,7 +59,13 @@ public static class ModCombinationDeploymentPolicy
         if (desired.GroupBy(ModDeploymentLayout.DeployedName, StringComparer.OrdinalIgnoreCase).Any(group => group.Count() > 1))
             throw new InvalidDataException("Two saved Mods use the same target folder name. Rename or separate them first.");
 
-        string[] enabled = Capture(sourceRoot, targetRoot).Select(relative => Path.GetFullPath(Path.Combine(sourceRoot, relative))).ToArray();
+        string[] enabled = Capture(sourceRoot, targetRoot, ownsCopy).Select(relative => Path.GetFullPath(Path.Combine(sourceRoot, relative))).ToArray();
+        // Copies named like a repository Mod that no repository Mod owns: kept, never replaced.
+        var enabledTargets = enabled.Select(source => ModDeploymentLayout.DeployedPath(targetRoot, source)).ToHashSet(StringComparer.OrdinalIgnoreCase);
+        string[] unowned = ownsCopy is null ? [] : known.Select(source => ModDeploymentLayout.DeployedPath(targetRoot, source))
+            .Distinct(StringComparer.OrdinalIgnoreCase)
+            .Where(target => Directory.Exists(target) && !DirectoryLinkDeployment.IsDirectoryLink(target) && !enabledTargets.Contains(target))
+            .OrderBy(target => target, StringComparer.OrdinalIgnoreCase).ToArray();
         var install = new List<string>();
         foreach (string source in desired)
         {
@@ -58,6 +74,8 @@ public static class ModCombinationDeploymentPolicy
             if (Directory.Exists(target) && DirectoryLinkDeployment.IsDirectoryLink(target)
                 && !known.Any(candidate => LinkMatches(candidate, target)))
                 throw new InvalidDataException("A required target is a junction outside this repository: " + target);
+            // An external copy in the way is neither replaced nor counted as this Mod; the caller blocks the restore.
+            if (unowned.Contains(target, StringComparer.OrdinalIgnoreCase)) continue;
             bool matches = Directory.Exists(target) && (useLinks
                 ? DirectoryLinkDeployment.IsDirectoryLink(target) && LinkMatches(source, target)
                 : !DirectoryLinkDeployment.IsDirectoryLink(target));
@@ -68,7 +86,7 @@ public static class ModCombinationDeploymentPolicy
                 ModDeploymentLayout.SameDeployedName(item, source)))
             .Select(source => ModDeploymentLayout.DeployedPath(targetRoot, source))
             .Distinct(StringComparer.OrdinalIgnoreCase).ToArray();
-        return new ModCombinationDeploymentPlan(desired, install, remove);
+        return new ModCombinationDeploymentPlan(desired, install, remove, unowned);
     }
 
     private static List<string> EnumerateMods(string sourceRoot)

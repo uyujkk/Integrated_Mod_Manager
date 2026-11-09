@@ -846,6 +846,14 @@ public sealed partial class MainWindow
         }
 
         bool targetExists = Directory.Exists(targetPath);
+        // Issue #107: a copied folder with this Mod's name that the manager did not make is the user's; say so first.
+        if (targetExists && !DirectoryLinkDeployment.IsDirectoryLink(targetPath))
+        {
+            bool owned = await Task.Run(() => OwnsCopy(repository)(item.Path, targetPath));
+            SaveCopyRecordsIfChanged();
+            if (!owned && !await ShowConfirmAsync(T("LocalLibrary.RemoveExternalFolder", targetPath), T("LocalLibrary.ExternalFolder")))
+                return;
+        }
         IReadOnlyList<string> siblingLinksToReplace = Array.Empty<string>();
         try
         {
@@ -894,6 +902,8 @@ public sealed partial class MainWindow
             {
                 UpdateProgress(15, T("LocalLibrary.RemovingFolder"));
                 await Task.Run(() => DeleteDirectoryTreeSafely(targetPath));
+                CopyLedger(repository).Forget(targetPath);
+                SaveShellConfig();
                 UpdateProgress(100, T("LocalLibrary.RemovalComplete"));
                 StatusTextBlock.Text = item.Name + T("LocalLibrary.WasRemovedFromTheTargetFolder");
                 ShowAppNotification(T("LocalLibrary.RemovedFromTarget", item.Name));
@@ -1076,6 +1086,9 @@ public sealed partial class MainWindow
         if (!repository.UseDirectoryLinks)
         {
             await CopyDirectoryWithProgressAsync(sourcePath, targetPath, progress);
+            // Issue #107: the manager's own copy, recorded in its settings.
+            CopyLedger(repository).Record(sourcePath, targetPath);
+            SaveShellConfig();
             return;
         }
 

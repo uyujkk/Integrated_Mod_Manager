@@ -89,6 +89,9 @@ public sealed class BetaShellConfig
 
     public List<ModPersistentSlot> ModPersistentSlots { get; set; } = [];
 
+    /// <summary>Mod folders the manager copied into loader folders (issue #107); see CopyDeploymentLedger.</summary>
+    public List<IntegratedModManager.Core.Deployment.CopyDeploymentRecord> CopyDeployments { get; set; } = [];
+
     /// <summary>Per repository id, the Mods (relative paths) already offered a default slot. Missing for a repository not scanned yet.</summary>
     public Dictionary<string, List<string>>? DefaultSlotSeeds { get; set; }
 
