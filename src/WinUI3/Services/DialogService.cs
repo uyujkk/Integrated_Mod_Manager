@@ -95,10 +95,10 @@ internal sealed class DialogService(LanguageService language)
     private Expander ErrorDetails(Exception exception)
     {
         string details = DetailsText(exception, T("Dialogs.ErrorLog", ErrorLogPath));
-        var text = new TextBox
+        var text = new TextBlock
         {
-            Text = details, IsReadOnly = true, TextWrapping = TextWrapping.Wrap, AcceptsReturn = true,
-            FontFamily = new Microsoft.UI.Xaml.Media.FontFamily("Consolas"), FontSize = 12, MaxHeight = 200
+            Text = details, IsTextSelectionEnabled = true, TextWrapping = TextWrapping.Wrap,
+            FontFamily = new Microsoft.UI.Xaml.Media.FontFamily("Consolas"), FontSize = 12
         };
         Microsoft.UI.Xaml.Automation.AutomationProperties.SetName(text, T("Dialogs.ViewDetails"));
         var copy = new Button { Content = T("Dialogs.CopyDetails") };
@@ -109,7 +109,7 @@ internal sealed class DialogService(LanguageService language)
             Windows.ApplicationModel.DataTransfer.Clipboard.SetContent(package);
         };
         var body = new StackPanel { Spacing = 8 };
-        body.Children.Add(text);
+        body.Children.Add(new ScrollViewer { Content = text, MaxHeight = 200, HorizontalScrollBarVisibility = ScrollBarVisibility.Disabled });
         body.Children.Add(copy);
         return new Expander
         {
@@ -144,18 +144,27 @@ internal sealed class DialogService(LanguageService language)
     }
 
     /// <summary>
-    /// The primary button gets the fixed red danger style, Cancel stays a plain button and is the default, so Enter
-    /// and Esc both cancel and the danger button never looks like an accent-coloured one.
+    /// The primary button gets the fixed red danger style and Cancel stays a plain button with the keyboard focus, so
+    /// Enter and Esc both cancel. No button is the dialog's default: the default button is drawn in the accent colour,
+    /// and with a red accent Cancel would look like the danger button.
     /// </summary>
     public static void MarkDangerous(ContentDialog dialog)
     {
         dialog.PrimaryButtonStyle = (Style)Application.Current.Resources["DangerAccentButtonStyle"];
         dialog.CloseButtonStyle = (Style)Application.Current.Resources["DefaultButtonStyle"];
-        dialog.DefaultButton = ContentDialogButton.Close;
-        // The default button is the one Enter invokes; the focus goes to Cancel too, so a stray key press never deletes.
-        dialog.Opened += (_, _) =>
+        dialog.DefaultButton = ContentDialogButton.None;
+        // Enter invokes the focused button: Cancel, so a stray key press never deletes.
+        // The dialog's buttons live in its popup; the dialog moves the focus itself right after Opened, so Cancel
+        // takes it a moment later.
+        dialog.Opened += async (_, _) =>
         {
-            if (FindButton(dialog, "CloseButton") is Button cancel) cancel.Focus(FocusState.Programmatic);
+            await Task.Delay(150);
+            foreach (var popup in VisualTreeHelper.GetOpenPopupsForXamlRoot(dialog.XamlRoot))
+                if (popup.Child is not null && FindButton(popup.Child, "CloseButton") is Button cancel)
+                {
+                    cancel.Focus(FocusState.Keyboard);
+                    return;
+                }
         };
     }
 
