@@ -14,11 +14,15 @@ namespace ModFolderCopier.WinUI;
 
 public sealed partial class MainWindow
 {
+    // Normally the plain client as before. IMM_ONLINE_FIXTURES (screenshots and UI tests only) answers every request
+    // from synthetic samples instead and sends nothing to the network.
     private static HttpClient CreateHttpClient()
     {
-        var client = new HttpClient();
-        client.DefaultRequestHeaders.UserAgent.ParseAdd($"IntegratedModManager/{AppVersion.TrimStart('v', 'V')}");
-        return client;
+        string? fixtures = Environment.GetEnvironmentVariable(OnlineHttpClientFactory.FixturesVariable);
+        if (!string.IsNullOrWhiteSpace(fixtures))
+            LogApplicationIssue("Online", new InvalidOperationException($"{OnlineFixtureHandler.ModeName} is on: {fixtures}"));
+        return OnlineHttpClientFactory.Create($"IntegratedModManager/{AppVersion.TrimStart('v', 'V')}", fixtures,
+            message => LogApplicationIssue("Online", new InvalidOperationException(message)));
     }
 
     private void InitializeOnlineControls()

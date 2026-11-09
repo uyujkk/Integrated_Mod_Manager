@@ -1,0 +1,7 @@
+{
+ "name": "Sample Mod 12",
+ "description": "A made-up sample Mod for screenshots and UI tests (Sample Mod 12).",
+ "text": "Synthetic description text. Line one of the sample.<br>Line two: nothing here comes from a real site.",
+ "screenshots": "[{\"_sFile800\": \"https://images.example.invalid/samples/mod-12.png\"}, {\"_sFile800\": \"https://images.example.invalid/samples/mod-01.png\"}, {\"_sFile800\": \"https://images.example.invalid/samples/mod-02.png\"}]",
+ "Preview().sSubFeedImageUrl()": "https://images.example.invalid/samples/mod-12.png"
+}

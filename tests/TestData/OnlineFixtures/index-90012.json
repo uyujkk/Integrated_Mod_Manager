@@ -1,0 +1,133 @@
+{
+ "_aMetadata": {
+  "_nRecordCount": 4,
+  "_nPerpage": 40,
+  "_bIsComplete": true
+ },
+ "_aRecords": [
+  {
+   "_idRow": 990101,
+   "_sName": "Sample Mod 02",
+   "_sProfileUrl": "https://gamebanana.com/mods/990101",
+   "_aSubmitter": {
+    "_sName": "Sample Author 2",
+    "_idRow": "880001"
+   },
+   "_aRootCategory": {
+    "_sName": "Skins"
+   },
+   "_aSubCategory": {
+    "_sName": "Sample Hero Briar",
+    "_sProfileUrl": "https://gamebanana.com/mods/cats/90012/"
+   },
+   "_aPreviewMedia": {
+    "_aImages": [
+     {
+      "_sBaseUrl": "https://images.example.invalid/samples",
+      "_sFile530": "mod-02.png",
+      "_sFile": "mod-02.png"
+     }
+    ]
+   },
+   "_tsDateModified": 1767139200,
+   "_tsDateUpdated": 1767139200,
+   "_tsDateAdded": 1764547200,
+   "_nLikeCount": 37,
+   "_nViewCount": 4700,
+   "_nDownloadCount": 840
+  },
+  {
+   "_idRow": 990104,
+   "_sName": "Sample Mod 05",
+   "_sProfileUrl": "https://gamebanana.com/mods/990104",
+   "_aSubmitter": {
+    "_sName": "Sample Author 1",
+    "_idRow": "880000"
+   },
+   "_aRootCategory": {
+    "_sName": "Skins"
+   },
+   "_aSubCategory": {
+    "_sName": "Sample Hero Briar",
+    "_sProfileUrl": "https://gamebanana.com/mods/cats/90012/"
+   },
+   "_aPreviewMedia": {
+    "_aImages": [
+     {
+      "_sBaseUrl": "https://images.example.invalid/samples",
+      "_sFile530": "mod-05.png",
+      "_sFile": "mod-05.png"
+     }
+    ]
+   },
+   "_tsDateModified": 1766880000,
+   "_tsDateUpdated": 1766880000,
+   "_tsDateAdded": 1764288000,
+   "_nLikeCount": 28,
+   "_nViewCount": 3800,
+   "_nDownloadCount": 660
+  },
+  {
+   "_idRow": 990107,
+   "_sName": "Sample Mod 08",
+   "_sProfileUrl": "https://gamebanana.com/mods/990107",
+   "_aSubmitter": {
+    "_sName": "Sample Author 4",
+    "_idRow": "880003"
+   },
+   "_aRootCategory": {
+    "_sName": "Skins"
+   },
+   "_aSubCategory": {
+    "_sName": "Sample Hero Briar",
+    "_sProfileUrl": "https://gamebanana.com/mods/cats/90012/"
+   },
+   "_aPreviewMedia": {
+    "_aImages": [
+     {
+      "_sBaseUrl": "https://images.example.invalid/samples",
+      "_sFile530": "mod-08.png",
+      "_sFile": "mod-08.png"
+     }
+    ]
+   },
+   "_tsDateModified": 1766620800,
+   "_tsDateUpdated": 1766620800,
+   "_tsDateAdded": 1764028800,
+   "_nLikeCount": 19,
+   "_nViewCount": 2900,
+   "_nDownloadCount": 480
+  },
+  {
+   "_idRow": 990110,
+   "_sName": "Sample Mod 11",
+   "_sProfileUrl": "https://gamebanana.com/mods/990110",
+   "_aSubmitter": {
+    "_sName": "Sample Author 3",
+    "_idRow": "880002"
+   },
+   "_aRootCategory": {
+    "_sName": "Skins"
+   },
+   "_aSubCategory": {
+    "_sName": "Sample Hero Briar",
+    "_sProfileUrl": "https://gamebanana.com/mods/cats/90012/"
+   },
+   "_aPreviewMedia": {
+    "_aImages": [
+     {
+      "_sBaseUrl": "https://images.example.invalid/samples",
+      "_sFile530": "mod-11.png",
+      "_sFile": "mod-11.png"
+     }
+    ]
+   },
+   "_tsDateModified": 1766361600,
+   "_tsDateUpdated": 1766361600,
+   "_tsDateAdded": 1763769600,
+   "_nLikeCount": 10,
+   "_nViewCount": 2000,
+   "_nDownloadCount": 300
+  }
+ ]
+}

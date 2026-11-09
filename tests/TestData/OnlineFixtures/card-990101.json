@@ -1,0 +1,29 @@
+{
+ "name": "Sample Mod 02",
+ "Category().name": "Sample Hero Briar",
+ "catid": 90012,
+ "RootCategory().name": "Skins",
+ "likes": 37,
+ "views": 4700,
+ "downloads": 840,
+ "userid": 880001,
+ "Owner().name": "Sample Author 2",
+ "mdate": 1767139200,
+ "Preview().sSubFeedImageUrl()": "https://images.example.invalid/samples/mod-02.png",
+ "Url().sProfileUrl()": "https://gamebanana.com/mods/990101",
+ "Url().sDownloadUrl()": "https://files.example.invalid/sample-990101.zip",
+ "Files().aFiles()": {
+  "770001": {
+   "_idRow": "770001",
+   "_sFile": "sample-mod-02.zip",
+   "_nFilesize": 2048,
+   "_tsDateAdded": 1767139200,
+   "_nDownloadCount": 840,
+   "_sDownloadUrl": "https://files.example.invalid/sample-990101.zip",
+   "_sVersion": "1.0",
+   "_sDescription": "Sample archive",
+   "_bIsArchived": false
+  }
+ },
+ "Updates().bSubmissionHasUpdates()": false
+}

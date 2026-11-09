@@ -1,0 +1,29 @@
+{
+ "name": "Sample Mod 01",
+ "Category().name": "Sample Hero Aster",
+ "catid": 90011,
+ "RootCategory().name": "Skins",
+ "likes": 40,
+ "views": 5000,
+ "downloads": 900,
+ "userid": 880000,
+ "Owner().name": "Sample Author 1",
+ "mdate": 1767225600,
+ "Preview().sSubFeedImageUrl()": "https://images.example.invalid/samples/mod-01.png",
+ "Url().sProfileUrl()": "https://gamebanana.com/mods/990100",
+ "Url().sDownloadUrl()": "https://files.example.invalid/sample-990100.zip",
+ "Files().aFiles()": {
+  "770000": {
+   "_idRow": "770000",
+   "_sFile": "sample-mod-01.zip",
+   "_nFilesize": 2048,
+   "_tsDateAdded": 1767225600,
+   "_nDownloadCount": 900,
+   "_sDownloadUrl": "https://files.example.invalid/sample-990100.zip",
+   "_sVersion": "1.0",
+   "_sDescription": "Sample archive",
+   "_bIsArchived": false
+  }
+ },
+ "Updates().bSubmissionHasUpdates()": false
+}

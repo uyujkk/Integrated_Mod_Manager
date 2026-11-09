@@ -1,0 +1,23 @@
+[
+ {
+  "_idRow": 90011,
+  "_sName": "Sample Hero Aster",
+  "_nItemCount": 4,
+  "_nCategoryCount": 0,
+  "_sIconUrl": "https://images.example.invalid/samples/hero-90011.png"
+ },
+ {
+  "_idRow": 90012,
+  "_sName": "Sample Hero Briar",
+  "_nItemCount": 4,
+  "_nCategoryCount": 0,
+  "_sIconUrl": "https://images.example.invalid/samples/hero-90012.png"
+ },
+ {
+  "_idRow": 90013,
+  "_sName": "Sample Hero Cobalt",
+  "_nItemCount": 4,
+  "_nCategoryCount": 0,
+  "_sIconUrl": "https://images.example.invalid/samples/hero-90013.png"
+ }
+]
