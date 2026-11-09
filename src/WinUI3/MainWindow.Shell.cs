@@ -83,9 +83,16 @@ public sealed partial class MainWindow
         button.Resources["ButtonForegroundDisabled"] = disabledForegroundBrush;
     }
 
+    // Set by a page switch whose refreshes have not run yet, so a quick second switch still refreshes the lists.
+    private bool _pendingRepositoryRefresh;
+    private int _shellStateVersion;
+
     private void ApplyShellState(bool refreshRepository)
     {
+        // What the click must show at once: the page and the navigation's selection, in this frame. The refreshes
+        // below used to run first and held the selection back by 50-100 ms on every switch (J8 follow-up).
         PageContentHost.Content = _pages[_currentPrimarySection];
+        RefreshPrimaryNavigationVisuals();
         if (_currentPrimarySection == PrimarySection.Shortcuts)
         {
             _shortcutsPage!.EnsureBuilt();
@@ -93,18 +100,33 @@ public sealed partial class MainWindow
             _ = RefreshShortcutPaneSafelyAsync();
         }
 
-        RefreshPrimaryNavigationVisuals();
+        UpdateShellLayout();
+        AnimateSectionEntrance(GetActiveSectionElement());
+        RootGrid.Focus(FocusState.Programmatic);
+
+        // The rest runs right after that frame; a newer switch replaces a refresh that has not run yet.
+        _pendingRepositoryRefresh |= refreshRepository;
+        int version = ++_shellStateVersion;
+        RootGrid.DispatcherQueue.TryEnqueue(Microsoft.UI.Dispatching.DispatcherQueuePriority.Low, () =>
+        {
+            if (version != _shellStateVersion || _onlineWindowClosed) return;
+            RefreshShellStateAfterSwitch();
+        });
+    }
+
+    private void RefreshShellStateAfterSwitch()
+    {
         ApplyLanguage();
         RefreshSettingsPane();
-        UpdateShellLayout();
 
         if (_currentPrimarySection is PrimarySection.Dashboard or PrimarySection.Repository or PrimarySection.Online)
         {
             ApplySelectedRepositoryToInputs();
         }
 
-        if (refreshRepository && _currentPrimarySection == PrimarySection.Repository)
+        if (_pendingRepositoryRefresh && _currentPrimarySection == PrimarySection.Repository)
         {
+            _pendingRepositoryRefresh = false;
             _ = RefreshListsAsync();
         }
 
@@ -113,9 +135,6 @@ public sealed partial class MainWindow
         RefreshUpdatesPane();
         RefreshRepositoryActionButtons();
         SaveShellConfig();
-        UIElement activeSection = GetActiveSectionElement();
-        RootGrid.DispatcherQueue.TryEnqueue(() => AnimateSectionEntrance(activeSection));
-        RootGrid.Focus(FocusState.Programmatic);
     }
 
     // Each page container stays alive in its wrapper, so switching keeps scroll positions,
@@ -167,15 +186,17 @@ public sealed partial class MainWindow
         var compositor = visual.Compositor;
         var easing = compositor.CreateCubicBezierEasingFunction(new Vector2(0.16f, 1f), new Vector2(0.3f, 1f));
 
-        visual.Opacity = 0.25f;
-        visual.Offset = new Vector3(12f, 0f, 0f);
+        // A light entrance that starts mostly visible, so the page is there at once (was 25 % opacity, 12 px and
+        // 170/210 ms, which read as lag; J8 follow-up). Reduce motion turns it off.
+        visual.Opacity = 0.7f;
+        visual.Offset = new Vector3(6f, 0f, 0f);
 
         var fade = compositor.CreateScalarKeyFrameAnimation();
-        fade.Duration = TimeSpan.FromMilliseconds(170);
+        fade.Duration = TimeSpan.FromMilliseconds(110);
         fade.InsertKeyFrame(1f, 1f, easing);
 
         var slide = compositor.CreateVector3KeyFrameAnimation();
-        slide.Duration = TimeSpan.FromMilliseconds(210);
+        slide.Duration = TimeSpan.FromMilliseconds(130);
         slide.InsertKeyFrame(1f, Vector3.Zero, easing);
 
         visual.StartAnimation("Opacity", fade);
