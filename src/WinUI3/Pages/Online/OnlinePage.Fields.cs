@@ -13,17 +13,17 @@ public sealed partial class OnlinePage
     internal void ApplySecondaryNavButtonVisual(Button button, bool isSelected)
     {
         Brush backgroundBrush = isSelected
-            ? _host.GetAppThemeBrush("AppSecondarySelectedBrush")
-            : _host.GetAppThemeBrush("AppSecondaryDefaultBrush");
+            ? GetAppThemeBrush("AppSecondarySelectedBrush")
+            : GetAppThemeBrush("AppSecondaryDefaultBrush");
         Brush borderBrush = isSelected
-            ? _host.GetAppThemeBrush("AppNavSelectedBorderBrush")
-            : _host.GetAppThemeBrush("AppCardBorderBrush");
+            ? GetAppThemeBrush("AppNavSelectedBorderBrush")
+            : GetAppThemeBrush("AppCardBorderBrush");
         Brush foregroundBrush = isSelected
-            ? _host.GetAppThemeBrush("AppSecondarySelectedForegroundBrush")
-            : _host.GetAppThemeBrush("AppSecondaryDefaultForegroundBrush");
-        Brush disabledForegroundBrush = _host.GetAppThemeBrush("AppDisabledForegroundBrush");
-        Brush disabledBackgroundBrush = _host.GetAppThemeBrush("AppSecondaryDefaultBrush");
-        Brush disabledBorderBrush = _host.GetAppThemeBrush("AppCardBorderBrush");
+            ? GetAppThemeBrush("AppSecondarySelectedForegroundBrush")
+            : GetAppThemeBrush("AppSecondaryDefaultForegroundBrush");
+        Brush disabledForegroundBrush = GetAppThemeBrush("AppDisabledForegroundBrush");
+        Brush disabledBackgroundBrush = GetAppThemeBrush("AppSecondaryDefaultBrush");
+        Brush disabledBorderBrush = GetAppThemeBrush("AppCardBorderBrush");
 
         button.Background = backgroundBrush;
         button.BorderBrush = borderBrush;
@@ -122,10 +122,10 @@ public sealed partial class OnlinePage
                 ? VerticalAlignment.Top
                 : VerticalAlignment.Center,
             CornerRadius = new CornerRadius(15),
-            Background = _host.GetAppThemeBrush(isFavorite ? "AppAccentSoftBrush" : "AppSecondaryDefaultBrush"),
-            BorderBrush = _host.GetAppThemeBrush(isFavorite ? "AppNavSelectedBorderBrush" : "AppCardBorderBrush"),
+            Background = GetAppThemeBrush(isFavorite ? "AppAccentSoftBrush" : "AppSecondaryDefaultBrush"),
+            BorderBrush = GetAppThemeBrush(isFavorite ? "AppNavSelectedBorderBrush" : "AppCardBorderBrush"),
             BorderThickness = new Thickness(1),
-            Foreground = _host.GetAppThemeBrush(isFavorite ? "AppAccentBrush" : "AppSecondaryDefaultForegroundBrush"),
+            Foreground = GetAppThemeBrush(isFavorite ? "AppAccentBrush" : "AppSecondaryDefaultForegroundBrush"),
             Content = new FontIcon
             {
                 Glyph = isFavorite ? "\uE735" : "\uE734",

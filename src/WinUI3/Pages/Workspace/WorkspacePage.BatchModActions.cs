@@ -12,13 +12,13 @@ public sealed partial class WorkspacePage
 
     private async Task ShowBatchModActionsAsync()
     {
-        WorkspaceRepository? repository = _host.GetSelectedRepository();
+        WorkspaceRepository? repository = _services.Repositories.Selected;
         SecondLevelFolderItem[] items = _modList.VisibleMods.ToArray();
         if (repository is null) return;
         if (items.Length == 0) { await ShowMessageAsync(T("LocalTags.NoModsInTheCurrentFilter"), T("BatchMods.Title")); return; }
 
         if (await BatchModActionsDialog.ShowAsync(_services, items, _modList.SelectedMod, [.. _host.GetCurrentRepositoryProfiles()], _host.SelectedConfigurationProfileId, _host.Root.ActualHeight)
-            is not { } choice || !ReferenceEquals(_host.GetSelectedRepository(), repository)) return;
+            is not { } choice || !ReferenceEquals(_services.Repositories.Selected, repository)) return;
         SecondLevelFolderItem[] chosen = [.. choice.Mods];
         switch (choice.Action)
         {
@@ -62,7 +62,7 @@ public sealed partial class WorkspacePage
 
     private async Task CopyModsToFolderAsync(IReadOnlyList<SecondLevelFolderItem> mods)
     {
-        if (await _host.PickFolderAsync() is not { } folder) return;
+        if (await _services.Dialogs.PickFolderAsync() is not { } folder) return;
         int copied = await Task.Run(() =>
         {
             int count = 0;

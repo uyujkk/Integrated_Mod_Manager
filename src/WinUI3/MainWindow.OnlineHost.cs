@@ -25,13 +25,9 @@ public sealed partial class MainWindow : IOnlineHost
     bool IOnlineHost.IsOnlinePageShown => _currentPrimarySection == PrimarySection.Online;
     FrameworkElement IOnlineHost.Root => RootGrid;
     Windows.Foundation.Rect IOnlineHost.Bounds => Bounds;
-    Brush IOnlineHost.GetAppThemeBrush(string resourceKey) => GetAppThemeBrush(resourceKey);
     string IOnlineHost.Density => _interfaceDensity.ToString();
     bool IOnlineHost.ReduceMotion => _reduceMotion;
-    bool IOnlineHost.ShouldReduceAnimations => ShouldReduceAnimations;
     void IOnlineHost.AnimateImageReveal(UIElement image) => _workspaceView.AnimateImageReveal(image);
-    Task<string?> IOnlineHost.PickFolderAsync(string? preferredPath) => PickFolderAsync(preferredPath);
-    Task IOnlineHost.OpenExternalUrlAsync(string? url, string failureTitle) => OpenExternalUrlAsync(url, failureTitle);
     Task IOnlineHost.ShowImageViewerAsync(ImageSource? source, string title, IReadOnlyList<string>? imageUrls, int selectedIndex)
         => ShowImageViewerAsync(source, title, imageUrls, selectedIndex);
 
@@ -42,7 +38,6 @@ public sealed partial class MainWindow : IOnlineHost
     void IOnlineHost.SaveShellConfig(bool throwOnError) => SaveShellConfig(throwOnError);
     bool IOnlineHost.SaveConfig() => SaveConfig();
 
-    WorkspaceRepository? IOnlineHost.GetSelectedRepository() => GetSelectedRepository();
     Task IOnlineHost.RefreshListsAsync() => _workspaceView.RefreshListsAsync();
     void IOnlineHost.SelectSecondLevelByPath(string? path) => _workspaceView.SelectSecondLevelByPath(path);
     void IOnlineHost.SetBusyState(bool busy) => _workspaceView.SetBusyState(busy);

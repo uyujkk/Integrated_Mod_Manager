@@ -13,7 +13,7 @@ public sealed partial class OnlinePage
 
     private string GetOnlineDetailContextKey()
     {
-        WorkspaceRepository? repository = _host.GetSelectedRepository();
+        WorkspaceRepository? repository = _services.Repositories.Selected;
         return System.Text.Json.JsonSerializer.Serialize(new[]
         {
             repository?.Id, repository?.SourcePath, repository?.OnlineCategoryId,
@@ -26,7 +26,7 @@ public sealed partial class OnlinePage
 
     private bool IsOnlineDownloadActionBlocked(OnlineModCard mod)
         => _onlineDownloadActions.IsPreparing || _onlineDownloadActions.IsActive(
-            CaptureOnlineDownloadContext(_host.GetSelectedRepository()), GetOnlineDownloadIdentity(mod));
+            CaptureOnlineDownloadContext(_services.Repositories.Selected), GetOnlineDownloadIdentity(mod));
 
     private void RefreshOnlineDetailActionState()
     {

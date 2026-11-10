@@ -477,7 +477,7 @@ public sealed partial class OnlinePage
         var visual = ElementCompositionPreview.GetElementVisual(OnlineDetailPaneBorder);
         visual.StopAnimation("Opacity");
         visual.StopAnimation("Offset");
-        if (_host.ShouldReduceAnimations)
+        if (_services.Appearance.ReduceAnimations())
         {
             visual.Opacity = 1f;
             visual.Offset = Vector3.Zero;
@@ -500,7 +500,7 @@ public sealed partial class OnlinePage
 
     private void AnimateOnlineDetailContentRefresh()
     {
-        if (_host.ShouldReduceAnimations)
+        if (_services.Appearance.ReduceAnimations())
         {
             return;
         }
@@ -900,7 +900,7 @@ public sealed partial class OnlinePage
         visual.StopAnimation("Opacity");
         visual.StopAnimation("Offset");
 
-        if (!_host.ShouldReduceAnimations && IsOnlineDetailOpen)
+        if (!_services.Appearance.ReduceAnimations() && IsOnlineDetailOpen)
         {
             var compositor = visual.Compositor;
             var easing = compositor.CreateCubicBezierEasingFunction(new Vector2(0.4f, 0f), new Vector2(1f, 1f));
@@ -948,7 +948,7 @@ public sealed partial class OnlinePage
                 return;
             }
 
-            await _host.OpenExternalUrlAsync(_activeOnlineDetailMod.ProfileUrl, T("Common.OpenPageFailed"));
+            await _services.Dialogs.OpenExternalUrlAsync(_activeOnlineDetailMod.ProfileUrl, T("Common.OpenPageFailed"));
         }
         catch (Exception ex)
         {
@@ -983,7 +983,7 @@ public sealed partial class OnlinePage
             }
 
             OnlineModCard sourceMod = _activeOnlineDetailMod;
-            WorkspaceRepository? downloadRepository = _host.GetSelectedRepository();
+            WorkspaceRepository? downloadRepository = _services.Repositories.Selected;
             OnlineDownloadContext downloadContext = CaptureOnlineDownloadContext(downloadRepository);
             bool useEndfieldMetadata = IsEndfieldRepository(downloadRepository);
             IReadOnlyCollection<string> characterAliases = GetCharacterFolderAliases(sourceMod);

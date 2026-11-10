@@ -1,12 +1,10 @@
-﻿using System.Diagnostics;
-using Microsoft.UI;
+﻿using Microsoft.UI;
 using Microsoft.UI.Xaml;
 using Microsoft.UI.Xaml.Automation;
 using Microsoft.UI.Xaml.Controls;
 using Microsoft.UI.Xaml.Media;
 using Microsoft.UI.Xaml.Media.Imaging;
 using Windows.System;
-using WinRT.Interop;
 
 namespace ModFolderCopier.WinUI;
 
@@ -263,32 +261,6 @@ public sealed partial class MainWindow
         }
     }
 
-    private async Task OpenExternalUrlAsync(string? url, string failureTitle)
-    {
-        if (string.IsNullOrWhiteSpace(url))
-        {
-            await ShowMessageAsync(
-                T("Dialogs.ThisEntryDoesNotHaveA"),
-                failureTitle);
-            return;
-        }
-
-        try
-        {
-            Process.Start(new ProcessStartInfo
-            {
-                FileName = url,
-                UseShellExecute = true
-            });
-        }
-        catch (Exception ex)
-        {
-            await ShowMessageAsync(
-                T("Common.FailedToOpenLink") + ex.Message,
-                failureTitle);
-        }
-    }
-
     private UIElement CreateInfoCard(string title, string body)
     {
         return new Border
@@ -318,64 +290,16 @@ public sealed partial class MainWindow
         };
     }
 
-    private Task<string?> PickFolderAsync(string? preferredPath = null) =>
-        Task.FromResult(NativeFileDialog.PickFolder(WindowNative.GetWindowHandle(this)));
+    // Stage J finish, step 2: these live in DialogService; the window keeps one-line forwards for its own callers.
+    private Task OpenExternalUrlAsync(string? url, string failureTitle) => _services.Dialogs.OpenExternalUrlAsync(url, failureTitle);
 
-    private Task<string?> PickFileAsync(string[] extensions) =>
-        Task.FromResult(NativeFileDialog.PickFile(WindowNative.GetWindowHandle(this), extensions));
+    private Task<string?> PickFolderAsync(string? preferredPath = null) => _services.Dialogs.PickFolderAsync(preferredPath);
 
-    private void OpenDirectory(string? directory, string title)
-    {
-        try
-        {
-            if (string.IsNullOrWhiteSpace(directory) || !Directory.Exists(directory))
-            {
-                _ = ShowMessageAsync(
-                    title + T("Dialogs.DoesNotExistPleaseChooseIt"),
-                T("Common.InvalidPath"));
-                return;
-            }
+    private Task<string?> PickFileAsync(string[] extensions) => _services.Dialogs.PickFileAsync(extensions);
 
-            Process.Start(new ProcessStartInfo
-            {
-                FileName = directory,
-                UseShellExecute = true
-            });
-        }
-        catch (Exception ex)
-        {
-            _ = ShowMessageAsync(
-                T("Dialogs.FailedToOpenFolder") + ex.Message,
-                T("Dialogs.OperationFailed"));
-        }
-    }
+    private void OpenDirectory(string? directory, string title) => _services.Dialogs.OpenDirectory(directory, title);
 
-    private void OpenFileLocation(string? filePath, string title)
-    {
-        try
-        {
-            if (string.IsNullOrWhiteSpace(filePath) || !File.Exists(filePath))
-            {
-                _ = ShowMessageAsync(
-                    title + T("Dialogs.DoesNotExistPleaseChooseIt"),
-                T("Common.InvalidPath"));
-                return;
-            }
-
-            Process.Start(new ProcessStartInfo
-            {
-                FileName = "explorer.exe",
-                Arguments = "/select,\"" + filePath + "\"",
-                UseShellExecute = true
-            });
-        }
-        catch (Exception ex)
-        {
-            _ = ShowMessageAsync(
-                T("Dialogs.FailedToOpenFileLocation") + ex.Message,
-                T("Dialogs.OperationFailed"));
-        }
-    }
+    private void OpenFileLocation(string? filePath, string title) => _services.Dialogs.OpenFileLocation(filePath, title);
 
     // The common dialogs, shown by DialogService (stage J8).
     private Task ShowMessageAsync(string content, string title) => _services.Dialogs.MessageAsync(title, content);

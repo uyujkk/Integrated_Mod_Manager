@@ -87,12 +87,12 @@ public sealed partial class OnlinePage
 
     private OnlineCardStatus GetOnlineCardStatus(OnlineModCard mod, TrackedModOrigin? installed, string defaultStatus)
     {
-        bool active = _onlineDownloadActions.IsActive(CaptureOnlineDownloadContext(_host.GetSelectedRepository()),
+        bool active = _onlineDownloadActions.IsActive(CaptureOnlineDownloadContext(_services.Repositories.Selected),
             GetOnlineDownloadIdentity(mod));
         DownloadTaskItem? task = _services.Downloads.Tasks.FirstOrDefault(item =>
             item.Session is not null && item.SourceIdentity == GetOnlineDownloadIdentity(mod)
-            && string.Equals(item.Session.Context.RepositoryId, _host.GetSelectedRepository()?.Id, StringComparison.OrdinalIgnoreCase)
-            && string.Equals(item.Session.Context.RepositoryPath, _host.GetSelectedRepository()?.SourcePath, StringComparison.OrdinalIgnoreCase));
+            && string.Equals(item.Session.Context.RepositoryId, _services.Repositories.Selected?.Id, StringComparison.OrdinalIgnoreCase)
+            && string.Equals(item.Session.Context.RepositoryPath, _services.Repositories.Selected?.SourcePath, StringComparison.OrdinalIgnoreCase));
         // A retry can be preparing while its previous terminal task is still in history.
         if (active && task is not null && DownloadProgressPolicy.IsTerminal(task.State)) task = null;
         string text = task?.State switch

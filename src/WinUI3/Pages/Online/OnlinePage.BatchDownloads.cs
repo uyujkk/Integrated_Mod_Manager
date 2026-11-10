@@ -96,7 +96,7 @@ public sealed partial class OnlinePage
                 enabled, isChecked, files, options, folderIndex, note));
         }
         if (await BatchDownloadDialogs.ReviewAsync(_services, context.RepositoryName, context.RepositoryPath, reviewRows,
-                (key, file) => GetOnlineDuplicateKind(((PreparedSavedDownload)key).Mod, file, context), _host.GetAppThemeBrush("AppNavSelectedBorderBrush"),
+                (key, file) => GetOnlineDuplicateKind(((PreparedSavedDownload)key).Mod, file, context), GetAppThemeBrush("AppNavSelectedBorderBrush"),
                 _host.Root.ActualWidth, _host.Root.ActualHeight) is not { } review
             || _onlineWindowClosed || contextKey != GetOnlineDetailContextKey()) return;
         var chosen = review.Rows.Select(plan => (Data: (PreparedSavedDownload)plan.Key, plan.File, Choice: plan.Folder)).ToArray();

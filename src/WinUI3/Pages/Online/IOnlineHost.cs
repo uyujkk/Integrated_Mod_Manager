@@ -19,14 +19,10 @@ internal interface IOnlineHost
     bool IsOnlinePageShown { get; }
     FrameworkElement Root { get; }
     Windows.Foundation.Rect Bounds { get; }
-    Brush GetAppThemeBrush(string resourceKey);
     // The density name, part of the page's layout cache key.
     string Density { get; }
     bool ReduceMotion { get; }
-    bool ShouldReduceAnimations { get; }
     void AnimateImageReveal(UIElement image);
-    Task<string?> PickFolderAsync(string? preferredPath = null);
-    Task OpenExternalUrlAsync(string? url, string failureTitle);
     Task ShowImageViewerAsync(ImageSource? source, string title, IReadOnlyList<string>? imageUrls = null, int selectedIndex = 0);
 
     // Errors and the error log.
@@ -39,7 +35,6 @@ internal interface IOnlineHost
     bool SaveConfig();
 
     // The repository and the Mod workspace: the selected repository, refreshing and selecting after an install.
-    WorkspaceRepository? GetSelectedRepository();
     Task RefreshListsAsync();
     void SelectSecondLevelByPath(string? path);
     void SetBusyState(bool busy);

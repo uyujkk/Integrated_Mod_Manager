@@ -220,8 +220,8 @@ public sealed partial class OnlinePage
     // Placeholder cards shaped like the current view (rows or tiles), shown under the loading ring.
     private void ShowOnlineLoadingPlaceholders()
     {
-        Brush fill = _host.GetAppThemeBrush("AppInsetBackgroundBrush");
-        Brush shade = _host.GetAppThemeBrush("AppAccentSoftBrush");
+        Brush fill = GetAppThemeBrush("AppInsetBackgroundBrush");
+        Brush shade = GetAppThemeBrush("AppAccentSoftBrush");
         if (_onlinePage.CardLayoutMode == OnlineCardLayoutMode.Grid)
         {
             double width = OnlineResultsHost.ActualWidth > 0 ? OnlineResultsHost.ActualWidth - 12 : OnlineLayoutPolicy.PreferredTileWidth;
@@ -286,7 +286,7 @@ public sealed partial class OnlinePage
         FrameworkElement resultsElement = GetOnlineResultsElement();
         var visual = ElementCompositionPreview.GetElementVisual(resultsElement);
         visual.StopAnimation("Opacity");
-        if (_host.ShouldReduceAnimations)
+        if (_services.Appearance.ReduceAnimations())
         {
             visual.Opacity = 1f;
             return;
@@ -469,7 +469,7 @@ public sealed partial class OnlinePage
     private OnlineModTileViewModel CreateOnlineTileModel(OnlineModCard mod)
     {
         var model = new OnlineModTileViewModel(mod,
-            openPage: () => _host.RunUiActionAsync("_host.OpenExternalUrlAsync", () => _host.OpenExternalUrlAsync(mod.ProfileUrl, T("Common.OpenPageFailed"))),
+            openPage: () => _host.RunUiActionAsync("_host.OpenExternalUrlAsync", () => _services.Dialogs.OpenExternalUrlAsync(mod.ProfileUrl, T("Common.OpenPageFailed"))),
             download: () => _host.RunUiActionAsync("DownloadAndExtractOnlineModAsync", () => DownloadAndExtractOnlineModAsync(mod)))
         {
             CharacterLabel = GetOnlineCharacterDisplayName(mod.CharacterName),
@@ -519,8 +519,8 @@ public sealed partial class OnlinePage
 
     private void AnimateOnlineModCardHover(Border card, bool isPointerOver)
     {
-        card.Background = _host.GetAppThemeBrush(isPointerOver ? "AppSecondarySelectedBrush" : "AppInsetBackgroundBrush");
-        if (_host.ShouldReduceAnimations)
+        card.Background = GetAppThemeBrush(isPointerOver ? "AppSecondarySelectedBrush" : "AppInsetBackgroundBrush");
+        if (_services.Appearance.ReduceAnimations())
         {
             return;
         }
@@ -564,8 +564,8 @@ public sealed partial class OnlinePage
         var indicator = new Border
         {
             HorizontalAlignment = HorizontalAlignment.Left,
-            Background = _host.GetAppThemeBrush("AppAccentSoftBrush"),
-            BorderBrush = _host.GetAppThemeBrush("AppNavSelectedBorderBrush"),
+            Background = GetAppThemeBrush("AppAccentSoftBrush"),
+            BorderBrush = GetAppThemeBrush("AppNavSelectedBorderBrush"),
             BorderThickness = new Thickness(1),
             CornerRadius = new CornerRadius(4),
             Padding = new Thickness(8, 4, 8, 4),

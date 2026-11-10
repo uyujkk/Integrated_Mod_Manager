@@ -34,7 +34,7 @@ public sealed partial class OnlinePage
     {
         EnsureOnlineBrowseSession();
         RefreshOnlineNavigationButtonLabels();
-        WorkspaceRepository? repository = _host.GetSelectedRepository();
+        WorkspaceRepository? repository = _services.Repositories.Selected;
         bool hasRepository = repository is not null;
         string effectiveSource = GetEffectiveOnlineSource(repository);
         string effectiveGameName = GetEffectiveOnlineGameName(repository);
@@ -318,7 +318,7 @@ public sealed partial class OnlinePage
     {
         try
         {
-            WorkspaceRepository? repository = _host.GetSelectedRepository();
+            WorkspaceRepository? repository = _services.Repositories.Selected;
             if (repository is not null)
             {
                 _ = EnsureOnlineCharacterCatalogAsync(repository, forceReload: true);
@@ -337,7 +337,7 @@ public sealed partial class OnlinePage
         EnsureOnlineBrowseSession();
         _host.SaveShellConfig();
         CancelOnlineModListRequest();
-        WorkspaceRepository? repository = _host.GetSelectedRepository();
+        WorkspaceRepository? repository = _services.Repositories.Selected;
         if (repository is null)
         {
             return;
@@ -891,7 +891,7 @@ public sealed partial class OnlinePage
 
     private bool MatchesOnlineSearch(OnlineModCard mod, string searchText)
     {
-        EndfieldCharacterInfo? character = IsEndfieldRepository(_host.GetSelectedRepository())
+        EndfieldCharacterInfo? character = IsEndfieldRepository(_services.Repositories.Selected)
             ? FindEndfieldCharacter(mod.CharacterName) : null;
         return OnlineBrowseStateAdapter.MatchesSearch(mod.Title, mod.CharacterName, mod.Author,
             searchText, character?.AllNames);

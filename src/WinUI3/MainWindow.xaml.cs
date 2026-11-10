@@ -143,6 +143,8 @@ public sealed partial class MainWindow : Window
         AttachWorkspacePageEvents();
         _services.Images.Attach(_httpClient, LogApplicationIssue);
         _services.Dialogs.Attach(() => RootGrid.XamlRoot, () => RootGrid.ActualTheme);
+        _services.Appearance.ReduceAnimations = () => ShouldReduceAnimations;
+        _services.Dialogs.AttachWindow(() => WinRT.Interop.WindowNative.GetWindowHandle(this));
         _services.Status.NotificationRequested += OnNotificationRequested;
         InitializeSettingsHost();
         InitializeUpdatesHost();

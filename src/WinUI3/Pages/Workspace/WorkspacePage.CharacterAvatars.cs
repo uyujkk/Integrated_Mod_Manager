@@ -24,7 +24,7 @@ public sealed partial class WorkspacePage
         _characterAvatarCancellation = new CancellationTokenSource();
         CancellationToken cancellationToken = _characterAvatarCancellation.Token;
 
-        WorkspaceRepository? repository = _host.GetSelectedRepository();
+        WorkspaceRepository? repository = _services.Repositories.Selected;
         FirstLevelFolderItem[] items = [.. _host.Characters.All];
         if (repository is null || items.Length == 0)
         {
@@ -46,7 +46,7 @@ public sealed partial class WorkspacePage
             if (!fresh && !cancellationToken.IsCancellationRequested && _avatarCatalogRefreshRequested.Add(repository.Id))
             {
                 await _host.OnlineView.EnsureOnlineCharacterCatalogAsync(repository, forceReload: false);
-                if (!cancellationToken.IsCancellationRequested && ReferenceEquals(_host.GetSelectedRepository(), repository))
+                if (!cancellationToken.IsCancellationRequested && ReferenceEquals(_services.Repositories.Selected, repository))
                 {
                     await RefreshCharacterFolderAvatarsAsync();
                 }
@@ -63,7 +63,7 @@ public sealed partial class WorkspacePage
 
     private async Task RefreshCharacterFolderAvatarAsync(FirstLevelFolderItem item)
     {
-        WorkspaceRepository? repository = _host.GetSelectedRepository();
+        WorkspaceRepository? repository = _services.Repositories.Selected;
         if (repository is null)
         {
             return;
@@ -164,7 +164,7 @@ public sealed partial class WorkspacePage
         var choose = new MenuFlyoutItem { Text = T("CharacterAvatars.ChooseImage") };
         choose.Click += async (_, _) => await RunCharacterAvatarActionAsync(item, async () =>
         {
-            string? image = await _host.PickFileAsync([.. CharacterFolderAvatars.ImageExtensions]);
+            string? image = await _services.Dialogs.PickFileAsync([.. CharacterFolderAvatars.ImageExtensions]);
             if (image is null) return false;
             CharacterFolderAvatars.SetCustomAvatar(item.Path, image);
             return true;
@@ -206,7 +206,7 @@ public sealed partial class WorkspacePage
     // Binds the folder to a catalog character, or clears the binding (automatic matching).
     private async Task<bool> PromptCharacterAvatarBindingAsync(FirstLevelFolderItem item)
     {
-        WorkspaceRepository? repository = _host.GetSelectedRepository();
+        WorkspaceRepository? repository = _services.Repositories.Selected;
         if (repository is null)
         {
             return false;
