@@ -1,6 +1,6 @@
 name: Release
 
-# Pushing a version tag (v4.7.3) builds, tests and packages that commit and prepares a DRAFT release:
+# Pushing a version tag (v4.8.0) builds, tests and packages that commit and prepares a DRAFT release:
 # the package, its SHA-256, a build provenance attestation and the notes from docs/releases/v<version>.md.
 # Nothing is public until the draft is reviewed and published on GitHub.
 #
@@ -21,7 +21,7 @@ on:
   workflow_dispatch:
     inputs:
       tag:
-        description: Existing version tag to build, such as v4.7.3
+        description: Existing version tag to build, such as v4.8.0
         required: true
 
 permissions:
