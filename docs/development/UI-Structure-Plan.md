@@ -299,6 +299,90 @@ J8b、J8c 都用到 J8a 的服务，两者之间没有依赖。
 - `MainWindow` 只剩外壳，预计不到 3,000 行；`MainWindow.xaml` 只剩导航、标题栏和状态栏。
 - 启动时只创建当前页面；记录启动时间的前后对比（`startup.log`）。
 
+## 收尾盘点（2026-11-10，叠在 #122 上）
+
+盘点完 J1–J8 之后离“全部完成后”两条标准还差多少，以及怎样分步做完。**这一节只是盘点和方案，还没有改代码；先等用户决定。**
+
+### 1. 按需创建页面
+
+现在启动时六个页面全部创建：
+- `OnlinePage` 和 `WorkspacePage` 在 `MainWindow` 构造函数里、紧跟 `InitializeComponent()` 创建；
+- 设置、仪表盘、更新、快捷键四页在 `InitializePageHost()` 里创建。
+
+**启动基线**：`startup.log`，从进程启动算起，7 次的中位数。构建是 #122 的顶端 `88f2f70`，界面测试的合成数据，起始页分别是仪表盘和工作区。
+
+| 阶段 | 仪表盘起始 | 工作区起始 |
+| --- | --- | --- |
+| 进入 `MainWindow` 构造函数 | 330 ms | 333 ms |
+| 窗口 XAML 和六个页面创建完 | 610 ms | 611 ms |
+| 读完配置 | 813 ms | 811 ms |
+| 构造函数结束 | 916 ms | 916 ms |
+| 窗口第一次显示（`RootGrid loaded`） | **1,065 ms** | **1,055 ms** |
+
+另做了一次临时测量（没有提交），给每页的创建单独计时：
+- 设置页 69 ms；
+- 更新页 32 ms；
+- 仪表盘 31 ms；
+- 快捷键页 29 ms；
+- 窗口 XAML 加在线页和工作区页，合计 118 ms。
+
+所以只创建当前页面，从仪表盘启动大约能省 **150–200 ms**，约占首次显示时间的 15–20%。
+
+要改的地方：
+
+| 页面 | 窗口直接用到它的地方 | 改成按需创建要做的事 | 难度 |
+| --- | --- | --- | --- |
+| 设置、仪表盘、更新、快捷键 | 只经服务和 ViewModel（`SettingsViewModel`、`DashboardViewModel`、`UpdatesViewModel`、`ShortcutPageViewModel`）。仪表盘有一处直接读 `DashboardPage.PathTextBoxes`；快捷键页有 4 处引用 `_shortcutsPage` | `_pages` 改成首次显示时创建。页面在构造时从 ViewModel 读取当前状态（这四页已经这样做）。`PathTextBoxes` 改成页面加载后再登记 | 低 |
+| 在线页 | `_onlineView.*` 有 206 处，在 30 个文件里，用到 61 个成员：启动时读下载任务、初始化控件、浏览会话；配置读写 `_onlinePage` 和 `_onlinePreferences`；`IOnlineHost` 反向调用 | 先把在线状态（`_onlinePage`、偏好、下载任务）移到服务或 ViewModel，窗口不再直接碰页面控件；之后才能按需创建 | 中，依赖第 3、5 步 |
+| 工作区页 | `_workspaceView.*` 有 268 处，在 27 个文件里，用到 107 个成员：列表数据源、状态槽位控件、组合预设控件、配置读写 `_modList` 和 `_localLibraries`、命令面板、仪表盘 | 先把共享状态（角色、Mod 列表、绑定）移到 `WorkspaceState`，槽位、预设、组合的控件改由页面自己更新；最后才能按需创建 | 高，依赖第 6、7 步 |
+
+### 2. 主窗口剩下的代码
+
+主窗口现在有 10,421 行（48 个 partial 文件）。`MainWindow.xaml` 有 145 行，只剩标题栏、导航和页面容器，“只剩外壳”这一条在 XAML 上已经达到。代码按功能分块：
+
+| 块 | 文件（行数） | 合计 | 谁在用 | 拆成服务的难度和风险 |
+| --- | --- | --- | --- | --- |
+| 状态槽位 | `PersistentSlots`（363）、`PersistentVariants`（312）、`DefaultSlots`（139）、`SlotCapture`（82）、`HotReload`（118） | 1,014 | `IWorkspaceHost`：`RefreshPersistentSlotControls`、`ModPersistentSlots`、`DefaultSlotSeeds`、`SeedDefaultSlotsAsync`，以及 5 个由窗口订阅的槽位按钮。`IShortcutOverlayActions`：`OverlaySlots`、`CurrentSlot`、`SwitchSlotAsync`、`RefreshFromDiskAsync`、`ModRelativePath` | 难，风险高：状态槽位保存和 F10 时序都在这里。只能整体移动，配“保存→恢复结果不变”的测试 |
+| 预设预览 | `PresetPreviews`（404） | 404 | `IWorkspaceHost`：`CreatePresetPreviewEditor`、`CreatePresetPreviewImage`。浮窗：`ShowSlotGalleryAsync`、`FrameCurrentSlotPictureAsync`、`CreatePresetPreviewImage` | 中：截图和文件读写，不碰部署 |
+| 组合预设和组合包 | `ConfigurationProfiles`（198）、`CombinationPresets`（223）、`CombinationBundles`（216）、`PresetShare`（95）、`ShortcutPresets`（100） | 832 | `IWorkspaceHost`：`GetCurrentRepositoryProfiles`、`GetSelectedConfigurationProfile`、`RefreshConfigurationProfiles`、`ConfigurationProfiles`、`SelectedConfigurationProfileId`、`ExportModsAsBundleAsync`、`InitializeCombinationBundleActions`，以及 7 个由窗口订阅的预设按钮。浮窗：`SaveCombinationPresetAsync`、`SaveSingleModPresetAsync` | 难，风险高：组合预设恢复在这里。只移动，配恢复预览和恢复结果的测试 |
+| 安装流程 | `InstallTransactions`（232）、`Archives`（163）、`IniConflicts`（74）、`CopyOwnership`（71）、`CharacterRename`（120） | 660 | `IWorkspaceHost`：事务 9 个、压缩包 3 个、INI 1 个、复制归属 3 个、重命名 1 个。`IOnlineHost`：`ExtractArchiveToDirectory`、`IsSupportedArchiveFile`、`DeleteDirectoryTreeSafely`。还有 `ModUpdates` | 中：大多是文件操作，已有 Core 规则和 #105、#107、#108、#109 的界面测试作保护 |
+| 快捷键发送、面板和角色跟随 | `ShortcutPanel`（526）、`ShortcutsHost`（70）、`ShortcutCapture`（83）、`ShortcutBindingRules`（155）、`CharacterFollow`（200） | 1,034 | `IShortcutOverlayActions` 的其余成员。`IOnlineHost`：`CreateAutomaticShortcutBinding`、`ModBindings`、`ModLinks`。`IWorkspaceHost`：绑定规则 3 个 | 中：发送按键和输入法；F10 时序要单独测 |
+| 应用更新、Mod 更新、下载任务 | `Updates`（575）、`ModUpdates`（120）、`DownloadTasks`（226）、`UpdatesHost`（167） | 1,088 | `IOnlineHost`：下载任务 4 个、`RefreshUpdatesPane`、`SetModUpdateStatus`、`TrackedModOrigins`、`TrackedModUpdateResults` | 中：下载和安装的结果不能变；`DownloadService` 已经有调度器和日志 |
+| 仓库与配置 | `Repositories`（540）、`Configuration`（503）、`BuiltInData`（36）、`RepositoryPerformance`（28） | 1,107 | 两个 host 都在用：`GetSelectedRepository`、`SwitchRepository`、`SaveShellConfig`、`SaveConfig`、`BuiltInRepositoryPresets` 等 | 中：`RepositoryService`、`ShellConfigService` 已经有；风险在配置读写顺序 |
+| 启动器 | `EndfieldBridge`（248） | 248 | `IWorkspaceHost`：`RunRepositoryLauncherAsync`；仪表盘 | 低到中：`EndfieldBridgeService`、`LaunchService` 已经有 |
+| 页面接线 | `DashboardHost`（312）、`SettingsHost`（286）、`OnlineHost`（81）、`WorkspaceHost`（126） | 805 | 窗口和各页之间的请求与转发 | 随上面各步自然变小 |
+| 外壳本身 | `Shell`（647）、`ProductivityFeatures`（691：日志、无障碍、诊断、备份）、`Tray`（426）、`Dialogs`（391）、`CommandPalette`（323）、`xaml.cs`（218）、`Localization`（202）、`WhatsNew`（68）、`UiActionGuard`（68）、`AppearanceEvents`（59）、`FirstRun`（54）、`SingleInstance`（47）、`TitleBarSearch`（30）、`UiDiagnostics`（5） | 3,229 | — | 大部分本来就该留在窗口；命令面板和托盘可以各自做成独立的类 |
+
+### 3. 三个过渡接口
+
+| 接口 | 成员 | 拆向 |
+| --- | --- | --- |
+| `IShortcutOverlayActions` | 22 | `SlotService`（槽位 5 个）、`PresetPreviewService`（3 个）、`CombinationService`（存预设 2 个）、`ShortcutSender`（发送按键、目标窗口、已部署 Mod，6 个）。剩下的 6 个（`IsClosing`、`IsSavingFromOverlay`、`HotkeyAvailable`、`RunAsync`、`ReportFailure`、`LogIssue`）由外壳提供 |
+| `IOnlineHost` | 47 | `CharacterCatalog`（约 6 个：角色、收藏、预设与 wiki）、`OnlineSource`（约 5 个：分类、来源站点、HTTP、元数据、本地索引）、`DownloadService` 扩展（追踪与任务，约 8 个）、`InstallService`（约 6 个）。外壳类成员约 22 个（对话框、选文件夹、报错、保存、仓库刷新），改成页面直接用 `AppServices` |
+| `IWorkspaceHost` | 77 | `InstallService`（约 17 个）、`SlotService`（约 4 个）、`CombinationService`（约 7 个）、`PresetPreviewService`（2 个）、`CharacterCatalog`（约 5 个）、`WorkspaceState`（共享列表与绑定，约 12 个）。外壳类成员约 30 个 |
+
+两个 host 的外壳类成员加起来约 50 个，大多已经有对应的服务（`DialogService`、`StatusService`、`ShellConfigService`、`RepositoryService`），只是还经窗口转一道，最容易先拿掉。
+
+### 4. 拆分方案（每步一个 PR，先低风险、收益大的）
+
+| 步 | 内容 | 风险 | 窗口剩余（约） | 证明结果没变的测试 |
+| --- | --- | --- | --- | --- |
+| 1 | 设置、仪表盘、更新、快捷键四页按需创建 | 低 | 10,450 | 启动前后对比（`startup.log`）；来回切页测试；四页首次打开的界面测试 |
+| 2 | 两个 host 的外壳类成员（对话框、选择器、报错、保存、仓库刷新）改成页面直接用 `AppServices`，删掉这些转发 | 低 | 10,100 | 现有界面测试；接口成员数下降 |
+| 3 | `CharacterCatalog`、`OnlineSource` 服务（角色目录和“有效在线来源”从在线页和窗口移入）；在线页改成按需创建 | 中低 | 9,900 | 在线样例测试（`IMM_ONLINE_FIXTURES`）；请求清单不变的单元测试 |
+| 4 | `InstallService`：安装事务、压缩包、INI 冲突、复制归属、重命名迁移，纯移动 | 中 | 9,250 | 复制归属、删除安全、重命名的界面测试；事务回滚的单元测试 |
+| 5 | Mod 更新、追踪、下载任务并入 `DownloadService`、`UpdatesViewModel` | 中 | 8,600 | 更新页界面测试；下载恢复的单元测试 |
+| 6 | `SlotService` 和 `PresetPreviewService`：状态槽位、默认槽位、变体、截图、热重载、预览，纯移动 | 高 | 7,200 | 槽位保存→恢复结果的测试；浮窗切换槽位和 F10 时序的测试；先补测试再移动 |
+| 7 | `CombinationService`：组合预设、组合包、预设分享、浮窗存预设，纯移动；工作区页改成按需创建 | 高 | 6,400 | 恢复预览和恢复结果的测试；组合包导入导出的单元测试 |
+| 8 | 仓库与配置进 `RepositoryService` 和 `ShellConfigService`，启动器进 `LaunchService`，命令面板和托盘各成独立的类，页面接线随之缩小 | 中 | 约 4,000 | 全部界面测试；配置读写往返的单元测试 |
+| 9（可选） | 诊断、备份和无障碍拆出 `ProductivityFeatures`，设置页接线改进 ViewModel | 低 | 约 3,000 | 诊断导出和备份恢复的测试 |
+
+**关于 3,000 行的目标**：做完第 8 步约剩 4,000 行。其中外壳本身（导航、标题栏、本地化、托盘和命令面板的入口、单实例、首次运行、报错）约 2,500 行，页面接线和少量协调约 1,000–1,500 行。到 3,000 行要做到第 9 步。
+
+建议把完成标准改成：**窗口里不再有业务逻辑（部署、槽位、预设、安装、下载都在服务里），窗口约 4,000 行以内**。3,000 行作为第 9 步的延伸目标。理由是第 9 步拿掉的诊断、备份、无障碍都是外壳级功能，移出去减少的只是行数，不会让页面更独立，也不会降低风险。
+
+第 6、7 步风险最高，状态槽位保存、F10 时序和组合预设恢复都在这两步里。这两步都先补“结果不变”的测试，再纯移动代码，不顺手改任何行为。
+
 ## 风险与对策
 
 | 风险 | 对策 |
