@@ -163,7 +163,9 @@ public sealed class SmokeTests
             AppSession.Invoke(button);
 
         Assert.True(app.IsRunning);
-        Assert.Equal("empty-repository", (string?)app.ShellConfig()["SelectedRepositoryId"]);
+        // The selection is saved right after the switch shows, so wait for the file instead of reading it at once.
+        Assert.True(SpinWait.SpinUntil(() => SelectedRepositoryId(app) == "empty-repository", TimeSpan.FromSeconds(5)),
+            SelectedRepositoryId(app));
         app.AssertNoErrors();
     }
 
@@ -565,6 +567,13 @@ public sealed class SmokeTests
             Thread.Sleep(250);
         }
         return null;
+    }
+
+    // Read while the app may be writing the file: a half-written or locked file counts as "not yet".
+    private static string? SelectedRepositoryId(AppSession app)
+    {
+        try { return (string?)app.ShellConfig()["SelectedRepositoryId"]; }
+        catch (Exception ex) when (ex is IOException or System.Text.Json.JsonException) { return null; }
     }
 
     private static nint TopWindowAt(Point point) => GetAncestor(WindowFromPoint(point), 2);
