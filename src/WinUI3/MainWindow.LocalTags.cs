@@ -81,45 +81,14 @@ public sealed partial class MainWindow
         string repoKey = WorkspaceIdentity.Library(repo.Id, repo.SourcePath);
         var items = single is null ? _modList.VisibleMods.ToArray() : [single];
         if (items.Length == 0) { await ShowMessageAsync(T("LocalTags.NoModsInTheCurrentFilter"), T("Common.Tags")); return; }
-        var body = new StackPanel { Spacing = 10, MinWidth = 300, MaxWidth = 580 };
-        body.Children.Add(new TextBlock { Text = T("LocalTags.SelectModsToEditTagsAre"), TextWrapping = TextWrapping.Wrap });
-        var mode = new ComboBox { Header = T("LocalTags.Action"), HorizontalAlignment = HorizontalAlignment.Stretch };
-        foreach (string label in new[] { T("LocalTags.AddTags"), T("LocalTags.RemoveTags"), T("LocalTags.ReplaceAllTagsLeaveBlankTo") }) mode.Items.Add(label);
-        mode.SelectedIndex = 0;
-        body.Children.Add(mode);
-        var input = new TextBox { Header = T("LocalTags.TagsCommaSeparatedUpTo16"), MaxLength = 1024,
-            PlaceholderText = T("LocalTags.ToTryFavoriteNeedsRepair") };
-        body.Children.Add(input);
-        var checks = new List<(SecondLevelFolderItem Mod, CheckBox Check)>();
-        var selectAll = new CheckBox { Content = T("LocalTags.SelectAllListedMods") };
-        body.Children.Add(selectAll);
-        foreach (var mod in items)
-        {
-            var check = new CheckBox { Content = mod.Name + LocalModTagSummary(mod.Path), IsChecked = ReferenceEquals(mod, single ?? _modList.SelectedMod) };
-            checks.Add((mod, check)); body.Children.Add(check);
-        }
-        selectAll.Click += (_, _) => { foreach (var item in checks) item.Check.IsChecked = selectAll.IsChecked == true; };
-        var dialog = new ContentDialog { Title = T("LocalTags.EditLocalTags"), Content = new ScrollViewer { Content = body, MaxHeight = Math.Max(180, RootGrid.ActualHeight - 280) },
-            PrimaryButtonText = T("Common.Save"), CloseButtonText = T("Common.Cancel"), XamlRoot = RootGrid.XamlRoot, RequestedTheme = RootGrid.ActualTheme };
-        var validation = new TextBlock { TextWrapping = TextWrapping.Wrap };
-        body.Children.Insert(3, validation);
-        dialog.PrimaryButtonClick += (_, args) =>
-        {
-            string[] requested = input.Text.Split([',', '，', ';', '；', '\n'], StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries);
-            if (requested.Any(tag => tag.Length > 32 || tag.Any(char.IsControl)) || requested.Distinct(StringComparer.OrdinalIgnoreCase).Count() > 16)
-            { validation.Text = T("LocalTags.UseUpTo16TagsEach"); args.Cancel = true; return; }
-            if (!checks.Any(item => item.Check.IsChecked == true))
-            { validation.Text = T("LocalTags.SelectAtLeastOneMod"); args.Cancel = true; }
-            else if (mode.SelectedIndex == 0 && checks.Where(item => item.Check.IsChecked == true).Any(item =>
-                library.TagsFor(WorkspaceIdentity.Relative(repo.SourcePath, item.Mod.Path)).Concat(requested).Distinct(StringComparer.OrdinalIgnoreCase).Count() > 16))
-            { validation.Text = T("LocalTags.SomeModsWouldExceed16Tags"); args.Cancel = true; }
-        };
-        if (await dialog.ShowAsync() != ContentDialogResult.Primary) return;
+        var entries = items.Select(mod => new LocalTagsDialog.Entry(mod, mod.Name + LocalModTagSummary(mod.Path), ReferenceEquals(mod, single ?? _modList.SelectedMod),
+            library.TagsFor(WorkspaceIdentity.Relative(repo.SourcePath, mod.Path)))).ToArray();
+        if (await LocalTagsDialog.ShowAsync(_services, entries, RootGrid.ActualHeight) is not { } edit) return;
         if (GetSelectedRepository() is not { } current
             || WorkspaceIdentity.Library(current.Id, current.SourcePath) != repoKey) return;
-        var tags = input.Text.Split([',', '，', ';', '；', '\n'], StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries);
-        library.EditTags(checks.Where(item => item.Check.IsChecked == true)
-            .Select(item => LocalModRelativePath(item.Mod.Path)).OfType<string>(), tags, (TagEditMode)mode.SelectedIndex);
+        var (chosenMods, tags, mode) = edit;
+        library.EditTags(chosenMods.Cast<SecondLevelFolderItem>()
+            .Select(mod => LocalModRelativePath(mod.Path)).OfType<string>(), tags, mode);
         SaveShellConfig(); RefreshRepositoryModView();
     }
 
@@ -179,7 +148,7 @@ public sealed partial class MainWindow
         var library = SelectedLocalLibrary();
         if (repo is null || library is null || _characters.Selected is not { } role) return;
         var snapshot = new LocalModFilter { Character = WorkspaceIdentity.Relative(repo.SourcePath, role.Path), Search = _repositoryModSearch!.Text, Tag = _localTagFilter };
-        string? name = await PromptForTextAsync(T("LocalTags.NameThisFilterUpTo64"), T("LocalTags.SaveFilter"), "");
+        string? name = await PromptForTextAsync(T("LocalTags.NameThisFilterUpTo64"), T("LocalTags.SaveFilter"), "", T("Common.Save"));
         if (string.IsNullOrWhiteSpace(name)) return;
         if (name.Trim().Length > 64) { await ShowMessageAsync(T("LocalTags.NamesCanContainUpTo64"), T("LocalTags.NameTooLong")); return; }
         snapshot.Name = name; library.SaveFilter(snapshot); SaveShellConfig();

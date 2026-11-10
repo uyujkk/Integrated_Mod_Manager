@@ -9,8 +9,17 @@ public sealed partial class MainWindow
     private bool _showTitleBarSearch = true;
     private bool _isApplyingTitleBarSearchSetting;
 
+    // Narrower than the compact navigation threshold (1120 px, so also at 1000 px) the box shrinks to a button.
+    private const double TitleBarSearchButtonBelowWidth = 1120;
+
     private void ApplyTitleBarSearchVisibility()
-        => TitleBarSearchBox.Visibility = _showTitleBarSearch ? Visibility.Visible : Visibility.Collapsed;
+    {
+        bool narrow = Bounds.Width < TitleBarSearchButtonBelowWidth;
+        TitleBarSearchBox.Visibility = _showTitleBarSearch && !narrow ? Visibility.Visible : Visibility.Collapsed;
+        TitleBarSearchButton.Visibility = _showTitleBarSearch && narrow ? Visibility.Visible : Visibility.Collapsed;
+    }
+
+    private void OnTitleBarSearchButtonClicked(object sender, RoutedEventArgs e) => OpenCommandPalette();
 
     private void RefreshTitleBarSearchSetting()
     {

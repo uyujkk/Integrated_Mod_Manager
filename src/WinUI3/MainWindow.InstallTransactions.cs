@@ -1,6 +1,5 @@
 using IntegratedModManager.Core.Deployment;
 using IntegratedModManager.Core.Infrastructure;
-using IntegratedModManager.Core.Layout;
 using Microsoft.UI.Xaml;
 using Microsoft.UI.Xaml.Controls;
 
@@ -38,29 +37,7 @@ public sealed partial class MainWindow
             list += T("InstallTransactions.AndMore", broken.Count - 20);
         }
 
-        DialogViewport viewport = DialogViewportPolicy.Selection(RootGrid.ActualWidth, RootGrid.ActualHeight);
-        var dialog = new ContentDialog
-        {
-            XamlRoot = RootGrid.XamlRoot,
-            RequestedTheme = RootGrid.ActualTheme,
-            Title = T("InstallTransactions.BrokenModLinksFound"),
-            Content = new ScrollViewer
-            {
-                MaxHeight = viewport.ContentHeight,
-                HorizontalScrollBarVisibility = ScrollBarVisibility.Disabled,
-                Content = new TextBlock
-                {
-                    TextWrapping = TextWrapping.Wrap,
-                    IsTextSelectionEnabled = true,
-                    Text = T("InstallTransactions.LinkSInTheLoaderFolder", broken.Count, list)
-                }
-            },
-            PrimaryButtonText = T("InstallTransactions.RemoveBrokenLinks"),
-            SecondaryButtonText = T("InstallTransactions.ContinueWithoutCleanup"),
-            CloseButtonText = T("Common.Cancel"),
-            DefaultButton = ContentDialogButton.Primary
-        };
-        ContentDialogResult result = await dialog.ShowAsync();
+        ContentDialogResult result = await BrokenLinksDialog.ShowAsync(_services, broken.Count, list);
         if (result == ContentDialogResult.None)
         {
             return false;
@@ -119,25 +96,7 @@ public sealed partial class MainWindow
         IReadOnlyList<(string? Candidate, ModIniConflictSummary Summary)> iniConflicts)
     {
         string text = BuildInstallConflictText(fileConflicts, iniConflicts);
-        var dialog = new ContentDialog
-        {
-            Title = T("InstallTransactions.PotentialModConflictsDetected"),
-            Content = new ScrollViewer
-            {
-                MaxHeight = 420,
-                Content = new TextBlock
-                {
-                    Text = text,
-                    TextWrapping = TextWrapping.Wrap,
-                    IsTextSelectionEnabled = true
-                }
-            },
-            PrimaryButtonText = T("InstallTransactions.ContinueAnyway"),
-            CloseButtonText = T("Common.Cancel"),
-            DefaultButton = ContentDialogButton.Close,
-            XamlRoot = RootGrid.XamlRoot
-        };
-        return await dialog.ShowAsync() == ContentDialogResult.Primary;
+        return await InstallConflictsDialog.ConfirmAsync(_services, text);
     }
 
     private async Task<string> CreateInstallTransactionAsync(string description, WorkspaceRepository repository, IEnumerable<string> affectedTargets)
@@ -241,9 +200,9 @@ public sealed partial class MainWindow
                 return;
             }
 
-            if (!await ShowConfirmAsync(
+            if (!await ShowDangerConfirmAsync(
                 T("InstallTransactions.UndoTheMostRecentModCopy"),
-                T("InstallTransactions.UndoModChange")))
+                T("InstallTransactions.UndoModChange"), T("Dialogs.Undo")))
             {
                 return;
             }

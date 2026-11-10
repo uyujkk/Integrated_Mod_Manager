@@ -1,11 +1,6 @@
 using System.Runtime.InteropServices.WindowsRuntime;
 using System.Text.Json;
 using IntegratedModManager.Core.Online;
-using Microsoft.UI.Xaml.Controls;
-using Microsoft.UI.Xaml.Media;
-using Microsoft.UI.Xaml.Media.Imaging;
-using Microsoft.UI.Xaml.Shapes;
-using Windows.Foundation;
 using Path = System.IO.Path;
 
 namespace ModFolderCopier.WinUI;
@@ -119,36 +114,7 @@ public sealed partial class MainWindow
             CharacterFrame frame = await CaptureCharacterReferenceAsync();
             if (_onlineWindowClosed) return;
             Activate();
-            var bitmap = new WriteableBitmap(frame.Width, frame.Height);
-            using (var stream = bitmap.PixelBuffer.AsStream()) stream.Write(frame.Bgra, 0, frame.Bgra.Length);
-            double scale = Math.Min(800d / frame.Width, 430d / frame.Height);
-            var canvas = new Canvas { Width = frame.Width * scale, Height = frame.Height * scale };
-            canvas.Children.Add(new Image { Source = bitmap, Width = canvas.Width, Height = canvas.Height });
-            var selection = new Rectangle { Stroke = new SolidColorBrush(Microsoft.UI.Colors.Orange), StrokeThickness = 2, IsHitTestVisible = false };
-            canvas.Children.Add(selection);
-            Point? start = null;
-            CharacterScreenRegion? chosen = null;
-            canvas.PointerPressed += (_, e) => { start = e.GetCurrentPoint(canvas).Position; chosen = null; canvas.CapturePointer(e.Pointer); };
-            canvas.PointerMoved += (_, e) =>
-            {
-                if (start is not Point from) return;
-                Point to = e.GetCurrentPoint(canvas).Position;
-                double x = Math.Clamp(Math.Min(from.X, to.X), 0, canvas.Width);
-                double y = Math.Clamp(Math.Min(from.Y, to.Y), 0, canvas.Height);
-                selection.Width = Math.Min(Math.Abs(to.X - from.X), canvas.Width - x);
-                selection.Height = Math.Min(Math.Abs(to.Y - from.Y), canvas.Height - y);
-                Canvas.SetLeft(selection, x); Canvas.SetTop(selection, y);
-                chosen = new(x / canvas.Width, y / canvas.Height, selection.Width / canvas.Width, selection.Height / canvas.Height);
-            };
-            canvas.PointerReleased += (_, e) => { start = null; canvas.ReleasePointerCapture(e.Pointer); };
-            var dialog = new ContentDialog
-            {
-                XamlRoot = RootGrid.XamlRoot, Title = T("CharacterFollow.DragOverTheActiveCharacterPortrait"),
-                Content = canvas, PrimaryButtonText = T("CharacterFollow.SaveRegion"), CloseButtonText = T("Common.Cancel")
-            };
-            dialog.Resources["ContentDialogMaxWidth"] = 900d;
-            dialog.PrimaryButtonClick += (_, e) => { if (chosen?.IsValid != true) e.Cancel = true; };
-            if (await dialog.ShowAsync() == ContentDialogResult.Primary && chosen?.IsValid == true)
+            if (await CharacterRegionDialog.ChooseAsync(_services, frame.Bgra, frame.Width, frame.Height) is { } chosen)
             {
                 _characterProfile.Region = chosen;
                 _characterProfile.Templates.Clear(); // Different geometry invalidates all old references.

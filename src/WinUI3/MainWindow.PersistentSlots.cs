@@ -244,7 +244,7 @@ public sealed partial class MainWindow
             string? name = await PromptForTextAsync(
                 T("PersistentSlots.FoundVariablesNameThisSlot", values.Count),
                 T("PersistentSlots.SaveInternalState"),
-                T("PersistentSlots.State1"));
+                T("PersistentSlots.State1"), T("Common.Save"));
             name = name?.Trim();
             if (string.IsNullOrWhiteSpace(name)) return;
 
@@ -303,33 +303,11 @@ public sealed partial class MainWindow
                 ModPersistentRuntimeRestorePlan plan = await Task.Run(() =>
                     ModPersistentPresetEngine.PlanRuntimeRestore(modPath, deployedName, userIni, values));
                 slot.Values = [.. values];
-                var closedCheck = new CheckBox
-                {
-                    Content = T("Common.IHaveFullyClosedTheGame")
-                };
-                var content = new StackPanel { Spacing = 12 };
-                if (CreatePresetPreviewImage(slot.PreviewFile, 320, 180) is { } savedLook) content.Children.Add(savedLook);
-                content.Children.Add(new TextBlock
-                {
-                    Text = T("PersistentSlots.SlotFileChangeAddAlreadyEqual", slot.Name, plan.Edit.Path, plan.ChangedCount, plan.AddedCount, plan.UnchangedCount),
-                    TextWrapping = TextWrapping.Wrap
-                });
-                content.Children.Add(closedCheck);
-                var dialog = new ContentDialog
-                {
-                    XamlRoot = RootGrid.XamlRoot,
-                    Title = T("PersistentSlots.RestoreLoaderState"),
-                    Content = content,
-                    PrimaryButtonText = T("PersistentSlots.BackUpAndRestore"),
-                    CloseButtonText = T("Common.Cancel"),
-                    IsPrimaryButtonEnabled = false,
-                    DefaultButton = ContentDialogButton.Close
-                };
-                CheckBox hotReload = CreateHotReloadOption(closedCheck, dialog);
-                content.Children.Add(hotReload);
-                closedCheck.Checked += (_, _) => dialog.IsPrimaryButtonEnabled = true;
-                closedCheck.Unchecked += (_, _) => dialog.IsPrimaryButtonEnabled = hotReload.IsChecked == true;
-                if (await dialog.ShowAsync() != ContentDialogResult.Primary) return;
+                (bool restore, bool hotReload) = await LoaderStateRestoreDialog.ConfirmSlotAsync(_services,
+                    CreatePresetPreviewImage(slot.PreviewFile, 320, 180),
+                    T("PersistentSlots.SlotFileChangeAddAlreadyEqual", slot.Name, plan.Edit.Path, plan.ChangedCount, plan.AddedCount, plan.UnchangedCount),
+                    CanHotReloadLoader);
+                if (!restore) return;
                 string? backup = await Task.Run(() => ModPersistentPresetEngine.ApplyRuntimeRestore(plan));
                 slot.ActivatedAtUtc = DateTimeOffset.UtcNow;
                 repository.PersistentUserIniPath = userIni;
@@ -337,7 +315,7 @@ public sealed partial class MainWindow
                 resultText = T("PersistentSlots.RestoreVerified", slot.Name, plan.ChangedCount, plan.AddedCount, plan.UnchangedCount) + "\n"
                     + (backup is null ? T("PersistentSlots.NoNewBackup") : T("PersistentSlots.BackupAt", backup)) + "\n" + T("PersistentSlots.RestartToVerify");
                 ShowAppNotification(T("PersistentSlots.OfflineRestored", slot.Name, plan.Values.Count));
-                if (hotReload.IsChecked == true)
+                if (hotReload)
                     resultText += "\n" + await HotReloadLoaderAsync(userIni);
             }
             catch (Exception ex) when (ex is IOException or UnauthorizedAccessException or InvalidDataException
@@ -367,9 +345,9 @@ public sealed partial class MainWindow
         {
             if (_restoringPersistentRuntime) return;
             ModPersistentSlot? slot = GetSelectedPersistentSlot();
-            if (slot is null || !await ShowConfirmAsync(
+            if (slot is null || !await ShowDangerConfirmAsync(
                 T("PersistentSlots.DeleteSlotModINIsWillNot", slot.Name),
-                T("PersistentSlots.DeleteStateSlot"))) return;
+                T("PersistentSlots.DeleteStateSlot"), T("Dialogs.Delete"))) return;
 
             _modPersistentSlots.Remove(slot);
             _selectedModPersistentSlotId = null;

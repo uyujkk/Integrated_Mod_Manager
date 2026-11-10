@@ -39,33 +39,13 @@ public sealed partial class MainWindow
                 || !Directory.Exists(ModDeploymentLayout.DeployedPath(repository.TargetPath, modPath)))
                 throw new InvalidDataException(T("PersistentSlots.DeployThisModUnderItsMatching"));
 
-            var nameBox = new TextBox { Header = T("ShortcutPanel.SinglePresetName"), MaxLength = 120 };
-            var error = new TextBlock { TextWrapping = TextWrapping.Wrap };
-            var content = new StackPanel { Spacing = 10 };
-            content.Children.Add(new TextBlock { Text = relative, TextWrapping = TextWrapping.Wrap });
-            content.Children.Add(new TextBlock { Text = T("ShortcutPanel.SinglePresetHint"), TextWrapping = TextWrapping.Wrap });
-            content.Children.Add(nameBox);
-            content.Children.Add(error);
-            var dialog = new ContentDialog
-            {
-                XamlRoot = root.XamlRoot, RequestedTheme = ElementTheme.Dark,
-                Title = T("ShortcutPanel.SaveSingleModPreset"), Content = content,
-                PrimaryButtonText = T("PersistentSlots.SaveSlot"), CloseButtonText = T("Common.Cancel"),
-                IsPrimaryButtonEnabled = false, DefaultButton = ContentDialogButton.Primary
-            };
-            nameBox.TextChanged += (_, _) =>
-            {
-                string candidate = nameBox.Text.Trim();
-                bool duplicate = _modPersistentSlots.Any(slot => slot.RepositoryId == repository.Id
+            (ContentDialog dialog, TextBox nameBox) = SingleModPresetDialog.Create(_services, root.XamlRoot, relative,
+                candidate => _modPersistentSlots.Any(slot => slot.RepositoryId == repository.Id
                     && string.Equals(slot.ModRelativePath, relative, StringComparison.OrdinalIgnoreCase)
-                    && string.Equals(slot.Name, candidate, StringComparison.OrdinalIgnoreCase));
-                error.Text = duplicate ? T("ShortcutPanel.SinglePresetDuplicate") : string.Empty;
-                dialog.IsPrimaryButtonEnabled = candidate.Length > 0 && !duplicate;
-            };
-            dialog.Opened += (_, _) => nameBox.Focus(FocusState.Programmatic);
+                    && string.Equals(slot.Name, candidate, StringComparison.OrdinalIgnoreCase)));
             overlay.SetKeyboardInputEnabled(true);
             ContentDialogResult result;
-            try { result = await dialog.ShowAsync(); }
+            try { result = await _services.Dialogs.ShowAsync(dialog); }
             finally
             {
                 if (ReferenceEquals(_overlay.Window, overlay)) overlay.SetKeyboardInputEnabled(false);

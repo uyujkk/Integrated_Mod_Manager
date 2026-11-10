@@ -1,6 +1,5 @@
 using System.Diagnostics;
 using IntegratedModManager.Core.Configuration;
-using Microsoft.UI.Xaml;
 using Microsoft.UI.Xaml.Controls;
 
 namespace ModFolderCopier.WinUI;
@@ -34,24 +33,10 @@ public sealed partial class MainWindow
             return;
         }
 
-        var dialog = new ContentDialog
-        {
-            Title = T("WhatsNew.Title", WhatsNewFeatureSet),
-            Content = new ScrollViewer
-            {
-                MaxHeight = Math.Max(240, RootGrid.ActualHeight - 260),
-                HorizontalScrollBarVisibility = ScrollBarVisibility.Disabled,
-                Content = new TextBlock { Text = T("WhatsNew.Body"), TextWrapping = TextWrapping.Wrap, IsTextSelectionEnabled = true }
-            },
-            PrimaryButtonText = T("WhatsNew.OpenDetails"),
-            CloseButtonText = T("WhatsNew.Close"),
-            DefaultButton = ContentDialogButton.Close,
-            RequestedTheme = RootGrid.ActualTheme,
-            XamlRoot = RootGrid.XamlRoot
-        };
+        var dialog = WhatsNewDialog.Create(_services, WhatsNewFeatureSet, RootGrid.ActualHeight);
         _whatsNewSeenVersion = WhatsNewFeatureSet;
         SaveShellConfig();
-        if (await dialog.ShowAsync() == ContentDialogResult.Primary)
+        if (await _services.Dialogs.ShowAsync(dialog) == ContentDialogResult.Primary)
         {
             OpenWhatsNewDetails();
         }

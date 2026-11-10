@@ -1,7 +1,6 @@
 using System.Text;
 using IntegratedModManager.Core.Deployment;
 using IntegratedModManager.Core.Presets;
-using Microsoft.UI.Xaml;
 using Microsoft.UI.Xaml.Controls;
 
 namespace ModFolderCopier.WinUI;
@@ -92,8 +91,8 @@ public sealed partial class MainWindow
         }
         if (await ChooseSlotValuesAsync(values) is not { } chosen) return;
         values = chosen;
-        if (!await ShowConfirmAsync(T("PersistentVariants.ReplaceSlotValues", context.Slot.Name, context.Slot.Values.Count, values.Count),
-                T("PersistentVariants.UpdateSelectedSlot")))
+        if (!await ShowDangerConfirmAsync(T("PersistentVariants.ReplaceSlotValues", context.Slot.Name, context.Slot.Values.Count, values.Count),
+                T("PersistentVariants.UpdateSelectedSlot"), T("Dialogs.Replace")))
         {
             return;
         }
@@ -112,7 +111,7 @@ public sealed partial class MainWindow
     private async Task RenameSelectedPersistentSlotAsync()
     {
         if (SelectedSlotContext() is not { } context) return;
-        string? name = (await PromptForTextAsync(T("PersistentVariants.EnterANewSlotName"), T("PersistentVariants.RenameSelectedSlot"), context.Slot.Name))?.Trim();
+        string? name = (await PromptForTextAsync(T("PersistentVariants.EnterANewSlotName"), T("PersistentVariants.RenameSelectedSlot"), context.Slot.Name, T("Dialogs.Rename")))?.Trim();
         if (string.IsNullOrWhiteSpace(name) || name == context.Slot.Name) return;
         context.Slot.Name = name;
         SaveShellConfig();
@@ -154,8 +153,8 @@ public sealed partial class MainWindow
         }
 
         string files = string.Join("\n", plans.SelectMany(plan => plan.Edits).Select(edit => edit.Path));
-        if (!await ShowConfirmAsync(T("PersistentVariants.ConfirmWriteModDefaults", context.Slot.Name, plans[0].ChangedCount, files),
-                T("PersistentVariants.WriteSlotAsModDefaults")))
+        if (!await ShowDangerConfirmAsync(T("PersistentVariants.ConfirmWriteModDefaults", context.Slot.Name, plans[0].ChangedCount, files),
+                T("PersistentVariants.WriteSlotAsModDefaults"), T("Dialogs.Write")))
         {
             return;
         }
@@ -270,7 +269,7 @@ public sealed partial class MainWindow
         WorkspaceRepository? repository = GetSelectedRepository();
         if (repository is null || await RequireUserIniPathAsync(T("PersistentVariants.SaveUserIniSnapshot")) is not { } userIni) return;
         string? name = (await PromptForTextAsync(T("PersistentVariants.NameThisSnapshot"), T("PersistentVariants.SaveUserIniSnapshot"),
-            DateTime.Now.ToString("yyyy-MM-dd HH.mm", System.Globalization.CultureInfo.InvariantCulture)))?.Trim();
+            DateTime.Now.ToString("yyyy-MM-dd HH.mm", System.Globalization.CultureInfo.InvariantCulture), T("Common.Save")))?.Trim();
         if (string.IsNullOrWhiteSpace(name)) return;
 
         try
@@ -295,39 +294,14 @@ public sealed partial class MainWindow
             return;
         }
 
-        var choices = new ComboBox { HorizontalAlignment = HorizontalAlignment.Stretch };
-        foreach (UserIniSnapshot snapshot in snapshots)
-        {
-            choices.Items.Add(new ComboBoxItem { Content = $"{snapshot.SavedAt.LocalDateTime:yyyy-MM-dd HH:mm} · {snapshot.Name}", Tag = snapshot });
-        }
-        choices.SelectedIndex = 0;
-        var closed = new CheckBox { Content = T("Common.IHaveFullyClosedTheGame") };
-        var panel = new StackPanel { Spacing = 10 };
-        panel.Children.Add(new TextBlock { Text = T("PersistentVariants.RestoreSnapshotExplanation", userIni), TextWrapping = TextWrapping.Wrap });
-        panel.Children.Add(choices);
-        panel.Children.Add(closed);
-        var dialog = new ContentDialog
-        {
-            Title = T("PersistentVariants.RestoreUserIniSnapshot"),
-            Content = panel,
-            PrimaryButtonText = T("PersistentSlots.BackUpAndRestore"),
-            CloseButtonText = T("Common.Cancel"),
-            DefaultButton = ContentDialogButton.Close,
-            IsPrimaryButtonEnabled = false,
-            RequestedTheme = RootGrid.ActualTheme,
-            XamlRoot = RootGrid.XamlRoot
-        };
-        CheckBox hotReload = CreateHotReloadOption(closed, dialog);
-        panel.Children.Add(hotReload);
-        closed.Checked += (_, _) => dialog.IsPrimaryButtonEnabled = true;
-        closed.Unchecked += (_, _) => dialog.IsPrimaryButtonEnabled = hotReload.IsChecked == true;
-        if (await dialog.ShowAsync() != ContentDialogResult.Primary || choices.SelectedItem is not ComboBoxItem { Tag: UserIniSnapshot chosen }) return;
+        (UserIniSnapshot? chosen, bool hotReload) = await LoaderStateRestoreDialog.ChooseSnapshotAsync(_services, snapshots, userIni, CanHotReloadLoader);
+        if (chosen is null) return;
 
         try
         {
             string backup = await Task.Run(() => UserIniSnapshots.Restore(chosen, userIni, DateTimeOffset.Now));
             PersistentSlotStatusTextBlock.Text = T("PersistentVariants.SnapshotRestored", chosen.Name, backup);
-            if (hotReload.IsChecked == true)
+            if (hotReload)
                 PersistentSlotStatusTextBlock.Text += "\n" + await HotReloadLoaderAsync(userIni);
         }
         catch (Exception ex) when (ex is IOException or UnauthorizedAccessException or InvalidDataException)

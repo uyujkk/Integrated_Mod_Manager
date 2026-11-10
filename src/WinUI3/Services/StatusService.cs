@@ -7,8 +7,9 @@ internal sealed class StatusService
 {
     public event EventHandler<StatusNotification>? NotificationRequested;
 
-    public void Notify(string message, InfoBarSeverity severity = InfoBarSeverity.Success)
-        => NotificationRequested?.Invoke(this, new StatusNotification(message, severity));
+    /// <param name="error">The failure behind an error notification; the InfoBar then offers its details.</param>
+    public void Notify(string message, InfoBarSeverity severity = InfoBarSeverity.Success, Exception? error = null)
+        => NotificationRequested?.Invoke(this, new StatusNotification(message, severity, error));
 }
 
-internal sealed record StatusNotification(string Message, InfoBarSeverity Severity);
+internal sealed record StatusNotification(string Message, InfoBarSeverity Severity, Exception? Error = null);

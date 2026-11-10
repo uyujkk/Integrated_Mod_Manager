@@ -432,7 +432,7 @@ public sealed partial class MainWindow
         _hasPromptedForLocalUpdate = true;
         bool confirmed = await ShowConfirmAsync(
             T("Updates.LocalUpdateVWasDetectedThe", _localUpdatePackageVersion),
-            T("Updates.InstallLocalUpdate"));
+            T("Updates.InstallLocalUpdate"), T("Dialogs.Install"));
 
         if (!confirmed)
         {
@@ -547,7 +547,7 @@ public sealed partial class MainWindow
                 {
                     bool install = await ShowConfirmAsync(
                         T("Updates.VersionIsAvailableDownloadInstallAnd", release.Tag),
-                        T("Updates.AppUpdateAvailable"));
+                        T("Updates.AppUpdateAvailable"), T("Dialogs.Update"));
                     if (install)
                     {
                         await DownloadAndInstallApplicationUpdateAsync(release);

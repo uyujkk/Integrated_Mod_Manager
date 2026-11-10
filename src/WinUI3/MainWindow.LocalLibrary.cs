@@ -227,7 +227,7 @@ public sealed partial class MainWindow
             string? name = await PromptForTextAsync(
                 T("LocalLibrary.EnterTheNewFirstLevelFolder"),
                 T("Common.CreateFirstLevelFolder"),
-                string.Empty);
+                string.Empty, T("Dialogs.Create"));
             if (string.IsNullOrWhiteSpace(name))
             {
                 return;
@@ -278,7 +278,7 @@ public sealed partial class MainWindow
             string? name = await PromptForTextAsync(
                 T("LocalLibrary.EnterTheNewFirstLevelFolder"),
                 T("LocalLibrary.RenameFirstLevelFolder"),
-                item.Name);
+                item.Name, T("Dialogs.Rename"));
             if (string.IsNullOrWhiteSpace(name))
             {
                 return;
@@ -467,9 +467,9 @@ public sealed partial class MainWindow
             string linkNote = deployedLinks.Count == 0
                 ? string.Empty
                 : T("LocalLibrary.LinkSInTheLoaderFolder", deployedLinks.Count, string.Join("\n", deployedLinks));
-            bool confirmed = await ShowConfirmAsync(
+            bool confirmed = await ShowDangerConfirmAsync(
                 T("LocalLibrary.AreYouSureYouWantTo", item.Name) + linkNote,
-                T("LocalLibrary.ConfirmDelete"));
+                T("LocalLibrary.ConfirmDelete"), T("Dialogs.Delete"));
             if (!confirmed)
             {
                 return;
@@ -855,7 +855,7 @@ public sealed partial class MainWindow
         {
             bool owned = await Task.Run(() => OwnsCopy(repository)(item.Path, targetPath));
             SaveCopyRecordsIfChanged();
-            if (!owned && !await ShowConfirmAsync(T("LocalLibrary.RemoveExternalFolder", targetPath), T("LocalLibrary.ExternalFolder")))
+            if (!owned && !await ShowDangerConfirmAsync(T("LocalLibrary.RemoveExternalFolder", targetPath), T("LocalLibrary.ExternalFolder"), T("Dialogs.Remove")))
                 return;
         }
         IReadOnlyList<string> siblingLinksToReplace = Array.Empty<string>();

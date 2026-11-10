@@ -1,0 +1,26 @@
+﻿<ResourceDictionary
+    xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
+    <!-- Page surfaces shared by several pages: cards, the page header and inset panels. -->
+
+    <!-- Corners follow the Windows geometry: OverlayCornerRadius (8) for cards and other containers,
+         ControlCornerRadius (4) for controls and areas inside a card. -->
+    <Style x:Key="CardBorderStyle" TargetType="Border">
+        <Setter Property="Background" Value="{ThemeResource AppCardBackgroundBrush}" />
+        <Setter Property="BorderBrush" Value="{ThemeResource AppCardBorderBrush}" />
+        <Setter Property="BorderThickness" Value="1" />
+        <Setter Property="CornerRadius" Value="{StaticResource OverlayCornerRadius}" />
+        <Setter Property="Padding" Value="16" />
+    </Style>
+
+    <Style x:Key="PageHeaderBorderStyle" TargetType="Border" BasedOn="{StaticResource CardBorderStyle}">
+        <Setter Property="Padding" Value="16,10" />
+    </Style>
+
+    <Style x:Key="InsetBorderStyle" TargetType="Border">
+        <Setter Property="Background" Value="{ThemeResource AppInsetBackgroundBrush}" />
+        <Setter Property="BorderBrush" Value="{ThemeResource AppCardBorderBrush}" />
+        <Setter Property="BorderThickness" Value="1" />
+        <Setter Property="CornerRadius" Value="{StaticResource ControlCornerRadius}" />
+    </Style>
+</ResourceDictionary>

@@ -1,7 +1,6 @@
 using IntegratedModManager.Core.Deployment;
 using IntegratedModManager.Core.Infrastructure;
 using IntegratedModManager.Core.Online;
-using Microsoft.UI.Xaml;
 using Microsoft.UI.Xaml.Automation;
 using Microsoft.UI.Xaml.Controls;
 
@@ -51,27 +50,8 @@ public sealed partial class MainWindow
             await ShowMessageAsync(T("ExistingModImport.CreateACharacterFolderInThis"), T("ExistingModImport.ChooseATargetCharacter"));
             return;
         }
-        var sourceBox = new TextBox { Header = T("ExistingModImport.ExistingModLibraryFolder"),
-            PlaceholderText = T("ExistingModImport.PasteAFolderPathOrChoose"), HorizontalAlignment = HorizontalAlignment.Stretch };
-        var target = new ComboBox { Header = T("ExistingModImport.CopyIntoCharacterFolder"), HorizontalAlignment = HorizontalAlignment.Stretch };
-        foreach (string character in characters) target.Items.Add(new ComboBoxItem { Content = Path.GetFileName(character), Tag = character });
-        target.SelectedItem = target.Items.Cast<ComboBoxItem>().FirstOrDefault(item => item.Tag as string == (_characters.Selected)?.Path)
-            ?? target.Items[0];
-        var choice = new ContentDialog { Title = T("ExistingModImport.ChooseImportDestination"), Content = new StackPanel { Spacing = 12, MinWidth = 320, Children =
-            { new TextBlock { Text = T("ExistingModImport.ImmediateSubfoldersContainingINIFilesAre"), TextWrapping = TextWrapping.Wrap, MaxWidth = 500 }, sourceBox, target } },
-            PrimaryButtonText = T("ExistingModImport.Preview"), SecondaryButtonText = T("ExistingModImport.BrowseSource"), IsPrimaryButtonEnabled = false,
-            CloseButtonText = T("Common.Cancel"), XamlRoot = RootGrid.XamlRoot, RequestedTheme = RootGrid.ActualTheme };
-        sourceBox.TextChanged += (_, _) => choice.IsPrimaryButtonEnabled = Directory.Exists(sourceBox.Text.Trim());
-        while (true)
-        {
-            ContentDialogResult result = await choice.ShowAsync();
-            if (result == ContentDialogResult.Primary) break;
-            if (result != ContentDialogResult.Secondary) return;
-            string? selectedSource = await PickFolderAsync();
-            if (selectedSource is not null) sourceBox.Text = selectedSource;
-        }
-        string source = sourceBox.Text.Trim();
-        string destination = (string)((ComboBoxItem)target.SelectedItem).Tag;
+        if (await ExistingModImportDialogs.ChooseAsync(_services, characters, _characters.Selected?.Path, () => PickFolderAsync()) is not { } chosen) return;
+        (string source, string destination) = chosen;
         _existingModImportBusy = true;
         using var cancellation = new CancellationTokenSource();
         _existingModImportCancellation = cancellation;
@@ -83,29 +63,19 @@ public sealed partial class MainWindow
                 await ShowMessageAsync(T("ExistingModImport.NoImmediateSubfoldersContainingINIFiles"), T("ExistingModImport.NoImportCandidates"));
                 return;
             }
-            var previewBody = new StackPanel { Spacing = 8 };
             long bytes = plan.Items.Sum(item => item.Snapshot.Files.Sum(file => file.Length));
-            previewBody.Children.Add(new TextBlock { Text = T("ExistingModImport.ModsDestination", plan.Items.Length, FormatFileSize(bytes), destination), TextWrapping = TextWrapping.Wrap });
-            foreach (ExistingModImportItem item in plan.Items)
-                previewBody.Children.Add(new TextBlock { Text = $"{item.SourceName} → {item.DestinationName}" + (item.Conflict is null ? string.Empty : T("ExistingModImport.ConflictCannotImport")), TextWrapping = TextWrapping.Wrap });
-            var preview = new ContentDialog { Title = T("ExistingModImport.OrganizedImportPreview"),
-                Content = new ScrollViewer { Content = previewBody, MaxHeight = Math.Max(180, RootGrid.ActualHeight - 250), MaxWidth = 620 },
-                PrimaryButtonText = T("ExistingModImport.CopyAndImport"), IsPrimaryButtonEnabled = plan.Items.All(item => item.Conflict is null),
-                CloseButtonText = T("Common.Cancel"), XamlRoot = RootGrid.XamlRoot, RequestedTheme = RootGrid.ActualTheme };
-            if (await preview.ShowAsync() != ContentDialogResult.Primary) return;
+            if (!await ExistingModImportDialogs.PreviewAsync(_services, plan, destination, FormatFileSize(bytes), RootGrid.ActualHeight)) return;
             string manifest = Path.Combine(ExistingImportRecordsRoot, Guid.NewGuid().ToString("N") + ".json");
             _onlinePreferences.LastImportManifest = manifest;
             SaveShellConfig();
-            var status = new TextBlock { Text = T("ExistingModImport.ValidatingPreviewAndCopying"), TextWrapping = TextWrapping.Wrap, MaxWidth = 500 };
-            var operation = new ContentDialog { Title = T("ExistingModImport.Importing"), Content = status, CloseButtonText = T("ExistingModImport.CancelTask"), XamlRoot = RootGrid.XamlRoot, RequestedTheme = RootGrid.ActualTheme };
-            operation.CloseButtonClick += (_, args) => { cancellation.Cancel(); args.Cancel = true; status.Text = T("ExistingModImport.CancelingWaitingForTheCurrentFile"); };
-            Task<ContentDialogResult> shown = operation.ShowAsync().AsTask();
+            (ContentDialog operation, TextBlock status) = ExistingModImportDialogs.Progress(_services, cancellation);
+            Task<ContentDialogResult> shown = _services.Dialogs.ShowAsync(operation);
             try
             {
                 await Task.Run(() => ExistingModImportService.ExecuteAsync(plan, manifest,
                     (done, total) => DispatcherQueue.TryEnqueue(() => status.Text = T("ExistingModImport.CopiedMods", done, total)), cancellation.Token));
             }
-            finally { operation.Hide(); await shown; }
+            finally { _services.Dialogs.Close(operation); await shown; }
             if (GetSelectedRepository()?.Id == context.RepositoryId) await RefreshListsAsync();
             ShowAppNotification(T("ExistingModImport.Imported"));
         }
@@ -134,18 +104,14 @@ public sealed partial class MainWindow
             var record = RecoveryJsonFile.Read<ExistingModImportManifest>(manifest);
             if (!IsPathInsideDirectory(record.DestinationRoot, repository.SourcePath))
                 throw new InvalidDataException(T("ExistingModImport.SwitchToTheOriginalRepositoryBefore"));
-            var dialog = new ContentDialog { Title = T("ExistingModImport.UndoOrganizedImport"),
-                Content = new TextBlock { Text = T("ExistingModImport.OnlyUnchangedCopiesFromThisImport"), TextWrapping = TextWrapping.Wrap, MaxWidth = 500 },
-                PrimaryButtonText = T("ExistingModImport.UndoImport"), CloseButtonText = T("Common.Cancel"), DefaultButton = ContentDialogButton.Close,
-                XamlRoot = RootGrid.XamlRoot, RequestedTheme = RootGrid.ActualTheme };
-            if (await dialog.ShowAsync() != ContentDialogResult.Primary) return;
+            if (!await ExistingModImportDialogs.ConfirmUndoAsync(_services)) return;
             _existingModImportBusy = true;
             ExistingModImportUndoResult result = await Task.Run(() => ExistingModImportService.Undo(manifest, record.DestinationRoot));
             await RefreshListsAsync();
             await ShowMessageAsync(T("ExistingModImport.RemovedUnchangedCopiesPreservedModifiedOr", result.Removed.Length, result.Preserved.Length)
                 + "\n" + string.Join("\n", result.Preserved), T("ExistingModImport.UndoResult"));
         }
-        catch (Exception ex) { await ReportOnlineActionErrorAsync(ex.Message, T("ExistingModImport.CannotUndoImport")); }
+        catch (Exception ex) { await ReportOnlineActionErrorAsync(ex.Message, T("ExistingModImport.CannotUndoImport"), ex); }
         finally { _existingModImportBusy = false; }
     }
 
@@ -162,15 +128,7 @@ public sealed partial class MainWindow
                 await ShowMessageAsync(T("ExistingModImport.NoInterruptedImportsNeedReviewIn"), T("ExistingModImport.ImportRecoveryCheck"));
                 return;
             }
-            var records = new ComboBox { Header = T("ExistingModImport.SelectAnInterruptedImport"), HorizontalAlignment = HorizontalAlignment.Stretch };
-            foreach (string candidate in candidates)
-                records.Items.Add(new ComboBoxItem { Content = File.GetLastWriteTime(candidate).ToString("yyyy-MM-dd HH:mm:ss") + " · " + Path.GetFileName(candidate), Tag = candidate });
-            records.SelectedIndex = 0;
-            var dialog = new ContentDialog { Title = T("ExistingModImport.ReviewInterruptedImport"), Content = records,
-                PrimaryButtonText = T("ExistingModImport.CheckAndRegister"), CloseButtonText = T("Common.Cancel"),
-                XamlRoot = RootGrid.XamlRoot, RequestedTheme = RootGrid.ActualTheme };
-            if (await dialog.ShowAsync() != ContentDialogResult.Primary) return;
-            string manifest = (string)((ComboBoxItem)records.SelectedItem).Tag;
+            if (await ExistingModImportDialogs.ChooseInterruptedAsync(_services, candidates) is not { } manifest) return;
             if (!IsPathInsideDirectory(manifest, ExistingImportRecordsRoot)) throw new InvalidDataException("Import record is outside the application records folder.");
             var record = RecoveryJsonFile.Read<ExistingModImportManifest>(manifest);
             if (!IsPathInsideDirectory(record.DestinationRoot, repository.SourcePath))
@@ -181,7 +139,7 @@ public sealed partial class MainWindow
             await ShowMessageAsync(T("ExistingModImport.RegisteredCompleteCopiesPreservedAmbiguousOr", result.Recovered.Length, result.Preserved.Length, result.StagingFolders.Length)
                 + "\n" + string.Join("\n", result.Preserved.Concat(result.StagingFolders)), T("ExistingModImport.ImportRecoveryCheck"));
         }
-        catch (Exception ex) { LogApplicationIssue("Recover organized import", ex); await ReportOnlineActionErrorAsync(ex.Message, T("ExistingModImport.CannotInspectImportRecord")); }
+        catch (Exception ex) { LogApplicationIssue("Recover organized import", ex); await ReportOnlineActionErrorAsync(ex.Message, T("ExistingModImport.CannotInspectImportRecord"), ex); }
         finally { _existingModImportBusy = false; }
     }
 

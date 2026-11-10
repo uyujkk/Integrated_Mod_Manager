@@ -1,8 +1,6 @@
-using System.Globalization;
 using System.Numerics;
 using System.Text.RegularExpressions;
 using IntegratedModManager.Core.Configuration;
-using IntegratedModManager.Core.Layout;
 using IntegratedModManager.Core.Online;
 using Microsoft.UI.Xaml;
 using Microsoft.UI.Xaml.Controls;
@@ -54,7 +52,7 @@ public sealed partial class MainWindow
             },
             ex => ReportOnlineActionErrorAsync(
                 T("OnlineDetails.FailedToOpenModDetails") + ex.Message,
-                T("OnlineDetails.DetailsLoadFailed")),
+                T("OnlineDetails.DetailsLoadFailed"), ex),
             () => !_onlineWindowClosed && ReferenceEquals(_activeOnlineDetailMod, mod)
                 && string.Equals(contextKey, GetOnlineDetailContextKey(), StringComparison.Ordinal),
             loading =>
@@ -1013,7 +1011,7 @@ public sealed partial class MainWindow
                     return;
                 }
 
-                OnlineDownloadCandidate? selectedFile = await ShowOnlineDownloadFilePickerAsync(effectiveMod, candidates);
+                OnlineDownloadCandidate? selectedFile = await DownloadFilePickerDialog.ChooseAsync(_services, effectiveMod, candidates);
                 action.Token.ThrowIfCancellationRequested();
                 if (selectedFile is null || !ReferenceEquals(_activeOnlineDetailMod, effectiveMod)
                     || !string.Equals(detailContext, GetOnlineDetailContextKey(), StringComparison.Ordinal)) return;
@@ -1025,7 +1023,7 @@ public sealed partial class MainWindow
             {
                 LogApplicationIssue("Select online download file", ex);
                 await ReportOnlineActionErrorAsync(T("OnlineDetails.FailedToSelectDownloadFile") + ex.Message,
-                    T("Common.OnlineDownloadFailed"));
+                    T("Common.OnlineDownloadFailed"), ex);
             }
             finally
             {
@@ -1038,128 +1036,5 @@ public sealed partial class MainWindow
         {
             ReportUiActionFailure("OnSelectOnlineDetailDownloadClicked", ex);
         }
-    }
-
-    private async Task<OnlineDownloadCandidate?> ShowOnlineDownloadFilePickerAsync(
-        OnlineModCard mod,
-        IReadOnlyList<OnlineDownloadCandidate> candidates)
-    {
-        DialogViewport viewport = DialogViewportPolicy.Selection(RootGrid.ActualWidth, RootGrid.ActualHeight);
-        var fileList = new ListView
-        {
-            SelectionMode = ListViewSelectionMode.Single,
-            HorizontalContentAlignment = HorizontalAlignment.Stretch
-        };
-
-        OnlineDownloadCandidate? defaultFile = OnlineDownloadSelectionPolicy.SelectDefault(candidates);
-        ListViewItem? defaultItem = null;
-        foreach (OnlineDownloadCandidate candidate in candidates)
-        {
-            string fileName = string.IsNullOrWhiteSpace(candidate.FileName)
-                ? T("OnlineDetails.File", candidate.FileId)
-                : candidate.FileName;
-
-            var title = new TextBlock
-            {
-                Text = fileName,
-                FontWeight = Microsoft.UI.Text.FontWeights.SemiBold,
-                TextWrapping = TextWrapping.Wrap,
-                TextTrimming = TextTrimming.CharacterEllipsis,
-                MaxLines = 2
-            };
-
-            var metadata = new List<string>();
-            if (!string.IsNullOrWhiteSpace(candidate.Version))
-            {
-                metadata.Add(T("OnlineDetails.Version", candidate.Version));
-            }
-            if (candidate.FileSizeBytes > 0)
-            {
-                metadata.Add(FormatFileSize(candidate.FileSizeBytes));
-            }
-            if (candidate.AddedAt > DateTimeOffset.MinValue)
-            {
-                metadata.Add(candidate.AddedAt.ToString("yyyy-MM-dd HH:mm", CultureInfo.CurrentCulture));
-            }
-            metadata.Add(candidate.IsArchived ? T("OnlineDetails.Archived") : T("OnlineDetails.Current"));
-            if (!candidate.IsSupportedArchive)
-            {
-                metadata.Add(T("OnlineDetails.CannotAutoExtract"));
-            }
-
-            var details = new StackPanel { Spacing = 3 };
-            details.Children.Add(title);
-            details.Children.Add(new TextBlock
-            {
-                Text = string.Join(" · ", metadata),
-                Style = (Style)Application.Current.Resources["CaptionTextStyle"],
-                TextWrapping = TextWrapping.Wrap
-            });
-            if (!string.IsNullOrWhiteSpace(candidate.Description))
-            {
-                details.Children.Add(new TextBlock
-                {
-                    Text = candidate.Description,
-                    Style = (Style)Application.Current.Resources["MutedTextStyle"],
-                    TextWrapping = TextWrapping.Wrap,
-                    TextTrimming = TextTrimming.CharacterEllipsis,
-                    MaxLines = 2
-                });
-            }
-
-            var item = new ListViewItem
-            {
-                Content = details,
-                Tag = candidate,
-                Padding = new Thickness(10, 8, 10, 8),
-                HorizontalContentAlignment = HorizontalAlignment.Stretch,
-                IsEnabled = candidate.IsSupportedArchive
-            };
-            fileList.Items.Add(item);
-            if (ReferenceEquals(candidate, defaultFile))
-            {
-                defaultItem = item;
-            }
-        }
-
-        fileList.SelectedItem = defaultItem
-            ?? fileList.Items.OfType<ListViewItem>().FirstOrDefault(item => item.IsEnabled);
-
-        var content = new Grid
-        {
-            Width = Math.Min(620, viewport.MaxWidth - 48),
-            Height = Math.Min(480, viewport.ContentHeight),
-            RowSpacing = 10
-        };
-        content.RowDefinitions.Add(new() { Height = GridLength.Auto });
-        content.RowDefinitions.Add(new() { Height = new GridLength(1, GridUnitType.Star) });
-        content.Children.Add(new TextBlock
-        {
-            Text = T("OnlineDetails.TheNewestCurrentArchiveIsSelected"),
-            Style = (Style)Application.Current.Resources["MutedTextStyle"],
-            TextWrapping = TextWrapping.Wrap
-        });
-        Grid.SetRow(fileList, 1);
-        content.Children.Add(fileList);
-
-        var dialog = new ContentDialog
-        {
-            Title = T("OnlineDetails.SelectDownloadFile", mod.Title),
-            Content = content,
-            PrimaryButtonText = T("OnlineDetails.DownloadSelected"),
-            CloseButtonText = T("Common.Cancel"),
-            DefaultButton = ContentDialogButton.Primary,
-            IsPrimaryButtonEnabled = fileList.SelectedItem is ListViewItem,
-            RequestedTheme = RootGrid.ActualTheme,
-            XamlRoot = RootGrid.XamlRoot
-        };
-        fileList.SelectionChanged += (_, _) =>
-            dialog.IsPrimaryButtonEnabled = fileList.SelectedItem is ListViewItem { IsEnabled: true };
-
-        ContentDialogResult result = await dialog.ShowAsync();
-        return result == ContentDialogResult.Primary
-            && fileList.SelectedItem is ListViewItem { Tag: OnlineDownloadCandidate selected }
-                ? selected
-                : null;
     }
 }

@@ -106,7 +106,7 @@ public sealed partial class MainWindow
             string? name = await PromptForTextAsync(
                 T("ConfigurationProfiles.NameThisCombinationIfIncludingState"),
                 T("ConfigurationProfiles.SaveModCombination"),
-                T("ConfigurationProfiles.MyProfile"));
+                T("ConfigurationProfiles.MyProfile"), T("Common.Save"));
             name = name?.Trim();
             if (string.IsNullOrWhiteSpace(name))
             {
@@ -133,8 +133,8 @@ public sealed partial class MainWindow
 
             WorkspaceRepository? repository = GetSelectedRepository();
             if (repository is null) return;
-            if (!await ShowConfirmAsync(T("ConfigurationProfiles.ReplaceWithTheEnabledCombinationSave", profile.Name),
-                T("ConfigurationProfiles.UpdateCombinationPreset"))) return;
+            if (!await ShowDangerConfirmAsync(T("ConfigurationProfiles.ReplaceWithTheEnabledCombinationSave", profile.Name),
+                T("ConfigurationProfiles.UpdateCombinationPreset"), T("Dialogs.Replace"))) return;
             await SaveCombinationProfileAsync(repository, profile.Name, profile);
         }
         catch (Exception ex)
@@ -153,9 +153,9 @@ public sealed partial class MainWindow
                 return;
             }
 
-            if (!await ShowConfirmAsync(
+            if (!await ShowDangerConfirmAsync(
                 T("ConfigurationProfiles.DeleteTheProfileThisWillNot", profile.Name),
-                T("ConfigurationProfiles.DeleteConfigurationProfile")))
+                T("ConfigurationProfiles.DeleteConfigurationProfile"), T("Dialogs.Delete")))
             {
                 return;
             }

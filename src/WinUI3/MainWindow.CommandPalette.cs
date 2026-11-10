@@ -3,6 +3,7 @@ using Microsoft.UI.Xaml;
 using Microsoft.UI.Xaml.Automation;
 using Microsoft.UI.Xaml.Controls;
 using Microsoft.UI.Xaml.Input;
+using Microsoft.UI.Xaml.Media;
 using Windows.System;
 
 namespace ModFolderCopier.WinUI;
@@ -18,6 +19,9 @@ public sealed partial class MainWindow
     private TextBlock? _commandPaletteHint;
     private CommandPaletteEntry[] _commandPaletteEntries = [];
     private IReadOnlyList<CommandPaletteEntry> _commandPaletteResults = [];
+    // Where each result sits in the list, which also holds the group headings (J8).
+    private int[] _commandPaletteRowIndexes = [];
+    private int _commandPaletteCursor = -1;
     // Where focus was before the palette opened; it goes back there when the palette closes.
     private Control? _focusBeforeCommandPalette;
 
@@ -114,6 +118,14 @@ public sealed partial class MainWindow
         _commandPalettePanel.Tapped += (_, args) => args.Handled = true;
         _commandPaletteOverlay = new Grid { Visibility = Visibility.Collapsed };
         _commandPaletteOverlay.Tapped += (_, _) => CloseCommandPalette();
+        // The panel floats above the dimmed window with the system's flyout shadow (J8). Outside a popup a
+        // ThemeShadow needs a receiver to fall on: a transparent layer under the panel that fills the overlay.
+        var shadowReceiver = new Grid { Background = new SolidColorBrush(Microsoft.UI.Colors.Transparent) };
+        var shadow = new ThemeShadow();
+        shadow.Receivers.Add(shadowReceiver);
+        _commandPalettePanel.Shadow = shadow;
+        _commandPalettePanel.Translation = new System.Numerics.Vector3(0, 0, 32);
+        _commandPaletteOverlay.Children.Add(shadowReceiver);
         _commandPaletteOverlay.Children.Add(_commandPalettePanel);
         Canvas.SetZIndex(_commandPaletteOverlay, 1000);
         RootGrid.Children.Add(_commandPaletteOverlay);
@@ -147,13 +159,57 @@ public sealed partial class MainWindow
     private void RefreshCommandPaletteResults()
     {
         if (_commandPaletteList is null) return;
-        _commandPaletteResults = CommandPaletteSearch.Rank(_commandPaletteEntries, _commandPaletteSearch!.Text, CommandPaletteLimit);
+        IReadOnlyList<CommandPaletteEntry> ranked = CommandPaletteSearch.Rank(_commandPaletteEntries, _commandPaletteSearch!.Text, CommandPaletteLimit);
+        // Grouped by type like the Windows search flyout; the ranking holds inside each group (J8).
+        var groups = ranked.GroupBy(CommandPaletteGroup).OrderBy(group => group.Key).ToArray();
+        _commandPaletteResults = [.. groups.SelectMany(group => group)];
         _commandPaletteList.Items.Clear();
-        foreach (CommandPaletteEntry entry in _commandPaletteResults)
-            _commandPaletteList.Items.Add(CreateCommandPaletteRow(entry));
-        _commandPaletteList.SelectedIndex = _commandPaletteResults.Count > 0 ? 0 : -1;
+        var rowIndexes = new List<int>();
+        foreach (var group in groups)
+        {
+            _commandPaletteList.Items.Add(CreateCommandPaletteHeader(group.Key switch
+            {
+                0 => T("CommandPalette.GroupPages"),
+                1 => T("CommandPalette.GroupCharacters"),
+                2 => T("CommandPalette.GroupMods"),
+                _ => T("CommandPalette.GroupCommands")
+            }));
+            foreach (CommandPaletteEntry entry in group)
+            {
+                rowIndexes.Add(_commandPaletteList.Items.Count);
+                _commandPaletteList.Items.Add(CreateCommandPaletteRow(entry));
+            }
+        }
+        _commandPaletteRowIndexes = [.. rowIndexes];
+        SelectCommandPaletteResult(_commandPaletteResults.Count > 0 ? 0 : -1);
         _commandPaletteList.Visibility = _commandPaletteResults.Count > 0 ? Visibility.Visible : Visibility.Collapsed;
         _commandPaletteEmpty!.Visibility = _commandPaletteResults.Count > 0 ? Visibility.Collapsed : Visibility.Visible;
+    }
+
+    // 0 pages, 1 characters, 2 Mods, 3 commands.
+    private static int CommandPaletteGroup(CommandPaletteEntry entry) => entry.Kind switch
+    {
+        CommandPaletteKind.Character => 1,
+        CommandPaletteKind.Mod => 2,
+        _ => entry.Key.StartsWith("nav:", StringComparison.Ordinal) ? 0 : 3
+    };
+
+    // A group heading: skipped by the arrow keys and not hit-testable (a disabled item would dim its text).
+    private static ListViewItem CreateCommandPaletteHeader(string text) => new()
+    {
+        Content = new TextBlock
+        {
+            Text = text, Style = (Style)Application.Current.Resources["CaptionTextBlockStyle"],
+            Foreground = (Brush)Application.Current.Resources["TextFillColorSecondaryBrush"], Margin = new Thickness(2, 6, 0, 0)
+        },
+        IsHitTestVisible = false, IsTabStop = false, MinHeight = 28
+    };
+
+    private void SelectCommandPaletteResult(int index)
+    {
+        _commandPaletteCursor = index;
+        _commandPaletteList!.SelectedIndex = index < 0 ? -1 : _commandPaletteRowIndexes[index];
+        if (_commandPaletteList.SelectedItem is not null) _commandPaletteList.ScrollIntoView(_commandPaletteList.SelectedItem);
     }
 
     private static FrameworkElement CreateCommandPaletteRow(CommandPaletteEntry entry)
@@ -190,8 +246,7 @@ public sealed partial class MainWindow
             case VirtualKey.Down or VirtualKey.Up when _commandPaletteResults.Count > 0:
                 int step = e.Key == VirtualKey.Down ? 1 : -1;
                 int count = _commandPaletteResults.Count;
-                _commandPaletteList!.SelectedIndex = ((_commandPaletteList.SelectedIndex + step) % count + count) % count;
-                _commandPaletteList.ScrollIntoView(_commandPaletteList.SelectedItem);
+                SelectCommandPaletteResult(((_commandPaletteCursor + step) % count + count) % count);
                 e.Handled = true;
                 break;
             case VirtualKey.Enter:

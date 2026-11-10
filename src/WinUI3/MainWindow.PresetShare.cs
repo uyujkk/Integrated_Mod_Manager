@@ -1,6 +1,4 @@
 using IntegratedModManager.Core.Presets;
-using Microsoft.UI.Xaml;
-using Microsoft.UI.Xaml.Controls;
 
 namespace ModFolderCopier.WinUI;
 
@@ -53,28 +51,10 @@ public sealed partial class MainWindow
         string[] available = await Task.Run(() => RepositoryModRelativePaths(root));
         PresetSharePreview preview = PresetShareService.Preview(file, available, repository.OnlineGameName);
 
-        var nameBox = new TextBox { Header = T("PresetShare.Name"), Text = UniqueBundleProfileName(file.Name), MaxLength = 200 };
-        var content = new StackPanel { Spacing = 10, MaxWidth = 560 };
-        content.Children.Add(new TextBlock
-        {
-            Text = T("PresetShare.Summary", preview.Matched.Count, file.Mods.Count, preview.MatchPercent(file.Mods.Count)),
-            TextWrapping = TextWrapping.Wrap
-        });
-        if (!preview.SameGame)
-            content.Children.Add(new InfoBar { Severity = InfoBarSeverity.Warning, IsOpen = true, IsClosable = false, Message = T("PresetShare.OtherGame", file.Game, repository.OnlineGameName) });
-        if (preview.Missing.Count > 0)
-            content.Children.Add(new TextBlock { Text = T("PresetShare.Missing", string.Join("\n", preview.Missing.Take(30))), TextWrapping = TextWrapping.Wrap });
-        content.Children.Add(nameBox);
-        var dialog = new ContentDialog
-        {
-            Title = T("PresetShare.Import"), Content = new ScrollViewer { Content = content, MaxHeight = Math.Max(200, RootGrid.ActualHeight - 260) },
-            PrimaryButtonText = T("PresetShare.ImportMatched"), CloseButtonText = T("Common.Cancel"), DefaultButton = ContentDialogButton.Primary,
-            IsPrimaryButtonEnabled = preview.Matched.Count > 0, XamlRoot = RootGrid.XamlRoot, RequestedTheme = RootGrid.ActualTheme
-        };
-        nameBox.TextChanged += (_, _) => dialog.IsPrimaryButtonEnabled = preview.Matched.Count > 0 && nameBox.Text.Trim().Length > 0;
-        if (await dialog.ShowAsync() != ContentDialogResult.Primary || !ReferenceEquals(GetSelectedRepository(), repository)) return;
+        string? chosenName = await PresetShareImportDialog.ShowAsync(_services, file, preview, repository.OnlineGameName, UniqueBundleProfileName(file.Name), RootGrid.ActualHeight);
+        if (chosenName is null || !ReferenceEquals(GetSelectedRepository(), repository)) return;
 
-        string name = UniqueBundleProfileName(nameBox.Text.Trim());
+        string name = UniqueBundleProfileName(chosenName);
         var profile = new ModConfigurationProfile
         {
             RepositoryId = repository.Id, Name = name,

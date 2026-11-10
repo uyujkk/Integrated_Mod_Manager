@@ -1084,9 +1084,10 @@ public sealed partial class MainWindow
     private void UpdateDeployButtonLabel()
     {
         SecondLevelFolderItem? mod = GetSelectedSecondLevelItem();
-        ToggleCopyButton.Content = mod is not null && ModTone(mod) == ModStateTone.Deployed
-            ? T("LocalLibrary.RemoveFromTarget")
-            : T("Localization.DeployMod");
+        bool removes = mod is not null && ModTone(mod) == ModStateTone.Deployed;
+        ToggleCopyButton.Content = removes ? T("LocalLibrary.RemoveFromTarget") : T("Localization.DeployMod");
+        // Removing uses the fixed red danger colour, deploying the accent colour (J8).
+        ToggleCopyButton.Style = (Style)Application.Current.Resources[removes ? "DangerAccentButtonStyle" : "PrimaryButtonStyle"];
     }
 
     private void UpdateRepositoryInfoSource()
@@ -1249,11 +1250,9 @@ public sealed partial class MainWindow
             VerticalScrollBarVisibility = ScrollBarVisibility.Auto
         };
         PreviewCard.Child = previewScroll;
-        var dialog = new ContentDialog { XamlRoot = RootGrid.XamlRoot, Content = WorkspaceDetailHost, CloseButtonText = T("Common.Close"), RequestedTheme = RootGrid.ActualTheme };
-        try { await dialog.ShowAsync(); }
+        try { await ModDetailsDialog.ShowAsync(_services, WorkspaceDetailHost); }
         finally
         {
-            dialog.Content = null;
             previewScroll.Content = null;
             PreviewCard.Child = previewContent;
             WorkspaceDetailHost.Height = double.NaN;

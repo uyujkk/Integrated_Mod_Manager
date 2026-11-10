@@ -1,7 +1,6 @@
 using IntegratedModManager.Core.Presets;
 using IntegratedModManager.Core.Shortcuts;
 using Microsoft.UI.Xaml;
-using Microsoft.UI.Xaml.Controls;
 
 namespace ModFolderCopier.WinUI;
 
@@ -56,15 +55,8 @@ public sealed partial class MainWindow
     {
         var overlay = _overlay.Window;
         if (overlay?.Content is not FrameworkElement root) return false;
-        var dialog = new ContentDialog
-        {
-            XamlRoot = root.XamlRoot, RequestedTheme = ElementTheme.Dark,
-            Title = title, Content = new TextBlock { Text = message, TextWrapping = TextWrapping.Wrap },
-            PrimaryButtonText = T("ShortcutCapture.ReadExisting"), CloseButtonText = T("Common.Cancel"),
-            DefaultButton = ContentDialogButton.Close
-        };
         overlay.SetKeyboardInputEnabled(true);
-        try { return await dialog.ShowAsync() == ContentDialogResult.Primary && !_onlineWindowClosed; }
+        try { return await ReadExistingFileDialog.ConfirmAsync(_services, root.XamlRoot, title, message) && !_onlineWindowClosed; }
         finally
         {
             if (ReferenceEquals(_overlay.Window, overlay)) overlay.SetKeyboardInputEnabled(false);

@@ -120,7 +120,7 @@ internal static class RepositoryEditorDialog
             XamlRoot = services.Dialogs.Root
         };
 
-        ContentDialogResult result = await dialog.ShowAsync();
+        ContentDialogResult result = await services.Dialogs.ShowAsync(dialog);
         if (result != ContentDialogResult.Primary)
         {
             return null;

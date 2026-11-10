@@ -39,7 +39,7 @@ public sealed partial class MainWindow
             }
 
             string summary = SanitizeDiagnosticText(exception.Message);
-            ShowAppNotification(T("UiActionGuard.Stopped", summary), InfoBarSeverity.Error);
+            ShowAppNotification(T("UiActionGuard.Stopped", summary), InfoBarSeverity.Error, exception);
         }
         catch
         {

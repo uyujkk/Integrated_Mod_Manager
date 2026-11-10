@@ -1,8 +1,6 @@
 using IntegratedModManager.Core.Deployment;
 using IntegratedModManager.Core.Presets;
 using IntegratedModManager.Core.Shortcuts;
-using Microsoft.UI.Xaml;
-using Microsoft.UI.Xaml.Controls;
 
 namespace ModFolderCopier.WinUI;
 
@@ -40,19 +38,6 @@ public sealed partial class MainWindow
     }
 
     // The checkbox restore dialogs show next to "I have fully closed the game".
-    private CheckBox CreateHotReloadOption(CheckBox closedCheck, ContentDialog dialog)
-    {
-        var hot = new CheckBox
-        {
-            Content = CanHotReloadLoader ? T("HotReload.ApplyWhileRunning") : T("HotReload.ApplyWhileRunningUnavailable"),
-            IsEnabled = CanHotReloadLoader
-        };
-        void Update(object sender, RoutedEventArgs e) => dialog.IsPrimaryButtonEnabled = closedCheck.IsChecked == true || hot.IsChecked == true;
-        hot.Checked += Update;
-        hot.Unchecked += Update;
-        return hot;
-    }
-
     private ModPersistentSlot[] OverlaySlots(out string? modPath)
     {
         WorkspaceRepository? repository = GetSelectedRepository();

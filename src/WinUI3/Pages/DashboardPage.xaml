@@ -53,7 +53,7 @@
                     <!-- Getting started after a first install (stage J4-b): one tip that moves from the new-repository
                          button to the paths to "Open Mod management". It takes no room here; it opens in a popup.
                          Esc or Skip closes it for good; focus moves into it, so the keyboard and Narrator reach it. -->
-                    <TeachingTip x:Name="GettingStartedTip" PreferredPlacement="Auto" IsLightDismissEnabled="False" Closed="OnGettingStartedTipClosed">
+                    <TeachingTip x:Name="GettingStartedTip" PreferredPlacement="Auto" IsLightDismissEnabled="False" ShouldConstrainToRootBounds="True" Closed="OnGettingStartedTipClosed">
                         <TeachingTip.IconSource>
                             <FontIconSource Glyph="&#xE82F;" />
                         </TeachingTip.IconSource>
