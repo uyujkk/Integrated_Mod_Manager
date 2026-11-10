@@ -17,7 +17,7 @@ public sealed partial class OnlinePage
     {
         UiCrashDiagnostics.RecordAction("Author browse");
         if (id <= 0) { OnlineSearchTextBox.Text = $"author:{name}"; return; }
-        string category = GetEffectiveOnlineCategoryId(_host.GetSelectedRepository());
+        string category = GetEffectiveOnlineCategoryId(_services.Repositories.Selected);
         _onlinePreferences.RecentAuthors.RemoveAll(item => item.Id == id && item.CategoryId == category);
         _onlinePreferences.RecentAuthors.Insert(0, new OnlineAuthorVisit(id, name, category, DateTimeOffset.UtcNow));
         _onlinePreferences.RecentAuthors = _onlinePreferences.RecentAuthors.Take(100).ToList();
@@ -83,13 +83,13 @@ public sealed partial class OnlinePage
     }
 
     private bool IsSavedOnlineMod(OnlineModCard mod) => _onlinePreferences.SavedMods.Any(item =>
-        item.RepositoryId == _host.GetSelectedRepository()?.Id
-        && string.Equals(item.RepositoryPath.TrimEnd('\\', '/'), _host.GetSelectedRepository()?.SourcePath.TrimEnd('\\', '/'), StringComparison.OrdinalIgnoreCase)
+        item.RepositoryId == _services.Repositories.Selected?.Id
+        && string.Equals(item.RepositoryPath.TrimEnd('\\', '/'), _services.Repositories.Selected?.SourcePath.TrimEnd('\\', '/'), StringComparison.OrdinalIgnoreCase)
         && GetOnlineDownloadIdentity(item.Mod) == GetOnlineDownloadIdentity(mod));
 
     private void ToggleSavedOnlineMod(OnlineModCard mod)
     {
-        WorkspaceRepository? repository = _host.GetSelectedRepository();
+        WorkspaceRepository? repository = _services.Repositories.Selected;
         if (repository is null) return;
         bool remove = IsSavedOnlineMod(mod);
         _onlinePreferences.SavedMods.RemoveAll(item => item.RepositoryId == repository.Id
@@ -111,11 +111,11 @@ public sealed partial class OnlinePage
         author.Click += async (_, _) => await _host.RunUiActionAsync("BrowseOnlineAuthorAsync", () => BrowseOnlineAuthorAsync(mod.AuthorId, mod.Author));
         menu.Items.Add(author);
         bool savedAuthor = _onlinePreferences.Authors.Any(item => item.Id == mod.AuthorId
-            && item.CategoryId == GetEffectiveOnlineCategoryId(_host.GetSelectedRepository()));
+            && item.CategoryId == GetEffectiveOnlineCategoryId(_services.Repositories.Selected));
         var favorite = new MenuFlyoutItem { Text = savedAuthor ? T("OnlineLibrary.UnsaveAuthor") : T("OnlineLibrary.SaveAuthor"), IsEnabled = mod.AuthorId > 0 };
         favorite.Click += (_, _) =>
         {
-            string category = GetEffectiveOnlineCategoryId(_host.GetSelectedRepository());
+            string category = GetEffectiveOnlineCategoryId(_services.Repositories.Selected);
             _onlinePreferences.Authors.RemoveAll(item => item.Id == mod.AuthorId && item.CategoryId == category);
             if (!savedAuthor) _onlinePreferences.Authors.Insert(0, new OnlineAuthorBookmark(mod.AuthorId, mod.Author, category));
             _onlinePreferences.Authors = _onlinePreferences.Authors.Take(100).ToList();
@@ -126,7 +126,7 @@ public sealed partial class OnlinePage
         {
             save.Text = IsSavedOnlineMod(mod) ? T("OnlineLibrary.RemoveFromSaved") : T("OnlineLibrary.SaveForLater");
             savedAuthor = _onlinePreferences.Authors.Any(item => item.Id == mod.AuthorId
-                && item.CategoryId == GetEffectiveOnlineCategoryId(_host.GetSelectedRepository()));
+                && item.CategoryId == GetEffectiveOnlineCategoryId(_services.Repositories.Selected));
             favorite.Text = savedAuthor ? T("OnlineLibrary.UnsaveAuthor") : T("OnlineLibrary.SaveAuthor");
         };
         return menu;

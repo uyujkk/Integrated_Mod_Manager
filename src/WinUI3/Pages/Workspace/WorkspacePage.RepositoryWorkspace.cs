@@ -183,7 +183,7 @@ public sealed partial class WorkspacePage
 
     private void OnRepositoryOpenModFolderClicked(object sender, RoutedEventArgs e)
     {
-        if (GetSelectedSecondLevelItem() is { } mod) _host.OpenDirectory(mod.Path, T("Common.ModFolder"));
+        if (GetSelectedSecondLevelItem() is { } mod) _services.Dialogs.OpenDirectory(mod.Path, T("Common.ModFolder"));
     }
 
     private void InitializeRepositoryToolbarV4()
@@ -288,7 +288,7 @@ public sealed partial class WorkspacePage
             string target = Paths.Target.Trim();
             bool connected = target.Length > 0 && Directory.Exists(target);
             _repositoryTargetStatus.Text = connected ? T("RepositoryWorkspace.TargetConnected") : T("RepositoryWorkspace.TargetMissing");
-            _repositoryTargetStatus.Foreground = _host.GetAppThemeBrush(connected ? "AppSuccessBrush" : "AppDangerBrush");
+            _repositoryTargetStatus.Foreground = GetAppThemeBrush(connected ? "AppSuccessBrush" : "AppDangerBrush");
         }
     }
 
@@ -574,9 +574,9 @@ public sealed partial class WorkspacePage
             AutomationProperties.SetName(_repositoryModeButtons[index], labels[index]);
             foreach (string state in new[] { "Checked", "CheckedPointerOver", "CheckedPressed" })
             {
-                _repositoryModeButtons[index].Resources["ToggleButtonBackground" + state] = _host.GetAppThemeBrush("AppSecondarySelectedBrush");
-                _repositoryModeButtons[index].Resources["ToggleButtonForeground" + state] = _host.GetAppThemeBrush("AppSecondarySelectedForegroundBrush");
-                _repositoryModeButtons[index].Resources["ToggleButtonBorderBrush" + state] = _host.GetAppThemeBrush("AppNavSelectedBorderBrush");
+                _repositoryModeButtons[index].Resources["ToggleButtonBackground" + state] = GetAppThemeBrush("AppSecondarySelectedBrush");
+                _repositoryModeButtons[index].Resources["ToggleButtonForeground" + state] = GetAppThemeBrush("AppSecondarySelectedForegroundBrush");
+                _repositoryModeButtons[index].Resources["ToggleButtonBorderBrush" + state] = GetAppThemeBrush("AppNavSelectedBorderBrush");
             }
         }
         _repositoryOpenDetails!.Content = RepositoryIconLabel("\uE8A5", T("RepositoryWorkspace.Details"));
@@ -587,7 +587,7 @@ public sealed partial class WorkspacePage
         AutomationProperties.SetName(_repositoryCopyModPath, T("RepositoryWorkspace.CopyPath"));
         PreviewTab.Header = T("RepositoryWorkspace.Preview");
         SelectionEyebrowTextBlock.Text = T("RepositoryWorkspace.CURRENTMOD");
-        CurrentFolderTextBlock.Foreground = _host.GetAppThemeBrush("AppNavDefaultForegroundBrush");
+        CurrentFolderTextBlock.Foreground = GetAppThemeBrush("AppNavDefaultForegroundBrush");
         DeploymentStateLabelTextBlock.Visibility = Visibility.Collapsed;
         _combinationWorkspaceTitle!.Text = T("RepositoryWorkspace.MyPresets");
         AutomationProperties.SetName(DeleteConfigurationProfileButton, T("RepositoryWorkspace.DeletePreset"));
@@ -603,9 +603,9 @@ public sealed partial class WorkspacePage
             _repositoryStateChips[index].Content = chipLabels[index];
             foreach (string state in new[] { "Checked", "CheckedPointerOver", "CheckedPressed" })
             {
-                _repositoryStateChips[index].Resources["ToggleButtonBackground" + state] = _host.GetAppThemeBrush("AppSecondarySelectedBrush");
-                _repositoryStateChips[index].Resources["ToggleButtonForeground" + state] = _host.GetAppThemeBrush("AppSecondarySelectedForegroundBrush");
-                _repositoryStateChips[index].Resources["ToggleButtonBorderBrush" + state] = _host.GetAppThemeBrush("AppNavSelectedBorderBrush");
+                _repositoryStateChips[index].Resources["ToggleButtonBackground" + state] = GetAppThemeBrush("AppSecondarySelectedBrush");
+                _repositoryStateChips[index].Resources["ToggleButtonForeground" + state] = GetAppThemeBrush("AppSecondarySelectedForegroundBrush");
+                _repositoryStateChips[index].Resources["ToggleButtonBorderBrush" + state] = GetAppThemeBrush("AppNavSelectedBorderBrush");
             }
         }
         CharacterFolderHintTextBlock.Text = T("RepositoryWorkspace.CharacterFolderHint");
@@ -652,7 +652,7 @@ public sealed partial class WorkspacePage
 
     private PaneSplitter CreateWorkspaceSplitter(string automationId, string name)
     {
-        var splitter = new PaneSplitter { Width = RepositoryWorkspacePolicy.SplitterWidth, LineBrush = _host.GetAppThemeBrush("AppAccentBrush") };
+        var splitter = new PaneSplitter { Width = RepositoryWorkspacePolicy.SplitterWidth, LineBrush = GetAppThemeBrush("AppAccentBrush") };
         AutomationProperties.SetAutomationId(splitter, automationId);
         AutomationProperties.SetName(splitter, name);
         ToolTipService.SetToolTip(splitter, name);
@@ -968,11 +968,11 @@ public sealed partial class WorkspacePage
         {
             var row = RepositoryColumns(GridLength.Auto, new GridLength(1, GridUnitType.Star), GridLength.Auto);
             row.ColumnSpacing = 10;
-            var done = new FontIcon { Glyph = "\uE73E", FontSize = 14, Foreground = _host.GetAppThemeBrush("AppSuccessBrush"), VerticalAlignment = VerticalAlignment.Center };
+            var done = new FontIcon { Glyph = "\uE73E", FontSize = 14, Foreground = GetAppThemeBrush("AppSuccessBrush"), VerticalAlignment = VerticalAlignment.Center };
             var number = new Border
             {
                 Width = 20, Height = 20, CornerRadius = new CornerRadius(10), BorderThickness = new Thickness(1),
-                BorderBrush = _host.GetAppThemeBrush("AppStrongBorderBrush"), VerticalAlignment = VerticalAlignment.Center,
+                BorderBrush = GetAppThemeBrush("AppStrongBorderBrush"), VerticalAlignment = VerticalAlignment.Center,
                 Child = new TextBlock { Text = (index + 1).ToString(System.Globalization.CultureInfo.InvariantCulture), FontSize = 11, HorizontalAlignment = HorizontalAlignment.Center, VerticalAlignment = VerticalAlignment.Center }
             };
             var marks = new Grid { Width = 20, VerticalAlignment = VerticalAlignment.Center };
@@ -1004,7 +1004,7 @@ public sealed partial class WorkspacePage
 
     private RepositorySetup CurrentRepositorySetup()
     {
-        WorkspaceRepository? repository = _host.GetSelectedRepository();
+        WorkspaceRepository? repository = _services.Repositories.Selected;
         string source = Paths.Source.Trim();
         string target = Paths.Target.Trim();
         // The game counts as chosen when the repository has one, its own or the default preset.
@@ -1018,7 +1018,7 @@ public sealed partial class WorkspacePage
     {
         _repositorySetupTitle!.Text = T("RepositoryWorkspace.SetupTitle");
         _repositorySetupProgress!.Text = T("RepositoryWorkspace.SetupProgress", setup.Done, RepositorySetup.Total);
-        WorkspaceRepository? repository = _host.GetSelectedRepository();
+        WorkspaceRepository? repository = _services.Repositories.Selected;
         string source = Paths.Source.Trim();
         (bool Done, string Title, string Detail, string Action)[] steps =
         [
@@ -1137,7 +1137,7 @@ public sealed partial class WorkspacePage
             _repositoryInfoTags.Children.Add(new Border
             {
                 Padding = new Thickness(8, 1, 8, 2), CornerRadius = new CornerRadius(4),
-                Background = _host.GetAppThemeBrush("AppSecondaryDefaultBrush"),
+                Background = GetAppThemeBrush("AppSecondaryDefaultBrush"),
                 Child = new TextBlock { Text = tag, FontSize = 12 }
             });
         }
@@ -1147,7 +1147,7 @@ public sealed partial class WorkspacePage
         int shortcuts = mod is null ? 0 : ModShortcutCount(mod);
         if (ShortcutTab is not null) ShortcutTab.Header = shortcuts > 0 ? T("Common.Shortcuts") + " · " + shortcuts : T("Common.Shortcuts");
         // With links, deploying replaces the character's deployed Mod (unless it keeps several); say which one.
-        WorkspaceRepository? repository = _host.GetSelectedRepository();
+        WorkspaceRepository? repository = _services.Repositories.Selected;
         bool links = repository?.UseDirectoryLinks == true;
         bool several = links && mod is not null && AllowsMultipleMods(repository!, mod.Path);
         string? replaced = mod is null || !links || ModTone(mod) == ModStateTone.Deployed || several ? null
@@ -1547,7 +1547,7 @@ public sealed partial class WorkspacePage
             return;
         }
 
-        WorkspaceRepository? repository = _host.GetSelectedRepository();
+        WorkspaceRepository? repository = _services.Repositories.Selected;
         if (repository is null)
         {
             return;

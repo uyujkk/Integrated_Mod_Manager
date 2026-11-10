@@ -33,19 +33,13 @@ public sealed partial class MainWindow : IWorkspaceHost
     Windows.Foundation.Rect IWorkspaceHost.Bounds => Bounds;
     object IWorkspaceHost.OnlineNavButton => OnlineNavButton;
     void IWorkspaceHost.AttachTrackedTextInput(TextBox box) => AttachTrackedTextInput(box);
-    Brush IWorkspaceHost.GetAppThemeBrush(string resourceKey) => GetAppThemeBrush(resourceKey);
     void IWorkspaceHost.OnOnlineNavClicked(object sender, RoutedEventArgs e) => OnOnlineNavClicked(sender, e);
 
     (List<FirstLevelFolderItem> Items, int SecondCount) IWorkspaceHost.LoadFolderItemsUsingIndex(string repositoryId, string sourceDir, string targetDir, CancellationToken cancellationToken, out int warningCount) => LoadFolderItemsUsingIndex(repositoryId, sourceDir, targetDir, cancellationToken, out warningCount);
     void IWorkspaceHost.LogApplicationIssue(string operation, Exception exception) => LogApplicationIssue(operation, exception);
-    bool IWorkspaceHost.ShouldReduceAnimations => ShouldReduceAnimations;
     void IWorkspaceHost.ReportUiActionFailure(string operation, Exception exception) => ReportUiActionFailure(operation, exception);
     Task IWorkspaceHost.RunUiActionAsync(string operation, Func<Task> action) => RunUiActionAsync(operation, action);
 
-    void IWorkspaceHost.OpenDirectory(string? directory, string title) => OpenDirectory(directory, title);
-    void IWorkspaceHost.OpenFileLocation(string? filePath, string title) => OpenFileLocation(filePath, title);
-    Task<string?> IWorkspaceHost.PickFileAsync(string[] extensions) => PickFileAsync(extensions);
-    Task<string?> IWorkspaceHost.PickFolderAsync(string? preferredPath) => PickFolderAsync(preferredPath);
     Task IWorkspaceHost.ShowImageViewerAsync(ImageSource? source, string title, IReadOnlyList<string>? imageUrls, int selectedIndex) => ShowImageViewerAsync(source, title, imageUrls, selectedIndex);
 
     bool IWorkspaceHost.SaveConfig() => SaveConfig();
@@ -54,7 +48,6 @@ public sealed partial class MainWindow : IWorkspaceHost
     void IWorkspaceHost.ApplyShortcutPlaceholders() => ApplyShortcutPlaceholders();
     void IWorkspaceHost.RefreshLocalizedStates() => RefreshLocalizedStates();
 
-    WorkspaceRepository? IWorkspaceHost.GetSelectedRepository() => GetSelectedRepository();
     void IWorkspaceHost.OnEditRepositoryDetailsClicked(object sender, RoutedEventArgs e) => OnEditRepositoryDetailsClicked(sender, e);
     void IWorkspaceHost.SwitchRepository(string repositoryId, bool openManager) => SwitchRepository(repositoryId, openManager);
 

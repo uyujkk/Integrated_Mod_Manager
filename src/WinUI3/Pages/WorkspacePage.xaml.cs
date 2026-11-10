@@ -1,4 +1,5 @@
 using Microsoft.UI.Xaml.Controls;
+using Microsoft.UI.Xaml.Media;
 
 namespace ModFolderCopier.WinUI;
 
@@ -24,6 +25,9 @@ public sealed partial class WorkspacePage : UserControl
     private SettingsViewModel SettingsView => _services.Settings;
 
     private bool IsChineseUi => _services.Language.IsChinese;
+
+    // The App*Brush tokens of Themes/Tokens.xaml, in the theme the window shows (stage J finish, step 2).
+    private Brush GetAppThemeBrush(string resourceKey) => ThemeTokens.Get(resourceKey, _services.Appearance.ThemeKey);
 
     private string T(string key) => _services.Language.T(key);
 

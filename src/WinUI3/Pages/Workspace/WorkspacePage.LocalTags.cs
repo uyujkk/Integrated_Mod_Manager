@@ -15,7 +15,7 @@ public sealed partial class WorkspacePage
 
     private LocalLibraryState? SelectedLocalLibrary()
     {
-        var repo = _host.GetSelectedRepository();
+        var repo = _services.Repositories.Selected;
         if (repo is null || string.IsNullOrWhiteSpace(repo.SourcePath)) return null;
         string key = WorkspaceIdentity.Library(repo.Id, repo.SourcePath);
         if (_localLibraryKey != key) { _localLibraryKey = key; _localTagFilter = ""; }
@@ -27,7 +27,7 @@ public sealed partial class WorkspacePage
     // Those are not part of this repository's library, so they get null instead of a throw.
     private string? LocalModRelativePath(string path)
     {
-        string? source = _host.GetSelectedRepository()?.SourcePath;
+        string? source = _services.Repositories.Selected?.SourcePath;
         return string.IsNullOrWhiteSpace(source) || string.IsNullOrWhiteSpace(path)
             || !IntegratedModManager.Core.Infrastructure.PathSafety.IsStrictlyInside(path, source)
                 ? null
@@ -75,7 +75,7 @@ public sealed partial class WorkspacePage
 
     private async Task EditLocalTagsAsync(SecondLevelFolderItem? single = null)
     {
-        var repo = _host.GetSelectedRepository();
+        var repo = _services.Repositories.Selected;
         var library = SelectedLocalLibrary();
         if (repo is null || library is null) return;
         string repoKey = WorkspaceIdentity.Library(repo.Id, repo.SourcePath);
@@ -84,7 +84,7 @@ public sealed partial class WorkspacePage
         var entries = items.Select(mod => new LocalTagsDialog.Entry(mod, mod.Name + LocalModTagSummary(mod.Path), ReferenceEquals(mod, single ?? _modList.SelectedMod),
             library.TagsFor(WorkspaceIdentity.Relative(repo.SourcePath, mod.Path)))).ToArray();
         if (await LocalTagsDialog.ShowAsync(_services, entries, _host.Root.ActualHeight) is not { } edit) return;
-        if (_host.GetSelectedRepository() is not { } current
+        if (_services.Repositories.Selected is not { } current
             || WorkspaceIdentity.Library(current.Id, current.SourcePath) != repoKey) return;
         var (chosenMods, tags, mode) = edit;
         library.EditTags(chosenMods.Cast<SecondLevelFolderItem>()
@@ -118,7 +118,7 @@ public sealed partial class WorkspacePage
             {
                 try
                 {
-                    var repo = _host.GetSelectedRepository();
+                    var repo = _services.Repositories.Selected;
                     if (repo is null) return;
                     string role = Path.Combine(repo.SourcePath, filter.Character.Replace('/', Path.DirectorySeparatorChar));
                     if (!Directory.Exists(role) || !OnlinePage.IsPathInsideDirectory(role, repo.SourcePath))
@@ -144,7 +144,7 @@ public sealed partial class WorkspacePage
 
     private async Task SaveLocalFilterAsync()
     {
-        var repo = _host.GetSelectedRepository();
+        var repo = _services.Repositories.Selected;
         var library = SelectedLocalLibrary();
         if (repo is null || library is null || _host.Characters.Selected is not { } role) return;
         var snapshot = new LocalModFilter { Character = WorkspaceIdentity.Relative(repo.SourcePath, role.Path), Search = _repositoryModSearch!.Text, Tag = _localTagFilter };

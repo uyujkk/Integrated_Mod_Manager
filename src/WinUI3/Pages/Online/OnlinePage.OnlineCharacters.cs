@@ -16,7 +16,7 @@ public sealed partial class OnlinePage
 {
     internal void PopulateOnlineCharacterOptions()
     {
-        EnsureOnlineCharacterOptionsForRepository(_host.GetSelectedRepository());
+        EnsureOnlineCharacterOptionsForRepository(_services.Repositories.Selected);
         IReadOnlyList<OnlineCharacterOption> visibleCharacters = GetVisibleOnlineCharacterOptions();
         _isApplyingOnlineCharacterSelection = true;
         try
@@ -246,7 +246,7 @@ public sealed partial class OnlinePage
 
     internal void RefreshOnlineCharacterAvatarStrip()
     {
-        EnsureOnlineCharacterOptionsForRepository(_host.GetSelectedRepository());
+        EnsureOnlineCharacterOptionsForRepository(_services.Repositories.Selected);
         IReadOnlyList<OnlineCharacterOption> visibleCharacters = GetVisibleOnlineCharacterOptions();
         string characterSignature = string.Join(";", visibleCharacters.Select(item => $"{item.Key}:{item.DisplayNameZh}:{item.DisplayNameEn}:{item.CategoryId}:{item.AvatarUrl}:{item.WikiOrder}"));
         string signature = $"{_services.Language.Current}|{_services.Appearance.IsDark}|{_isLoadingOnlineMods}|{_onlinePage.CharacterFilter}|{_onlinePage.TotalCount}|horizontal={_useHorizontalOnlineCharacterRail}|{characterSignature}";
@@ -309,8 +309,8 @@ public sealed partial class OnlinePage
             VerticalAlignment = VerticalAlignment.Center,
             CornerRadius = new CornerRadius(avatarSize / 2),
             BorderThickness = new Thickness(isSelected ? 2 : 1),
-            BorderBrush = _host.GetAppThemeBrush(isSelected ? "AppNavSelectedBorderBrush" : "AppCardBorderBrush"),
-            Background = _host.GetAppThemeBrush("AppInsetBackgroundBrush")
+            BorderBrush = GetAppThemeBrush(isSelected ? "AppNavSelectedBorderBrush" : "AppCardBorderBrush"),
+            Background = GetAppThemeBrush("AppInsetBackgroundBrush")
         };
 
         if (!string.IsNullOrWhiteSpace(avatarUrl))
@@ -439,9 +439,9 @@ public sealed partial class OnlinePage
             HorizontalContentAlignment = _useHorizontalOnlineCharacterRail
                 ? HorizontalAlignment.Center
                 : HorizontalAlignment.Stretch,
-            Background = _host.GetAppThemeBrush(isSelected ? "AppSecondarySelectedBrush" : "AppSecondaryDefaultBrush"),
-            BorderBrush = _host.GetAppThemeBrush(isSelected ? "AppNavSelectedBorderBrush" : "AppCardBorderBrush"),
-            Foreground = _host.GetAppThemeBrush(isSelected ? "AppSecondarySelectedForegroundBrush" : "AppSecondaryDefaultForegroundBrush")
+            Background = GetAppThemeBrush(isSelected ? "AppSecondarySelectedBrush" : "AppSecondaryDefaultBrush"),
+            BorderBrush = GetAppThemeBrush(isSelected ? "AppNavSelectedBorderBrush" : "AppCardBorderBrush"),
+            Foreground = GetAppThemeBrush(isSelected ? "AppSecondarySelectedForegroundBrush" : "AppSecondaryDefaultForegroundBrush")
         };
         OnlineCharacterOption? characterOption = _onlinePage.CharacterOptions.FirstOrDefault(item =>
             string.Equals(item.Key, character, StringComparison.OrdinalIgnoreCase));
@@ -468,7 +468,7 @@ public sealed partial class OnlinePage
             return GetOnlineCharacterDisplayName(option);
         }
 
-        if (IsEndfieldRepository(_host.GetSelectedRepository()))
+        if (IsEndfieldRepository(_services.Repositories.Selected))
         {
             EndfieldCharacterInfo? character = FindEndfieldCharacter(characterName);
             return character is null ? characterName : GetOnlineCharacterDisplayName(character);

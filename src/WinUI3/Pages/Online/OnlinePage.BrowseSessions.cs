@@ -17,7 +17,7 @@ public sealed partial class OnlinePage
 
     private string? CurrentBrowseSessionKey()
     {
-        var repository = _host.GetSelectedRepository();
+        var repository = _services.Repositories.Selected;
         return repository is null ? null : WorkspaceIdentity.Online(repository.Id, repository.SourcePath,
             GetEffectiveOnlineSource(repository), GetEffectiveOnlineCategoryId(repository));
     }
@@ -30,7 +30,7 @@ public sealed partial class OnlinePage
         CancelOnlineModListRequest();
         _lastLoadedOnlineConfigKey = null;
         _onlinePage.Mods.Clear();
-        EnsureOnlineCharacterOptionsForRepository(_host.GetSelectedRepository());
+        EnsureOnlineCharacterOptionsForRepository(_services.Repositories.Selected);
         ++_browseRestoreRevision;
         var state = key is not null && _onlinePreferences.BrowseSessions.TryGetValue(key, out var saved) && saved is not null
             ? saved.Sanitize() : new OnlineBrowseSession { Layout = _onlinePage.CardLayoutMode.ToString() };

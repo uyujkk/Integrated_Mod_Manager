@@ -41,7 +41,7 @@ public sealed partial class WorkspacePage
     private async Task ShowExistingModImportAsync()
     {
         if (_existingModImportBusy) return;
-        WorkspaceRepository? repository = _host.GetSelectedRepository();
+        WorkspaceRepository? repository = _services.Repositories.Selected;
         if (repository is null || !Directory.Exists(repository.SourcePath)) return;
         OnlineDownloadContext context = OnlinePage.CaptureOnlineDownloadContext(repository);
         string[] characters = Directory.GetDirectories(context.RepositoryPath).OrderBy(Path.GetFileName).ToArray();
@@ -50,7 +50,7 @@ public sealed partial class WorkspacePage
             await ShowMessageAsync(T("ExistingModImport.CreateACharacterFolderInThis"), T("ExistingModImport.ChooseATargetCharacter"));
             return;
         }
-        if (await ExistingModImportDialogs.ChooseAsync(_services, characters, _host.Characters.Selected?.Path, () => _host.PickFolderAsync()) is not { } chosen) return;
+        if (await ExistingModImportDialogs.ChooseAsync(_services, characters, _host.Characters.Selected?.Path, () => _services.Dialogs.PickFolderAsync()) is not { } chosen) return;
         (string source, string destination) = chosen;
         _existingModImportBusy = true;
         using var cancellation = new CancellationTokenSource();
@@ -76,7 +76,7 @@ public sealed partial class WorkspacePage
                     (done, total) => DispatcherQueue.TryEnqueue(() => status.Text = T("ExistingModImport.CopiedMods", done, total)), cancellation.Token));
             }
             finally { _services.Dialogs.Close(operation); await shown; }
-            if (_host.GetSelectedRepository()?.Id == context.RepositoryId) await RefreshListsAsync();
+            if (_services.Repositories.Selected?.Id == context.RepositoryId) await RefreshListsAsync();
             ShowAppNotification(T("ExistingModImport.Imported"));
         }
         catch (OperationCanceledException)
@@ -95,7 +95,7 @@ public sealed partial class WorkspacePage
     private async Task UndoExistingModImportAsync()
     {
         string? manifest = _host.OnlineView._onlinePreferences.LastImportManifest;
-        WorkspaceRepository? repository = _host.GetSelectedRepository();
+        WorkspaceRepository? repository = _services.Repositories.Selected;
         if (_existingModImportBusy || manifest is null || repository is null) return;
         try
         {
@@ -117,7 +117,7 @@ public sealed partial class WorkspacePage
 
     private async Task RecoverExistingModImportAsync()
     {
-        WorkspaceRepository? repository = _host.GetSelectedRepository();
+        WorkspaceRepository? repository = _services.Repositories.Selected;
         if (_existingModImportBusy || repository is null) return;
         _existingModImportBusy = true;
         try

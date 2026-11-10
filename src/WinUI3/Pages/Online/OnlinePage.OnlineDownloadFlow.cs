@@ -20,7 +20,7 @@ public sealed partial class OnlinePage
         {
             OnlineModCard? latestMod = await FetchGameBananaModCardAsyncV2(
                 mod.ItemId,
-                useEndfieldMetadata: useEndfieldMetadata ?? IsEndfieldRepository(_host.GetSelectedRepository()),
+                useEndfieldMetadata: useEndfieldMetadata ?? IsEndfieldRepository(_services.Repositories.Selected),
                 cancellationToken: cancellationToken);
             if (latestMod is null)
             {
@@ -91,7 +91,7 @@ public sealed partial class OnlinePage
         IReadOnlyCollection<string>? capturedCharacterAliases = null,
         string? confirmedDestination = null, bool batchConfirmed = false)
     {
-        WorkspaceRepository? initialRepository = _host.GetSelectedRepository();
+        WorkspaceRepository? initialRepository = _services.Repositories.Selected;
         OnlineDownloadContext context = capturedContext ?? CaptureOnlineDownloadContext(initialRepository);
         bool useEndfieldMetadata = capturedEndfieldMetadata ?? IsEndfieldRepository(initialRepository);
         IReadOnlyCollection<string> characterAliases = capturedCharacterAliases ?? GetCharacterFolderAliases(mod);
@@ -231,14 +231,14 @@ public sealed partial class OnlinePage
             // failed task or delete it. A changed repository must not receive the old selection.
             try
             {
-                WorkspaceRepository? repository = _host.GetSelectedRepository();
+                WorkspaceRepository? repository = _services.Repositories.Selected;
                 if (repository?.Id == context.RepositoryId
                     && string.Equals(repository.SourcePath, context.RepositoryPath, StringComparison.OrdinalIgnoreCase)
                     && !string.IsNullOrWhiteSpace(context.RepositoryPath)
                     && IsPathInsideDirectory(extractFolder, context.RepositoryPath))
                 {
                     await _host.RefreshListsAsync();
-                    repository = _host.GetSelectedRepository();
+                    repository = _services.Repositories.Selected;
                     if (repository?.Id == context.RepositoryId
                         && string.Equals(repository.SourcePath, context.RepositoryPath, StringComparison.OrdinalIgnoreCase))
                         _host.SelectSecondLevelByPath(extractFolder);
@@ -397,7 +397,7 @@ public sealed partial class OnlinePage
 
     private TrackedModOrigin? FindInstalledOnlineMod(OnlineModCard mod)
     {
-        WorkspaceRepository? repository = _host.GetSelectedRepository();
+        WorkspaceRepository? repository = _services.Repositories.Selected;
         string repositoryPath = repository?.SourcePath ?? string.Empty;
 
         foreach (TrackedModOrigin origin in _host.TrackedModOrigins.Values)
@@ -753,6 +753,6 @@ public sealed partial class OnlinePage
             }
         }
 
-        return await _host.PickFolderAsync();
+        return await _services.Dialogs.PickFolderAsync();
     }
 }

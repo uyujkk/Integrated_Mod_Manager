@@ -118,7 +118,7 @@ public sealed partial class WorkspacePage
         box.Resources["TextControlBorderBrushPointerOver"] = transparentBrush;
         box.Resources["TextControlBorderBrushDisabled"] = transparentBrush;
         box.Resources["TextControlBorderBrushReadOnly"] = transparentBrush;
-        box.Resources["TextControlForegroundReadOnly"] = _host.GetAppThemeBrush("AppNavDefaultForegroundBrush");
+        box.Resources["TextControlForegroundReadOnly"] = GetAppThemeBrush("AppNavDefaultForegroundBrush");
     }
 
     private void OnShortcutKeyBoxGotFocus(object sender, RoutedEventArgs e)
@@ -139,10 +139,10 @@ public sealed partial class WorkspacePage
 
     internal void UpdateShortcutKeyFocusVisuals()
     {
-        Brush normalBackground = _host.GetAppThemeBrush("AppInsetBackgroundBrush");
-        Brush normalBorder = _host.GetAppThemeBrush("AppCardBorderBrush");
-        Brush activeBackground = _host.GetAppThemeBrush("AppAccentSoftBrush");
-        Brush activeBorder = _host.GetAppThemeBrush("AppNavSelectedBorderBrush");
+        Brush normalBackground = GetAppThemeBrush("AppInsetBackgroundBrush");
+        Brush normalBorder = GetAppThemeBrush("AppCardBorderBrush");
+        Brush activeBackground = GetAppThemeBrush("AppAccentSoftBrush");
+        Brush activeBorder = GetAppThemeBrush("AppNavSelectedBorderBrush");
         object? focusedElement = Content is FrameworkElement root && root.XamlRoot is not null
             ? FocusManager.GetFocusedElement(root.XamlRoot)
             : null;

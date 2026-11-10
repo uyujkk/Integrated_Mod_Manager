@@ -22,7 +22,7 @@ public sealed partial class OnlinePage
     private async Task ShowOnlineLibraryAsync()
     {
         UiCrashDiagnostics.RecordAction("Author and saved workspace opened");
-        var repo = _host.GetSelectedRepository();
+        var repo = _services.Repositories.Selected;
         if (repo is null) return;
         string category = GetEffectiveOnlineCategoryId(repo);
         string contextKey = GetOnlineDetailContextKey();

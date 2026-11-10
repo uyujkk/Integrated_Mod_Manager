@@ -18,7 +18,7 @@ public sealed partial class WorkspacePage
 
     private void AddCharacterSelectionMenuItem(MenuFlyout menu, FirstLevelFolderItem item)
     {
-        WorkspaceRepository? repository = _host.GetSelectedRepository();
+        WorkspaceRepository? repository = _services.Repositories.Selected;
         if (repository is null)
         {
             return;
@@ -56,7 +56,7 @@ public sealed partial class WorkspacePage
     private void UpdateCharacterHeaderActions()
     {
         if (CharacterMultipleModsToggle is null || CharacterAvatarButton is null) return;
-        WorkspaceRepository? repository = _host.GetSelectedRepository();
+        WorkspaceRepository? repository = _services.Repositories.Selected;
         var item = _host.Characters.Selected;
         bool allows = repository is not null && item is not null
             && CharacterSelectionPolicy.AllowsMultiple(item.Name, repository.AllowMultipleModsPerCharacter, repository.CharacterSelectionOverrides);
@@ -82,7 +82,7 @@ public sealed partial class WorkspacePage
 
     private void OnCharacterMultipleModsToggleClicked(object sender, RoutedEventArgs e)
     {
-        if (_host.GetSelectedRepository() is { } repository && _host.Characters.Selected is { } item)
+        if (_services.Repositories.Selected is { } repository && _host.Characters.Selected is { } item)
         {
             SetCharacterAllowsMultiple(repository, item, CharacterMultipleModsToggle.IsChecked == true);
         }

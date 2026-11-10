@@ -1,5 +1,6 @@
 using Microsoft.UI.Xaml;
 using Microsoft.UI.Xaml.Controls;
+using Microsoft.UI.Xaml.Media;
 
 namespace ModFolderCopier.WinUI;
 
@@ -25,6 +26,9 @@ public sealed partial class OnlinePage : UserControl
     }
 
     private bool IsChineseUi => _services.Language.IsChinese;
+
+    // The App*Brush tokens of Themes/Tokens.xaml, in the theme the window shows (stage J finish, step 2).
+    private Brush GetAppThemeBrush(string resourceKey) => ThemeTokens.Get(resourceKey, _services.Appearance.ThemeKey);
 
     private string T(string key) => _services.Language.T(key);
 

@@ -16,7 +16,7 @@ public sealed partial class WorkspacePage
 {
     internal void AnimateImageReveal(UIElement image)
     {
-        if (_host.ShouldReduceAnimations)
+        if (_services.Appearance.ReduceAnimations())
         {
             ElementCompositionPreview.GetElementVisual(image).Opacity = 1f;
             return;
@@ -52,7 +52,7 @@ public sealed partial class WorkspacePage
     {
         try
         {
-            string? picked = await _host.PickFolderAsync();
+            string? picked = await _services.Dialogs.PickFolderAsync();
             if (!string.IsNullOrEmpty(picked))
             {
                 Paths.Source = picked;
@@ -70,7 +70,7 @@ public sealed partial class WorkspacePage
     {
         try
         {
-            string? picked = await _host.PickFolderAsync();
+            string? picked = await _services.Dialogs.PickFolderAsync();
             if (!string.IsNullOrEmpty(picked))
             {
                 Paths.Target = picked;
@@ -88,7 +88,7 @@ public sealed partial class WorkspacePage
     {
         try
         {
-            string? picked = await _host.PickFileAsync([".exe", ".bat", ".cmd"]);
+            string? picked = await _services.Dialogs.PickFileAsync([".exe", ".bat", ".cmd"]);
             if (!string.IsNullOrEmpty(picked))
             {
                 Paths.Launcher = picked;
@@ -101,11 +101,11 @@ public sealed partial class WorkspacePage
         }
     }
 
-    internal void OnOpenSourceClicked(object sender, RoutedEventArgs e) => _host.OpenDirectory(Paths.Source, T("LocalLibrary.SourceFolder"));
+    internal void OnOpenSourceClicked(object sender, RoutedEventArgs e) => _services.Dialogs.OpenDirectory(Paths.Source, T("LocalLibrary.SourceFolder"));
 
-    internal void OnOpenTargetClicked(object sender, RoutedEventArgs e) => _host.OpenDirectory(Paths.Target, T("LocalLibrary.TargetFolder"));
+    internal void OnOpenTargetClicked(object sender, RoutedEventArgs e) => _services.Dialogs.OpenDirectory(Paths.Target, T("LocalLibrary.TargetFolder"));
 
-    internal void OnOpenLauncherClicked(object sender, RoutedEventArgs e) => _host.OpenFileLocation(Paths.Launcher, T("LocalLibrary.Launcher"));
+    internal void OnOpenLauncherClicked(object sender, RoutedEventArgs e) => _services.Dialogs.OpenFileLocation(Paths.Launcher, T("LocalLibrary.Launcher"));
 
     internal async void OnRunLauncherClicked(object sender, RoutedEventArgs e) => await _host.RunUiActionAsync("OnRunLauncherClicked", _host.RunRepositoryLauncherAsync);
 
@@ -124,7 +124,7 @@ public sealed partial class WorkspacePage
                 return;
             }
 
-            string? archive = await _host.PickFileAsync(_host.SupportedArchiveExtensions
+            string? archive = await _services.Dialogs.PickFileAsync(_host.SupportedArchiveExtensions
                 .Select(value => Path.GetExtension(value)!)
                 .Where(extension => !string.IsNullOrWhiteSpace(extension))
                 .Distinct(StringComparer.OrdinalIgnoreCase).ToArray());
@@ -196,7 +196,7 @@ public sealed partial class WorkspacePage
             Text = T("LocalLibrary.OpenFolder"),
             Icon = new FontIcon { Glyph = "\uE838" }
         };
-        openItem.Click += (_, _) => _host.OpenDirectory(item.Path, T("LocalLibrary.FirstLevelFolder"));
+        openItem.Click += (_, _) => _services.Dialogs.OpenDirectory(item.Path, T("LocalLibrary.FirstLevelFolder"));
         menu.Items.Add(openItem);
 
         var renameItem = new MenuFlyoutItem
@@ -290,7 +290,7 @@ public sealed partial class WorkspacePage
                 return;
             }
 
-            WorkspaceRepository repository = _host.GetSelectedRepository()!;
+            WorkspaceRepository repository = _services.Repositories.Selected!;
             string? loader = string.IsNullOrWhiteSpace(repository.TargetPath) ? null : repository.TargetPath;
             CharacterRenamePlan plan = await Task.Run(() => CharacterRename.Prepare(item.Path, trimmed, loader));
             if (!plan.CanRename)
@@ -397,7 +397,7 @@ public sealed partial class WorkspacePage
             Text = T("LocalLibrary.OpenModFolder"),
             Icon = new FontIcon { Glyph = "\uE838" }
         };
-        openItem.Click += (_, _) => _host.OpenDirectory(item.Path, T("Common.ModFolder"));
+        openItem.Click += (_, _) => _services.Dialogs.OpenDirectory(item.Path, T("Common.ModFolder"));
         menu.Items.Add(openItem);
         menu.Items.Add(new MenuFlyoutSeparator());
 
@@ -446,7 +446,7 @@ public sealed partial class WorkspacePage
                 return;
             }
 
-            string loaderRoot = (_host.GetSelectedRepository()?.TargetPath ?? Paths.Target).Trim();
+            string loaderRoot = (_services.Repositories.Selected?.TargetPath ?? Paths.Target).Trim();
             // Without the full list of links, deleting the folder could leave links to a missing folder (issue #109):
             // a loader folder that is set but cannot be reached stops the delete like a failed scan.
             LinkScanResult scan = await Task.Run(() => DirectoryLinkDeployment.ScanLinksTargeting(item.Path, loaderRoot));
@@ -507,7 +507,7 @@ public sealed partial class WorkspacePage
 
     private void SetDropTargetHighlight(Border border, bool isActive)
     {
-        border.BorderBrush = _host.GetAppThemeBrush(isActive ? "AppNavSelectedBorderBrush" : "AppCardBorderBrush");
+        border.BorderBrush = GetAppThemeBrush(isActive ? "AppNavSelectedBorderBrush" : "AppCardBorderBrush");
         border.BorderThickness = isActive ? new Thickness(2) : new Thickness(1);
     }
 
@@ -684,7 +684,7 @@ public sealed partial class WorkspacePage
         }
 
         _host.SaveConfig();
-        string repositoryId = _host.GetSelectedRepository()?.Id ?? sourceDir;
+        string repositoryId = _services.Repositories.Selected?.Id ?? sourceDir;
         using var cancellation = new CancellationTokenSource();
         _host.FolderRefreshCancellation = cancellation;
         _workspaceScanning = true;
@@ -706,7 +706,7 @@ public sealed partial class WorkspacePage
             timing?.SetCounts(loaded.SecondCount);
             ApplyFirstLevelFilter();
             _ = RefreshCharacterFolderAvatarsAsync();
-            if (_host.GetSelectedRepository() is { SourcePath: { Length: > 0 } scannedSource } scanned
+            if (_services.Repositories.Selected is { SourcePath: { Length: > 0 } scannedSource } scanned
                 && string.Equals(Path.GetFullPath(scannedSource).TrimEnd('\\'), Path.GetFullPath(sourceDir).TrimEnd('\\'), StringComparison.OrdinalIgnoreCase))
                 _ = _host.SeedDefaultSlotsAsync(scanned, loaded.Items);
             FirstCountTextBlock.Text = _host.Characters.All.Count.ToString();
@@ -839,7 +839,7 @@ public sealed partial class WorkspacePage
         }
 
         string targetPath = GetTargetDirectoryPath(targetDir, item.Path);
-        WorkspaceRepository? repository = _host.GetSelectedRepository();
+        WorkspaceRepository? repository = _services.Repositories.Selected;
         if (repository is null)
         {
             await ShowMessageAsync(T("Common.SelectARepositoryFirst"), T("LocalLibrary.CannotContinue"));

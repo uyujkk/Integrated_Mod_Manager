@@ -1,3 +1,4 @@
+using System.Diagnostics;
 using IntegratedModManager.Core.Layout;
 using Microsoft.UI.Xaml;
 using Microsoft.UI.Xaml.Controls;
@@ -24,6 +25,11 @@ internal sealed class DialogService(LanguageService language)
     private string T(string key) => language.T(key);
 
     private string T(string key, params object?[] values) => language.T(key, values);
+
+    private Func<nint> _windowHandle = () => 0;
+
+    /// <summary>The window's handle, for the file pickers (stage J finish, step 2).</summary>
+    public void AttachWindow(Func<nint> handle) => _windowHandle = handle;
 
     /// <summary>Called once the window exists.</summary>
     public void Attach(Func<XamlRoot?> root, Func<ElementTheme>? theme = null)
@@ -216,5 +222,79 @@ internal sealed class DialogService(LanguageService language)
         if (dialog.RequestedTheme == ElementTheme.Default) dialog.RequestedTheme = _theme();
         if (dialog.Style is null && Application.Current.Resources.TryGetValue("DefaultContentDialogStyle", out object style))
             dialog.Style = (Style)style;
+    }
+
+    // Pickers and opening folders, files and links (moved from the window in stage J finish, step 2).
+    public async Task OpenExternalUrlAsync(string? url, string failureTitle)
+    {
+        if (string.IsNullOrWhiteSpace(url))
+        {
+            await MessageAsync(failureTitle, T("Dialogs.ThisEntryDoesNotHaveA"));
+            return;
+        }
+
+        try
+        {
+            Process.Start(new ProcessStartInfo
+            {
+                FileName = url,
+                UseShellExecute = true
+            });
+        }
+        catch (Exception ex)
+        {
+            await MessageAsync(failureTitle, T("Common.FailedToOpenLink") + ex.Message);
+        }
+    }
+
+    public Task<string?> PickFolderAsync(string? preferredPath = null) =>
+        Task.FromResult(NativeFileDialog.PickFolder(_windowHandle()));
+
+    public Task<string?> PickFileAsync(string[] extensions) =>
+        Task.FromResult(NativeFileDialog.PickFile(_windowHandle(), extensions));
+
+    public void OpenDirectory(string? directory, string title)
+    {
+        try
+        {
+            if (string.IsNullOrWhiteSpace(directory) || !Directory.Exists(directory))
+            {
+                _ = MessageAsync(T("Common.InvalidPath"), title + T("Dialogs.DoesNotExistPleaseChooseIt"));
+                return;
+            }
+
+            Process.Start(new ProcessStartInfo
+            {
+                FileName = directory,
+                UseShellExecute = true
+            });
+        }
+        catch (Exception ex)
+        {
+            _ = MessageAsync(T("Dialogs.OperationFailed"), T("Dialogs.FailedToOpenFolder") + ex.Message);
+        }
+    }
+
+    public void OpenFileLocation(string? filePath, string title)
+    {
+        try
+        {
+            if (string.IsNullOrWhiteSpace(filePath) || !File.Exists(filePath))
+            {
+                _ = MessageAsync(T("Common.InvalidPath"), title + T("Dialogs.DoesNotExistPleaseChooseIt"));
+                return;
+            }
+
+            Process.Start(new ProcessStartInfo
+            {
+                FileName = "explorer.exe",
+                Arguments = "/select,\"" + filePath + "\"",
+                UseShellExecute = true
+            });
+        }
+        catch (Exception ex)
+        {
+            _ = MessageAsync(T("Dialogs.OperationFailed"), T("Dialogs.FailedToOpenFileLocation") + ex.Message);
+        }
     }
 }

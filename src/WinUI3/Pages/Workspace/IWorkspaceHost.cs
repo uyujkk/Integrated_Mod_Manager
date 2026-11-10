@@ -21,21 +21,15 @@ internal interface IWorkspaceHost
     Windows.Foundation.Rect Bounds { get; }
     object OnlineNavButton { get; }
     void AttachTrackedTextInput(TextBox box);
-    Brush GetAppThemeBrush(string resourceKey);
     void OnOnlineNavClicked(object sender, RoutedEventArgs e);
 
     // Errors, the error log and listing a repository through the local index.
     (List<FirstLevelFolderItem> Items, int SecondCount) LoadFolderItemsUsingIndex(string repositoryId, string sourceDir, string targetDir, CancellationToken cancellationToken, out int warningCount);
     void LogApplicationIssue(string operation, Exception exception);
-    bool ShouldReduceAnimations { get; }
     void ReportUiActionFailure(string operation, Exception exception);
     Task RunUiActionAsync(string operation, Func<Task> action);
 
     // Pickers, folders and the image viewer.
-    void OpenDirectory(string? directory, string title);
-    void OpenFileLocation(string? filePath, string title);
-    Task<string?> PickFileAsync(string[] extensions);
-    Task<string?> PickFolderAsync(string? preferredPath = null);
     Task ShowImageViewerAsync(ImageSource? source, string title, IReadOnlyList<string>? imageUrls = null, int selectedIndex = 0);
 
     // Saving the settings (beta-shell.json) and config.ini.
@@ -47,7 +41,6 @@ internal interface IWorkspaceHost
     void RefreshLocalizedStates();
 
     // Repositories: the selected one, switching, editing and the deployment mode switch.
-    WorkspaceRepository? GetSelectedRepository();
     void OnEditRepositoryDetailsClicked(object sender, RoutedEventArgs e);
     void SwitchRepository(string repositoryId, bool openManager);
 
