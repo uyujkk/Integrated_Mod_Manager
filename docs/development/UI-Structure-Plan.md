@@ -216,6 +216,24 @@ J0 结果（2026-11-04，分支 `claude/ui-j0-prep`）：
 - 安装后刷新工作区（`RefreshListsAsync`、`SelectSecondLevelByPath`、`SetBusyState`）改成请求事件；
 - 窗口还在用的页面小函数（`IsPathInsideDirectory`、`FormatFileSize` 等，现在是 `OnlinePage` 的静态成员）移进 Core。
 
+#### J7 牵连清单（Mod 工作区）
+
+2026-11-10 清点（`claude/ui-j7-workspace`，main `4f8da19`）。
+
+- 代码：20 个 partial 文件共 6,455 行。原计划的 17 个，加上 J5 留下的 `ShortcutBindings`（快捷键标签页的编辑器，690 行），以及之后新增的 `CopyOwnership`（#107）和 `CharacterRename`（#108）。
+- XAML：`MainWindow.xaml:207-647`（441 行），加上隐藏容器 `CombinationProfileControlsHost`（`:652-686`，J3 留下的组合预设卡片），共 109 个命名控件。
+
+| 方向 | 数量 | 主要内容 |
+| --- | --- | --- |
+| 别的文件用工作区的成员 | 约 90 个 | **约一半来自快捷键页和浮窗**：`ShortcutPanel`、`ShortcutPresets`、`ShortcutsHost`、`HotReload`、`SlotCapture`、`ShortcutCapture`、`CharacterFollow`。它们用状态槽位、默认槽位、预设预览和组合预设的代码，如 `RefreshPersistentSlotControls`、`TryGetDefaultPersistentIniPath`、`CapturePresetPreviewAsync`、`_applyingCombinationProfile`、`_restoringPersistentRuntime`。其余来自：配置读写（`Configuration`、`ConfigurationProfiles`）；外壳（`RefreshListsAsync`、`SelectSecondLevelByPath`、命令面板）；仪表盘（路径与启动器按钮的处理）；在线页的 `IOnlineHost`（安装后刷新、解压、自动快捷键绑定）；更新页（打开组合工作区） |
+| 工作区用窗口的成员 | 约 71 个 | 共享状态：`_characters`、`_secondLevelItems`、`_currentSecondLevelPath`、`_modBindings`、`_modLinks`、`_modPersistentSlots`、`_trackedModOrigins`、`_configurationProfiles`、`_shortcuts`、`_overlay`。还有对话框、保存设置、仓库切换、部署模式开关、安装事务回滚、热重载、浮窗刷新、在线页 |
+
+规模：XL（L 偏大以上），比 J6 大约 20%。真正的难点不在行数：状态槽位、预设预览、组合预设这几块由工作区和快捷键浮窗共用，而这几块操作的结果（状态槽位保存、组合预设恢复）在不能改动的清单上。
+
+拆分（待用户决定）：
+- 方案一（建议）：J7 只移界面，即工作区页面、角色和 Mod 列表、详情、快捷键编辑器、导入、标签、批量操作、复制归属和重命名。状态槽位、默认槽位、预设预览、组合预设的逻辑这次留在窗口里，页面经 `IWorkspaceHost` 使用；之后单独拆成 `SlotService` 和 `CombinationService`。外观按 Fluent 方案放到 J7-b，单独一个 PR，在 J7 合并之后。
+- 方案二：照 J6 的做法，全部文件随页面移走，浮窗和快捷键页经 `_workspaceView` 调用；J7 和 J7-b 在同一个分支里分提交完成。
+
 ### J8. 对话框与资源
 
 - 每种对话框一个类（`Dialogs/` 下），由 `DialogService` 统一设置 `XamlRoot` 并保证同一时间只有一个对话框。
