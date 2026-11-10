@@ -33,6 +33,9 @@ public sealed partial class SettingsPage : UserControl
             if (args.NewSize.Width > 0) UpdateLayoutState(args.NewSize.Width);
             if (Math.Abs(args.NewSize.Width - args.PreviousSize.Width) > 0.5) QueueBalanceColumns();
         };
+        // A page made while hidden lays its groups out later; balance again once their heights are known.
+        SettingsMainPanel.SizeChanged += (_, args) => { if (Math.Abs(args.NewSize.Height - args.PreviousSize.Height) > 0.5) QueueBalanceColumns(); };
+        SettingsRailPanel.SizeChanged += (_, args) => { if (Math.Abs(args.NewSize.Height - args.PreviousSize.Height) > 0.5) QueueBalanceColumns(); };
         ApplyLanguage();
     }
 
@@ -252,6 +255,10 @@ public sealed partial class SettingsPage : UserControl
         QueueBalanceColumns();
     }
 
+    private double _balancedWidth = -1;
+    private double _balancedContent;
+    private int _balanceRounds;
+
     // After layout, so the heights are current.
     private void QueueBalanceColumns()
         => DispatcherQueue.TryEnqueue(Microsoft.UI.Dispatching.DispatcherQueuePriority.Low, BalanceColumns);
@@ -265,6 +272,16 @@ public sealed partial class SettingsPage : UserControl
         bool[] move = new bool[movable.Length];
         if (_twoColumns == true)
         {
+            // Heights are only known once the groups have been laid out; until then the panels' SizeChanged brings
+            // the balance back here. The same width and content heights give the same answer, so a move that only
+            // changes a group's wrapping does not start another round (at most a few rounds per width).
+            if (movable.Any(group => group.ActualHeight <= 0) || SettingsMainPanel.DesiredSize.Height <= 0) return;
+            double content = SettingsMainPanel.DesiredSize.Height + SettingsRailPanel.DesiredSize.Height;
+            double width = Math.Round(SettingsScrollViewer.ActualWidth);
+            if (width != _balancedWidth) { _balancedWidth = width; _balanceRounds = 0; }
+            else if (Math.Abs(content - _balancedContent) < 40 || _balanceRounds >= 3) return;
+            _balancedContent = content;
+            _balanceRounds++;
             double movedHeight = movable.Where(group => SettingsMainPanel.Children.Contains(group)).Sum(group => group.ActualHeight + SettingsMainPanel.Spacing);
             move = SettingsLayoutPolicy.BalanceColumns(
                 // Its content height: the panel itself stretches to the row, which the side column may set.

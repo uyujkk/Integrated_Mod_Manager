@@ -19,11 +19,7 @@ public sealed partial class MainWindow
 {
     private void RegisterTrackedTextInputs()
     {
-        // The dashboard's path boxes are on its page (stage J4).
-        foreach (TextBox box in ((DashboardPage)_pages[PrimarySection.Dashboard]).PathTextBoxes)
-        {
-            AttachTrackedTextInput(box);
-        }
+        // The dashboard's path boxes are registered when that page is created (GetPage).
         AttachTrackedTextInput(_workspaceView.FirstLevelSearchTextBox);
         AttachTrackedTextInput(_workspaceView.ModLinkTextBox);
     }
@@ -55,7 +51,7 @@ public sealed partial class MainWindow
     {
         // What the click must show at once: the page and the navigation's selection, in this frame. The refreshes
         // below used to run first and held the selection back by 50-100 ms on every switch (J8 follow-up).
-        PageContentHost.Content = _pages[_currentPrimarySection];
+        PageContentHost.Content = GetPage(_currentPrimarySection);
         RefreshPrimaryNavigationVisuals();
         if (_currentPrimarySection == PrimarySection.Shortcuts)
         {
@@ -111,28 +107,37 @@ public sealed partial class MainWindow
         _pages[PrimarySection.Repository] = _workspaceView;
         // Stage J6: the Online page, created with the window.
         _pages[PrimarySection.Online] = _onlineView;
-        // Stage J2: the Settings page is a page of its own.
-        _pages[PrimarySection.Settings] = new SettingsPage(_services);
-        // Stage J4: the dashboard.
-        _pages[PrimarySection.Dashboard] = new DashboardPage(_services);
-        // Stage J3: the Updates page too.
-        _pages[PrimarySection.Updates] = new UpdatesPage(_services);
-        // Stage J5: the Shortcuts page.
-        _pages[PrimarySection.Shortcuts] = _shortcutsPage = new ShortcutsPage(_services);
+        // Settings (J2), the dashboard (J4), Updates (J3) and Shortcuts (J5) are created the first time they are shown
+        // (stage J finish, step 1) and kept from then on. They talk to the window only through AppServices and their
+        // view models and draw from the current state when they are made, so a language, theme or data change before
+        // then needs no catching up.
     }
 
-    private UIElement GetActiveSectionElement()
+    // The page for a section: made on first use, then kept, so switching keeps scroll positions and selections.
+    private UserControl GetPage(PrimarySection section)
     {
-        return _currentPrimarySection switch
+        if (_pages.TryGetValue(section, out UserControl? page)) return page;
+        page = section switch
         {
-            PrimarySection.Dashboard => _pages[PrimarySection.Dashboard],
-            PrimarySection.Repository => _pages[PrimarySection.Repository],
-            PrimarySection.Online => _pages[PrimarySection.Online],
-            PrimarySection.Updates => _pages[PrimarySection.Updates],
-            PrimarySection.Shortcuts => _pages[PrimarySection.Shortcuts],
-            _ => _pages[PrimarySection.Settings]
+            PrimarySection.Dashboard => CreateDashboardPage(),
+            PrimarySection.Updates => new UpdatesPage(_services),
+            PrimarySection.Shortcuts => _shortcutsPage = new ShortcutsPage(_services),
+            PrimarySection.Settings => new SettingsPage(_services),
+            _ => throw new ArgumentOutOfRangeException(nameof(section), section, "The workspace and Online pages are made with the window.")
         };
+        _pages[section] = page;
+        return page;
     }
+
+    private DashboardPage CreateDashboardPage()
+    {
+        var page = new DashboardPage(_services);
+        // The dashboard's path boxes take part in the window's text-box tracking (stage J4).
+        foreach (TextBox box in page.PathTextBoxes) AttachTrackedTextInput(box);
+        return page;
+    }
+
+    private UIElement GetActiveSectionElement() => GetPage(_currentPrimarySection);
 
     private void AnimateSectionEntrance(UIElement element)
     {
