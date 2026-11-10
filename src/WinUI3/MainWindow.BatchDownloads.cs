@@ -16,7 +16,7 @@ public sealed partial class MainWindow
     private async Task PrepareSavedBatchAsync(OnlineSavedMod[] saved, WorkspaceRepository repository)
     {
         if (_onlineDownloadActions.IsPreparing || saved.Length == 0) return;
-        if (!_downloadJournalAvailable)
+        if (!_services.Downloads.JournalAvailable)
         { await ShowMessageAsync(T("BatchDownloads.TheDownloadRecordIsUnreadableAnd"), T("BatchDownloads.CannotDownloadBatch")); return; }
         var context = CaptureOnlineDownloadContext(repository);
         string contextKey = GetOnlineDetailContextKey();

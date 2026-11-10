@@ -84,7 +84,7 @@ public sealed partial class MainWindow
             _onlinePreferences.RecentAuthors ??= [];
             _localLibraries = config?.LocalLibraries ?? new(StringComparer.OrdinalIgnoreCase);
             foreach (var library in _localLibraries.Values) library.Normalize();
-            _onlineDownloadScheduler.Limit = _onlinePreferences.ConcurrentDownloads;
+            _services.Downloads.Scheduler.Limit = _onlinePreferences.ConcurrentDownloads;
             _loadedUpdateCheckInterval = config?.UpdateCheckInterval;
             _updateCheckInterval = AppSelfUpdateEnabled ? ParseUpdateCheckInterval(_loadedUpdateCheckInterval) : UpdateCheckInterval.Manual;
             _navigationCollapsed = config?.NavigationCollapsed ?? false;

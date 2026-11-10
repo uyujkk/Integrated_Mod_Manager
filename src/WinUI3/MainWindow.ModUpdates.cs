@@ -54,7 +54,7 @@ public sealed partial class MainWindow
             RefreshUpdatesPane();
             work = Path.Combine(AppContext.BaseDirectory, "cache", "mod-updates", Guid.NewGuid().ToString("N"));
             Directory.CreateDirectory(work);
-            using IDisposable execution = await _onlineDownloadScheduler.AcquireAsync(task.Cancellation.Token);
+            using IDisposable execution = await _services.Downloads.Scheduler.AcquireAsync(task.Cancellation.Token);
             string archive = EnsureDownloadArchiveExtension(await DownloadOnlineModArchiveAsync(effective, work, task, task.Cancellation.Token));
             if (!IsSupportedArchiveFile(archive)) throw new InvalidDataException(T("ModUpdates.TheDownloadedFileIsNotA"));
             string payload = Path.Combine(work, "payload");

@@ -6,7 +6,6 @@ namespace ModFolderCopier.WinUI;
 
 public sealed partial class MainWindow
 {
-    private readonly OnlineDownloadScheduler _onlineDownloadScheduler = new(2);
 
     private async void OnOnlineDownloadOptionsClicked(object sender, RoutedEventArgs e)
     {
@@ -16,7 +15,7 @@ public sealed partial class MainWindow
                 is not { } options) return;
             _onlinePreferences.ConcurrentDownloads = options.Concurrency;
             _onlinePreferences.RememberDownloadFolders = options.RememberFolders;
-            _onlineDownloadScheduler.Limit = _onlinePreferences.ConcurrentDownloads;
+            _services.Downloads.Scheduler.Limit = _onlinePreferences.ConcurrentDownloads;
             SaveShellConfig();
         }
         catch (Exception ex)

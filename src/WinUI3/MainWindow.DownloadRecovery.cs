@@ -5,7 +5,6 @@ namespace ModFolderCopier.WinUI;
 
 public sealed partial class MainWindow
 {
-    private bool _downloadJournalAvailable = true;
     private bool _downloadJournalWarningShown;
     private int _restoredInterruptedDownloads;
 
@@ -13,26 +12,13 @@ public sealed partial class MainWindow
     {
         try
         {
-            var restored = _services.Downloads.Journal.Load();
-            foreach (var record in restored.Tasks)
-            {
-                _services.Downloads.Tasks.Add(new DownloadTaskItem
-                {
-                    Id = record.Id, Title = record.Title, SourceIdentity = record.SourceIdentity,
-                    DestinationPath = record.DestinationPath, ArchivePath = record.ArchivePath,
-                    State = record.State, Progress = record.Progress,
-                    StatusZh = record.StatusZh, StatusEn = record.StatusEn,
-                    RetryRequest = record.Request, RestoredFromJournal = true,
-                    Interrupted = record.Interrupted
-                });
-            }
-            _restoredInterruptedDownloads = restored.Tasks.Count(task => task.Interrupted);
-            if (restored.UsedBackup) LogApplicationIssue("Download queue recovered from backup", new IOException("The primary queue record was invalid; the previous complete record was loaded."));
+            (int interrupted, bool usedBackup) = _services.Downloads.Restore();
+            _restoredInterruptedDownloads = interrupted;
+            if (usedBackup) LogApplicationIssue("Download queue recovered from backup", new IOException("The primary queue record was invalid; the previous complete record was loaded."));
         }
         catch (Exception ex)
         {
-            // Never replace an unreadable queue with an empty one.
-            _downloadJournalAvailable = false;
+            // Never replace an unreadable queue with an empty one (the service stops using the journal).
             LogApplicationIssue("Load download recovery record", ex);
         }
     }
@@ -47,10 +33,8 @@ public sealed partial class MainWindow
         }
         try
         {
-            if (!_downloadJournalAvailable) throw new IOException(T("DownloadRecovery.TheDownloadRecordCouldNotBe"));
-            _services.Downloads.Journal.Save(_services.Downloads.Tasks.Select(task => ModUpdateRecoveryPolicy.ForSnapshot(new DownloadTaskRecord<OnlineDownloadRetryRequest>(
-                task.Id, task.Title, task.SourceIdentity, task.DestinationPath, task.State, task.Progress,
-                task.StatusZh, task.StatusEn, task.RetryRequest, task.ArchivePath, task.Interrupted))));
+            if (!_services.Downloads.JournalAvailable) throw new IOException(T("DownloadRecovery.TheDownloadRecordCouldNotBe"));
+            _services.Downloads.Save();
         }
         catch (Exception ex)
         {

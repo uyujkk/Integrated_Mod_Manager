@@ -176,7 +176,7 @@ public sealed partial class MainWindow
         {
             PersistDownloadTasks(required: true);
             RefreshOnlineDetailActionState();
-            using IDisposable execution = await _onlineDownloadScheduler.AcquireAsync(downloadTask.Cancellation.Token);
+            using IDisposable execution = await _services.Downloads.Scheduler.AcquireAsync(downloadTask.Cancellation.Token);
             _foregroundDownloadTaskId = downloadTask.Id;
             SetOnlineInstallBusy(true);
             installBusy = true;
