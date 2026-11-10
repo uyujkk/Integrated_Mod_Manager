@@ -165,4 +165,38 @@ public sealed class RepositoryWorkspacePolicyTests
         Assert.Equal(done, setup.Done);
         Assert.Equal(complete, setup.IsComplete);
     }
+
+    [Fact]
+    public void DraggedWidthsAreKeptWithinTheirBounds()
+    {
+        RepositoryWorkspaceLayout layout = RepositoryWorkspacePolicy.Layout(1600, 260, 420);
+        Assert.Equal(260, layout.CategoryWidth);
+        Assert.Equal(420, layout.DetailWidth);
+
+        layout = RepositoryWorkspacePolicy.Layout(1600, 90, 900);
+        Assert.Equal(RepositoryWorkspacePolicy.MinCharacterWidth, layout.CategoryWidth);
+        Assert.Equal(RepositoryWorkspacePolicy.MaxDetailWidth, layout.DetailWidth);
+    }
+
+    [Fact]
+    public void DraggedWidthsLeaveTheModListItsMinimum()
+    {
+        RepositoryWorkspaceLayout layout = RepositoryWorkspacePolicy.Layout(1000, 360, 560);
+        double list = 1000 - layout.CategoryWidth - layout.DetailWidth - 2 * RepositoryWorkspacePolicy.SplitterWidth;
+        Assert.True(list >= RepositoryWorkspacePolicy.MinModListWidth, $"Mod list {list}");
+        Assert.True(layout.DetailWidth >= RepositoryWorkspacePolicy.MinDetailWidth);
+    }
+
+    [Fact]
+    public void WithoutDraggedWidthsTheLayoutIsTheDefault()
+        => Assert.Equal(RepositoryWorkspacePolicy.Layout(1400), RepositoryWorkspacePolicy.Layout(1400, null, null));
+
+    [Fact]
+    public void ANarrowWorkspaceIgnoresTheDetailWidth()
+    {
+        RepositoryWorkspaceLayout layout = RepositoryWorkspacePolicy.Layout(800, 240, 500);
+        Assert.False(layout.InlineDetails);
+        Assert.Equal(0, layout.DetailWidth);
+        Assert.Equal(240, layout.CategoryWidth);
+    }
 }

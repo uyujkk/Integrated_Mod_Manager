@@ -624,20 +624,82 @@ public sealed partial class WorkspacePage
         UpdateRepositoryEmptyState();
     }
 
+    private PaneSplitter? _characterSplitter;
+    private PaneSplitter? _detailSplitter;
+
+    // The two column splitters (stage J7-b). Dragging one, or the arrow keys on a focused one, resizes the pane beside
+    // it within RepositoryWorkspacePolicy's bounds; the width is kept in the settings when the drag ends and used
+    // again on the next layout and start.
+    private void EnsureWorkspaceSplitters()
+    {
+        if (_characterSplitter is not null) return;
+        _characterSplitter = CreateWorkspaceSplitter("WorkspaceCharacterSplitter", T("RepositoryWorkspace.ResizeCharacters"));
+        _characterSplitter.Moved += (_, delta) =>
+        {
+            _modList.CharacterPaneWidth = (_modList.CharacterPaneWidth ?? WorkspaceWorkbench.ColumnDefinitions[0].ActualWidth) + delta;
+            ApplyWorkspacePaneWidths();
+        };
+        _detailSplitter = CreateWorkspaceSplitter("WorkspaceDetailSplitter", T("RepositoryWorkspace.ResizeDetails"));
+        _detailSplitter.Moved += (_, delta) =>
+        {
+            _modList.DetailPaneWidth = (_modList.DetailPaneWidth ?? WorkspaceWorkbench.ColumnDefinitions[4].ActualWidth) - delta;
+            ApplyWorkspacePaneWidths();
+        };
+        WorkspaceWorkbench.Children.Add(_characterSplitter);
+        WorkspaceWorkbench.Children.Add(_detailSplitter);
+    }
+
+    private PaneSplitter CreateWorkspaceSplitter(string automationId, string name)
+    {
+        var splitter = new PaneSplitter { Width = RepositoryWorkspacePolicy.SplitterWidth, LineBrush = _host.GetAppThemeBrush("AppAccentBrush") };
+        AutomationProperties.SetAutomationId(splitter, automationId);
+        AutomationProperties.SetName(splitter, name);
+        ToolTipService.SetToolTip(splitter, name);
+        splitter.Completed += (_, _) => _host.SaveShellConfig();
+        return splitter;
+    }
+
+    // Keeps the dragged widths as the layout bounded them, so a drag past a bound does not build up.
+    private void ApplyWorkspacePaneWidths()
+    {
+        UpdateRepositoryWorkspaceLayoutV4();
+        ColumnDefinitionCollection columns = WorkspaceWorkbench.ColumnDefinitions;
+        if (columns.Count < 5) return;
+        if (_modList.CharacterPaneWidth is not null) _modList.CharacterPaneWidth = Math.Round(columns[0].Width.Value);
+        if (_modList.DetailPaneWidth is not null && columns[4].Width.Value > 0) _modList.DetailPaneWidth = Math.Round(columns[4].Width.Value);
+    }
+
     private void UpdateRepositoryWorkspaceLayoutV4()
     {
         if (!_repositoryV4Ready) return;
         double width = WorkspaceScrollViewer.ActualWidth;
         if (width <= 0) width = Math.Max(320, _host.Bounds.Width - 220);
         RefreshRepositoryStatusV4();
-        var layout = RepositoryWorkspacePolicy.Layout(width);
-        WorkspaceWorkbench.ColumnDefinitions.Clear();
-        WorkspaceWorkbench.RowDefinitions.Clear();
-        WorkspaceWorkbench.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(layout.CategoryWidth) });
-        WorkspaceWorkbench.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(1, GridUnitType.Star) });
-        WorkspaceWorkbench.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(layout.DetailWidth) });
-        WorkspaceWorkbench.RowDefinitions.Add(new RowDefinition { Height = new GridLength(1, GridUnitType.Star) });
-        Place(CategoryCard, 0, 0); Place(ModCard, 0, 1); Place(WorkspaceDetailHost, 0, 2);
+        var layout = RepositoryWorkspacePolicy.Layout(width, _modList.CharacterPaneWidth, _modList.DetailPaneWidth);
+        // Characters | splitter | Mods | splitter | details (stage J7-b): the splitters take the old column gap.
+        EnsureWorkspaceSplitters();
+        WorkspaceWorkbench.ColumnSpacing = 0;
+        // The column definitions stay the same objects; only their widths follow the layout.
+        if (WorkspaceWorkbench.ColumnDefinitions.Count != 5)
+        {
+            WorkspaceWorkbench.ColumnDefinitions.Clear();
+            for (int i = 0; i < 5; i++) WorkspaceWorkbench.ColumnDefinitions.Add(new ColumnDefinition());
+        }
+        if (WorkspaceWorkbench.RowDefinitions.Count != 1)
+        {
+            WorkspaceWorkbench.RowDefinitions.Clear();
+            WorkspaceWorkbench.RowDefinitions.Add(new RowDefinition { Height = new GridLength(1, GridUnitType.Star) });
+        }
+        {
+            ColumnDefinitionCollection columns = WorkspaceWorkbench.ColumnDefinitions;
+            columns[0].Width = new GridLength(layout.CategoryWidth);
+            columns[1].Width = new GridLength(RepositoryWorkspacePolicy.SplitterWidth);
+            columns[2].Width = new GridLength(1, GridUnitType.Star);
+            columns[3].Width = new GridLength(layout.InlineDetails ? RepositoryWorkspacePolicy.SplitterWidth : 0);
+            columns[4].Width = new GridLength(layout.DetailWidth);
+        }
+        Place(CategoryCard, 0, 0); Place(_characterSplitter!, 0, 1); Place(ModCard, 0, 2); Place(_detailSplitter!, 0, 3); Place(WorkspaceDetailHost, 0, 4);
+        _detailSplitter!.Visibility = layout.InlineDetails ? Visibility.Visible : Visibility.Collapsed;
         if (!_repositoryDetailDialogOpen) WorkspaceDetailHost.Visibility = layout.InlineDetails ? Visibility.Visible : Visibility.Collapsed;
         _repositoryOpenDetails!.Visibility = layout.InlineDetails || _modList.View == RepositoryWorkspaceView.Presets ? Visibility.Collapsed : Visibility.Visible;
         WorkspaceContentGrid.VerticalAlignment = VerticalAlignment.Stretch;

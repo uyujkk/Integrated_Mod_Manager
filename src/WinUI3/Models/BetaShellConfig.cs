@@ -31,6 +31,11 @@ public sealed class BetaShellConfig
 
     public string RepositoryWorkspaceView { get; set; } = "list";
 
+    /// <summary>The Mod workspace's character column and details pane widths, as last dragged (null: the default).</summary>
+    public double? WorkspaceCharacterWidth { get; set; }
+
+    public double? WorkspaceDetailWidth { get; set; }
+
     /// <summary>The Updates page's view: "mods", "downloads" or "recovery".</summary>
     public string? UpdatesView { get; set; }
     public string? CurrentPrimarySection { get; set; }

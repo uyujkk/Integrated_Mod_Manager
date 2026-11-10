@@ -1136,6 +1136,8 @@
   "RepositoryWorkspace.NoTags": "无标签",
   "RepositoryWorkspace.EditSourceLink": "编辑来源链接",
   "RepositoryWorkspace.EditTags": "编辑标签",
+  "RepositoryWorkspace.ResizeCharacters": "调整角色栏宽度",
+  "RepositoryWorkspace.ResizeDetails": "调整详情栏宽度",
   "RepositoryWorkspace.ShortcutCount": "{0} 个快捷键",
   "RepositoryWorkspace.ShortcutCountOne": "1 个快捷键",
   "RepositoryWorkspace.InfoTags": "标签",

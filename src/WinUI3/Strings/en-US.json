@@ -1136,6 +1136,8 @@
   "RepositoryWorkspace.NoTags": "No tags yet",
   "RepositoryWorkspace.EditSourceLink": "Edit the source link",
   "RepositoryWorkspace.EditTags": "Edit this Mod's tags",
+  "RepositoryWorkspace.ResizeCharacters": "Resize the character column",
+  "RepositoryWorkspace.ResizeDetails": "Resize the details pane",
   "RepositoryWorkspace.ShortcutCount": "{0} shortcuts",
   "RepositoryWorkspace.ShortcutCountOne": "1 shortcut",
   "RepositoryWorkspace.InfoTags": "Tags",
