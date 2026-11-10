@@ -20,7 +20,7 @@ public sealed partial class OnlinePage
         { await ShowMessageAsync(T("BatchDownloads.TheDownloadRecordIsUnreadableAnd"), T("BatchDownloads.CannotDownloadBatch")); return; }
         var context = CaptureOnlineDownloadContext(repository);
         string contextKey = GetOnlineDetailContextKey();
-        bool endfield = IsEndfieldRepository(repository);
+        bool endfield = _services.OnlineSource.IsEndfield(repository);
         if (!Directory.Exists(context.RepositoryPath))
         { await ShowMessageAsync(T("BatchDownloads.TheRepositoryFolderIsUnavailableCorrect"), T("BatchDownloads.CannotDownloadBatch")); return; }
         using var cancellation = new CancellationTokenSource();

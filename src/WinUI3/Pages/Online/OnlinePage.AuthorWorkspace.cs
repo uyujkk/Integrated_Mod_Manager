@@ -24,7 +24,7 @@ public sealed partial class OnlinePage
         UiCrashDiagnostics.RecordAction("Author and saved workspace opened");
         var repo = _services.Repositories.Selected;
         if (repo is null) return;
-        string category = GetEffectiveOnlineCategoryId(repo);
+        string category = _services.OnlineSource.CategoryId(repo);
         string contextKey = GetOnlineDetailContextKey();
         Func<Task>? next = await AuthorWorkspaceDialog.ShowAsync(_services, new AuthorWorkspaceDialog.Host(
             _services.Online.Preferences, () => _host.SaveShellConfig(), BrowseOnlineAuthorAsync, ShowOnlineModDetailsAsync, saved => PrepareSavedBatchAsync(saved, repo)),

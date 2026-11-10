@@ -36,10 +36,10 @@ public sealed partial class OnlinePage
         RefreshOnlineNavigationButtonLabels();
         WorkspaceRepository? repository = _services.Repositories.Selected;
         bool hasRepository = repository is not null;
-        string effectiveSource = GetEffectiveOnlineSource(repository);
-        string effectiveGameName = GetEffectiveOnlineGameName(repository);
-        string effectiveCategoryId = GetEffectiveOnlineCategoryId(repository);
-        bool isSupportedSource = IsGameBananaSource(effectiveSource);
+        string effectiveSource = _services.OnlineSource.Source(repository);
+        string effectiveGameName = _services.OnlineSource.GameName(repository);
+        string effectiveCategoryId = _services.OnlineSource.CategoryId(repository);
+        bool isSupportedSource = _services.OnlineSource.IsGameBanana(effectiveSource);
         bool canLoadOnlineMods = hasRepository && isSupportedSource && !string.IsNullOrWhiteSpace(effectiveCategoryId);
         string requestCategoryId = GetOnlineRequestCategoryId(repository);
         string configKey = hasRepository
@@ -148,12 +148,6 @@ public sealed partial class OnlinePage
         }
     }
 
-    internal bool IsGameBananaSource(string? source)
-    {
-        return string.IsNullOrWhiteSpace(source)
-            || source.Contains("gamebanana", StringComparison.OrdinalIgnoreCase);
-    }
-
     private void ShowOnlineEmptyResults(UIElement content)
     {
         OnlineEmptyResultsContentControl.Content = content;
@@ -195,38 +189,6 @@ public sealed partial class OnlinePage
             .ToList();
     }
 
-    internal string GetEffectiveOnlineSource(WorkspaceRepository? repository)
-    {
-        if (repository is null)
-        {
-            return T("Common.NotSelected");
-        }
-
-        return string.IsNullOrWhiteSpace(repository.OnlineSourceSite)
-            ? _host.DefaultOnlineSourceSite
-            : repository.OnlineSourceSite.Trim();
-    }
-
-    internal string GetEffectiveOnlineGameName(WorkspaceRepository? repository)
-    {
-        if (repository is null)
-        {
-            return string.Empty;
-        }
-
-        return repository.OnlineGameName?.Trim() ?? string.Empty;
-    }
-
-    internal string GetEffectiveOnlineCategoryId(WorkspaceRepository? repository)
-    {
-        if (repository is null)
-        {
-            return string.Empty;
-        }
-
-        return repository.OnlineCategoryId?.Trim() ?? string.Empty;
-    }
-
     private string GetOnlineRequestCategoryId(WorkspaceRepository? repository)
     {
         EnsureOnlineCharacterOptionsForRepository(repository);
@@ -234,7 +196,7 @@ public sealed partial class OnlinePage
             string.Equals(character.Key, _services.Online.Page.CharacterFilter, StringComparison.OrdinalIgnoreCase));
         return selectedCharacter is not null && !string.IsNullOrWhiteSpace(selectedCharacter.CategoryId)
             ? selectedCharacter.CategoryId
-            : GetEffectiveOnlineCategoryId(repository);
+            : _services.OnlineSource.CategoryId(repository);
     }
 
     private void SetOnlineStatus(UiMessage status)
@@ -344,11 +306,11 @@ public sealed partial class OnlinePage
         }
 
         EnsureOnlineCharacterOptionsForRepository(repository);
-        string source = GetEffectiveOnlineSource(repository);
-        string baseCategoryId = GetEffectiveOnlineCategoryId(repository);
+        string source = _services.OnlineSource.Source(repository);
+        string baseCategoryId = _services.OnlineSource.CategoryId(repository);
         string categoryId = GetOnlineRequestCategoryId(repository);
-        bool useEndfieldMetadata = IsEndfieldRepository(repository);
-        if (!IsGameBananaSource(source) || string.IsNullOrWhiteSpace(baseCategoryId))
+        bool useEndfieldMetadata = _services.OnlineSource.IsEndfield(repository);
+        if (!_services.OnlineSource.IsGameBanana(source) || string.IsNullOrWhiteSpace(baseCategoryId))
         {
             SetOnlineStatus(M("OnlineFeed.NoOnlineSource"));
             RefreshOnlinePaneV2();
@@ -381,7 +343,7 @@ public sealed partial class OnlinePage
         _isLoadingOnlineMods = true;
         RefreshOnlineButtonTextBlock.Text = T("Common.Loading");
         RefreshOnlineButton.IsEnabled = false;
-        string gameName = GetEffectiveOnlineGameName(repository);
+        string gameName = _services.OnlineSource.GameName(repository);
         string categoryLabel = string.IsNullOrWhiteSpace(gameName)
             ? categoryId
             : $"{gameName} / {categoryId}";
@@ -719,7 +681,7 @@ public sealed partial class OnlinePage
         CancellationToken cancellationToken = default,
         int authorId = 0)
     {
-        bool shouldUseEndfieldMetadata = useEndfieldMetadata ?? IsEndfieldCategoryId(categoryId);
+        bool shouldUseEndfieldMetadata = useEndfieldMetadata ?? _services.OnlineSource.IsEndfieldCategory(categoryId);
         OnlineCategoryPageResult result = await GameBananaCategoryClient.GetPageAsync(_host.Http, categoryId, page, pageSize, authorId, DateTimeOffset.Now, cancellationToken);
         foreach (OnlineModCard card in result.Mods) AdaptGameBananaCategoryMod(card, shouldUseEndfieldMetadata);
         return result;
@@ -891,7 +853,7 @@ public sealed partial class OnlinePage
 
     private bool MatchesOnlineSearch(OnlineModCard mod, string searchText)
     {
-        EndfieldCharacterInfo? character = IsEndfieldRepository(_services.Repositories.Selected)
+        EndfieldCharacterInfo? character = _services.OnlineSource.IsEndfield(_services.Repositories.Selected)
             ? FindEndfieldCharacter(mod.CharacterName) : null;
         return OnlineBrowseStateAdapter.MatchesSearch(mod.Title, mod.CharacterName, mod.Author,
             searchText, character?.AllNames);

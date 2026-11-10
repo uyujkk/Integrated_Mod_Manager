@@ -1,6 +1,5 @@
 using IntegratedModManager.Core.Configuration;
 using IntegratedModManager.Core.Deployment;
-using IntegratedModManager.Core.Endfield;
 using IntegratedModManager.Core.Presets;
 using IntegratedModManager.Core.Repository;
 using Microsoft.UI.Xaml;
@@ -69,7 +68,6 @@ public sealed partial class MainWindow : IWorkspaceHost
     List<TextBox> IWorkspaceHost.ShortcutActionBoxes => _shortcutActionBoxes;
     List<TextBox> IWorkspaceHost.ShortcutKeyBoxes => _shortcutKeyBoxes;
     Dictionary<string, TrackedModOrigin> IWorkspaceHost.TrackedModOrigins => _trackedModOrigins;
-    IReadOnlyList<EndfieldCharacterInfo> IWorkspaceHost.EndfieldCharacters => EndfieldCharacters;
 
     void IWorkspaceHost.CommitInstallTransaction(string transactionPath) => CommitInstallTransaction(transactionPath);
     Task<bool> IWorkspaceHost.ConfirmInstallConflictsAsync(IReadOnlyList<string> fileConflicts, IReadOnlyList<(string? Candidate, ModIniConflictSummary Summary)> iniConflicts) => ConfirmInstallConflictsAsync(fileConflicts, iniConflicts);

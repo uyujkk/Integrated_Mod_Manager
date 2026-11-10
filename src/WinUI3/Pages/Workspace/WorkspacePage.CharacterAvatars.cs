@@ -1,3 +1,4 @@
+using IntegratedModManager.Core.Endfield;
 using IntegratedModManager.Core.Online;
 using IntegratedModManager.Core.Repository;
 using Microsoft.UI.Xaml;
@@ -110,12 +111,12 @@ public sealed partial class WorkspacePage
             string.Equals(_host.OnlineView._onlineCharacterCatalogKey, catalogKey, StringComparison.Ordinal) && _services.Online.Page.CharacterOptions.Count > 0
                 ? [.. _services.Online.Page.CharacterOptions]
                 : cached?.Characters ?? [];
-        if (!_host.OnlineView.IsEndfieldRepository(repository))
+        if (!_services.OnlineSource.IsEndfield(repository))
         {
             return (online, cached?.IsFresh == true);
         }
 
-        OnlineCharacterOption[] builtIn = _host.EndfieldCharacters.Select((character, index) => new OnlineCharacterOption
+        OnlineCharacterOption[] builtIn = EndfieldCharacterCatalog.BuiltIn.Select((character, index) => new OnlineCharacterOption
         {
             Key = character.EnglishName,
             DisplayNameZh = character.ChineseName,

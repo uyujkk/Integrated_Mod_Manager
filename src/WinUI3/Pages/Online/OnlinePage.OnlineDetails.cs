@@ -985,7 +985,7 @@ public sealed partial class OnlinePage
             OnlineModCard sourceMod = _activeOnlineDetailMod;
             WorkspaceRepository? downloadRepository = _services.Repositories.Selected;
             OnlineDownloadContext downloadContext = CaptureOnlineDownloadContext(downloadRepository);
-            bool useEndfieldMetadata = IsEndfieldRepository(downloadRepository);
+            bool useEndfieldMetadata = _services.OnlineSource.IsEndfield(downloadRepository);
             IReadOnlyCollection<string> characterAliases = GetCharacterFolderAliases(sourceMod);
             string detailContext = GetOnlineDetailContextKey();
             using OnlineDownloadActionAdapter.Lease? action = _onlineDownloadActions.TryBegin(

@@ -44,7 +44,7 @@ public sealed partial class OnlinePage
         {
             Origin = new TrackedModOrigin
             {
-                Path = extractFolder, SourceSite = _host.DefaultOnlineSourceSite, ItemId = mod.ItemId,
+                Path = extractFolder, SourceSite = OnlineSourceRules.DefaultSourceSite, ItemId = mod.ItemId,
                 Title = mod.Title, ProfileUrl = mod.ProfileUrl,
                 DownloadFileId = mod.DownloadFileId, DownloadFileName = mod.DownloadFileName,
                 PreviewUrl = string.IsNullOrWhiteSpace(previewUrl) ? mod.PreviewUrl : previewUrl,

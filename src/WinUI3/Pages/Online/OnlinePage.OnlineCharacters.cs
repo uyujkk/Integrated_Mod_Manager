@@ -80,11 +80,11 @@ public sealed partial class OnlinePage
             return;
         }
 
-        if (IsEndfieldRepository(repository))
+        if (_services.OnlineSource.IsEndfield(repository))
         {
             if (_services.Online.Page.CharacterOptions.Count == 0)
             {
-                _services.Online.Page.CharacterOptions.AddRange(_host.EndfieldCharacters.Select((character, index) => new OnlineCharacterOption
+                _services.Online.Page.CharacterOptions.AddRange(EndfieldCharacterCatalog.BuiltIn.Select((character, index) => new OnlineCharacterOption
                 {
                     Key = character.EnglishName,
                     DisplayNameZh = character.ChineseName,
@@ -211,30 +211,6 @@ public sealed partial class OnlinePage
         return repository is null
             ? string.Empty
             : $"wiki-monthly-v4|{repository.Id}|wiki={repository.WikiUrl.Trim()}";
-    }
-
-    internal bool IsEndfieldRepository(WorkspaceRepository? repository)
-    {
-        if (repository is null)
-        {
-            return false;
-        }
-
-        string categoryId = GetEffectiveOnlineCategoryId(repository);
-        string gameName = GetEffectiveOnlineGameName(repository);
-        return string.Equals(categoryId, _host.DefaultOnlineCategoryId, StringComparison.OrdinalIgnoreCase)
-            || gameName.Contains("Endfield", StringComparison.OrdinalIgnoreCase)
-            || gameName.Contains("终末地", StringComparison.OrdinalIgnoreCase);
-    }
-
-    private bool IsEndfieldCategoryId(string? categoryId)
-    {
-        return !string.IsNullOrWhiteSpace(categoryId)
-            && (string.Equals(categoryId, _host.DefaultOnlineCategoryId, StringComparison.OrdinalIgnoreCase)
-                || _host.EndfieldCharacters.Any(character => string.Equals(
-                    character.GameBananaCategoryId,
-                    categoryId,
-                    StringComparison.OrdinalIgnoreCase)));
     }
 
     private string GetOnlineCharacterDisplayName(OnlineCharacterOption character)
@@ -468,7 +444,7 @@ public sealed partial class OnlinePage
             return GetOnlineCharacterDisplayName(option);
         }
 
-        if (IsEndfieldRepository(_services.Repositories.Selected))
+        if (_services.OnlineSource.IsEndfield(_services.Repositories.Selected))
         {
             EndfieldCharacterInfo? character = FindEndfieldCharacter(characterName);
             return character is null ? characterName : GetOnlineCharacterDisplayName(character);
@@ -526,7 +502,7 @@ public sealed partial class OnlinePage
 
         if (useEndfieldMetadata)
         {
-            EndfieldCharacterInfo? titleCharacter = _host.EndfieldCharacters.FirstOrDefault(character =>
+            EndfieldCharacterInfo? titleCharacter = EndfieldCharacterCatalog.BuiltIn.FirstOrDefault(character =>
                 character.AllNames.Any(alias => OnlineCharacterCatalogMatcher.ContainsAlias(title, alias)));
             if (titleCharacter is not null)
             {
@@ -545,7 +521,7 @@ public sealed partial class OnlinePage
         }
 
         string normalized = OnlineCharacterCatalogMatcher.NormalizeLookup(name);
-        return _host.EndfieldCharacters.FirstOrDefault(character =>
+        return EndfieldCharacterCatalog.BuiltIn.FirstOrDefault(character =>
             character.AllNames.Any(alias => string.Equals(
                 OnlineCharacterCatalogMatcher.NormalizeLookup(alias),
                 normalized,
@@ -716,7 +692,7 @@ public sealed partial class OnlinePage
 
     private async Task<List<OnlineCharacterOption>> FetchWikiCharacterCatalogAsync(WorkspaceRepository repository)
     {
-        if (IsEndfieldRepository(repository))
+        if (_services.OnlineSource.IsEndfield(repository))
         {
             return await FetchEndfieldCharacterCatalogAsync(repository);
         }
@@ -729,8 +705,8 @@ public sealed partial class OnlinePage
 
     private Task<List<OnlineCharacterOption>> FetchEndfieldCharacterCatalogAsync(WorkspaceRepository repository)
         => RequestCharacterCatalogAsync("Load Endfield operator catalog",
-            token => CharacterCatalogClient.FetchEndfieldOperatorsAsync(_host.Http, _host.EndfieldCharacters,
-                string.IsNullOrWhiteSpace(repository.WikiUrl) ? _host.EndfieldOfficialWikiUrl : repository.WikiUrl, token));
+            token => CharacterCatalogClient.FetchEndfieldOperatorsAsync(_host.Http, EndfieldCharacterCatalog.BuiltIn,
+                string.IsNullOrWhiteSpace(repository.WikiUrl) ? OnlineSourceRules.EndfieldOfficialWikiUrl : repository.WikiUrl, token));
 
     private Task<List<OnlineCharacterOption>> FetchGameBananaCharacterCatalogAsync(string categoryId)
         => RequestCharacterCatalogAsync("Load GameBanana character categories",
@@ -856,7 +832,7 @@ public sealed partial class OnlinePage
                 if (cachedCatalog is not null)
                 {
                     bool requiresWikiCatalog = GetWikiCatalogDescriptor(repository) is not null
-                        || IsEndfieldRepository(repository);
+                        || _services.OnlineSource.IsEndfield(repository);
                     if (!requiresWikiCatalog || cachedCatalog.Characters.Any(character => character.IsWikiCharacter))
                     {
                         OnlineCharacterCatalogMatcher.ApplyManualMappings(repository.CharacterCategoryMappings, cachedCatalog.Characters);
@@ -870,7 +846,7 @@ public sealed partial class OnlinePage
             }
 
             List<OnlineCharacterOption> wikiCharacters = await FetchWikiCharacterCatalogAsync(repository);
-            if ((GetWikiCatalogDescriptor(repository) is not null || IsEndfieldRepository(repository))
+            if ((GetWikiCatalogDescriptor(repository) is not null || _services.OnlineSource.IsEndfield(repository))
                 && wikiCharacters.Count == 0)
             {
                 return;
@@ -887,7 +863,7 @@ public sealed partial class OnlinePage
                 try
                 {
                     gameBananaCharacters = await FetchGameBananaCharacterCatalogAsync(
-                        GetEffectiveOnlineCategoryId(repository));
+                        _services.OnlineSource.CategoryId(repository));
                 }
                 catch (Exception ex)
                 {
@@ -979,7 +955,7 @@ public sealed partial class OnlinePage
         }
 
         EndfieldCharacterInfo? endfieldCharacter = FindEndfieldCharacter(mod.CharacterName)
-            ?? _host.EndfieldCharacters.FirstOrDefault(character =>
+            ?? EndfieldCharacterCatalog.BuiltIn.FirstOrDefault(character =>
                 !string.IsNullOrWhiteSpace(mod.CategoryId)
                 && string.Equals(
                     character.GameBananaCategoryId,
@@ -1003,7 +979,7 @@ public sealed partial class OnlinePage
             (!string.IsNullOrWhiteSpace(mod.CategoryId) && string.Equals(item.CategoryId, mod.CategoryId, StringComparison.OrdinalIgnoreCase))
             || string.Equals(OnlineCharacterCatalogMatcher.NormalizeLookup(item.Key), normalized, StringComparison.OrdinalIgnoreCase));
         EndfieldCharacterInfo? endfield = FindEndfieldCharacter(mod.CharacterName)
-            ?? _host.EndfieldCharacters.FirstOrDefault(character => !string.IsNullOrWhiteSpace(mod.CategoryId)
+            ?? EndfieldCharacterCatalog.BuiltIn.FirstOrDefault(character => !string.IsNullOrWhiteSpace(mod.CategoryId)
                 && string.Equals(character.GameBananaCategoryId, mod.CategoryId, StringComparison.OrdinalIgnoreCase));
         string? chinese = endfield?.ChineseName ?? option?.DisplayNameZh;
         string? english = endfield?.EnglishName ?? option?.DisplayNameEn;

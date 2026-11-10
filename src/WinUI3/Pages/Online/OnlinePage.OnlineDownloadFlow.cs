@@ -20,7 +20,7 @@ public sealed partial class OnlinePage
         {
             OnlineModCard? latestMod = await FetchGameBananaModCardAsyncV2(
                 mod.ItemId,
-                useEndfieldMetadata: useEndfieldMetadata ?? IsEndfieldRepository(_services.Repositories.Selected),
+                useEndfieldMetadata: useEndfieldMetadata ?? _services.OnlineSource.IsEndfield(_services.Repositories.Selected),
                 cancellationToken: cancellationToken);
             if (latestMod is null)
             {
@@ -93,7 +93,7 @@ public sealed partial class OnlinePage
     {
         WorkspaceRepository? initialRepository = _services.Repositories.Selected;
         OnlineDownloadContext context = capturedContext ?? CaptureOnlineDownloadContext(initialRepository);
-        bool useEndfieldMetadata = capturedEndfieldMetadata ?? IsEndfieldRepository(initialRepository);
+        bool useEndfieldMetadata = capturedEndfieldMetadata ?? _services.OnlineSource.IsEndfield(initialRepository);
         IReadOnlyCollection<string> characterAliases = capturedCharacterAliases ?? GetCharacterFolderAliases(mod);
         using OnlineDownloadActionAdapter.Lease? action = _onlineDownloadActions.TryBegin(context, GetOnlineDownloadIdentity(mod));
         if (action is null) return;

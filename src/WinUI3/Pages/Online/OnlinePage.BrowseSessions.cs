@@ -19,7 +19,7 @@ public sealed partial class OnlinePage
     {
         var repository = _services.Repositories.Selected;
         return repository is null ? null : WorkspaceIdentity.Online(repository.Id, repository.SourcePath,
-            GetEffectiveOnlineSource(repository), GetEffectiveOnlineCategoryId(repository));
+            _services.OnlineSource.Source(repository), _services.OnlineSource.CategoryId(repository));
     }
 
     private void EnsureOnlineBrowseSession()

@@ -243,7 +243,7 @@ public sealed partial class MainWindow
     private string[] PreferredGameProcesses(WorkspaceRepository? repository)
     {
         if (repository is null) return [];
-        if (_onlineView.IsEndfieldRepository(repository)) return [.. GameWindowDetection.KnownGames[0]];
+        if (_services.OnlineSource.IsEndfield(repository)) return [.. GameWindowDetection.KnownGames[0]];
         RepositoryPresetInfo? preset = BuiltInRepositoryPresets.FirstOrDefault(candidate => IsRepositoryForPreset(repository, candidate));
         return preset?.Id switch
         {

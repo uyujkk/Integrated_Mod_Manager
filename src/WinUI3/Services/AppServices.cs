@@ -9,6 +9,7 @@ internal sealed class AppServices
     public AppServices()
     {
         Dialogs = new(Language);
+        OnlineSource = new(Language);
     }
 
     public LanguageService Language { get; } = new();
@@ -28,6 +29,9 @@ internal sealed class AppServices
     public UpdatesViewModel Updates { get; } = new();
 
     public ImageService Images { get; } = new();
+
+    /// <summary>Which online source each repository uses (stage J finish, step 3).</summary>
+    public OnlineSourceService OnlineSource { get; }
 
     /// <summary>The Online page's view model and preferences (stage J finish, step 3).</summary>
     public OnlineState Online { get; } = new();

@@ -16,7 +16,7 @@ public sealed partial class OnlinePage
     {
         UiCrashDiagnostics.RecordAction("Author browse");
         if (id <= 0) { OnlineSearchTextBox.Text = $"author:{name}"; return; }
-        string category = GetEffectiveOnlineCategoryId(_services.Repositories.Selected);
+        string category = _services.OnlineSource.CategoryId(_services.Repositories.Selected);
         _services.Online.Preferences.RecentAuthors.RemoveAll(item => item.Id == id && item.CategoryId == category);
         _services.Online.Preferences.RecentAuthors.Insert(0, new OnlineAuthorVisit(id, name, category, DateTimeOffset.UtcNow));
         _services.Online.Preferences.RecentAuthors = _services.Online.Preferences.RecentAuthors.Take(100).ToList();
@@ -110,11 +110,11 @@ public sealed partial class OnlinePage
         author.Click += async (_, _) => await _host.RunUiActionAsync("BrowseOnlineAuthorAsync", () => BrowseOnlineAuthorAsync(mod.AuthorId, mod.Author));
         menu.Items.Add(author);
         bool savedAuthor = _services.Online.Preferences.Authors.Any(item => item.Id == mod.AuthorId
-            && item.CategoryId == GetEffectiveOnlineCategoryId(_services.Repositories.Selected));
+            && item.CategoryId == _services.OnlineSource.CategoryId(_services.Repositories.Selected));
         var favorite = new MenuFlyoutItem { Text = savedAuthor ? T("OnlineLibrary.UnsaveAuthor") : T("OnlineLibrary.SaveAuthor"), IsEnabled = mod.AuthorId > 0 };
         favorite.Click += (_, _) =>
         {
-            string category = GetEffectiveOnlineCategoryId(_services.Repositories.Selected);
+            string category = _services.OnlineSource.CategoryId(_services.Repositories.Selected);
             _services.Online.Preferences.Authors.RemoveAll(item => item.Id == mod.AuthorId && item.CategoryId == category);
             if (!savedAuthor) _services.Online.Preferences.Authors.Insert(0, new OnlineAuthorBookmark(mod.AuthorId, mod.Author, category));
             _services.Online.Preferences.Authors = _services.Online.Preferences.Authors.Take(100).ToList();
@@ -125,7 +125,7 @@ public sealed partial class OnlinePage
         {
             save.Text = IsSavedOnlineMod(mod) ? T("OnlineLibrary.RemoveFromSaved") : T("OnlineLibrary.SaveForLater");
             savedAuthor = _services.Online.Preferences.Authors.Any(item => item.Id == mod.AuthorId
-                && item.CategoryId == GetEffectiveOnlineCategoryId(_services.Repositories.Selected));
+                && item.CategoryId == _services.OnlineSource.CategoryId(_services.Repositories.Selected));
             favorite.Text = savedAuthor ? T("OnlineLibrary.UnsaveAuthor") : T("OnlineLibrary.SaveAuthor");
         };
         return menu;

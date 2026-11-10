@@ -1,6 +1,5 @@
 using IntegratedModManager.Core.Configuration;
 using IntegratedModManager.Core.Deployment;
-using IntegratedModManager.Core.Endfield;
 using IntegratedModManager.Core.Presets;
 using IntegratedModManager.Core.Repository;
 using Microsoft.UI.Xaml;
@@ -63,7 +62,6 @@ internal interface IWorkspaceHost
     List<TextBox> ShortcutActionBoxes { get; }
     List<TextBox> ShortcutKeyBoxes { get; }
     Dictionary<string, TrackedModOrigin> TrackedModOrigins { get; }
-    IReadOnlyList<EndfieldCharacterInfo> EndfieldCharacters { get; }
 
     // Install transactions: conflicts, backups, commit and rollback.
     void CommitInstallTransaction(string transactionPath);
