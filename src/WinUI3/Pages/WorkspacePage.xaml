@@ -97,7 +97,7 @@
                     <RowDefinition Height="Auto" />
                     <RowDefinition Height="*" />
                 </Grid.RowDefinitions>
-                <!-- Title and repository picker with refresh, import and launch; under them the view buttons and the counts. -->
+                <!-- Title and repository picker with the command bar (refresh, import, launch); under them the view buttons and the counts. -->
                 <Border x:Name="RepositoryToolbarCard" Style="{StaticResource CommandSurfaceBorderStyle}" Padding="14,10,14,10" CornerRadius="6">
                     <Grid x:Name="RepositoryToolbarGrid" RowSpacing="10">
                         <Grid.RowDefinitions>
@@ -114,16 +114,20 @@
                                 <ComboBox x:Name="RepositoryWorkspacePicker" MinWidth="190" MaxWidth="300" MinHeight="32" HorizontalAlignment="Left"
                                         SelectionChanged="OnRepositoryWorkspacePickerSelectionChanged" />
                             </StackPanel>
-                            <Grid x:Name="RepositoryToolbarCommandsGrid" Grid.Column="1" ColumnSpacing="8" HorizontalAlignment="Right" VerticalAlignment="Center">
-                                <Grid.ColumnDefinitions>
-                                    <ColumnDefinition Width="Auto" />
-                                    <ColumnDefinition Width="Auto" />
-                                    <ColumnDefinition Width="Auto" />
-                                </Grid.ColumnDefinitions>
-                                <Button x:Name="RefreshButton" x:FieldModifier="internal" HorizontalAlignment="Left" MinHeight="36" Click="OnRefreshClicked" Style="{StaticResource SecondaryButtonStyle}" />
-                                <Button x:Name="ImportZipButton" x:FieldModifier="internal" Grid.Column="1" HorizontalAlignment="Left" MinHeight="36" Click="OnImportZipClicked" Style="{StaticResource SecondaryButtonStyle}" />
-                                <Button x:Name="RunLauncherButton" x:FieldModifier="internal" Grid.Column="2" HorizontalAlignment="Left" MinHeight="36" Click="OnRunLauncherClicked" Style="{StaticResource SecondaryButtonStyle}" />
-                            </Grid>
+                            <!-- Stage J7-b: the page commands as a command bar; labels go when the window is narrow, the
+                                 automation ids stay the old button names. -->
+                            <CommandBar x:Name="RepositoryCommandBar" Grid.Column="1" DefaultLabelPosition="Right" IsOpen="False"
+                                        HorizontalAlignment="Right" VerticalAlignment="Center" OverflowButtonVisibility="Collapsed" Background="Transparent">
+                                <AppBarButton x:Name="RefreshButton" x:FieldModifier="internal" Click="OnRefreshClicked">
+                                    <AppBarButton.Icon><FontIcon Glyph="&#xE72C;" /></AppBarButton.Icon>
+                                </AppBarButton>
+                                <AppBarButton x:Name="ImportZipButton" x:FieldModifier="internal" Click="OnImportZipClicked">
+                                    <AppBarButton.Icon><FontIcon Glyph="&#xE8E5;" /></AppBarButton.Icon>
+                                </AppBarButton>
+                                <AppBarButton x:Name="RunLauncherButton" x:FieldModifier="internal" Click="OnRunLauncherClicked">
+                                    <AppBarButton.Icon><FontIcon Glyph="&#xE768;" /></AppBarButton.Icon>
+                                </AppBarButton>
+                            </CommandBar>
                         </Grid>
                         <Grid Grid.Row="1" ColumnSpacing="8">
                             <Grid.ColumnDefinitions>

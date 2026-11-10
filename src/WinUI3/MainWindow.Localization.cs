@@ -72,10 +72,10 @@ public sealed partial class MainWindow
         AppTitleBar.Subtitle = AppVersion;
 
 
-        _workspaceView.RefreshButton.Content = T("Localization.Refresh");
-        _workspaceView.ImportZipButton.Content = T("Localization.ImportMod");
+        _workspaceView.RefreshButton.Label = T("Localization.Refresh");
+        _workspaceView.ImportZipButton.Label = T("Localization.ImportMod");
         ToolTipService.SetToolTip(_workspaceView.ImportZipButton, T("Localization.ImportIntoTheSelectedFolder"));
-        _workspaceView.RunLauncherButton.Content = T("Localization.RunLauncher");
+        _workspaceView.RunLauncherButton.Label = T("Localization.RunLauncher");
         _workspaceView.UpdateDeployButtonLabel();
 
         _workspaceView.FirstCountLabelTextBlock.Text = T("Localization.FirstLevelFolders");
@@ -136,7 +136,7 @@ public sealed partial class MainWindow
 
     private void ApplyTextOverrides()
     {
-        _workspaceView.ImportZipButton.Content = T("Localization.ImportMod");
+        _workspaceView.ImportZipButton.Label = T("Localization.ImportMod");
 
         _workspaceView.FirstCountHintTextBlock.Text = T("Localization.NumberOfCategoriesInTheMod");
 

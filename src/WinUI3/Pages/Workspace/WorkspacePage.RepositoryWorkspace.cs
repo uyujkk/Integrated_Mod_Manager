@@ -188,9 +188,8 @@ public sealed partial class WorkspacePage
 
     private void InitializeRepositoryToolbarV4()
     {
-        RepositoryDecorateButton(RefreshButton, "\uE72C", true);
-        RepositoryDecorateButton(ImportZipButton, "\uE8E5");
-        RepositoryDecorateButton(RunLauncherButton, "\uE768");
+        // The command bar's buttons carry their own icons and labels (stage J7-b); the refresh label is only a tooltip.
+        RefreshButton.LabelPosition = CommandBarLabelPosition.Collapsed;
         _repositoryModeButtons = Enumerable.Range(0, 3).Select(index =>
         {
             var button = new ToggleButton { MinHeight = 34, Padding = new Thickness(10, 6, 10, 6), CornerRadius = new CornerRadius(4), Tag = (RepositoryWorkspaceView)index };
@@ -724,11 +723,19 @@ public sealed partial class WorkspacePage
         RepositoryHeaderGrid.RowDefinitions.Add(new RowDefinition { Height = GridLength.Auto });
         RepositoryHeaderGrid.RowDefinitions.Add(new RowDefinition { Height = width < 720 ? GridLength.Auto : new GridLength(0) });
         RepositoryHeaderGrid.RowSpacing = width < 720 ? 8 : 0;
-        Grid.SetRow(RepositoryToolbarCommandsGrid, width < 720 ? 1 : 0);
-        Grid.SetColumn(RepositoryToolbarCommandsGrid, width < 720 ? 0 : 1);
-        Grid.SetColumnSpan(RepositoryToolbarCommandsGrid, width < 720 ? 2 : 1);
-        RepositoryToolbarCommandsGrid.HorizontalAlignment = width < 720 ? HorizontalAlignment.Left : HorizontalAlignment.Right;
+        // Narrow windows keep the command bar beside the title as icons (with tooltips) instead of a row of its own,
+        // and the view buttons drop their labels, so the toolbar takes two rows, not three.
+        bool narrowToolbar = width < 720;
+        Grid.SetRow(RepositoryCommandBar, 0);
+        Grid.SetColumn(RepositoryCommandBar, 1);
+        Grid.SetColumnSpan(RepositoryCommandBar, 1);
+        RepositoryCommandBar.DefaultLabelPosition = narrowToolbar ? CommandBarDefaultLabelPosition.Collapsed : CommandBarDefaultLabelPosition.Right;
+        foreach (ContentControl button in RepositoryViewButtonsPanel.Children.OfType<ContentControl>())
+            if (button.Content is StackPanel iconLabel)
+                foreach (TextBlock label in iconLabel.Children.OfType<TextBlock>()) label.Visibility = narrowToolbar ? Visibility.Collapsed : Visibility.Visible;
         RepositoryCountTextBlock.Visibility = width < 620 ? Visibility.Collapsed : Visibility.Visible;
+        foreach (AppBarButton command in new[] { RefreshButton, ImportZipButton, RunLauncherButton })
+            if (ToolTipService.GetToolTip(command) is null || command == RefreshButton || command == RunLauncherButton) ToolTipService.SetToolTip(command, command.Label);
         _combinationWorkspace!.ColumnDefinitions.Clear(); _combinationWorkspace.RowDefinitions.Clear();
         bool inlineRecovery = RepositoryWorkspacePolicy.InlineCombinationRecovery(width, height);
         _combinationWorkspace.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(width >= 1100 ? 220 : 160) });
