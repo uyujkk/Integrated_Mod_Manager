@@ -415,7 +415,7 @@ public sealed partial class MainWindow
             _onlineView.EnsureOnlineCharacterOptionsForRepository(repository);
             if (!_services.Online.Page.CharacterOptions.Any(character => character.IsWikiCharacter))
             {
-                _ = _onlineView.EnsureOnlineCharacterCatalogAsync(repository, forceReload: false);
+                _ = _services.CharacterCatalog.EnsureAsync(repository, forceReload: false);
                 for (int attempt = 0; attempt < 12 && !_services.Online.Page.CharacterOptions.Any(character => character.IsWikiCharacter); attempt++)
                 {
                     await Task.Delay(250);
@@ -475,7 +475,7 @@ public sealed partial class MainWindow
             SaveShellConfig();
             ResetOnlineRepositoryContext();
             _onlineView.EnsureOnlineCharacterOptionsForRepository(repository);
-            _ = _onlineView.EnsureOnlineCharacterCatalogAsync(repository, forceReload: false);
+            _ = _services.CharacterCatalog.EnsureAsync(repository, forceReload: false);
             RefreshSettingsPane();
             _onlineView.RefreshOnlinePaneV2();
             ShowAppNotification(T("Repositories.CategoryMappingUpdated"));

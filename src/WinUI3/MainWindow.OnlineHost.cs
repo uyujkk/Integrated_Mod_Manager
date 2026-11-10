@@ -62,9 +62,7 @@ public sealed partial class MainWindow : IOnlineHost
     GameBananaMetadataService IOnlineHost.Metadata => _gameBananaMetadataService;
 
     int IOnlineHost.ShortcutScanSafetyLimit => ShortcutScanSafetyLimit;
-    IReadOnlyList<RepositoryPresetInfo> IOnlineHost.BuiltInRepositoryPresets => BuiltInRepositoryPresets;
     IReadOnlyList<string> IOnlineHost.ImageExtensions => ImageExtensions;
-    bool IOnlineHost.IsRepositoryForPreset(WorkspaceRepository repository, RepositoryPresetInfo preset) => IsRepositoryForPreset(repository, preset);
     bool IOnlineHost.IsSupportedArchiveFile(string path) => IsSupportedArchiveFile(path);
     string? IOnlineHost.FindPreviewImage(List<string> files) => _workspaceView.FindPreviewImage(files);
     void IOnlineHost.DeleteDirectoryTreeSafely(string path) => DeleteDirectoryTreeSafely(path);

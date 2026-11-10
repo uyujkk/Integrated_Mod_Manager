@@ -9,4 +9,7 @@ internal sealed class OnlineState
     public OnlinePageViewModel Page { get; } = new();
 
     public OnlineWorkspacePreferences Preferences { get; set; } = new();
+
+    /// <summary>The catalog the Online page shows (its repository's); favourites and workspace avatars are keyed by it.</summary>
+    public string? CharacterCatalogKey { get; set; }
 }

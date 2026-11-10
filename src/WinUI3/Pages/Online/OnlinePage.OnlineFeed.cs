@@ -283,7 +283,7 @@ public sealed partial class OnlinePage
             WorkspaceRepository? repository = _services.Repositories.Selected;
             if (repository is not null)
             {
-                _ = EnsureOnlineCharacterCatalogAsync(repository, forceReload: true);
+                _ = _services.CharacterCatalog.EnsureAsync(repository, forceReload: true);
             }
 
             await LoadOnlineModsAsync(forceReload: true);

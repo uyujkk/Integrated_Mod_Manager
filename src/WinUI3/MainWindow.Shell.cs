@@ -340,7 +340,7 @@ public sealed partial class MainWindow
         WorkspaceRepository? repository = GetSelectedRepository();
         if (repository is not null)
         {
-            _ = _onlineView.EnsureOnlineCharacterCatalogAsync(repository, forceReload: false);
+            _ = _services.CharacterCatalog.EnsureAsync(repository, forceReload: false);
         }
     }
 

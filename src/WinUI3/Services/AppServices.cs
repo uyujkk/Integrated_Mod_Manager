@@ -10,6 +10,7 @@ internal sealed class AppServices
     {
         Dialogs = new(Language);
         OnlineSource = new(Language);
+        CharacterCatalog = new(OnlineSource);
     }
 
     public LanguageService Language { get; } = new();
@@ -32,6 +33,9 @@ internal sealed class AppServices
 
     /// <summary>Which online source each repository uses (stage J finish, step 3).</summary>
     public OnlineSourceService OnlineSource { get; }
+
+    /// <summary>The character catalog of each repository's game (stage J finish, step 3).</summary>
+    public CharacterCatalogService CharacterCatalog { get; }
 
     /// <summary>The Online page's view model and preferences (stage J finish, step 3).</summary>
     public OnlineState Online { get; } = new();

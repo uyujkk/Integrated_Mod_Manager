@@ -62,9 +62,7 @@ internal interface IOnlineHost
 
     // Shared values and helpers of the window.
     int ShortcutScanSafetyLimit { get; }
-    IReadOnlyList<RepositoryPresetInfo> BuiltInRepositoryPresets { get; }
     IReadOnlyList<string> ImageExtensions { get; }
-    bool IsRepositoryForPreset(WorkspaceRepository repository, RepositoryPresetInfo preset);
     bool IsSupportedArchiveFile(string path);
     string? FindPreviewImage(List<string> files);
     void DeleteDirectoryTreeSafely(string path);

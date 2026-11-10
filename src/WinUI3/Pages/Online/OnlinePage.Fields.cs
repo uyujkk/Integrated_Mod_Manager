@@ -151,12 +151,9 @@ public sealed partial class OnlinePage
     internal bool _isApplyingOnlineCharacterSelection;
     internal bool _isLoadingOnlineMods;
     internal string? _lastLoadedOnlineConfigKey;
-    internal readonly HashSet<string> _loadingOnlineCharacterCatalogKeys = new(StringComparer.Ordinal);
     internal CancellationTokenSource _onlineCharacterAvatarCancellation = new();
     internal readonly SemaphoreSlim _onlineCharacterAvatarDownloadGate = new(3, 3);
     internal int _onlineCharacterAvatarRequestVersion;
-    internal readonly string _onlineCharacterCachePath = Path.Combine(AppContext.BaseDirectory, "cache", "online-characters");
-    internal string? _onlineCharacterCatalogKey;
     internal string? _onlineCharacterStripSignature;
     internal int _onlineDetailAnimationVersion;
     internal int _onlineDetailImageIndex;

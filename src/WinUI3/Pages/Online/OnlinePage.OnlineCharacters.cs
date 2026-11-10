@@ -1,10 +1,6 @@
-using System.Security.Cryptography;
-using System.Text;
-using System.Text.Json;
 using IntegratedModManager.Core.Deployment;
 using IntegratedModManager.Core.Endfield;
 using IntegratedModManager.Core.Online;
-using IntegratedModManager.Data;
 using Microsoft.UI.Xaml;
 using Microsoft.UI.Xaml.Automation;
 using Microsoft.UI.Xaml.Controls;
@@ -64,10 +60,10 @@ public sealed partial class OnlinePage
 
     internal void EnsureOnlineCharacterOptionsForRepository(WorkspaceRepository? repository)
     {
-        string catalogKey = GetOnlineCharacterCatalogKey(repository);
-        if (!string.Equals(_onlineCharacterCatalogKey, catalogKey, StringComparison.Ordinal))
+        string catalogKey = _services.CharacterCatalog.CatalogKey(repository);
+        if (!string.Equals(_services.Online.CharacterCatalogKey, catalogKey, StringComparison.Ordinal))
         {
-            _onlineCharacterCatalogKey = catalogKey;
+            _services.Online.CharacterCatalogKey = catalogKey;
             _services.Online.Page.CharacterOptions.Clear();
             _services.Online.Page.Mods.Clear();
             _services.Online.Page.CharacterFilter = string.Empty;
@@ -195,22 +191,14 @@ public sealed partial class OnlinePage
         {
             OnlineCharacterCatalogMatcher.SortByWikiOrderThenNewest(_services.Online.Page.CharacterOptions);
             _onlineCharacterStripSignature = null;
-            if (!string.IsNullOrWhiteSpace(_onlineCharacterCatalogKey))
+            if (!string.IsNullOrWhiteSpace(_services.Online.CharacterCatalogKey))
             {
-                _ = WriteOnlineCharacterCatalogCacheAsync(
-                    _onlineCharacterCatalogKey,
+                _ = _services.CharacterCatalog.WriteCacheAsync(
+                    _services.Online.CharacterCatalogKey,
                     _services.Online.Page.CharacterOptions,
                     preserveWikiCheckedAt: true);
             }
         }
-    }
-
-
-    internal string GetOnlineCharacterCatalogKey(WorkspaceRepository? repository)
-    {
-        return repository is null
-            ? string.Empty
-            : $"wiki-monthly-v4|{repository.Id}|wiki={repository.WikiUrl.Trim()}";
     }
 
     private string GetOnlineCharacterDisplayName(OnlineCharacterOption character)
@@ -528,8 +516,6 @@ public sealed partial class OnlinePage
                 StringComparison.OrdinalIgnoreCase)));
     }
 
-
-
     private static bool IsGenericOnlineCharacterName(string? categoryName)
     {
         return string.IsNullOrWhiteSpace(categoryName)
@@ -586,315 +572,9 @@ public sealed partial class OnlinePage
         await LoadOnlineModsAsync(forceReload: false);
     }
 
-    private string GetOnlineCharacterCatalogCacheFile(string catalogKey)
-    {
-        string key = Convert.ToHexString(SHA256.HashData(Encoding.UTF8.GetBytes(catalogKey))).ToLowerInvariant()[..16];
-        return Path.Combine(_onlineCharacterCachePath, $"{key}.json");
-    }
-
-    // A cached catalog older than this is shown at once and refreshed in the background, so newly
-    // released characters (and their avatars) appear within a day. Refreshing the online page reloads now.
-    internal static readonly TimeSpan OnlineCharacterCatalogFreshFor = TimeSpan.FromDays(1);
-
-    internal async Task<OnlineCharacterCatalogCacheSnapshot?> TryReadOnlineCharacterCatalogCacheAsync(string catalogKey)
-    {
-        CachedValue<OnlineCharacterCatalogCacheEntry>? sqliteEntry = _host.DataStore.TryReadCache<OnlineCharacterCatalogCacheEntry>(
-            "character-catalog",
-            catalogKey,
-            OnlineCharacterCatalogFreshFor,
-            allowExpired: true);
-        if (sqliteEntry?.Value.Characters is { Count: > 0 } storedCharacters)
-        {
-            return new OnlineCharacterCatalogCacheSnapshot(
-                storedCharacters,
-                sqliteEntry.CachedAtUtc,
-                !sqliteEntry.IsExpired);
-        }
-
-        try
-        {
-            string cacheFile = GetOnlineCharacterCatalogCacheFile(catalogKey);
-            if (!File.Exists(cacheFile))
-            {
-                return null;
-            }
-
-            string json = await File.ReadAllTextAsync(cacheFile);
-            OnlineCharacterCatalogCacheEntry? entry = JsonSerializer.Deserialize<OnlineCharacterCatalogCacheEntry>(json);
-            DateTimeOffset checkedAt = entry is not null && entry.CachedAtUtc > DateTimeOffset.MinValue
-                ? entry.CachedAtUtc
-                : new DateTimeOffset(File.GetLastWriteTimeUtc(cacheFile));
-            return entry?.Characters is { Count: > 0 } characters
-                ? new OnlineCharacterCatalogCacheSnapshot(
-                    characters,
-                    checkedAt,
-                    DateTimeOffset.UtcNow - checkedAt <= OnlineCharacterCatalogFreshFor)
-                : null;
-        }
-        catch
-        {
-            return null;
-        }
-    }
-
-    private async Task WriteOnlineCharacterCatalogCacheAsync(
-        string catalogKey,
-        List<OnlineCharacterOption> characters,
-        bool preserveWikiCheckedAt = false)
-    {
-        try
-        {
-            Directory.CreateDirectory(_onlineCharacterCachePath);
-            string cacheFile = GetOnlineCharacterCatalogCacheFile(catalogKey);
-            DateTimeOffset checkedAt = DateTimeOffset.UtcNow;
-            if (preserveWikiCheckedAt && File.Exists(cacheFile))
-            {
-                try
-                {
-                    string existingJson = await File.ReadAllTextAsync(cacheFile);
-                    OnlineCharacterCatalogCacheEntry? existingEntry = JsonSerializer.Deserialize<OnlineCharacterCatalogCacheEntry>(existingJson);
-                    if (existingEntry?.CachedAtUtc > DateTimeOffset.MinValue)
-                    {
-                        checkedAt = existingEntry.CachedAtUtc;
-                    }
-                }
-                catch (Exception ex)
-                {
-                    _host.LogApplicationIssue("Read existing character catalog cache", ex);
-                }
-            }
-
-            var entry = new OnlineCharacterCatalogCacheEntry
-            {
-                CachedAtUtc = checkedAt,
-                Characters = characters
-            };
-            _host.DataStore.WriteCache("character-catalog", catalogKey, entry, checkedAt);
-            await File.WriteAllTextAsync(cacheFile, JsonSerializer.Serialize(entry));
-        }
-        catch (Exception ex)
-        {
-            _host.LogApplicationIssue("Write character catalog cache", ex);
-        }
-    }
-
-    // Each catalog request gets this long, then one more try; see CharacterCatalogClient.WithRetryAsync.
-    private static readonly TimeSpan CharacterCatalogRequestTimeout = TimeSpan.FromSeconds(20);
-
-    // The repository's own wiki link, else its game's built-in one (found by category or game name).
-    private WikiCatalogDescriptor? GetWikiCatalogDescriptor(WorkspaceRepository repository)
-        => CharacterCatalogClient.Describe(repository.WikiUrl,
-            _host.BuiltInRepositoryPresets.FirstOrDefault(preset => _host.IsRepositoryForPreset(repository, preset))?.WikiUrl);
-
-    private Task<T> RequestCharacterCatalogAsync<T>(string operation, Func<CancellationToken, Task<T>> request)
-        => CharacterCatalogClient.WithRetryAsync(request, CharacterCatalogRequestTimeout,
-            ex => _host.LogApplicationIssue(operation + ", trying again", ex));
-
-    private async Task<List<OnlineCharacterOption>> FetchWikiCharacterCatalogAsync(WorkspaceRepository repository)
-    {
-        if (_services.OnlineSource.IsEndfield(repository))
-        {
-            return await FetchEndfieldCharacterCatalogAsync(repository);
-        }
-
-        return GetWikiCatalogDescriptor(repository) is { } descriptor
-            ? await RequestCharacterCatalogAsync("Load wiki character catalog",
-                token => CharacterCatalogClient.FetchWikiCharactersAsync(_host.Http, descriptor, repository.WikiUrl, token))
-            : [];
-    }
-
-    private Task<List<OnlineCharacterOption>> FetchEndfieldCharacterCatalogAsync(WorkspaceRepository repository)
-        => RequestCharacterCatalogAsync("Load Endfield operator catalog",
-            token => CharacterCatalogClient.FetchEndfieldOperatorsAsync(_host.Http, EndfieldCharacterCatalog.BuiltIn,
-                string.IsNullOrWhiteSpace(repository.WikiUrl) ? OnlineSourceRules.EndfieldOfficialWikiUrl : repository.WikiUrl, token));
-
-    private Task<List<OnlineCharacterOption>> FetchGameBananaCharacterCatalogAsync(string categoryId)
-        => RequestCharacterCatalogAsync("Load GameBanana character categories",
-            token => CharacterCatalogClient.FetchGameBananaCharactersAsync(_host.Http, categoryId, token));
-
-    private async Task ApplyOfficialHoYoWikiEnglishNamesAsync(
-        WorkspaceRepository repository,
-        List<OnlineCharacterOption> characters)
-    {
-        WikiCatalogDescriptor? descriptor = GetWikiCatalogDescriptor(repository);
-        if (descriptor is null
-            || string.IsNullOrWhiteSpace(descriptor.HoYoWikiApp)
-            || string.IsNullOrWhiteSpace(descriptor.HoYoWikiCharacterMenuId))
-        {
-            return;
-        }
-
-        try
-        {
-            // Fetch sequentially to keep the monthly Wiki refresh gentle and separate from mod loading.
-            List<HoYoWikiLocalizedCharacter> chineseCharacters = await RequestCharacterCatalogAsync("Load HoYoWiki names",
-                token => CharacterCatalogClient.FetchHoYoWikiNamesAsync(_host.Http, descriptor, "zh-cn", token));
-            List<HoYoWikiLocalizedCharacter> englishCharacters = await RequestCharacterCatalogAsync("Load HoYoWiki names",
-                token => CharacterCatalogClient.FetchHoYoWikiNamesAsync(_host.Http, descriptor, "en-us", token));
-            CharacterCatalogClient.ApplyEnglishNames(characters, chineseCharacters, englishCharacters);
-        }
-        catch (Exception ex)
-        {
-            // The existing Chinese catalog and translation fallback remain usable when HoYoWiki is unavailable.
-            _host.LogApplicationIssue("Load HoYoWiki names", ex);
-        }
-    }
-
-    private async Task TranslateWikiCharacterOptionsAsync(List<OnlineCharacterOption> characters)
-    {
-        List<OnlineCharacterOption> unresolvedCharacters = characters
-            .Where(character => string.IsNullOrWhiteSpace(character.DisplayNameEn)
-                || string.Equals(
-                    OnlineCharacterCatalogMatcher.NormalizeLookup(character.DisplayNameEn),
-                    OnlineCharacterCatalogMatcher.NormalizeLookup(character.DisplayNameZh),
-                    StringComparison.Ordinal))
-            .ToList();
-        if (unresolvedCharacters.Count == 0)
-        {
-            return;
-        }
-
-        IReadOnlyList<string> englishNames = await TranslateWikiCharacterNamesAsync(
-            unresolvedCharacters.Select(character => character.DisplayNameZh).ToList());
-        for (int index = 0; index < unresolvedCharacters.Count && index < englishNames.Count; index++)
-        {
-            string englishName = englishNames[index].Trim();
-            if (string.IsNullOrWhiteSpace(englishName))
-            {
-                continue;
-            }
-
-            unresolvedCharacters[index].DisplayNameEn = englishName;
-            if (!unresolvedCharacters[index].Aliases.Contains(englishName, StringComparer.OrdinalIgnoreCase))
-            {
-                unresolvedCharacters[index].Aliases.Add(englishName);
-            }
-        }
-    }
-
-    private async Task<IReadOnlyList<string>> TranslateWikiCharacterNamesAsync(IReadOnlyList<string> names)
-    {
-        string[] translatedNames = names.ToArray();
-        const int batchSize = 16;
-        const string separator = " [[[IMM_NAME]]] ";
-
-        for (int start = 0; start < names.Count; start += batchSize)
-        {
-            int count = Math.Min(batchSize, names.Count - start);
-            string[] batch = names.Skip(start).Take(count).ToArray();
-            try
-            {
-                string translatedBatch = await TranslateChunkAsync(string.Join(separator, batch), "en");
-                string[] parts = translatedBatch.Split("[[[IMM_NAME]]]", StringSplitOptions.TrimEntries);
-                if (parts.Length == count)
-                {
-                    for (int index = 0; index < count; index++)
-                    {
-                        translatedNames[start + index] = parts[index];
-                    }
-                    continue;
-                }
-
-                Task<string>[] translations = batch.Select(name => TranslateChunkAsync(name, "en")).ToArray();
-                string[] fallbackResults = await Task.WhenAll(translations);
-                for (int index = 0; index < count; index++)
-                {
-                    translatedNames[start + index] = fallbackResults[index];
-                }
-            }
-            catch
-            {
-                // Chinese names remain available when the optional translation service is unavailable.
-            }
-        }
-
-        return translatedNames;
-    }
-
-
-
-
-
-
-    internal async Task EnsureOnlineCharacterCatalogAsync(WorkspaceRepository repository, bool forceReload)
-    {
-        string catalogKey = GetOnlineCharacterCatalogKey(repository);
-        if (string.IsNullOrWhiteSpace(catalogKey) || !_loadingOnlineCharacterCatalogKeys.Add(catalogKey))
-        {
-            return;
-        }
-
-        try
-        {
-            if (!forceReload)
-            {
-                OnlineCharacterCatalogCacheSnapshot? cachedCatalog = await TryReadOnlineCharacterCatalogCacheAsync(catalogKey);
-                if (cachedCatalog is not null)
-                {
-                    bool requiresWikiCatalog = GetWikiCatalogDescriptor(repository) is not null
-                        || _services.OnlineSource.IsEndfield(repository);
-                    if (!requiresWikiCatalog || cachedCatalog.Characters.Any(character => character.IsWikiCharacter))
-                    {
-                        OnlineCharacterCatalogMatcher.ApplyManualMappings(repository.CharacterCategoryMappings, cachedCatalog.Characters);
-                        ApplyOnlineCharacterCatalog(catalogKey, cachedCatalog.Characters);
-                        if (cachedCatalog.IsFresh)
-                        {
-                            return;
-                        }
-                    }
-                }
-            }
-
-            List<OnlineCharacterOption> wikiCharacters = await FetchWikiCharacterCatalogAsync(repository);
-            if ((GetWikiCatalogDescriptor(repository) is not null || _services.OnlineSource.IsEndfield(repository))
-                && wikiCharacters.Count == 0)
-            {
-                return;
-            }
-
-            if (wikiCharacters.Count > 0)
-            {
-                OnlineCharacterCatalogMatcher.ApplyManualMappings(repository.CharacterCategoryMappings, wikiCharacters);
-                ApplyOnlineCharacterCatalog(catalogKey, wikiCharacters);
-                await ApplyOfficialHoYoWikiEnglishNamesAsync(repository, wikiCharacters);
-                await TranslateWikiCharacterOptionsAsync(wikiCharacters);
-
-                List<OnlineCharacterOption> gameBananaCharacters = [];
-                try
-                {
-                    gameBananaCharacters = await FetchGameBananaCharacterCatalogAsync(
-                        _services.OnlineSource.CategoryId(repository));
-                }
-                catch (Exception ex)
-                {
-                    // Wiki names remain usable if the optional category mapping request fails.
-                    _host.LogApplicationIssue("Load GameBanana character categories", ex);
-                }
-
-                List<OnlineCharacterOption> mergedCharacters = OnlineCharacterCatalogMatcher.Merge(
-                    wikiCharacters,
-                    gameBananaCharacters,
-                    repository.CharacterCategoryMappings);
-                OnlineCharacterCatalogMatcher.ApplyManualMappings(repository.CharacterCategoryMappings, mergedCharacters);
-                await WriteOnlineCharacterCatalogCacheAsync(catalogKey, mergedCharacters);
-                ApplyOnlineCharacterCatalog(catalogKey, mergedCharacters);
-            }
-        }
-        catch (Exception ex)
-        {
-            // The current page still supplies a usable partial character list; the log says why the catalog did not load.
-            _host.LogApplicationIssue("Load online character catalog", ex);
-        }
-        finally
-        {
-            _loadingOnlineCharacterCatalogKeys.Remove(catalogKey);
-        }
-    }
-
-
     private void ApplyOnlineCharacterCatalog(string catalogKey, List<OnlineCharacterOption> characters)
     {
-        if (!string.Equals(_onlineCharacterCatalogKey, catalogKey, StringComparison.Ordinal))
+        if (!string.Equals(_services.Online.CharacterCatalogKey, catalogKey, StringComparison.Ordinal))
         {
             return;
         }
