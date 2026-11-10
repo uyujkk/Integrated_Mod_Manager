@@ -234,6 +234,21 @@ J0 结果（2026-11-04，分支 `claude/ui-j0-prep`）：
 - 方案一（建议）：J7 只移界面，即工作区页面、角色和 Mod 列表、详情、快捷键编辑器、导入、标签、批量操作、复制归属和重命名。状态槽位、默认槽位、预设预览、组合预设的逻辑这次留在窗口里，页面经 `IWorkspaceHost` 使用；之后单独拆成 `SlotService` 和 `CombinationService`。外观按 Fluent 方案放到 J7-b，单独一个 PR，在 J7 合并之后。
 - 方案二：照 J6 的做法，全部文件随页面移走，浮窗和快捷键页经 `_workspaceView` 调用；J7 和 J7-b 在同一个分支里分提交完成。
 
+#### J7 后续：拆开 `IWorkspaceHost`
+
+这次（用户 2026-11-10 选方案一）只移界面：工作区的 XAML（连同只它用的样式和 `CombinationProfileControlsHost`）和 9 个界面文件移到 `Pages/WorkspacePage.xaml` 和 `Pages/Workspace/`。移过去的文件：`RepositoryWorkspace`、`RefinedWorkspace`、`LocalLibrary`、`LocalTags`、`BatchModActions`、`CharacterSelection`、`ExistingModImport`、`CharacterAvatars`，以及 `ShortcutBindings` 的编辑器部分。
+
+留在窗口的逻辑：状态槽位、变体、默认槽位、预设预览、组合预设和组合包、预设分享、压缩包、复制归属（#107）、角色重命名迁移（#108）、INI 冲突检测，以及 `ShortcutBindingRules`（快捷键规则，在线安装也用）。
+
+页面不引用 `MainWindow`，用到的窗口功能都经 `IWorkspaceHost`。接口现在有 **77 个成员**（76 个名字，`DetectModFileConflicts` 有两个重载），按用途分 18 组，每组一行注释。有 12 个控件的事件处理在留下的逻辑文件里（状态槽位、组合预设），由窗口创建页面后订阅（`AttachWorkspacePageEvents`）。
+
+以后拆成服务，每拆一块就从接口里删掉对应的成员：
+- `SlotService`：状态槽位、默认槽位、变体，以及共享的 `ModPersistentSlots`、`DefaultSlotSeeds`。浮窗和快捷键页也用它们。
+- `PresetPreviewService`：预设预览的截图、编辑和存储。
+- `CombinationService`：组合预设、组合包、预设分享和 `ConfigurationProfiles`。
+- 安装事务、压缩包、复制归属、INI 冲突合成一个 `InstallService`，和 J6 后续的“安装流程服务”合并。
+- 共享状态（`Characters`、`SecondLevelItems`、`ModBindings`、`ModLinks`）进 `WorkspaceState`，仪表盘、浮窗和命令面板都从这里读。
+
 ### J8. 对话框与资源
 
 - 每种对话框一个类（`Dialogs/` 下），由 `DialogService` 统一设置 `XamlRoot` 并保证同一时间只有一个对话框。
