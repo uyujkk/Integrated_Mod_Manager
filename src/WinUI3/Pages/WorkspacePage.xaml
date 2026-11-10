@@ -99,8 +99,10 @@
                 </Grid.RowDefinitions>
                 <!-- Title and repository picker with the command bar (refresh, import, launch); under them the view buttons and the counts. -->
                 <Border x:Name="RepositoryToolbarCard" Style="{StaticResource CommandSurfaceBorderStyle}" Padding="14,10,14,10" CornerRadius="6">
-                    <Grid x:Name="RepositoryToolbarGrid" RowSpacing="10">
+                    <Grid x:Name="RepositoryToolbarGrid">
                         <Grid.RowDefinitions>
+                            <RowDefinition Height="Auto" />
+                            <RowDefinition Height="Auto" />
                             <RowDefinition Height="Auto" />
                             <RowDefinition Height="Auto" />
                         </Grid.RowDefinitions>
@@ -129,7 +131,7 @@
                                 </AppBarButton>
                             </CommandBar>
                         </Grid>
-                        <Grid Grid.Row="1" ColumnSpacing="8">
+                        <Grid Grid.Row="1" ColumnSpacing="8" Margin="0,10,0,0">
                             <Grid.ColumnDefinitions>
                                 <ColumnDefinition Width="Auto" />
                                 <ColumnDefinition Width="*" />
@@ -140,6 +142,9 @@
                             <TextBlock x:Name="RepositoryCountTextBlock" Grid.Column="1" FontSize="12" VerticalAlignment="Center" HorizontalAlignment="Right"
                                        TextTrimming="CharacterEllipsis" ToolTipService.ToolTip="{Binding Text, RelativeSource={RelativeSource Self}}" />
                         </Grid>
+                        <!-- Stage J7-b: a scan or a long action in progress, and a scan that failed (with Retry). -->
+                        <ProgressBar x:Name="WorkspaceProgressBar" Grid.Row="1" VerticalAlignment="Bottom" Margin="0,0,0,-8" IsIndeterminate="True" Visibility="Collapsed" />
+                        <InfoBar x:Name="WorkspaceErrorInfoBar" Grid.Row="3" Margin="0,10,0,0" Severity="Error" IsOpen="False" Visibility="Collapsed" />
                     </Grid>
                 </Border>
                 <!-- Hidden holders: the toolbar and footer take these controls, and the counts are read from the metrics. -->
@@ -282,7 +287,7 @@
                                         <TextBlock x:Name="RepositoryModTitleTextBlock" FontSize="16" FontWeight="SemiBold" VerticalAlignment="Center" />
                                         <TextBlock x:Name="RepositoryModCountTextBlock" Grid.Column="1" FontSize="12" VerticalAlignment="Center" />
                                         <Button x:Name="DeleteSecondLevelButton" x:FieldModifier="internal" Grid.Column="2" Width="32" Height="32" MinHeight="32" Padding="6" CornerRadius="4"
-                                                Click="OnDeleteSecondLevelClicked" Style="{StaticResource SecondaryButtonStyle}">
+                                                Click="OnDeleteSecondLevelClicked" Style="{StaticResource DangerButtonStyle}">
                                             <FontIcon FontSize="16" Glyph="&#xE74D;" />
                                         </Button>
                                     </Grid>
@@ -491,7 +496,7 @@
                                                             <ColumnDefinition Width="*" />
                                                         </Grid.ColumnDefinitions>
                                                         <Button x:Name="CapturePersistentSlotButton" x:FieldModifier="internal" HorizontalAlignment="Stretch" Style="{StaticResource SecondaryButtonStyle}" />
-                                                        <Button x:Name="DeletePersistentSlotButton" x:FieldModifier="internal" Grid.Column="1" HorizontalAlignment="Stretch" Style="{StaticResource SecondaryButtonStyle}" />
+                                                        <Button x:Name="DeletePersistentSlotButton" x:FieldModifier="internal" Grid.Column="1" HorizontalAlignment="Stretch" Style="{StaticResource DangerButtonStyle}" />
                                                     </Grid>
                                                     <Button x:Name="RestorePersistentRuntimeButton" x:FieldModifier="internal" HorizontalAlignment="Stretch" Style="{StaticResource PrimaryButtonStyle}" />
                                                     <DropDownButton x:Name="PersistentSlotMoreButton" x:FieldModifier="internal" HorizontalAlignment="Stretch" HorizontalContentAlignment="Center" />
@@ -569,7 +574,7 @@
                         <Button x:Name="CreateConfigurationProfileButton" x:FieldModifier="internal" Style="{StaticResource SecondaryButtonStyle}" />
                         <Button x:Name="UpdateConfigurationProfileButton" x:FieldModifier="internal" Grid.Column="1" Style="{StaticResource SecondaryButtonStyle}" />
                         <Button x:Name="ApplyConfigurationProfileButton" x:FieldModifier="internal" Grid.Column="2" Style="{StaticResource PrimaryButtonStyle}" />
-                        <Button x:Name="DeleteConfigurationProfileButton" x:FieldModifier="internal" Grid.Column="4" Style="{StaticResource SecondaryButtonStyle}" />
+                        <Button x:Name="DeleteConfigurationProfileButton" x:FieldModifier="internal" Grid.Column="4" Style="{StaticResource DangerButtonStyle}" />
                     </Grid>
                     <TextBlock x:Name="ConfigurationProfileSummaryTextBlock" x:FieldModifier="internal" Style="{StaticResource CaptionTextStyle}" TextWrapping="Wrap" />
                 </StackPanel>
