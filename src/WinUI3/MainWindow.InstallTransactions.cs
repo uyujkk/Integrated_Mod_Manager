@@ -67,7 +67,7 @@ public sealed partial class MainWindow
             }
         }
 
-        StatusTextBlock.Text = T("InstallTransactions.RemovedBrokenLinkS", removed);
+        _workspaceView.StatusTextBlock.Text = T("InstallTransactions.RemovedBrokenLinkS", removed);
         if (failures.Count > 0)
         {
             await ShowMessageAsync(
@@ -207,11 +207,11 @@ public sealed partial class MainWindow
                 return;
             }
 
-            SetBusyState(true);
+            _workspaceView.SetBusyState(true);
             try
             {
                 await RollbackInstallTransactionAsync(_lastInstallTransactionPath, clearLastTransaction: true);
-                await RefreshListsAsync();
+                await _workspaceView.RefreshListsAsync();
                 ShowAppNotification(T("InstallTransactions.Restored"));
             }
             catch (Exception ex)
@@ -220,7 +220,7 @@ public sealed partial class MainWindow
             }
             finally
             {
-                SetBusyState(false);
+                _workspaceView.SetBusyState(false);
                 RefreshConfigurationProfiles();
             }
         }

@@ -82,13 +82,13 @@ public sealed partial class MainWindow
             _onlineView._onlinePreferences.DownloadFolders ??= new(StringComparer.OrdinalIgnoreCase);
             _onlineView._onlinePreferences.BrowseSessions ??= [];
             _onlineView._onlinePreferences.RecentAuthors ??= [];
-            _localLibraries = config?.LocalLibraries ?? new(StringComparer.OrdinalIgnoreCase);
-            foreach (var library in _localLibraries.Values) library.Normalize();
+            _workspaceView._localLibraries = config?.LocalLibraries ?? new(StringComparer.OrdinalIgnoreCase);
+            foreach (var library in _workspaceView._localLibraries.Values) library.Normalize();
             _services.Downloads.Scheduler.Limit = _onlineView._onlinePreferences.ConcurrentDownloads;
             _loadedUpdateCheckInterval = config?.UpdateCheckInterval;
             _updateCheckInterval = AppSelfUpdateEnabled ? ParseUpdateCheckInterval(_loadedUpdateCheckInterval) : UpdateCheckInterval.Manual;
             _navigationCollapsed = config?.NavigationCollapsed ?? false;
-            _modList.View = config?.RepositoryWorkspaceView switch
+            _workspaceView._modList.View = config?.RepositoryWorkspaceView switch
             {
                 "covers" => RepositoryWorkspaceView.Covers,
                 "presets" => RepositoryWorkspaceView.Presets,
@@ -263,7 +263,7 @@ public sealed partial class MainWindow
             {
                 CurrentPrimarySection = _currentPrimarySection.ToString().ToLowerInvariant(),
                 OnlinePreferences = _onlineView._onlinePreferences,
-                LocalLibraries = _localLibraries,
+                LocalLibraries = _workspaceView._localLibraries,
                 SelectedRepositoryId = _services.Repositories.SelectedId,
                 UpdateCheckInterval = ApplicationReleasePolicy.UpdateSettingToSave(_updateCheckInterval.ToString(), _loadedUpdateCheckInterval),
                 LastUpdateCheckUtc = _lastUpdateCheckUtc?.ToString("O"),
@@ -302,7 +302,7 @@ public sealed partial class MainWindow
                 NavigationCollapsed = _navigationCollapsed,
                 InterfaceDensity = _interfaceDensity == InterfaceDensity.Compact ? "compact" : "comfortable",
                 OnlineCardLayout = _onlineView._onlinePage.CardLayoutMode == OnlineCardLayoutMode.Grid ? "grid" : "list",
-                RepositoryWorkspaceView = _modList.View.ToString().ToLowerInvariant(),
+                RepositoryWorkspaceView = _workspaceView._modList.View.ToString().ToLowerInvariant(),
                 UpdatesView = UpdatesViewModel.FormatView(_services.Updates.View),
                 SelectedConfigurationProfileId = _selectedConfigurationProfileId,
                 EnableConflictDetection = _enableConflictDetection,
@@ -331,7 +331,7 @@ public sealed partial class MainWindow
         {
             if (throwOnError) throw;
             LogApplicationIssue("Save repository configuration", ex);
-            StatusTextBlock.Text = T("Configuration.FailedToSaveRepositoryConfig");
+            _workspaceView.StatusTextBlock.Text = T("Configuration.FailedToSaveRepositoryConfig");
         }
     }
 
@@ -411,7 +411,7 @@ public sealed partial class MainWindow
 
         if (!File.Exists(_services.ShellConfig.ConfigPath))
         {
-            LoadDefaultShortcutTemplate();
+            _workspaceView.LoadDefaultShortcutTemplate();
             return;
         }
 
@@ -434,7 +434,7 @@ public sealed partial class MainWindow
         catch (Exception ex)
         {
             LogApplicationIssue("Load configuration", ex);
-            StatusTextBlock.Text = T("Configuration.FailedToLoadConfigOlderConfig");
+            _workspaceView.StatusTextBlock.Text = T("Configuration.FailedToLoadConfigOlderConfig");
         }
 
         if (_onlineView.DeduplicateTrackedModOrigins())
@@ -442,8 +442,8 @@ public sealed partial class MainWindow
             SaveConfig();
         }
 
-        LoadDefaultShortcutTemplate();
-        LoadLinkForCurrentMod(null);
+        _workspaceView.LoadDefaultShortcutTemplate();
+        _workspaceView.LoadLinkForCurrentMod(null);
     }
 
     private bool SaveConfig()
@@ -458,7 +458,7 @@ public sealed partial class MainWindow
         catch (Exception ex)
         {
             LogApplicationIssue("Save configuration", ex);
-            StatusTextBlock.Text = T("Configuration.FailedToSaveConfigButThe");
+            _workspaceView.StatusTextBlock.Text = T("Configuration.FailedToSaveConfigButThe");
             return false;
         }
     }
@@ -486,7 +486,7 @@ public sealed partial class MainWindow
         string text = _services.ShellConfig.Read(filePath, validator, out bool restoredFromBackup);
         if (restoredFromBackup)
         {
-            StatusTextBlock.Text = T("Configuration.WasDamagedAndTheLatestBackup", Path.GetFileName(filePath));
+            _workspaceView.StatusTextBlock.Text = T("Configuration.WasDamagedAndTheLatestBackup", Path.GetFileName(filePath));
         }
 
         return text;

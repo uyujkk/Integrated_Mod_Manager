@@ -15,29 +15,29 @@ public sealed partial class MainWindow
         if (!_applyingCombinationProfile && !_restoringPersistentRuntime)
         {
             NavigateToPrimarySection(PrimarySection.Repository);
-            SetRepositoryWorkspaceViewV4(RepositoryWorkspaceView.Presets);
+            _workspaceView.SetRepositoryWorkspaceViewV4(RepositoryWorkspaceView.Presets);
         }
     }
 
     private void SetCombinationBusy(bool busy)
     {
         _applyingCombinationProfile = busy;
-        SetBusyState(busy);
+        _workspaceView.SetBusyState(busy);
         ShellNavigationView.IsHitTestVisible = !busy;
         foreach (NavigationViewItem item in new[] { DashboardNavButton, RepositoryNavButton, OnlineNavButton, UpdatesNavButton, SettingsNavButton })
             item.IsEnabled = !busy;
         Paths.ArePathsEditable = !busy;
-        RefreshButton.IsEnabled = !busy;
-        ImportZipButton.IsEnabled = !busy;
-        RunLauncherButton.IsEnabled = !busy;
+        _workspaceView.RefreshButton.IsEnabled = !busy;
+        _workspaceView.ImportZipButton.IsEnabled = !busy;
+        _workspaceView.RunLauncherButton.IsEnabled = !busy;
         RefreshConfigurationProfiles();
         RefreshPersistentSlotControls();
     }
 
     private async Task SaveCombinationProfileAsync(WorkspaceRepository repository, string name, ModConfigurationProfile? existing)
     {
-        bool includeState = CaptureCombinationStateCheckBox.IsChecked == true;
-        string userIni = CombinationUserIniTextBox.Text.Trim();
+        bool includeState = _workspaceView.CaptureCombinationStateCheckBox.IsChecked == true;
+        string userIni = _workspaceView.CombinationUserIniTextBox.Text.Trim();
         SetCombinationBusy(true);
         try
         {
@@ -104,7 +104,7 @@ public sealed partial class MainWindow
         ModConfigurationProfile? profile = GetSelectedConfigurationProfile();
         WorkspaceRepository? repository = GetSelectedRepository();
         if (profile is null || repository is null) return;
-        string userIni = CombinationUserIniTextBox.Text.Trim();
+        string userIni = _workspaceView.CombinationUserIniTextBox.Text.Trim();
         string? transaction = null, stateBackup = null;
         ModPersistentRuntimeRestorePlan? runtimePlan = null;
         bool started = false, committed = false, adopted = false;
@@ -133,7 +133,7 @@ public sealed partial class MainWindow
             }
             if (choice != CombinationRestoreChoice.Restore) return;
             if (repository.UseDirectoryLinks
-                && !await ConfirmSingleSelectionViolationsAsync(repository, preview.Deployment!.DesiredSources)) return;
+                && !await _workspaceView.ConfirmSingleSelectionViolationsAsync(repository, preview.Deployment!.DesiredSources)) return;
             ModCombinationDeploymentPlan deployment = preview.Deployment!;
             runtimePlan = preview.Runtime;
 
@@ -169,8 +169,8 @@ public sealed partial class MainWindow
             }
             foreach (string source in deployment.InstallSources)
             {
-                await DeployModAsync(source, ModDeploymentLayout.DeployedPath(repository.TargetPath, source), repository,
-                    new Progress<ProgressInfo>(info => UpdateProgress(info.Percent, T("CombinationPresets.RestoringCombination") + Path.GetFileName(source))));
+                await _workspaceView.DeployModAsync(source, ModDeploymentLayout.DeployedPath(repository.TargetPath, source), repository,
+                    new Progress<ProgressInfo>(info => _workspaceView.UpdateProgress(info.Percent, T("CombinationPresets.RestoringCombination") + Path.GetFileName(source))));
             }
             SaveShellConfig();
             var actual = await Task.Run(() => ModCombinationDeploymentPolicy.Capture(repository.SourcePath, repository.TargetPath, OwnsCopy(repository)));
@@ -188,7 +188,7 @@ public sealed partial class MainWindow
             if (transaction is not null) CommitInstallTransaction(transaction);
             committed = true;
             await RefreshShortcutDeployedModsAsync();
-            UpdateProgress(100, T("CombinationPresets.CombinationAndLoaderParametersVerified"));
+            _workspaceView.UpdateProgress(100, T("CombinationPresets.CombinationAndLoaderParametersVerified"));
             await ShowMessageAsync(T("CombinationPresets.RestoredModsParameters", profile.Name, actual.Count, runtimePlan?.Values.Count ?? 0)
                 + (stateBackup is null ? T("CombinationPresets.StateWasUnchangedNoNewState") : T("CombinationPresets.StateBackup") + stateBackup)
                 + T("CombinationPresets.RestartTheLoaderAndGameTo"), T("CombinationPresets.CombinationRestored"));
@@ -215,7 +215,7 @@ public sealed partial class MainWindow
         }
         finally
         {
-            if (started) await RefreshListsAsync();
+            if (started) await _workspaceView.RefreshListsAsync();
             SetCombinationBusy(false);
         }
         if (adopted) await RestoreCombinationProfileAsync();

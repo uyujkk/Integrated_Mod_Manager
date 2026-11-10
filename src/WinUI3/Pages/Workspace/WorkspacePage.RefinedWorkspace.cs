@@ -4,21 +4,21 @@ using Microsoft.UI.Xaml.Controls;
 
 namespace ModFolderCopier.WinUI;
 
-public sealed partial class MainWindow
+public sealed partial class WorkspacePage
 {
     private bool _refinedWorkspaceReady;
 
     // The page frames are in MainWindow.xaml; this wires their layout and text. RepositoryWorkspace.cs
     // fills the repository cards afterwards.
-    private void InitializeRefinedWorkspace()
+    internal void InitializeRefinedWorkspace()
     {
         _refinedWorkspaceReady = true;
-        RootGrid.SizeChanged += (_, _) => UpdateRefinedWorkspaceLayout();
+        _host.Root.SizeChanged += (_, _) => UpdateRefinedWorkspaceLayout();
         UpdateRefinedWorkspaceLanguage();
         UpdateRefinedWorkspaceLayout();
     }
 
-    private void UpdateRefinedWorkspaceLanguage()
+    internal void UpdateRefinedWorkspaceLanguage()
     {
         if (!_refinedWorkspaceReady)
         {
@@ -47,7 +47,7 @@ public sealed partial class MainWindow
         AutomationProperties.SetName(button, label);
     }
 
-    private void UpdateRefinedWorkspaceLayout()
+    internal void UpdateRefinedWorkspaceLayout()
     {
         if (_repositoryV4Ready)
         {

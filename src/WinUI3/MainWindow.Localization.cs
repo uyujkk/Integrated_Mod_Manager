@@ -45,14 +45,14 @@ public sealed partial class MainWindow
         ToolTipService.SetToolTip(_onlineView.OnlineNextPageButton, null);
         ToolTipService.SetToolTip(_onlineView.OnlineSearchTextBox, T("Localization.SearchThisPageByCharacterMod2"));
         ToolTipService.SetToolTip(_onlineView.OnlineSortComboBox, T("Localization.ChangeTheSortOrderForThe"));
-        ToolTipService.SetToolTip(PreviewImage, T("Localization.ClickToViewFullSize"));
+        ToolTipService.SetToolTip(_workspaceView.PreviewImage, T("Localization.ClickToViewFullSize"));
         ToolTipService.SetToolTip(_onlineView.OnlineDetailHeroImage, T("Localization.ClickToViewFullSize"));
         AutomationProperties.SetName(_onlineView.RefreshOnlineButton, T("Localization.RefreshOnlineModList"));
         AutomationProperties.SetName(_onlineView.OnlinePrevPageButton, T("Localization.PreviousPage"));
         AutomationProperties.SetName(_onlineView.OnlineNextPageButton, T("Localization.NextPage"));
         AutomationProperties.SetName(_onlineView.OnlineSearchTextBox, T("Localization.SearchThisPageByCharacterMod"));
         AutomationProperties.SetName(_onlineView.OnlineSortComboBox, T("Localization.OnlineListSort"));
-        AutomationProperties.SetName(PreviewImage, T("Localization.OpenFullSizeModPreview"));
+        AutomationProperties.SetName(_workspaceView.PreviewImage, T("Localization.OpenFullSizeModPreview"));
         AutomationProperties.SetName(_onlineView.OnlineDetailHeroImage, T("Localization.OpenFullSizeOnlineModImage"));
         _onlineView.InitializeOnlineControls();
 
@@ -72,46 +72,46 @@ public sealed partial class MainWindow
         AppTitleBar.Subtitle = AppVersion;
 
 
-        RefreshButton.Content = T("Localization.Refresh");
-        ImportZipButton.Content = T("Localization.ImportMod");
-        ToolTipService.SetToolTip(ImportZipButton, T("Localization.ImportIntoTheSelectedFolder"));
-        RunLauncherButton.Content = T("Localization.RunLauncher");
-        UpdateDeployButtonLabel();
+        _workspaceView.RefreshButton.Content = T("Localization.Refresh");
+        _workspaceView.ImportZipButton.Content = T("Localization.ImportMod");
+        ToolTipService.SetToolTip(_workspaceView.ImportZipButton, T("Localization.ImportIntoTheSelectedFolder"));
+        _workspaceView.RunLauncherButton.Content = T("Localization.RunLauncher");
+        _workspaceView.UpdateDeployButtonLabel();
 
-        FirstCountLabelTextBlock.Text = T("Localization.FirstLevelFolders");
-        FirstCountHintTextBlock.Text = T("Localization.NumberOfCategoriesInTheSource");
-        SecondCountLabelTextBlock.Text = T("Localization.SecondLevelFolders");
-        SecondCountHintTextBlock.Text = T("Localization.TotalModFoldersFoundInThe");
-        CurrentStateLabelTextBlock.Text = T("Localization.DeploymentStatus");
-        CurrentStateHintTextBlock.Text = T("Localization.DistinguishesNormalCopiesFromDirectoryJunctions");
-        CurrentFolderLabelTextBlock.Text = T("Localization.CurrentSecondLevelFolder");
-        CurrentFolderHintTextBlock.Text = T("Localization.ShowsTheCurrentlySelectedModName");
-        FirstLevelSearchTextBox.PlaceholderText = T("RepositoryWorkspace.SearchCharacters");
-        CreateFirstLevelButton.Content = T("Localization.NewFolder");
-        RenameFirstLevelButton.Content = T("Localization.Rename");
-        DeleteSecondLevelButton.Content = T("Localization.DeleteMod");
+        _workspaceView.FirstCountLabelTextBlock.Text = T("Localization.FirstLevelFolders");
+        _workspaceView.FirstCountHintTextBlock.Text = T("Localization.NumberOfCategoriesInTheSource");
+        _workspaceView.SecondCountLabelTextBlock.Text = T("Localization.SecondLevelFolders");
+        _workspaceView.SecondCountHintTextBlock.Text = T("Localization.TotalModFoldersFoundInThe");
+        _workspaceView.CurrentStateLabelTextBlock.Text = T("Localization.DeploymentStatus");
+        _workspaceView.CurrentStateHintTextBlock.Text = T("Localization.DistinguishesNormalCopiesFromDirectoryJunctions");
+        _workspaceView.CurrentFolderLabelTextBlock.Text = T("Localization.CurrentSecondLevelFolder");
+        _workspaceView.CurrentFolderHintTextBlock.Text = T("Localization.ShowsTheCurrentlySelectedModName");
+        _workspaceView.FirstLevelSearchTextBox.PlaceholderText = T("RepositoryWorkspace.SearchCharacters");
+        _workspaceView.CreateFirstLevelButton.Content = T("Localization.NewFolder");
+        _workspaceView.RenameFirstLevelButton.Content = T("Localization.Rename");
+        _workspaceView.DeleteSecondLevelButton.Content = T("Localization.DeleteMod");
 
-        ShortcutSectionTitleTextBlock.Text = T("Localization.ShortcutNotes");
-        ShortcutSectionSubtitleTextBlock.Text = T("Localization.ShortcutNotesForTheSelectedMod");
-        AddShortcutRowButton.Content = T("Localization.AddRow");
-        ShortcutHintTextBlock.Text = T("Localization.ReadsKeySectionsFromModINIs");
+        _workspaceView.ShortcutSectionTitleTextBlock.Text = T("Localization.ShortcutNotes");
+        _workspaceView.ShortcutSectionSubtitleTextBlock.Text = T("Localization.ShortcutNotesForTheSelectedMod");
+        _workspaceView.AddShortcutRowButton.Content = T("Localization.AddRow");
+        _workspaceView.ShortcutHintTextBlock.Text = T("Localization.ReadsKeySectionsFromModINIs");
 
-        PreviewSectionTitleTextBlock.Text = T("Localization.ImagePreview");
-        PreviewSectionSubtitleTextBlock.Text = T("Localization.PrefersPreviewCoverThumbnailImageAnd");
-        ModLinkSectionTitleTextBlock.Text = T("Localization.ModLink");
-        ModLinkSectionSubtitleTextBlock.Text = T("Localization.BindAWebLinkToThe");
-        ModLinkTextBox.PlaceholderText = T("Localization.PasteTheWebLinkForThe");
-        PreviewFooterTextBlock.Text = T("Localization.ThePreviewShowsTheCurrentSecond");
-        OpenModLinkButton.Content = T("Localization.OpenLink");
+        _workspaceView.PreviewSectionTitleTextBlock.Text = T("Localization.ImagePreview");
+        _workspaceView.PreviewSectionSubtitleTextBlock.Text = T("Localization.PrefersPreviewCoverThumbnailImageAnd");
+        _workspaceView.ModLinkSectionTitleTextBlock.Text = T("Localization.ModLink");
+        _workspaceView.ModLinkSectionSubtitleTextBlock.Text = T("Localization.BindAWebLinkToThe");
+        _workspaceView.ModLinkTextBox.PlaceholderText = T("Localization.PasteTheWebLinkForThe");
+        _workspaceView.PreviewFooterTextBlock.Text = T("Localization.ThePreviewShowsTheCurrentSecond");
+        _workspaceView.OpenModLinkButton.Content = T("Localization.OpenLink");
 
-        ProgressTextBlock.Text = string.IsNullOrWhiteSpace(ProgressTextBlock.Text)
+        _workspaceView.ProgressTextBlock.Text = string.IsNullOrWhiteSpace(_workspaceView.ProgressTextBlock.Text)
             ? T("Common.NoActiveCopyTask")
-            : ProgressTextBlock.Text;
-        AuthorTextBlock.Text = T("Localization.ToolAuthorUyujkk");
+            : _workspaceView.ProgressTextBlock.Text;
+        _workspaceView.AuthorTextBlock.Text = T("Localization.ToolAuthorUyujkk");
 
         ApplyShortcutPlaceholders();
-        UpdateShortcutRowVisibility();
-        UpdateLinkButtonState();
+        _workspaceView.UpdateShortcutRowVisibility();
+        _workspaceView.UpdateLinkButtonState();
         RefreshLocalizedStates();
         ApplyTextOverrides();
         ApplyActionButtonPresentation();
@@ -119,50 +119,50 @@ public sealed partial class MainWindow
         if (_characters.Selected is { } firstItem)
         {
             string? selectedPath = _currentSecondLevelPath;
-            PopulateSecondLevelList(firstItem, preserveStatus: true);
-            SelectSecondLevelByPath(selectedPath);
+            _workspaceView.PopulateSecondLevelList(firstItem, preserveStatus: true);
+            _workspaceView.SelectSecondLevelByPath(selectedPath);
         }
-        else if (GetSelectedSecondLevelItem() is SecondLevelFolderItem secondItem)
+        else if (_workspaceView.GetSelectedSecondLevelItem() is SecondLevelFolderItem secondItem)
         {
-            ShowSecondLevelDetails(secondItem, preserveStatus: true);
+            _workspaceView.ShowSecondLevelDetails(secondItem, preserveStatus: true);
         }
         else
         {
-            ShowModSummary(null);
-            ClearPreview();
+            _workspaceView.ShowModSummary(null);
+            _workspaceView.ClearPreview();
             SetDefaultStatus();
         }
     }
 
     private void ApplyTextOverrides()
     {
-        ImportZipButton.Content = T("Localization.ImportMod");
+        _workspaceView.ImportZipButton.Content = T("Localization.ImportMod");
 
-        FirstCountHintTextBlock.Text = T("Localization.NumberOfCategoriesInTheMod");
+        _workspaceView.FirstCountHintTextBlock.Text = T("Localization.NumberOfCategoriesInTheMod");
 
-        ShortcutSectionTitleTextBlock.Text = T("Localization.ShortcutAndDescription");
-        ShortcutSectionSubtitleTextBlock.Text = T("Localization.RecordAShortcutAndDescriptionFor");
-        ShortcutHintTextBlock.Text = T("Localization.ClickABoxToRecordGame");
+        _workspaceView.ShortcutSectionTitleTextBlock.Text = T("Localization.ShortcutAndDescription");
+        _workspaceView.ShortcutSectionSubtitleTextBlock.Text = T("Localization.RecordAShortcutAndDescriptionFor");
+        _workspaceView.ShortcutHintTextBlock.Text = T("Localization.ClickABoxToRecordGame");
         RefreshPersistentSlotControls();
     }
 
     private void ApplyActionButtonPresentation()
     {
-        CreateFirstLevelButton.Content = new FontIcon { Glyph = "\uE710", FontSize = 16 };
-        RenameFirstLevelButton.Content = new FontIcon { Glyph = "\uE70F", FontSize = 16 };
-        DeleteSecondLevelButton.Content = new FontIcon { Glyph = "\uE74D", FontSize = 16 };
+        _workspaceView.CreateFirstLevelButton.Content = new FontIcon { Glyph = "\uE710", FontSize = 16 };
+        _workspaceView.RenameFirstLevelButton.Content = new FontIcon { Glyph = "\uE70F", FontSize = 16 };
+        _workspaceView.DeleteSecondLevelButton.Content = new FontIcon { Glyph = "\uE74D", FontSize = 16 };
 
         string createTip = T("Common.CreateFirstLevelFolder");
         string renameTip = T("Localization.RenameFirstLevelFolder");
         string deleteTip = T("Localization.DeleteSelectedMod");
 
-        ToolTipService.SetToolTip(CreateFirstLevelButton, createTip);
-        ToolTipService.SetToolTip(RenameFirstLevelButton, renameTip);
-        ToolTipService.SetToolTip(DeleteSecondLevelButton, deleteTip);
+        ToolTipService.SetToolTip(_workspaceView.CreateFirstLevelButton, createTip);
+        ToolTipService.SetToolTip(_workspaceView.RenameFirstLevelButton, renameTip);
+        ToolTipService.SetToolTip(_workspaceView.DeleteSecondLevelButton, deleteTip);
 
-        AutomationProperties.SetName(CreateFirstLevelButton, createTip);
-        AutomationProperties.SetName(RenameFirstLevelButton, renameTip);
-        AutomationProperties.SetName(DeleteSecondLevelButton, deleteTip);
+        AutomationProperties.SetName(_workspaceView.CreateFirstLevelButton, createTip);
+        AutomationProperties.SetName(_workspaceView.RenameFirstLevelButton, renameTip);
+        AutomationProperties.SetName(_workspaceView.DeleteSecondLevelButton, deleteTip);
     }
 
     private void ApplyShortcutPlaceholders()
@@ -180,7 +180,7 @@ public sealed partial class MainWindow
 
     private void SetDefaultStatus()
     {
-        StatusTextBlock.Text = T("Localization.ChooseAModStorageFolderAnd", AppVersion);
+        _workspaceView.StatusTextBlock.Text = T("Localization.ChooseAModStorageFolderAnd", AppVersion);
     }
 
     private void RefreshLocalizedStates()
@@ -190,18 +190,13 @@ public sealed partial class MainWindow
         {
             foreach (SecondLevelFolderItem second in first.Children)
             {
-                second.State = GetFolderCopyState(targetDir, second.Path);
+                second.State = _workspaceView.GetFolderCopyState(targetDir, second.Path);
             }
         }
     }
 
-    private string StateNotSelectedText => T("Common.NotSelected");
 
-    private string StateNotConfiguredText => T("Localization.NotConfigured");
 
-    private string StateCopiedText => T("Localization.Copied");
 
-    private string StateLinkedText => T("Localization.Linked");
 
-    private string StateMissingText => T("Localization.NotDeployed");
 }

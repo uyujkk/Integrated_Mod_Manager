@@ -24,8 +24,8 @@ public sealed partial class MainWindow
         {
             AttachTrackedTextInput(box);
         }
-        AttachTrackedTextInput(FirstLevelSearchTextBox);
-        AttachTrackedTextInput(ModLinkTextBox);
+        AttachTrackedTextInput(_workspaceView.FirstLevelSearchTextBox);
+        AttachTrackedTextInput(_workspaceView.ModLinkTextBox);
     }
 
     private void AttachTrackedTextInput(TextBox box)
@@ -91,7 +91,7 @@ public sealed partial class MainWindow
         if (_pendingRepositoryRefresh && _currentPrimarySection == PrimarySection.Repository)
         {
             _pendingRepositoryRefresh = false;
-            _ = RefreshListsAsync();
+            _ = _workspaceView.RefreshListsAsync();
         }
 
         RefreshDashboard();
@@ -107,14 +107,8 @@ public sealed partial class MainWindow
 
     private void InitializePageHost()
     {
-        foreach ((PrimarySection section, FrameworkElement container) in new (PrimarySection, FrameworkElement)[]
-        {
-            (PrimarySection.Repository, WorkspacePageHost)
-        })
-        {
-            PagesHostGrid.Children.Remove(container);
-            _pages[section] = new WrapperPage(container);
-        }
+        // Stage J7: the Mod workspace page, created with the window.
+        _pages[PrimarySection.Repository] = _workspaceView;
         // Stage J6: the Online page, created with the window.
         _pages[PrimarySection.Online] = _onlineView;
         // Stage J2: the Settings page is a page of its own.
@@ -132,7 +126,7 @@ public sealed partial class MainWindow
         return _currentPrimarySection switch
         {
             PrimarySection.Dashboard => _pages[PrimarySection.Dashboard],
-            PrimarySection.Repository => WorkspacePageHost,
+            PrimarySection.Repository => _pages[PrimarySection.Repository],
             PrimarySection.Online => _pages[PrimarySection.Online],
             PrimarySection.Updates => _pages[PrimarySection.Updates],
             PrimarySection.Shortcuts => _pages[PrimarySection.Shortcuts],
@@ -197,7 +191,7 @@ public sealed partial class MainWindow
         _onlineView.UpdateOnlineResponsiveLayout(width);
         ApplyTitleBarSearchVisibility();
         // The Settings and Updates pages lay themselves out when their own size changes.
-        UpdateRefinedWorkspaceLayout();
+        _workspaceView.UpdateRefinedWorkspaceLayout();
 
         // The navigation view opens its labelled pane from 1440 px (ExpandedModeThresholdWidth) unless
         // the user collapsed it; below that it shows icons.
@@ -225,7 +219,7 @@ public sealed partial class MainWindow
 
     private void ApplyPrimaryNavigationContent()
     {
-        UpdateRefinedWorkspaceLanguage();
+        _workspaceView.UpdateRefinedWorkspaceLanguage();
         SetNavigationItem(DashboardNavButton, T("Shell.Dashboard"), T("Shell.Dashboard"));
         SetNavigationItem(RepositoryNavButton, T("Shell.Repositories"), T("Shell.Repositories"));
         SetNavigationItem(OnlineNavButton, T("Shell.Online"), T("Shell.OnlineMods"));
@@ -378,7 +372,7 @@ public sealed partial class MainWindow
 
             if (_onlineView._restoredInterruptedDownloads > 0)
                 ShowAppNotification(T("Shell.InterruptedTasksRestored", _onlineView._restoredInterruptedDownloads));
-            await NotifyInterruptedImportsAsync();
+            await _workspaceView.NotifyInterruptedImportsAsync();
             await ChooseFirstInstallGameAsync();
             // Waits for any startup dialog (including the update prompt below) before showing; the
             // getting-started tips come after what's new, so they never sit under a dialog.
@@ -414,7 +408,7 @@ public sealed partial class MainWindow
         ++_onlineView._onlineDetailAnimationVersion;
         _onlineView.PersistDownloadTasks();
         _bundleOperationCancellation?.Cancel();
-        _existingModImportCancellation?.Cancel();
+        _workspaceView._existingModImportCancellation?.Cancel();
         _onlineView._onlineWindowClosed = true;
         _onlineView.InvalidateOnlineDetailRequest();
         _onlineView._onlineDownloadActions.CancelPreparation();
@@ -440,7 +434,7 @@ public sealed partial class MainWindow
             bool altDown = InputKeyboardSource.GetKeyStateForCurrentThread(VirtualKey.Menu).HasFlag(CoreVirtualKeyStates.Down);
 
             if (e.Key == VirtualKey.Tab
-                || IsModifierDown(VirtualKey.LeftWindows) || IsModifierDown(VirtualKey.RightWindows)
+                || WorkspacePage.IsModifierDown(VirtualKey.LeftWindows) || WorkspacePage.IsModifierDown(VirtualKey.RightWindows)
                 || (altDown && e.Key is VirtualKey.Escape or VirtualKey.F4)) return;
 
             // Ctrl+K is a keyboard accelerator (InitializeCommandPaletteShortcut); while the
@@ -449,7 +443,7 @@ public sealed partial class MainWindow
 
             if (controlDown && e.Key == VirtualKey.F)
             {
-                (_currentPrimarySection == PrimarySection.Online ? _onlineView.OnlineSearchTextBox : FirstLevelSearchTextBox).Focus(FocusState.Keyboard);
+                (_currentPrimarySection == PrimarySection.Online ? _onlineView.OnlineSearchTextBox : _workspaceView.FirstLevelSearchTextBox).Focus(FocusState.Keyboard);
                 e.Handled = true;
                 return;
             }
@@ -488,7 +482,7 @@ public sealed partial class MainWindow
                 }
                 else
                 {
-                    await RefreshListsAsync();
+                    await _workspaceView.RefreshListsAsync();
                 }
                 e.Handled = true;
                 return;
@@ -496,10 +490,10 @@ public sealed partial class MainWindow
 
             if (e.Key == VirtualKey.Enter)
             {
-                var item = GetSelectedSecondLevelItem();
+                var item = _workspaceView.GetSelectedSecondLevelItem();
                 if (item is not null)
                 {
-                    await ToggleDirectoryCopyAsync(item);
+                    await _workspaceView.ToggleDirectoryCopyAsync(item);
                     e.Handled = true;
                     return;
                 }

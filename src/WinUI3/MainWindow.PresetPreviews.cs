@@ -33,7 +33,7 @@ public sealed partial class MainWindow
     {
         _presetPreviewDefaultRegion = null;
         SaveShellConfig();
-        StatusTextBlock.Text = T("PresetPreview.DefaultRegionCleared");
+        _workspaceView.StatusTextBlock.Text = T("PresetPreview.DefaultRegionCleared");
     }
 
     // A saved slot shows the same part of the game every time, once the user has set a default region.

@@ -17,7 +17,7 @@ public sealed partial class MainWindow
         };
         Paths.PropertyChanged += (_, args) =>
         {
-            if (args.PropertyName == nameof(RepositoryPathsViewModel.UseDirectoryLinks)) OnLinkDeploymentChanged();
+            if (args.PropertyName == nameof(RepositoryPathsViewModel.UseDirectoryLinks)) _workspaceView.OnLinkDeploymentChanged();
         };
     }
 
@@ -31,16 +31,16 @@ public sealed partial class MainWindow
             case DashboardAction.NewRepository: OnAddRepositoryDetailsClicked(this, args); break;
             case DashboardAction.EditRepository: OnEditRepositoryDetailsClicked(this, args); break;
             case DashboardAction.OpenRepository: OpenCurrentRepository(); break;
-            case DashboardAction.PickSource: OnPickSourceClicked(this, args); break;
-            case DashboardAction.PickTarget: OnPickTargetClicked(this, args); break;
-            case DashboardAction.PickLauncher: OnPickLauncherClicked(this, args); break;
-            case DashboardAction.OpenSource: OnOpenSourceClicked(this, args); break;
-            case DashboardAction.OpenTarget: OnOpenTargetClicked(this, args); break;
-            case DashboardAction.OpenLauncher: OnOpenLauncherClicked(this, args); break;
+            case DashboardAction.PickSource: _workspaceView.OnPickSourceClicked(this, args); break;
+            case DashboardAction.PickTarget: _workspaceView.OnPickTargetClicked(this, args); break;
+            case DashboardAction.PickLauncher: _workspaceView.OnPickLauncherClicked(this, args); break;
+            case DashboardAction.OpenSource: _workspaceView.OnOpenSourceClicked(this, args); break;
+            case DashboardAction.OpenTarget: _workspaceView.OnOpenTargetClicked(this, args); break;
+            case DashboardAction.OpenLauncher: _workspaceView.OnOpenLauncherClicked(this, args); break;
             case DashboardAction.BridgeOptions: OnBridgeOptionsClicked(this, args); break;
             case DashboardAction.BrowseOnline: OnOnlineNavClicked(this, args); break;
             case DashboardAction.CheckModUpdates: CheckModUpdatesFromDashboard(); break;
-            case DashboardAction.RunLauncher: OnRunLauncherClicked(this, args); break;
+            case DashboardAction.RunLauncher: _workspaceView.OnRunLauncherClicked(this, args); break;
             case DashboardAction.GettingStartedTipsClosed: OnGettingStartedTipsClosed(); break;
         }
     }
@@ -204,9 +204,9 @@ public sealed partial class MainWindow
         SaveSelectedRepositoryFromInputs();
         _currentPrimarySection = PrimarySection.Repository;
         ApplyShellState(refreshRepository: false);
-        FirstLevelSearchTextBox.Text = string.Empty;
-        await RefreshListsAsync();
-        SelectFirstLevelByPath(path);
+        _workspaceView.FirstLevelSearchTextBox.Text = string.Empty;
+        await _workspaceView.RefreshListsAsync();
+        _workspaceView.SelectFirstLevelByPath(path);
     }
 
     private void CheckModUpdatesFromDashboard()

@@ -228,7 +228,7 @@ public sealed partial class MainWindow
 
     private void SwitchLanguage(string language)
     {
-        SaveCurrentModBindings();
+        _workspaceView.SaveCurrentModBindings();
         // The pages relabel themselves and the choice is saved (MainWindow.AppearanceEvents.cs).
         _services.Language.Change(language);
     }

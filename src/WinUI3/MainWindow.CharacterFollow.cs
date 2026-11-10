@@ -7,12 +7,6 @@ namespace ModFolderCopier.WinUI;
 
 public sealed partial class MainWindow
 {
-    private sealed class CharacterFollowProfile
-    {
-        public CharacterScreenRegion? Region { get; set; }
-        public Dictionary<string, byte[]> Templates { get; set; } = new(StringComparer.OrdinalIgnoreCase);
-        public Dictionary<string, string> PreferredMods { get; set; } = new(StringComparer.OrdinalIgnoreCase);
-    }
     private readonly CharacterImageMatcher _characterMatcher = new();
     private CharacterFollowProfile _characterProfile = new();
     private string? _characterProfilePath;
@@ -195,4 +189,12 @@ public sealed partial class MainWindow
         catch (Exception ex) { _characterMatcher.Reset(); if (!_onlineView._onlineWindowClosed) _shortcuts.CharacterFollowStatus = ex.Message; }
         finally { _characterCaptureBusy = false; }
     }
+}
+
+// The character follow profile (stage J7: a top-level type so the workspace page can use it through IWorkspaceHost).
+internal sealed class CharacterFollowProfile
+{
+    public CharacterScreenRegion? Region { get; set; }
+    public Dictionary<string, byte[]> Templates { get; set; } = new(StringComparer.OrdinalIgnoreCase);
+    public Dictionary<string, string> PreferredMods { get; set; } = new(StringComparer.OrdinalIgnoreCase);
 }

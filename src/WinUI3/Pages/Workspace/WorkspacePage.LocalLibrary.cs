@@ -12,11 +12,11 @@ using Windows.Storage;
 
 namespace ModFolderCopier.WinUI;
 
-public sealed partial class MainWindow
+public sealed partial class WorkspacePage
 {
-    private void AnimateImageReveal(UIElement image)
+    internal void AnimateImageReveal(UIElement image)
     {
-        if (ShouldReduceAnimations)
+        if (_host.ShouldReduceAnimations)
         {
             ElementCompositionPreview.GetElementVisual(image).Opacity = 1f;
             return;
@@ -40,82 +40,82 @@ public sealed partial class MainWindow
     {
         try
         {
-            await ShowImageViewerAsync(PreviewImage.Source, T("LocalLibrary.ModPreview"));
+            await _host.ShowImageViewerAsync(PreviewImage.Source, T("LocalLibrary.ModPreview"));
         }
         catch (Exception ex)
         {
-            ReportUiActionFailure("OnPreviewImageTapped", ex);
+            _host.ReportUiActionFailure("OnPreviewImageTapped", ex);
         }
     }
 
-    private async void OnPickSourceClicked(object sender, RoutedEventArgs e)
+    internal async void OnPickSourceClicked(object sender, RoutedEventArgs e)
     {
         try
         {
-            string? picked = await PickFolderAsync();
+            string? picked = await _host.PickFolderAsync();
             if (!string.IsNullOrEmpty(picked))
             {
                 Paths.Source = picked;
-                SaveConfig();
+                _host.SaveConfig();
                 await RefreshListsAsync();
             }
         }
         catch (Exception ex)
         {
-            ReportUiActionFailure("OnPickSourceClicked", ex);
+            _host.ReportUiActionFailure("OnPickSourceClicked", ex);
         }
     }
 
-    private async void OnPickTargetClicked(object sender, RoutedEventArgs e)
+    internal async void OnPickTargetClicked(object sender, RoutedEventArgs e)
     {
         try
         {
-            string? picked = await PickFolderAsync();
+            string? picked = await _host.PickFolderAsync();
             if (!string.IsNullOrEmpty(picked))
             {
                 Paths.Target = picked;
-                SaveConfig();
+                _host.SaveConfig();
                 await RefreshListsAsync();
             }
         }
         catch (Exception ex)
         {
-            ReportUiActionFailure("OnPickTargetClicked", ex);
+            _host.ReportUiActionFailure("OnPickTargetClicked", ex);
         }
     }
 
-    private async void OnPickLauncherClicked(object sender, RoutedEventArgs e)
+    internal async void OnPickLauncherClicked(object sender, RoutedEventArgs e)
     {
         try
         {
-            string? picked = await PickFileAsync([".exe", ".bat", ".cmd"]);
+            string? picked = await _host.PickFileAsync([".exe", ".bat", ".cmd"]);
             if (!string.IsNullOrEmpty(picked))
             {
                 Paths.Launcher = picked;
-                SaveConfig();
+                _host.SaveConfig();
             }
         }
         catch (Exception ex)
         {
-            ReportUiActionFailure("OnPickLauncherClicked", ex);
+            _host.ReportUiActionFailure("OnPickLauncherClicked", ex);
         }
     }
 
-    private void OnOpenSourceClicked(object sender, RoutedEventArgs e) => OpenDirectory(Paths.Source, T("LocalLibrary.SourceFolder"));
+    internal void OnOpenSourceClicked(object sender, RoutedEventArgs e) => _host.OpenDirectory(Paths.Source, T("LocalLibrary.SourceFolder"));
 
-    private void OnOpenTargetClicked(object sender, RoutedEventArgs e) => OpenDirectory(Paths.Target, T("LocalLibrary.TargetFolder"));
+    internal void OnOpenTargetClicked(object sender, RoutedEventArgs e) => _host.OpenDirectory(Paths.Target, T("LocalLibrary.TargetFolder"));
 
-    private void OnOpenLauncherClicked(object sender, RoutedEventArgs e) => OpenFileLocation(Paths.Launcher, T("LocalLibrary.Launcher"));
+    internal void OnOpenLauncherClicked(object sender, RoutedEventArgs e) => _host.OpenFileLocation(Paths.Launcher, T("LocalLibrary.Launcher"));
 
-    private async void OnRunLauncherClicked(object sender, RoutedEventArgs e) => await RunUiActionAsync("OnRunLauncherClicked", RunRepositoryLauncherAsync);
+    internal async void OnRunLauncherClicked(object sender, RoutedEventArgs e) => await _host.RunUiActionAsync("OnRunLauncherClicked", _host.RunRepositoryLauncherAsync);
 
-    private async void OnRefreshClicked(object sender, RoutedEventArgs e) => await RunUiActionAsync("OnRefreshClicked", RefreshListsAsync);
+    private async void OnRefreshClicked(object sender, RoutedEventArgs e) => await _host.RunUiActionAsync("OnRefreshClicked", RefreshListsAsync);
 
-    private async void OnImportZipClicked(object sender, RoutedEventArgs e)
+    internal async void OnImportZipClicked(object sender, RoutedEventArgs e)
     {
         try
         {
-            FirstLevelFolderItem? item = _characters.Selected;
+            FirstLevelFolderItem? item = _host.Characters.Selected;
             if (item is null)
             {
                 await ShowMessageAsync(
@@ -124,7 +124,7 @@ public sealed partial class MainWindow
                 return;
             }
 
-            string? archive = await PickFileAsync(SupportedArchiveExtensions
+            string? archive = await _host.PickFileAsync(_host.SupportedArchiveExtensions
                 .Select(value => Path.GetExtension(value)!)
                 .Where(extension => !string.IsNullOrWhiteSpace(extension))
                 .Distinct(StringComparer.OrdinalIgnoreCase).ToArray());
@@ -135,7 +135,7 @@ public sealed partial class MainWindow
         }
         catch (Exception ex)
         {
-            LogApplicationIssue("Open archive picker", ex);
+            _host.LogApplicationIssue("Open archive picker", ex);
             await ShowMessageAsync(
                 T("LocalLibrary.CouldNotOpenTheArchivePicker") + ex.Message,
                 T("LocalLibrary.ImportModFailed"));
@@ -159,14 +159,14 @@ public sealed partial class MainWindow
         }
         catch (Exception ex)
         {
-            ReportUiActionFailure("OnToggleCopyClicked", ex);
+            _host.ReportUiActionFailure("OnToggleCopyClicked", ex);
         }
     }
 
     private void OnFirstLevelSelectionChanged(object sender, SelectionChangedEventArgs e)
     {
-        _characters.Selected = FirstLevelListView.SelectedItem as FirstLevelFolderItem;
-        PopulateSecondLevelList(_characters.Selected);
+        _host.Characters.Selected = FirstLevelListView.SelectedItem as FirstLevelFolderItem;
+        PopulateSecondLevelList(_host.Characters.Selected);
         UpdateCharacterHeaderActions();
     }
 
@@ -196,7 +196,7 @@ public sealed partial class MainWindow
             Text = T("LocalLibrary.OpenFolder"),
             Icon = new FontIcon { Glyph = "\uE838" }
         };
-        openItem.Click += (_, _) => OpenDirectory(item.Path, T("LocalLibrary.FirstLevelFolder"));
+        openItem.Click += (_, _) => _host.OpenDirectory(item.Path, T("LocalLibrary.FirstLevelFolder"));
         menu.Items.Add(openItem);
 
         var renameItem = new MenuFlyoutItem
@@ -258,7 +258,7 @@ public sealed partial class MainWindow
         }
         catch (Exception ex)
         {
-            ReportUiActionFailure("OnCreateFirstLevelClicked", ex);
+            _host.ReportUiActionFailure("OnCreateFirstLevelClicked", ex);
         }
     }
 
@@ -266,7 +266,7 @@ public sealed partial class MainWindow
     {
         try
         {
-            FirstLevelFolderItem? item = _characters.Selected;
+            FirstLevelFolderItem? item = _host.Characters.Selected;
             if (item is null)
             {
                 await ShowMessageAsync(
@@ -290,26 +290,26 @@ public sealed partial class MainWindow
                 return;
             }
 
-            WorkspaceRepository repository = GetSelectedRepository()!;
+            WorkspaceRepository repository = _host.GetSelectedRepository()!;
             string? loader = string.IsNullOrWhiteSpace(repository.TargetPath) ? null : repository.TargetPath;
             CharacterRenamePlan plan = await Task.Run(() => CharacterRename.Prepare(item.Path, trimmed, loader));
             if (!plan.CanRename)
             {
-                await ShowMessageAsync(CharacterRenameBlockText(plan, repository), T("LocalLibrary.RenameFailed"));
+                await ShowMessageAsync(_host.CharacterRenameBlockText(plan, repository), T("LocalLibrary.RenameFailed"));
                 return;
             }
 
             try
             {
                 // The folder, the links into it and every saved path move together, or none of them do (#108).
-                CharacterRename.Execute(plan, new CharacterRenameReferences(this, repository));
+                CharacterRename.Execute(plan, _host.CreateCharacterRenameReferences(repository));
                 await RefreshListsAsync();
                 SelectFirstLevelByPath(plan.NewPath);
                 StatusTextBlock.Text = T("LocalLibrary.RenamedFirstLevelFolderTo", trimmed);
             }
             catch (CharacterRenameException ex)
             {
-                LogApplicationIssue("Rename character", ex);
+                _host.LogApplicationIssue("Rename character", ex);
                 await ShowMessageAsync(
                     ex.RolledBack
                         ? T("LocalLibrary.RenameUndone", ex.Message)
@@ -320,7 +320,7 @@ public sealed partial class MainWindow
         }
         catch (Exception ex)
         {
-            ReportUiActionFailure("OnRenameFirstLevelClicked", ex);
+            _host.ReportUiActionFailure("OnRenameFirstLevelClicked", ex);
         }
     }
 
@@ -335,8 +335,8 @@ public sealed partial class MainWindow
                 SecondLevelFolderItem? item = GetSelectedSecondLevelItem();
                 ApplySecondLevelSelectionState(item);
                 if (item is not null
-                    && await TryImportShortcutBindingsFromModFilesAsync(item.Path) > 0
-                    && string.Equals(_currentSecondLevelPath, item.Path, StringComparison.CurrentCultureIgnoreCase))
+                    && await _host.TryImportShortcutBindingsFromModFilesAsync(item.Path) > 0
+                    && string.Equals(_host.CurrentSecondLevelPath, item.Path, StringComparison.CurrentCultureIgnoreCase))
                 {
                     LoadBindingsForCurrentMod(item);
                     // The row's shortcut count and the tab header read the bindings just imported.
@@ -347,14 +347,14 @@ public sealed partial class MainWindow
             }
             catch (Exception ex)
             {
-                LogApplicationIssue("Mod selection", ex);
+                _host.LogApplicationIssue("Mod selection", ex);
                 ClearPreview();
                 StatusTextBlock.Text = T("LocalLibrary.CouldNotReadTheSelectedMod", ex.Message);
             }
         }
         catch (Exception ex)
         {
-            ReportUiActionFailure("OnSecondLevelSelectionChanged", ex);
+            _host.ReportUiActionFailure("OnSecondLevelSelectionChanged", ex);
         }
     }
 
@@ -370,7 +370,7 @@ public sealed partial class MainWindow
         }
         catch (Exception ex)
         {
-            ReportUiActionFailure("OnSecondLevelDoubleTapped", ex);
+            _host.ReportUiActionFailure("OnSecondLevelDoubleTapped", ex);
         }
     }
 
@@ -389,7 +389,7 @@ public sealed partial class MainWindow
             Text = isInstalled ? T("LocalLibrary.RemoveFromTarget") : T("LocalLibrary.DeployToTarget"),
             Icon = new FontIcon { Glyph = isInstalled ? "\uE74D" : "\uE8B0" }
         };
-        toggleItem.Click += async (_, _) => await RunUiActionAsync("ToggleDirectoryCopyAsync", () => ToggleDirectoryCopyAsync(item));
+        toggleItem.Click += async (_, _) => await _host.RunUiActionAsync("ToggleDirectoryCopyAsync", () => ToggleDirectoryCopyAsync(item));
         menu.Items.Add(toggleItem);
 
         var openItem = new MenuFlyoutItem
@@ -397,12 +397,12 @@ public sealed partial class MainWindow
             Text = T("LocalLibrary.OpenModFolder"),
             Icon = new FontIcon { Glyph = "\uE838" }
         };
-        openItem.Click += (_, _) => OpenDirectory(item.Path, T("Common.ModFolder"));
+        openItem.Click += (_, _) => _host.OpenDirectory(item.Path, T("Common.ModFolder"));
         menu.Items.Add(openItem);
         menu.Items.Add(new MenuFlyoutSeparator());
 
         var tagsItem = new MenuFlyoutItem { Text = T("LocalLibrary.EditTags") };
-        tagsItem.Click += async (_, _) => await RunUiActionAsync("EditLocalTagsAsync", () => EditLocalTagsAsync(item));
+        tagsItem.Click += async (_, _) => await _host.RunUiActionAsync("EditLocalTagsAsync", () => EditLocalTagsAsync(item));
         menu.Items.Add(tagsItem);
         var deleteItem = new MenuFlyoutItem
         {
@@ -428,9 +428,9 @@ public sealed partial class MainWindow
             }
         }
 
-        _trackedModOrigins.Remove(item.Path);
-        _modLinks.Remove(item.Path);
-        DeleteDirectoryTreeSafely(item.Path);
+        _host.TrackedModOrigins.Remove(item.Path);
+        _host.ModLinks.Remove(item.Path);
+        _host.DeleteDirectoryTreeSafely(item.Path);
     }
 
     private async void OnDeleteSecondLevelClicked(object sender, RoutedEventArgs e)
@@ -446,19 +446,19 @@ public sealed partial class MainWindow
                 return;
             }
 
-            string loaderRoot = (GetSelectedRepository()?.TargetPath ?? Paths.Target).Trim();
+            string loaderRoot = (_host.GetSelectedRepository()?.TargetPath ?? Paths.Target).Trim();
             // Without the full list of links, deleting the folder could leave links to a missing folder (issue #109):
             // a loader folder that is set but cannot be reached stops the delete like a failed scan.
             LinkScanResult scan = await Task.Run(() => DirectoryLinkDeployment.ScanLinksTargeting(item.Path, loaderRoot));
             if (scan.Status == LinkScanStatus.Unavailable)
             {
-                LogApplicationIssue("Find deployed links before delete", new DirectoryNotFoundException(scan.Detail));
+                _host.LogApplicationIssue("Find deployed links before delete", new DirectoryNotFoundException(scan.Detail));
                 await ShowMessageAsync(T("LocalLibrary.LoaderUnavailableBeforeDelete", scan.Detail, item.Name), T("LocalLibrary.DeleteFailed"));
                 return;
             }
             if (scan.Status == LinkScanStatus.Failed)
             {
-                LogApplicationIssue("Find deployed links before delete", new IOException(scan.Detail));
+                _host.LogApplicationIssue("Find deployed links before delete", new IOException(scan.Detail));
                 await ShowMessageAsync(T("LocalLibrary.LinksUnknown", item.Name, scan.Detail), T("LocalLibrary.DeleteFailed"));
                 return;
             }
@@ -477,9 +477,9 @@ public sealed partial class MainWindow
 
             try
             {
-                string selectedFirstLevelPath = (_characters.Selected)?.Path ?? string.Empty;
+                string selectedFirstLevelPath = (_host.Characters.Selected)?.Path ?? string.Empty;
                 RemoveModAndItsLinks(item, deployedLinks);
-                SaveConfig();
+                _host.SaveConfig();
                 await RefreshListsAsync();
                 SelectFirstLevelByPath(selectedFirstLevelPath);
                 StatusTextBlock.Text = T("LocalLibrary.DeletedSecondLevelMod", item.Name);
@@ -493,7 +493,7 @@ public sealed partial class MainWindow
         }
         catch (Exception ex)
         {
-            ReportUiActionFailure("OnDeleteSecondLevelClicked", ex);
+            _host.ReportUiActionFailure("OnDeleteSecondLevelClicked", ex);
         }
     }
 
@@ -507,7 +507,7 @@ public sealed partial class MainWindow
 
     private void SetDropTargetHighlight(Border border, bool isActive)
     {
-        border.BorderBrush = GetAppThemeBrush(isActive ? "AppNavSelectedBorderBrush" : "AppCardBorderBrush");
+        border.BorderBrush = _host.GetAppThemeBrush(isActive ? "AppNavSelectedBorderBrush" : "AppCardBorderBrush");
         border.BorderThickness = isActive ? new Thickness(2) : new Thickness(1);
     }
 
@@ -574,7 +574,7 @@ public sealed partial class MainWindow
         }
         catch (Exception ex)
         {
-            ReportUiActionFailure("OnPreviewDrop", ex);
+            _host.ReportUiActionFailure("OnPreviewDrop", ex);
         }
     }
 
@@ -586,7 +586,7 @@ public sealed partial class MainWindow
             SetDropTargetHighlight(border, false);
         }
 
-        if (_characters.Selected is null)
+        if (_host.Characters.Selected is null)
         {
             return;
         }
@@ -610,7 +610,7 @@ public sealed partial class MainWindow
                 SetDropTargetHighlight(border, false);
             }
 
-            FirstLevelFolderItem? item = _characters.Selected;
+            FirstLevelFolderItem? item = _host.Characters.Selected;
             if (item is null)
             {
                 await ShowMessageAsync(
@@ -630,7 +630,7 @@ public sealed partial class MainWindow
             IReadOnlyList<IStorageItem> droppedItems = await e.DataView.GetStorageItemsAsync();
             StorageFile? archiveFile = droppedItems
                 .OfType<StorageFile>()
-                .FirstOrDefault(file => IsSupportedArchiveFile(file.Path));
+                .FirstOrDefault(file => _host.IsSupportedArchiveFile(file.Path));
 
             if (archiveFile is null)
             {
@@ -644,23 +644,23 @@ public sealed partial class MainWindow
         }
         catch (Exception ex)
         {
-            ReportUiActionFailure("OnSecondLevelDrop", ex);
+            _host.ReportUiActionFailure("OnSecondLevelDrop", ex);
         }
     }
 
-    private async Task RefreshListsAsync()
+    internal async Task RefreshListsAsync()
     {
-        using var timing = MeasureRepositoryUi(RepositoryPerformanceOperation.Refresh, _characters.All.Sum(first => first.Children.Count));
-        _folderRefreshCancellation?.Cancel();
-        int generation = ++_folderRefreshGeneration;
-        string? previousMod = _currentSecondLevelPath;
-        string? previousCategory = (_characters.Selected)?.Path;
-        _characters.All.Clear();
+        using var timing = _host.MeasureRepositoryUi(RepositoryPerformanceOperation.Refresh, _host.Characters.All.Sum(first => first.Children.Count));
+        _host.FolderRefreshCancellation?.Cancel();
+        int generation = ++_host.FolderRefreshGeneration;
+        string? previousMod = _host.CurrentSecondLevelPath;
+        string? previousCategory = (_host.Characters.Selected)?.Path;
+        _host.Characters.All.Clear();
         _modList.SelectedMod = null;
-        _characters.Visible.Clear();
-        _secondLevelItems.Clear();
-        _currentSecondLevelPath = null;
-        RefreshPersistentSlotControls();
+        _host.Characters.Visible.Clear();
+        _host.SecondLevelItems.Clear();
+        _host.CurrentSecondLevelPath = null;
+        _host.RefreshPersistentSlotControls();
         FirstCountTextBlock.Text = "0";
         SecondCountTextBlock.Text = "0";
         ShowModSummary(null);
@@ -683,39 +683,39 @@ public sealed partial class MainWindow
             return;
         }
 
-        SaveConfig();
-        string repositoryId = GetSelectedRepository()?.Id ?? sourceDir;
+        _host.SaveConfig();
+        string repositoryId = _host.GetSelectedRepository()?.Id ?? sourceDir;
         using var cancellation = new CancellationTokenSource();
-        _folderRefreshCancellation = cancellation;
+        _host.FolderRefreshCancellation = cancellation;
         try
         {
             var loaded = await Task.Run(() =>
             {
-                var items = LoadFolderItemsUsingIndex(repositoryId, sourceDir, targetDir,
+                var items = _host.LoadFolderItemsUsingIndex(repositoryId, sourceDir, targetDir,
                     cancellation.Token, out int warnings);
                 return (items.Items, items.SecondCount, Warnings: warnings);
             }, cancellation.Token);
 
-            if (cancellation.IsCancellationRequested || generation != _folderRefreshGeneration
+            if (cancellation.IsCancellationRequested || generation != _host.FolderRefreshGeneration
                 || !string.Equals(sourceDir, Paths.Source.Trim(), StringComparison.OrdinalIgnoreCase)
                 || !string.Equals(targetDir, Paths.Target.Trim(), StringComparison.OrdinalIgnoreCase)) return;
-            _characters.Load(loaded.Items);
+            _host.Characters.Load(loaded.Items);
             timing?.SetCounts(loaded.SecondCount);
             ApplyFirstLevelFilter();
             _ = RefreshCharacterFolderAvatarsAsync();
-            if (GetSelectedRepository() is { SourcePath: { Length: > 0 } scannedSource } scanned
+            if (_host.GetSelectedRepository() is { SourcePath: { Length: > 0 } scannedSource } scanned
                 && string.Equals(Path.GetFullPath(scannedSource).TrimEnd('\\'), Path.GetFullPath(sourceDir).TrimEnd('\\'), StringComparison.OrdinalIgnoreCase))
-                _ = SeedDefaultSlotsAsync(scanned, loaded.Items);
-            FirstCountTextBlock.Text = _characters.All.Count.ToString();
+                _ = _host.SeedDefaultSlotsAsync(scanned, loaded.Items);
+            FirstCountTextBlock.Text = _host.Characters.All.Count.ToString();
             SecondCountTextBlock.Text = loaded.SecondCount.ToString();
             StatusTextBlock.Text = loaded.Warnings == 0
-                ? T("LocalLibrary.LoadedFirstLevelFoldersAndSecond", _characters.All.Count, loaded.SecondCount)
-                : T("LocalLibrary.LoadedCategoriesAndModsScanCache", _characters.All.Count, loaded.SecondCount, loaded.Warnings);
-            if (_characters.Visible.Count > 0)
+                ? T("LocalLibrary.LoadedFirstLevelFoldersAndSecond", _host.Characters.All.Count, loaded.SecondCount)
+                : T("LocalLibrary.LoadedCategoriesAndModsScanCache", _host.Characters.All.Count, loaded.SecondCount, loaded.Warnings);
+            if (_host.Characters.Visible.Count > 0)
             {
                 SelectFirstLevelByPath(previousCategory);
                 if (!string.IsNullOrEmpty(previousMod)) SelectSecondLevelByPath(previousMod);
-                if (_characters.Selected is null) FirstLevelListView.SelectedIndex = 0;
+                if (_host.Characters.Selected is null) FirstLevelListView.SelectedIndex = 0;
             }
         }
         catch (OperationCanceledException) when (cancellation.IsCancellationRequested)
@@ -724,35 +724,35 @@ public sealed partial class MainWindow
         }
         catch (Exception ex)
         {
-            LogApplicationIssue("Refresh repository folders", ex);
-            if (generation == _folderRefreshGeneration && !cancellation.IsCancellationRequested)
+            _host.LogApplicationIssue("Refresh repository folders", ex);
+            if (generation == _host.FolderRefreshGeneration && !cancellation.IsCancellationRequested)
                 StatusTextBlock.Text = T("LocalLibrary.RepositoryScanFailedTheExistingIndex");
         }
         finally
         {
-            if (ReferenceEquals(_folderRefreshCancellation, cancellation)) _folderRefreshCancellation = null;
+            if (ReferenceEquals(_host.FolderRefreshCancellation, cancellation)) _host.FolderRefreshCancellation = null;
         }
     }
 
-    private void PopulateSecondLevelList(FirstLevelFolderItem? firstItem, bool preserveStatus = false)
+    internal void PopulateSecondLevelList(FirstLevelFolderItem? firstItem, bool preserveStatus = false)
     {
-        using var timing = MeasureRepositoryUi(RepositoryPerformanceOperation.Populate, firstItem?.Children.Count ?? 0);
+        using var timing = _host.MeasureRepositoryUi(RepositoryPerformanceOperation.Populate, firstItem?.Children.Count ?? 0);
         _modList.SelectedMod = null;
         ClearPreview();
         ShowModSummary(null);
-        _currentSecondLevelPath = null;
+        _host.CurrentSecondLevelPath = null;
         LoadDefaultShortcutTemplate();
         LoadLinkForCurrentMod(null);
 
         if (firstItem is null)
         {
-            _secondLevelItems.ReplaceAll([]);
+            _host.SecondLevelItems.ReplaceAll([]);
             ApplySecondLevelSelectionState(null, preserveStatus: true);
             RefreshRepositoryModView();
             return;
         }
 
-        _secondLevelItems.ReplaceAll(firstItem.Children);
+        _host.SecondLevelItems.ReplaceAll(firstItem.Children);
         RefreshRepositoryModView();
 
         if (!preserveStatus)
@@ -760,14 +760,14 @@ public sealed partial class MainWindow
             StatusTextBlock.Text = T("LocalLibrary.CurrentFirstLevelFolder") + firstItem.Path;
         }
 
-        if (_secondLevelItems.Count > 0)
+        if (_host.SecondLevelItems.Count > 0)
         {
             SecondLevelListView.SelectedIndex = 0;
-            ApplySecondLevelSelectionState(_secondLevelItems[0], preserveStatus: true);
+            ApplySecondLevelSelectionState(_host.SecondLevelItems[0], preserveStatus: true);
         }
     }
 
-    private void ShowSecondLevelDetails(SecondLevelFolderItem? item, bool preserveStatus = false)
+    internal void ShowSecondLevelDetails(SecondLevelFolderItem? item, bool preserveStatus = false)
     {
         if (item is null)
         {
@@ -788,23 +788,23 @@ public sealed partial class MainWindow
 
     private void ApplySecondLevelSelectionState(SecondLevelFolderItem? item, bool preserveStatus = false)
     {
-        _currentSecondLevelPath = item?.Path;
+        _host.CurrentSecondLevelPath = item?.Path;
         ShowSecondLevelDetails(item, preserveStatus);
         LoadBindingsForCurrentMod(item);
         LoadLinkForCurrentMod(item);
-        RefreshPersistentSlotControls();
+        _host.RefreshPersistentSlotControls();
         SyncRepositorySelectionV4(item);
     }
 
     // The details summary: the Mod's name and its deployment state, coloured by state.
-    private void ShowModSummary(SecondLevelFolderItem? item)
+    internal void ShowModSummary(SecondLevelFolderItem? item)
     {
         _modDetails.Show(item, StateNotSelectedText, item is null ? ModStateTone.Neutral
             : RepositoryWorkspacePolicy.StateTone(item.State, StateMissingText, StateCopiedText, StateLinkedText));
         RenderModSummary();
     }
 
-    private void RenderModSummary()
+    internal void RenderModSummary()
     {
         CurrentFolderTextBlock.Text = _modDetails.Name;
         CurrentStateTextBlock.Text = _modDetails.State;
@@ -816,7 +816,7 @@ public sealed partial class MainWindow
         };
     }
 
-    private async Task ToggleDirectoryCopyAsync(SecondLevelFolderItem item)
+    internal async Task ToggleDirectoryCopyAsync(SecondLevelFolderItem item)
     {
         string targetDir = Paths.Target.Trim();
         if (string.IsNullOrWhiteSpace(targetDir) || !Directory.Exists(targetDir))
@@ -828,7 +828,7 @@ public sealed partial class MainWindow
         }
 
         string targetPath = GetTargetDirectoryPath(targetDir, item.Path);
-        WorkspaceRepository? repository = GetSelectedRepository();
+        WorkspaceRepository? repository = _host.GetSelectedRepository();
         if (repository is null)
         {
             await ShowMessageAsync(T("Common.SelectARepositoryFirst"), T("LocalLibrary.CannotContinue"));
@@ -844,7 +844,7 @@ public sealed partial class MainWindow
             return;
         }
 
-        if (!await OfferBrokenLinkCleanupAsync(targetDir))
+        if (!await _host.OfferBrokenLinkCleanupAsync(targetDir))
         {
             return;
         }
@@ -853,8 +853,8 @@ public sealed partial class MainWindow
         // Issue #107: a copied folder with this Mod's name that the manager did not make is the user's; say so first.
         if (targetExists && !DirectoryLinkDeployment.IsDirectoryLink(targetPath))
         {
-            bool owned = await Task.Run(() => OwnsCopy(repository)(item.Path, targetPath));
-            SaveCopyRecordsIfChanged();
+            bool owned = await Task.Run(() => _host.OwnsCopy(repository)(item.Path, targetPath));
+            _host.SaveCopyRecordsIfChanged();
             if (!owned && !await ShowDangerConfirmAsync(T("LocalLibrary.RemoveExternalFolder", targetPath), T("LocalLibrary.ExternalFolder"), T("Dialogs.Remove")))
                 return;
         }
@@ -867,14 +867,14 @@ public sealed partial class MainWindow
                     DirectoryLinkDeployment.FindSiblingLinksToReplace(item.Path, repository.SourcePath, targetDir));
             }
 
-            if (!targetExists && _enableConflictDetection)
+            if (!targetExists && _host.EnableConflictDetection)
             {
                 string[] ignoredTargets = [targetPath, .. siblingLinksToReplace];
-                List<string> conflicts = await Task.Run(() => DetectModFileConflicts(item.Path, targetDir, ignoredTargets));
+                List<string> conflicts = await Task.Run(() => _host.DetectModFileConflicts(item.Path, targetDir, ignoredTargets));
                 (string? Candidate, ModIniConflictSummary Summary)[] iniConflicts = (await Task.Run(() =>
-                        DetectModIniConflictsSafely(item.Path, targetDir, ignoredTargets)))
+                        _host.DetectModIniConflictsSafely(item.Path, targetDir, ignoredTargets)))
                     .Select(summary => ((string?)null, summary)).ToArray();
-                if ((conflicts.Count > 0 || iniConflicts.Length > 0) && !await ConfirmInstallConflictsAsync(conflicts, iniConflicts))
+                if ((conflicts.Count > 0 || iniConflicts.Length > 0) && !await _host.ConfirmInstallConflictsAsync(conflicts, iniConflicts))
                 {
                     return;
                 }
@@ -882,7 +882,7 @@ public sealed partial class MainWindow
         }
         catch (Exception ex)
         {
-            LogApplicationIssue("Mod deployment planning", ex);
+            _host.LogApplicationIssue("Mod deployment planning", ex);
             await ShowMessageAsync(
                 T("LocalLibrary.CouldNotInspectTheSelectedMod") + ex.Message,
                 T("LocalLibrary.CannotContinue"));
@@ -893,7 +893,7 @@ public sealed partial class MainWindow
         SetBusyState(true);
         try
         {
-            transactionPath = await CreateInstallTransactionAsync(
+            transactionPath = await _host.CreateInstallTransactionAsync(
                 targetExists
                     ? T("LocalLibrary.RemoveMod", item.Name)
                     : siblingLinksToReplace.Count > 0
@@ -905,9 +905,9 @@ public sealed partial class MainWindow
             if (targetExists)
             {
                 UpdateProgress(15, T("LocalLibrary.RemovingFolder"));
-                await Task.Run(() => DeleteDirectoryTreeSafely(targetPath));
-                CopyLedger(repository).Forget(targetPath);
-                SaveShellConfig();
+                await Task.Run(() => _host.DeleteDirectoryTreeSafely(targetPath));
+                _host.CopyLedger(repository).Forget(targetPath);
+                _host.SaveShellConfig();
                 UpdateProgress(100, T("LocalLibrary.RemovalComplete"));
                 StatusTextBlock.Text = item.Name + T("LocalLibrary.WasRemovedFromTheTargetFolder");
                 ShowAppNotification(T("LocalLibrary.RemovedFromTarget", item.Name));
@@ -942,8 +942,8 @@ public sealed partial class MainWindow
                     : T("LocalLibrary.CopiedToTarget", item.Name));
             }
 
-            CommitInstallTransaction(transactionPath);
-            await RefreshShortcutDeployedModsAsync(targetExists ? null : item.Path);
+            _host.CommitInstallTransaction(transactionPath);
+            await _host.RefreshShortcutDeployedModsAsync(targetExists ? null : item.Path);
         }
         catch (Exception ex)
         {
@@ -951,7 +951,7 @@ public sealed partial class MainWindow
             {
                 try
                 {
-                    await RollbackInstallTransactionAsync(transactionPath, clearLastTransaction: true);
+                    await _host.RollbackInstallTransactionAsync(transactionPath, clearLastTransaction: true);
                 }
                 catch (Exception rollbackError)
                 {
@@ -976,7 +976,7 @@ public sealed partial class MainWindow
         SetBusyState(true);
         try
         {
-            string importedPath = await Task.Run(() => ImportArchiveContents(archivePath, item.Path));
+            string importedPath = await Task.Run(() => _host.ImportArchiveContents(archivePath, item.Path));
 
             string importedName = Path.GetFileName(importedPath);
             StatusTextBlock.Text = T("LocalLibrary.InstalledAs", Path.GetFileName(archivePath), item.Name, importedName, importedPath);
@@ -984,7 +984,7 @@ public sealed partial class MainWindow
             await RefreshListsAsync();
             SelectFirstLevelByPath(item.Path);
             SelectSecondLevelByPath(importedPath);
-            await TryImportShortcutBindingsFromModFilesAsync(importedPath);
+            await _host.TryImportShortcutBindingsFromModFilesAsync(importedPath);
         }
         catch (Exception ex)
         {
@@ -1046,7 +1046,7 @@ public sealed partial class MainWindow
     {
         await Task.Run(() =>
         {
-            (List<string> directories, List<string> files) = InspectDirectoryTreeSafely(sourcePath);
+            (List<string> directories, List<string> files) = _host.InspectDirectoryTreeSafely(sourcePath);
             int totalSteps = directories.Count + files.Count + 1;
             int currentStep = 0;
 
@@ -1057,7 +1057,7 @@ public sealed partial class MainWindow
             foreach (string directory in directories)
             {
                 string relativePath = Path.GetRelativePath(sourcePath, directory);
-                Directory.CreateDirectory(GetSafePathInsideDirectory(targetPath, relativePath));
+                Directory.CreateDirectory(_host.GetSafePathInsideDirectory(targetPath, relativePath));
                 currentStep++;
                 progress.Report(new ProgressInfo(currentStep * 100 / totalSteps, T("LocalLibrary.CreatingSubfolders")));
             }
@@ -1065,7 +1065,7 @@ public sealed partial class MainWindow
             foreach (string file in files)
             {
                 string relativePath = Path.GetRelativePath(sourcePath, file);
-                string destinationFile = GetSafePathInsideDirectory(targetPath, relativePath);
+                string destinationFile = _host.GetSafePathInsideDirectory(targetPath, relativePath);
                 string? destinationDir = Path.GetDirectoryName(destinationFile);
                 if (!string.IsNullOrEmpty(destinationDir))
                 {
@@ -1081,7 +1081,7 @@ public sealed partial class MainWindow
         });
     }
 
-    private async Task DeployModAsync(
+    internal async Task DeployModAsync(
         string sourcePath,
         string targetPath,
         WorkspaceRepository repository,
@@ -1091,8 +1091,8 @@ public sealed partial class MainWindow
         {
             await CopyDirectoryWithProgressAsync(sourcePath, targetPath, progress);
             // Issue #107: the manager's own copy, recorded in its settings.
-            CopyLedger(repository).Record(sourcePath, targetPath);
-            SaveShellConfig();
+            _host.CopyLedger(repository).Record(sourcePath, targetPath);
+            _host.SaveShellConfig();
             return;
         }
 
@@ -1107,13 +1107,13 @@ public sealed partial class MainWindow
         progress.Report(new ProgressInfo(100, T("LocalLibrary.DirectoryJunctionCreated")));
     }
 
-    private void UpdateProgress(int percent, string message)
+    internal void UpdateProgress(int percent, string message)
     {
         CopyProgressBar.Value = percent;
         ProgressTextBlock.Text = message;
     }
 
-    private void SetBusyState(bool busy)
+    internal void SetBusyState(bool busy)
     {
         SettingsView.IsBusy = busy;
         Paths.IsLinkDeploymentEditable = !busy;
@@ -1123,27 +1123,27 @@ public sealed partial class MainWindow
         SetRepositoryWorkspaceBusyV4(busy);
     }
 
-    private void SelectSecondLevelByPath(string? path)
+    internal void SelectSecondLevelByPath(string? path)
     {
         if (string.IsNullOrEmpty(path))
         {
             return;
         }
 
-        for (int firstIndex = 0; firstIndex < _characters.Visible.Count; firstIndex++)
+        for (int firstIndex = 0; firstIndex < _host.Characters.Visible.Count; firstIndex++)
         {
-            FirstLevelFolderItem first = _characters.Visible[firstIndex];
+            FirstLevelFolderItem first = _host.Characters.Visible[firstIndex];
             if (first.Children.Any(child => string.Equals(child.Path, path, StringComparison.CurrentCultureIgnoreCase)))
             {
                 FirstLevelListView.SelectedIndex = firstIndex;
-                for (int secondIndex = 0; secondIndex < _secondLevelItems.Count; secondIndex++)
+                for (int secondIndex = 0; secondIndex < _host.SecondLevelItems.Count; secondIndex++)
                 {
-                    if (string.Equals(_secondLevelItems[secondIndex].Path, path, StringComparison.CurrentCultureIgnoreCase))
+                    if (string.Equals(_host.SecondLevelItems[secondIndex].Path, path, StringComparison.CurrentCultureIgnoreCase))
                     {
-                        SecondLevelFolderItem selected = _secondLevelItems[secondIndex];
+                        SecondLevelFolderItem selected = _host.SecondLevelItems[secondIndex];
                         SecondLevelListView.SelectedItem = selected;
                         if (_modList.VisibleMods.Contains(selected)) SecondLevelListView.ScrollIntoView(selected);
-                        ApplySecondLevelSelectionState(_secondLevelItems[secondIndex], preserveStatus: true);
+                        ApplySecondLevelSelectionState(_host.SecondLevelItems[secondIndex], preserveStatus: true);
                         return;
                     }
                 }
@@ -1171,7 +1171,7 @@ public sealed partial class MainWindow
         return ModDeploymentLayout.DeployedPath(targetDir, sourceDirectoryPath);
     }
 
-    private string GetFolderCopyState(string targetDir, string directoryPath)
+    internal string GetFolderCopyState(string targetDir, string directoryPath)
     {
         if (string.IsNullOrWhiteSpace(targetDir))
         {
@@ -1187,7 +1187,7 @@ public sealed partial class MainWindow
         return DirectoryLinkDeployment.IsDirectoryLink(targetPath) ? StateLinkedText : StateCopiedText;
     }
 
-    private SecondLevelFolderItem? GetSelectedSecondLevelItem()
+    internal SecondLevelFolderItem? GetSelectedSecondLevelItem()
     {
         return _modList.SelectedMod ?? SecondLevelListView.SelectedItem as SecondLevelFolderItem;
     }
@@ -1206,7 +1206,7 @@ public sealed partial class MainWindow
             }
             catch (Exception ex)
             {
-                LogApplicationIssue("Mod preview selection", ex);
+                _host.LogApplicationIssue("Mod preview selection", ex);
                 if (requestVersion == _previewImageRequestVersion)
                 {
                     PreviewImage.Source = null;
@@ -1217,7 +1217,7 @@ public sealed partial class MainWindow
         }
         catch (Exception ex)
         {
-            ReportUiActionFailure("UpdatePreviewForDirectory", ex);
+            _host.ReportUiActionFailure("UpdatePreviewForDirectory", ex);
         }
     }
 
@@ -1243,7 +1243,7 @@ public sealed partial class MainWindow
         }
     }
 
-    private void ClearPreview()
+    internal void ClearPreview()
     {
         _previewImageRequestVersion++;
         PreviewImage.Source = null;
@@ -1251,7 +1251,7 @@ public sealed partial class MainWindow
         PreviewHintTextBlock.Visibility = Visibility.Visible;
     }
 
-    private static string? FindPreviewImage(List<string> files)
+    internal string? FindPreviewImage(List<string> files)
     {
         string? namedPreview = files.FirstOrDefault(file =>
         {
@@ -1271,26 +1271,26 @@ public sealed partial class MainWindow
         return images.FirstOrDefault();
     }
 
-    private static bool IsImageFile(string path)
+    private bool IsImageFile(string path)
     {
         string extension = Path.GetExtension(path);
-        return !string.IsNullOrEmpty(extension) && ImageExtensions.Contains(extension.ToLowerInvariant());
+        return !string.IsNullOrEmpty(extension) && _host.ImageExtensions.Contains(extension.ToLowerInvariant());
     }
 
-    private void ApplyFirstLevelFilter()
+    internal void ApplyFirstLevelFilter()
     {
-        string? selectedPath = _characters.Selected?.Path;
-        _characters.ApplyFilter(FirstLevelSearchTextBox.Text);
+        string? selectedPath = _host.Characters.Selected?.Path;
+        _host.Characters.ApplyFilter(FirstLevelSearchTextBox.Text);
         SelectFirstLevelByPath(selectedPath);
-        if (_characters.Selected is null && _characters.Visible.Count > 0)
+        if (_host.Characters.Selected is null && _host.Characters.Visible.Count > 0)
         {
             FirstLevelListView.SelectedIndex = 0;
         }
     }
 
-    private void SelectFirstLevelByPath(string? path)
+    internal void SelectFirstLevelByPath(string? path)
     {
-        if (_characters.FindVisible(path) is { } item)
+        if (_host.Characters.FindVisible(path) is { } item)
         {
             FirstLevelListView.SelectedItem = item;
         }

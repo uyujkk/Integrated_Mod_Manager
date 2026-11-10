@@ -58,7 +58,7 @@ public sealed partial class MainWindow
                 repository.EndfieldUseMods = settings.UseMods;
                 repository.LauncherPath = settings.LauncherPath;
                 if (GetSelectedRepository()?.Id == repository.Id) Paths.Launcher = repository.LauncherPath;
-                StatusTextBlock.Text = repository.UseEndfieldBridge
+                _workspaceView.StatusTextBlock.Text = repository.UseEndfieldBridge
                     ? T("EndfieldBridge.EndfieldLaunchSettingsSavedRunLauncher")
                     : T("EndfieldBridge.SavedRunLauncherStartsTheExisting");
             }
@@ -115,7 +115,7 @@ public sealed partial class MainWindow
             }
 
             _services.Launch.StartLoader(loader);
-            StatusTextBlock.Text = T("EndfieldBridge.ExistingLoaderStarted");
+            _workspaceView.StatusTextBlock.Text = T("EndfieldBridge.ExistingLoaderStarted");
             if (string.IsNullOrWhiteSpace(Paths.Launcher)) Paths.Launcher = loader;
             SaveConfig();
         }
@@ -164,7 +164,7 @@ public sealed partial class MainWindow
         }
 
         _services.Launch.StartWithArguments(loader, XxmiLaunchPolicy.Arguments(importer), workingDirectory);
-        StatusTextBlock.Text = T("XxmiLaunch.Started", importer);
+        _workspaceView.StatusTextBlock.Text = T("XxmiLaunch.Started", importer);
         if (string.IsNullOrWhiteSpace(Paths.Launcher)) Paths.Launcher = loader;
         SaveConfig();
         return true;
@@ -207,13 +207,13 @@ public sealed partial class MainWindow
         }
         catch (Win32Exception ex) when (ex.NativeErrorCode == 1223)
         {
-            StatusTextBlock.Text = T("EndfieldBridge.AdministratorApprovalWasDeclinedTheGame");
+            _workspaceView.StatusTextBlock.Text = T("EndfieldBridge.AdministratorApprovalWasDeclinedTheGame");
             return;
         }
 
         _services.EndfieldBridge.LaunchInProgress = true;
         RefreshEndfieldBridgeControls();
-        StatusTextBlock.Text = T("EndfieldBridge.StartingEndfield");
+        _workspaceView.StatusTextBlock.Text = T("EndfieldBridge.StartingEndfield");
         try
         {
             LaunchStatus? status = await EndfieldBridgeService.WaitForLaunchStatusAsync(service.Store, sessionId, TimeSpan.FromSeconds(profile.WithMods ? 120 : 45), () => _onlineView._onlineWindowClosed);
@@ -221,19 +221,19 @@ public sealed partial class MainWindow
             switch (status?.State)
             {
                 case LaunchStates.GameStarted:
-                    StatusTextBlock.Text = status!.Message.For(english);
+                    _workspaceView.StatusTextBlock.Text = status!.Message.For(english);
                     ShowAppNotification(T("EndfieldBridge.Started"));
                     break;
                 case LaunchStates.Failed:
                 case LaunchStates.Exited:
-                    StatusTextBlock.Text = T("EndfieldBridge.TheEndfieldLaunchDidNotComplete");
+                    _workspaceView.StatusTextBlock.Text = T("EndfieldBridge.TheEndfieldLaunchDidNotComplete");
                     await ShowMessageAsync(status!.Message.For(english), T("EndfieldBridge.EndfieldLaunch"));
                     break;
                 case LaunchStates.LoaderStarted:
-                    StatusTextBlock.Text = T("EndfieldBridge.HandedToXXMIEFMINoGame");
+                    _workspaceView.StatusTextBlock.Text = T("EndfieldBridge.HandedToXXMIEFMINoGame");
                     break;
                 default:
-                    StatusTextBlock.Text = T("EndfieldBridge.NoLaunchResultYetOpenThe");
+                    _workspaceView.StatusTextBlock.Text = T("EndfieldBridge.NoLaunchResultYetOpenThe");
                     break;
             }
         }

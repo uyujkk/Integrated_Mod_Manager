@@ -4,10 +4,8 @@ using IntegratedModManager.Core.Online;
 using IntegratedModManager.Core.Repository;
 using IntegratedModManager.Core.Updates;
 using IntegratedModManager.Data;
-using Microsoft.UI;
 using Microsoft.UI.Xaml;
 using Microsoft.UI.Xaml.Controls;
-using Microsoft.UI.Xaml.Media;
 
 namespace ModFolderCopier.WinUI;
 
@@ -30,7 +28,6 @@ public sealed partial class MainWindow : Window
     private const string DefaultOnlineGameName = "Arknights: Endfield";
     private const string EndfieldOfficialWikiUrl = "https://wiki.skland.com/endfield";
     private const int ArchiveToolTimeoutMinutes = 10;
-    private const int InitialShortcutRows = 1;
     private const int ShortcutScanSafetyLimit = 256;
     private static readonly IReadOnlyList<string> SupportedArchiveExtensions = ArchiveExtractor.SupportedExtensions;
     private static readonly ArchiveExtractor ArchiveExtraction = new(
@@ -68,14 +65,10 @@ public sealed partial class MainWindow : Window
     }
 
     internal static readonly string[] ImageExtensions = [".png", ".jpg", ".jpeg", ".bmp", ".gif", ".webp"];
-    private static readonly SolidColorBrush CopiedBrush = new(ColorHelper.FromArgb(255, 36, 124, 76));
-    private static readonly SolidColorBrush MissingBrush = new(ColorHelper.FromArgb(255, 177, 76, 55));
-    private static readonly SolidColorBrush NeutralBrush = new(ColorHelper.FromArgb(255, 60, 60, 60));
 
     private readonly HttpClient _httpClient = CreateHttpClient();
     private readonly CharacterListViewModel _characters = new();
     private readonly BatchObservableCollection<SecondLevelFolderItem> _secondLevelItems = [];
-    private readonly List<Border> _shortcutKeyBorders = [];
     private readonly List<TextBox> _shortcutKeyBoxes = [];
     private readonly List<TextBox> _shortcutActionBoxes = [];
     private readonly Dictionary<string, List<ShortcutBinding>> _modBindings = new(StringComparer.CurrentCultureIgnoreCase);
@@ -94,8 +87,6 @@ public sealed partial class MainWindow : Window
     private bool? _legacyDarkTheme;
     private bool _isCheckingUpdates;
     private bool _isCheckingModUpdates;
-    private bool _isLoadingBindings;
-    private bool _isLoadingModLink;
     private bool _hasPromptedForLocalUpdate;
     private bool _isApplyingUpdateCheckIntervalSelection;
     private bool _isApplyingModUpdateIntervalSelection;
@@ -103,8 +94,6 @@ public sealed partial class MainWindow : Window
     private bool _isApplyingRepositoryDeploymentMode;
     private bool _enableConflictDetection = true;
     private bool _reduceMotion;
-    private int _visibleShortcutRows = 1;
-    private TextBox? _activeShortcutKeyBox;
     private string? _currentSecondLevelPath;
     private string? _latestReleaseBody;
     private string? _latestReleasePublishedAt;
@@ -127,7 +116,6 @@ public sealed partial class MainWindow : Window
     private DateTimeOffset? _lastModUpdateCheckUtc;
     private TextBox? _lastFocusedTextBox;
     private int _notificationVersion;
-    private int _previewImageRequestVersion;
     private int? _savedWindowX;
     private int? _savedWindowY;
     private int? _savedWindowWidth;
@@ -136,6 +124,7 @@ public sealed partial class MainWindow : Window
     private int? _savedWindowHeight;
     private InterfaceDensity _interfaceDensity = InterfaceDensity.Comfortable;
     private readonly OnlinePage _onlineView;
+    private readonly WorkspacePage _workspaceView;
 
     public MainWindow()
     {
@@ -149,6 +138,9 @@ public sealed partial class MainWindow : Window
         InitializeComponent();
         // Stage J6: the Online page; it reaches the window only through IOnlineHost.
         _onlineView = new OnlinePage(_services, this);
+        // Stage J7: the Mod workspace page; it reaches the window only through IWorkspaceHost.
+        _workspaceView = new WorkspacePage(_services, this);
+        AttachWorkspacePageEvents();
         _services.Images.Attach(_httpClient, LogApplicationIssue);
         _services.Dialogs.Attach(() => RootGrid.XamlRoot, () => RootGrid.ActualTheme);
         _services.Status.NotificationRequested += OnNotificationRequested;
@@ -164,13 +156,13 @@ public sealed partial class MainWindow : Window
         TraceStartupStage("Persistent data store initialized");
         InitializeAppTitleBar();
         InitializeCommandPaletteShortcut();
-        FirstLevelListView.ItemsSource = _characters.Visible;
-        SecondLevelListView.ItemsSource = _secondLevelItems;
+        _workspaceView.FirstLevelListView.ItemsSource = _characters.Visible;
+        _workspaceView.SecondLevelListView.ItemsSource = _secondLevelItems;
         _onlineView.OnlineVirtualizedListView.ItemsSource = _onlineView._onlinePage.VisibleMods;
         _onlineView.OnlineVirtualizedGridView.ItemsSource = _onlineView._onlinePage.VisibleMods;
         TraceStartupStage("List sources attached");
         RegisterTrackedTextInputs();
-        BuildShortcutRows();
+        _workspaceView.BuildShortcutRows();
         TraceStartupStage("Input handlers and shortcuts initialized");
         // Neither file exists only on a first install; upgrades keep them, and with them the user's language.
         _firstInstall = _services.ShellConfig.IsFirstInstall;
@@ -183,8 +175,8 @@ public sealed partial class MainWindow : Window
         InitializeShortcutPanelHotkey();
         try
         {
-            InitializeRefinedWorkspace();
-            InitializeRepositoryWorkspaceV4();
+            _workspaceView.InitializeRefinedWorkspace();
+            _workspaceView.InitializeRepositoryWorkspaceV4();
         }
         catch (Exception ex)
         {
@@ -211,7 +203,7 @@ public sealed partial class MainWindow : Window
 
         if (Directory.Exists(Paths.Source))
         {
-            _ = RefreshListsAsync();
+            _ = _workspaceView.RefreshListsAsync();
         }
         else
         {
