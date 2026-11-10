@@ -4,7 +4,7 @@ using IntegratedModManager.Core.Shortcuts;
 
 namespace ModFolderCopier.WinUI;
 
-public sealed partial class MainWindow
+public sealed partial class OnlinePage
 {
     private sealed class PreparedOnlineInstallMetadata
     {
@@ -13,7 +13,7 @@ public sealed partial class MainWindow
         public Exception? PersistenceWarning { get; set; }
     }
 
-    private static OnlineDownloadContext CaptureOnlineDownloadContext(WorkspaceRepository? repository)
+    internal static OnlineDownloadContext CaptureOnlineDownloadContext(WorkspaceRepository? repository)
         => new(repository?.Id ?? string.Empty, repository?.SourcePath ?? string.Empty, repository?.Name ?? string.Empty);
 
     private async Task<PreparedOnlineInstallMetadata> PrepareOnlineInstallMetadataAsync(
@@ -32,25 +32,25 @@ public sealed partial class MainWindow
             try
             {
                 IReadOnlyList<DetectedModShortcut> detected = await Task.Run(
-                    () => ModShortcutScanner.ScanDirectory(extractFolder, ShortcutScanSafetyLimit), cancellationToken);
+                    () => ModShortcutScanner.ScanDirectory(extractFolder, _host.ShortcutScanSafetyLimit), cancellationToken);
                 cancellationToken.ThrowIfCancellationRequested();
-                bindings = detected.Take(ShortcutScanSafetyLimit).Select(CreateAutomaticShortcutBinding).ToList();
+                bindings = detected.Take(_host.ShortcutScanSafetyLimit).Select(_host.CreateAutomaticShortcutBinding).ToList();
             }
             catch (OperationCanceledException) { throw; }
-            catch (Exception ex) { LogApplicationIssue("Prepare online Mod shortcuts", ex); }
+            catch (Exception ex) { _host.LogApplicationIssue("Prepare online Mod shortcuts", ex); }
         }
         cancellationToken.ThrowIfCancellationRequested();
         return new PreparedOnlineInstallMetadata
         {
             Origin = new TrackedModOrigin
             {
-                Path = extractFolder, SourceSite = DefaultOnlineSourceSite, ItemId = mod.ItemId,
+                Path = extractFolder, SourceSite = _host.DefaultOnlineSourceSite, ItemId = mod.ItemId,
                 Title = mod.Title, ProfileUrl = mod.ProfileUrl,
                 DownloadFileId = mod.DownloadFileId, DownloadFileName = mod.DownloadFileName,
                 PreviewUrl = string.IsNullOrWhiteSpace(previewUrl) ? mod.PreviewUrl : previewUrl,
                 LastKnownUpdatedAt = mod.UpdatedAt
             },
-            Bindings = bindings.Take(ShortcutScanSafetyLimit).ToList()
+            Bindings = bindings.Take(_host.ShortcutScanSafetyLimit).ToList()
         };
     }
 
@@ -58,11 +58,11 @@ public sealed partial class MainWindow
     {
         // One UI-thread, non-awaiting commit. Keep other installations' records; a source ID
         // identifies the website entry, not a unique local installation.
-        _modLinks[extractFolder] = metadata.Origin.ProfileUrl;
-        _trackedModOrigins[extractFolder] = metadata.Origin;
+        _host.ModLinks[extractFolder] = metadata.Origin.ProfileUrl;
+        _host.TrackedModOrigins[extractFolder] = metadata.Origin;
         if (metadata.Bindings.Count > 0)
-            _modBindings[extractFolder] = metadata.Bindings;
-        if (!SaveConfig())
+            _host.ModBindings[extractFolder] = metadata.Bindings;
+        if (!_host.SaveConfig())
             metadata.PersistenceWarning = new IOException("Installation tracking could not be persisted.");
     }
 
@@ -72,12 +72,12 @@ public sealed partial class MainWindow
         if (cleanup.ArchivePath is not null)
         {
             try { if (File.Exists(cleanup.ArchivePath)) File.Delete(cleanup.ArchivePath); }
-            catch (Exception ex) { LogApplicationIssue("Owned online archive cleanup", ex); }
+            catch (Exception ex) { _host.LogApplicationIssue("Owned online archive cleanup", ex); }
         }
         if (cleanup.ExtractionPath is not null)
         {
-            try { if (Directory.Exists(cleanup.ExtractionPath)) DeleteDirectoryTreeSafely(cleanup.ExtractionPath); }
-            catch (Exception ex) { LogApplicationIssue("Owned online extraction cleanup", ex); }
+            try { if (Directory.Exists(cleanup.ExtractionPath)) _host.DeleteDirectoryTreeSafely(cleanup.ExtractionPath); }
+            catch (Exception ex) { _host.LogApplicationIssue("Owned online extraction cleanup", ex); }
         }
     }
 }

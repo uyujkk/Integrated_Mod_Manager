@@ -6,9 +6,9 @@ using Microsoft.UI.Xaml.Controls;
 
 namespace ModFolderCopier.WinUI;
 
-public sealed partial class MainWindow
+public sealed partial class OnlinePage
 {
-    private OnlineWorkspacePreferences _onlinePreferences = new();
+    internal OnlineWorkspacePreferences _onlinePreferences = new();
     private bool _resettingOnlineFilters;
 
     private string OnlineAuthorKey => _onlinePage.AuthorId > 0 ? $"|author={_onlinePage.AuthorId}" : string.Empty;
@@ -17,7 +17,7 @@ public sealed partial class MainWindow
     {
         UiCrashDiagnostics.RecordAction("Author browse");
         if (id <= 0) { OnlineSearchTextBox.Text = $"author:{name}"; return; }
-        string category = GetEffectiveOnlineCategoryId(GetSelectedRepository());
+        string category = GetEffectiveOnlineCategoryId(_host.GetSelectedRepository());
         _onlinePreferences.RecentAuthors.RemoveAll(item => item.Id == id && item.CategoryId == category);
         _onlinePreferences.RecentAuthors.Insert(0, new OnlineAuthorVisit(id, name, category, DateTimeOffset.UtcNow));
         _onlinePreferences.RecentAuthors = _onlinePreferences.RecentAuthors.Take(100).ToList();
@@ -62,7 +62,7 @@ public sealed partial class MainWindow
         }
         catch (Exception ex)
         {
-            ReportUiActionFailure("OnClearOnlineFiltersClicked", ex);
+            _host.ReportUiActionFailure("OnClearOnlineFiltersClicked", ex);
         }
     }
 
@@ -83,13 +83,13 @@ public sealed partial class MainWindow
     }
 
     private bool IsSavedOnlineMod(OnlineModCard mod) => _onlinePreferences.SavedMods.Any(item =>
-        item.RepositoryId == GetSelectedRepository()?.Id
-        && string.Equals(item.RepositoryPath.TrimEnd('\\', '/'), GetSelectedRepository()?.SourcePath.TrimEnd('\\', '/'), StringComparison.OrdinalIgnoreCase)
+        item.RepositoryId == _host.GetSelectedRepository()?.Id
+        && string.Equals(item.RepositoryPath.TrimEnd('\\', '/'), _host.GetSelectedRepository()?.SourcePath.TrimEnd('\\', '/'), StringComparison.OrdinalIgnoreCase)
         && GetOnlineDownloadIdentity(item.Mod) == GetOnlineDownloadIdentity(mod));
 
     private void ToggleSavedOnlineMod(OnlineModCard mod)
     {
-        WorkspaceRepository? repository = GetSelectedRepository();
+        WorkspaceRepository? repository = _host.GetSelectedRepository();
         if (repository is null) return;
         bool remove = IsSavedOnlineMod(mod);
         _onlinePreferences.SavedMods.RemoveAll(item => item.RepositoryId == repository.Id
@@ -97,7 +97,7 @@ public sealed partial class MainWindow
             && GetOnlineDownloadIdentity(item.Mod) == GetOnlineDownloadIdentity(mod));
         if (!remove) _onlinePreferences.SavedMods.Insert(0, new OnlineSavedMod(repository.Id, repository.SourcePath, mod));
         _onlinePreferences.SavedMods = _onlinePreferences.SavedMods.Take(100).ToList();
-        SaveShellConfig();
+        _host.SaveShellConfig();
         ShowAppNotification(remove ? T("OnlineLibrary.RemovedFromSaved") : T("OnlineLibrary.Saved"));
     }
 
@@ -108,25 +108,25 @@ public sealed partial class MainWindow
         save.Click += (_, _) => ToggleSavedOnlineMod(mod);
         menu.Items.Add(save);
         var author = new MenuFlyoutItem { Text = T("OnlineLibrary.BrowseAuthorAllPages"), IsEnabled = mod.AuthorId > 0 };
-        author.Click += async (_, _) => await RunUiActionAsync("BrowseOnlineAuthorAsync", () => BrowseOnlineAuthorAsync(mod.AuthorId, mod.Author));
+        author.Click += async (_, _) => await _host.RunUiActionAsync("BrowseOnlineAuthorAsync", () => BrowseOnlineAuthorAsync(mod.AuthorId, mod.Author));
         menu.Items.Add(author);
         bool savedAuthor = _onlinePreferences.Authors.Any(item => item.Id == mod.AuthorId
-            && item.CategoryId == GetEffectiveOnlineCategoryId(GetSelectedRepository()));
+            && item.CategoryId == GetEffectiveOnlineCategoryId(_host.GetSelectedRepository()));
         var favorite = new MenuFlyoutItem { Text = savedAuthor ? T("OnlineLibrary.UnsaveAuthor") : T("OnlineLibrary.SaveAuthor"), IsEnabled = mod.AuthorId > 0 };
         favorite.Click += (_, _) =>
         {
-            string category = GetEffectiveOnlineCategoryId(GetSelectedRepository());
+            string category = GetEffectiveOnlineCategoryId(_host.GetSelectedRepository());
             _onlinePreferences.Authors.RemoveAll(item => item.Id == mod.AuthorId && item.CategoryId == category);
             if (!savedAuthor) _onlinePreferences.Authors.Insert(0, new OnlineAuthorBookmark(mod.AuthorId, mod.Author, category));
             _onlinePreferences.Authors = _onlinePreferences.Authors.Take(100).ToList();
-            SaveShellConfig();
+            _host.SaveShellConfig();
         };
         menu.Items.Add(favorite);
         menu.Opening += (_, _) =>
         {
             save.Text = IsSavedOnlineMod(mod) ? T("OnlineLibrary.RemoveFromSaved") : T("OnlineLibrary.SaveForLater");
             savedAuthor = _onlinePreferences.Authors.Any(item => item.Id == mod.AuthorId
-                && item.CategoryId == GetEffectiveOnlineCategoryId(GetSelectedRepository()));
+                && item.CategoryId == GetEffectiveOnlineCategoryId(_host.GetSelectedRepository()));
             favorite.Text = savedAuthor ? T("OnlineLibrary.UnsaveAuthor") : T("OnlineLibrary.SaveAuthor");
         };
         return menu;
@@ -138,7 +138,7 @@ public sealed partial class MainWindow
         catch (OperationCanceledException) { }
         catch (Exception ex)
         {
-            LogApplicationIssue("Author and saved workspace", ex);
+            _host.LogApplicationIssue("Author and saved workspace", ex);
             await ReportOnlineActionErrorAsync(ex.Message, T("OnlineLibrary.CannotCompleteAction"), ex);
         }
     }

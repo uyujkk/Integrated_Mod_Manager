@@ -3,7 +3,7 @@ using Microsoft.UI.Xaml.Media.Imaging;
 
 namespace ModFolderCopier.WinUI;
 
-public sealed partial class MainWindow
+public sealed partial class OnlinePage
 {
     private async Task SetCachedOnlineCharacterAvatarAsync(
         Image image,
@@ -34,7 +34,7 @@ public sealed partial class MainWindow
         }
         catch (Exception exception)
         {
-            LogApplicationIssue("Online character avatar", exception);
+            _host.LogApplicationIssue("Online character avatar", exception);
         }
         finally
         {

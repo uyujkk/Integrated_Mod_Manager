@@ -43,7 +43,7 @@ internal static class DownloadFilePickerDialog
             }
             if (candidate.FileSizeBytes > 0)
             {
-                metadata.Add(MainWindow.FormatFileSize(candidate.FileSizeBytes));
+                metadata.Add(OnlinePage.FormatFileSize(candidate.FileSizeBytes));
             }
             if (candidate.AddedAt > DateTimeOffset.MinValue)
             {

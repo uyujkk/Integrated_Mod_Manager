@@ -3,17 +3,17 @@ using IntegratedModManager.Core.Online;
 
 namespace ModFolderCopier.WinUI;
 
-public sealed partial class MainWindow
+public sealed partial class OnlinePage
 {
-    private readonly OnlinePageViewModel _onlinePage = new();
+    internal readonly OnlinePageViewModel _onlinePage = new();
     private readonly OnlinePageStateAdapter _onlineDetailState = new();
-    private readonly OnlineDownloadActionAdapter _onlineDownloadActions = new();
+    internal readonly OnlineDownloadActionAdapter _onlineDownloadActions = new();
     private int _onlineInstallBusyCount;
-    private bool _onlineWindowClosed;
+    internal bool _onlineWindowClosed;
 
     private string GetOnlineDetailContextKey()
     {
-        WorkspaceRepository? repository = GetSelectedRepository();
+        WorkspaceRepository? repository = _host.GetSelectedRepository();
         return System.Text.Json.JsonSerializer.Serialize(new[]
         {
             repository?.Id, repository?.SourcePath, repository?.OnlineCategoryId,
@@ -21,12 +21,12 @@ public sealed partial class MainWindow
         });
     }
 
-    private static string GetOnlineDownloadIdentity(OnlineModCard mod)
+    internal static string GetOnlineDownloadIdentity(OnlineModCard mod)
         => mod.ItemId > 0 ? $"GameBanana:{mod.ItemId}" : mod.ProfileUrl;
 
     private bool IsOnlineDownloadActionBlocked(OnlineModCard mod)
         => _onlineDownloadActions.IsPreparing || _onlineDownloadActions.IsActive(
-            CaptureOnlineDownloadContext(GetSelectedRepository()), GetOnlineDownloadIdentity(mod));
+            CaptureOnlineDownloadContext(_host.GetSelectedRepository()), GetOnlineDownloadIdentity(mod));
 
     private void RefreshOnlineDetailActionState()
     {
@@ -41,7 +41,7 @@ public sealed partial class MainWindow
         }
     }
 
-    private void InvalidateOnlineDetailRequest()
+    internal void InvalidateOnlineDetailRequest()
     {
         _onlineDetailState.Invalidate();
         _onlineHeroImageRequestVersion++;
@@ -50,7 +50,7 @@ public sealed partial class MainWindow
     private void SetOnlineInstallBusy(bool busy)
     {
         _onlineInstallBusyCount = Math.Max(0, _onlineInstallBusyCount + (busy ? 1 : -1));
-        SetBusyState(_onlineInstallBusyCount > 0);
+        _host.SetBusyState(_onlineInstallBusyCount > 0);
     }
 
     private async Task RunOnlineCardDownloadAsync(OnlineModCard mod, Microsoft.UI.Xaml.Controls.Button button)
@@ -64,10 +64,10 @@ public sealed partial class MainWindow
         }
     }
 
-    private async Task ReportOnlineActionErrorAsync(string message, string title, Exception? error = null)
+    internal async Task ReportOnlineActionErrorAsync(string message, string title, Exception? error = null)
     {
         if (_onlineWindowClosed) return;
         try { await _services.Dialogs.ErrorAsync(title, message, error); }
-        catch (Exception ex) { LogApplicationIssue("Report online action error", ex); }
+        catch (Exception ex) { _host.LogApplicationIssue("Report online action error", ex); }
     }
 }

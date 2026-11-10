@@ -45,7 +45,7 @@ public sealed partial class MainWindow
 
             if (!fresh && !cancellationToken.IsCancellationRequested && _avatarCatalogRefreshRequested.Add(repository.Id))
             {
-                await EnsureOnlineCharacterCatalogAsync(repository, forceReload: false);
+                await _onlineView.EnsureOnlineCharacterCatalogAsync(repository, forceReload: false);
                 if (!cancellationToken.IsCancellationRequested && ReferenceEquals(GetSelectedRepository(), repository))
                 {
                     await RefreshCharacterFolderAvatarsAsync();
@@ -101,16 +101,16 @@ public sealed partial class MainWindow
         }
     }
 
-    // The catalog for avatar matching and whether it is fresh (see OnlineCharacterCatalogFreshFor).
+    // The catalog for avatar matching and whether it is fresh (see _onlineView.OnlineCharacterCatalogFreshFor).
     private async Task<(IReadOnlyList<OnlineCharacterOption> Characters, bool Fresh)> GetCharacterAvatarCatalogAsync(WorkspaceRepository repository)
     {
-        string catalogKey = GetOnlineCharacterCatalogKey(repository);
-        OnlineCharacterCatalogCacheSnapshot? cached = await TryReadOnlineCharacterCatalogCacheAsync(catalogKey);
+        string catalogKey = _onlineView.GetOnlineCharacterCatalogKey(repository);
+        OnlineCharacterCatalogCacheSnapshot? cached = await _onlineView.TryReadOnlineCharacterCatalogCacheAsync(catalogKey);
         IReadOnlyList<OnlineCharacterOption> online =
-            string.Equals(_onlineCharacterCatalogKey, catalogKey, StringComparison.Ordinal) && _onlinePage.CharacterOptions.Count > 0
-                ? [.. _onlinePage.CharacterOptions]
+            string.Equals(_onlineView._onlineCharacterCatalogKey, catalogKey, StringComparison.Ordinal) && _onlineView._onlinePage.CharacterOptions.Count > 0
+                ? [.. _onlineView._onlinePage.CharacterOptions]
                 : cached?.Characters ?? [];
-        if (!IsEndfieldRepository(repository))
+        if (!_onlineView.IsEndfieldRepository(repository))
         {
             return (online, cached?.IsFresh == true);
         }

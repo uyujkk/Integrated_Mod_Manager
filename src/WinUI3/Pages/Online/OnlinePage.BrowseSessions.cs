@@ -7,17 +7,17 @@ using Microsoft.UI.Xaml;
 
 namespace ModFolderCopier.WinUI;
 
-public sealed partial class MainWindow
+public sealed partial class OnlinePage
 {
-    private string? _activeBrowseSessionKey;
-    private OnlineBrowseSession? _pendingBrowsePosition;
+    internal string? _activeBrowseSessionKey;
+    internal OnlineBrowseSession? _pendingBrowsePosition;
     private bool _restoringBrowseControls;
-    private int _browseRestoreRevision;
-    private Microsoft.UI.Dispatching.DispatcherQueueTimer? _browseSaveTimer;
+    internal int _browseRestoreRevision;
+    internal Microsoft.UI.Dispatching.DispatcherQueueTimer? _browseSaveTimer;
 
     private string? CurrentBrowseSessionKey()
     {
-        var repository = GetSelectedRepository();
+        var repository = _host.GetSelectedRepository();
         return repository is null ? null : WorkspaceIdentity.Online(repository.Id, repository.SourcePath,
             GetEffectiveOnlineSource(repository), GetEffectiveOnlineCategoryId(repository));
     }
@@ -30,7 +30,7 @@ public sealed partial class MainWindow
         CancelOnlineModListRequest();
         _lastLoadedOnlineConfigKey = null;
         _onlinePage.Mods.Clear();
-        EnsureOnlineCharacterOptionsForRepository(GetSelectedRepository());
+        EnsureOnlineCharacterOptionsForRepository(_host.GetSelectedRepository());
         ++_browseRestoreRevision;
         var state = key is not null && _onlinePreferences.BrowseSessions.TryGetValue(key, out var saved) && saved is not null
             ? saved.Sanitize() : new OnlineBrowseSession { Layout = _onlinePage.CardLayoutMode.ToString() };
@@ -53,7 +53,7 @@ public sealed partial class MainWindow
         finally { _restoringBrowseControls = _resettingOnlineFilters = false; }
     }
 
-    private void CaptureOnlineBrowseSession()
+    internal void CaptureOnlineBrowseSession()
     {
         if (_activeBrowseSessionKey is null || _activeBrowseSessionKey != CurrentBrowseSessionKey() || _restoringBrowseControls) return;
         var state = new OnlineBrowseSession
@@ -98,12 +98,12 @@ public sealed partial class MainWindow
         return null;
     }
 
-    private void InitializeBrowseSessionTracking()
+    internal void InitializeBrowseSessionTracking()
     {
         _browseSaveTimer = DispatcherQueue.CreateTimer();
         _browseSaveTimer.Interval = TimeSpan.FromMilliseconds(600);
         _browseSaveTimer.IsRepeating = false;
-        _browseSaveTimer.Tick += (_, _) => { if (!_onlineWindowClosed) SaveShellConfig(); };
+        _browseSaveTimer.Tick += (_, _) => { if (!_onlineWindowClosed) _host.SaveShellConfig(); };
         foreach (ListViewBase list in new ListViewBase[] { OnlineVirtualizedListView, OnlineVirtualizedGridView })
             list.Loaded += (_, _) =>
             {
@@ -130,7 +130,7 @@ public sealed partial class MainWindow
     private void QueueRestoreOnlineBrowsePosition()
     {
         if (_pendingBrowsePosition is not { } state || _isLoadingOnlineMods || _onlinePage.VisibleMods.Count == 0
-            || _currentPrimarySection != PrimarySection.Online || !OnlineResultsList().IsLoaded) return;
+            || !_host.IsOnlinePageShown || !OnlineResultsList().IsLoaded) return;
         int revision = ++_browseRestoreRevision;
         string? key = _activeBrowseSessionKey;
         var list = OnlineResultsList();

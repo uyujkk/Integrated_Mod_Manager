@@ -13,7 +13,7 @@ public sealed partial class MainWindow
 
     private async Task NotifyModUpdatesAvailableAsync()
     {
-        if (_showingModUpdateNotification || _onlineWindowClosed) return;
+        if (_showingModUpdateNotification || _onlineView._onlineWindowClosed) return;
         var updates = _trackedModUpdateResults.Where(item => item.HasUpdate).ToArray();
         if (updates.Length == 0) return;
         _showingModUpdateNotification = true;
@@ -42,12 +42,12 @@ public sealed partial class MainWindow
             string repositoryId = repository.Id;
             string repositoryPath = repository.SourcePath;
             ModUpdateSnapshot snapshot = await Task.Run(() => ModUpdateReplacement.Capture(repositoryPath, result.Path));
-            OnlineModCard mod = await FetchGameBananaModCardAsyncV2(result.ItemId)
+            OnlineModCard mod = await _onlineView.FetchGameBananaModCardAsyncV2(result.ItemId)
                 ?? throw new IOException(T("ModUpdates.CouldNotLoadCurrentDownloadFiles"));
             var candidates = mod.DownloadFiles.Where(file => file.IsSupportedArchive && !file.IsArchived && !string.IsNullOrWhiteSpace(file.DownloadUrl)).ToArray();
             if (candidates.Length == 0) throw new IOException(T("ModUpdates.NoSupportedArchivesAreAvailableReview"));
-            if (await ModUpdateReplaceDialog.ChooseAsync(_services, result.Path, candidates, origin.DownloadFileId, FormatFileSize) is not { } selected) return;
-            OnlineModCard effective = WithSelectedDownloadFile(mod, selected);
+            if (await ModUpdateReplaceDialog.ChooseAsync(_services, result.Path, candidates, origin.DownloadFileId, OnlinePage.FormatFileSize) is not { } selected) return;
+            OnlineModCard effective = OnlinePage.WithSelectedDownloadFile(mod, selected);
             task = CreateDownloadTask(effective, result.Path);
             // Recovery must never replay a replacement as an ordinary separate installation.
             task.SourceIdentity = "mod-update|" + task.SourceIdentity;
@@ -55,7 +55,7 @@ public sealed partial class MainWindow
             work = Path.Combine(AppContext.BaseDirectory, "cache", "mod-updates", Guid.NewGuid().ToString("N"));
             Directory.CreateDirectory(work);
             using IDisposable execution = await _services.Downloads.Scheduler.AcquireAsync(task.Cancellation.Token);
-            string archive = EnsureDownloadArchiveExtension(await DownloadOnlineModArchiveAsync(effective, work, task, task.Cancellation.Token));
+            string archive = _onlineView.EnsureDownloadArchiveExtension(await _onlineView.DownloadOnlineModArchiveAsync(effective, work, task, task.Cancellation.Token));
             if (!IsSupportedArchiveFile(archive)) throw new InvalidDataException(T("ModUpdates.TheDownloadedFileIsNotA"));
             string payload = Path.Combine(work, "payload");
             Directory.CreateDirectory(payload);
@@ -105,7 +105,7 @@ public sealed partial class MainWindow
         {
             LogApplicationIssueWithStack("Tracked Mod update", ex);
             if (task is not null && !committed) UpdateDownloadTask(task, DownloadTaskState.Failed, task.Progress, M("ModUpdates.Failed", ex.Message), forceRefresh: true);
-            if (!_onlineWindowClosed) await ShowMessageAsync(
+            if (!_onlineView._onlineWindowClosed) await ShowMessageAsync(
                 (committed ? T("ModUpdates.ReplacedButSaveFailed") : T("ModUpdates.StoppedOriginalsKept")) + ex.Message,
                 T("ModUpdates.ModUpdate"));
         }
@@ -114,7 +114,7 @@ public sealed partial class MainWindow
             _modUpdatesInProgress.Remove(result.Path);
             // Retain failed downloads for diagnosis; successful work is an owned cache folder.
             if (committed && work is not null) { try { Directory.Delete(work, true); } catch (Exception ex) { LogApplicationIssue("Clean Mod update cache", ex); } }
-            if (!_onlineWindowClosed) RefreshUpdatesPane();
+            if (!_onlineView._onlineWindowClosed) RefreshUpdatesPane();
         }
     }
 }

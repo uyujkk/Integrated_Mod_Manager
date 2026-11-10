@@ -16,7 +16,7 @@ public sealed partial class MainWindow
         if (GetSelectedRepository() is not { } repository) return;
 
         RepositoryPresetInfo? chosen = await FirstRunDialog.ShowAsync(_services, BuiltInRepositoryPresets, RootGrid.ActualTheme);
-        if (chosen is null || _onlineWindowClosed) return;
+        if (chosen is null || _onlineView._onlineWindowClosed) return;
         repository.Name = L(chosen.DisplayNameZh, chosen.DisplayNameEn);
         repository.OnlineSourceSite = DefaultOnlineSourceSite;
         repository.OnlineGameName = chosen.DisplayNameEn;
@@ -42,7 +42,7 @@ public sealed partial class MainWindow
         {
             await Task.Delay(1000);
         }
-        if (_onlineWindowClosed || !_gettingStartedTips.IsPending) return;
+        if (_onlineView._onlineWindowClosed || !_gettingStartedTips.IsPending) return;
         _services.Dashboard.GettingStarted = _gettingStartedTips;
     }
 

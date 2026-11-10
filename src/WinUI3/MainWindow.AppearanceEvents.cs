@@ -28,8 +28,8 @@ public sealed partial class MainWindow
         // Online: re-project the open details from the same raw cache; the older translation is rejected.
         language.LanguageChanged += (_, _) =>
         {
-            if (IsOnlineDetailOpen && _activeOnlineDetailMod is OnlineModCard mod)
-                _ = ShowOnlineModDetailsAsync(mod);
+            if (_onlineView.IsOnlineDetailOpen && _onlineView._activeOnlineDetailMod is OnlineModCard mod)
+                _ = _onlineView.ShowOnlineModDetailsAsync(mod);
         };
 
         AppearanceService appearance = _services.Appearance;

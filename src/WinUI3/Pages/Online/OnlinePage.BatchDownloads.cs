@@ -4,12 +4,12 @@ using Microsoft.UI.Xaml.Controls;
 
 namespace ModFolderCopier.WinUI;
 
-public sealed partial class MainWindow
+public sealed partial class OnlinePage
 {
     private sealed record PreparedSavedDownload(OnlineModCard Mod, IReadOnlyCollection<string> Aliases, string? Error);
 
     private OnlineDuplicateKind GetOnlineDuplicateKind(OnlineModCard mod, OnlineDownloadCandidate? file, OnlineDownloadContext context)
-        => OnlineDuplicatePolicy.Classify(file?.FileId, _trackedModOrigins.Values.Where(origin =>
+        => OnlineDuplicatePolicy.Classify(file?.FileId, _host.TrackedModOrigins.Values.Where(origin =>
             OnlineInstallationDetectionPolicy.Matches(mod.ItemId, mod.ProfileUrl, origin.ItemId, origin.ProfileUrl)
             && Directory.Exists(origin.Path) && IsPathInsideDirectory(origin.Path, context.RepositoryPath)).Select(origin => origin.DownloadFileId));
 
@@ -58,7 +58,7 @@ public sealed partial class MainWindow
         foreach (var data in rows)
         {
             var candidates = OnlineDownloadSelectionPolicy.OrderForManualSelection(data.Mod.DownloadFiles).Where(candidate => candidate.IsSupportedArchive).ToArray();
-            if (candidates.Length == 0 && data.Mod.DownloadFiles.Count == 0 && IsSupportedArchiveFile(data.Mod.DownloadFileName) && !string.IsNullOrWhiteSpace(data.Mod.DownloadUrl))
+            if (candidates.Length == 0 && data.Mod.DownloadFiles.Count == 0 && _host.IsSupportedArchiveFile(data.Mod.DownloadFileName) && !string.IsNullOrWhiteSpace(data.Mod.DownloadUrl))
                 candidates = [new OnlineDownloadCandidate { FileId = data.Mod.DownloadFileId, FileName = data.Mod.DownloadFileName, DownloadUrl = data.Mod.DownloadUrl, IsSupportedArchive = true }];
             var files = candidates.Select(candidate => (candidate.FileName + (candidate.IsArchived ? T("BatchDownloads.Archived") : ""), candidate)).ToArray();
             bool active = _onlineDownloadActions.IsActive(context, GetOnlineDownloadIdentity(data.Mod));
@@ -96,8 +96,8 @@ public sealed partial class MainWindow
                 enabled, isChecked, files, options, folderIndex, note));
         }
         if (await BatchDownloadDialogs.ReviewAsync(_services, context.RepositoryName, context.RepositoryPath, reviewRows,
-                (key, file) => GetOnlineDuplicateKind(((PreparedSavedDownload)key).Mod, file, context), GetAppThemeBrush("AppNavSelectedBorderBrush"),
-                RootGrid.ActualWidth, RootGrid.ActualHeight) is not { } review
+                (key, file) => GetOnlineDuplicateKind(((PreparedSavedDownload)key).Mod, file, context), _host.GetAppThemeBrush("AppNavSelectedBorderBrush"),
+                _host.Root.ActualWidth, _host.Root.ActualHeight) is not { } review
             || _onlineWindowClosed || contextKey != GetOnlineDetailContextKey()) return;
         var chosen = review.Rows.Select(plan => (Data: (PreparedSavedDownload)plan.Key, plan.File, Choice: plan.Folder)).ToArray();
         if (chosen.Any(plan => plan.Choice is string folder && !IsUsableRememberedFolder(folder, context)))

@@ -107,7 +107,7 @@ public sealed partial class MainWindow
                 start = remembered with { X = game.X + remembered.X, Y = game.Y + remembered.Y };
             var text = new RegionSelectionText(T("PresetPreview.FrameHint"), T("PresetPreview.LockFrameSize"), T("PresetPreview.UseAsDefaultRegion"), T("PresetPreview.Capture"), T("Common.Cancel"));
             RegionSelection? selection = await overlay.SelectRegionAsync(start, text, _presetPreviewFrameLocked, _presetPreviewDefaultRegion is not null, animate);
-            if (selection is null || _onlineWindowClosed || !ReferenceEquals(_overlay.Window, overlay)) return;
+            if (selection is null || _onlineView._onlineWindowClosed || !ReferenceEquals(_overlay.Window, overlay)) return;
             string? stored = null;
             PixelRect? clipped = PresetPreviewStore.ClipToGame(game, selection.Area);
             _presetPreviewFrameLocked = selection.LockSize;
@@ -135,13 +135,13 @@ public sealed partial class MainWindow
         catch (Exception ex)
         {
             LogApplicationIssue("Preset preview framing", ex);
-            if (!_onlineWindowClosed) _shortcuts.StatusText = T("PresetPreview.CannotUse");
+            if (!_onlineView._onlineWindowClosed) _shortcuts.StatusText = T("PresetPreview.CannotUse");
         }
         finally
         {
             _savingOverlaySinglePreset = false;
             if (ReferenceEquals(_overlay.Window, overlay)) await overlay.LeaveLayerAsync(animate);
-            if (!_onlineWindowClosed)
+            if (!_onlineView._onlineWindowClosed)
             {
                 _overlay.InvalidateSlots();
                 RefreshShortcutOverlay(bindingsChanged: true);
@@ -231,7 +231,7 @@ public sealed partial class MainWindow
         finally { _savingOverlaySinglePreset = false; }
         // Switch while the window goes back: waiting for the animation would only delay the game.
         Task leaving = ReferenceEquals(_overlay.Window, overlay) ? overlay.LeaveLayerAsync(animate) : Task.CompletedTask;
-        if (selected is not null && !_onlineWindowClosed) await SwitchSlotFromOverlayAsync(selected, modPath);
+        if (selected is not null && !_onlineView._onlineWindowClosed) await SwitchSlotFromOverlayAsync(selected, modPath);
         await leaving;
     }
 

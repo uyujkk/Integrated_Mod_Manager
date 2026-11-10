@@ -167,22 +167,22 @@ public sealed partial class MainWindow
 
     private bool IsFavoriteCharacter(string characterKey)
     {
-        if (string.IsNullOrWhiteSpace(characterKey) || string.IsNullOrWhiteSpace(_onlineCharacterCatalogKey))
+        if (string.IsNullOrWhiteSpace(characterKey) || string.IsNullOrWhiteSpace(_onlineView._onlineCharacterCatalogKey))
         {
             return false;
         }
 
-        return _favoriteCharacterKeys.Contains(AppDataStore.BuildFavoriteKey(_onlineCharacterCatalogKey, characterKey));
+        return _favoriteCharacterKeys.Contains(AppDataStore.BuildFavoriteKey(_onlineView._onlineCharacterCatalogKey, characterKey));
     }
 
     private void ToggleFavoriteCharacter(string characterKey)
     {
-        if (string.IsNullOrWhiteSpace(characterKey) || string.IsNullOrWhiteSpace(_onlineCharacterCatalogKey))
+        if (string.IsNullOrWhiteSpace(characterKey) || string.IsNullOrWhiteSpace(_onlineView._onlineCharacterCatalogKey))
         {
             return;
         }
 
-        string favoriteKey = AppDataStore.BuildFavoriteKey(_onlineCharacterCatalogKey, characterKey);
+        string favoriteKey = AppDataStore.BuildFavoriteKey(_onlineView._onlineCharacterCatalogKey, characterKey);
         bool isFavorite = !_favoriteCharacterKeys.Contains(favoriteKey);
         if (isFavorite)
         {
@@ -193,63 +193,13 @@ public sealed partial class MainWindow
             _favoriteCharacterKeys.Remove(favoriteKey);
         }
 
-        _appDataStore.SetFavorite(_onlineCharacterCatalogKey, characterKey, isFavorite);
-        _onlineCharacterStripSignature = null;
-        RefreshOnlineCharacterAvatarStrip();
-        PopulateOnlineCharacterOptions();
+        _appDataStore.SetFavorite(_onlineView._onlineCharacterCatalogKey, characterKey, isFavorite);
+        _onlineView._onlineCharacterStripSignature = null;
+        _onlineView.RefreshOnlineCharacterAvatarStrip();
+        _onlineView.PopulateOnlineCharacterOptions();
         ShowAppNotification(
                 isFavorite ? T("ProductivityFeatures.CharacterFavorited") : T("ProductivityFeatures.CharacterUnfavorited"),
                 InfoBarSeverity.Informational);
-    }
-
-    private FrameworkElement WrapCharacterButtonWithFavorite(Button characterButton, string characterKey)
-    {
-        if (string.IsNullOrWhiteSpace(characterKey))
-        {
-            return characterButton;
-        }
-
-        bool isFavorite = IsFavoriteCharacter(characterKey);
-        var host = new Grid
-        {
-            HorizontalAlignment = HorizontalAlignment.Stretch
-        };
-        host.Children.Add(characterButton);
-
-        var favoriteButton = new Button
-        {
-            Width = _useHorizontalOnlineCharacterRail ? 26 : 30,
-            Height = _useHorizontalOnlineCharacterRail ? 26 : 30,
-            Padding = new Thickness(0),
-            Margin = _useHorizontalOnlineCharacterRail
-                ? new Thickness(0, 4, 4, 0)
-                : new Thickness(0, 0, 7, 0),
-            HorizontalAlignment = HorizontalAlignment.Right,
-            VerticalAlignment = _useHorizontalOnlineCharacterRail
-                ? VerticalAlignment.Top
-                : VerticalAlignment.Center,
-            CornerRadius = new CornerRadius(15),
-            Background = GetAppThemeBrush(isFavorite ? "AppAccentSoftBrush" : "AppSecondaryDefaultBrush"),
-            BorderBrush = GetAppThemeBrush(isFavorite ? "AppNavSelectedBorderBrush" : "AppCardBorderBrush"),
-            BorderThickness = new Thickness(1),
-            Foreground = GetAppThemeBrush(isFavorite ? "AppAccentBrush" : "AppSecondaryDefaultForegroundBrush"),
-            Content = new FontIcon
-            {
-                Glyph = isFavorite ? "\uE735" : "\uE734",
-                FontSize = _useHorizontalOnlineCharacterRail ? 12 : 14
-            }
-        };
-        string accessibleName = isFavorite
-            ? T("ProductivityFeatures.RemoveCharacterFromFavorites")
-            : T("ProductivityFeatures.FavoriteAndPinCharacter");
-        AutomationProperties.SetName(favoriteButton, accessibleName);
-        ToolTipService.SetToolTip(favoriteButton, accessibleName);
-        favoriteButton.Click += (_, args) =>
-        {
-            ToggleFavoriteCharacter(characterKey);
-        };
-        host.Children.Add(favoriteButton);
-        return host;
     }
 
     private Task<LatestReleaseInfo> FetchLatestReleaseInfoAsync(CancellationToken cancellationToken = default)

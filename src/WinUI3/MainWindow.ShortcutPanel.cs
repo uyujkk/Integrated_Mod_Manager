@@ -180,7 +180,7 @@ public sealed partial class MainWindow
         RenderShortcutButtons();
         _shortcuts.StatusText = T("ShortcutPanel.ReadingCurrentRepository");
         ShortcutModOption[] options = await Task.Run(() => ReadShortcutModOptions(repository));
-        if (_onlineWindowClosed || revision != _shortcuts.ScanRevision) return;
+        if (_onlineView._onlineWindowClosed || revision != _shortcuts.ScanRevision) return;
         // A new list clears the choice, as replacing a ComboBox's items did; the choice below loads the bindings again.
         _shortcuts.ModOptions = options;
         _shortcuts.SelectedMod = null;
@@ -194,7 +194,7 @@ public sealed partial class MainWindow
     private async Task RefreshShortcutPaneSafelyAsync()
     {
         try { await RefreshShortcutModsAsync(); }
-        catch (Exception ex) { if (!_onlineWindowClosed) _shortcuts.StatusText = ex.Message; }
+        catch (Exception ex) { if (!_onlineView._onlineWindowClosed) _shortcuts.StatusText = ex.Message; }
     }
 
     private async Task LoadShortcutSelectionAsync(bool force = false)
@@ -209,7 +209,7 @@ public sealed partial class MainWindow
         {
             _shortcuts.StatusText = T("ShortcutPanel.ReadingINI");
             var detected = await Task.Run(() => _shortcutScanCache.Scan(mod.Path, force));
-            if (_onlineWindowClosed || revision != _shortcuts.ScanRevision) return;
+            if (_onlineView._onlineWindowClosed || revision != _shortcuts.ScanRevision) return;
             _shortcuts.LoadedPath = mod.Path;
             _shortcuts.Detected = detected;
             _shortcuts.StatusText = T("ShortcutPanel.ReadBindingsInGameConditionsAre", detected.Count);
@@ -218,7 +218,7 @@ public sealed partial class MainWindow
         catch (Exception ex)
         {
             LogApplicationIssue("Read shortcut panel INI", ex);
-            if (!_onlineWindowClosed && revision == _shortcuts.ScanRevision) _shortcuts.StatusText = ex.Message;
+            if (!_onlineView._onlineWindowClosed && revision == _shortcuts.ScanRevision) _shortcuts.StatusText = ex.Message;
         }
     }
 
@@ -243,7 +243,7 @@ public sealed partial class MainWindow
     private string[] PreferredGameProcesses(WorkspaceRepository? repository)
     {
         if (repository is null) return [];
-        if (IsEndfieldRepository(repository)) return [.. GameWindowDetection.KnownGames[0]];
+        if (_onlineView.IsEndfieldRepository(repository)) return [.. GameWindowDetection.KnownGames[0]];
         RepositoryPresetInfo? preset = BuiltInRepositoryPresets.FirstOrDefault(candidate => IsRepositoryForPreset(repository, candidate));
         return preset?.Id switch
         {
@@ -295,14 +295,14 @@ public sealed partial class MainWindow
                 ? _shortcuts.HoldMilliseconds
                 : _shortcuts.TapMilliseconds;
             string report = await _shortcutInput.SendAsync(target, plan!, hold, _shortcuts.InputMode, _services.Language.Current);
-            if (!_onlineWindowClosed) _shortcuts.StatusText = shortcut.Shortcut + " · " + report;
+            if (!_onlineView._onlineWindowClosed) _shortcuts.StatusText = shortcut.Shortcut + " · " + report;
         }
         catch (Exception ex)
         {
-            if (!_onlineWindowClosed) _shortcuts.StatusText = ex.Message;
+            if (!_onlineView._onlineWindowClosed) _shortcuts.StatusText = ex.Message;
         }
         finally { _shortcuts.SendInProgress = false; }
-        if (!_onlineWindowClosed) RefreshShortcutOverlay();
+        if (!_onlineView._onlineWindowClosed) RefreshShortcutOverlay();
     }
 
     private static ShortcutModOption[] ReadShortcutModOptions(string root)
@@ -335,7 +335,7 @@ public sealed partial class MainWindow
         {
             LogApplicationIssue("Shortcut deployed Mods", ex); // Unknown deployment clears actions instead of exposing stale ones.
         }
-        if (_onlineWindowClosed || revision != _shortcutDeployedRevision || repository != GetSelectedRepository()
+        if (_onlineView._onlineWindowClosed || revision != _shortcutDeployedRevision || repository != GetSelectedRepository()
             || source != (repository?.SourcePath ?? string.Empty) || target != (repository?.TargetPath ?? string.Empty)) return;
         ShortcutModOption? current = _shortcuts.SelectedMod;
         // Only a Mod that was enabled and has just been disabled or replaced is followed. The main page also
@@ -426,12 +426,12 @@ public sealed partial class MainWindow
         catch (Exception ex)
         {
             LogApplicationIssue("Overlay combination capture", ex);
-            if (!_onlineWindowClosed) _shortcuts.StatusText = T("ShortcutPanel.PresetNotSaved") + OverlayCaptureError(ex);
+            if (!_onlineView._onlineWindowClosed) _shortcuts.StatusText = T("ShortcutPanel.PresetNotSaved") + OverlayCaptureError(ex);
         }
         finally
         {
             _savingOverlaySinglePreset = false;
-            if (!_onlineWindowClosed)
+            if (!_onlineView._onlineWindowClosed)
             {
                 SetCombinationBusy(false);
                 RefreshShortcutOverlay(bindingsChanged: true);
@@ -451,8 +451,8 @@ public sealed partial class MainWindow
                 throw new InvalidOperationException(T("ShortcutPanel.SelectATargetWindowAndEnable"));
             _shortcuts.StatusText = await _shortcutInput.SendAsync(target, new ShortcutKeyPlan(new ushort[] { 0x90 }, Array.Empty<ushort>()), 150, ShortcutInputMode.VirtualKey, _services.Language.Current);
         }
-        catch (Exception ex) { if (!_onlineWindowClosed) _shortcuts.StatusText = ex.Message; }
-        finally { _shortcuts.SendInProgress = false; if (!_onlineWindowClosed) RefreshShortcutOverlay(); }
+        catch (Exception ex) { if (!_onlineView._onlineWindowClosed) _shortcuts.StatusText = ex.Message; }
+        finally { _shortcuts.SendInProgress = false; if (!_onlineView._onlineWindowClosed) RefreshShortcutOverlay(); }
     }
 
     private void CloseShortcutPanel()

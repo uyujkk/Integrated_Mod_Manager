@@ -4,7 +4,7 @@ using Microsoft.UI.Xaml;
 
 namespace ModFolderCopier.WinUI;
 
-public sealed partial class MainWindow
+public sealed partial class OnlinePage
 {
 
     private async void OnOnlineDownloadOptionsClicked(object sender, RoutedEventArgs e)
@@ -16,11 +16,11 @@ public sealed partial class MainWindow
             _onlinePreferences.ConcurrentDownloads = options.Concurrency;
             _onlinePreferences.RememberDownloadFolders = options.RememberFolders;
             _services.Downloads.Scheduler.Limit = _onlinePreferences.ConcurrentDownloads;
-            SaveShellConfig();
+            _host.SaveShellConfig();
         }
         catch (Exception ex)
         {
-            ReportUiActionFailure("OnOnlineDownloadOptionsClicked", ex);
+            _host.ReportUiActionFailure("OnOnlineDownloadOptionsClicked", ex);
         }
     }
 
@@ -55,14 +55,14 @@ public sealed partial class MainWindow
         if (_onlinePreferences.RememberDownloadFolders && IsUsableRememberedFolder(selected, context))
         {
             _onlinePreferences.DownloadFolders[key] = selected!;
-            SaveShellConfig();
+            _host.SaveShellConfig();
         }
         return selected;
     }
 
     private async Task<bool> ConfirmOnlineDuplicateAsync(OnlineModCard mod, OnlineDownloadCandidate? file, OnlineDownloadContext context)
     {
-        TrackedModOrigin[] installed = _trackedModOrigins.Values.Where(origin =>
+        TrackedModOrigin[] installed = _host.TrackedModOrigins.Values.Where(origin =>
             OnlineInstallationDetectionPolicy.Matches(mod.ItemId, mod.ProfileUrl, origin.ItemId, origin.ProfileUrl)
             && Directory.Exists(origin.Path) && !string.IsNullOrWhiteSpace(context.RepositoryPath)
             && IsPathInsideDirectory(origin.Path, context.RepositoryPath)).ToArray();
@@ -77,11 +77,11 @@ public sealed partial class MainWindow
         return await OnlineDuplicateDialog.ConfirmAsync(_services, summary, installed.Select(item => item.Path));
     }
 
-    private async Task RetryOnlineDownloadAsync(DownloadTaskItem task)
+    internal async Task RetryOnlineDownloadAsync(DownloadTaskItem task)
     {
         if (task.RetryRequest is not { } request || task.RetryInProgress || _onlineDownloadActions.IsPreparing) return;
         task.RetryInProgress = true;
-        RefreshDownloadTaskCard(task);
+        _host.RefreshDownloadTaskCard(task);
         try
         {
             if (!await ConfirmRestoredDownloadAsync(task, request)) return;
@@ -90,7 +90,7 @@ public sealed partial class MainWindow
                 capturedCharacterAliases: request.CharacterAliases, confirmedDestination: request.Destination);
         }
         catch (Exception ex) { await ReportOnlineActionErrorAsync(ex.Message, T("OnlineDownloads.CannotRestartDownload"), ex); }
-        finally { task.RetryInProgress = false; if (!_onlineWindowClosed) RefreshDownloadTaskCard(task); }
+        finally { task.RetryInProgress = false; if (!_onlineWindowClosed) _host.RefreshDownloadTaskCard(task); }
     }
 }
 

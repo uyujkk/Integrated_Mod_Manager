@@ -106,7 +106,7 @@ public sealed partial class MainWindow
         {
             string full = Path.GetFullPath(modPath);
             string sourceRoot = Path.GetFullPath(repository.SourcePath);
-            if (!IsPathInsideDirectory(full, sourceRoot)) return null;
+            if (!OnlinePage.IsPathInsideDirectory(full, sourceRoot)) return null;
             string relative = Path.GetRelativePath(sourceRoot, full);
             return relative is "." or ".." || relative.StartsWith(".." + Path.DirectorySeparatorChar, StringComparison.Ordinal)
                 ? null : relative;

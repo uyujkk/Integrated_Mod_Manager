@@ -1,29 +1,26 @@
-using IntegratedModManager.Core.Online;
-using IntegratedModManager.Core.Updates;
-
 namespace ModFolderCopier.WinUI;
 
-public sealed partial class MainWindow
+public sealed partial class OnlinePage
 {
     private bool _downloadJournalWarningShown;
-    private int _restoredInterruptedDownloads;
+    internal int _restoredInterruptedDownloads;
 
-    private void LoadDownloadTasks()
+    internal void LoadDownloadTasks()
     {
         try
         {
             (int interrupted, bool usedBackup) = _services.Downloads.Restore();
             _restoredInterruptedDownloads = interrupted;
-            if (usedBackup) LogApplicationIssue("Download queue recovered from backup", new IOException("The primary queue record was invalid; the previous complete record was loaded."));
+            if (usedBackup) _host.LogApplicationIssue("Download queue recovered from backup", new IOException("The primary queue record was invalid; the previous complete record was loaded."));
         }
         catch (Exception ex)
         {
             // Never replace an unreadable queue with an empty one (the service stops using the journal).
-            LogApplicationIssue("Load download recovery record", ex);
+            _host.LogApplicationIssue("Load download recovery record", ex);
         }
     }
 
-    private void PersistDownloadTasks(bool required = false)
+    internal void PersistDownloadTasks(bool required = false)
     {
         if (!DispatcherQueue.HasThreadAccess)
         {
@@ -38,7 +35,7 @@ public sealed partial class MainWindow
         }
         catch (Exception ex)
         {
-            LogApplicationIssue("Save download recovery record", ex);
+            _host.LogApplicationIssue("Save download recovery record", ex);
             if (required) throw;
             if (!_onlineWindowClosed && !_downloadJournalWarningShown)
             {

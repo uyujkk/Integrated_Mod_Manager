@@ -12,18 +12,18 @@ using Windows.System;
 
 namespace ModFolderCopier.WinUI;
 
-public sealed partial class MainWindow
+public sealed partial class OnlinePage
 {
     private void OnOnlineDetailHeroImageOpened(object sender, RoutedEventArgs e)
     {
-        AnimateImageReveal(OnlineDetailHeroImage);
+        _host.AnimateImageReveal(OnlineDetailHeroImage);
     }
 
     private async void OnOnlineDetailHeroImageTapped(object sender, TappedRoutedEventArgs e)
     {
         try
         {
-            await ShowImageViewerAsync(
+            await _host.ShowImageViewerAsync(
                 OnlineDetailHeroImage.Source,
                 T("OnlineDetails.OnlineModImages"),
                 _onlineDetailImageUrls,
@@ -31,11 +31,11 @@ public sealed partial class MainWindow
         }
         catch (Exception ex)
         {
-            ReportUiActionFailure("OnOnlineDetailHeroImageTapped", ex);
+            _host.ReportUiActionFailure("OnOnlineDetailHeroImageTapped", ex);
         }
     }
 
-    private async Task ShowOnlineModDetailsAsync(OnlineModCard mod)
+    internal async Task ShowOnlineModDetailsAsync(OnlineModCard mod)
     {
         TraceOnlineUiState("Details requested", mod.ItemId);
         _activeOnlineDetailMod = mod;
@@ -64,7 +64,7 @@ public sealed partial class MainWindow
 
     private async Task<OnlineModDetails> GetOnlineModDetailsAsync(OnlineModCard mod, CancellationToken cancellationToken = default)
     {
-        GameBananaDetails raw = await _gameBananaMetadataService.GetDetailsAsync(mod.ItemId, cancellationToken);
+        GameBananaDetails raw = await _host.Metadata.GetDetailsAsync(mod.ItemId, cancellationToken);
         cancellationToken.ThrowIfCancellationRequested();
         string text = string.Join(Environment.NewLine,
             new[] { raw.Summary, raw.Description }.Where(value => !string.IsNullOrWhiteSpace(value)));
@@ -88,13 +88,13 @@ public sealed partial class MainWindow
         if (!IsChineseUi)
         {
             return bindings
-                .Take(ShortcutScanSafetyLimit)
+                .Take(_host.ShortcutScanSafetyLimit)
                 .Select(binding => new ShortcutBinding(binding.Shortcut, binding.Action))
                 .ToList();
         }
 
         var localized = new List<ShortcutBinding>();
-        foreach (ShortcutBinding binding in bindings.Take(ShortcutScanSafetyLimit))
+        foreach (ShortcutBinding binding in bindings.Take(_host.ShortcutScanSafetyLimit))
         {
             string action = binding.Action;
             if (!string.IsNullOrWhiteSpace(action))
@@ -109,7 +109,7 @@ public sealed partial class MainWindow
                 }
                 catch (Exception ex)
                 {
-                    LogApplicationIssue("Translate shortcut action", ex);
+                    _host.LogApplicationIssue("Translate shortcut action", ex);
                 }
             }
 
@@ -175,7 +175,7 @@ public sealed partial class MainWindow
         return string.Join(Environment.NewLine, matches);
     }
 
-    private static List<ShortcutBinding> ExtractShortcutBindingsFromText(string text)
+    private List<ShortcutBinding> ExtractShortcutBindingsFromText(string text)
     {
         var bindings = new List<ShortcutBinding>();
         if (string.IsNullOrWhiteSpace(text))
@@ -198,7 +198,7 @@ public sealed partial class MainWindow
                 if (seen.Add(identity))
                 {
                     bindings.Add(binding);
-                    if (bindings.Count >= ShortcutScanSafetyLimit)
+                    if (bindings.Count >= _host.ShortcutScanSafetyLimit)
                     {
                         break;
                     }
@@ -455,12 +455,12 @@ public sealed partial class MainWindow
         OnlineDetailDrawer.Visibility = Visibility.Visible;
         await Task.Delay(1);
         if (_onlineWindowClosed || animationVersion != _onlineDetailAnimationVersion) return;
-        UpdateOnlineResponsiveLayout(Bounds.Width);
+        UpdateOnlineResponsiveLayout(_host.Bounds.Width);
         UpdateOnlineWorkspaceWidthConstraint();
         DispatcherQueue.TryEnqueue(() =>
         {
             if (_onlineWindowClosed || animationVersion != _onlineDetailAnimationVersion) return;
-            UpdateOnlineResponsiveLayout(Bounds.Width);
+            UpdateOnlineResponsiveLayout(_host.Bounds.Width);
             UpdateOnlineWorkspaceWidthConstraint();
             // The cards re-flowed around the drawer; bring the one being shown back into view.
             int index = GetActiveOnlineDetailIndex();
@@ -477,7 +477,7 @@ public sealed partial class MainWindow
         var visual = ElementCompositionPreview.GetElementVisual(OnlineDetailPaneBorder);
         visual.StopAnimation("Opacity");
         visual.StopAnimation("Offset");
-        if (ShouldReduceAnimations)
+        if (_host.ShouldReduceAnimations)
         {
             visual.Opacity = 1f;
             visual.Offset = Vector3.Zero;
@@ -500,7 +500,7 @@ public sealed partial class MainWindow
 
     private void AnimateOnlineDetailContentRefresh()
     {
-        if (ShouldReduceAnimations)
+        if (_host.ShouldReduceAnimations)
         {
             return;
         }
@@ -655,7 +655,7 @@ public sealed partial class MainWindow
         PopulateOnlineDetailImages(displayDetails.ImageUrls);
     }
 
-    private void UpdateOnlineDetailDownloadControls(OnlineModCard mod)
+    internal void UpdateOnlineDetailDownloadControls(OnlineModCard mod)
     {
         bool isInstalled = FindInstalledOnlineMod(mod) is not null;
         OnlineDownloadCandidate? defaultFile = OnlineDownloadSelectionPolicy.SelectDefault(mod.DownloadFiles);
@@ -701,7 +701,7 @@ public sealed partial class MainWindow
         }
     }
 
-    private void ResetOnlineDetailPaneToPlaceholder()
+    internal void ResetOnlineDetailPaneToPlaceholder()
     {
         OnlineDetailPaneTitleTextBlock.Text = T("OnlineDetails.ModDetailsAndPreview");
         OnlineDetailPaneMetaTextBlock.Text = T("OnlineDetails.SelectAnOnlineModFromThe");
@@ -819,15 +819,15 @@ public sealed partial class MainWindow
         }
         catch (Exception ex)
         {
-            ReportUiActionFailure("ShowOnlineDetailHeroImage", ex);
+            _host.ReportUiActionFailure("ShowOnlineDetailHeroImage", ex);
         }
     }
 
     private Task<string> TranslateTextForDisplayAsync(string text, string targetLanguage)
-        => TextTranslationClient.TranslateLongTextAsync(_httpClient, text, targetLanguage);
+        => TextTranslationClient.TranslateLongTextAsync(_host.Http, text, targetLanguage);
 
     private Task<string> TranslateChunkAsync(string text, string targetLanguage)
-        => TextTranslationClient.TranslateAsync(_httpClient, text, targetLanguage);
+        => TextTranslationClient.TranslateAsync(_host.Http, text, targetLanguage);
 
     private async void OnCloseOnlineDetailsClicked(object sender, RoutedEventArgs e)
     {
@@ -837,7 +837,7 @@ public sealed partial class MainWindow
         }
         catch (Exception ex)
         {
-            ReportUiActionFailure("OnCloseOnlineDetailsClicked", ex);
+            _host.ReportUiActionFailure("OnCloseOnlineDetailsClicked", ex);
         }
     }
 
@@ -870,9 +870,9 @@ public sealed partial class MainWindow
         }
     }
 
-    private async void OnOnlineDetailPreviousClicked(object sender, RoutedEventArgs e) => await RunUiActionAsync("Previous online detail", () => ShowAdjacentOnlineDetailAsync(-1));
+    private async void OnOnlineDetailPreviousClicked(object sender, RoutedEventArgs e) => await _host.RunUiActionAsync("Previous online detail", () => ShowAdjacentOnlineDetailAsync(-1));
 
-    private async void OnOnlineDetailNextClicked(object sender, RoutedEventArgs e) => await RunUiActionAsync("Next online detail", () => ShowAdjacentOnlineDetailAsync(1));
+    private async void OnOnlineDetailNextClicked(object sender, RoutedEventArgs e) => await _host.RunUiActionAsync("Next online detail", () => ShowAdjacentOnlineDetailAsync(1));
 
     private async Task ShowAdjacentOnlineDetailAsync(int step)
     {
@@ -881,10 +881,10 @@ public sealed partial class MainWindow
         if (index < 0 || target < 0 || target >= _onlinePage.VisibleMods.Count) return;
         OnlineModCard mod = _onlinePage.VisibleMods[target];
         if (GetOnlineResultsElement() is ListViewBase results) results.ScrollIntoView(mod);
-        await RunUiActionAsync("ShowOnlineModDetailsAsync", () => ShowOnlineModDetailsAsync(mod));
+        await _host.RunUiActionAsync("ShowOnlineModDetailsAsync", () => ShowOnlineModDetailsAsync(mod));
     }
 
-    private async Task CloseOnlineDetailPaneAsync()
+    internal async Task CloseOnlineDetailPaneAsync()
     {
         if (_onlineWindowClosed) return;
         // The cards re-flow to more columns on close; keep the one just viewed on screen.
@@ -900,7 +900,7 @@ public sealed partial class MainWindow
         visual.StopAnimation("Opacity");
         visual.StopAnimation("Offset");
 
-        if (!ShouldReduceAnimations && IsOnlineDetailOpen)
+        if (!_host.ShouldReduceAnimations && IsOnlineDetailOpen)
         {
             var compositor = visual.Compositor;
             var easing = compositor.CreateCubicBezierEasingFunction(new Vector2(0.4f, 0f), new Vector2(1f, 1f));
@@ -922,7 +922,7 @@ public sealed partial class MainWindow
 
         _activeOnlineDetailMod = null;
         OnlineDetailDrawer.Visibility = Visibility.Collapsed;
-        UpdateOnlineResponsiveLayout(Bounds.Width);
+        UpdateOnlineResponsiveLayout(_host.Bounds.Width);
         UpdateOnlineWorkspaceWidthConstraint();
         if (lastShown is not null)
         {
@@ -948,11 +948,11 @@ public sealed partial class MainWindow
                 return;
             }
 
-            await OpenExternalUrlAsync(_activeOnlineDetailMod.ProfileUrl, T("Common.OpenPageFailed"));
+            await _host.OpenExternalUrlAsync(_activeOnlineDetailMod.ProfileUrl, T("Common.OpenPageFailed"));
         }
         catch (Exception ex)
         {
-            ReportUiActionFailure("OnOpenOnlineDetailPageClicked", ex);
+            _host.ReportUiActionFailure("OnOpenOnlineDetailPageClicked", ex);
         }
     }
 
@@ -969,7 +969,7 @@ public sealed partial class MainWindow
         }
         catch (Exception ex)
         {
-            ReportUiActionFailure("OnDownloadOnlineDetailClicked", ex);
+            _host.ReportUiActionFailure("OnDownloadOnlineDetailClicked", ex);
         }
     }
 
@@ -983,7 +983,7 @@ public sealed partial class MainWindow
             }
 
             OnlineModCard sourceMod = _activeOnlineDetailMod;
-            WorkspaceRepository? downloadRepository = GetSelectedRepository();
+            WorkspaceRepository? downloadRepository = _host.GetSelectedRepository();
             OnlineDownloadContext downloadContext = CaptureOnlineDownloadContext(downloadRepository);
             bool useEndfieldMetadata = IsEndfieldRepository(downloadRepository);
             IReadOnlyCollection<string> characterAliases = GetCharacterFolderAliases(sourceMod);
@@ -1021,7 +1021,7 @@ public sealed partial class MainWindow
             catch (OperationCanceledException) when (action.Token.IsCancellationRequested) { }
             catch (Exception ex)
             {
-                LogApplicationIssue("Select online download file", ex);
+                _host.LogApplicationIssue("Select online download file", ex);
                 await ReportOnlineActionErrorAsync(T("OnlineDetails.FailedToSelectDownloadFile") + ex.Message,
                     T("Common.OnlineDownloadFailed"), ex);
             }
@@ -1034,7 +1034,7 @@ public sealed partial class MainWindow
         }
         catch (Exception ex)
         {
-            ReportUiActionFailure("OnSelectOnlineDetailDownloadClicked", ex);
+            _host.ReportUiActionFailure("OnSelectOnlineDetailDownloadClicked", ex);
         }
     }
 }

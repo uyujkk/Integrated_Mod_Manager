@@ -11,7 +11,7 @@ using Windows.System;
 
 namespace ModFolderCopier.WinUI;
 
-public sealed partial class MainWindow
+public sealed partial class OnlinePage
 {
     private async Task<OnlineModCard> RefreshOnlineModDownloadInfoAsync(OnlineModCard mod, bool? useEndfieldMetadata = null,
         CancellationToken cancellationToken = default, bool requireDownloadInfo = false)
@@ -20,7 +20,7 @@ public sealed partial class MainWindow
         {
             OnlineModCard? latestMod = await FetchGameBananaModCardAsyncV2(
                 mod.ItemId,
-                useEndfieldMetadata: useEndfieldMetadata ?? IsEndfieldRepository(GetSelectedRepository()),
+                useEndfieldMetadata: useEndfieldMetadata ?? IsEndfieldRepository(_host.GetSelectedRepository()),
                 cancellationToken: cancellationToken);
             if (latestMod is null)
             {
@@ -54,7 +54,7 @@ public sealed partial class MainWindow
         }
     }
 
-    private static OnlineModCard WithSelectedDownloadFile(OnlineModCard mod, OnlineDownloadCandidate selectedFile)
+    internal static OnlineModCard WithSelectedDownloadFile(OnlineModCard mod, OnlineDownloadCandidate selectedFile)
     {
         return new OnlineModCard
         {
@@ -91,7 +91,7 @@ public sealed partial class MainWindow
         IReadOnlyCollection<string>? capturedCharacterAliases = null,
         string? confirmedDestination = null, bool batchConfirmed = false)
     {
-        WorkspaceRepository? initialRepository = GetSelectedRepository();
+        WorkspaceRepository? initialRepository = _host.GetSelectedRepository();
         OnlineDownloadContext context = capturedContext ?? CaptureOnlineDownloadContext(initialRepository);
         bool useEndfieldMetadata = capturedEndfieldMetadata ?? IsEndfieldRepository(initialRepository);
         IReadOnlyCollection<string> characterAliases = capturedCharacterAliases ?? GetCharacterFolderAliases(mod);
@@ -106,7 +106,7 @@ public sealed partial class MainWindow
         catch (OperationCanceledException) when (action.Token.IsCancellationRequested) { }
         catch (Exception ex)
         {
-            LogApplicationIssue("Prepare online download", ex);
+            _host.LogApplicationIssue("Prepare online download", ex);
             await ReportOnlineActionErrorAsync(T("OnlineDownloadFlow.FailedToPrepareDownload") + ex.Message,
                 T("Common.OnlineDownloadFailed"), ex);
         }
@@ -165,7 +165,7 @@ public sealed partial class MainWindow
             return;
         }
 
-        DownloadTaskItem downloadTask = CreateDownloadTask(effectiveMod, selectedFolder);
+        DownloadTaskItem downloadTask = _host.CreateDownloadTask(effectiveMod, selectedFolder);
         downloadTask.RetryRequest = new OnlineDownloadRetryRequest(effectiveMod, effectiveFile, context,
             useEndfieldMetadata, characterAliases.ToArray(), selectedFolder);
         action.MarkTaskStarted();
@@ -182,7 +182,7 @@ public sealed partial class MainWindow
             installBusy = true;
             // The picker is finished; a different visible Mod can now start its own task.
             RefreshOnlineDetailActionState();
-            UpdateDownloadTask(downloadTask, DownloadTaskState.Preparing, 0, M("OnlineDownload.ReadingInformation"), forceRefresh: true);
+            _host.UpdateDownloadTask(downloadTask, DownloadTaskState.Preparing, 0, M("OnlineDownload.ReadingInformation"), forceRefresh: true);
             downloadTask.Cancellation.Token.ThrowIfCancellationRequested();
             OnlineModDetails details = await GetOnlineModDetailsAsync(effectiveMod, downloadTask.Cancellation.Token);
 
@@ -196,7 +196,7 @@ public sealed partial class MainWindow
             string resolvedArchivePath = EnsureDownloadArchiveExtension(archivePath);
             session.RegisterArchive(resolvedArchivePath);
             downloadTask.ArchivePath = resolvedArchivePath;
-            if (!IsSupportedArchiveFile(resolvedArchivePath))
+            if (!_host.IsSupportedArchiveFile(resolvedArchivePath))
             {
                 throw new InvalidOperationException(T("OnlineDownloadFlow.TheFileWasDownloadedButIt", Path.GetFileName(resolvedArchivePath)));
             }
@@ -209,11 +209,11 @@ public sealed partial class MainWindow
             session.RegisterExtraction(extractFolder);
 
             downloadTask.DestinationPath = extractFolder;
-            UpdateDownloadTask(downloadTask, DownloadTaskState.Extracting, 92, M("OnlineDownload.Extracting"), forceRefresh: true);
+            _host.UpdateDownloadTask(downloadTask, DownloadTaskState.Extracting, 92, M("OnlineDownload.Extracting"), forceRefresh: true);
             downloadTask.Cancellation.Token.ThrowIfCancellationRequested();
             await Task.Run(() =>
             {
-                ExtractArchiveToDirectory(resolvedArchivePath, extractFolder);
+                _host.ExtractArchiveToDirectory(resolvedArchivePath, extractFolder);
                 // The extraction folder is already this Mod's own folder; an archive that
                 // brings its own top-level folder would otherwise be nested twice.
                 ArchiveImportLayout.HoistSingleTopFolder(extractFolder);
@@ -223,7 +223,7 @@ public sealed partial class MainWindow
                 token => PrepareOnlineInstallMetadataAsync(extractFolder, effectiveMod, details, token),
                 metadata => CommitOnlineInstallMetadata(extractFolder, metadata),
                 downloadTask.Cancellation.Token);
-            UpdateDownloadTask(downloadTask, DownloadTaskState.Completed, 100,
+            _host.UpdateDownloadTask(downloadTask, DownloadTaskState.Completed, 100,
                 M(prepared.PersistenceWarning is null ? "OnlineDownload.CompletedAt" : "OnlineDownload.InstalledConfigNotSaved", extractFolder),
                 forceRefresh: true);
 
@@ -231,20 +231,20 @@ public sealed partial class MainWindow
             // failed task or delete it. A changed repository must not receive the old selection.
             try
             {
-                WorkspaceRepository? repository = GetSelectedRepository();
+                WorkspaceRepository? repository = _host.GetSelectedRepository();
                 if (repository?.Id == context.RepositoryId
                     && string.Equals(repository.SourcePath, context.RepositoryPath, StringComparison.OrdinalIgnoreCase)
                     && !string.IsNullOrWhiteSpace(context.RepositoryPath)
                     && IsPathInsideDirectory(extractFolder, context.RepositoryPath))
                 {
-                    await RefreshListsAsync();
-                    repository = GetSelectedRepository();
+                    await _host.RefreshListsAsync();
+                    repository = _host.GetSelectedRepository();
                     if (repository?.Id == context.RepositoryId
                         && string.Equals(repository.SourcePath, context.RepositoryPath, StringComparison.OrdinalIgnoreCase))
-                        SelectSecondLevelByPath(extractFolder);
+                        _host.SelectSecondLevelByPath(extractFolder);
                 }
                 SetOnlineStatus(M("OnlineDownload.ExtractedTo", extractFolder));
-                RefreshUpdatesPane();
+                _host.RefreshUpdatesPane();
                 ShowAppNotification(T("OnlineDownload.Completed", effectiveMod.Title));
                 if (prepared.PersistenceWarning is not null)
                     await ShowMessageAsync(T("OnlineDownloadFlow.TheModIsInstalledButIts"),
@@ -252,19 +252,19 @@ public sealed partial class MainWindow
             }
             catch (Exception refreshException)
             {
-                LogApplicationIssue("Refresh after online installation", refreshException);
+                _host.LogApplicationIssue("Refresh after online installation", refreshException);
             }
         }
         catch (OperationCanceledException)
         {
             CleanupOnlineDownload(session, canceled: true);
-            UpdateDownloadTask(downloadTask, DownloadTaskState.Canceled, downloadTask.Progress, M("OnlineDownload.TaskCanceled"), forceRefresh: true);
+            _host.UpdateDownloadTask(downloadTask, DownloadTaskState.Canceled, downloadTask.Progress, M("OnlineDownload.TaskCanceled"), forceRefresh: true);
             SetOnlineStatus(M("OnlineDownload.Canceled"));
         }
         catch (Exception ex)
         {
             CleanupOnlineDownload(session, canceled: false);
-            UpdateDownloadTask(downloadTask, DownloadTaskState.Failed, downloadTask.Progress, M("OnlineDownload.TaskFailed", ex.Message), forceRefresh: true);
+            _host.UpdateDownloadTask(downloadTask, DownloadTaskState.Failed, downloadTask.Progress, M("OnlineDownload.TaskFailed", ex.Message), forceRefresh: true);
             SetOnlineStatus(M("OnlineDownload.DownloadOrExtractFailed"));
             string message = ex.Message;
             if (ex is InvalidDataException or IOException)
@@ -276,7 +276,7 @@ public sealed partial class MainWindow
             }
 
             string failedArchiveName = Path.GetFileName(downloadTask.ArchivePath);
-            UpdateDownloadTask(downloadTask, DownloadTaskState.Failed, downloadTask.Progress,
+            _host.UpdateDownloadTask(downloadTask, DownloadTaskState.Failed, downloadTask.Progress,
                 M("OnlineDownload.FailedWithReason", failedArchiveName, message), forceRefresh: true);
             ShowAppNotification(T("OnlineDownload.Failed", effectiveMod.Title), InfoBarSeverity.Error);
         }
@@ -294,17 +294,17 @@ public sealed partial class MainWindow
             }
             if (installBusy && !_onlineWindowClosed) SetOnlineInstallBusy(false);
             try { if (!_onlineWindowClosed) RefreshOnlinePaneV2(); }
-            catch (Exception refreshException) { LogApplicationIssue("Refresh online task UI", refreshException); }
+            catch (Exception refreshException) { _host.LogApplicationIssue("Refresh online task UI", refreshException); }
         }
     }
 
-    private async Task<string> DownloadOnlineModArchiveAsync(
+    internal async Task<string> DownloadOnlineModArchiveAsync(
         OnlineModCard mod,
         string destinationFolder,
         DownloadTaskItem downloadTask,
         CancellationToken cancellationToken)
     {
-        var service = new OnlineArchiveDownloadService(_httpClient);
+        var service = new OnlineArchiveDownloadService(_host.Http);
         try
         {
             OnlineArchiveDownloadResult result = await service.DownloadAsync(
@@ -320,7 +320,7 @@ public sealed partial class MainWindow
                     if (string.Equals(_foregroundDownloadTaskId, downloadTask.Id, StringComparison.Ordinal))
                         SetOnlineDownloadProgress(true, progress.Percent, T(downloadStatus),
                             isIndeterminate: progress.TotalBytes <= 0);
-                    UpdateDownloadTask(downloadTask, DownloadTaskState.Downloading,
+                    _host.UpdateDownloadTask(downloadTask, DownloadTaskState.Downloading,
                         Math.Min(90, progress.Percent * 0.9), downloadStatus, forceRefresh: true);
                 }),
                 cancellationToken);
@@ -333,9 +333,9 @@ public sealed partial class MainWindow
         }
     }
 
-    private string EnsureDownloadArchiveExtension(string archivePath)
+    internal string EnsureDownloadArchiveExtension(string archivePath)
     {
-        if (IsSupportedArchiveFile(archivePath))
+        if (_host.IsSupportedArchiveFile(archivePath))
         {
             return archivePath;
         }
@@ -397,10 +397,10 @@ public sealed partial class MainWindow
 
     private TrackedModOrigin? FindInstalledOnlineMod(OnlineModCard mod)
     {
-        WorkspaceRepository? repository = GetSelectedRepository();
+        WorkspaceRepository? repository = _host.GetSelectedRepository();
         string repositoryPath = repository?.SourcePath ?? string.Empty;
 
-        foreach (TrackedModOrigin origin in _trackedModOrigins.Values)
+        foreach (TrackedModOrigin origin in _host.TrackedModOrigins.Values)
         {
             try
             {
@@ -433,22 +433,22 @@ public sealed partial class MainWindow
         return null;
     }
 
-    private bool DeduplicateTrackedModOrigins()
+    internal bool DeduplicateTrackedModOrigins()
     {
         IReadOnlyList<string> stalePaths = OnlineTrackingScopePolicy.FindStaleDuplicatePaths(
-            _trackedModOrigins.Values.Select(origin => new OnlineTrackedInstallation(
+            _host.TrackedModOrigins.Values.Select(origin => new OnlineTrackedInstallation(
                 origin.Path, GetTrackedModIdentity(origin.ItemId, origin.ProfileUrl),
                 Directory.Exists(origin.Path), origin.LastKnownUpdatedAt)),
             _services.Repositories.Items.Select(repository => repository.SourcePath));
         foreach (string path in stalePaths)
         {
-            _trackedModOrigins.Remove(path);
-            _trackedModUpdateResults.RemoveAll(result => string.Equals(result.Path, path, StringComparison.CurrentCultureIgnoreCase));
+            _host.TrackedModOrigins.Remove(path);
+            _host.TrackedModUpdateResults.RemoveAll(result => string.Equals(result.Path, path, StringComparison.CurrentCultureIgnoreCase));
         }
         return stalePaths.Count > 0;
     }
 
-    private async Task RemoveTrackedModRecordAsync(TrackedModUpdateResult result)
+    internal async Task RemoveTrackedModRecordAsync(TrackedModUpdateResult result)
     {
         bool confirmed = await ShowDangerConfirmAsync(
             T("OnlineDownloadFlow.RemoveTheUpdateTrackingRecordFor", result.Title),
@@ -458,12 +458,12 @@ public sealed partial class MainWindow
             return;
         }
 
-        _trackedModOrigins.Remove(result.Path);
-        _trackedModUpdateResults.RemoveAll(item => string.Equals(item.Path, result.Path, StringComparison.CurrentCultureIgnoreCase));
-        SaveConfig();
-        SaveShellConfig();
-        SetModUpdateStatus(M("Updates.TrackingRemoved", result.Title));
-        RefreshUpdatesPane();
+        _host.TrackedModOrigins.Remove(result.Path);
+        _host.TrackedModUpdateResults.RemoveAll(item => string.Equals(item.Path, result.Path, StringComparison.CurrentCultureIgnoreCase));
+        _host.SaveConfig();
+        _host.SaveShellConfig();
+        _host.SetModUpdateStatus(M("Updates.TrackingRemoved", result.Title));
+        _host.RefreshUpdatesPane();
     }
 
     private async Task<string?> SaveOnlinePreviewImageAsync(
@@ -476,7 +476,7 @@ public sealed partial class MainWindow
         try
         {
             List<string> existingFiles = Directory.GetFiles(modFolder).ToList();
-            if (!string.IsNullOrWhiteSpace(FindPreviewImage(existingFiles)))
+            if (!string.IsNullOrWhiteSpace(_host.FindPreviewImage(existingFiles)))
             {
                 return null;
             }
@@ -560,7 +560,7 @@ public sealed partial class MainWindow
         }
         catch (Exception ex)
         {
-            LogApplicationIssue("Preview image download", ex);
+            _host.LogApplicationIssue("Preview image download", ex);
             if (!string.IsNullOrWhiteSpace(temporaryPath) && File.Exists(temporaryPath))
             {
                 try
@@ -569,7 +569,7 @@ public sealed partial class MainWindow
                 }
                 catch (Exception cleanupException)
                 {
-                    LogApplicationIssue("Preview image cleanup", cleanupException);
+                    _host.LogApplicationIssue("Preview image cleanup", cleanupException);
                 }
             }
 
@@ -624,10 +624,10 @@ public sealed partial class MainWindow
         }
     }
 
-    private static string GetOnlinePreviewImageExtension(Uri imageUri, byte[] imageBytes)
+    private string GetOnlinePreviewImageExtension(Uri imageUri, byte[] imageBytes)
     {
         string extension = Path.GetExtension(imageUri.AbsolutePath).ToLowerInvariant();
-        if (ImageExtensions.Contains(extension, StringComparer.OrdinalIgnoreCase))
+        if (_host.ImageExtensions.Contains(extension, StringComparer.OrdinalIgnoreCase))
         {
             return extension;
         }
@@ -670,7 +670,7 @@ public sealed partial class MainWindow
         return ".jpg";
     }
 
-    private static bool IsPathInsideDirectory(string candidatePath, string parentPath)
+    internal static bool IsPathInsideDirectory(string candidatePath, string parentPath)
     {
         return PathSafety.IsSameOrInside(candidatePath, parentPath);
     }
@@ -753,6 +753,6 @@ public sealed partial class MainWindow
             }
         }
 
-        return await PickFolderAsync();
+        return await _host.PickFolderAsync();
     }
 }

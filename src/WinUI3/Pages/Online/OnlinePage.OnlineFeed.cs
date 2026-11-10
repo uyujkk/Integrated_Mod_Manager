@@ -12,20 +12,9 @@ using Windows.System;
 
 namespace ModFolderCopier.WinUI;
 
-public sealed partial class MainWindow
+public sealed partial class OnlinePage
 {
-    // Normally the plain client as before. IMM_ONLINE_FIXTURES (screenshots and UI tests only) answers every request
-    // from synthetic samples instead and sends nothing to the network.
-    private static HttpClient CreateHttpClient()
-    {
-        string? fixtures = Environment.GetEnvironmentVariable(OnlineHttpClientFactory.FixturesVariable);
-        if (!string.IsNullOrWhiteSpace(fixtures))
-            LogApplicationIssue("Online", new InvalidOperationException($"{OnlineFixtureHandler.ModeName} is on: {fixtures}"));
-        return OnlineHttpClientFactory.Create($"IntegratedModManager/{AppVersion.TrimStart('v', 'V')}", fixtures,
-            message => LogApplicationIssue("Online", new InvalidOperationException(message)));
-    }
-
-    private void InitializeOnlineControls()
+    internal void InitializeOnlineControls()
     {
         OnlineSearchTextBox.PlaceholderText = T("OnlineFeed.SearchThisPageCharacterModOr");
         OnlineSortComboBox.Items.Clear();
@@ -41,11 +30,11 @@ public sealed partial class MainWindow
         PopulateOnlineCharacterOptions();
     }
 
-    private void RefreshOnlinePaneV2()
+    internal void RefreshOnlinePaneV2()
     {
         EnsureOnlineBrowseSession();
         RefreshOnlineNavigationButtonLabels();
-        WorkspaceRepository? repository = GetSelectedRepository();
+        WorkspaceRepository? repository = _host.GetSelectedRepository();
         bool hasRepository = repository is not null;
         string effectiveSource = GetEffectiveOnlineSource(repository);
         string effectiveGameName = GetEffectiveOnlineGameName(repository);
@@ -146,7 +135,7 @@ public sealed partial class MainWindow
         if (resultsChanged || _animateOnlineCardsOnNextRefresh) AnimateOnlineCardsEntrance();
         QueueRestoreOnlineBrowsePosition();
 
-        if (_currentPrimarySection == PrimarySection.Online
+        if (_host.IsOnlinePageShown
             && canLoadOnlineMods
             && configKey != _lastLoadedOnlineConfigKey
             && !string.Equals(configKey, _blockedOnlineAutoLoadConfigKey, StringComparison.Ordinal)
@@ -156,7 +145,7 @@ public sealed partial class MainWindow
         }
     }
 
-    private bool IsGameBananaSource(string? source)
+    internal bool IsGameBananaSource(string? source)
     {
         return string.IsNullOrWhiteSpace(source)
             || source.Contains("gamebanana", StringComparison.OrdinalIgnoreCase);
@@ -203,7 +192,7 @@ public sealed partial class MainWindow
             .ToList();
     }
 
-    private string GetEffectiveOnlineSource(WorkspaceRepository? repository)
+    internal string GetEffectiveOnlineSource(WorkspaceRepository? repository)
     {
         if (repository is null)
         {
@@ -211,11 +200,11 @@ public sealed partial class MainWindow
         }
 
         return string.IsNullOrWhiteSpace(repository.OnlineSourceSite)
-            ? DefaultOnlineSourceSite
+            ? _host.DefaultOnlineSourceSite
             : repository.OnlineSourceSite.Trim();
     }
 
-    private string GetEffectiveOnlineGameName(WorkspaceRepository? repository)
+    internal string GetEffectiveOnlineGameName(WorkspaceRepository? repository)
     {
         if (repository is null)
         {
@@ -225,7 +214,7 @@ public sealed partial class MainWindow
         return repository.OnlineGameName?.Trim() ?? string.Empty;
     }
 
-    private string GetEffectiveOnlineCategoryId(WorkspaceRepository? repository)
+    internal string GetEffectiveOnlineCategoryId(WorkspaceRepository? repository)
     {
         if (repository is null)
         {
@@ -260,7 +249,7 @@ public sealed partial class MainWindow
         ToolTipService.SetToolTip(OnlineCacheStatusBorder, status is not null ? T(status) : null);
     }
 
-    private void CancelOnlineModListRequest()
+    internal void CancelOnlineModListRequest()
     {
         // Invalidate even when the next load exits before creating a new request.
         _onlineModRequestVersion++;
@@ -324,7 +313,7 @@ public sealed partial class MainWindow
     {
         try
         {
-            WorkspaceRepository? repository = GetSelectedRepository();
+            WorkspaceRepository? repository = _host.GetSelectedRepository();
             if (repository is not null)
             {
                 _ = EnsureOnlineCharacterCatalogAsync(repository, forceReload: true);
@@ -334,16 +323,16 @@ public sealed partial class MainWindow
         }
         catch (Exception ex)
         {
-            ReportUiActionFailure("OnRefreshOnlineModsClicked", ex);
+            _host.ReportUiActionFailure("OnRefreshOnlineModsClicked", ex);
         }
     }
 
-    private async Task LoadOnlineModsAsync(bool forceReload)
+    internal async Task LoadOnlineModsAsync(bool forceReload)
     {
         EnsureOnlineBrowseSession();
-        SaveShellConfig();
+        _host.SaveShellConfig();
         CancelOnlineModListRequest();
-        WorkspaceRepository? repository = GetSelectedRepository();
+        WorkspaceRepository? repository = _host.GetSelectedRepository();
         if (repository is null)
         {
             return;
@@ -727,7 +716,7 @@ public sealed partial class MainWindow
         int authorId = 0)
     {
         bool shouldUseEndfieldMetadata = useEndfieldMetadata ?? IsEndfieldCategoryId(categoryId);
-        OnlineCategoryPageResult result = await GameBananaCategoryClient.GetPageAsync(_httpClient, categoryId, page, pageSize, authorId, DateTimeOffset.Now, cancellationToken);
+        OnlineCategoryPageResult result = await GameBananaCategoryClient.GetPageAsync(_host.Http, categoryId, page, pageSize, authorId, DateTimeOffset.Now, cancellationToken);
         foreach (OnlineModCard card in result.Mods) AdaptGameBananaCategoryMod(card, shouldUseEndfieldMetadata);
         return result;
     }
@@ -746,10 +735,10 @@ public sealed partial class MainWindow
     }
 
 
-    private async Task<OnlineModCard?> FetchGameBananaModCardAsyncV2(
+    internal async Task<OnlineModCard?> FetchGameBananaModCardAsyncV2(
         int itemId, bool useEndfieldMetadata = false, CancellationToken cancellationToken = default)
     {
-        GameBananaModMetadata metadata = await _gameBananaMetadataService.GetModAsync(itemId, cancellationToken);
+        GameBananaModMetadata metadata = await _host.Metadata.GetModAsync(itemId, cancellationToken);
         string category = string.IsNullOrWhiteSpace(metadata.CharacterName) ? T("OnlineFeed.Uncategorized") : metadata.CharacterName;
         string character = ResolveOnlineCharacterName(category, metadata.Title, useEndfieldMetadata);
         OnlineDownloadCandidate? file = OnlineDownloadSelectionPolicy.SelectDefault(metadata.DownloadFiles);
@@ -780,7 +769,7 @@ public sealed partial class MainWindow
 
     private async Task<int?> TryReadGameBananaDownloadMetricCacheAsync(int itemId)
     {
-        CachedValue<GameBananaDownloadMetricCacheEntry>? sqliteMetric = _appDataStore.TryReadCache<GameBananaDownloadMetricCacheEntry>(
+        CachedValue<GameBananaDownloadMetricCacheEntry>? sqliteMetric = _host.DataStore.TryReadCache<GameBananaDownloadMetricCacheEntry>(
             "download-metric",
             itemId.ToString(CultureInfo.InvariantCulture),
             TimeSpan.FromHours(12));
@@ -818,19 +807,19 @@ public sealed partial class MainWindow
                 CachedAtUtc = DateTimeOffset.UtcNow,
                 DownloadCount = Math.Max(0, downloadCount)
             };
-            _appDataStore.WriteCache("download-metric", itemId.ToString(CultureInfo.InvariantCulture), entry);
+            _host.DataStore.WriteCache("download-metric", itemId.ToString(CultureInfo.InvariantCulture), entry);
             await File.WriteAllTextAsync(
                 GetGameBananaDownloadMetricCacheFile(itemId),
                 JsonSerializer.Serialize(entry));
         }
         catch (Exception ex)
         {
-            LogApplicationIssue("Write download count cache", ex);
+            _host.LogApplicationIssue("Write download count cache", ex);
         }
     }
 
     private Task<Dictionary<int, int>> FetchGameBananaDownloadCountsAsync(IReadOnlyList<int> itemIds, CancellationToken cancellationToken)
-        => GameBananaDownloadCounts.FetchAsync(_httpClient, itemIds, cancellationToken);
+        => GameBananaDownloadCounts.FetchAsync(_host.Http, itemIds, cancellationToken);
 
     /// <summary>
     /// Fills download counts from the 12-hour metric cache, then one batch request. Returns how many
@@ -898,7 +887,7 @@ public sealed partial class MainWindow
 
     private bool MatchesOnlineSearch(OnlineModCard mod, string searchText)
     {
-        EndfieldCharacterInfo? character = IsEndfieldRepository(GetSelectedRepository())
+        EndfieldCharacterInfo? character = IsEndfieldRepository(_host.GetSelectedRepository())
             ? FindEndfieldCharacter(mod.CharacterName) : null;
         return OnlineBrowseStateAdapter.MatchesSearch(mod.Title, mod.CharacterName, mod.Author,
             searchText, character?.AllNames);
@@ -926,7 +915,7 @@ public sealed partial class MainWindow
         }
         catch (Exception ex)
         {
-            ReportUiActionFailure("OnOnlinePrevPageClicked", ex);
+            _host.ReportUiActionFailure("OnOnlinePrevPageClicked", ex);
         }
     }
 
@@ -945,7 +934,7 @@ public sealed partial class MainWindow
         }
         catch (Exception ex)
         {
-            ReportUiActionFailure("OnOnlineNextPageClicked", ex);
+            _host.ReportUiActionFailure("OnOnlineNextPageClicked", ex);
         }
     }
 
@@ -971,7 +960,7 @@ public sealed partial class MainWindow
         bool allowExpired = false)
     {
         string sqliteKey = $"{categoryId}:{Math.Max(1, page)}:{OnlineDisplayPageSize}";
-        CachedValue<OnlineCategoryPageCacheEntry>? sqliteEntry = _appDataStore.TryReadCache<OnlineCategoryPageCacheEntry>(
+        CachedValue<OnlineCategoryPageCacheEntry>? sqliteEntry = _host.DataStore.TryReadCache<OnlineCategoryPageCacheEntry>(
             "online-page",
             sqliteKey,
             TimeSpan.FromHours(6),
@@ -1028,13 +1017,13 @@ public sealed partial class MainWindow
                 Page = result.Page,
                 PageSize = result.PageSize
             };
-            _appDataStore.WriteCache("online-page", $"{categoryId}:{Math.Max(1, result.Page)}:{OnlineDisplayPageSize}", entry);
+            _host.DataStore.WriteCache("online-page", $"{categoryId}:{Math.Max(1, result.Page)}:{OnlineDisplayPageSize}", entry);
             string json = JsonSerializer.Serialize(entry);
             await File.WriteAllTextAsync(GetOnlineCategoryPageCacheFile(categoryId, result.Page), json);
         }
         catch (Exception ex)
         {
-            LogApplicationIssue("Write online page cache", ex);
+            _host.LogApplicationIssue("Write online page cache", ex);
         }
     }
 }

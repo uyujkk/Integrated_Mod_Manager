@@ -6,7 +6,7 @@ using Microsoft.UI.Xaml.Controls;
 
 namespace ModFolderCopier.WinUI;
 
-public sealed partial class MainWindow
+public sealed partial class OnlinePage
 {
     // Only loaded cards subscribe. Virtualized/recycled cards do not accumulate callbacks.
     private readonly HashSet<Action<bool>> _onlineCardRefreshers = [];
@@ -14,7 +14,7 @@ public sealed partial class MainWindow
 
     private void RefreshOnlineCardPresentation()
     {
-        string key = $"{_services.Language.Current}|{_services.Appearance.IsDark}|{_interfaceDensity}";
+        string key = $"{_services.Language.Current}|{_services.Appearance.IsDark}|{_host.Density}";
         if (_onlineCardPresentationKey == key) return;
         _onlineCardPresentationKey = key;
         RefreshPresenters(OnlineVirtualizedListView);
@@ -60,9 +60,9 @@ public sealed partial class MainWindow
                     if (mod.AuthorId <= 0 && mod.ItemId > 0)
                     {
                         using var cancellation = new CancellationTokenSource(TimeSpan.FromSeconds(5));
-                        try { mod.AuthorId = (await _gameBananaMetadataService.GetModAsync(mod.ItemId, cancellation.Token)).AuthorId; }
+                        try { mod.AuthorId = (await _host.Metadata.GetModAsync(mod.ItemId, cancellation.Token)).AuthorId; }
                         catch (Exception ex) when (ex is HttpRequestException or OperationCanceledException or TimeoutException or InvalidDataException or System.Text.Json.JsonException)
-                        { LogApplicationIssue("Resolve cached author identity", ex); }
+                        { _host.LogApplicationIssue("Resolve cached author identity", ex); }
                     }
                     if (!_onlineWindowClosed && context == GetOnlineDetailContextKey())
                     {
@@ -75,7 +75,7 @@ public sealed partial class MainWindow
             }
             catch (Exception ex)
             {
-                ReportUiActionFailure("link.Click", ex);
+                _host.ReportUiActionFailure("link.Click", ex);
             }
         };
         link.ContextFlyout = CreateOnlineCardMenu(mod);
@@ -87,12 +87,12 @@ public sealed partial class MainWindow
 
     private OnlineCardStatus GetOnlineCardStatus(OnlineModCard mod, TrackedModOrigin? installed, string defaultStatus)
     {
-        bool active = _onlineDownloadActions.IsActive(CaptureOnlineDownloadContext(GetSelectedRepository()),
+        bool active = _onlineDownloadActions.IsActive(CaptureOnlineDownloadContext(_host.GetSelectedRepository()),
             GetOnlineDownloadIdentity(mod));
         DownloadTaskItem? task = _services.Downloads.Tasks.FirstOrDefault(item =>
             item.Session is not null && item.SourceIdentity == GetOnlineDownloadIdentity(mod)
-            && string.Equals(item.Session.Context.RepositoryId, GetSelectedRepository()?.Id, StringComparison.OrdinalIgnoreCase)
-            && string.Equals(item.Session.Context.RepositoryPath, GetSelectedRepository()?.SourcePath, StringComparison.OrdinalIgnoreCase));
+            && string.Equals(item.Session.Context.RepositoryId, _host.GetSelectedRepository()?.Id, StringComparison.OrdinalIgnoreCase)
+            && string.Equals(item.Session.Context.RepositoryPath, _host.GetSelectedRepository()?.SourcePath, StringComparison.OrdinalIgnoreCase));
         // A retry can be preparing while its previous terminal task is still in history.
         if (active && task is not null && DownloadProgressPolicy.IsTerminal(task.State)) task = null;
         string text = task?.State switch
@@ -147,7 +147,7 @@ public sealed partial class MainWindow
         Refresh(true);
     }
 
-    private void RefreshOnlineCardStates(bool refreshInstalled = true)
+    internal void RefreshOnlineCardStates(bool refreshInstalled = true)
     {
         if (_onlineWindowClosed) return;
         foreach (Action<bool> refresh in _onlineCardRefreshers.ToArray()) refresh(refreshInstalled);
@@ -168,7 +168,7 @@ public sealed partial class MainWindow
         foreach (Action update in _onlineCardMetricRefreshers.ToArray()) update();
     }
 
-    private void RefreshOnlineNavigationButtonLabels()
+    internal void RefreshOnlineNavigationButtonLabels()
     {
         RefreshOnlineButton.Content = _isLoadingOnlineMods
             ? T("Common.Loading")

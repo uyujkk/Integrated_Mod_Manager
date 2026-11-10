@@ -12,11 +12,11 @@ using Microsoft.UI.Xaml.Media;
 
 namespace ModFolderCopier.WinUI;
 
-public sealed partial class MainWindow
+public sealed partial class OnlinePage
 {
-    private void PopulateOnlineCharacterOptions()
+    internal void PopulateOnlineCharacterOptions()
     {
-        EnsureOnlineCharacterOptionsForRepository(GetSelectedRepository());
+        EnsureOnlineCharacterOptionsForRepository(_host.GetSelectedRepository());
         IReadOnlyList<OnlineCharacterOption> visibleCharacters = GetVisibleOnlineCharacterOptions();
         _isApplyingOnlineCharacterSelection = true;
         try
@@ -56,13 +56,13 @@ public sealed partial class MainWindow
             .ToList();
         IEnumerable<OnlineCharacterOption> source = wikiCharacters.Count > 0 ? wikiCharacters : _onlinePage.CharacterOptions;
         return source
-            .OrderByDescending(character => IsFavoriteCharacter(character.Key))
+            .OrderByDescending(character => _host.IsFavoriteCharacter(character.Key))
             .ThenBy(character => character.WikiOrder)
             .ThenBy(character => GetOnlineCharacterDisplayName(character), StringComparer.CurrentCultureIgnoreCase)
             .ToList();
     }
 
-    private void EnsureOnlineCharacterOptionsForRepository(WorkspaceRepository? repository)
+    internal void EnsureOnlineCharacterOptionsForRepository(WorkspaceRepository? repository)
     {
         string catalogKey = GetOnlineCharacterCatalogKey(repository);
         if (!string.Equals(_onlineCharacterCatalogKey, catalogKey, StringComparison.Ordinal))
@@ -84,7 +84,7 @@ public sealed partial class MainWindow
         {
             if (_onlinePage.CharacterOptions.Count == 0)
             {
-                _onlinePage.CharacterOptions.AddRange(EndfieldCharacters.Select((character, index) => new OnlineCharacterOption
+                _onlinePage.CharacterOptions.AddRange(_host.EndfieldCharacters.Select((character, index) => new OnlineCharacterOption
                 {
                     Key = character.EnglishName,
                     DisplayNameZh = character.ChineseName,
@@ -206,14 +206,14 @@ public sealed partial class MainWindow
     }
 
 
-    private string GetOnlineCharacterCatalogKey(WorkspaceRepository? repository)
+    internal string GetOnlineCharacterCatalogKey(WorkspaceRepository? repository)
     {
         return repository is null
             ? string.Empty
             : $"wiki-monthly-v4|{repository.Id}|wiki={repository.WikiUrl.Trim()}";
     }
 
-    private bool IsEndfieldRepository(WorkspaceRepository? repository)
+    internal bool IsEndfieldRepository(WorkspaceRepository? repository)
     {
         if (repository is null)
         {
@@ -222,16 +222,16 @@ public sealed partial class MainWindow
 
         string categoryId = GetEffectiveOnlineCategoryId(repository);
         string gameName = GetEffectiveOnlineGameName(repository);
-        return string.Equals(categoryId, DefaultOnlineCategoryId, StringComparison.OrdinalIgnoreCase)
+        return string.Equals(categoryId, _host.DefaultOnlineCategoryId, StringComparison.OrdinalIgnoreCase)
             || gameName.Contains("Endfield", StringComparison.OrdinalIgnoreCase)
             || gameName.Contains("终末地", StringComparison.OrdinalIgnoreCase);
     }
 
-    private static bool IsEndfieldCategoryId(string? categoryId)
+    private bool IsEndfieldCategoryId(string? categoryId)
     {
         return !string.IsNullOrWhiteSpace(categoryId)
-            && (string.Equals(categoryId, DefaultOnlineCategoryId, StringComparison.OrdinalIgnoreCase)
-                || EndfieldCharacters.Any(character => string.Equals(
+            && (string.Equals(categoryId, _host.DefaultOnlineCategoryId, StringComparison.OrdinalIgnoreCase)
+                || _host.EndfieldCharacters.Any(character => string.Equals(
                     character.GameBananaCategoryId,
                     categoryId,
                     StringComparison.OrdinalIgnoreCase)));
@@ -244,9 +244,9 @@ public sealed partial class MainWindow
             : character.DisplayNameEn;
     }
 
-    private void RefreshOnlineCharacterAvatarStrip()
+    internal void RefreshOnlineCharacterAvatarStrip()
     {
-        EnsureOnlineCharacterOptionsForRepository(GetSelectedRepository());
+        EnsureOnlineCharacterOptionsForRepository(_host.GetSelectedRepository());
         IReadOnlyList<OnlineCharacterOption> visibleCharacters = GetVisibleOnlineCharacterOptions();
         string characterSignature = string.Join(";", visibleCharacters.Select(item => $"{item.Key}:{item.DisplayNameZh}:{item.DisplayNameEn}:{item.CategoryId}:{item.AvatarUrl}:{item.WikiOrder}"));
         string signature = $"{_services.Language.Current}|{_services.Appearance.IsDark}|{_isLoadingOnlineMods}|{_onlinePage.CharacterFilter}|{_onlinePage.TotalCount}|horizontal={_useHorizontalOnlineCharacterRail}|{characterSignature}";
@@ -309,8 +309,8 @@ public sealed partial class MainWindow
             VerticalAlignment = VerticalAlignment.Center,
             CornerRadius = new CornerRadius(avatarSize / 2),
             BorderThickness = new Thickness(isSelected ? 2 : 1),
-            BorderBrush = GetAppThemeBrush(isSelected ? "AppNavSelectedBorderBrush" : "AppCardBorderBrush"),
-            Background = GetAppThemeBrush("AppInsetBackgroundBrush")
+            BorderBrush = _host.GetAppThemeBrush(isSelected ? "AppNavSelectedBorderBrush" : "AppCardBorderBrush"),
+            Background = _host.GetAppThemeBrush("AppInsetBackgroundBrush")
         };
 
         if (!string.IsNullOrWhiteSpace(avatarUrl))
@@ -439,9 +439,9 @@ public sealed partial class MainWindow
             HorizontalContentAlignment = _useHorizontalOnlineCharacterRail
                 ? HorizontalAlignment.Center
                 : HorizontalAlignment.Stretch,
-            Background = GetAppThemeBrush(isSelected ? "AppSecondarySelectedBrush" : "AppSecondaryDefaultBrush"),
-            BorderBrush = GetAppThemeBrush(isSelected ? "AppNavSelectedBorderBrush" : "AppCardBorderBrush"),
-            Foreground = GetAppThemeBrush(isSelected ? "AppSecondarySelectedForegroundBrush" : "AppSecondaryDefaultForegroundBrush")
+            Background = _host.GetAppThemeBrush(isSelected ? "AppSecondarySelectedBrush" : "AppSecondaryDefaultBrush"),
+            BorderBrush = _host.GetAppThemeBrush(isSelected ? "AppNavSelectedBorderBrush" : "AppCardBorderBrush"),
+            Foreground = _host.GetAppThemeBrush(isSelected ? "AppSecondarySelectedForegroundBrush" : "AppSecondaryDefaultForegroundBrush")
         };
         OnlineCharacterOption? characterOption = _onlinePage.CharacterOptions.FirstOrDefault(item =>
             string.Equals(item.Key, character, StringComparison.OrdinalIgnoreCase));
@@ -450,7 +450,7 @@ public sealed partial class MainWindow
             : $"{characterOption.DisplayNameZh} / {characterOption.DisplayNameEn}";
         ToolTipService.SetToolTip(button, string.IsNullOrWhiteSpace(character) ? T("OnlineCharacters.ShowAllCharacters") : tooltip);
         AutomationProperties.SetName(button, string.IsNullOrWhiteSpace(character) ? T("OnlineCharacters.AllCharacters") : label);
-        button.Click += async (_, _) => await RunUiActionAsync("SelectOnlineCharacterAsync", () => SelectOnlineCharacterAsync(character));
+        button.Click += async (_, _) => await _host.RunUiActionAsync("SelectOnlineCharacterAsync", () => SelectOnlineCharacterAsync(character));
         return WrapCharacterButtonWithFavorite(button, character);
     }
 
@@ -468,7 +468,7 @@ public sealed partial class MainWindow
             return GetOnlineCharacterDisplayName(option);
         }
 
-        if (IsEndfieldRepository(GetSelectedRepository()))
+        if (IsEndfieldRepository(_host.GetSelectedRepository()))
         {
             EndfieldCharacterInfo? character = FindEndfieldCharacter(characterName);
             return character is null ? characterName : GetOnlineCharacterDisplayName(character);
@@ -526,7 +526,7 @@ public sealed partial class MainWindow
 
         if (useEndfieldMetadata)
         {
-            EndfieldCharacterInfo? titleCharacter = EndfieldCharacters.FirstOrDefault(character =>
+            EndfieldCharacterInfo? titleCharacter = _host.EndfieldCharacters.FirstOrDefault(character =>
                 character.AllNames.Any(alias => OnlineCharacterCatalogMatcher.ContainsAlias(title, alias)));
             if (titleCharacter is not null)
             {
@@ -537,7 +537,7 @@ public sealed partial class MainWindow
         return "Uncategorized";
     }
 
-    private static EndfieldCharacterInfo? FindEndfieldCharacter(string? name)
+    private EndfieldCharacterInfo? FindEndfieldCharacter(string? name)
     {
         if (string.IsNullOrWhiteSpace(name))
         {
@@ -545,7 +545,7 @@ public sealed partial class MainWindow
         }
 
         string normalized = OnlineCharacterCatalogMatcher.NormalizeLookup(name);
-        return EndfieldCharacters.FirstOrDefault(character =>
+        return _host.EndfieldCharacters.FirstOrDefault(character =>
             character.AllNames.Any(alias => string.Equals(
                 OnlineCharacterCatalogMatcher.NormalizeLookup(alias),
                 normalized,
@@ -574,7 +574,7 @@ public sealed partial class MainWindow
         }
         catch (Exception ex)
         {
-            ReportUiActionFailure("OnOnlineCharacterSelectionChanged", ex);
+            _host.ReportUiActionFailure("OnOnlineCharacterSelectionChanged", ex);
         }
     }
 
@@ -623,11 +623,11 @@ public sealed partial class MainWindow
 
     // A cached catalog older than this is shown at once and refreshed in the background, so newly
     // released characters (and their avatars) appear within a day. Refreshing the online page reloads now.
-    private static readonly TimeSpan OnlineCharacterCatalogFreshFor = TimeSpan.FromDays(1);
+    internal static readonly TimeSpan OnlineCharacterCatalogFreshFor = TimeSpan.FromDays(1);
 
-    private async Task<OnlineCharacterCatalogCacheSnapshot?> TryReadOnlineCharacterCatalogCacheAsync(string catalogKey)
+    internal async Task<OnlineCharacterCatalogCacheSnapshot?> TryReadOnlineCharacterCatalogCacheAsync(string catalogKey)
     {
-        CachedValue<OnlineCharacterCatalogCacheEntry>? sqliteEntry = _appDataStore.TryReadCache<OnlineCharacterCatalogCacheEntry>(
+        CachedValue<OnlineCharacterCatalogCacheEntry>? sqliteEntry = _host.DataStore.TryReadCache<OnlineCharacterCatalogCacheEntry>(
             "character-catalog",
             catalogKey,
             OnlineCharacterCatalogFreshFor,
@@ -689,7 +689,7 @@ public sealed partial class MainWindow
                 }
                 catch (Exception ex)
                 {
-                    LogApplicationIssue("Read existing character catalog cache", ex);
+                    _host.LogApplicationIssue("Read existing character catalog cache", ex);
                 }
             }
 
@@ -698,12 +698,12 @@ public sealed partial class MainWindow
                 CachedAtUtc = checkedAt,
                 Characters = characters
             };
-            _appDataStore.WriteCache("character-catalog", catalogKey, entry, checkedAt);
+            _host.DataStore.WriteCache("character-catalog", catalogKey, entry, checkedAt);
             await File.WriteAllTextAsync(cacheFile, JsonSerializer.Serialize(entry));
         }
         catch (Exception ex)
         {
-            LogApplicationIssue("Write character catalog cache", ex);
+            _host.LogApplicationIssue("Write character catalog cache", ex);
         }
     }
 
@@ -711,13 +711,13 @@ public sealed partial class MainWindow
     private static readonly TimeSpan CharacterCatalogRequestTimeout = TimeSpan.FromSeconds(20);
 
     // The repository's own wiki link, else its game's built-in one (found by category or game name).
-    private static WikiCatalogDescriptor? GetWikiCatalogDescriptor(WorkspaceRepository repository)
+    private WikiCatalogDescriptor? GetWikiCatalogDescriptor(WorkspaceRepository repository)
         => CharacterCatalogClient.Describe(repository.WikiUrl,
-            BuiltInRepositoryPresets.FirstOrDefault(preset => IsRepositoryForPreset(repository, preset))?.WikiUrl);
+            _host.BuiltInRepositoryPresets.FirstOrDefault(preset => _host.IsRepositoryForPreset(repository, preset))?.WikiUrl);
 
     private Task<T> RequestCharacterCatalogAsync<T>(string operation, Func<CancellationToken, Task<T>> request)
         => CharacterCatalogClient.WithRetryAsync(request, CharacterCatalogRequestTimeout,
-            ex => LogApplicationIssue(operation + ", trying again", ex));
+            ex => _host.LogApplicationIssue(operation + ", trying again", ex));
 
     private async Task<List<OnlineCharacterOption>> FetchWikiCharacterCatalogAsync(WorkspaceRepository repository)
     {
@@ -728,18 +728,18 @@ public sealed partial class MainWindow
 
         return GetWikiCatalogDescriptor(repository) is { } descriptor
             ? await RequestCharacterCatalogAsync("Load wiki character catalog",
-                token => CharacterCatalogClient.FetchWikiCharactersAsync(_httpClient, descriptor, repository.WikiUrl, token))
+                token => CharacterCatalogClient.FetchWikiCharactersAsync(_host.Http, descriptor, repository.WikiUrl, token))
             : [];
     }
 
     private Task<List<OnlineCharacterOption>> FetchEndfieldCharacterCatalogAsync(WorkspaceRepository repository)
         => RequestCharacterCatalogAsync("Load Endfield operator catalog",
-            token => CharacterCatalogClient.FetchEndfieldOperatorsAsync(_httpClient, EndfieldCharacters,
-                string.IsNullOrWhiteSpace(repository.WikiUrl) ? EndfieldOfficialWikiUrl : repository.WikiUrl, token));
+            token => CharacterCatalogClient.FetchEndfieldOperatorsAsync(_host.Http, _host.EndfieldCharacters,
+                string.IsNullOrWhiteSpace(repository.WikiUrl) ? _host.EndfieldOfficialWikiUrl : repository.WikiUrl, token));
 
     private Task<List<OnlineCharacterOption>> FetchGameBananaCharacterCatalogAsync(string categoryId)
         => RequestCharacterCatalogAsync("Load GameBanana character categories",
-            token => CharacterCatalogClient.FetchGameBananaCharactersAsync(_httpClient, categoryId, token));
+            token => CharacterCatalogClient.FetchGameBananaCharactersAsync(_host.Http, categoryId, token));
 
     private async Task ApplyOfficialHoYoWikiEnglishNamesAsync(
         WorkspaceRepository repository,
@@ -757,15 +757,15 @@ public sealed partial class MainWindow
         {
             // Fetch sequentially to keep the monthly Wiki refresh gentle and separate from mod loading.
             List<HoYoWikiLocalizedCharacter> chineseCharacters = await RequestCharacterCatalogAsync("Load HoYoWiki names",
-                token => CharacterCatalogClient.FetchHoYoWikiNamesAsync(_httpClient, descriptor, "zh-cn", token));
+                token => CharacterCatalogClient.FetchHoYoWikiNamesAsync(_host.Http, descriptor, "zh-cn", token));
             List<HoYoWikiLocalizedCharacter> englishCharacters = await RequestCharacterCatalogAsync("Load HoYoWiki names",
-                token => CharacterCatalogClient.FetchHoYoWikiNamesAsync(_httpClient, descriptor, "en-us", token));
+                token => CharacterCatalogClient.FetchHoYoWikiNamesAsync(_host.Http, descriptor, "en-us", token));
             CharacterCatalogClient.ApplyEnglishNames(characters, chineseCharacters, englishCharacters);
         }
         catch (Exception ex)
         {
             // The existing Chinese catalog and translation fallback remain usable when HoYoWiki is unavailable.
-            LogApplicationIssue("Load HoYoWiki names", ex);
+            _host.LogApplicationIssue("Load HoYoWiki names", ex);
         }
     }
 
@@ -845,7 +845,7 @@ public sealed partial class MainWindow
 
 
 
-    private async Task EnsureOnlineCharacterCatalogAsync(WorkspaceRepository repository, bool forceReload)
+    internal async Task EnsureOnlineCharacterCatalogAsync(WorkspaceRepository repository, bool forceReload)
     {
         string catalogKey = GetOnlineCharacterCatalogKey(repository);
         if (string.IsNullOrWhiteSpace(catalogKey) || !_loadingOnlineCharacterCatalogKeys.Add(catalogKey))
@@ -897,7 +897,7 @@ public sealed partial class MainWindow
                 catch (Exception ex)
                 {
                     // Wiki names remain usable if the optional category mapping request fails.
-                    LogApplicationIssue("Load GameBanana character categories", ex);
+                    _host.LogApplicationIssue("Load GameBanana character categories", ex);
                 }
 
                 List<OnlineCharacterOption> mergedCharacters = OnlineCharacterCatalogMatcher.Merge(
@@ -912,7 +912,7 @@ public sealed partial class MainWindow
         catch (Exception ex)
         {
             // The current page still supplies a usable partial character list; the log says why the catalog did not load.
-            LogApplicationIssue("Load online character catalog", ex);
+            _host.LogApplicationIssue("Load online character catalog", ex);
         }
         finally
         {
@@ -984,7 +984,7 @@ public sealed partial class MainWindow
         }
 
         EndfieldCharacterInfo? endfieldCharacter = FindEndfieldCharacter(mod.CharacterName)
-            ?? EndfieldCharacters.FirstOrDefault(character =>
+            ?? _host.EndfieldCharacters.FirstOrDefault(character =>
                 !string.IsNullOrWhiteSpace(mod.CategoryId)
                 && string.Equals(
                     character.GameBananaCategoryId,
@@ -1008,7 +1008,7 @@ public sealed partial class MainWindow
             (!string.IsNullOrWhiteSpace(mod.CategoryId) && string.Equals(item.CategoryId, mod.CategoryId, StringComparison.OrdinalIgnoreCase))
             || string.Equals(OnlineCharacterCatalogMatcher.NormalizeLookup(item.Key), normalized, StringComparison.OrdinalIgnoreCase));
         EndfieldCharacterInfo? endfield = FindEndfieldCharacter(mod.CharacterName)
-            ?? EndfieldCharacters.FirstOrDefault(character => !string.IsNullOrWhiteSpace(mod.CategoryId)
+            ?? _host.EndfieldCharacters.FirstOrDefault(character => !string.IsNullOrWhiteSpace(mod.CategoryId)
                 && string.Equals(character.GameBananaCategoryId, mod.CategoryId, StringComparison.OrdinalIgnoreCase));
         string? chinese = endfield?.ChineseName ?? option?.DisplayNameZh;
         string? english = endfield?.EnglishName ?? option?.DisplayNameEn;

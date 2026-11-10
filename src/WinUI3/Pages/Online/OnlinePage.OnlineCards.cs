@@ -10,9 +10,9 @@ using Windows.System;
 
 namespace ModFolderCopier.WinUI;
 
-public sealed partial class MainWindow
+public sealed partial class OnlinePage
 {
-    private void UpdateOnlineResponsiveLayout(double windowWidth)
+    internal void UpdateOnlineResponsiveLayout(double windowWidth)
     {
         TraceOnlineUiState("Responsive layout");
         if (OnlineDetailsHost is null
@@ -35,7 +35,7 @@ public sealed partial class MainWindow
             ? OnlineDetailsHost.ActualWidth
             : windowWidth;
 
-        OnlineCharacterRailLayout railLayout = OnlineLayoutPolicy.CharacterRail(onlineContentWidth, RootGrid.ActualHeight);
+        OnlineCharacterRailLayout railLayout = OnlineLayoutPolicy.CharacterRail(onlineContentWidth, _host.Root.ActualHeight);
         bool useHorizontalCharacterRail = railLayout.Horizontal;
         bool characterRailModeChanged = _useHorizontalOnlineCharacterRail != useHorizontalCharacterRail;
         _useHorizontalOnlineCharacterRail = useHorizontalCharacterRail;
@@ -98,7 +98,7 @@ public sealed partial class MainWindow
         ApplyOnlineDrawerReservation();
     }
 
-    private bool IsOnlineDetailOpen => OnlineDetailDrawer.Visibility == Visibility.Visible;
+    internal bool IsOnlineDetailOpen => OnlineDetailDrawer.Visibility == Visibility.Visible;
 
     // While the drawer is open the cards make room for it: only the results area narrows and
     // re-flows into fewer columns of the same tile size, so no card sits under the drawer.
@@ -156,7 +156,7 @@ public sealed partial class MainWindow
         var visual = ElementCompositionPreview.GetElementVisual(resultsElement);
         visual.StopAnimation("Opacity");
 
-        if (_reduceMotion || _onlinePage.VisibleMods.Count == 0)
+        if (_host.ReduceMotion || _onlinePage.VisibleMods.Count == 0)
         {
             visual.Opacity = 1f;
             return;
@@ -184,7 +184,7 @@ public sealed partial class MainWindow
         FrameworkElement resultsElement = GetOnlineResultsElement();
         var visual = ElementCompositionPreview.GetElementVisual(resultsElement);
         visual.StopAnimation("Opacity");
-        if (ShouldReduceAnimations)
+        if (_host.ShouldReduceAnimations)
         {
             visual.Opacity = 1f;
             return;
@@ -209,7 +209,7 @@ public sealed partial class MainWindow
             ResetOnlineBrowsePosition();
             _onlinePage.SortMode = sortMode;
             RefreshOnlinePaneV2();
-            SaveShellConfig();
+            _host.SaveShellConfig();
         }
     }
 
@@ -234,7 +234,7 @@ public sealed partial class MainWindow
         _pendingBrowsePosition = _activeBrowseSessionKey is not null && _onlinePreferences.BrowseSessions.TryGetValue(_activeBrowseSessionKey, out var savedPosition) ? savedPosition : new();
         _onlinePage.CardLayoutMode = layoutMode;
         _animateOnlineCardsOnNextRefresh = true;
-        SaveShellConfig();
+        _host.SaveShellConfig();
         RefreshOnlinePaneV2();
     }
 
@@ -305,7 +305,7 @@ public sealed partial class MainWindow
 
     private void OnOnlineDetailsHostSizeChanged(object sender, SizeChangedEventArgs e)
     {
-        if (Math.Abs(e.NewSize.Width - e.PreviousSize.Width) > 0.5) UpdateOnlineResponsiveLayout(Bounds.Width);
+        if (Math.Abs(e.NewSize.Width - e.PreviousSize.Width) > 0.5) UpdateOnlineResponsiveLayout(_host.Bounds.Width);
     }
 
     private void OnOnlineWorkspaceGridSizeChanged(object sender, SizeChangedEventArgs e)
@@ -314,7 +314,7 @@ public sealed partial class MainWindow
         UpdateOnlineWorkspaceWidthConstraint();
     }
 
-    private void UpdateOnlineWorkspaceWidthConstraint()
+    internal void UpdateOnlineWorkspaceWidthConstraint()
     {
         if (OnlineResultsHost is null
             || OnlineWorkspaceGrid is null
@@ -366,8 +366,8 @@ public sealed partial class MainWindow
     private OnlineModTileViewModel CreateOnlineTileModel(OnlineModCard mod)
     {
         var model = new OnlineModTileViewModel(mod,
-            openPage: () => RunUiActionAsync("OpenExternalUrlAsync", () => OpenExternalUrlAsync(mod.ProfileUrl, T("Common.OpenPageFailed"))),
-            download: () => RunUiActionAsync("DownloadAndExtractOnlineModAsync", () => DownloadAndExtractOnlineModAsync(mod)))
+            openPage: () => _host.RunUiActionAsync("_host.OpenExternalUrlAsync", () => _host.OpenExternalUrlAsync(mod.ProfileUrl, T("Common.OpenPageFailed"))),
+            download: () => _host.RunUiActionAsync("DownloadAndExtractOnlineModAsync", () => DownloadAndExtractOnlineModAsync(mod)))
         {
             CharacterLabel = GetOnlineCharacterDisplayName(mod.CharacterName),
             PreviewPlaceholder = T("OnlineCards.NoPreview"),
@@ -409,15 +409,15 @@ public sealed partial class MainWindow
     private async void OnOnlineResultItemClick(object sender, ItemClickEventArgs e)
     {
         if (e.ClickedItem is OnlineModCard mod)
-            await RunUiActionAsync("ShowOnlineModDetailsAsync", () => ShowOnlineModDetailsAsync(mod));
+            await _host.RunUiActionAsync("ShowOnlineModDetailsAsync", () => ShowOnlineModDetailsAsync(mod));
     }
 
     private string FormatCompactMetric(int value) => OnlineBrowseOrder.CompactCount(value, IsChineseUi);
 
     private void AnimateOnlineModCardHover(Border card, bool isPointerOver)
     {
-        card.Background = GetAppThemeBrush(isPointerOver ? "AppSecondarySelectedBrush" : "AppInsetBackgroundBrush");
-        if (ShouldReduceAnimations)
+        card.Background = _host.GetAppThemeBrush(isPointerOver ? "AppSecondarySelectedBrush" : "AppInsetBackgroundBrush");
+        if (_host.ShouldReduceAnimations)
         {
             return;
         }
@@ -461,8 +461,8 @@ public sealed partial class MainWindow
         var indicator = new Border
         {
             HorizontalAlignment = HorizontalAlignment.Left,
-            Background = GetAppThemeBrush("AppAccentSoftBrush"),
-            BorderBrush = GetAppThemeBrush("AppNavSelectedBorderBrush"),
+            Background = _host.GetAppThemeBrush("AppAccentSoftBrush"),
+            BorderBrush = _host.GetAppThemeBrush("AppNavSelectedBorderBrush"),
             BorderThickness = new Thickness(1),
             CornerRadius = new CornerRadius(4),
             Padding = new Thickness(8, 4, 8, 4),
