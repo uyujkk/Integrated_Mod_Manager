@@ -150,29 +150,6 @@ public sealed partial class OnlinePage
         return border;
     }
 
-    private async Task AnimateOnlineListExitAsync()
-    {
-        FrameworkElement resultsElement = GetOnlineResultsElement();
-        var visual = ElementCompositionPreview.GetElementVisual(resultsElement);
-        visual.StopAnimation("Opacity");
-
-        if (_host.ReduceMotion || _onlinePage.VisibleMods.Count == 0)
-        {
-            visual.Opacity = 1f;
-            return;
-        }
-
-        var compositor = visual.Compositor;
-        var easing = compositor.CreateCubicBezierEasingFunction(new Vector2(0.4f, 0f), new Vector2(1f, 1f));
-        var fade = compositor.CreateScalarKeyFrameAnimation();
-        fade.Duration = TimeSpan.FromMilliseconds(110);
-        fade.InsertKeyFrame(1f, 0f, easing);
-        visual.StartAnimation("Opacity", fade);
-        await Task.Delay(135);
-        visual.StopAnimation("Opacity");
-        visual.Opacity = 1f;
-    }
-
     private void AnimateOnlineCardsEntrance()
     {
         if (!_animateOnlineCardsOnNextRefresh)

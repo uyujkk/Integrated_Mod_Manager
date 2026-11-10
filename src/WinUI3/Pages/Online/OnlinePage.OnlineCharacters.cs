@@ -586,13 +586,8 @@ public sealed partial class OnlinePage
             return;
         }
 
-        int animationVersion = ++_onlineCharacterAnimationVersion;
-        await AnimateOnlineListExitAsync();
-        if (animationVersion != _onlineCharacterAnimationVersion)
-        {
-            return;
-        }
-
+        // The new character's cards fade in when they arrive; the old ones no longer fade out first,
+        // which held every switch for 135 ms before anything changed (stage J6-b).
         ResetOnlineBrowsePosition();
         _onlinePage.CharacterFilter = character;
         _onlinePage.ResetPaging();
