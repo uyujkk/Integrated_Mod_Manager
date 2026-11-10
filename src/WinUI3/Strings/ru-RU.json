@@ -1136,6 +1136,8 @@
   "RepositoryWorkspace.NoTags": "Тегов пока нет",
   "RepositoryWorkspace.EditSourceLink": "Изменить ссылку на источник",
   "RepositoryWorkspace.EditTags": "Изменить теги этого мода",
+  "RepositoryWorkspace.ResizeCharacters": "Изменить ширину столбца персонажей",
+  "RepositoryWorkspace.ResizeDetails": "Изменить ширину панели сведений",
   "RepositoryWorkspace.ShortcutCount": "Горячих клавиш: {0}",
   "RepositoryWorkspace.ShortcutCountOne": "1 горячая клавиша",
   "RepositoryWorkspace.InfoTags": "Теги",

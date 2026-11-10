@@ -94,6 +94,8 @@ public sealed partial class MainWindow
                 "presets" => RepositoryWorkspaceView.Presets,
                 _ => RepositoryWorkspaceView.List
             };
+            _workspaceView._modList.CharacterPaneWidth = config?.WorkspaceCharacterWidth;
+            _workspaceView._modList.DetailPaneWidth = config?.WorkspaceDetailWidth;
             _lastUpdateCheckUtc = TryParseDateTimeOffset(config?.LastUpdateCheckUtc);
             // Restoring the view is not a change to save.
             _restoringUpdatesView = true;
@@ -303,6 +305,8 @@ public sealed partial class MainWindow
                 InterfaceDensity = _interfaceDensity == InterfaceDensity.Compact ? "compact" : "comfortable",
                 OnlineCardLayout = _onlineView._onlinePage.CardLayoutMode == OnlineCardLayoutMode.Grid ? "grid" : "list",
                 RepositoryWorkspaceView = _workspaceView._modList.View.ToString().ToLowerInvariant(),
+                WorkspaceCharacterWidth = _workspaceView._modList.CharacterPaneWidth,
+                WorkspaceDetailWidth = _workspaceView._modList.DetailPaneWidth,
                 UpdatesView = UpdatesViewModel.FormatView(_services.Updates.View),
                 SelectedConfigurationProfileId = _selectedConfigurationProfileId,
                 EnableConflictDetection = _enableConflictDetection,

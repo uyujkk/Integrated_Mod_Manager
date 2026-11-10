@@ -687,6 +687,8 @@ public sealed partial class WorkspacePage
         string repositoryId = _host.GetSelectedRepository()?.Id ?? sourceDir;
         using var cancellation = new CancellationTokenSource();
         _host.FolderRefreshCancellation = cancellation;
+        _workspaceScanning = true;
+        UpdateWorkspaceProgress();
         try
         {
             var loaded = await Task.Run(() =>
@@ -700,6 +702,7 @@ public sealed partial class WorkspacePage
                 || !string.Equals(sourceDir, Paths.Source.Trim(), StringComparison.OrdinalIgnoreCase)
                 || !string.Equals(targetDir, Paths.Target.Trim(), StringComparison.OrdinalIgnoreCase)) return;
             _host.Characters.Load(loaded.Items);
+            HideWorkspaceScanError();
             timing?.SetCounts(loaded.SecondCount);
             ApplyFirstLevelFilter();
             _ = RefreshCharacterFolderAvatarsAsync();
@@ -726,11 +729,19 @@ public sealed partial class WorkspacePage
         {
             _host.LogApplicationIssue("Refresh repository folders", ex);
             if (generation == _host.FolderRefreshGeneration && !cancellation.IsCancellationRequested)
+            {
                 StatusTextBlock.Text = T("LocalLibrary.RepositoryScanFailedTheExistingIndex");
+                ShowWorkspaceScanError(T("LocalLibrary.RepositoryScanFailedTheExistingIndex"));
+            }
         }
         finally
         {
             if (ReferenceEquals(_host.FolderRefreshCancellation, cancellation)) _host.FolderRefreshCancellation = null;
+            if (generation == _host.FolderRefreshGeneration)
+            {
+                _workspaceScanning = false;
+                UpdateWorkspaceProgress();
+            }
         }
     }
 
@@ -1113,8 +1124,62 @@ public sealed partial class WorkspacePage
         ProgressTextBlock.Text = message;
     }
 
+    private bool _workspaceScanning;
+    private bool _workspaceBusy;
+
+    private Microsoft.UI.Dispatching.DispatcherQueueTimer? _workspaceProgressDelay;
+
+    // The progress bar on the toolbar's lower edge while the repository is scanned or a long action runs (stage J7-b).
+    // It overlays the edge instead of taking a row, and waits 300 ms so quick scans do not flash it.
+    private void UpdateWorkspaceProgress()
+    {
+        if (!_workspaceScanning && !_workspaceBusy)
+        {
+            _workspaceProgressDelay?.Stop();
+            WorkspaceProgressBar.Visibility = Visibility.Collapsed;
+            return;
+        }
+        if (WorkspaceProgressBar.Visibility == Visibility.Visible) return;
+        _workspaceProgressDelay ??= CreateWorkspaceProgressDelay();
+        _workspaceProgressDelay.Start();
+    }
+
+    private Microsoft.UI.Dispatching.DispatcherQueueTimer CreateWorkspaceProgressDelay()
+    {
+        var timer = DispatcherQueue.CreateTimer();
+        timer.Interval = TimeSpan.FromMilliseconds(300);
+        timer.IsRepeating = false;
+        timer.Tick += (_, _) =>
+        {
+            if (_workspaceScanning || _workspaceBusy) WorkspaceProgressBar.Visibility = Visibility.Visible;
+        };
+        return timer;
+    }
+
+    private void ShowWorkspaceScanError(string message)
+    {
+        WorkspaceErrorInfoBar.Message = message;
+        if (WorkspaceErrorInfoBar.ActionButton is not Button retry)
+        {
+            retry = new Button();
+            retry.Click += async (_, _) => await _host.RunUiActionAsync("RetryRepositoryScan", RefreshListsAsync);
+            WorkspaceErrorInfoBar.ActionButton = retry;
+        }
+        retry.Content = T("DownloadTasks.Retry");
+        WorkspaceErrorInfoBar.Visibility = Visibility.Visible;
+        WorkspaceErrorInfoBar.IsOpen = true;
+    }
+
+    private void HideWorkspaceScanError()
+    {
+        WorkspaceErrorInfoBar.IsOpen = false;
+        WorkspaceErrorInfoBar.Visibility = Visibility.Collapsed;
+    }
+
     internal void SetBusyState(bool busy)
     {
+        _workspaceBusy = busy;
+        UpdateWorkspaceProgress();
         SettingsView.IsBusy = busy;
         Paths.IsLinkDeploymentEditable = !busy;
         FirstLevelListView.IsEnabled = !busy;

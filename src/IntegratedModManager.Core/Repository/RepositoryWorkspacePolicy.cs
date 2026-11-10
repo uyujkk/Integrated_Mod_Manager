@@ -40,6 +40,39 @@ public static class RepositoryWorkspacePolicy
         => double.IsFinite(width) && (width >= 780
             || (width >= 720 && double.IsFinite(height) && height > 0 && height < 420));
 
+    /// <summary>The narrowest a dragged character column or details pane may get (stage J7-b).</summary>
+    public const double MinCharacterWidth = 200;
+    public const double MaxCharacterWidth = 360;
+    public const double MinDetailWidth = 320;
+    public const double MaxDetailWidth = 560;
+    /// <summary>The Mod list keeps at least this much width between the two dragged columns.</summary>
+    public const double MinModListWidth = 280;
+    /// <summary>The space each column splitter takes between two panes.</summary>
+    public const double SplitterWidth = 12;
+
+    /// <summary>
+    /// The layout with the widths the user dragged the splitters to, when there are any: each within its bounds, and
+    /// never so wide that the Mod list gets less than <see cref="MinModListWidth"/>.
+    /// </summary>
+    public static RepositoryWorkspaceLayout Layout(double availableWidth, double? characterWidth, double? detailWidth)
+    {
+        RepositoryWorkspaceLayout layout = Layout(availableWidth);
+        double width = double.IsFinite(availableWidth) ? Math.Max(0, availableWidth) : 0;
+        double category = layout.CategoryWidth;
+        if (characterWidth is double wantedCategory && double.IsFinite(wantedCategory))
+        {
+            double room = width - MinModListWidth - SplitterWidth - (layout.InlineDetails ? layout.DetailWidth + SplitterWidth : 0);
+            category = Math.Clamp(wantedCategory, MinCharacterWidth, Math.Max(MinCharacterWidth, Math.Min(MaxCharacterWidth, room)));
+        }
+        double detail = layout.DetailWidth;
+        if (layout.InlineDetails && detailWidth is double wantedDetail && double.IsFinite(wantedDetail))
+        {
+            double room = width - category - MinModListWidth - 2 * SplitterWidth;
+            detail = Math.Clamp(wantedDetail, MinDetailWidth, Math.Max(MinDetailWidth, Math.Min(MaxDetailWidth, room)));
+        }
+        return layout with { CategoryWidth = category, DetailWidth = detail };
+    }
+
     public static RepositoryWorkspaceLayout Layout(double availableWidth)
     {
         double width = double.IsFinite(availableWidth) ? Math.Max(0, availableWidth) : 0;

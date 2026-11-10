@@ -22,6 +22,11 @@ public sealed partial class ModListViewModel : ObservableObject
 
     public RepositoryWorkspaceView View { get => _view; set => SetProperty(ref _view, value); }
 
+    /// <summary>The widths the column splitters were dragged to (stage J7-b); null keeps the default layout.</summary>
+    public double? CharacterPaneWidth { get; set; }
+
+    public double? DetailPaneWidth { get; set; }
+
     /// <summary>The state chips above the list: all Mods, the deployed ones, or the rest.</summary>
     public ModStateFilter StateFilter { get => _stateFilter; set => SetProperty(ref _stateFilter, value); }
 
