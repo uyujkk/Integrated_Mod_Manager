@@ -9,7 +9,8 @@
     IsTabStop="False"
     HorizontalContentAlignment="Stretch"
     VerticalContentAlignment="Stretch">
-    <!-- The Online page (stage J6): moved from MainWindow.xaml as it was. -->
+    <!-- The Online page (stage J6, moved from MainWindow.xaml). Stage J6-b (UI-Fluent-Design-Plan.md, "在线（J6）"):
+         the header and toolbar re-flow instead of clipping (OnlineLayoutPolicy decides when). -->
     <UserControl.Resources>
         <!-- Opaque, because it floats over other content. -->
         <Style x:Key="DetailPaneBorderStyle" TargetType="Border" BasedOn="{StaticResource CardBorderStyle}">
@@ -37,16 +38,17 @@
                             <RowDefinition Height="*" />
                         </Grid.RowDefinitions>
 
-                        <Grid ColumnSpacing="10">
+                        <!-- Title, then the status (it takes what is left and trims, with the full text as a tooltip),
+                             then the view switch and refresh, whose label drops when the status would get too little room. -->
+                        <Grid x:Name="OnlineHeaderGrid" ColumnSpacing="10" SizeChanged="OnOnlineHeaderSizeChanged">
                             <Grid.ColumnDefinitions>
-                                <ColumnDefinition Width="Auto" />
                                 <ColumnDefinition Width="Auto" />
                                 <ColumnDefinition Width="*" />
                                 <ColumnDefinition Width="Auto" />
                                 <ColumnDefinition Width="Auto" />
                             </Grid.ColumnDefinitions>
-                            <StackPanel Orientation="Horizontal" Spacing="8" VerticalAlignment="Center">
-                                <TextBlock x:Name="OnlineTitleTextBlock" x:FieldModifier="internal" Style="{StaticResource PageTitleTextStyle}" VerticalAlignment="Center" />
+                            <StackPanel x:Name="OnlineTitlePanel" Orientation="Horizontal" Spacing="8" VerticalAlignment="Center">
+                                <TextBlock x:Name="OnlineTitleTextBlock" x:FieldModifier="internal" Style="{StaticResource PageTitleTextStyle}" VerticalAlignment="Center" TextTrimming="CharacterEllipsis" />
                                 <!-- The page descriptions live in this tooltip instead of two header lines. -->
                                 <FontIcon Glyph="&#xE946;" FontSize="14" Opacity="0.7" VerticalAlignment="Center">
                                     <ToolTipService.ToolTip>
@@ -60,19 +62,11 @@
                                     </ToolTipService.ToolTip>
                                 </FontIcon>
                             </StackPanel>
-                            <StackPanel Grid.Column="1" Orientation="Horizontal" Spacing="8" VerticalAlignment="Center">
-                                <Border
-                                    Background="{ThemeResource AppAccentSoftBrush}"
-                                    CornerRadius="6"
-                                    Padding="10,4">
-                                    <TextBlock
-                                        x:Name="OnlineStatusTextBlock"
-                                        MaxLines="1"
-                                        MaxWidth="460"
-                                        Style="{StaticResource CaptionTextStyle}"
-                                        TextTrimming="CharacterEllipsis"
-                                        TextWrapping="NoWrap" />
-                                </Border>
+                            <Grid Grid.Column="1" ColumnSpacing="8" VerticalAlignment="Center">
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="Auto" />
+                                    <ColumnDefinition Width="*" />
+                                </Grid.ColumnDefinitions>
                                 <Border
                                     x:Name="OnlineCacheStatusBorder"
                                     Background="{ThemeResource AppInsetBackgroundBrush}"
@@ -88,13 +82,27 @@
                                         TextTrimming="CharacterEllipsis"
                                         TextWrapping="NoWrap" />
                                 </Border>
-                            </StackPanel>
-                            <StackPanel Grid.Column="3" x:Name="OnlineDownloadProgressPanel" Width="240" Spacing="4" VerticalAlignment="Center" Visibility="Collapsed">
+                                <Border
+                                    x:Name="OnlineStatusBorder"
+                                    Grid.Column="1"
+                                    HorizontalAlignment="Left"
+                                    Background="{ThemeResource AppAccentSoftBrush}"
+                                    CornerRadius="6"
+                                    Padding="10,4">
+                                    <TextBlock
+                                        x:Name="OnlineStatusTextBlock"
+                                        MaxLines="1"
+                                        Style="{StaticResource CaptionTextStyle}"
+                                        TextTrimming="CharacterEllipsis"
+                                        TextWrapping="NoWrap" />
+                                </Border>
+                            </Grid>
+                            <StackPanel Grid.Column="2" x:Name="OnlineDownloadProgressPanel" Width="240" Spacing="4" VerticalAlignment="Center" Visibility="Collapsed">
                                 <TextBlock x:Name="OnlineDownloadProgressTextBlock" Style="{StaticResource CaptionTextStyle}" TextTrimming="CharacterEllipsis" />
                                 <ProgressBar x:Name="OnlineDownloadProgressBar" Minimum="0" Maximum="100" Height="4" />
                             </StackPanel>
-                            <StackPanel Grid.Column="4" Orientation="Horizontal" Spacing="8" VerticalAlignment="Center">
-                                <StackPanel Orientation="Horizontal" Spacing="2" Padding="2" CornerRadius="8" Background="{ThemeResource AppInsetBackgroundBrush}">
+                            <StackPanel Grid.Column="3" Orientation="Horizontal" Spacing="8" VerticalAlignment="Center">
+                                <StackPanel x:Name="OnlineLayoutTogglePanel" Orientation="Horizontal" Spacing="2" Padding="2" CornerRadius="8" Background="{ThemeResource AppInsetBackgroundBrush}">
                                     <Button
                                         x:Name="OnlineListLayoutButton"
                                         Width="36"
@@ -118,7 +126,14 @@
                                     x:Name="RefreshOnlineButton" x:FieldModifier="internal"
                                     Click="OnRefreshOnlineModsClicked"
                                     MinHeight="36"
-                                    Style="{StaticResource SecondaryButtonStyle}" />
+                                    MinWidth="36"
+                                    Padding="10,4"
+                                    Style="{StaticResource SecondaryButtonStyle}">
+                                    <StackPanel Orientation="Horizontal" Spacing="8">
+                                        <FontIcon FontSize="14" Glyph="&#xE72C;" />
+                                        <TextBlock x:Name="RefreshOnlineButtonTextBlock" VerticalAlignment="Center" />
+                                    </StackPanel>
+                                </Button>
                             </StackPanel>
                         </Grid>
 
@@ -191,13 +206,19 @@
                                     <RowDefinition Height="*" />
                                     <RowDefinition Height="Auto" />
                                 </Grid.RowDefinitions>
-                                <!-- One toolbar row: search, sort, then the page filters and options. -->
-                                <Grid ColumnSpacing="8" Canvas.ZIndex="1">
+                                <!-- Search, sort, then the page filters and options. When the search box would get too
+                                     narrow it takes a row of its own; without the character rail the character list joins
+                                     the second row (OnlinePage.UpdateOnlineToolbarLayout). -->
+                                <Grid x:Name="OnlineToolbarGrid" ColumnSpacing="8" RowSpacing="8" Canvas.ZIndex="1">
                                     <Grid.ColumnDefinitions>
                                         <ColumnDefinition Width="*" />
-                                        <ColumnDefinition Width="176" />
+                                        <ColumnDefinition x:Name="OnlineSortColumn" Width="176" />
                                         <ColumnDefinition Width="Auto" />
                                     </Grid.ColumnDefinitions>
+                                    <Grid.RowDefinitions>
+                                        <RowDefinition Height="Auto" />
+                                        <RowDefinition Height="Auto" />
+                                    </Grid.RowDefinitions>
                                     <TextBox
                                         x:Name="OnlineSearchTextBox" x:FieldModifier="internal"
                                         MinHeight="36"
@@ -215,7 +236,7 @@
                                         MinHeight="36"
                                         HorizontalAlignment="Stretch"
                                         SelectionChanged="OnOnlineSortSelectionChanged" />
-                                    <StackPanel Grid.Column="2" Orientation="Horizontal" Spacing="6">
+                                    <StackPanel x:Name="OnlineToolbarButtonsPanel" Grid.Column="2" Orientation="Horizontal" Spacing="6">
                                         <Button x:Name="OnlineWorkFilterButton" MinHeight="36" Padding="10,2" Click="OnOnlineWorkFilterClicked" Style="{StaticResource SecondaryButtonStyle}" />
                                         <Button x:Name="ClearOnlineFiltersButton" MinHeight="36" Padding="10,2" Click="OnClearOnlineFiltersClicked" Style="{StaticResource SecondaryButtonStyle}" />
                                         <Button x:Name="OnlineSavedItemsButton" Width="36" Height="36" Padding="0" Click="OnOnlineSavedItemsClicked" Style="{StaticResource SecondaryButtonStyle}"><FontIcon FontSize="14" Glyph="&#xE734;" /></Button>

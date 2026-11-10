@@ -36,6 +36,10 @@ public sealed partial class OnlinePage
             : windowWidth;
 
         OnlineCharacterRailLayout railLayout = OnlineLayoutPolicy.CharacterRail(onlineContentWidth, _host.Root.ActualHeight);
+        // Narrow pages fold the rail into the toolbar's character list (stage J6-b).
+        _onlineCharacterRailCollapsed = railLayout.Collapsed;
+        OnlineCharacterRailHost.Visibility = railLayout.Collapsed ? Visibility.Collapsed : Visibility.Visible;
+        OnlineCharacterComboBox.Visibility = railLayout.Collapsed ? Visibility.Visible : Visibility.Collapsed;
         bool useHorizontalCharacterRail = railLayout.Horizontal;
         bool characterRailModeChanged = _useHorizontalOnlineCharacterRail != useHorizontalCharacterRail;
         _useHorizontalOnlineCharacterRail = useHorizontalCharacterRail;
@@ -62,6 +66,7 @@ public sealed partial class OnlinePage
         else
         {
             OnlineCharacterRailColumn.Width = new GridLength(railLayout.ColumnWidth);
+            OnlineWorkspaceGrid.ColumnSpacing = railLayout.Collapsed ? 0 : 12;
             OnlineResultsColumn.Width = new GridLength(1, GridUnitType.Star);
             OnlineCharacterRailRow.Height = new GridLength(1, GridUnitType.Star);
             OnlineResultsRow.Height = new GridLength(0);
@@ -80,6 +85,7 @@ public sealed partial class OnlinePage
             OnlineCharacterRailHintTextBlock.Visibility = Visibility.Collapsed;
         }
 
+        UpdateOnlineToolbarLayout();
         if (characterRailModeChanged)
         {
             _onlineCharacterStripSignature = null;
@@ -96,6 +102,69 @@ public sealed partial class OnlinePage
         // The preview keeps a 16:9 frame at the drawer's width instead of a fixed height.
         OnlineDetailHeroBorder.Height = Math.Clamp(Math.Round((OnlineDetailDrawer.Width - 70) * 9 / 16), 220, 400);
         ApplyOnlineDrawerReservation();
+    }
+
+    private bool _onlineCharacterRailCollapsed;
+
+    // One toolbar row while the search box keeps OnlineLayoutPolicy.MinSearchWidth; otherwise the search box gets the
+    // first row and sort, filters (and, without the rail, the character list) the second.
+    private void UpdateOnlineToolbarLayout()
+    {
+        // Desired sizes come from the last layout pass (both sit in Auto columns, so they are their natural sizes);
+        // measuring elements in the tree from here could start a layout cycle.
+        double resultsWidth = OnlineResultsHost.ActualWidth;
+        if (resultsWidth <= 0) return;
+        double controlsWidth = 176 + OnlineToolbarButtonsPanel.DesiredSize.Width + 16;
+        bool twoRows = _onlineCharacterRailCollapsed || OnlineLayoutPolicy.ToolbarOnTwoRows(resultsWidth, controlsWidth);
+        Grid.SetRow(OnlineSearchTextBox, 0);
+        Grid.SetColumnSpan(OnlineSearchTextBox, twoRows ? 3 : 1);
+        int row = twoRows ? 1 : 0;
+        Grid.SetRow(OnlineCharacterComboBox, row);
+        Grid.SetRow(OnlineSortComboBox, row);
+        Grid.SetRow(OnlineToolbarButtonsPanel, row);
+        if (!twoRows)
+        {
+            OnlineSortColumn.Width = new GridLength(176);
+            Grid.SetColumn(OnlineSortComboBox, 1);
+            Grid.SetColumnSpan(OnlineSortComboBox, 1);
+        }
+        else if (_onlineCharacterRailCollapsed)
+        {
+            // Character list and sort share the row evenly.
+            OnlineSortColumn.Width = new GridLength(1, GridUnitType.Star);
+            Grid.SetColumn(OnlineSortComboBox, 1);
+            Grid.SetColumnSpan(OnlineSortComboBox, 1);
+        }
+        else
+        {
+            OnlineSortColumn.Width = new GridLength(176);
+            Grid.SetColumn(OnlineSortComboBox, 0);
+            Grid.SetColumnSpan(OnlineSortComboBox, 2);
+        }
+    }
+
+    private void OnOnlineHeaderSizeChanged(object sender, SizeChangedEventArgs e)
+    {
+        if (Math.Abs(e.NewSize.Width - e.PreviousSize.Width) > 0.5) UpdateOnlineHeaderLayout();
+    }
+
+    // The refresh label goes when the status would keep less than OnlineLayoutPolicy.MinHeaderStatusWidth;
+    // the button keeps its icon, tooltip and automation name.
+    private void UpdateOnlineHeaderLayout()
+    {
+        double headerWidth = OnlineHeaderGrid.ActualWidth;
+        if (headerWidth <= 0) return;
+        var label = new TextBlock { Text = RefreshOnlineButtonTextBlock.Text };
+        label.Measure(new Windows.Foundation.Size(double.PositiveInfinity, double.PositiveInfinity));
+        double progress = OnlineDownloadProgressPanel.Visibility == Visibility.Visible ? OnlineDownloadProgressPanel.Width + 10 : 0;
+        // Title, view switch, the refresh icon and padding, and the column spacing.
+        double other = OnlineTitlePanel.DesiredSize.Width + OnlineLayoutTogglePanel.ActualWidth + 8 + 42 + 30 + progress;
+        bool showLabel = OnlineLayoutPolicy.ShowRefreshLabel(headerWidth, other, label.DesiredSize.Width + 8);
+        RefreshOnlineButtonTextBlock.Visibility = showLabel ? Visibility.Visible : Visibility.Collapsed;
+        // A status cut to a letter or two says nothing; below the minimum it hides (the footer still shows the page).
+        double statusRoom = headerWidth - other - (showLabel ? label.DesiredSize.Width + 8 : 0)
+            - (OnlineCacheStatusBorder.Visibility == Visibility.Visible ? OnlineCacheStatusBorder.ActualWidth + 8 : 0);
+        OnlineStatusBorder.Visibility = statusRoom >= OnlineLayoutPolicy.MinHeaderStatusWidth ? Visibility.Visible : Visibility.Collapsed;
     }
 
     internal bool IsOnlineDetailOpen => OnlineDetailDrawer.Visibility == Visibility.Visible;
@@ -259,6 +328,7 @@ public sealed partial class OnlinePage
     private void OnOnlineResultsHostSizeChanged(object sender, SizeChangedEventArgs e)
     {
         TraceOnlineUiState("Results size changed");
+        if (Math.Abs(e.NewSize.Width - e.PreviousSize.Width) > 0.5) UpdateOnlineToolbarLayout();
         if (_onlinePage.CardLayoutMode == OnlineCardLayoutMode.Grid)
         {
             UpdateOnlineGridCardMetrics(GetOnlineGridAvailableWidth(e.NewSize.Width));

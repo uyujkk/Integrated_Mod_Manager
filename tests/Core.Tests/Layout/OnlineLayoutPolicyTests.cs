@@ -6,7 +6,7 @@ public sealed class OnlineLayoutPolicyTests
 {
     [Theory]
     [InlineData(845, 621, false, 152)]
-    [InlineData(600, 466, false, 152)]
+    [InlineData(720, 466, false, 152)]
     [InlineData(845, 739, false, 152)]
     [InlineData(845, 740, true, 152)]
     [InlineData(1039, 900, true, 152)]
@@ -15,6 +15,28 @@ public sealed class OnlineLayoutPolicyTests
     [InlineData(1600, 900, false, 220)]
     public void ShortWindowsKeepVerticalSpaceForResults(double width, double height, bool horizontal, double columnWidth)
         => Assert.Equal(new OnlineCharacterRailLayout(horizontal, columnWidth), OnlineLayoutPolicy.CharacterRail(width, height));
+
+    [Theory]
+    [InlineData(719, 466)]
+    [InlineData(560, 900)]
+    [InlineData(0, 0)]
+    public void NarrowContentFoldsTheRailIntoTheToolbar(double width, double height)
+        => Assert.Equal(new OnlineCharacterRailLayout(false, 0, true), OnlineLayoutPolicy.CharacterRail(width, height));
+
+    [Theory]
+    [InlineData(1100, 500, false)]
+    [InlineData(740, 500, false)]
+    [InlineData(739, 500, true)]
+    [InlineData(400, 500, true)]
+    public void TheSearchBoxGetsItsOwnRowBeforeItShrinksTooFar(double resultsWidth, double controlsWidth, bool twoRows)
+        => Assert.Equal(twoRows, OnlineLayoutPolicy.ToolbarOnTwoRows(resultsWidth, controlsWidth));
+
+    [Theory]
+    [InlineData(880, 500, 260, true)]
+    [InlineData(880, 500, 261, false)]
+    [InlineData(560, 420, 180, false)]
+    public void TheRefreshLabelYieldsToTheStatus(double headerWidth, double otherWidth, double labelWidth, bool show)
+        => Assert.Equal(show, OnlineLayoutPolicy.ShowRefreshLabel(headerWidth, otherWidth, labelWidth));
 
     [Theory]
     [InlineData(400, 1, 400, 219)]

@@ -7,7 +7,8 @@ public enum OnlineCardLayoutMode
     Grid
 }
 
-public readonly record struct OnlineCharacterRailLayout(bool Horizontal, double ColumnWidth);
+/// <param name="Collapsed">No rail: the character list moves into the toolbar.</param>
+public readonly record struct OnlineCharacterRailLayout(bool Horizontal, double ColumnWidth, bool Collapsed = false);
 
 public readonly record struct OnlineGridTileLayout(int Columns, double ItemWidth, double ItemHeight, double ImageHeight);
 
@@ -20,9 +21,19 @@ public static class OnlineLayoutPolicy
     // The tile keeps a 5 px margin on every side inside its grid cell.
     public const double TileMargin = 5;
 
+    /// <summary>Below this content width a side rail would leave the results too narrow for the toolbar.</summary>
+    public const double CollapsedRailWidth = 720;
+
+    /// <summary>The search box moves to its own toolbar row rather than shrink below this width.</summary>
+    public const double MinSearchWidth = 240;
+
+    /// <summary>The header status keeps at least this much room before the refresh button drops its label.</summary>
+    public const double MinHeaderStatusWidth = 120;
+
     /// <summary>A short window must reserve height for the Mod list, not a second toolbar row.</summary>
     public static OnlineCharacterRailLayout CharacterRail(double contentWidth, double windowHeight)
     {
+        if (contentWidth < CollapsedRailWidth) return new(false, 0, true);
         bool narrow = contentWidth < 1040;
         double width = narrow ? 152 : contentWidth < 1600 ? 188 : 220;
         return new(narrow && windowHeight >= 740, width);
@@ -40,4 +51,12 @@ public static class OnlineLayoutPolicy
         double imageHeight = Math.Clamp(Math.Round((itemWidth - 2 * TileMargin) * 9 / 16), 120, 240);
         return new(columns, itemWidth, imageHeight + TileBodyHeight + 2 * TileMargin, imageHeight);
     }
+
+    /// <summary>Search, sort and the filter buttons share one row while the search box keeps its minimum width.</summary>
+    public static bool ToolbarOnTwoRows(double resultsWidth, double controlsWidth)
+        => resultsWidth - controlsWidth < MinSearchWidth;
+
+    /// <summary>The refresh button shows its label only when the status beside it keeps its minimum room.</summary>
+    public static bool ShowRefreshLabel(double headerWidth, double otherWidth, double labelWidth)
+        => headerWidth - otherWidth - labelWidth >= MinHeaderStatusWidth;
 }

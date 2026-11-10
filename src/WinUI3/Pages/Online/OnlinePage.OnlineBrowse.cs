@@ -170,9 +170,11 @@ public sealed partial class OnlinePage
 
     internal void RefreshOnlineNavigationButtonLabels()
     {
-        RefreshOnlineButton.Content = _isLoadingOnlineMods
+        RefreshOnlineButtonTextBlock.Text = _isLoadingOnlineMods
             ? T("Common.Loading")
             : T("Settings.RefreshOnlineList");
+        UpdateOnlineHeaderLayout();
+        UpdateOnlineToolbarLayout();
         OnlinePrevPageButton.Content = T("Settings.Previous");
         OnlineNextPageButton.Content = T("Settings.Next");
     }

@@ -59,6 +59,8 @@ public sealed partial class OnlinePage
         OnlineStatusTextBlock.Text = _onlinePage.HasStatus
             ? T(_onlinePage.Status!)
             : T("OnlineFeed.ClickRefreshOnlineListToFetch");
+        // The status trims in narrow windows; the tooltip keeps the whole text (also after a language change).
+        ToolTipService.SetToolTip(OnlineStatusTextBlock, OnlineStatusTextBlock.Text);
         bool hasCacheStatus = _onlinePage.HasCacheStatus;
         OnlineCacheStatusBorder.Visibility = hasCacheStatus ? Visibility.Visible : Visibility.Collapsed;
         OnlineCacheStatusTextBlock.Text = hasCacheStatus
@@ -247,6 +249,8 @@ public sealed partial class OnlinePage
         OnlineCacheStatusBorder.Visibility = status is not null ? Visibility.Visible : Visibility.Collapsed;
         OnlineCacheStatusTextBlock.Text = status is not null ? T(status) : string.Empty;
         ToolTipService.SetToolTip(OnlineCacheStatusBorder, status is not null ? T(status) : null);
+        // The cache pill's width changes what is left for the status.
+        DispatcherQueue.TryEnqueue(Microsoft.UI.Dispatching.DispatcherQueuePriority.Low, UpdateOnlineHeaderLayout);
     }
 
     internal void CancelOnlineModListRequest()
@@ -374,7 +378,7 @@ public sealed partial class OnlinePage
         int downloadEnrichmentVersion = ++_onlineDownloadEnrichmentVersion;
 
         _isLoadingOnlineMods = true;
-        RefreshOnlineButton.Content = T("Common.Loading");
+        RefreshOnlineButtonTextBlock.Text = T("Common.Loading");
         RefreshOnlineButton.IsEnabled = false;
         string gameName = GetEffectiveOnlineGameName(repository);
         string categoryLabel = string.IsNullOrWhiteSpace(gameName)
