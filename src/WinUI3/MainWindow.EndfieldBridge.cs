@@ -67,14 +67,14 @@ public sealed partial class MainWindow
         }
         catch (Exception ex)
         {
-            if (_onlineView._onlineWindowClosed) return;
+            if (_services.IsClosing) return;
             LogApplicationIssue("Endfield launch settings", ex);
             await ShowMessageAsync(T("EndfieldBridge.CouldNotOpenEndfieldLaunchSettings") + ex.Message, T("EndfieldBridge.EndfieldLaunch"));
         }
         finally
         {
             _services.EndfieldBridge.OperationInProgress = false;
-            if (!_onlineView._onlineWindowClosed)
+            if (!_services.IsClosing)
             {
                 RefreshEndfieldBridgeControls();
                 RefreshDashboard();
@@ -216,7 +216,7 @@ public sealed partial class MainWindow
         _workspaceView.StatusTextBlock.Text = T("EndfieldBridge.StartingEndfield");
         try
         {
-            LaunchStatus? status = await EndfieldBridgeService.WaitForLaunchStatusAsync(service.Store, sessionId, TimeSpan.FromSeconds(profile.WithMods ? 120 : 45), () => _onlineView._onlineWindowClosed);
+            LaunchStatus? status = await EndfieldBridgeService.WaitForLaunchStatusAsync(service.Store, sessionId, TimeSpan.FromSeconds(profile.WithMods ? 120 : 45), () => _services.IsClosing);
             bool english = profile.English;
             switch (status?.State)
             {
@@ -240,7 +240,7 @@ public sealed partial class MainWindow
         finally
         {
             _services.EndfieldBridge.LaunchInProgress = false;
-            if (!_onlineView._onlineWindowClosed) RefreshEndfieldBridgeControls();
+            if (!_services.IsClosing) RefreshEndfieldBridgeControls();
         }
     }
 

@@ -29,26 +29,26 @@ public sealed partial class OnlinePage
         _activeBrowseSessionKey = key;
         CancelOnlineModListRequest();
         _lastLoadedOnlineConfigKey = null;
-        _onlinePage.Mods.Clear();
+        _services.Online.Page.Mods.Clear();
         EnsureOnlineCharacterOptionsForRepository(_services.Repositories.Selected);
         ++_browseRestoreRevision;
-        var state = key is not null && _onlinePreferences.BrowseSessions.TryGetValue(key, out var saved) && saved is not null
-            ? saved.Sanitize() : new OnlineBrowseSession { Layout = _onlinePage.CardLayoutMode.ToString() };
+        var state = key is not null && _services.Online.Preferences.BrowseSessions.TryGetValue(key, out var saved) && saved is not null
+            ? saved.Sanitize() : new OnlineBrowseSession { Layout = _services.Online.Page.CardLayoutMode.ToString() };
         _pendingBrowsePosition = state;
         _restoringBrowseControls = _resettingOnlineFilters = true;
         try
         {
-            _onlinePage.CurrentPage = state.Page;
-            _onlinePage.CharacterFilter = state.Character;
-            _onlinePage.AuthorId = state.AuthorId;
-            _onlinePage.AuthorName = state.AuthorName;
-            _onlinePage.SearchText = state.Search;
-            _onlinePage.SortMode = Enum.Parse<OnlineSortMode>(state.Sort);
-            _onlinePage.CardLayoutMode = Enum.Parse<OnlineCardLayoutMode>(state.Layout);
-            _onlinePage.AuthorWorkFilter = state.WorkFilter;
+            _services.Online.Page.CurrentPage = state.Page;
+            _services.Online.Page.CharacterFilter = state.Character;
+            _services.Online.Page.AuthorId = state.AuthorId;
+            _services.Online.Page.AuthorName = state.AuthorName;
+            _services.Online.Page.SearchText = state.Search;
+            _services.Online.Page.SortMode = Enum.Parse<OnlineSortMode>(state.Sort);
+            _services.Online.Page.CardLayoutMode = Enum.Parse<OnlineCardLayoutMode>(state.Layout);
+            _services.Online.Page.AuthorWorkFilter = state.WorkFilter;
             OnlineSearchTextBox.Text = state.Search;
             OnlineSortComboBox.SelectedItem = OnlineSortComboBox.Items.OfType<ComboBoxItem>()
-                .FirstOrDefault(item => item.Tag is OnlineSortMode sort && sort == _onlinePage.SortMode);
+                .FirstOrDefault(item => item.Tag is OnlineSortMode sort && sort == _services.Online.Page.SortMode);
         }
         finally { _restoringBrowseControls = _resettingOnlineFilters = false; }
     }
@@ -58,9 +58,9 @@ public sealed partial class OnlinePage
         if (_activeBrowseSessionKey is null || _activeBrowseSessionKey != CurrentBrowseSessionKey() || _restoringBrowseControls) return;
         var state = new OnlineBrowseSession
         {
-            Page = _onlinePage.CurrentPage, Character = _onlinePage.CharacterFilter, AuthorId = _onlinePage.AuthorId,
-            AuthorName = _onlinePage.AuthorName, Search = _onlinePage.SearchText, Sort = _onlinePage.SortMode.ToString(),
-            Layout = _onlinePage.CardLayoutMode.ToString(), WorkFilter = _onlinePage.AuthorWorkFilter
+            Page = _services.Online.Page.CurrentPage, Character = _services.Online.Page.CharacterFilter, AuthorId = _services.Online.Page.AuthorId,
+            AuthorName = _services.Online.Page.AuthorName, Search = _services.Online.Page.SearchText, Sort = _services.Online.Page.SortMode.ToString(),
+            Layout = _services.Online.Page.CardLayoutMode.ToString(), WorkFilter = _services.Online.Page.AuthorWorkFilter
         };
         if (_pendingBrowsePosition is { } pending)
         { state.Offset = pending.Offset; state.Anchor = pending.Anchor; state.AnchorOffset = pending.AnchorOffset; }
@@ -68,7 +68,7 @@ public sealed partial class OnlinePage
         {
             state.Offset = viewer.VerticalOffset;
             var list = OnlineResultsList();
-            foreach (var mod in _onlinePage.VisibleMods)
+            foreach (var mod in _services.Online.Page.VisibleMods)
             {
                 if (list.ContainerFromItem(mod) is not FrameworkElement container) continue;
                 double y;
@@ -80,13 +80,13 @@ public sealed partial class OnlinePage
                 break;
             }
         }
-        _onlinePreferences.BrowseSessions.Remove(_activeBrowseSessionKey);
-        _onlinePreferences.BrowseSessions[_activeBrowseSessionKey] = state.Sanitize();
-        while (_onlinePreferences.BrowseSessions.Count > 64)
-            _onlinePreferences.BrowseSessions.Remove(_onlinePreferences.BrowseSessions.Keys.First());
+        _services.Online.Preferences.BrowseSessions.Remove(_activeBrowseSessionKey);
+        _services.Online.Preferences.BrowseSessions[_activeBrowseSessionKey] = state.Sanitize();
+        while (_services.Online.Preferences.BrowseSessions.Count > 64)
+            _services.Online.Preferences.BrowseSessions.Remove(_services.Online.Preferences.BrowseSessions.Keys.First());
     }
 
-    private ListViewBase OnlineResultsList() => _onlinePage.CardLayoutMode == OnlineCardLayoutMode.Grid
+    private ListViewBase OnlineResultsList() => _services.Online.Page.CardLayoutMode == OnlineCardLayoutMode.Grid
         ? OnlineVirtualizedGridView : OnlineVirtualizedListView;
 
     private ScrollViewer? OnlineResultsScrollViewer() => FindBrowseViewer(OnlineResultsList());
@@ -103,7 +103,7 @@ public sealed partial class OnlinePage
         _browseSaveTimer = DispatcherQueue.CreateTimer();
         _browseSaveTimer.Interval = TimeSpan.FromMilliseconds(600);
         _browseSaveTimer.IsRepeating = false;
-        _browseSaveTimer.Tick += (_, _) => { if (!_onlineWindowClosed) _host.SaveShellConfig(); };
+        _browseSaveTimer.Tick += (_, _) => { if (!_services.IsClosing) _host.SaveShellConfig(); };
         foreach (ListViewBase list in new ListViewBase[] { OnlineVirtualizedListView, OnlineVirtualizedGridView })
             list.Loaded += (_, _) =>
             {
@@ -112,7 +112,7 @@ public sealed partial class OnlinePage
                     viewer.Tag = "BrowseTracked";
                     viewer.ViewChanged += (_, args) =>
                     {
-                        if (!args.IsIntermediate && _pendingBrowsePosition is null && !_onlineWindowClosed
+                        if (!args.IsIntermediate && _pendingBrowsePosition is null && !_services.IsClosing
                             && ReferenceEquals(list, OnlineResultsList()))
                         { _browseSaveTimer.Stop(); _browseSaveTimer.Start(); }
                     };
@@ -129,18 +129,18 @@ public sealed partial class OnlinePage
 
     private void QueueRestoreOnlineBrowsePosition()
     {
-        if (_pendingBrowsePosition is not { } state || _isLoadingOnlineMods || _onlinePage.VisibleMods.Count == 0
+        if (_pendingBrowsePosition is not { } state || _isLoadingOnlineMods || _services.Online.Page.VisibleMods.Count == 0
             || !_host.IsOnlinePageShown || !OnlineResultsList().IsLoaded) return;
         int revision = ++_browseRestoreRevision;
         string? key = _activeBrowseSessionKey;
         var list = OnlineResultsList();
-        var anchor = _onlinePage.VisibleMods.FirstOrDefault(mod => GetOnlineDownloadIdentity(mod) == state.Anchor);
+        var anchor = _services.Online.Page.VisibleMods.FirstOrDefault(mod => GetOnlineDownloadIdentity(mod) == state.Anchor);
         int attempts = 0;
         bool scrolledToAnchor = false;
         EventHandler<object>? handler = null;
         void Restore()
         {
-            if (_onlineWindowClosed || revision != _browseRestoreRevision || key != CurrentBrowseSessionKey()
+            if (_services.IsClosing || revision != _browseRestoreRevision || key != CurrentBrowseSessionKey()
                 || !ReferenceEquals(list, OnlineResultsList())) { list.LayoutUpdated -= handler; return; }
             if (FindBrowseViewer(list) is not { } viewer || viewer.ViewportHeight <= 0)
             { if (++attempts > 12) list.LayoutUpdated -= handler; return; }

@@ -54,7 +54,7 @@ public sealed partial class MainWindow
         task.Status = status;
         task.StatusZh = status.Resolve(UiLanguagePolicy.Chinese);
         task.StatusEn = status.Resolve(UiLanguagePolicy.English);
-        if (!_onlineView._onlineWindowClosed && (phaseChanged || DownloadProgressPolicy.IsTerminal(state))) _onlineView.PersistDownloadTasks();
+        if (!_services.IsClosing && (phaseChanged || DownloadProgressPolicy.IsTerminal(state))) _onlineView.PersistDownloadTasks();
 
         DateTimeOffset now = DateTimeOffset.UtcNow;
         if (!forceRefresh && now - task.LastUiRefreshUtc < TimeSpan.FromMilliseconds(125))
@@ -64,7 +64,7 @@ public sealed partial class MainWindow
         task.LastUiRefreshUtc = now;
         DispatcherQueue.TryEnqueue(() =>
         {
-            if (_onlineView._onlineWindowClosed) return;
+            if (_services.IsClosing) return;
             RefreshDownloadTaskCard(task);
             _onlineView.RefreshOnlineCardStates(refreshInstalled: DownloadProgressPolicy.IsTerminal(task.State));
         });

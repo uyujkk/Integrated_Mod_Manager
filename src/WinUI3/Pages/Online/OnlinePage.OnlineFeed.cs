@@ -25,7 +25,7 @@ public sealed partial class OnlinePage
         OnlineSortComboBox.Items.Add(new ComboBoxItem { Content = T("OnlineFeed.SortByUpdatedTime"), Tag = OnlineSortMode.Updated });
         OnlineSortComboBox.SelectedItem = OnlineSortComboBox.Items
             .OfType<ComboBoxItem>()
-            .FirstOrDefault(item => item.Tag is OnlineSortMode sortMode && sortMode == _onlinePage.SortMode)
+            .FirstOrDefault(item => item.Tag is OnlineSortMode sortMode && sortMode == _services.Online.Page.SortMode)
             ?? OnlineSortComboBox.Items.OfType<ComboBoxItem>().FirstOrDefault();
         PopulateOnlineCharacterOptions();
     }
@@ -43,38 +43,38 @@ public sealed partial class OnlinePage
         bool canLoadOnlineMods = hasRepository && isSupportedSource && !string.IsNullOrWhiteSpace(effectiveCategoryId);
         string requestCategoryId = GetOnlineRequestCategoryId(repository);
         string configKey = hasRepository
-            ? $"{repository!.Id}|{effectiveSource}|{requestCategoryId}|character={_onlinePage.CharacterFilter}|page={_onlinePage.CurrentPage}{OnlineAuthorKey}"
+            ? $"{repository!.Id}|{effectiveSource}|{requestCategoryId}|character={_services.Online.Page.CharacterFilter}|page={_services.Online.Page.CurrentPage}{OnlineAuthorKey}"
             : string.Empty;
 
         if (!string.IsNullOrEmpty(_lastLoadedOnlineConfigKey)
             && !string.Equals(_lastLoadedOnlineConfigKey, configKey, StringComparison.Ordinal)
             && !_isLoadingOnlineMods)
         {
-            _onlinePage.Mods.Clear();
+            _services.Online.Page.Mods.Clear();
         }
 
         RefreshOnlineButton.IsEnabled = canLoadOnlineMods && !_isLoadingOnlineMods;
         if (_isLoadingOnlineMods && OnlineLoadingOverlay.Visibility != Visibility.Visible) ShowOnlineLoadingPlaceholders();
         OnlineLoadingOverlay.Visibility = _isLoadingOnlineMods ? Visibility.Visible : Visibility.Collapsed;
         OnlineLoadingTextBlock.Text = T("OnlineFeed.LoadingOnlineModsPleaseWait");
-        OnlineStatusTextBlock.Text = _onlinePage.HasStatus
-            ? T(_onlinePage.Status!)
+        OnlineStatusTextBlock.Text = _services.Online.Page.HasStatus
+            ? T(_services.Online.Page.Status!)
             : T("OnlineFeed.ClickRefreshOnlineListToFetch");
         // The status trims in narrow windows; the tooltip keeps the whole text (also after a language change).
         ToolTipService.SetToolTip(OnlineStatusTextBlock, OnlineStatusTextBlock.Text);
-        bool hasCacheStatus = _onlinePage.HasCacheStatus;
+        bool hasCacheStatus = _services.Online.Page.HasCacheStatus;
         OnlineCacheStatusBorder.Visibility = hasCacheStatus ? Visibility.Visible : Visibility.Collapsed;
         OnlineCacheStatusTextBlock.Text = hasCacheStatus
-            ? T(_onlinePage.CacheStatus!)
+            ? T(_services.Online.Page.CacheStatus!)
             : string.Empty;
         List<OnlineModCard> filteredMods = canLoadOnlineMods ? GetFilteredOnlineMods() : [];
         List<OnlineModCard> visibleMods = GetVisibleOnlineMods(filteredMods);
-        RefreshOnlineFilterSummary(visibleMods.Count, _onlinePage.Mods.Count);
+        RefreshOnlineFilterSummary(visibleMods.Count, _services.Online.Page.Mods.Count);
         OnlinePaginationTextBlock.Text = canLoadOnlineMods
-            ? T("OnlineFeed.PageModsTotal", _onlinePage.CurrentPage, _onlinePage.TotalPages, _onlinePage.TotalCount)
+            ? T("OnlineFeed.PageModsTotal", _services.Online.Page.CurrentPage, _services.Online.Page.TotalPages, _services.Online.Page.TotalCount)
             : T("OnlineFeed.WaitingForOnlineConfig");
-        OnlinePrevPageButton.IsEnabled = canLoadOnlineMods && !_isLoadingOnlineMods && _onlinePage.HasPreviousPage;
-        OnlineNextPageButton.IsEnabled = canLoadOnlineMods && !_isLoadingOnlineMods && _onlinePage.HasNextPage;
+        OnlinePrevPageButton.IsEnabled = canLoadOnlineMods && !_isLoadingOnlineMods && _services.Online.Page.HasPreviousPage;
+        OnlineNextPageButton.IsEnabled = canLoadOnlineMods && !_isLoadingOnlineMods && _services.Online.Page.HasNextPage;
         OnlineSearchTextBox.PlaceholderText = T("OnlineFeed.SearchThisPageCharacterModOr");
         OnlineSearchTextBox.IsEnabled = canLoadOnlineMods && !_isLoadingOnlineMods;
         OnlineCharacterComboBox.IsEnabled = canLoadOnlineMods && !_isLoadingOnlineMods;
@@ -84,7 +84,7 @@ public sealed partial class OnlinePage
         UpdateOnlineCardLayoutControls();
 
         // Status-only refreshes must not reset either virtualized view's scroll position.
-        bool resultsChanged = OnlineBrowseStateAdapter.Synchronize(_onlinePage.VisibleMods, visibleMods);
+        bool resultsChanged = OnlineBrowseStateAdapter.Synchronize(_services.Online.Page.VisibleMods, visibleMods);
         RefreshOnlineCardPresentation();
         RefreshOnlineCardStates();
         ToolTipService.SetToolTip(OnlineSearchTextBox, T("OnlineFeed.SearchThisPageByCharacterMod"));
@@ -109,7 +109,7 @@ public sealed partial class OnlinePage
             return;
         }
 
-        if (_onlinePage.Mods.Count == 0)
+        if (_services.Online.Page.Mods.Count == 0)
         {
             ShowOnlineEmptyResults(CreateOnlineEmptyState("\uE72C",
                 T("OnlineFeed.ReadyToLoadRealData"),
@@ -129,7 +129,7 @@ public sealed partial class OnlinePage
             }
         }
 
-        if (_onlinePage.CardLayoutMode == OnlineCardLayoutMode.Grid)
+        if (_services.Online.Page.CardLayoutMode == OnlineCardLayoutMode.Grid)
         {
             DispatcherQueue.TryEnqueue(() => UpdateOnlineGridCardMetrics(
                 GetOnlineGridAvailableWidth(OnlineVirtualizedGridView.ActualWidth)));
@@ -168,25 +168,25 @@ public sealed partial class OnlinePage
 
     private List<OnlineModCard> GetFilteredOnlineMods()
     {
-        IEnumerable<OnlineModCard> query = _onlinePage.Mods
+        IEnumerable<OnlineModCard> query = _services.Online.Page.Mods
             .Where(mod => IsAllowedSkinCategory(mod.RootCategoryName));
 
-        if (!string.IsNullOrWhiteSpace(_onlinePage.CharacterFilter))
+        if (!string.IsNullOrWhiteSpace(_services.Online.Page.CharacterFilter))
         {
             query = query.Where(mod => DoesOnlineModMatchCharacter(
-                _onlinePage.CharacterFilter,
+                _services.Online.Page.CharacterFilter,
                 mod.CharacterName));
         }
 
-        if (!string.IsNullOrWhiteSpace(_onlinePage.SearchText))
+        if (!string.IsNullOrWhiteSpace(_services.Online.Page.SearchText))
         {
-            query = query.Where(mod => MatchesOnlineSearch(mod, _onlinePage.SearchText));
+            query = query.Where(mod => MatchesOnlineSearch(mod, _services.Online.Page.SearchText));
         }
 
-        if (_onlinePage.AuthorWorkFilter == 1) query = query.Where(mod => FindInstalledOnlineMod(mod) is not null);
-        else if (_onlinePage.AuthorWorkFilter == 2) query = query.Where(IsSavedOnlineMod);
+        if (_services.Online.Page.AuthorWorkFilter == 1) query = query.Where(mod => FindInstalledOnlineMod(mod) is not null);
+        else if (_services.Online.Page.AuthorWorkFilter == 2) query = query.Where(IsSavedOnlineMod);
 
-        return OnlineBrowseOrder.Sort(query, _onlinePage.SortMode).ToList();
+        return OnlineBrowseOrder.Sort(query, _services.Online.Page.SortMode).ToList();
     }
 
     private List<OnlineModCard> GetVisibleOnlineMods(List<OnlineModCard> filteredMods)
@@ -230,8 +230,8 @@ public sealed partial class OnlinePage
     private string GetOnlineRequestCategoryId(WorkspaceRepository? repository)
     {
         EnsureOnlineCharacterOptionsForRepository(repository);
-        OnlineCharacterOption? selectedCharacter = _onlinePage.CharacterOptions.FirstOrDefault(character =>
-            string.Equals(character.Key, _onlinePage.CharacterFilter, StringComparison.OrdinalIgnoreCase));
+        OnlineCharacterOption? selectedCharacter = _services.Online.Page.CharacterOptions.FirstOrDefault(character =>
+            string.Equals(character.Key, _services.Online.Page.CharacterFilter, StringComparison.OrdinalIgnoreCase));
         return selectedCharacter is not null && !string.IsNullOrWhiteSpace(selectedCharacter.CategoryId)
             ? selectedCharacter.CategoryId
             : GetEffectiveOnlineCategoryId(repository);
@@ -239,14 +239,14 @@ public sealed partial class OnlinePage
 
     private void SetOnlineStatus(UiMessage status)
     {
-        _onlinePage.SetStatus(status);
+        _services.Online.Page.SetStatus(status);
         OnlineStatusTextBlock.Text = T(status);
         ToolTipService.SetToolTip(OnlineStatusTextBlock, T(status));
     }
 
     private void SetOnlineCacheStatus(UiMessage? status)
     {
-        _onlinePage.SetCacheStatus(status);
+        _services.Online.Page.SetCacheStatus(status);
         OnlineCacheStatusBorder.Visibility = status is not null ? Visibility.Visible : Visibility.Collapsed;
         OnlineCacheStatusTextBlock.Text = status is not null ? T(status) : string.Empty;
         ToolTipService.SetToolTip(OnlineCacheStatusBorder, status is not null ? T(status) : null);
@@ -355,8 +355,8 @@ public sealed partial class OnlinePage
             return;
         }
 
-        int authorId = _onlinePage.AuthorId;
-        string configKey = $"{repository.Id}|{source}|{categoryId}|character={_onlinePage.CharacterFilter}|page={_onlinePage.CurrentPage}{OnlineAuthorKey}";
+        int authorId = _services.Online.Page.AuthorId;
+        string configKey = $"{repository.Id}|{source}|{categoryId}|character={_services.Online.Page.CharacterFilter}|page={_services.Online.Page.CurrentPage}{OnlineAuthorKey}";
         if (forceReload)
         {
             _blockedOnlineAutoLoadConfigKey = null;
@@ -367,7 +367,7 @@ public sealed partial class OnlinePage
             return;
         }
 
-        if (!forceReload && string.Equals(configKey, _lastLoadedOnlineConfigKey, StringComparison.Ordinal) && _onlinePage.Mods.Count > 0)
+        if (!forceReload && string.Equals(configKey, _lastLoadedOnlineConfigKey, StringComparison.Ordinal) && _services.Online.Page.Mods.Count > 0)
         {
             RefreshOnlinePaneV2();
             return;
@@ -395,14 +395,14 @@ public sealed partial class OnlinePage
 
         try
         {
-            bool needsCharacterFallback = !string.IsNullOrWhiteSpace(_onlinePage.CharacterFilter)
+            bool needsCharacterFallback = !string.IsNullOrWhiteSpace(_services.Online.Page.CharacterFilter)
                 && string.Equals(categoryId, baseCategoryId, StringComparison.OrdinalIgnoreCase);
             string cacheCategoryKey = (needsCharacterFallback
-                ? $"category-v3|{baseCategoryId}-character-{_onlinePage.CharacterFilter}"
+                ? $"category-v3|{baseCategoryId}-character-{_services.Online.Page.CharacterFilter}"
                 : $"category-v3|{categoryId}") + (authorId > 0 ? $"|author={authorId}" : string.Empty);
             OnlineCategoryPageResult? cachedPage = forceReload
                 ? null
-                : await TryReadOnlineCategoryPageCacheAsync(cacheCategoryKey, _onlinePage.CurrentPage);
+                : await TryReadOnlineCategoryPageCacheAsync(cacheCategoryKey, _services.Online.Page.CurrentPage);
             bool loadedFromCache = cachedPage is not null;
             bool loadedDuringRateLimit = false;
             bool loadedAfterTimeout = false;
@@ -411,7 +411,7 @@ public sealed partial class OnlinePage
             {
                 OnlineCategoryPageResult? stalePage = await TryReadOnlineCategoryPageCacheAsync(
                     cacheCategoryKey,
-                    _onlinePage.CurrentPage,
+                    _services.Online.Page.CurrentPage,
                     allowExpired: true);
                 if (stalePage is null)
                 {
@@ -434,14 +434,14 @@ public sealed partial class OnlinePage
                         ?? (needsCharacterFallback && authorId == 0
                             ? await FetchGameBananaCharacterFallbackPageAsync(
                                 baseCategoryId,
-                                _onlinePage.CharacterFilter,
-                                _onlinePage.CurrentPage,
+                                _services.Online.Page.CharacterFilter,
+                                _services.Online.Page.CurrentPage,
                                 useEndfieldMetadata,
                                 cacheCategoryKey,
                                 linkedCancellation.Token)
                             : await FetchGameBananaCategoryPageAsync(
                                 categoryId,
-                                _onlinePage.CurrentPage,
+                                _services.Online.Page.CurrentPage,
                                 useEndfieldMetadata: useEndfieldMetadata,
                                 cancellationToken: linkedCancellation.Token,
                                 authorId: authorId));
@@ -455,7 +455,7 @@ public sealed partial class OnlinePage
                     RegisterOnlineRateLimit(ex.RetryAfter);
                     OnlineCategoryPageResult? stalePage = await TryReadOnlineCategoryPageCacheAsync(
                         cacheCategoryKey,
-                        _onlinePage.CurrentPage,
+                        _services.Online.Page.CurrentPage,
                         allowExpired: true);
                     if (stalePage is null)
                     {
@@ -470,7 +470,7 @@ public sealed partial class OnlinePage
                 {
                     OnlineCategoryPageResult? stalePage = await TryReadOnlineCategoryPageCacheAsync(
                         cacheCategoryKey,
-                        _onlinePage.CurrentPage,
+                        _services.Online.Page.CurrentPage,
                         allowExpired: true);
                     if (stalePage is null)
                     {
@@ -515,27 +515,27 @@ public sealed partial class OnlinePage
             }
 
             // A remembered author/category may have fewer pages after entries are removed.
-            if (_onlinePage.CurrentPage > Math.Max(1, pageResult.TotalPages))
+            if (_services.Online.Page.CurrentPage > Math.Max(1, pageResult.TotalPages))
             {
-                _onlinePage.CurrentPage = Math.Max(1, pageResult.TotalPages);
+                _services.Online.Page.CurrentPage = Math.Max(1, pageResult.TotalPages);
                 ResetOnlineBrowsePosition();
                 await LoadOnlineModsAsync(forceReload: false);
                 return;
             }
 
-            _onlinePage.Mods.Clear();
-            _onlinePage.Mods.AddRange(pageResult.Mods);
-            _onlinePage.KnownCharacters.Clear();
-            foreach (string character in _onlinePage.Mods
+            _services.Online.Page.Mods.Clear();
+            _services.Online.Page.Mods.AddRange(pageResult.Mods);
+            _services.Online.Page.KnownCharacters.Clear();
+            foreach (string character in _services.Online.Page.Mods
                          .Select(mod => mod.CharacterName)
                          .Where(name => !string.IsNullOrWhiteSpace(name)))
             {
-                _onlinePage.KnownCharacters.Add(character);
+                _services.Online.Page.KnownCharacters.Add(character);
             }
 
-            MergeOnlineCharacterOptionsFromMods(_onlinePage.Mods);
+            MergeOnlineCharacterOptionsFromMods(_services.Online.Page.Mods);
             PopulateOnlineCharacterOptions();
-            _onlinePage.ApplyPageResult(pageResult.TotalCount, pageResult.TotalPages);
+            _services.Online.Page.ApplyPageResult(pageResult.TotalCount, pageResult.TotalPages);
 
             if (pageResult.Mods.Count == 0)
             {
@@ -559,13 +559,13 @@ public sealed partial class OnlinePage
 
             // A character scan already cached every page; otherwise warm the next page (also after a
             // cache hit, so paging forward stays instant). Never while throttled or after a timeout.
-            if (!needsCharacterFallback && !loadedDuringRateLimit && !loadedAfterTimeout && _onlinePage.CurrentPage < _onlinePage.TotalPages)
+            if (!needsCharacterFallback && !loadedDuringRateLimit && !loadedAfterTimeout && _services.Online.Page.CurrentPage < _services.Online.Page.TotalPages)
             {
-                _ = PrefetchNextOnlinePageAsync(categoryId, _onlinePage.CurrentPage + 1, useEndfieldMetadata, authorId, cacheCategoryKey, configKey);
+                _ = PrefetchNextOnlinePageAsync(categoryId, _services.Online.Page.CurrentPage + 1, useEndfieldMetadata, authorId, cacheCategoryKey, configKey);
             }
 
-            OnlineCharacterOption? selectedCharacter = _onlinePage.CharacterOptions.FirstOrDefault(character =>
-                string.Equals(character.Key, _onlinePage.CharacterFilter, StringComparison.OrdinalIgnoreCase));
+            OnlineCharacterOption? selectedCharacter = _services.Online.Page.CharacterOptions.FirstOrDefault(character =>
+                string.Equals(character.Key, _services.Online.Page.CharacterFilter, StringComparison.OrdinalIgnoreCase));
             string roleLabel = selectedCharacter is null
                 ? T("OnlineFeed.AllCategories")
                 : IsChineseUi ? selectedCharacter.DisplayNameZh : selectedCharacter.DisplayNameEn;
@@ -573,9 +573,9 @@ public sealed partial class OnlinePage
                 ? FormatOnlineCacheAge(pageResult.CachedAtUtc, loadedDuringRateLimit || loadedAfterTimeout)
                 : M("OnlineFeed.Live"));
             SetOnlineStatus(
-                loadedAfterTimeout ? M("OnlineFeed.TimeoutCachePage", roleLabel, _onlinePage.CurrentPage)
-                : loadedDuringRateLimit ? M("OnlineFeed.RateLimitedCachePage", roleLabel, _onlinePage.CurrentPage)
-                : M(loadedFromCache ? "OnlineFeed.LocalCachePage" : "OnlineFeed.UpdatedPage", roleLabel, _onlinePage.CurrentPage, _onlinePage.TotalCount));
+                loadedAfterTimeout ? M("OnlineFeed.TimeoutCachePage", roleLabel, _services.Online.Page.CurrentPage)
+                : loadedDuringRateLimit ? M("OnlineFeed.RateLimitedCachePage", roleLabel, _services.Online.Page.CurrentPage)
+                : M(loadedFromCache ? "OnlineFeed.LocalCachePage" : "OnlineFeed.UpdatedPage", roleLabel, _services.Online.Page.CurrentPage, _services.Online.Page.TotalCount));
             if (loadedAfterTimeout)
             {
                 ShowAppNotification(T("OnlineFeed.TimeoutShowingCache"), InfoBarSeverity.Warning);
@@ -908,13 +908,13 @@ public sealed partial class OnlinePage
     {
         try
         {
-            if (_onlinePage.CurrentPage <= 1 || _isLoadingOnlineMods)
+            if (_services.Online.Page.CurrentPage <= 1 || _isLoadingOnlineMods)
             {
                 return;
             }
 
             ResetOnlineBrowsePosition();
-            _onlinePage.CurrentPage--;
+            _services.Online.Page.CurrentPage--;
             await LoadOnlineModsAsync(forceReload: false);
         }
         catch (Exception ex)
@@ -927,13 +927,13 @@ public sealed partial class OnlinePage
     {
         try
         {
-            if (_onlinePage.CurrentPage >= _onlinePage.TotalPages || _isLoadingOnlineMods)
+            if (_services.Online.Page.CurrentPage >= _services.Online.Page.TotalPages || _isLoadingOnlineMods)
             {
                 return;
             }
 
             ResetOnlineBrowsePosition();
-            _onlinePage.CurrentPage++;
+            _services.Online.Page.CurrentPage++;
             await LoadOnlineModsAsync(forceReload: false);
         }
         catch (Exception ex)
@@ -944,7 +944,7 @@ public sealed partial class OnlinePage
 
     private void OnOnlineSearchTextChanged(object sender, TextChangedEventArgs e)
     {
-        _onlinePage.SearchText = OnlineSearchTextBox.Text?.Trim() ?? string.Empty;
+        _services.Online.Page.SearchText = OnlineSearchTextBox.Text?.Trim() ?? string.Empty;
         if (_resettingOnlineFilters) return;
         ResetOnlineBrowsePosition();
         RefreshOnlinePaneV2();

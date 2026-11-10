@@ -1208,7 +1208,7 @@ public sealed partial class WorkspacePage
         }
         _repositoryInfoSize.Text = "…";
         long? bytes = mod.SizeBytes ?? await EnsureModSizeAsync(mod);
-        if (bytes is long size && revision == _repositorySizeRevision && !_host.OnlineView._onlineWindowClosed)
+        if (bytes is long size && revision == _repositorySizeRevision && !_services.IsClosing)
             _repositoryInfoSize.Text = T("RepositoryWorkspace.SizeAndFiles", OnlinePage.FormatFileSize(size), mod.Files.Count);
     }
 

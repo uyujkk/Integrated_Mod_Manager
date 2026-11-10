@@ -82,13 +82,13 @@ public sealed partial class MainWindow
         _onlineView.CancelOnlineModListRequest();
         _onlineView.InvalidateOnlineDetailRequest();
         _onlineView._onlineDownloadEnrichmentVersion++;
-        _onlineView._onlinePage.ResetPaging();
-        _onlineView._onlinePage.CharacterFilter = string.Empty;
-        _onlineView._onlinePage.KnownCharacters.Clear();
-        _onlineView._onlinePage.AuthorId = 0;
-        _onlineView._onlinePage.AuthorName = string.Empty;
+        _services.Online.Page.ResetPaging();
+        _services.Online.Page.CharacterFilter = string.Empty;
+        _services.Online.Page.KnownCharacters.Clear();
+        _services.Online.Page.AuthorId = 0;
+        _services.Online.Page.AuthorName = string.Empty;
         _onlineView._lastLoadedOnlineConfigKey = null;
-        _onlineView._onlinePage.Mods.Clear();
+        _services.Online.Page.Mods.Clear();
         _onlineView._activeOnlineDetailMod = null;
         _onlineView.ResetOnlineDetailPaneToPlaceholder();
     }
@@ -212,11 +212,11 @@ public sealed partial class MainWindow
 
             _services.Repositories.Items.Add(repository);
             _services.Repositories.SelectedId = repository.Id;
-            _onlineView._onlinePage.ResetPaging();
-            _onlineView._onlinePage.CharacterFilter = string.Empty;
-            _onlineView._onlinePage.KnownCharacters.Clear();
+            _services.Online.Page.ResetPaging();
+            _services.Online.Page.CharacterFilter = string.Empty;
+            _services.Online.Page.KnownCharacters.Clear();
             _onlineView._lastLoadedOnlineConfigKey = null;
-            _onlineView._onlinePage.Mods.Clear();
+            _services.Online.Page.Mods.Clear();
             _currentPrimarySection = PrimarySection.Repository;
             ApplySelectedRepositoryToInputs();
             SaveConfig();
@@ -291,11 +291,11 @@ public sealed partial class MainWindow
             _services.Repositories.Items.Add(repository);
             _services.Repositories.SelectedId = repository.Id;
             _currentPrimarySection = PrimarySection.Repository;
-            _onlineView._onlinePage.ResetPaging();
-            _onlineView._onlinePage.CharacterFilter = string.Empty;
-            _onlineView._onlinePage.KnownCharacters.Clear();
+            _services.Online.Page.ResetPaging();
+            _services.Online.Page.CharacterFilter = string.Empty;
+            _services.Online.Page.KnownCharacters.Clear();
             _onlineView._lastLoadedOnlineConfigKey = null;
-            _onlineView._onlinePage.Mods.Clear();
+            _services.Online.Page.Mods.Clear();
             ApplySelectedRepositoryToInputs();
             SaveConfig();
             ApplyShellState(refreshRepository: false);
@@ -413,16 +413,16 @@ public sealed partial class MainWindow
             }
 
             _onlineView.EnsureOnlineCharacterOptionsForRepository(repository);
-            if (!_onlineView._onlinePage.CharacterOptions.Any(character => character.IsWikiCharacter))
+            if (!_services.Online.Page.CharacterOptions.Any(character => character.IsWikiCharacter))
             {
                 _ = _onlineView.EnsureOnlineCharacterCatalogAsync(repository, forceReload: false);
-                for (int attempt = 0; attempt < 12 && !_onlineView._onlinePage.CharacterOptions.Any(character => character.IsWikiCharacter); attempt++)
+                for (int attempt = 0; attempt < 12 && !_services.Online.Page.CharacterOptions.Any(character => character.IsWikiCharacter); attempt++)
                 {
                     await Task.Delay(250);
                 }
             }
 
-            List<OnlineCharacterOption> wikiCharacters = _onlineView._onlinePage.CharacterOptions
+            List<OnlineCharacterOption> wikiCharacters = _services.Online.Page.CharacterOptions
                 .Where(character => character.IsWikiCharacter)
                 .OrderBy(character => character.WikiOrder)
                 .ToList();
@@ -434,7 +434,7 @@ public sealed partial class MainWindow
                 return;
             }
 
-            List<OnlineCharacterOption> categoryCandidates = _onlineView._onlinePage.CharacterOptions
+            List<OnlineCharacterOption> categoryCandidates = _services.Online.Page.CharacterOptions
                 .Where(character => !string.IsNullOrWhiteSpace(character.CategoryId))
                 .GroupBy(character => character.CategoryId, StringComparer.OrdinalIgnoreCase)
                 .Select(group => group.First())

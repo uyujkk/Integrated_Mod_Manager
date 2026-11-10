@@ -69,7 +69,7 @@ public sealed partial class MainWindow
         int version = ++_shellStateVersion;
         RootGrid.DispatcherQueue.TryEnqueue(Microsoft.UI.Dispatching.DispatcherQueuePriority.Low, () =>
         {
-            if (version != _shellStateVersion || _onlineView._onlineWindowClosed) return;
+            if (version != _shellStateVersion || _services.IsClosing) return;
             RefreshShellStateAfterSwitch();
         });
     }
@@ -409,12 +409,12 @@ public sealed partial class MainWindow
         _onlineView._browseSaveTimer?.Stop();
         ++_onlineView._browseRestoreRevision;
         UiCrashDiagnostics.RecordAction("Window closed", width: RootGrid.ActualWidth, height: RootGrid.ActualHeight, closed: true);
-        _onlineView._onlineWindowClosed = true;
+        _services.IsClosing = true;
         ++_onlineView._onlineDetailAnimationVersion;
         _onlineView.PersistDownloadTasks();
         _bundleOperationCancellation?.Cancel();
         _workspaceView._existingModImportCancellation?.Cancel();
-        _onlineView._onlineWindowClosed = true;
+        _services.IsClosing = true;
         _onlineView.InvalidateOnlineDetailRequest();
         _onlineView._onlineDownloadActions.CancelPreparation();
         foreach (DownloadTaskItem task in _services.Downloads.Tasks.Where(task => DownloadProgressPolicy.IsActive(task.State)))

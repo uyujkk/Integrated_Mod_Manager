@@ -28,7 +28,7 @@ public sealed partial class MainWindow
         {
             await Task.Delay(1000);
         }
-        if (_onlineView._onlineWindowClosed || IsContentDialogOpen())
+        if (_services.IsClosing || IsContentDialogOpen())
         {
             return;
         }

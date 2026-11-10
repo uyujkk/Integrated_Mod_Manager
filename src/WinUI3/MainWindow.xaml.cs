@@ -160,8 +160,8 @@ public sealed partial class MainWindow : Window
         InitializeCommandPaletteShortcut();
         _workspaceView.FirstLevelListView.ItemsSource = _characters.Visible;
         _workspaceView.SecondLevelListView.ItemsSource = _secondLevelItems;
-        _onlineView.OnlineVirtualizedListView.ItemsSource = _onlineView._onlinePage.VisibleMods;
-        _onlineView.OnlineVirtualizedGridView.ItemsSource = _onlineView._onlinePage.VisibleMods;
+        _onlineView.OnlineVirtualizedListView.ItemsSource = _services.Online.Page.VisibleMods;
+        _onlineView.OnlineVirtualizedGridView.ItemsSource = _services.Online.Page.VisibleMods;
         TraceStartupStage("List sources attached");
         RegisterTrackedTextInputs();
         _workspaceView.BuildShortcutRows();

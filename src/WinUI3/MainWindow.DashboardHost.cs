@@ -13,7 +13,7 @@ public sealed partial class MainWindow
         _services.EndfieldBridge.LogIssue = LogApplicationIssue;
         _services.EndfieldBridge.BusyChanged += (_, _) =>
         {
-            if (!_onlineView._onlineWindowClosed) RefreshEndfieldBridgeControls();
+            if (!_services.IsClosing) RefreshEndfieldBridgeControls();
         };
         Paths.PropertyChanged += (_, args) =>
         {

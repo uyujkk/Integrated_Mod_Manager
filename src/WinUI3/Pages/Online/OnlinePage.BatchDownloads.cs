@@ -51,7 +51,7 @@ public sealed partial class OnlinePage
         }
         catch (OperationCanceledException) { }
         finally { _services.Dialogs.Close(progressDialog); await showing; }
-        if (!prepared || cancellation.IsCancellationRequested || _onlineWindowClosed || contextKey != GetOnlineDetailContextKey()) return;
+        if (!prepared || cancellation.IsCancellationRequested || _services.IsClosing || contextKey != GetOnlineDetailContextKey()) return;
 
         string[] folders = Directory.GetDirectories(context.RepositoryPath).Order(StringComparer.CurrentCultureIgnoreCase).Prepend(context.RepositoryPath).ToArray();
         var reviewRows = new List<BatchDownloadDialogs.Row>();
@@ -76,7 +76,7 @@ public sealed partial class OnlinePage
             }
             string folderKey = DownloadFolderKey(context, data.Mod);
             bool usesRemembered = false;
-            if (_onlinePreferences.RememberDownloadFolders && _onlinePreferences.DownloadFolders.TryGetValue(folderKey, out var remembered) && IsUsableRememberedFolder(remembered, context))
+            if (_services.Online.Preferences.RememberDownloadFolders && _services.Online.Preferences.DownloadFolders.TryGetValue(folderKey, out var remembered) && IsUsableRememberedFolder(remembered, context))
             {
                 preferred = remembered;
                 usesRemembered = true;
@@ -98,7 +98,7 @@ public sealed partial class OnlinePage
         if (await BatchDownloadDialogs.ReviewAsync(_services, context.RepositoryName, context.RepositoryPath, reviewRows,
                 (key, file) => GetOnlineDuplicateKind(((PreparedSavedDownload)key).Mod, file, context), GetAppThemeBrush("AppNavSelectedBorderBrush"),
                 _host.Root.ActualWidth, _host.Root.ActualHeight) is not { } review
-            || _onlineWindowClosed || contextKey != GetOnlineDetailContextKey()) return;
+            || _services.IsClosing || contextKey != GetOnlineDetailContextKey()) return;
         var chosen = review.Rows.Select(plan => (Data: (PreparedSavedDownload)plan.Key, plan.File, Choice: plan.Folder)).ToArray();
         if (chosen.Any(plan => plan.Choice is string folder && !IsUsableRememberedFolder(folder, context)))
         { await ShowMessageAsync(T("BatchDownloads.ADestinationIsNoLongerAvailable"), T("BatchDownloads.DestinationChanged")); return; }
@@ -121,7 +121,7 @@ public sealed partial class OnlinePage
         var tasks = new List<Task>();
         foreach (var plan in approved)
         {
-            if (_onlineWindowClosed || contextKey != GetOnlineDetailContextKey()) break;
+            if (_services.IsClosing || contextKey != GetOnlineDetailContextKey()) break;
             tasks.Add(DownloadAndExtractOnlineModAsync(plan.Data.Mod, plan.File, refreshDownloadInfo: false,
                 capturedContext: context, capturedEndfieldMetadata: endfield, capturedCharacterAliases: plan.Data.Aliases,
                 confirmedDestination: plan.Folder, batchConfirmed: true));

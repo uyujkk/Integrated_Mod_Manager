@@ -66,7 +66,7 @@ public sealed partial class MainWindow
     private IProgress<CombinationBundleProgress> BundleProgress(CancellationToken token, string operation) =>
         new Progress<CombinationBundleProgress>(info =>
         {
-            if (!_onlineView._onlineWindowClosed && !token.IsCancellationRequested && _bundleOperationCancellation?.Token == token)
+            if (!_services.IsClosing && !token.IsCancellationRequested && _bundleOperationCancellation?.Token == token)
                 _workspaceView.UpdateProgress(info.Percent, operation + (info.RelativePath.Length == 0 ? "" : " · " + info.RelativePath));
         });
 
@@ -105,19 +105,19 @@ public sealed partial class MainWindow
             cancellation.Token.ThrowIfCancellationRequested();
             string? folder = await PickFolderAsync();
             cancellation.Token.ThrowIfCancellationRequested();
-            if (folder is null || _onlineView._onlineWindowClosed) return;
+            if (folder is null || _services.IsClosing) return;
             string output = Path.Combine(folder, $"Combination-{DateTime.UtcNow:yyyyMMdd-HHmmss}-{Guid.NewGuid().ToString("N")[..8]}.imm-preset.zip");
             var progress = BundleProgress(cancellation.Token, T("CombinationBundles.ExportingBundle"));
             await Task.Run(() => CombinationBundleService.Export(root, output, name, game, includeState, mods,
                 cancellation.Token, progress: progress));
             await _onlineView.ReportOnlineActionErrorAsync(T("CombinationBundles.BundleCreatedModsSavedValues", mods.Length, mods.Sum(mod => mod.Values.Count), output), T("CombinationBundles.ExportComplete"));
         }
-        catch (OperationCanceledException) { if (!_onlineView._onlineWindowClosed) ShowAppNotification(T("CombinationBundles.ExportCanceled")); }
+        catch (OperationCanceledException) { if (!_services.IsClosing) ShowAppNotification(T("CombinationBundles.ExportCanceled")); }
         catch (Exception ex) { await ReportBundleErrorAsync(ex, false); }
         finally
         {
             _bundleOperationCancellation = null;
-            if (!_onlineView._onlineWindowClosed) SetCombinationBusy(false);
+            if (!_services.IsClosing) SetCombinationBusy(false);
         }
     }
 
@@ -134,17 +134,17 @@ public sealed partial class MainWindow
         {
             string? archive = await PickFileAsync([".zip"]);
             cancellation.Token.ThrowIfCancellationRequested();
-            if (archive is null || _onlineView._onlineWindowClosed) return;
+            if (archive is null || _services.IsClosing) return;
             var validationProgress = BundleProgress(cancellation.Token, T("CombinationBundles.ValidatingBundle"));
             import = await Task.Run(() => CombinationBundleService.PrepareImport(archive, root,
                 CombinationBundleService.CreateStagingParent(root), cancellation.Token,
                 progress: validationProgress));
             cancellation.Token.ThrowIfCancellationRequested();
-            if (_onlineView._onlineWindowClosed) return;
+            if (_services.IsClosing) return;
             CombinationBundleManifest manifest = import.Manifest;
             var confirmation = await CombinationBundleDialog.ConfirmInstallAsync(_services, import, repository.OnlineGameName);
             cancellation.Token.ThrowIfCancellationRequested();
-            if (!confirmation.Install || _onlineView._onlineWindowClosed) return;
+            if (!confirmation.Install || _services.IsClosing) return;
             if (GetSelectedRepository() is not { } current || current.Id != repositoryId || current.SourcePath != root)
                 throw new IOException(T("CombinationBundles.RepositoryChangedSelectTheBundleAgain"));
             var progress = BundleProgress(cancellation.Token, T("CombinationBundles.InstallingBundle"));
@@ -176,19 +176,19 @@ public sealed partial class MainWindow
                 throw;
             }
             restore = confirmation.Restore;
-            if (!_onlineView._onlineWindowClosed)
+            if (!_services.IsClosing)
             {
                 await _workspaceView.RefreshListsAsync();
                 ShowAppNotification(T("CombinationBundles.InstalledAndSaved", profile.Name));
             }
         }
-        catch (OperationCanceledException) { if (!_onlineView._onlineWindowClosed) ShowAppNotification(T("CombinationBundles.InstallCanceled")); }
+        catch (OperationCanceledException) { if (!_services.IsClosing) ShowAppNotification(T("CombinationBundles.InstallCanceled")); }
         catch (Exception ex) { restore = false; await ReportBundleErrorAsync(ex, import?.IsCommitted == true); }
         finally
         {
             import?.Dispose();
             _bundleOperationCancellation = null;
-            if (!_onlineView._onlineWindowClosed)
+            if (!_services.IsClosing)
             {
                 SetCombinationBusy(false);
                 if (import?.CleanupWarnings.Count > 0)
@@ -197,7 +197,7 @@ public sealed partial class MainWindow
         }
         // Restore is a separate approved transaction: deploy the set, then patch selected d3dx_user.ini keys.
         // Cancelling/failing that step leaves the imported files and saved profile available for retry.
-        if (restore && import?.IsCommitted == true && !_onlineView._onlineWindowClosed) await RestoreCombinationProfileAsync();
+        if (restore && import?.IsCommitted == true && !_services.IsClosing) await RestoreCombinationProfileAsync();
     }
 
     private string UniqueBundleProfileName(string name)

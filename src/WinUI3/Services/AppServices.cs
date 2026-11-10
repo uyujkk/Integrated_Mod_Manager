@@ -29,6 +29,12 @@ internal sealed class AppServices
 
     public ImageService Images { get; } = new();
 
+    /// <summary>The Online page's view model and preferences (stage J finish, step 3).</summary>
+    public OnlineState Online { get; } = new();
+
+    /// <summary>The window is closing: background work stops updating the pages (set once, by the window).</summary>
+    public bool IsClosing { get; set; }
+
     /// <summary>The dashboard's state (stage J4).</summary>
     public DashboardViewModel Dashboard { get; } = new();
 

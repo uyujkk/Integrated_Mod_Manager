@@ -11,11 +11,11 @@ public sealed partial class OnlinePage
     {
         try
         {
-            if (await DownloadOptionsDialog.ShowAsync(_services, _onlinePreferences.ConcurrentDownloads, _onlinePreferences.RememberDownloadFolders)
+            if (await DownloadOptionsDialog.ShowAsync(_services, _services.Online.Preferences.ConcurrentDownloads, _services.Online.Preferences.RememberDownloadFolders)
                 is not { } options) return;
-            _onlinePreferences.ConcurrentDownloads = options.Concurrency;
-            _onlinePreferences.RememberDownloadFolders = options.RememberFolders;
-            _services.Downloads.Scheduler.Limit = _onlinePreferences.ConcurrentDownloads;
+            _services.Online.Preferences.ConcurrentDownloads = options.Concurrency;
+            _services.Online.Preferences.RememberDownloadFolders = options.RememberFolders;
+            _services.Downloads.Scheduler.Limit = _services.Online.Preferences.ConcurrentDownloads;
             _host.SaveShellConfig();
         }
         catch (Exception ex)
@@ -49,12 +49,12 @@ public sealed partial class OnlinePage
             return confirmedDestination;
         }
         string key = DownloadFolderKey(context, mod);
-        if (_onlinePreferences.RememberDownloadFolders && _onlinePreferences.DownloadFolders.TryGetValue(key, out string? remembered)
+        if (_services.Online.Preferences.RememberDownloadFolders && _services.Online.Preferences.DownloadFolders.TryGetValue(key, out string? remembered)
             && IsUsableRememberedFolder(remembered, context)) return remembered;
         string? selected = await PickDownloadFolderAsync(mod, context, aliases);
-        if (_onlinePreferences.RememberDownloadFolders && IsUsableRememberedFolder(selected, context))
+        if (_services.Online.Preferences.RememberDownloadFolders && IsUsableRememberedFolder(selected, context))
         {
-            _onlinePreferences.DownloadFolders[key] = selected!;
+            _services.Online.Preferences.DownloadFolders[key] = selected!;
             _host.SaveShellConfig();
         }
         return selected;
@@ -90,7 +90,7 @@ public sealed partial class OnlinePage
                 capturedCharacterAliases: request.CharacterAliases, confirmedDestination: request.Destination);
         }
         catch (Exception ex) { await ReportOnlineActionErrorAsync(ex.Message, T("OnlineDownloads.CannotRestartDownload"), ex); }
-        finally { task.RetryInProgress = false; if (!_onlineWindowClosed) _host.RefreshDownloadTaskCard(task); }
+        finally { task.RetryInProgress = false; if (!_services.IsClosing) _host.RefreshDownloadTaskCard(task); }
     }
 }
 

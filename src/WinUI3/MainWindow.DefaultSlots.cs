@@ -97,7 +97,7 @@ public sealed partial class MainWindow
                 }
                 return (All: DefaultSlotPolicy.Seen(mods.Select(mod => mod.Relative!), unreadable), Defaults: defaults);
             });
-            if (_onlineView._onlineWindowClosed || !ReferenceEquals(GetSelectedRepository(), repository)) return;
+            if (_services.IsClosing || !ReferenceEquals(GetSelectedRepository(), repository)) return;
 
             bool firstScan = !_defaultSlotSeeds.TryGetValue(repository.Id, out HashSet<string>? seeds) || _defaultSlotsBackfilled.Add(repository.Id);
             seeds ??= _defaultSlotSeeds[repository.Id] = new HashSet<string>(StringComparer.OrdinalIgnoreCase);

@@ -107,8 +107,8 @@ public sealed partial class WorkspacePage
         string catalogKey = _host.OnlineView.GetOnlineCharacterCatalogKey(repository);
         OnlineCharacterCatalogCacheSnapshot? cached = await _host.OnlineView.TryReadOnlineCharacterCatalogCacheAsync(catalogKey);
         IReadOnlyList<OnlineCharacterOption> online =
-            string.Equals(_host.OnlineView._onlineCharacterCatalogKey, catalogKey, StringComparison.Ordinal) && _host.OnlineView._onlinePage.CharacterOptions.Count > 0
-                ? [.. _host.OnlineView._onlinePage.CharacterOptions]
+            string.Equals(_host.OnlineView._onlineCharacterCatalogKey, catalogKey, StringComparison.Ordinal) && _services.Online.Page.CharacterOptions.Count > 0
+                ? [.. _services.Online.Page.CharacterOptions]
                 : cached?.Characters ?? [];
         if (!_host.OnlineView.IsEndfieldRepository(repository))
         {

@@ -13,7 +13,7 @@ public sealed partial class MainWindow
 
     private async Task NotifyModUpdatesAvailableAsync()
     {
-        if (_showingModUpdateNotification || _onlineView._onlineWindowClosed) return;
+        if (_showingModUpdateNotification || _services.IsClosing) return;
         var updates = _trackedModUpdateResults.Where(item => item.HasUpdate).ToArray();
         if (updates.Length == 0) return;
         _showingModUpdateNotification = true;
@@ -105,7 +105,7 @@ public sealed partial class MainWindow
         {
             LogApplicationIssueWithStack("Tracked Mod update", ex);
             if (task is not null && !committed) UpdateDownloadTask(task, DownloadTaskState.Failed, task.Progress, M("ModUpdates.Failed", ex.Message), forceRefresh: true);
-            if (!_onlineView._onlineWindowClosed) await ShowMessageAsync(
+            if (!_services.IsClosing) await ShowMessageAsync(
                 (committed ? T("ModUpdates.ReplacedButSaveFailed") : T("ModUpdates.StoppedOriginalsKept")) + ex.Message,
                 T("ModUpdates.ModUpdate"));
         }
@@ -114,7 +114,7 @@ public sealed partial class MainWindow
             _modUpdatesInProgress.Remove(result.Path);
             // Retain failed downloads for diagnosis; successful work is an owned cache folder.
             if (committed && work is not null) { try { Directory.Delete(work, true); } catch (Exception ex) { LogApplicationIssue("Clean Mod update cache", ex); } }
-            if (!_onlineView._onlineWindowClosed) RefreshUpdatesPane();
+            if (!_services.IsClosing) RefreshUpdatesPane();
         }
     }
 }

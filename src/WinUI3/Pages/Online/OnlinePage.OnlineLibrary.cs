@@ -8,28 +8,27 @@ namespace ModFolderCopier.WinUI;
 
 public sealed partial class OnlinePage
 {
-    internal OnlineWorkspacePreferences _onlinePreferences = new();
     private bool _resettingOnlineFilters;
 
-    private string OnlineAuthorKey => _onlinePage.AuthorId > 0 ? $"|author={_onlinePage.AuthorId}" : string.Empty;
+    private string OnlineAuthorKey => _services.Online.Page.AuthorId > 0 ? $"|author={_services.Online.Page.AuthorId}" : string.Empty;
 
     private async Task BrowseOnlineAuthorAsync(int id, string name)
     {
         UiCrashDiagnostics.RecordAction("Author browse");
         if (id <= 0) { OnlineSearchTextBox.Text = $"author:{name}"; return; }
         string category = GetEffectiveOnlineCategoryId(_services.Repositories.Selected);
-        _onlinePreferences.RecentAuthors.RemoveAll(item => item.Id == id && item.CategoryId == category);
-        _onlinePreferences.RecentAuthors.Insert(0, new OnlineAuthorVisit(id, name, category, DateTimeOffset.UtcNow));
-        _onlinePreferences.RecentAuthors = _onlinePreferences.RecentAuthors.Take(100).ToList();
+        _services.Online.Preferences.RecentAuthors.RemoveAll(item => item.Id == id && item.CategoryId == category);
+        _services.Online.Preferences.RecentAuthors.Insert(0, new OnlineAuthorVisit(id, name, category, DateTimeOffset.UtcNow));
+        _services.Online.Preferences.RecentAuthors = _services.Online.Preferences.RecentAuthors.Take(100).ToList();
         ResetOnlineBrowsePosition();
         CancelOnlineModListRequest();
-        _onlinePage.AuthorId = id;
-        _onlinePage.AuthorName = name;
-        _onlinePage.CurrentPage = 1;
+        _services.Online.Page.AuthorId = id;
+        _services.Online.Page.AuthorName = name;
+        _services.Online.Page.CurrentPage = 1;
         _lastLoadedOnlineConfigKey = null;
-        _onlinePage.Mods.Clear();
+        _services.Online.Page.Mods.Clear();
         _resettingOnlineFilters = true;
-        try { OnlineSearchTextBox.Text = string.Empty; _onlinePage.SearchText = string.Empty; }
+        try { OnlineSearchTextBox.Text = string.Empty; _services.Online.Page.SearchText = string.Empty; }
         finally { _resettingOnlineFilters = false; }
         await CloseOnlineDetailPaneAsync();
         await LoadOnlineModsAsync(forceReload: false);
@@ -41,21 +40,21 @@ public sealed partial class OnlinePage
         {
             UiCrashDiagnostics.RecordAction("Clear online filters");
             ResetOnlineBrowsePosition();
-            _onlinePage.AuthorWorkFilter = 0;
-            bool reload = _onlinePage.AuthorId > 0 || _onlinePage.CharacterFilter.Length > 0;
-            _onlinePage.AuthorId = 0;
-            _onlinePage.AuthorName = string.Empty;
-            _onlinePage.CharacterFilter = string.Empty;
+            _services.Online.Page.AuthorWorkFilter = 0;
+            bool reload = _services.Online.Page.AuthorId > 0 || _services.Online.Page.CharacterFilter.Length > 0;
+            _services.Online.Page.AuthorId = 0;
+            _services.Online.Page.AuthorName = string.Empty;
+            _services.Online.Page.CharacterFilter = string.Empty;
             _onlineCharacterStripSignature = null;
             PopulateOnlineCharacterOptions();
             _resettingOnlineFilters = true;
-            try { OnlineSearchTextBox.Text = string.Empty; _onlinePage.SearchText = string.Empty; }
+            try { OnlineSearchTextBox.Text = string.Empty; _services.Online.Page.SearchText = string.Empty; }
             finally { _resettingOnlineFilters = false; }
             if (reload)
             {
-                _onlinePage.CurrentPage = 1;
+                _services.Online.Page.CurrentPage = 1;
                 _lastLoadedOnlineConfigKey = null;
-                _onlinePage.Mods.Clear();
+                _services.Online.Page.Mods.Clear();
                 await LoadOnlineModsAsync(forceReload: false);
             }
             else RefreshOnlinePaneV2();
@@ -69,20 +68,20 @@ public sealed partial class OnlinePage
     private void RefreshOnlineFilterSummary(int matches, int loaded)
     {
         OnlineFilterSummaryTextBlock.Text = T("OnlineLibrary.ThisPageMatches", matches, loaded)
-            + (_onlinePage.AuthorId > 0 ? T("OnlineLibrary.AuthorAuthorPagesTextFiltersThis", _onlinePage.AuthorName)
+            + (_services.Online.Page.AuthorId > 0 ? T("OnlineLibrary.AuthorAuthorPagesTextFiltersThis", _services.Online.Page.AuthorName)
                 : T("OnlineLibrary.SearchFiltersThisPageOnlyClick"));
         AutomationProperties.SetName(OnlineSearchTextBox, T("OnlineLibrary.SearchThisPageByCharacterMod"));
         ToolTipService.SetToolTip(OnlineFilterSummaryTextBlock, OnlineFilterSummaryTextBlock.Text);
         ClearOnlineFiltersButton.Content = T("OnlineLibrary.ClearFilters");
-        ClearOnlineFiltersButton.IsEnabled = _onlinePage.AuthorId > 0 || _onlinePage.SearchText.Length > 0 || _onlinePage.CharacterFilter.Length > 0 || _onlinePage.AuthorWorkFilter > 0;
-        OnlineWorkFilterButton.Content = _onlinePage.AuthorWorkFilter switch { 1 => T("OnlineLibrary.InstalledOnPage"), 2 => T("OnlineLibrary.SavedOnPage"), _ => T("OnlineLibrary.AllOnPage") };
+        ClearOnlineFiltersButton.IsEnabled = _services.Online.Page.AuthorId > 0 || _services.Online.Page.SearchText.Length > 0 || _services.Online.Page.CharacterFilter.Length > 0 || _services.Online.Page.AuthorWorkFilter > 0;
+        OnlineWorkFilterButton.Content = _services.Online.Page.AuthorWorkFilter switch { 1 => T("OnlineLibrary.InstalledOnPage"), 2 => T("OnlineLibrary.SavedOnPage"), _ => T("OnlineLibrary.AllOnPage") };
         ToolTipService.SetToolTip(OnlineSavedItemsButton, T("OnlineLibrary.AuthorsAndSavedModsFindAuthors"));
         AutomationProperties.SetName(OnlineSavedItemsButton, T("OnlineLibrary.AuthorsAndSavedMods"));
         ToolTipService.SetToolTip(OnlineDownloadOptionsButton, T("Common.DownloadOptions"));
         AutomationProperties.SetName(OnlineDownloadOptionsButton, T("Common.DownloadOptions"));
     }
 
-    private bool IsSavedOnlineMod(OnlineModCard mod) => _onlinePreferences.SavedMods.Any(item =>
+    private bool IsSavedOnlineMod(OnlineModCard mod) => _services.Online.Preferences.SavedMods.Any(item =>
         item.RepositoryId == _services.Repositories.Selected?.Id
         && string.Equals(item.RepositoryPath.TrimEnd('\\', '/'), _services.Repositories.Selected?.SourcePath.TrimEnd('\\', '/'), StringComparison.OrdinalIgnoreCase)
         && GetOnlineDownloadIdentity(item.Mod) == GetOnlineDownloadIdentity(mod));
@@ -92,11 +91,11 @@ public sealed partial class OnlinePage
         WorkspaceRepository? repository = _services.Repositories.Selected;
         if (repository is null) return;
         bool remove = IsSavedOnlineMod(mod);
-        _onlinePreferences.SavedMods.RemoveAll(item => item.RepositoryId == repository.Id
+        _services.Online.Preferences.SavedMods.RemoveAll(item => item.RepositoryId == repository.Id
             && string.Equals(item.RepositoryPath.TrimEnd('\\', '/'), repository.SourcePath.TrimEnd('\\', '/'), StringComparison.OrdinalIgnoreCase)
             && GetOnlineDownloadIdentity(item.Mod) == GetOnlineDownloadIdentity(mod));
-        if (!remove) _onlinePreferences.SavedMods.Insert(0, new OnlineSavedMod(repository.Id, repository.SourcePath, mod));
-        _onlinePreferences.SavedMods = _onlinePreferences.SavedMods.Take(100).ToList();
+        if (!remove) _services.Online.Preferences.SavedMods.Insert(0, new OnlineSavedMod(repository.Id, repository.SourcePath, mod));
+        _services.Online.Preferences.SavedMods = _services.Online.Preferences.SavedMods.Take(100).ToList();
         _host.SaveShellConfig();
         ShowAppNotification(remove ? T("OnlineLibrary.RemovedFromSaved") : T("OnlineLibrary.Saved"));
     }
@@ -110,22 +109,22 @@ public sealed partial class OnlinePage
         var author = new MenuFlyoutItem { Text = T("OnlineLibrary.BrowseAuthorAllPages"), IsEnabled = mod.AuthorId > 0 };
         author.Click += async (_, _) => await _host.RunUiActionAsync("BrowseOnlineAuthorAsync", () => BrowseOnlineAuthorAsync(mod.AuthorId, mod.Author));
         menu.Items.Add(author);
-        bool savedAuthor = _onlinePreferences.Authors.Any(item => item.Id == mod.AuthorId
+        bool savedAuthor = _services.Online.Preferences.Authors.Any(item => item.Id == mod.AuthorId
             && item.CategoryId == GetEffectiveOnlineCategoryId(_services.Repositories.Selected));
         var favorite = new MenuFlyoutItem { Text = savedAuthor ? T("OnlineLibrary.UnsaveAuthor") : T("OnlineLibrary.SaveAuthor"), IsEnabled = mod.AuthorId > 0 };
         favorite.Click += (_, _) =>
         {
             string category = GetEffectiveOnlineCategoryId(_services.Repositories.Selected);
-            _onlinePreferences.Authors.RemoveAll(item => item.Id == mod.AuthorId && item.CategoryId == category);
-            if (!savedAuthor) _onlinePreferences.Authors.Insert(0, new OnlineAuthorBookmark(mod.AuthorId, mod.Author, category));
-            _onlinePreferences.Authors = _onlinePreferences.Authors.Take(100).ToList();
+            _services.Online.Preferences.Authors.RemoveAll(item => item.Id == mod.AuthorId && item.CategoryId == category);
+            if (!savedAuthor) _services.Online.Preferences.Authors.Insert(0, new OnlineAuthorBookmark(mod.AuthorId, mod.Author, category));
+            _services.Online.Preferences.Authors = _services.Online.Preferences.Authors.Take(100).ToList();
             _host.SaveShellConfig();
         };
         menu.Items.Add(favorite);
         menu.Opening += (_, _) =>
         {
             save.Text = IsSavedOnlineMod(mod) ? T("OnlineLibrary.RemoveFromSaved") : T("OnlineLibrary.SaveForLater");
-            savedAuthor = _onlinePreferences.Authors.Any(item => item.Id == mod.AuthorId
+            savedAuthor = _services.Online.Preferences.Authors.Any(item => item.Id == mod.AuthorId
                 && item.CategoryId == GetEffectiveOnlineCategoryId(_services.Repositories.Selected));
             favorite.Text = savedAuthor ? T("OnlineLibrary.UnsaveAuthor") : T("OnlineLibrary.SaveAuthor");
         };
