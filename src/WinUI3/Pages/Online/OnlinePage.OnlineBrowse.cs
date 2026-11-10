@@ -175,6 +175,7 @@ public sealed partial class OnlinePage
             : T("Settings.RefreshOnlineList");
         UpdateOnlineHeaderLayout();
         UpdateOnlineToolbarLayout();
+        UpdateOnlineDetailCloseButton();
         OnlinePrevPageButton.Content = T("Settings.Previous");
         OnlineNextPageButton.Content = T("Settings.Next");
     }

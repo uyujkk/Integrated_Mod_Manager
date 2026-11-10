@@ -823,6 +823,7 @@
   "OnlineDetails.Archived": "В архиве",
   "OnlineDetails.Author": "Автор",
   "OnlineDetails.AutomaticTranslationIsUnavailableRightNow": "Автоматический перевод сейчас недоступен, поэтому показан исходный текст.",
+  "OnlineDetails.BackToResults": "Назад к результатам",
   "OnlineDetails.CannotAutoExtract": "Автораспаковка невозможна",
   "OnlineDetails.Category": "Категория",
   "OnlineDetails.Character": "Персонаж",

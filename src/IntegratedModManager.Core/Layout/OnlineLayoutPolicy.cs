@@ -10,6 +10,9 @@ public enum OnlineCardLayoutMode
 /// <param name="Collapsed">No rail: the character list moves into the toolbar.</param>
 public readonly record struct OnlineCharacterRailLayout(bool Horizontal, double ColumnWidth, bool Collapsed = false);
 
+/// <param name="FullWidth">The drawer covers the results area, so its close button reads as "back".</param>
+public readonly record struct OnlineDetailDrawerLayout(double Width, bool FullWidth);
+
 public readonly record struct OnlineGridTileLayout(int Columns, double ItemWidth, double ItemHeight, double ImageHeight);
 
 public static class OnlineLayoutPolicy
@@ -59,4 +62,20 @@ public static class OnlineLayoutPolicy
     /// <summary>The refresh button shows its label only when the status beside it keeps its minimum room.</summary>
     public static bool ShowRefreshLabel(double headerWidth, double otherWidth, double labelWidth)
         => headerWidth - otherWidth - labelWidth >= MinHeaderStatusWidth;
+
+    /// <summary>Below this content width the details drawer covers the whole results area (with a back button).</summary>
+    public const double FullDrawerContentWidth = 900;
+
+    /// <summary>
+    /// The details drawer takes 45 % of the page (400-600 px) and never more than the results area; on narrow
+    /// pages it covers the results area.
+    /// </summary>
+    public static OnlineDetailDrawerLayout DetailDrawer(double contentWidth, double resultsWidth)
+    {
+        double results = double.IsFinite(resultsWidth) && resultsWidth > 0 ? resultsWidth : contentWidth;
+        if (!double.IsFinite(results) || results <= 0) return new(400, true);
+        if (contentWidth < FullDrawerContentWidth) return new(results, true);
+        double width = Math.Clamp(Math.Round(contentWidth * 0.45), 400, 600);
+        return width >= results ? new(results, true) : new(width, false);
+    }
 }

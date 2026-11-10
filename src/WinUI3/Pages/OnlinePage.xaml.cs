@@ -21,6 +21,7 @@ public sealed partial class OnlinePage : UserControl
         HorizontalContentAlignment = HorizontalAlignment.Stretch;
         VerticalContentAlignment = VerticalAlignment.Stretch;
         InitializeComponent();
+        InitializeOnlineDetailShadow();
     }
 
     private bool IsChineseUi => _services.Language.IsChinese;

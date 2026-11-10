@@ -12,14 +12,14 @@
     <!-- The Online page (stage J6, moved from MainWindow.xaml). Stage J6-b (UI-Fluent-Design-Plan.md, "在线（J6）"):
          the header and toolbar re-flow instead of clipping (OnlineLayoutPolicy decides when). -->
     <UserControl.Resources>
-        <!-- Opaque, because it floats over other content. -->
+        <!-- The details drawer (stage J6-b, option A): in-app acrylic over the cards, lifted by the system shadow. -->
         <Style x:Key="DetailPaneBorderStyle" TargetType="Border" BasedOn="{StaticResource CardBorderStyle}">
-            <Setter Property="Background" Value="{ThemeResource AppElevatedBackgroundBrush}" />
-            <Setter Property="BorderBrush" Value="{ThemeResource AppStrongBorderBrush}" />
+            <Setter Property="Background" Value="{ThemeResource AcrylicInAppFillColorDefaultBrush}" />
+            <Setter Property="BorderBrush" Value="{ThemeResource SurfaceStrokeColorFlyoutBrush}" />
             <Setter Property="Padding" Value="18" />
         </Style>
         <Style x:Key="StickyActionBorderStyle" TargetType="Border">
-            <Setter Property="Background" Value="{ThemeResource AppElevatedBackgroundBrush}" />
+            <Setter Property="Background" Value="{ThemeResource LayerFillColorDefaultBrush}" />
             <Setter Property="BorderBrush" Value="{ThemeResource AppCardBorderBrush}" />
             <Setter Property="BorderThickness" Value="1,1,1,0" />
             <Setter Property="CornerRadius" Value="{StaticResource OverlayCornerRadius}" />
@@ -340,6 +340,8 @@
                                         </StackPanel>
                                     </StackPanel>
                                 </Border>
+            <!-- Transparent: only the drawer's ThemeShadow falls on it (a shadow outside a popup needs a receiver). -->
+            <Border x:Name="OnlineDetailShadowReceiver" Grid.Row="1" Background="Transparent" IsHitTestVisible="False" Canvas.ZIndex="9" />
             <Grid
                 x:Name="OnlineDetailDrawer" x:FieldModifier="internal"
                 Grid.Row="1"
@@ -347,15 +349,6 @@
                 HorizontalAlignment="Right"
                 Visibility="Collapsed"
                 Canvas.ZIndex="10">
-                <!-- A soft edge shadow separates the drawer from the cards underneath. -->
-                <Border Width="24" Margin="-24,12,0,12" HorizontalAlignment="Left" IsHitTestVisible="False">
-                    <Border.Background>
-                        <LinearGradientBrush StartPoint="0,0" EndPoint="1,0">
-                            <GradientStop Offset="0" Color="#00000000" />
-                            <GradientStop Offset="1" Color="#38000000" />
-                        </LinearGradientBrush>
-                    </Border.Background>
-                </Border>
                 <Border x:Name="OnlineDetailPaneBorder" Style="{StaticResource DetailPaneBorderStyle}">
                     <Grid RowSpacing="12">
                         <Grid.RowDefinitions>
@@ -455,31 +448,31 @@
                                     Style="{StaticResource CaptionTextStyle}"
                                     TextTrimming="CharacterEllipsis"
                                     TextWrapping="NoWrap" />
+                                <!-- One main action, the file choice beside it, and the source page as a link. -->
                                 <Grid ColumnSpacing="10">
                                     <Grid.ColumnDefinitions>
                                         <ColumnDefinition Width="*" />
-                                        <ColumnDefinition Width="*" />
+                                        <ColumnDefinition Width="Auto" />
                                     </Grid.ColumnDefinitions>
                                     <Button
-                                        x:Name="OpenOnlineDetailPageButton" x:FieldModifier="internal"
-                                        Click="OnOpenOnlineDetailPageClicked"
+                                        x:Name="DownloadOnlineDetailButton" x:FieldModifier="internal"
+                                        Click="OnDownloadOnlineDetailClicked"
                                         HorizontalAlignment="Stretch"
                                         MinHeight="40"
-                                        Style="{StaticResource SecondaryButtonStyle}" />
+                                        Style="{StaticResource PrimaryButtonStyle}" />
                                     <Button
                                         x:Name="SelectOnlineDetailDownloadButton" x:FieldModifier="internal"
                                         Grid.Column="1"
                                         Click="OnSelectOnlineDetailDownloadClicked"
-                                        HorizontalAlignment="Stretch"
                                         MinHeight="40"
+                                        MinWidth="120"
                                         Style="{StaticResource SecondaryButtonStyle}" />
                                 </Grid>
-                                <Button
-                                    x:Name="DownloadOnlineDetailButton" x:FieldModifier="internal"
-                                    Click="OnDownloadOnlineDetailClicked"
-                                    HorizontalAlignment="Stretch"
-                                    MinHeight="42"
-                                    Style="{StaticResource PrimaryButtonStyle}" />
+                                <HyperlinkButton
+                                    x:Name="OpenOnlineDetailPageButton" x:FieldModifier="internal"
+                                    Click="OnOpenOnlineDetailPageClicked"
+                                    Padding="4,2"
+                                    Margin="-4,0,0,0" />
                             </StackPanel>
                         </Border>
                     </Grid>

@@ -72,4 +72,18 @@ public sealed class OnlineLayoutPolicyTests
         Assert.Equal(1, layout.Columns);
         Assert.Equal(OnlineLayoutPolicy.PreferredTileWidth, layout.ItemWidth);
     }
+
+    [Theory]
+    [InlineData(1900, 1600, 600, false)]
+    [InlineData(1200, 900, 540, false)]
+    [InlineData(900, 700, 405, false)]
+    [InlineData(899, 700, 700, true)]
+    [InlineData(560, 520, 520, true)]
+    [InlineData(950, 420, 420, true)]
+    public void TheDetailDrawerTakesNearlyHalfThePageOrAllOfANarrowOne(double content, double results, double width, bool full)
+        => Assert.Equal(new OnlineDetailDrawerLayout(width, full), OnlineLayoutPolicy.DetailDrawer(content, results));
+
+    [Fact]
+    public void TheDetailDrawerHasASizeBeforeLayout()
+        => Assert.Equal(new OnlineDetailDrawerLayout(400, true), OnlineLayoutPolicy.DetailDrawer(0, 0));
 }

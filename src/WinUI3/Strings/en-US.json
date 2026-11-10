@@ -823,6 +823,7 @@
   "OnlineDetails.Archived": "Archived",
   "OnlineDetails.Author": "Author",
   "OnlineDetails.AutomaticTranslationIsUnavailableRightNow": "Automatic translation is unavailable right now, so the original text is shown.",
+  "OnlineDetails.BackToResults": "Back to results",
   "OnlineDetails.CannotAutoExtract": "Cannot auto-extract",
   "OnlineDetails.Category": "Category",
   "OnlineDetails.Character": "Character",

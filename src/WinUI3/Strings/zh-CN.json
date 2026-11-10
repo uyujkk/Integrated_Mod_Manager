@@ -823,6 +823,7 @@
   "OnlineDetails.Archived": "历史归档",
   "OnlineDetails.Author": "作者",
   "OnlineDetails.AutomaticTranslationIsUnavailableRightNow": "自动翻译暂时不可用，当前显示原文。",
+  "OnlineDetails.BackToResults": "返回结果",
   "OnlineDetails.CannotAutoExtract": "不能自动解压",
   "OnlineDetails.Category": "分类",
   "OnlineDetails.Character": "角色",

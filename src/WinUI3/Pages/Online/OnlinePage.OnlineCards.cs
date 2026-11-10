@@ -92,13 +92,12 @@ public sealed partial class OnlinePage
             RefreshOnlineCharacterAvatarStrip();
         }
 
-        // Narrow windows give the drawer most of the page; full screen caps it so the cards stay visible beside it.
-        double drawerWidth = windowWidth < 1220
-            ? Math.Clamp(windowWidth - 150, 380, 600)
-            : Math.Clamp(windowWidth * 0.34, 480, 760);
-        // The drawer opens over the results row, between the toolbar and the paging footer.
+        // 45 % of the page (400-600 px); narrow pages give it the whole results area (stage J6-b).
         double resultsWidth = OnlineResultsHost.ActualWidth > 0 ? OnlineResultsHost.ActualWidth : onlineContentWidth;
-        OnlineDetailDrawer.Width = Math.Min(drawerWidth, Math.Max(320, resultsWidth - 24));
+        OnlineDetailDrawerLayout drawerLayout = OnlineLayoutPolicy.DetailDrawer(onlineContentWidth, resultsWidth);
+        OnlineDetailDrawer.Width = drawerLayout.Width;
+        _onlineDetailDrawerFullWidth = drawerLayout.FullWidth;
+        UpdateOnlineDetailCloseButton();
         // The preview keeps a 16:9 frame at the drawer's width instead of a fixed height.
         OnlineDetailHeroBorder.Height = Math.Clamp(Math.Round((OnlineDetailDrawer.Width - 70) * 9 / 16), 220, 400);
         ApplyOnlineDrawerReservation();
@@ -165,6 +164,26 @@ public sealed partial class OnlinePage
         double statusRoom = headerWidth - other - (showLabel ? label.DesiredSize.Width + 8 : 0)
             - (OnlineCacheStatusBorder.Visibility == Visibility.Visible ? OnlineCacheStatusBorder.ActualWidth + 8 : 0);
         OnlineStatusBorder.Visibility = statusRoom >= OnlineLayoutPolicy.MinHeaderStatusWidth ? Visibility.Visible : Visibility.Collapsed;
+    }
+
+    private bool _onlineDetailDrawerFullWidth;
+
+    // Covering the whole results area, the drawer's close button reads as "back to results".
+    private void UpdateOnlineDetailCloseButton()
+    {
+        string label = _onlineDetailDrawerFullWidth ? T("OnlineDetails.BackToResults") : T("Common.Close");
+        ((FontIcon)CloseOnlineDetailButton.Content).Glyph = _onlineDetailDrawerFullWidth ? "\uE72B" : "\uE711";
+        ToolTipService.SetToolTip(CloseOnlineDetailButton, label);
+        Microsoft.UI.Xaml.Automation.AutomationProperties.SetName(CloseOnlineDetailButton, label);
+    }
+
+    // The drawer floats over the cards with the system shadow on the transparent layer under it.
+    private void InitializeOnlineDetailShadow()
+    {
+        var shadow = new Microsoft.UI.Xaml.Media.ThemeShadow();
+        shadow.Receivers.Add(OnlineDetailShadowReceiver);
+        OnlineDetailPaneBorder.Shadow = shadow;
+        OnlineDetailPaneBorder.Translation = new System.Numerics.Vector3(0, 0, 32);
     }
 
     internal bool IsOnlineDetailOpen => OnlineDetailDrawer.Visibility == Visibility.Visible;
