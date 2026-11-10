@@ -152,127 +152,136 @@
 
             <!-- Rail: what is mostly to look at; below the main column on a narrow page. -->
             <StackPanel x:Name="SettingsRailPanel" Grid.Row="1" Grid.Column="1" Spacing="4">
-                <!-- The version and its update state, with the buttons to check and install. -->
-                <TextBlock x:Name="SettingsAppUpdatesTitleTextBlock" Style="{StaticResource SettingsFirstGroupTitleStyle}" />
-                <!-- In the rail the two buttons do not fit beside the status (Russian), so they go below it, one per row. -->
-                <toolkit:SettingsCard x:Name="AppUpdateStatusCard" Header="{x:Bind ViewModel.UpdateStatus, Mode=OneWay}"
-                                      ContentAlignment="Vertical" HorizontalContentAlignment="Left">
-                    <toolkit:SettingsCard.HeaderIcon>
-                        <FontIcon Glyph="&#xE895;" />
-                    </toolkit:SettingsCard.HeaderIcon>
-                    <StackPanel x:Name="AppUpdateButtonsPanel" Orientation="Vertical" Spacing="8">
-                        <Button x:Name="CheckUpdatesButton" Click="OnCheckUpdatesClicked" IsEnabled="{x:Bind ViewModel.CanCheckUpdates, Mode=OneWay}" />
-                        <Button x:Name="InstallUpdateButton" Click="OnInstallUpdateClicked" Style="{StaticResource AccentButtonStyle}" />
-                    </StackPanel>
-                </toolkit:SettingsCard>
-                <toolkit:SettingsCard x:Name="AppUpdateProgressCard" Header="{x:Bind ViewModel.DownloadText, Mode=OneWay}"
-                                      Visibility="{x:Bind ViewModel.IsDownloadingUpdate, Mode=OneWay}">
-                    <toolkit:SettingsCard.HeaderIcon>
-                        <FontIcon Glyph="&#xE896;" />
-                    </toolkit:SettingsCard.HeaderIcon>
-                    <ProgressBar x:Name="AppUpdateProgressBar" Width="200" Minimum="0" Maximum="100"
-                                 IsIndeterminate="{x:Bind ViewModel.IsDownloadProgressIndeterminate, Mode=OneWay}"
-                                 Value="{x:Bind ViewModel.DownloadProgress, Mode=OneWay}" />
-                </toolkit:SettingsCard>
-                <toolkit:SettingsCard x:Name="OpenGitHubButton" IsClickEnabled="True" Click="OnOpenGitHubClicked"
-                                      Description="https://github.com/uyujkk/Integrated_Mod_Manager">
-                    <toolkit:SettingsCard.HeaderIcon>
-                        <FontIcon Glyph="&#xE8A7;" />
-                    </toolkit:SettingsCard.HeaderIcon>
-                    <toolkit:SettingsCard.ActionIcon>
-                        <FontIcon Glyph="&#xE8A7;" />
-                    </toolkit:SettingsCard.ActionIcon>
-                </toolkit:SettingsCard>
-
-                <!-- The current repository's online settings. -->
-                <TextBlock x:Name="SettingsPlaceholderTitleTextBlock" Style="{StaticResource SettingsGroupTitleStyle}" />
-                <toolkit:SettingsExpander x:Name="SettingsOnlineExpander"
-                                          Description="{x:Bind ViewModel.OnlineSummary, Mode=OneWay}"
-                                          ItemsSource="{x:Bind ViewModel.OnlineInfo, Mode=OneWay}">
-                    <toolkit:SettingsExpander.HeaderIcon>
-                        <FontIcon Glyph="&#xE774;" />
-                    </toolkit:SettingsExpander.HeaderIcon>
-                    <toolkit:SettingsExpander.ItemTemplate>
-                        <DataTemplate x:DataType="local:SettingInfoItem">
-                            <toolkit:SettingsCard Header="{x:Bind Label}">
-                                <TextBlock Text="{x:Bind Value}" IsTextSelectionEnabled="True" TextWrapping="Wrap" MaxWidth="420"
-                                           TextAlignment="Right" Style="{StaticResource MutedTextStyle}" />
+                <!-- Each side-column group is one unit: with two columns, later groups may move to the end of the
+                     main column so both columns end at about the same height (SettingsLayoutPolicy.BalanceColumns). -->
+                <StackPanel x:Name="SettingsAppUpdatesGroup" Spacing="4">
+                    <!-- The version and its update state, with the buttons to check and install. -->
+                    <TextBlock x:Name="SettingsAppUpdatesTitleTextBlock" Style="{StaticResource SettingsFirstGroupTitleStyle}" />
+                    <!-- In the rail the two buttons do not fit beside the status (Russian), so they go below it, one per row. -->
+                    <toolkit:SettingsCard x:Name="AppUpdateStatusCard" Header="{x:Bind ViewModel.UpdateStatus, Mode=OneWay}"
+                                          ContentAlignment="Vertical" HorizontalContentAlignment="Left">
+                        <toolkit:SettingsCard.HeaderIcon>
+                            <FontIcon Glyph="&#xE895;" />
+                        </toolkit:SettingsCard.HeaderIcon>
+                        <StackPanel x:Name="AppUpdateButtonsPanel" Orientation="Vertical" Spacing="8">
+                            <Button x:Name="CheckUpdatesButton" Click="OnCheckUpdatesClicked" IsEnabled="{x:Bind ViewModel.CanCheckUpdates, Mode=OneWay}" />
+                            <Button x:Name="InstallUpdateButton" Click="OnInstallUpdateClicked" Style="{StaticResource AccentButtonStyle}" />
+                        </StackPanel>
+                    </toolkit:SettingsCard>
+                    <toolkit:SettingsCard x:Name="AppUpdateProgressCard" Header="{x:Bind ViewModel.DownloadText, Mode=OneWay}"
+                                          Visibility="{x:Bind ViewModel.IsDownloadingUpdate, Mode=OneWay}">
+                        <toolkit:SettingsCard.HeaderIcon>
+                            <FontIcon Glyph="&#xE896;" />
+                        </toolkit:SettingsCard.HeaderIcon>
+                        <ProgressBar x:Name="AppUpdateProgressBar" Width="200" Minimum="0" Maximum="100"
+                                     IsIndeterminate="{x:Bind ViewModel.IsDownloadProgressIndeterminate, Mode=OneWay}"
+                                     Value="{x:Bind ViewModel.DownloadProgress, Mode=OneWay}" />
+                    </toolkit:SettingsCard>
+                    <toolkit:SettingsCard x:Name="OpenGitHubButton" IsClickEnabled="True" Click="OnOpenGitHubClicked"
+                                          Description="https://github.com/uyujkk/Integrated_Mod_Manager">
+                        <toolkit:SettingsCard.HeaderIcon>
+                            <FontIcon Glyph="&#xE8A7;" />
+                        </toolkit:SettingsCard.HeaderIcon>
+                        <toolkit:SettingsCard.ActionIcon>
+                            <FontIcon Glyph="&#xE8A7;" />
+                        </toolkit:SettingsCard.ActionIcon>
+                    </toolkit:SettingsCard>
+                </StackPanel>
+                <StackPanel x:Name="SettingsOnlineGroup" Spacing="4">
+                    <!-- The current repository's online settings. -->
+                    <TextBlock x:Name="SettingsPlaceholderTitleTextBlock" Style="{StaticResource SettingsGroupTitleStyle}" />
+                    <toolkit:SettingsExpander x:Name="SettingsOnlineExpander"
+                                              Description="{x:Bind ViewModel.OnlineSummary, Mode=OneWay}"
+                                              ItemsSource="{x:Bind ViewModel.OnlineInfo, Mode=OneWay}">
+                        <toolkit:SettingsExpander.HeaderIcon>
+                            <FontIcon Glyph="&#xE774;" />
+                        </toolkit:SettingsExpander.HeaderIcon>
+                        <toolkit:SettingsExpander.ItemTemplate>
+                            <DataTemplate x:DataType="local:SettingInfoItem">
+                                <toolkit:SettingsCard Header="{x:Bind Label}">
+                                    <TextBlock Text="{x:Bind Value}" IsTextSelectionEnabled="True" TextWrapping="Wrap" MaxWidth="420"
+                                               TextAlignment="Right" Style="{StaticResource MutedTextStyle}" />
+                                </toolkit:SettingsCard>
+                            </DataTemplate>
+                        </toolkit:SettingsExpander.ItemTemplate>
+                    </toolkit:SettingsExpander>
+                    <toolkit:SettingsCard x:Name="EditOnlineRepositoryButton" IsClickEnabled="True" Click="OnEditOnlineRepositoryClicked">
+                        <toolkit:SettingsCard.HeaderIcon>
+                            <FontIcon Glyph="&#xE70F;" />
+                        </toolkit:SettingsCard.HeaderIcon>
+                    </toolkit:SettingsCard>
+                    <toolkit:SettingsCard x:Name="EditCharacterMappingsButton" IsClickEnabled="True" Click="OnEditCharacterMappingsClicked">
+                        <toolkit:SettingsCard.HeaderIcon>
+                            <FontIcon Glyph="&#xE716;" />
+                        </toolkit:SettingsCard.HeaderIcon>
+                    </toolkit:SettingsCard>
+                </StackPanel>
+                <StackPanel x:Name="SettingsDiagnosticsGroup" Spacing="4">
+                    <!-- Diagnostics and feedback. -->
+                    <TextBlock x:Name="DiagnosticsTitleTextBlock" Style="{StaticResource SettingsGroupTitleStyle}" />
+                    <toolkit:SettingsCard x:Name="ExportDiagnosticsButton" IsClickEnabled="True" Click="OnExportDiagnosticsClicked">
+                        <toolkit:SettingsCard.HeaderIcon>
+                            <FontIcon Glyph="&#xE9D9;" />
+                        </toolkit:SettingsCard.HeaderIcon>
+                    </toolkit:SettingsCard>
+                    <toolkit:SettingsCard x:Name="SubmitDiagnosticsButton" IsClickEnabled="True" Click="OnSubmitDiagnosticsClicked">
+                        <toolkit:SettingsCard.HeaderIcon>
+                            <FontIcon Glyph="&#xEBE8;" />
+                        </toolkit:SettingsCard.HeaderIcon>
+                        <toolkit:SettingsCard.ActionIcon>
+                            <FontIcon Glyph="&#xE8A7;" />
+                        </toolkit:SettingsCard.ActionIcon>
+                    </toolkit:SettingsCard>
+                    <toolkit:SettingsCard x:Name="FeedbackGroupSettingsCard">
+                        <toolkit:SettingsCard.HeaderIcon>
+                            <FontIcon Glyph="&#xE8BD;" />
+                        </toolkit:SettingsCard.HeaderIcon>
+                        <toolkit:SettingsCard.Description>
+                            <TextBlock x:Name="FeedbackGroupNumberTextBlock" IsTextSelectionEnabled="True" TextWrapping="Wrap" />
+                        </toolkit:SettingsCard.Description>
+                        <Button x:Name="CopyFeedbackGroupButton" Click="OnCopyFeedbackGroupClicked" />
+                    </toolkit:SettingsCard>
+                    <toolkit:SettingsCard x:Name="FeedbackDiscordSettingsCard">
+                        <toolkit:SettingsCard.HeaderIcon>
+                            <FontIcon Glyph="&#xE8BD;" />
+                        </toolkit:SettingsCard.HeaderIcon>
+                        <Button x:Name="OpenFeedbackDiscordButton" Click="OnOpenFeedbackDiscordClicked" />
+                    </toolkit:SettingsCard>
+                    <TextBlock x:Name="DiagnosticsStatusTextBlock" Margin="1,4,0,0" Style="{StaticResource CaptionTextStyle}" TextWrapping="Wrap"
+                               Text="{x:Bind ViewModel.DiagnosticsStatus, Mode=OneWay}" Visibility="{x:Bind ViewModel.HasDiagnosticsStatus, Mode=OneWay}" />
+                </StackPanel>
+                <StackPanel x:Name="SettingsProjectGroup" Spacing="4">
+                    <!-- About: the version, then the project and the open-source components it uses. -->
+                    <TextBlock x:Name="ProjectResourcesTitleTextBlock" Style="{StaticResource SettingsGroupTitleStyle}" />
+                    <toolkit:SettingsExpander x:Name="AboutExpander">
+                        <toolkit:SettingsExpander.HeaderIcon>
+                            <FontIcon Glyph="&#xE946;" />
+                        </toolkit:SettingsExpander.HeaderIcon>
+                        <toolkit:SettingsExpander.Items>
+                            <toolkit:SettingsCard Header="Integrated Mod Manager · GitHub">
+                                <HyperlinkButton Content="github.com/uyujkk/Integrated_Mod_Manager" Tag="https://github.com/uyujkk/Integrated_Mod_Manager" Click="OnExternalResourceClicked" />
                             </toolkit:SettingsCard>
-                        </DataTemplate>
-                    </toolkit:SettingsExpander.ItemTemplate>
-                </toolkit:SettingsExpander>
-                <toolkit:SettingsCard x:Name="EditOnlineRepositoryButton" IsClickEnabled="True" Click="OnEditOnlineRepositoryClicked">
-                    <toolkit:SettingsCard.HeaderIcon>
-                        <FontIcon Glyph="&#xE70F;" />
-                    </toolkit:SettingsCard.HeaderIcon>
-                </toolkit:SettingsCard>
-                <toolkit:SettingsCard x:Name="EditCharacterMappingsButton" IsClickEnabled="True" Click="OnEditCharacterMappingsClicked">
-                    <toolkit:SettingsCard.HeaderIcon>
-                        <FontIcon Glyph="&#xE716;" />
-                    </toolkit:SettingsCard.HeaderIcon>
-                </toolkit:SettingsCard>
-                <!-- Diagnostics and feedback. -->
-                <TextBlock x:Name="DiagnosticsTitleTextBlock" Style="{StaticResource SettingsGroupTitleStyle}" />
-                <toolkit:SettingsCard x:Name="ExportDiagnosticsButton" IsClickEnabled="True" Click="OnExportDiagnosticsClicked">
-                    <toolkit:SettingsCard.HeaderIcon>
-                        <FontIcon Glyph="&#xE9D9;" />
-                    </toolkit:SettingsCard.HeaderIcon>
-                </toolkit:SettingsCard>
-                <toolkit:SettingsCard x:Name="SubmitDiagnosticsButton" IsClickEnabled="True" Click="OnSubmitDiagnosticsClicked">
-                    <toolkit:SettingsCard.HeaderIcon>
-                        <FontIcon Glyph="&#xEBE8;" />
-                    </toolkit:SettingsCard.HeaderIcon>
-                    <toolkit:SettingsCard.ActionIcon>
-                        <FontIcon Glyph="&#xE8A7;" />
-                    </toolkit:SettingsCard.ActionIcon>
-                </toolkit:SettingsCard>
-                <toolkit:SettingsCard x:Name="FeedbackGroupSettingsCard">
-                    <toolkit:SettingsCard.HeaderIcon>
-                        <FontIcon Glyph="&#xE8BD;" />
-                    </toolkit:SettingsCard.HeaderIcon>
-                    <toolkit:SettingsCard.Description>
-                        <TextBlock x:Name="FeedbackGroupNumberTextBlock" IsTextSelectionEnabled="True" TextWrapping="Wrap" />
-                    </toolkit:SettingsCard.Description>
-                    <Button x:Name="CopyFeedbackGroupButton" Click="OnCopyFeedbackGroupClicked" />
-                </toolkit:SettingsCard>
-                <toolkit:SettingsCard x:Name="FeedbackDiscordSettingsCard">
-                    <toolkit:SettingsCard.HeaderIcon>
-                        <FontIcon Glyph="&#xE8BD;" />
-                    </toolkit:SettingsCard.HeaderIcon>
-                    <Button x:Name="OpenFeedbackDiscordButton" Click="OnOpenFeedbackDiscordClicked" />
-                </toolkit:SettingsCard>
-                <TextBlock x:Name="DiagnosticsStatusTextBlock" Margin="1,4,0,0" Style="{StaticResource CaptionTextStyle}" TextWrapping="Wrap"
-                           Text="{x:Bind ViewModel.DiagnosticsStatus, Mode=OneWay}" Visibility="{x:Bind ViewModel.HasDiagnosticsStatus, Mode=OneWay}" />
-                <!-- About: the version, then the project and the open-source components it uses. -->
-                <TextBlock x:Name="ProjectResourcesTitleTextBlock" Style="{StaticResource SettingsGroupTitleStyle}" />
-                <toolkit:SettingsExpander x:Name="AboutExpander">
-                    <toolkit:SettingsExpander.HeaderIcon>
-                        <FontIcon Glyph="&#xE946;" />
-                    </toolkit:SettingsExpander.HeaderIcon>
-                    <toolkit:SettingsExpander.Items>
-                        <toolkit:SettingsCard Header="Integrated Mod Manager · GitHub">
-                            <HyperlinkButton Content="github.com/uyujkk/Integrated_Mod_Manager" Tag="https://github.com/uyujkk/Integrated_Mod_Manager" Click="OnExternalResourceClicked" />
-                        </toolkit:SettingsCard>
-                        <toolkit:SettingsCard Header="B站主页 / Bilibili">
-                            <HyperlinkButton Content="space.bilibili.com/476698898" Tag="https://space.bilibili.com/476698898" Click="OnExternalResourceClicked" />
-                        </toolkit:SettingsCard>
-                        <toolkit:SettingsCard Header="Windows App SDK / WinUI&#160;3">
-                            <HyperlinkButton Content="github.com/microsoft/WindowsAppSDK" Tag="https://github.com/microsoft/WindowsAppSDK" Click="OnExternalResourceClicked" />
-                        </toolkit:SettingsCard>
-                        <toolkit:SettingsCard Header="CommunityToolkit.Mvvm">
-                            <HyperlinkButton Content="github.com/CommunityToolkit/dotnet" Tag="https://github.com/CommunityToolkit/dotnet" Click="OnExternalResourceClicked" />
-                        </toolkit:SettingsCard>
-                        <toolkit:SettingsCard Header="SQLite / Microsoft.Data.Sqlite">
-                            <HyperlinkButton Content="www.sqlite.org" Tag="https://www.sqlite.org/" Click="OnExternalResourceClicked" />
-                        </toolkit:SettingsCard>
-                        <toolkit:SettingsCard Header="7-Zip">
-                            <HyperlinkButton Content="www.7-zip.org" Tag="https://www.7-zip.org/" Click="OnExternalResourceClicked" />
-                        </toolkit:SettingsCard>
-                        <toolkit:SettingsCard Header="libarchive / Windows tar">
-                            <HyperlinkButton Content="github.com/libarchive/libarchive" Tag="https://github.com/libarchive/libarchive" Click="OnExternalResourceClicked" />
-                        </toolkit:SettingsCard>
-                    </toolkit:SettingsExpander.Items>
-                </toolkit:SettingsExpander>
+                            <toolkit:SettingsCard Header="B站主页 / Bilibili">
+                                <HyperlinkButton Content="space.bilibili.com/476698898" Tag="https://space.bilibili.com/476698898" Click="OnExternalResourceClicked" />
+                            </toolkit:SettingsCard>
+                            <toolkit:SettingsCard Header="Windows App SDK / WinUI&#160;3">
+                                <HyperlinkButton Content="github.com/microsoft/WindowsAppSDK" Tag="https://github.com/microsoft/WindowsAppSDK" Click="OnExternalResourceClicked" />
+                            </toolkit:SettingsCard>
+                            <toolkit:SettingsCard Header="CommunityToolkit.Mvvm">
+                                <HyperlinkButton Content="github.com/CommunityToolkit/dotnet" Tag="https://github.com/CommunityToolkit/dotnet" Click="OnExternalResourceClicked" />
+                            </toolkit:SettingsCard>
+                            <toolkit:SettingsCard Header="SQLite / Microsoft.Data.Sqlite">
+                                <HyperlinkButton Content="www.sqlite.org" Tag="https://www.sqlite.org/" Click="OnExternalResourceClicked" />
+                            </toolkit:SettingsCard>
+                            <toolkit:SettingsCard Header="7-Zip">
+                                <HyperlinkButton Content="www.7-zip.org" Tag="https://www.7-zip.org/" Click="OnExternalResourceClicked" />
+                            </toolkit:SettingsCard>
+                            <toolkit:SettingsCard Header="libarchive / Windows tar">
+                                <HyperlinkButton Content="github.com/libarchive/libarchive" Tag="https://github.com/libarchive/libarchive" Click="OnExternalResourceClicked" />
+                            </toolkit:SettingsCard>
+                        </toolkit:SettingsExpander.Items>
+                    </toolkit:SettingsExpander>
+                </StackPanel>
             </StackPanel>
         </Grid>
     </ScrollViewer>
