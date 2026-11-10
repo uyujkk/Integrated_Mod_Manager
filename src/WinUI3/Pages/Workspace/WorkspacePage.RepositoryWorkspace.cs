@@ -1009,7 +1009,7 @@ public sealed partial class WorkspacePage
         string target = Paths.Target.Trim();
         // The game counts as chosen when the repository has one, its own or the default preset.
         return new RepositorySetup(
-            repository is not null && !string.IsNullOrWhiteSpace(_host.OnlineView.GetEffectiveOnlineGameName(repository)),
+            repository is not null && !string.IsNullOrWhiteSpace(_services.OnlineSource.GameName(repository)),
             source.Length > 0 && Directory.Exists(source),
             target.Length > 0 && Directory.Exists(target));
     }
@@ -1023,7 +1023,7 @@ public sealed partial class WorkspacePage
         (bool Done, string Title, string Detail, string Action)[] steps =
         [
             (setup.HasGame, T("RepositoryWorkspace.SetupGame"),
-                setup.HasGame ? _host.OnlineView.GetEffectiveOnlineGameName(repository) : T("RepositoryWorkspace.SetupGameHint"),
+                setup.HasGame ? _services.OnlineSource.GameName(repository) : T("RepositoryWorkspace.SetupGameHint"),
                 T("RepositoryWorkspace.SetupEdit")),
             (setup.HasRepositoryFolder, T("RepositoryWorkspace.SetupRepository"),
                 setup.HasRepositoryFolder ? source : T("RepositoryWorkspace.SetupRepositoryHint"), T("RepositoryWorkspace.SetupChoose")),
@@ -1208,7 +1208,7 @@ public sealed partial class WorkspacePage
         }
         _repositoryInfoSize.Text = "…";
         long? bytes = mod.SizeBytes ?? await EnsureModSizeAsync(mod);
-        if (bytes is long size && revision == _repositorySizeRevision && !_host.OnlineView._onlineWindowClosed)
+        if (bytes is long size && revision == _repositorySizeRevision && !_services.IsClosing)
             _repositoryInfoSize.Text = T("RepositoryWorkspace.SizeAndFiles", OnlinePage.FormatFileSize(size), mod.Files.Count);
     }
 

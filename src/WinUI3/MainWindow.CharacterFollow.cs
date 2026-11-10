@@ -106,7 +106,7 @@ public sealed partial class MainWindow
         try
         {
             CharacterFrame frame = await CaptureCharacterReferenceAsync();
-            if (_onlineView._onlineWindowClosed) return;
+            if (_services.IsClosing) return;
             Activate();
             if (await CharacterRegionDialog.ChooseAsync(_services, frame.Bgra, frame.Width, frame.Height) is { } chosen)
             {
@@ -116,8 +116,8 @@ public sealed partial class MainWindow
                 _shortcuts.CharacterFollowStatus = T("CharacterFollow.RegionSavedSaveReferencesForEach");
             }
         }
-        catch (Exception ex) { if (!_onlineView._onlineWindowClosed) _shortcuts.CharacterFollowStatus = ex.Message; }
-        finally { _characterCaptureBusy = false; if (!_onlineView._onlineWindowClosed && _shortcuts.OverlayVisible) _overlay.Window?.ShowPanel(); }
+        catch (Exception ex) { if (!_services.IsClosing) _shortcuts.CharacterFollowStatus = ex.Message; }
+        finally { _characterCaptureBusy = false; if (!_services.IsClosing && _shortcuts.OverlayVisible) _overlay.Window?.ShowPanel(); }
     }
 
     private async Task SaveCharacterReferenceAsync()
@@ -130,7 +130,7 @@ public sealed partial class MainWindow
             string role = SelectedShortcutRole() ?? throw new InvalidOperationException(T("CharacterFollow.SelectAModForThisCharacter"));
             CharacterScreenRegion region = _characterProfile.Region ?? throw new InvalidOperationException(T("CharacterFollow.SelectAHUDRegionFirst"));
             CharacterFrame frame = await CaptureCharacterReferenceAsync();
-            if (_onlineView._onlineWindowClosed) return;
+            if (_services.IsClosing) return;
             byte[] feature = CharacterImageMatcher.Extract(frame.Bgra, frame.Width, frame.Height, region);
             if (!CharacterImageMatcher.HasDetail(feature)) throw new InvalidOperationException(T("CharacterFollow.TheRegionIsTooUniformOr"));
             _characterProfile.Templates[role] = feature;
@@ -139,13 +139,13 @@ public sealed partial class MainWindow
             Activate();
             _shortcuts.CharacterFollowStatus = T("CharacterFollow.SavedReferenceForTotal", role, _characterProfile.Templates.Count);
         }
-        catch (Exception ex) { if (!_onlineView._onlineWindowClosed) _shortcuts.CharacterFollowStatus = ex.Message; }
-        finally { _characterCaptureBusy = false; if (!_onlineView._onlineWindowClosed && _shortcuts.OverlayVisible) _overlay.Window?.ShowPanel(); }
+        catch (Exception ex) { if (!_services.IsClosing) _shortcuts.CharacterFollowStatus = ex.Message; }
+        finally { _characterCaptureBusy = false; if (!_services.IsClosing && _shortcuts.OverlayVisible) _overlay.Window?.ShowPanel(); }
     }
 
     private async Task ObserveCharacterAsync()
     {
-        if (_characterCaptureBusy || _onlineView._onlineWindowClosed || !_shortcuts.CharacterFollowEnabled
+        if (_characterCaptureBusy || _services.IsClosing || !_shortcuts.CharacterFollowEnabled
             || _shortcuts.SendInProgress || _shortcuts.SelectedTarget is not ShortcutTarget target
             || _characterProfile.Region is not CharacterScreenRegion region) return;
         if (!ShortcutInputService.IsTargetForeground(target))
@@ -162,7 +162,7 @@ public sealed partial class MainWindow
                 && CharacterScreenCapture.OverlapsRegion(WinRT.Interop.WindowNative.GetWindowHandle(_overlay.Window), target, region))
             { _characterMatcher.Reset(); _shortcuts.CharacterFollowStatus = T("CharacterFollow.MoveTheOverlayAwayFromThe"); return; }
             CharacterFrame frame = await Task.Run(() => CharacterScreenCapture.Capture(target, _services.Language.Current));
-            if (_onlineView._onlineWindowClosed || !_shortcuts.CharacterFollowEnabled) return;
+            if (_services.IsClosing || !_shortcuts.CharacterFollowEnabled) return;
             if (_shortcuts.SelectedTarget is not ShortcutTarget current
                 || current.Handle != target.Handle || current.StartTicks != target.StartTicks)
             { _characterMatcher.Reset(); return; }
@@ -186,7 +186,7 @@ public sealed partial class MainWindow
             try { _shortcuts.SelectedMod = selected; }
             finally { _characterAutoSelecting = false; }
         }
-        catch (Exception ex) { _characterMatcher.Reset(); if (!_onlineView._onlineWindowClosed) _shortcuts.CharacterFollowStatus = ex.Message; }
+        catch (Exception ex) { _characterMatcher.Reset(); if (!_services.IsClosing) _shortcuts.CharacterFollowStatus = ex.Message; }
         finally { _characterCaptureBusy = false; }
     }
 }

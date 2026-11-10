@@ -1,5 +1,4 @@
 using IntegratedModManager.Core.Configuration;
-using IntegratedModManager.Core.Endfield;
 using IntegratedModManager.Core.Online;
 using IntegratedModManager.Core.Shortcuts;
 using IntegratedModManager.Data;
@@ -62,14 +61,8 @@ internal interface IOnlineHost
     GameBananaMetadataService Metadata { get; }
 
     // Shared values and helpers of the window.
-    string DefaultOnlineCategoryId { get; }
-    string DefaultOnlineSourceSite { get; }
-    string EndfieldOfficialWikiUrl { get; }
     int ShortcutScanSafetyLimit { get; }
-    IReadOnlyList<RepositoryPresetInfo> BuiltInRepositoryPresets { get; }
-    IReadOnlyList<EndfieldCharacterInfo> EndfieldCharacters { get; }
     IReadOnlyList<string> ImageExtensions { get; }
-    bool IsRepositoryForPreset(WorkspaceRepository repository, RepositoryPresetInfo preset);
     bool IsSupportedArchiveFile(string path);
     string? FindPreviewImage(List<string> files);
     void DeleteDirectoryTreeSafely(string path);

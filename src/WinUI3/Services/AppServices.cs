@@ -9,6 +9,8 @@ internal sealed class AppServices
     public AppServices()
     {
         Dialogs = new(Language);
+        OnlineSource = new(Language);
+        CharacterCatalog = new(OnlineSource);
     }
 
     public LanguageService Language { get; } = new();
@@ -28,6 +30,18 @@ internal sealed class AppServices
     public UpdatesViewModel Updates { get; } = new();
 
     public ImageService Images { get; } = new();
+
+    /// <summary>Which online source each repository uses (stage J finish, step 3).</summary>
+    public OnlineSourceService OnlineSource { get; }
+
+    /// <summary>The character catalog of each repository's game (stage J finish, step 3).</summary>
+    public CharacterCatalogService CharacterCatalog { get; }
+
+    /// <summary>The Online page's view model and preferences (stage J finish, step 3).</summary>
+    public OnlineState Online { get; } = new();
+
+    /// <summary>The window is closing: background work stops updating the pages (set once, by the window).</summary>
+    public bool IsClosing { get; set; }
 
     /// <summary>The dashboard's state (stage J4).</summary>
     public DashboardViewModel Dashboard { get; } = new();

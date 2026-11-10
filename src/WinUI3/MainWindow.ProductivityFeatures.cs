@@ -167,22 +167,22 @@ public sealed partial class MainWindow
 
     private bool IsFavoriteCharacter(string characterKey)
     {
-        if (string.IsNullOrWhiteSpace(characterKey) || string.IsNullOrWhiteSpace(_onlineView._onlineCharacterCatalogKey))
+        if (string.IsNullOrWhiteSpace(characterKey) || string.IsNullOrWhiteSpace(_services.Online.CharacterCatalogKey))
         {
             return false;
         }
 
-        return _favoriteCharacterKeys.Contains(AppDataStore.BuildFavoriteKey(_onlineView._onlineCharacterCatalogKey, characterKey));
+        return _favoriteCharacterKeys.Contains(AppDataStore.BuildFavoriteKey(_services.Online.CharacterCatalogKey, characterKey));
     }
 
     private void ToggleFavoriteCharacter(string characterKey)
     {
-        if (string.IsNullOrWhiteSpace(characterKey) || string.IsNullOrWhiteSpace(_onlineView._onlineCharacterCatalogKey))
+        if (string.IsNullOrWhiteSpace(characterKey) || string.IsNullOrWhiteSpace(_services.Online.CharacterCatalogKey))
         {
             return;
         }
 
-        string favoriteKey = AppDataStore.BuildFavoriteKey(_onlineView._onlineCharacterCatalogKey, characterKey);
+        string favoriteKey = AppDataStore.BuildFavoriteKey(_services.Online.CharacterCatalogKey, characterKey);
         bool isFavorite = !_favoriteCharacterKeys.Contains(favoriteKey);
         if (isFavorite)
         {
@@ -193,7 +193,7 @@ public sealed partial class MainWindow
             _favoriteCharacterKeys.Remove(favoriteKey);
         }
 
-        _appDataStore.SetFavorite(_onlineView._onlineCharacterCatalogKey, characterKey, isFavorite);
+        _appDataStore.SetFavorite(_services.Online.CharacterCatalogKey, characterKey, isFavorite);
         _onlineView._onlineCharacterStripSignature = null;
         _onlineView.RefreshOnlineCharacterAvatarStrip();
         _onlineView.PopulateOnlineCharacterOptions();

@@ -79,7 +79,7 @@ public sealed partial class OnlinePage
     internal const int OnlineRawPageLimit = 80;
     internal void TraceOnlineUiState(string stage, int itemId = 0)
     {
-        if (_onlineWindowClosed) return;
+        if (_services.IsClosing) return;
         try
         {
             if (stage is "Details requested" or "Pane opening" or "Details publishing" or "Hero assigning decoded bitmap")
@@ -91,7 +91,7 @@ public sealed partial class OnlinePage
             $"drawerWidth={OnlineDetailDrawer?.Width:F2} " +
             $"workspace={OnlineWorkspaceGrid?.ActualWidth:F2}x{OnlineWorkspaceGrid?.ActualHeight:F2} " +
             $"results={OnlineResultsHost?.ActualWidth:F2}x{OnlineResultsHost?.ActualHeight:F2} " +
-            $"cards={_onlinePage.CardLayoutMode} closed={_onlineWindowClosed}");
+            $"cards={_services.Online.Page.CardLayoutMode} closed={_services.IsClosing}");
         }
         catch { /* A disconnected XAML object must not turn tracing into a failure. */ }
     }
@@ -151,12 +151,9 @@ public sealed partial class OnlinePage
     internal bool _isApplyingOnlineCharacterSelection;
     internal bool _isLoadingOnlineMods;
     internal string? _lastLoadedOnlineConfigKey;
-    internal readonly HashSet<string> _loadingOnlineCharacterCatalogKeys = new(StringComparer.Ordinal);
     internal CancellationTokenSource _onlineCharacterAvatarCancellation = new();
     internal readonly SemaphoreSlim _onlineCharacterAvatarDownloadGate = new(3, 3);
     internal int _onlineCharacterAvatarRequestVersion;
-    internal readonly string _onlineCharacterCachePath = Path.Combine(AppContext.BaseDirectory, "cache", "online-characters");
-    internal string? _onlineCharacterCatalogKey;
     internal string? _onlineCharacterStripSignature;
     internal int _onlineDetailAnimationVersion;
     internal int _onlineDetailImageIndex;

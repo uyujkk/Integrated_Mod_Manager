@@ -64,14 +64,14 @@ public sealed partial class OnlinePage
                         catch (Exception ex) when (ex is HttpRequestException or OperationCanceledException or TimeoutException or InvalidDataException or System.Text.Json.JsonException)
                         { _host.LogApplicationIssue("Resolve cached author identity", ex); }
                     }
-                    if (!_onlineWindowClosed && context == GetOnlineDetailContextKey())
+                    if (!_services.IsClosing && context == GetOnlineDetailContextKey())
                     {
                         if (mod.AuthorId <= 0 && mod.ItemId > 0)
                             ShowAppNotification(T("OnlineBrowse.AuthorUnavailable"));
                         await BrowseOnlineAuthorAsync(mod.AuthorId, mod.Author);
                     }
                 }
-                finally { if (!_onlineWindowClosed) link.IsEnabled = true; }
+                finally { if (!_services.IsClosing) link.IsEnabled = true; }
             }
             catch (Exception ex)
             {
@@ -149,7 +149,7 @@ public sealed partial class OnlinePage
 
     internal void RefreshOnlineCardStates(bool refreshInstalled = true)
     {
-        if (_onlineWindowClosed) return;
+        if (_services.IsClosing) return;
         foreach (Action<bool> refresh in _onlineCardRefreshers.ToArray()) refresh(refreshInstalled);
     }
 
@@ -164,7 +164,7 @@ public sealed partial class OnlinePage
 
     private void RefreshOnlineCardMetrics()
     {
-        if (_onlineWindowClosed) return;
+        if (_services.IsClosing) return;
         foreach (Action update in _onlineCardMetricRefreshers.ToArray()) update();
     }
 

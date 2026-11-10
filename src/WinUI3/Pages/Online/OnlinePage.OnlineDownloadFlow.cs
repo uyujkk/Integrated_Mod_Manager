@@ -20,7 +20,7 @@ public sealed partial class OnlinePage
         {
             OnlineModCard? latestMod = await FetchGameBananaModCardAsyncV2(
                 mod.ItemId,
-                useEndfieldMetadata: useEndfieldMetadata ?? IsEndfieldRepository(_services.Repositories.Selected),
+                useEndfieldMetadata: useEndfieldMetadata ?? _services.OnlineSource.IsEndfield(_services.Repositories.Selected),
                 cancellationToken: cancellationToken);
             if (latestMod is null)
             {
@@ -93,7 +93,7 @@ public sealed partial class OnlinePage
     {
         WorkspaceRepository? initialRepository = _services.Repositories.Selected;
         OnlineDownloadContext context = capturedContext ?? CaptureOnlineDownloadContext(initialRepository);
-        bool useEndfieldMetadata = capturedEndfieldMetadata ?? IsEndfieldRepository(initialRepository);
+        bool useEndfieldMetadata = capturedEndfieldMetadata ?? _services.OnlineSource.IsEndfield(initialRepository);
         IReadOnlyCollection<string> characterAliases = capturedCharacterAliases ?? GetCharacterFolderAliases(mod);
         using OnlineDownloadActionAdapter.Lease? action = _onlineDownloadActions.TryBegin(context, GetOnlineDownloadIdentity(mod));
         if (action is null) return;
@@ -114,7 +114,7 @@ public sealed partial class OnlinePage
         {
             action.Dispose();
             RefreshOnlineDetailActionState();
-            if (!_onlineWindowClosed) RefreshOnlinePaneV2();
+            if (!_services.IsClosing) RefreshOnlinePaneV2();
         }
     }
 
@@ -282,18 +282,18 @@ public sealed partial class OnlinePage
         }
         finally
         {
-            if (!_onlineWindowClosed && string.Equals(_foregroundDownloadTaskId, downloadTask.Id, StringComparison.Ordinal))
+            if (!_services.IsClosing && string.Equals(_foregroundDownloadTaskId, downloadTask.Id, StringComparison.Ordinal))
             {
                 _foregroundDownloadTaskId = null;
                 SetOnlineDownloadProgress(false, 0, string.Empty);
             }
-            if (!_onlineWindowClosed && !_services.Downloads.Tasks.Any(task => DownloadProgressPolicy.IsActive(task.State)))
+            if (!_services.IsClosing && !_services.Downloads.Tasks.Any(task => DownloadProgressPolicy.IsActive(task.State)))
             {
                 _foregroundDownloadTaskId = null;
                 SetOnlineDownloadProgress(false, 0, string.Empty);
             }
-            if (installBusy && !_onlineWindowClosed) SetOnlineInstallBusy(false);
-            try { if (!_onlineWindowClosed) RefreshOnlinePaneV2(); }
+            if (installBusy && !_services.IsClosing) SetOnlineInstallBusy(false);
+            try { if (!_services.IsClosing) RefreshOnlinePaneV2(); }
             catch (Exception refreshException) { _host.LogApplicationIssue("Refresh online task UI", refreshException); }
         }
     }

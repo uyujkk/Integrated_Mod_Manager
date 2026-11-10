@@ -25,7 +25,7 @@ public sealed partial class OnlinePage
         if (!DispatcherQueue.HasThreadAccess)
         {
             if (required) throw new InvalidOperationException("Download queue snapshots require the UI thread.");
-            DispatcherQueue.TryEnqueue(() => { if (!_onlineWindowClosed) PersistDownloadTasks(); });
+            DispatcherQueue.TryEnqueue(() => { if (!_services.IsClosing) PersistDownloadTasks(); });
             return;
         }
         try
@@ -37,7 +37,7 @@ public sealed partial class OnlinePage
         {
             _host.LogApplicationIssue("Save download recovery record", ex);
             if (required) throw;
-            if (!_onlineWindowClosed && !_downloadJournalWarningShown)
+            if (!_services.IsClosing && !_downloadJournalWarningShown)
             {
                 _downloadJournalWarningShown = true;
                 ShowAppNotification(T("DownloadRecovery.HistoryNotSaved"), Microsoft.UI.Xaml.Controls.InfoBarSeverity.Warning);

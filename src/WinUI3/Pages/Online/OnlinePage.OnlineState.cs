@@ -5,11 +5,9 @@ namespace ModFolderCopier.WinUI;
 
 public sealed partial class OnlinePage
 {
-    internal readonly OnlinePageViewModel _onlinePage = new();
     private readonly OnlinePageStateAdapter _onlineDetailState = new();
     internal readonly OnlineDownloadActionAdapter _onlineDownloadActions = new();
     private int _onlineInstallBusyCount;
-    internal bool _onlineWindowClosed;
 
     private string GetOnlineDetailContextKey()
     {
@@ -30,7 +28,7 @@ public sealed partial class OnlinePage
 
     private void RefreshOnlineDetailActionState()
     {
-        if (_onlineWindowClosed) return;
+        if (_services.IsClosing) return;
         RefreshOnlineCardStates();
         if (_activeOnlineDetailMod is not OnlineModCard mod) return;
         UpdateOnlineDetailDownloadControls(mod);
@@ -59,14 +57,14 @@ public sealed partial class OnlinePage
         try { await DownloadAndExtractOnlineModAsync(mod); }
         finally
         {
-            if (!_onlineWindowClosed)
+            if (!_services.IsClosing)
                 button.IsEnabled = !string.IsNullOrWhiteSpace(mod.DownloadUrl) && !IsOnlineDownloadActionBlocked(mod);
         }
     }
 
     internal async Task ReportOnlineActionErrorAsync(string message, string title, Exception? error = null)
     {
-        if (_onlineWindowClosed) return;
+        if (_services.IsClosing) return;
         try { await _services.Dialogs.ErrorAsync(title, message, error); }
         catch (Exception ex) { _host.LogApplicationIssue("Report online action error", ex); }
     }

@@ -1,5 +1,4 @@
 using IntegratedModManager.Core.Configuration;
-using IntegratedModManager.Core.Endfield;
 using IntegratedModManager.Core.Online;
 using IntegratedModManager.Core.Shortcuts;
 using IntegratedModManager.Data;
@@ -62,14 +61,8 @@ public sealed partial class MainWindow : IOnlineHost
     AppDataStore IOnlineHost.DataStore => _appDataStore;
     GameBananaMetadataService IOnlineHost.Metadata => _gameBananaMetadataService;
 
-    string IOnlineHost.DefaultOnlineCategoryId => DefaultOnlineCategoryId;
-    string IOnlineHost.DefaultOnlineSourceSite => DefaultOnlineSourceSite;
-    string IOnlineHost.EndfieldOfficialWikiUrl => EndfieldOfficialWikiUrl;
     int IOnlineHost.ShortcutScanSafetyLimit => ShortcutScanSafetyLimit;
-    IReadOnlyList<RepositoryPresetInfo> IOnlineHost.BuiltInRepositoryPresets => BuiltInRepositoryPresets;
-    IReadOnlyList<EndfieldCharacterInfo> IOnlineHost.EndfieldCharacters => EndfieldCharacters;
     IReadOnlyList<string> IOnlineHost.ImageExtensions => ImageExtensions;
-    bool IOnlineHost.IsRepositoryForPreset(WorkspaceRepository repository, RepositoryPresetInfo preset) => IsRepositoryForPreset(repository, preset);
     bool IOnlineHost.IsSupportedArchiveFile(string path) => IsSupportedArchiveFile(path);
     string? IOnlineHost.FindPreviewImage(List<string> files) => _workspaceView.FindPreviewImage(files);
     void IOnlineHost.DeleteDirectoryTreeSafely(string path) => DeleteDirectoryTreeSafely(path);

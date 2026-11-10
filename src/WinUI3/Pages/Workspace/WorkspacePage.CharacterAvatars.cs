@@ -1,3 +1,4 @@
+using IntegratedModManager.Core.Endfield;
 using IntegratedModManager.Core.Online;
 using IntegratedModManager.Core.Repository;
 using Microsoft.UI.Xaml;
@@ -45,7 +46,7 @@ public sealed partial class WorkspacePage
 
             if (!fresh && !cancellationToken.IsCancellationRequested && _avatarCatalogRefreshRequested.Add(repository.Id))
             {
-                await _host.OnlineView.EnsureOnlineCharacterCatalogAsync(repository, forceReload: false);
+                await _services.CharacterCatalog.EnsureAsync(repository, forceReload: false);
                 if (!cancellationToken.IsCancellationRequested && ReferenceEquals(_services.Repositories.Selected, repository))
                 {
                     await RefreshCharacterFolderAvatarsAsync();
@@ -101,21 +102,21 @@ public sealed partial class WorkspacePage
         }
     }
 
-    // The catalog for avatar matching and whether it is fresh (see _host.OnlineView.OnlineCharacterCatalogFreshFor).
+    // The catalog for avatar matching and whether it is fresh (see CharacterCatalogService.FreshFor).
     private async Task<(IReadOnlyList<OnlineCharacterOption> Characters, bool Fresh)> GetCharacterAvatarCatalogAsync(WorkspaceRepository repository)
     {
-        string catalogKey = _host.OnlineView.GetOnlineCharacterCatalogKey(repository);
-        OnlineCharacterCatalogCacheSnapshot? cached = await _host.OnlineView.TryReadOnlineCharacterCatalogCacheAsync(catalogKey);
+        string catalogKey = _services.CharacterCatalog.CatalogKey(repository);
+        OnlineCharacterCatalogCacheSnapshot? cached = await _services.CharacterCatalog.TryReadCacheAsync(catalogKey);
         IReadOnlyList<OnlineCharacterOption> online =
-            string.Equals(_host.OnlineView._onlineCharacterCatalogKey, catalogKey, StringComparison.Ordinal) && _host.OnlineView._onlinePage.CharacterOptions.Count > 0
-                ? [.. _host.OnlineView._onlinePage.CharacterOptions]
+            string.Equals(_services.Online.CharacterCatalogKey, catalogKey, StringComparison.Ordinal) && _services.Online.Page.CharacterOptions.Count > 0
+                ? [.. _services.Online.Page.CharacterOptions]
                 : cached?.Characters ?? [];
-        if (!_host.OnlineView.IsEndfieldRepository(repository))
+        if (!_services.OnlineSource.IsEndfield(repository))
         {
             return (online, cached?.IsFresh == true);
         }
 
-        OnlineCharacterOption[] builtIn = _host.EndfieldCharacters.Select((character, index) => new OnlineCharacterOption
+        OnlineCharacterOption[] builtIn = EndfieldCharacterCatalog.BuiltIn.Select((character, index) => new OnlineCharacterOption
         {
             Key = character.EnglishName,
             DisplayNameZh = character.ChineseName,

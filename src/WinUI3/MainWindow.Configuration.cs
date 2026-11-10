@@ -75,16 +75,16 @@ public sealed partial class MainWindow
                 "shortcuts" => PrimarySection.Shortcuts,
                 _ => PrimarySection.Dashboard
             };
-            _onlineView._onlinePreferences = config?.OnlinePreferences ?? new();
-            _onlineView._onlinePreferences.ConcurrentDownloads = Math.Clamp(_onlineView._onlinePreferences.ConcurrentDownloads, 1, 4);
-            _onlineView._onlinePreferences.Authors ??= [];
-            _onlineView._onlinePreferences.SavedMods ??= [];
-            _onlineView._onlinePreferences.DownloadFolders ??= new(StringComparer.OrdinalIgnoreCase);
-            _onlineView._onlinePreferences.BrowseSessions ??= [];
-            _onlineView._onlinePreferences.RecentAuthors ??= [];
+            _services.Online.Preferences = config?.OnlinePreferences ?? new();
+            _services.Online.Preferences.ConcurrentDownloads = Math.Clamp(_services.Online.Preferences.ConcurrentDownloads, 1, 4);
+            _services.Online.Preferences.Authors ??= [];
+            _services.Online.Preferences.SavedMods ??= [];
+            _services.Online.Preferences.DownloadFolders ??= new(StringComparer.OrdinalIgnoreCase);
+            _services.Online.Preferences.BrowseSessions ??= [];
+            _services.Online.Preferences.RecentAuthors ??= [];
             _workspaceView._localLibraries = config?.LocalLibraries ?? new(StringComparer.OrdinalIgnoreCase);
             foreach (var library in _workspaceView._localLibraries.Values) library.Normalize();
-            _services.Downloads.Scheduler.Limit = _onlineView._onlinePreferences.ConcurrentDownloads;
+            _services.Downloads.Scheduler.Limit = _services.Online.Preferences.ConcurrentDownloads;
             _loadedUpdateCheckInterval = config?.UpdateCheckInterval;
             _updateCheckInterval = AppSelfUpdateEnabled ? ParseUpdateCheckInterval(_loadedUpdateCheckInterval) : UpdateCheckInterval.Manual;
             _navigationCollapsed = config?.NavigationCollapsed ?? false;
@@ -134,7 +134,7 @@ public sealed partial class MainWindow
             _interfaceDensity = string.Equals(config?.InterfaceDensity, "compact", StringComparison.OrdinalIgnoreCase)
                 ? InterfaceDensity.Compact
                 : InterfaceDensity.Comfortable;
-            _onlineView._onlinePage.CardLayoutMode = string.Equals(config?.OnlineCardLayout, "grid", StringComparison.OrdinalIgnoreCase)
+            _services.Online.Page.CardLayoutMode = string.Equals(config?.OnlineCardLayout, "grid", StringComparison.OrdinalIgnoreCase)
                 ? OnlineCardLayoutMode.Grid
                 : OnlineCardLayoutMode.List;
             if (config?.ConfigurationProfiles is { Count: > 0 })
@@ -203,7 +203,7 @@ public sealed partial class MainWindow
             _storedThemePreference = null;
             _minimizeToTray = false;
             _interfaceDensity = InterfaceDensity.Comfortable;
-            _onlineView._onlinePage.CardLayoutMode = OnlineCardLayoutMode.List;
+            _services.Online.Page.CardLayoutMode = OnlineCardLayoutMode.List;
             _savedWindowX = null;
             _savedWindowY = null;
             _savedWindowWidth = null;
@@ -264,7 +264,7 @@ public sealed partial class MainWindow
             var config = new BetaShellConfig
             {
                 CurrentPrimarySection = _currentPrimarySection.ToString().ToLowerInvariant(),
-                OnlinePreferences = _onlineView._onlinePreferences,
+                OnlinePreferences = _services.Online.Preferences,
                 LocalLibraries = _workspaceView._localLibraries,
                 SelectedRepositoryId = _services.Repositories.SelectedId,
                 UpdateCheckInterval = ApplicationReleasePolicy.UpdateSettingToSave(_updateCheckInterval.ToString(), _loadedUpdateCheckInterval),
@@ -303,7 +303,7 @@ public sealed partial class MainWindow
                 ShowTitleBarSearch = _showTitleBarSearch,
                 NavigationCollapsed = _navigationCollapsed,
                 InterfaceDensity = _interfaceDensity == InterfaceDensity.Compact ? "compact" : "comfortable",
-                OnlineCardLayout = _onlineView._onlinePage.CardLayoutMode == OnlineCardLayoutMode.Grid ? "grid" : "list",
+                OnlineCardLayout = _services.Online.Page.CardLayoutMode == OnlineCardLayoutMode.Grid ? "grid" : "list",
                 RepositoryWorkspaceView = _workspaceView._modList.View.ToString().ToLowerInvariant(),
                 WorkspaceCharacterWidth = _workspaceView._modList.CharacterPaneWidth,
                 WorkspaceDetailWidth = _workspaceView._modList.DetailPaneWidth,

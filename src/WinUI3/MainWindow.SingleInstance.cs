@@ -8,7 +8,7 @@ public sealed partial class MainWindow
     // Runs on the UI thread after Program redirected a second launch to this process.
     internal void RestoreFromExternalActivation()
     {
-        if (_onlineView._onlineWindowClosed)
+        if (_services.IsClosing)
         {
             return;
         }

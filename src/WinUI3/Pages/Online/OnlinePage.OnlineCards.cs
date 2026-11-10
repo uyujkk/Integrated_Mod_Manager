@@ -222,7 +222,7 @@ public sealed partial class OnlinePage
     {
         Brush fill = GetAppThemeBrush("AppInsetBackgroundBrush");
         Brush shade = GetAppThemeBrush("AppAccentSoftBrush");
-        if (_onlinePage.CardLayoutMode == OnlineCardLayoutMode.Grid)
+        if (_services.Online.Page.CardLayoutMode == OnlineCardLayoutMode.Grid)
         {
             double width = OnlineResultsHost.ActualWidth > 0 ? OnlineResultsHost.ActualWidth - 12 : OnlineLayoutPolicy.PreferredTileWidth;
             OnlineGridTileLayout tiles = OnlineLayoutPolicy.GridTiles(width);
@@ -307,9 +307,9 @@ public sealed partial class OnlinePage
         if (_restoringBrowseControls) return;
         if (OnlineSortComboBox.SelectedItem is ComboBoxItem { Tag: OnlineSortMode sortMode })
         {
-            if (_onlinePage.SortMode == sortMode) return;
+            if (_services.Online.Page.SortMode == sortMode) return;
             ResetOnlineBrowsePosition();
-            _onlinePage.SortMode = sortMode;
+            _services.Online.Page.SortMode = sortMode;
             RefreshOnlinePaneV2();
             _host.SaveShellConfig();
         }
@@ -327,14 +327,14 @@ public sealed partial class OnlinePage
 
     private void SetOnlineCardLayout(OnlineCardLayoutMode layoutMode)
     {
-        if (_onlinePage.CardLayoutMode == layoutMode)
+        if (_services.Online.Page.CardLayoutMode == layoutMode)
         {
             return;
         }
 
         CaptureOnlineBrowseSession();
-        _pendingBrowsePosition = _activeBrowseSessionKey is not null && _onlinePreferences.BrowseSessions.TryGetValue(_activeBrowseSessionKey, out var savedPosition) ? savedPosition : new();
-        _onlinePage.CardLayoutMode = layoutMode;
+        _pendingBrowsePosition = _activeBrowseSessionKey is not null && _services.Online.Preferences.BrowseSessions.TryGetValue(_activeBrowseSessionKey, out var savedPosition) ? savedPosition : new();
+        _services.Online.Page.CardLayoutMode = layoutMode;
         _animateOnlineCardsOnNextRefresh = true;
         _host.SaveShellConfig();
         RefreshOnlinePaneV2();
@@ -342,14 +342,14 @@ public sealed partial class OnlinePage
 
     private FrameworkElement GetOnlineResultsElement()
     {
-        return _onlinePage.CardLayoutMode == OnlineCardLayoutMode.Grid
+        return _services.Online.Page.CardLayoutMode == OnlineCardLayoutMode.Grid
             ? OnlineVirtualizedGridView
             : OnlineVirtualizedListView;
     }
 
     private void UpdateOnlineCardLayoutControls()
     {
-        bool showGrid = _onlinePage.CardLayoutMode == OnlineCardLayoutMode.Grid;
+        bool showGrid = _services.Online.Page.CardLayoutMode == OnlineCardLayoutMode.Grid;
         OnlineVirtualizedListView.Visibility = showGrid ? Visibility.Collapsed : Visibility.Visible;
         OnlineVirtualizedGridView.Visibility = showGrid ? Visibility.Visible : Visibility.Collapsed;
         ApplySecondaryNavButtonVisual(OnlineListLayoutButton, !showGrid);
@@ -385,7 +385,7 @@ public sealed partial class OnlinePage
     {
         TraceOnlineUiState("Results size changed");
         if (Math.Abs(e.NewSize.Width - e.PreviousSize.Width) > 0.5) UpdateOnlineToolbarLayout();
-        if (_onlinePage.CardLayoutMode == OnlineCardLayoutMode.Grid)
+        if (_services.Online.Page.CardLayoutMode == OnlineCardLayoutMode.Grid)
         {
             UpdateOnlineGridCardMetrics(GetOnlineGridAvailableWidth(e.NewSize.Width));
         }
@@ -432,7 +432,7 @@ public sealed partial class OnlinePage
         OnlineWorkspaceGrid.ClearValue(FrameworkElement.WidthProperty);
         OnlineResultsHost.ClearValue(FrameworkElement.WidthProperty);
 
-        if (_onlinePage.CardLayoutMode == OnlineCardLayoutMode.Grid)
+        if (_services.Online.Page.CardLayoutMode == OnlineCardLayoutMode.Grid)
         {
             double availableWidth = OnlineVirtualizedGridView.ActualWidth > 0
                 ? OnlineVirtualizedGridView.ActualWidth

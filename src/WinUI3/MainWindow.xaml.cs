@@ -23,10 +23,10 @@ public sealed partial class MainWindow : Window
     private static bool AppSelfUpdateEnabled => ApplicationReleasePolicy.ApplicationSelfUpdateEnabled;
     private const string GitHubRepositoryUrl = "https://github.com/uyujkk/Integrated_Mod_Manager";
     private const string GitHubLatestReleaseApiUrl = "https://api.github.com/repos/uyujkk/Integrated_Mod_Manager/releases/latest";
-    private const string DefaultOnlineSourceSite = "GameBanana";
-    private const string DefaultOnlineCategoryId = "42770";
+    private const string DefaultOnlineSourceSite = OnlineSourceRules.DefaultSourceSite;
+    private const string DefaultOnlineCategoryId = OnlineSourceRules.DefaultCategoryId;
     private const string DefaultOnlineGameName = "Arknights: Endfield";
-    private const string EndfieldOfficialWikiUrl = "https://wiki.skland.com/endfield";
+    private const string EndfieldOfficialWikiUrl = OnlineSourceRules.EndfieldOfficialWikiUrl;
     private const int ArchiveToolTimeoutMinutes = 10;
     private const int ShortcutScanSafetyLimit = 256;
     private static readonly IReadOnlyList<string> SupportedArchiveExtensions = ArchiveExtractor.SupportedExtensions;
@@ -142,6 +142,8 @@ public sealed partial class MainWindow : Window
         _workspaceView = new WorkspacePage(_services, this);
         AttachWorkspacePageEvents();
         _services.Images.Attach(_httpClient, LogApplicationIssue);
+        _services.CharacterCatalog.Attach(_httpClient, _appDataStore, LogApplicationIssue,
+            repository => BuiltInRepositoryPresets.FirstOrDefault(preset => IsRepositoryForPreset(repository, preset))?.WikiUrl);
         _services.Dialogs.Attach(() => RootGrid.XamlRoot, () => RootGrid.ActualTheme);
         _services.Appearance.ReduceAnimations = () => ShouldReduceAnimations;
         _services.Dialogs.AttachWindow(() => WinRT.Interop.WindowNative.GetWindowHandle(this));
@@ -160,8 +162,8 @@ public sealed partial class MainWindow : Window
         InitializeCommandPaletteShortcut();
         _workspaceView.FirstLevelListView.ItemsSource = _characters.Visible;
         _workspaceView.SecondLevelListView.ItemsSource = _secondLevelItems;
-        _onlineView.OnlineVirtualizedListView.ItemsSource = _onlineView._onlinePage.VisibleMods;
-        _onlineView.OnlineVirtualizedGridView.ItemsSource = _onlineView._onlinePage.VisibleMods;
+        _onlineView.OnlineVirtualizedListView.ItemsSource = _services.Online.Page.VisibleMods;
+        _onlineView.OnlineVirtualizedGridView.ItemsSource = _services.Online.Page.VisibleMods;
         TraceStartupStage("List sources attached");
         RegisterTrackedTextInputs();
         _workspaceView.BuildShortcutRows();

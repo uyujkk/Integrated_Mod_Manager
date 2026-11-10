@@ -23,6 +23,8 @@ public sealed partial class OnlinePage : UserControl
         VerticalContentAlignment = VerticalAlignment.Stretch;
         InitializeComponent();
         InitializeOnlineDetailShadow();
+        // A catalog loaded for the page's repository replaces its character list (stage J finish, step 3).
+        services.CharacterCatalog.Loaded += (_, loaded) => ApplyOnlineCharacterCatalog(loaded.Key, loaded.Characters);
     }
 
     private bool IsChineseUi => _services.Language.IsChinese;

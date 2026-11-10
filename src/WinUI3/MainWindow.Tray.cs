@@ -244,7 +244,7 @@ public sealed partial class MainWindow
     private string BuildTraySourceLine()
     {
         WorkspaceRepository? repository = GetSelectedRepository();
-        string source = repository is null ? T("Common.NotSelected") : _onlineView.GetEffectiveOnlineSource(repository);
+        string source = repository is null ? T("Common.NotSelected") : _services.OnlineSource.Source(repository);
         return T("Tray.OnlineSource", source);
     }
 

@@ -11,7 +11,7 @@ public sealed class OnlineTests
 {
     private const string FixtureModeLine = "测试样例模式";
 
-    private static AppSession StartOnline(string category = "90001")
+    private static AppSession StartOnline(string category = "90001", string language = "zh")
     {
         AppSession app = AppSession.Configured((shell, _) =>
         {
@@ -19,6 +19,12 @@ public sealed class OnlineTests
             shell["Repositories"]![0]!["OnlineCategoryId"] = category;
             shell["Repositories"]![0]!["OnlineGameName"] = "Sample Game";
         });
+        if (language != "zh")
+        {
+            static string Encode(string value) => Convert.ToBase64String(System.Text.Encoding.UTF8.GetBytes(value));
+            string config = Path.Combine(app.AppFolder, "config.ini");
+            File.WriteAllLines(config, File.ReadAllLines(config).Select(line => line.StartsWith("language=") ? "language=" + Encode(language) : line));
+        }
         Environment.SetEnvironmentVariable("IMM_ONLINE_FIXTURES", Path.Combine(app.TestData, "OnlineFixtures"));
         try { app.Start(); }
         finally { Environment.SetEnvironmentVariable("IMM_ONLINE_FIXTURES", null); }
@@ -121,5 +127,34 @@ public sealed class OnlineTests
         Assert.Null(app.MainWindow.FindFirstDescendant(cf => cf.ByClassName("ContentDialog")));
 
         AssertNoErrorsBesidesSampleMode(app, allowMissingSamples: true);
+    }
+
+    // Stage J finish, step 3: the character catalog moves out of the page. Its result must stay the same: the rail lists
+    // the same characters in the same order with their avatars, the same in each language, and the catalog is cached.
+    [Theory]
+    [InlineData("zh")]
+    [InlineData("en")]
+    public void Online_CharacterCatalogResultIsUnchanged(string language)
+    {
+        using AppSession app = StartOnline(language: language);
+        app.Resize(1400, 900);
+        Visible(app, "Sample Mod 01");
+        Thread.Sleep(1500);
+
+        string[] heroes = app.MainWindow.FindAllDescendants(cf => cf.ByControlType(FlaUI.Core.Definitions.ControlType.Button))
+            .Where(element => (element.Properties.Name.ValueOrDefault ?? string.Empty).StartsWith("Sample Hero", StringComparison.Ordinal)
+                && !element.Properties.IsOffscreen.ValueOrDefault)
+            .OrderBy(element => element.BoundingRectangle.Top).ThenBy(element => element.BoundingRectangle.Left)
+            .Select(element => element.Name).ToArray();
+        Assert.Equal(["Sample Hero Aster", "Sample Hero Briar", "Sample Hero Cobalt"], heroes);
+
+        // Picking a character filters by its category, as before.
+        Mouse.Click(Visible(app, "Sample Hero Cobalt").GetClickablePoint());
+        WaitUntil(() => app.MainWindow.FindFirstDescendant(cf => cf.ByName("Sample Mod 03")) is not null
+            && app.MainWindow.FindFirstDescendant(cf => cf.ByName("Sample Mod 01")) is null, "Cobalt's Mods only");
+
+        // The catalog is kept in the local index for the next start.
+        WaitUntil(() => File.Exists(Path.Combine(app.AppFolder, "cache", "app-index.db")), "the local index");
+        AssertNoErrorsBesidesSampleMode(app);
     }
 }

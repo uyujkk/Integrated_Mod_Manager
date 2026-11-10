@@ -9,8 +9,8 @@ public sealed partial class MainWindow
     private async Task<bool> WaitForOverlayCaptureAsync()
     {
         // A hot switch owns the file until its read-only hold finishes. Queue a save behind it.
-        while (_restoringPersistentRuntime && !_onlineView._onlineWindowClosed) await Task.Delay(50);
-        return !_onlineView._onlineWindowClosed && !_applyingCombinationProfile;
+        while (_restoringPersistentRuntime && !_services.IsClosing) await Task.Delay(50);
+        return !_services.IsClosing && !_applyingCombinationProfile;
     }
 
     private async Task<bool> PrepareOverlayCaptureAsync(string userIni)
@@ -32,7 +32,7 @@ public sealed partial class MainWindow
             var chosen = _shortcuts.SelectedTarget!;
             await LoaderStateCapture.FlushAsync(userIni,
                 _ => _shortcutInput.SendAsync(chosen, new ShortcutKeyPlan([LoaderReloadKey], []), 120, _shortcuts.InputMode, _services.Language.Current));
-            return !_onlineView._onlineWindowClosed;
+            return !_services.IsClosing;
         }
         catch (TimeoutException)
         {
@@ -40,9 +40,9 @@ public sealed partial class MainWindow
             // which looks the same as a missed F10. Let the user decide instead of refusing outright.
         }
         finally { _shortcuts.SendInProgress = false; }
-        bool readExisting = !_onlineView._onlineWindowClosed
+        bool readExisting = !_services.IsClosing
             && await AskToReadExistingFileAsync(T("ShortcutCapture.NoNewWrite"), T("ShortcutCapture.NoNewWriteWarning"));
-        if (!readExisting && !_onlineView._onlineWindowClosed)
+        if (!readExisting && !_services.IsClosing)
         {
             _shortcuts.StatusText = T("ShortcutPanel.PresetNotSaved") + T("ShortcutCapture.TimedOut");
             RefreshShortcutOverlay();
@@ -56,7 +56,7 @@ public sealed partial class MainWindow
         var overlay = _overlay.Window;
         if (overlay?.Content is not FrameworkElement root) return false;
         overlay.SetKeyboardInputEnabled(true);
-        try { return await ReadExistingFileDialog.ConfirmAsync(_services, root.XamlRoot, title, message) && !_onlineView._onlineWindowClosed; }
+        try { return await ReadExistingFileDialog.ConfirmAsync(_services, root.XamlRoot, title, message) && !_services.IsClosing; }
         finally
         {
             if (ReferenceEquals(_overlay.Window, overlay)) overlay.SetKeyboardInputEnabled(false);

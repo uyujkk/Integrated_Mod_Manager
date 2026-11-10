@@ -19,7 +19,7 @@ public sealed partial class MainWindow : IShortcutOverlayActions
     // After the settings are loaded, so loading them is not taken for the user's changes.
     private void ListenToShortcutState() => _shortcuts.PropertyChanged += OnShortcutStateChanged;
 
-    bool IShortcutOverlayActions.IsClosing => _onlineView._onlineWindowClosed;
+    bool IShortcutOverlayActions.IsClosing => _services.IsClosing;
 
     bool IShortcutOverlayActions.IsSavingFromOverlay => _savingOverlaySinglePreset;
 

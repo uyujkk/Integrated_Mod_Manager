@@ -33,7 +33,7 @@ public sealed partial class MainWindow
 
             UiCrashDiagnostics.RecordAction("UI action failed: " + operation);
             LogApplicationIssueWithStack("UI action " + operation, exception);
-            if (_onlineView._onlineWindowClosed)
+            if (_services.IsClosing)
             {
                 return;
             }

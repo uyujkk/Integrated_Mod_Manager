@@ -51,7 +51,7 @@ public sealed partial class MainWindow
                 if (ReferenceEquals(_overlay.Window, overlay)) overlay.SetKeyboardInputEnabled(false);
                 if (_shortcuts.SelectedTarget is ShortcutTarget target) ShortcutInputService.FocusTarget(target);
             }
-            if (result != ContentDialogResult.Primary || _onlineView._onlineWindowClosed) return;
+            if (result != ContentDialogResult.Primary || _services.IsClosing) return;
 
             CharacterFrame? preview = await CapturePresetPreviewAsync();
             if (!await PrepareOverlayCaptureAsync(userIni)) return;
@@ -66,7 +66,7 @@ public sealed partial class MainWindow
             if (captured.Count == 0)
                 throw new InvalidDataException(T("PersistentSlots.NoNumericPersistentValuesMatchedThis"));
             var (values, menuStateLeft) = FilterSlotValues(captured);
-            if (_onlineView._onlineWindowClosed) return;
+            if (_services.IsClosing) return;
             var slot = new ModPersistentSlot
             {
                 RepositoryId = repository.Id, ModRelativePath = relative, Name = name,
@@ -84,12 +84,12 @@ public sealed partial class MainWindow
         catch (Exception ex)
         {
             LogApplicationIssue("Overlay single Mod preset capture", ex);
-            if (!_onlineView._onlineWindowClosed) _shortcuts.StatusText = T("ShortcutPanel.PresetNotSaved") + OverlayCaptureError(ex);
+            if (!_services.IsClosing) _shortcuts.StatusText = T("ShortcutPanel.PresetNotSaved") + OverlayCaptureError(ex);
         }
         finally
         {
             _savingOverlaySinglePreset = false;
-            if (!_onlineView._onlineWindowClosed)
+            if (!_services.IsClosing)
             {
                 SetCombinationBusy(false);
                 RefreshPersistentSlotControls();

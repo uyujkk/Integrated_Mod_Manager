@@ -108,7 +108,7 @@ public sealed partial class MainWindow
             _restoringPersistentRuntime = false;
             _shortcuts.SendInProgress = false;
             _overlay.InvalidateSlots();
-            if (!_onlineView._onlineWindowClosed)
+            if (!_services.IsClosing)
             {
                 RefreshShortcutOverlay(bindingsChanged: true);
                 RefreshPersistentSlotControls();

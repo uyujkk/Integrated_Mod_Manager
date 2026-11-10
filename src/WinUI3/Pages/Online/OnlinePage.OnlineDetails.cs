@@ -53,7 +53,7 @@ public sealed partial class OnlinePage
             ex => ReportOnlineActionErrorAsync(
                 T("OnlineDetails.FailedToOpenModDetails") + ex.Message,
                 T("OnlineDetails.DetailsLoadFailed"), ex),
-            () => !_onlineWindowClosed && ReferenceEquals(_activeOnlineDetailMod, mod)
+            () => !_services.IsClosing && ReferenceEquals(_activeOnlineDetailMod, mod)
                 && string.Equals(contextKey, GetOnlineDetailContextKey(), StringComparison.Ordinal),
             loading =>
             {
@@ -454,18 +454,18 @@ public sealed partial class OnlinePage
         bool wasOpen = IsOnlineDetailOpen;
         OnlineDetailDrawer.Visibility = Visibility.Visible;
         await Task.Delay(1);
-        if (_onlineWindowClosed || animationVersion != _onlineDetailAnimationVersion) return;
+        if (_services.IsClosing || animationVersion != _onlineDetailAnimationVersion) return;
         UpdateOnlineResponsiveLayout(_host.Bounds.Width);
         UpdateOnlineWorkspaceWidthConstraint();
         DispatcherQueue.TryEnqueue(() =>
         {
-            if (_onlineWindowClosed || animationVersion != _onlineDetailAnimationVersion) return;
+            if (_services.IsClosing || animationVersion != _onlineDetailAnimationVersion) return;
             UpdateOnlineResponsiveLayout(_host.Bounds.Width);
             UpdateOnlineWorkspaceWidthConstraint();
             // The cards re-flowed around the drawer; bring the one being shown back into view.
             int index = GetActiveOnlineDetailIndex();
             if (index >= 0 && GetOnlineResultsElement() is ListViewBase results)
-                results.ScrollIntoView(_onlinePage.VisibleMods[index]);
+                results.ScrollIntoView(_services.Online.Page.VisibleMods[index]);
         });
         if (animationVersion != _onlineDetailAnimationVersion)
         {
@@ -846,9 +846,9 @@ public sealed partial class OnlinePage
     private int GetActiveOnlineDetailIndex()
     {
         if (_activeOnlineDetailMod is not { } active) return -1;
-        for (int index = 0; index < _onlinePage.VisibleMods.Count; index++)
+        for (int index = 0; index < _services.Online.Page.VisibleMods.Count; index++)
         {
-            OnlineModCard candidate = _onlinePage.VisibleMods[index];
+            OnlineModCard candidate = _services.Online.Page.VisibleMods[index];
             if (ReferenceEquals(candidate, active) || (active.ItemId > 0 && candidate.ItemId == active.ItemId)) return index;
         }
         return -1;
@@ -858,7 +858,7 @@ public sealed partial class OnlinePage
     {
         int index = GetActiveOnlineDetailIndex();
         OnlineDetailPreviousButton.IsEnabled = index > 0;
-        OnlineDetailNextButton.IsEnabled = index >= 0 && index < _onlinePage.VisibleMods.Count - 1;
+        OnlineDetailNextButton.IsEnabled = index >= 0 && index < _services.Online.Page.VisibleMods.Count - 1;
         foreach ((Button button, string label) in new[]
         {
             (OnlineDetailPreviousButton, T("OnlineDetails.PreviousMod")),
@@ -878,18 +878,18 @@ public sealed partial class OnlinePage
     {
         int index = GetActiveOnlineDetailIndex();
         int target = index + step;
-        if (index < 0 || target < 0 || target >= _onlinePage.VisibleMods.Count) return;
-        OnlineModCard mod = _onlinePage.VisibleMods[target];
+        if (index < 0 || target < 0 || target >= _services.Online.Page.VisibleMods.Count) return;
+        OnlineModCard mod = _services.Online.Page.VisibleMods[target];
         if (GetOnlineResultsElement() is ListViewBase results) results.ScrollIntoView(mod);
         await _host.RunUiActionAsync("ShowOnlineModDetailsAsync", () => ShowOnlineModDetailsAsync(mod));
     }
 
     internal async Task CloseOnlineDetailPaneAsync()
     {
-        if (_onlineWindowClosed) return;
+        if (_services.IsClosing) return;
         // The cards re-flow to more columns on close; keep the one just viewed on screen.
         int lastShownIndex = GetActiveOnlineDetailIndex();
-        OnlineModCard? lastShown = lastShownIndex >= 0 ? _onlinePage.VisibleMods[lastShownIndex] : null;
+        OnlineModCard? lastShown = lastShownIndex >= 0 ? _services.Online.Page.VisibleMods[lastShownIndex] : null;
         // Close takes effect before the animation awaits, not 165ms later.
         InvalidateOnlineDetailRequest();
         _activeOnlineDetailMod = null;
@@ -915,7 +915,7 @@ public sealed partial class OnlinePage
             await Task.Delay(165);
         }
 
-        if (_onlineWindowClosed || animationVersion != _onlineDetailAnimationVersion)
+        if (_services.IsClosing || animationVersion != _onlineDetailAnimationVersion)
         {
             return;
         }
@@ -928,7 +928,7 @@ public sealed partial class OnlinePage
         {
             DispatcherQueue.TryEnqueue(() =>
             {
-                if (!_onlineWindowClosed && _onlinePage.VisibleMods.Contains(lastShown) && GetOnlineResultsElement() is ListViewBase results)
+                if (!_services.IsClosing && _services.Online.Page.VisibleMods.Contains(lastShown) && GetOnlineResultsElement() is ListViewBase results)
                     results.ScrollIntoView(lastShown);
             });
         }
@@ -985,7 +985,7 @@ public sealed partial class OnlinePage
             OnlineModCard sourceMod = _activeOnlineDetailMod;
             WorkspaceRepository? downloadRepository = _services.Repositories.Selected;
             OnlineDownloadContext downloadContext = CaptureOnlineDownloadContext(downloadRepository);
-            bool useEndfieldMetadata = IsEndfieldRepository(downloadRepository);
+            bool useEndfieldMetadata = _services.OnlineSource.IsEndfield(downloadRepository);
             IReadOnlyCollection<string> characterAliases = GetCharacterFolderAliases(sourceMod);
             string detailContext = GetOnlineDetailContextKey();
             using OnlineDownloadActionAdapter.Lease? action = _onlineDownloadActions.TryBegin(
@@ -1029,7 +1029,7 @@ public sealed partial class OnlinePage
             {
                 action.Dispose();
                 RefreshOnlineDetailActionState();
-                if (!_onlineWindowClosed) RefreshOnlinePaneV2();
+                if (!_services.IsClosing) RefreshOnlinePaneV2();
             }
         }
         catch (Exception ex)
