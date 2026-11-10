@@ -205,6 +205,17 @@ J0 结果（2026-11-04，分支 `claude/ui-j0-prep`）：
 
 规模：L 偏大（约 5,600 行代码 + 480 行 XAML，两个方向约 150 处牵连），加上 J6-b 的外观和流程，按步骤分开提交：服务 → 纯移动（分几次）→ 外观 → 测试和截图。
 
+#### J6 后续：拆开 `IOnlineHost`
+
+这次（用户 2026-11-09 选 A）在线页整体移到 `Pages/OnlinePage.xaml` 和 `Pages/Online/`，页面不引用 `MainWindow`，用到的窗口功能都经 `IOnlineHost`。移动后接口有 **47 个成员**，按用途分 8 组：外壳（页面是否显示、根元素和窗口大小、主题画刷、密度和动画、选文件夹、打开链接、看图）、错误和日志、保存设置、仓库和 Mod 工作区、快捷键绑定、追踪的 Mod 和下载任务、HTTP 客户端和本地索引、共用常量和小函数。角色目录和“有效在线来源”这次仍在页面里，窗口经 `_onlineView` 调用。
+
+以后拆成服务，每拆一块就从接口里删掉对应的成员：
+- 角色目录服务：`EndfieldCharacters`、`IsFavoriteCharacter`、`ToggleFavoriteCharacter`、`BuiltInRepositoryPresets`、`IsRepositoryForPreset`、`EndfieldOfficialWikiUrl`，以及页面里的角色目录代码（窗口的头像和仓库设置也在用）；
+- 在线来源服务：`DefaultOnlineCategoryId`、`DefaultOnlineSourceSite`、`Http`、`Metadata`、`DataStore`，以及页面里的 `GetEffectiveOnline*`（仪表盘、设置、托盘在用）；
+- 安装流程服务：`ExtractArchiveToDirectory`、`IsSupportedArchiveFile`、`FindPreviewImage`、`DeleteDirectoryTreeSafely`、`ModBindings`、`ModLinks`、`CreateAutomaticShortcutBinding`、`ShortcutScanSafetyLimit`、`TrackedModOrigins`、`TrackedModUpdateResults`、下载任务的四个成员；
+- 安装后刷新工作区（`RefreshListsAsync`、`SelectSecondLevelByPath`、`SetBusyState`）改成请求事件；
+- 窗口还在用的页面小函数（`IsPathInsideDirectory`、`FormatFileSize` 等，现在是 `OnlinePage` 的静态成员）移进 Core。
+
 ### J8. 对话框与资源
 
 - 每种对话框一个类（`Dialogs/` 下），由 `DialogService` 统一设置 `XamlRoot` 并保证同一时间只有一个对话框。
