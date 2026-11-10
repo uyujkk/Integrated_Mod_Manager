@@ -518,7 +518,7 @@ public sealed partial class MainWindow
                     imageUrl,
                     imageUri,
                     timeout.Token);
-                if (imageBytes is null || imageBytes.Length == 0 || imageBytes.Length > MaxOnlinePreviewImageBytes)
+                if (imageBytes is null || imageBytes.Length == 0 || imageBytes.Length > ImageService.MaxImageBytes)
                 {
                     continue;
                 }
@@ -583,17 +583,17 @@ public sealed partial class MainWindow
         Uri imageUri,
         CancellationToken cancellationToken)
     {
-        Uri? cachedUri = TryGetExistingCachedOnlineImageUri(imageUrl);
+        Uri? cachedUri = _services.Images.TryGetExistingCachedUri(imageUrl);
         if (cachedUri is { IsFile: true } && File.Exists(cachedUri.LocalPath))
         {
             FileInfo cachedFile = new(cachedUri.LocalPath);
-            if (cachedFile.Length > 0 && cachedFile.Length <= MaxOnlinePreviewImageBytes)
+            if (cachedFile.Length > 0 && cachedFile.Length <= ImageService.MaxImageBytes)
             {
                 return await File.ReadAllBytesAsync(cachedUri.LocalPath, cancellationToken);
             }
         }
 
-        return await DownloadOnlineImageBytesWithRetryAsync(imageUri, cancellationToken);
+        return await _services.Images.DownloadImageBytesWithRetryAsync(imageUri, cancellationToken);
     }
 
     private static async Task<(int Width, int Height)> TryReadOnlineImageDimensionsAsync(byte[] imageBytes)

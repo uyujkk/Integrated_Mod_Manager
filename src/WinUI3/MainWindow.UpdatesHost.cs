@@ -15,7 +15,6 @@ public sealed partial class MainWindow
     {
         UpdatesView.ActionRequested += OnUpdatesActionRequested;
         UpdatesView.PropertyChanged += OnUpdatesViewChanged;
-        _services.Images.Loader = SetCachedOnlineImageAsync;
         _services.Appearance.ReduceAnimations = () => ShouldReduceAnimations;
         _services.Downloads.IsRetryBlocked = () => _onlineDownloadActions.IsPreparing;
         // The navigation shows the running downloads; the Updates page lists the finished ones itself.

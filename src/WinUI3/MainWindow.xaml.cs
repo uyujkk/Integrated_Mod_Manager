@@ -32,10 +32,8 @@ public sealed partial class MainWindow : Window
     private const int OnlineDisplayPageSize = 40;
     private const int OnlineRawPageLimit = 80;
     private static readonly TimeSpan OnlineModListRequestTimeout = TimeSpan.FromSeconds(5);
-    private static readonly TimeSpan OnlinePreviewImageRequestTimeout = TimeSpan.FromSeconds(15);
     // How long a page may wait for its download counts before it is shown without them.
     private static readonly TimeSpan OnlineDownloadCountInlineBudget = TimeSpan.FromSeconds(2);
-    private const long MaxOnlinePreviewImageBytes = 20L * 1024 * 1024;
     private const int ArchiveToolTimeoutMinutes = 10;
     private const int InitialShortcutRows = 1;
     private const int ShortcutScanSafetyLimit = 256;
@@ -79,12 +77,11 @@ public sealed partial class MainWindow : Window
         Weekly
     }
 
-    private static readonly string[] ImageExtensions = [".png", ".jpg", ".jpeg", ".bmp", ".gif", ".webp"];
+    internal static readonly string[] ImageExtensions = [".png", ".jpg", ".jpeg", ".bmp", ".gif", ".webp"];
     private static readonly SolidColorBrush CopiedBrush = new(ColorHelper.FromArgb(255, 36, 124, 76));
     private static readonly SolidColorBrush MissingBrush = new(ColorHelper.FromArgb(255, 177, 76, 55));
     private static readonly SolidColorBrush NeutralBrush = new(ColorHelper.FromArgb(255, 60, 60, 60));
 
-    private readonly string _onlineImageCachePath = Path.Combine(AppContext.BaseDirectory, "cache", "online-images");
     private readonly string _onlinePageCachePath = Path.Combine(AppContext.BaseDirectory, "cache", "online-pages");
     private readonly string _onlineDetailsCachePath = Path.Combine(AppContext.BaseDirectory, "cache", "online-details");
     private readonly string _onlineCharacterCachePath = Path.Combine(AppContext.BaseDirectory, "cache", "online-characters");
@@ -185,6 +182,7 @@ public sealed partial class MainWindow : Window
             new OnlineMetadataCacheAdapter(_appDataStore, _onlineDetailsCachePath, LogApplicationIssue),
             diagnostics: LogApplicationIssue);
         InitializeComponent();
+        _services.Images.Attach(_httpClient, LogApplicationIssue);
         _services.Dialogs.Attach(() => RootGrid.XamlRoot, () => RootGrid.ActualTheme);
         _services.Status.NotificationRequested += OnNotificationRequested;
         InitializeSettingsHost();

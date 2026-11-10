@@ -1234,7 +1234,7 @@ public sealed partial class MainWindow
             return;
         }
 
-        BitmapImage bitmap = await LoadLocalBitmapAsync(imagePath);
+        BitmapImage bitmap = await ImageService.LoadLocalBitmapAsync(imagePath);
         if (requestVersion == _previewImageRequestVersion)
         {
             PreviewImage.Source = bitmap;

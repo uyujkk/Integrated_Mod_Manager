@@ -81,8 +81,8 @@ public sealed partial class MainWindow
         {
             BitmapImage? bitmap = avatar switch
             {
-                { FilePath: { } path } => await LoadLocalBitmapAsync(path, CharacterAvatarDecodeWidth),
-                { ImageUrl: { } url } => await LoadOnlineBitmapAsync(url, cancellationToken, CharacterAvatarDecodeWidth),
+                { FilePath: { } path } => await ImageService.LoadLocalBitmapAsync(path, CharacterAvatarDecodeWidth),
+                { ImageUrl: { } url } => await _services.Images.LoadOnlineBitmapAsync(url, cancellationToken, CharacterAvatarDecodeWidth),
                 _ => null
             };
             if (!cancellationToken.IsCancellationRequested)

@@ -407,7 +407,7 @@ public sealed partial class MainWindow
             RestoreWindowPlacement();
             UpdateOnlineWorkspaceWidthConstraint();
             DispatcherQueue.TryEnqueue(UpdateOnlineWorkspaceWidthConstraint);
-            TrimOnlineImageCache();
+            _services.Images.TrimCache();
             DetectLocalUpdatePackage();
             await RefreshInstallBackupListAsync();
 

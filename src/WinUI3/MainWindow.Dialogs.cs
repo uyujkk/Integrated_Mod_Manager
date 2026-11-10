@@ -151,7 +151,7 @@ public sealed partial class MainWindow
             int requestVersion = ++loadVersion;
             image.Source = null;
             loadingText.Visibility = Visibility.Visible;
-            BitmapImage? cachedImage = await LoadOnlineBitmapAsync(navigationImages[currentIndex]);
+            BitmapImage? cachedImage = await _services.Images.LoadOnlineBitmapAsync(navigationImages[currentIndex]);
             if (requestVersion != loadVersion)
             {
                 return;

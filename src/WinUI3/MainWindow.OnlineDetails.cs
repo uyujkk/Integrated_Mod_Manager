@@ -522,7 +522,7 @@ public sealed partial class MainWindow
             {
                 Stretch = Stretch.UniformToFill
             };
-            _ = SetCachedOnlineImageAsync(image, imageUrl!);
+            _ = _services.Images.LoadCachedAsync(image, imageUrl!);
             return image;
         }
 
@@ -795,7 +795,7 @@ public sealed partial class MainWindow
                 OnlineDetailHeroImage.Visibility = Visibility.Visible;
                 OnlineDetailHeroPlaceholderTextBlock.Visibility = Visibility.Visible;
                 OnlineDetailHeroPlaceholderTextBlock.Text = T("OnlineDetails.LoadingHighResolutionPreview");
-                BitmapImage? bitmap = await LoadOnlineBitmapAsync(imageUrl!);
+                BitmapImage? bitmap = await _services.Images.LoadOnlineBitmapAsync(imageUrl!);
                 if (requestVersion != _onlineHeroImageRequestVersion)
                 {
                     return;

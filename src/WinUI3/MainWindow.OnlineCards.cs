@@ -383,7 +383,7 @@ public sealed partial class MainWindow
         OnlineModTileViewModel model = view.ViewModel;
         OnlineModCard mod = model.Mod;
         view.ContextFlyout = CreateOnlineCardMenu(mod);
-        if (model.HasPreview) _ = SetCachedOnlineImageAsync(view.Preview, mod.PreviewUrl!);
+        if (model.HasPreview) _ = _services.Images.LoadCachedAsync(view.Preview, mod.PreviewUrl!);
         view.Author.Content = CreateOnlineAuthorLink(mod);
         view.PointerEntered += (_, _) => AnimateOnlineModCardHover(view.Card, true);
         view.PointerExited += (_, _) => AnimateOnlineModCardHover(view.Card, false);
