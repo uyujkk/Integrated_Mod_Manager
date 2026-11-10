@@ -6,7 +6,13 @@
 
 This document records version changes in Integrated Mod Manager. Unpublished versions are marked separately.
 
-## v4.7.3 — 未发布（正式版 / Stable）
+## v4.8.0 — 未发布（正式版 / Stable）
+
+重新设计整个界面：导航栏和标题栏搜索、卡片式的仪表盘与设置、带命令栏和可调分栏的 Mod 工作区、带抽屉和清晰状态的在线页、分成三个视图的更新页、一列卡片的快捷键页，以及写明动作、危险操作用红色按钮的对话框；启动快约 80–120 毫秒。修复 4.7.3 及更早版本中可能误删文件或留下失效链接的五个问题：源和目标重叠时开关单个 Mod（#105）、启动时清理预设图片进入目录联接（#106）、加载器文件夹不可用时删除 Mod（#109）、复制模式恢复组合预设删除同名文件夹（#107）、重命名角色后链接和保存的路径失效（#108）。见 [v4.8.0](v4.8.0.md)。
+
+Redesigns the whole interface: a navigation pane and title-bar search, the Dashboard and Settings as cards, a Mod workspace with a command bar and resizable columns, an Online page with a drawer and clear states, an Updates page in three views, Shortcuts as one column of cards, and dialogs whose buttons name their action, with red buttons for destructive ones; starts about 80–120 ms faster. Fixes five problems in 4.7.3 and earlier that could delete the wrong files or leave broken links: turning a single Mod on or off when source and target overlap (#105), the startup preset picture cleanup following a junction (#106), deleting a Mod while the loader folder is unavailable (#109), copy-mode preset restores deleting a same-named folder (#107), and links and saved paths left behind by a character rename (#108). See [v4.8.0](v4.8.0.md).
+
+## v4.7.3 — 2026-11-04（正式版 / Stable）
 
 界面新增俄语：在“设置 → 语言”中选择“Русский”，系统语言为俄语的新安装会默认使用它。界面语言改为每种语言一个文件，以后添加语言不用改代码。见 [v4.7.3](v4.7.3.md)。
 
