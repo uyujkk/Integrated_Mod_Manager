@@ -1,5 +1,6 @@
 ﻿using System.ComponentModel;
 using CommunityToolkit.WinUI.Controls;
+using IntegratedModManager.Core.Layout;
 using Microsoft.UI.Xaml;
 using Microsoft.UI.Xaml.Automation;
 using Microsoft.UI.Xaml.Controls;
@@ -30,6 +31,7 @@ public sealed partial class SettingsPage : UserControl
         SettingsScrollViewer.SizeChanged += (_, args) =>
         {
             if (args.NewSize.Width > 0) UpdateLayoutState(args.NewSize.Width);
+            if (Math.Abs(args.NewSize.Width - args.PreviousSize.Width) > 0.5) QueueBalanceColumns();
         };
         ApplyLanguage();
     }
@@ -42,6 +44,8 @@ public sealed partial class SettingsPage : UserControl
 
     private void ApplyLanguage()
     {
+        // New text changes the group heights.
+        QueueBalanceColumns();
         bool selfUpdate = ViewModel.SelfUpdateEnabled;
         SettingsPageHeader.Title = T("Common.ApplicationSettings");
         SettingsPageHeader.Description = T("Settings.LanguageThemeRepositoryEntryPointsAnd");
@@ -245,5 +249,44 @@ public sealed partial class SettingsPage : UserControl
         AppUpdateStatusCard.ContentAlignment = twoColumns ? ContentAlignment.Vertical : ContentAlignment.Right;
         AppUpdateStatusCard.HorizontalContentAlignment = twoColumns ? HorizontalAlignment.Left : HorizontalAlignment.Right;
         AppUpdateButtonsPanel.Orientation = twoColumns ? Orientation.Vertical : Orientation.Horizontal;
+        QueueBalanceColumns();
+    }
+
+    // After layout, so the heights are current.
+    private void QueueBalanceColumns()
+        => DispatcherQueue.TryEnqueue(Microsoft.UI.Dispatching.DispatcherQueuePriority.Low, BalanceColumns);
+
+    // One column keeps every group in the side panel in its own order. Two columns move the side column's later
+    // groups (online, diagnostics, project) that best even out the column bottoms to the end of the main column, in
+    // their own order; Tab follows the panels, so it still goes down the main column and then down the side column.
+    private void BalanceColumns()
+    {
+        StackPanel[] movable = [SettingsOnlineGroup, SettingsDiagnosticsGroup, SettingsProjectGroup];
+        bool[] move = new bool[movable.Length];
+        if (_twoColumns == true)
+        {
+            double movedHeight = movable.Where(group => SettingsMainPanel.Children.Contains(group)).Sum(group => group.ActualHeight + SettingsMainPanel.Spacing);
+            move = SettingsLayoutPolicy.BalanceColumns(
+                // Its content height: the panel itself stretches to the row, which the side column may set.
+                SettingsMainPanel.DesiredSize.Height - movedHeight,
+                SettingsAppUpdatesGroup.ActualHeight,
+                movable.Select(group => group.ActualHeight).ToArray(),
+                SettingsRailPanel.Spacing);
+        }
+
+        for (int i = 0; i < movable.Length; i++)
+        {
+            StackPanel target = move[i] ? SettingsMainPanel : SettingsRailPanel;
+            if (target.Children.Contains(movable[i])) continue;
+            ((Panel)movable[i].Parent).Children.Remove(movable[i]);
+            // Groups keep their order within each column.
+            int index = target.Children.Count;
+            for (int j = i + 1; j < movable.Length; j++)
+            {
+                int at = target.Children.IndexOf(movable[j]);
+                if (at >= 0) { index = at; break; }
+            }
+            target.Children.Insert(index, movable[i]);
+        }
     }
 }
