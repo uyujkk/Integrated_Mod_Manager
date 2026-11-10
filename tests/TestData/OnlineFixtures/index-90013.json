@@ -1,0 +1,133 @@
+{
+ "_aMetadata": {
+  "_nRecordCount": 4,
+  "_nPerpage": 40,
+  "_bIsComplete": true
+ },
+ "_aRecords": [
+  {
+   "_idRow": 990102,
+   "_sName": "Sample Mod 03",
+   "_sProfileUrl": "https://gamebanana.com/mods/990102",
+   "_aSubmitter": {
+    "_sName": "Sample Author 3",
+    "_idRow": "880002"
+   },
+   "_aRootCategory": {
+    "_sName": "Skins"
+   },
+   "_aSubCategory": {
+    "_sName": "Sample Hero Cobalt",
+    "_sProfileUrl": "https://gamebanana.com/mods/cats/90013/"
+   },
+   "_aPreviewMedia": {
+    "_aImages": [
+     {
+      "_sBaseUrl": "https://images.example.invalid/samples",
+      "_sFile530": "mod-03.png",
+      "_sFile": "mod-03.png"
+     }
+    ]
+   },
+   "_tsDateModified": 1767052800,
+   "_tsDateUpdated": 1767052800,
+   "_tsDateAdded": 1764460800,
+   "_nLikeCount": 34,
+   "_nViewCount": 4400,
+   "_nDownloadCount": 780
+  },
+  {
+   "_idRow": 990105,
+   "_sName": "Sample Mod 06",
+   "_sProfileUrl": "https://gamebanana.com/mods/990105",
+   "_aSubmitter": {
+    "_sName": "Sample Author 2",
+    "_idRow": "880001"
+   },
+   "_aRootCategory": {
+    "_sName": "Skins"
+   },
+   "_aSubCategory": {
+    "_sName": "Sample Hero Cobalt",
+    "_sProfileUrl": "https://gamebanana.com/mods/cats/90013/"
+   },
+   "_aPreviewMedia": {
+    "_aImages": [
+     {
+      "_sBaseUrl": "https://images.example.invalid/samples",
+      "_sFile530": "mod-06.png",
+      "_sFile": "mod-06.png"
+     }
+    ]
+   },
+   "_tsDateModified": 1766793600,
+   "_tsDateUpdated": 1766793600,
+   "_tsDateAdded": 1764201600,
+   "_nLikeCount": 25,
+   "_nViewCount": 3500,
+   "_nDownloadCount": 600
+  },
+  {
+   "_idRow": 990108,
+   "_sName": "Sample Mod 09",
+   "_sProfileUrl": "https://gamebanana.com/mods/990108",
+   "_aSubmitter": {
+    "_sName": "Sample Author 1",
+    "_idRow": "880000"
+   },
+   "_aRootCategory": {
+    "_sName": "Skins"
+   },
+   "_aSubCategory": {
+    "_sName": "Sample Hero Cobalt",
+    "_sProfileUrl": "https://gamebanana.com/mods/cats/90013/"
+   },
+   "_aPreviewMedia": {
+    "_aImages": [
+     {
+      "_sBaseUrl": "https://images.example.invalid/samples",
+      "_sFile530": "mod-09.png",
+      "_sFile": "mod-09.png"
+     }
+    ]
+   },
+   "_tsDateModified": 1766534400,
+   "_tsDateUpdated": 1766534400,
+   "_tsDateAdded": 1763942400,
+   "_nLikeCount": 16,
+   "_nViewCount": 2600,
+   "_nDownloadCount": 420
+  },
+  {
+   "_idRow": 990111,
+   "_sName": "Sample Mod 12",
+   "_sProfileUrl": "https://gamebanana.com/mods/990111",
+   "_aSubmitter": {
+    "_sName": "Sample Author 4",
+    "_idRow": "880003"
+   },
+   "_aRootCategory": {
+    "_sName": "Skins"
+   },
+   "_aSubCategory": {
+    "_sName": "Sample Hero Cobalt",
+    "_sProfileUrl": "https://gamebanana.com/mods/cats/90013/"
+   },
+   "_aPreviewMedia": {
+    "_aImages": [
+     {
+      "_sBaseUrl": "https://images.example.invalid/samples",
+      "_sFile530": "mod-12.png",
+      "_sFile": "mod-12.png"
+     }
+    ]
+   },
+   "_tsDateModified": 1766275200,
+   "_tsDateUpdated": 1766275200,
+   "_tsDateAdded": 1763683200,
+   "_nLikeCount": 7,
+   "_nViewCount": 1700,
+   "_nDownloadCount": 240
+  }
+ ]
+}

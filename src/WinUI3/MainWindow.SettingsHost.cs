@@ -204,10 +204,10 @@ public sealed partial class MainWindow
             return;
         }
 
-        string source = GetEffectiveOnlineSource(repository);
-        string gameName = GetEffectiveOnlineGameName(repository);
-        string categoryId = GetEffectiveOnlineCategoryId(repository);
-        bool ready = IsGameBananaSource(source) && !string.IsNullOrWhiteSpace(categoryId);
+        string source = _onlineView.GetEffectiveOnlineSource(repository);
+        string gameName = _onlineView.GetEffectiveOnlineGameName(repository);
+        string categoryId = _onlineView.GetEffectiveOnlineCategoryId(repository);
+        bool ready = _onlineView.IsGameBananaSource(source) && !string.IsNullOrWhiteSpace(categoryId);
         string OrNotSet(string? value) => string.IsNullOrWhiteSpace(value) ? T("Settings.NotSet") : value;
 
         SettingsView.SetOnlineInfo(T("Settings.OnlinePageReadsThisRepository"),

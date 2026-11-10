@@ -31,8 +31,8 @@ public sealed partial class MainWindow
             undo.Text = T("ExistingModImport.UndoLastOrganizedImport");
             recover.Text = T("ExistingModImport.CheckInterruptedImport");
             import.IsEnabled = !_existingModImportBusy && !_repositoryWorkspaceBusy;
-            undo.IsEnabled = import.IsEnabled && !string.IsNullOrWhiteSpace(_onlinePreferences.LastImportManifest)
-                && File.Exists(_onlinePreferences.LastImportManifest);
+            undo.IsEnabled = import.IsEnabled && !string.IsNullOrWhiteSpace(_onlineView._onlinePreferences.LastImportManifest)
+                && File.Exists(_onlineView._onlinePreferences.LastImportManifest);
             recover.IsEnabled = import.IsEnabled && HasExistingImportRecords();
         };
         host.Children.Add(button);
@@ -43,7 +43,7 @@ public sealed partial class MainWindow
         if (_existingModImportBusy) return;
         WorkspaceRepository? repository = GetSelectedRepository();
         if (repository is null || !Directory.Exists(repository.SourcePath)) return;
-        OnlineDownloadContext context = CaptureOnlineDownloadContext(repository);
+        OnlineDownloadContext context = OnlinePage.CaptureOnlineDownloadContext(repository);
         string[] characters = Directory.GetDirectories(context.RepositoryPath).OrderBy(Path.GetFileName).ToArray();
         if (characters.Length == 0)
         {
@@ -64,9 +64,9 @@ public sealed partial class MainWindow
                 return;
             }
             long bytes = plan.Items.Sum(item => item.Snapshot.Files.Sum(file => file.Length));
-            if (!await ExistingModImportDialogs.PreviewAsync(_services, plan, destination, FormatFileSize(bytes), RootGrid.ActualHeight)) return;
+            if (!await ExistingModImportDialogs.PreviewAsync(_services, plan, destination, OnlinePage.FormatFileSize(bytes), RootGrid.ActualHeight)) return;
             string manifest = Path.Combine(ExistingImportRecordsRoot, Guid.NewGuid().ToString("N") + ".json");
-            _onlinePreferences.LastImportManifest = manifest;
+            _onlineView._onlinePreferences.LastImportManifest = manifest;
             SaveShellConfig();
             (ContentDialog operation, TextBlock status) = ExistingModImportDialogs.Progress(_services, cancellation);
             Task<ContentDialogResult> shown = _services.Dialogs.ShowAsync(operation);
@@ -81,12 +81,12 @@ public sealed partial class MainWindow
         }
         catch (OperationCanceledException)
         {
-            if (!_onlineWindowClosed) await ShowMessageAsync(T("ExistingModImport.ImportCanceledCompletedCopiesRemainAnd"), T("ExistingModImport.ImportCanceled"));
+            if (!_onlineView._onlineWindowClosed) await ShowMessageAsync(T("ExistingModImport.ImportCanceledCompletedCopiesRemainAnd"), T("ExistingModImport.ImportCanceled"));
         }
         catch (Exception ex)
         {
             LogApplicationIssue("Organize existing Mods", ex);
-            if (!_onlineWindowClosed) await ShowMessageAsync(T("ExistingModImport.ImportDidNotFinish") + ex.Message
+            if (!_onlineView._onlineWindowClosed) await ShowMessageAsync(T("ExistingModImport.ImportDidNotFinish") + ex.Message
                 + T("ExistingModImport.UseUndoForCompletedCopiesSource"), T("ExistingModImport.OrganizedImport"));
         }
         finally { _existingModImportCancellation = null; _existingModImportBusy = false; }
@@ -94,7 +94,7 @@ public sealed partial class MainWindow
 
     private async Task UndoExistingModImportAsync()
     {
-        string? manifest = _onlinePreferences.LastImportManifest;
+        string? manifest = _onlineView._onlinePreferences.LastImportManifest;
         WorkspaceRepository? repository = GetSelectedRepository();
         if (_existingModImportBusy || manifest is null || repository is null) return;
         try
@@ -102,7 +102,7 @@ public sealed partial class MainWindow
             if (!PathSafety.IsStrictlyInside(manifest, ExistingImportRecordsRoot))
                 throw new InvalidDataException("Import record is outside the application records folder.");
             var record = RecoveryJsonFile.Read<ExistingModImportManifest>(manifest);
-            if (!IsPathInsideDirectory(record.DestinationRoot, repository.SourcePath))
+            if (!OnlinePage.IsPathInsideDirectory(record.DestinationRoot, repository.SourcePath))
                 throw new InvalidDataException(T("ExistingModImport.SwitchToTheOriginalRepositoryBefore"));
             if (!await ExistingModImportDialogs.ConfirmUndoAsync(_services)) return;
             _existingModImportBusy = true;
@@ -111,7 +111,7 @@ public sealed partial class MainWindow
             await ShowMessageAsync(T("ExistingModImport.RemovedUnchangedCopiesPreservedModifiedOr", result.Removed.Length, result.Preserved.Length)
                 + "\n" + string.Join("\n", result.Preserved), T("ExistingModImport.UndoResult"));
         }
-        catch (Exception ex) { await ReportOnlineActionErrorAsync(ex.Message, T("ExistingModImport.CannotUndoImport"), ex); }
+        catch (Exception ex) { await _onlineView.ReportOnlineActionErrorAsync(ex.Message, T("ExistingModImport.CannotUndoImport"), ex); }
         finally { _existingModImportBusy = false; }
     }
 
@@ -129,17 +129,17 @@ public sealed partial class MainWindow
                 return;
             }
             if (await ExistingModImportDialogs.ChooseInterruptedAsync(_services, candidates) is not { } manifest) return;
-            if (!IsPathInsideDirectory(manifest, ExistingImportRecordsRoot)) throw new InvalidDataException("Import record is outside the application records folder.");
+            if (!OnlinePage.IsPathInsideDirectory(manifest, ExistingImportRecordsRoot)) throw new InvalidDataException("Import record is outside the application records folder.");
             var record = RecoveryJsonFile.Read<ExistingModImportManifest>(manifest);
-            if (!IsPathInsideDirectory(record.DestinationRoot, repository.SourcePath))
+            if (!OnlinePage.IsPathInsideDirectory(record.DestinationRoot, repository.SourcePath))
                 throw new InvalidDataException(T("ExistingModImport.SwitchToTheOriginalRepositoryTo"));
             ExistingModImportRecoveryResult result = await Task.Run(() => ExistingModImportService.Recover(manifest, record.DestinationRoot));
-            if (result.Recovered.Length > 0) { _onlinePreferences.LastImportManifest = manifest; SaveShellConfig(); }
+            if (result.Recovered.Length > 0) { _onlineView._onlinePreferences.LastImportManifest = manifest; SaveShellConfig(); }
             await RefreshListsAsync();
             await ShowMessageAsync(T("ExistingModImport.RegisteredCompleteCopiesPreservedAmbiguousOr", result.Recovered.Length, result.Preserved.Length, result.StagingFolders.Length)
                 + "\n" + string.Join("\n", result.Preserved.Concat(result.StagingFolders)), T("ExistingModImport.ImportRecoveryCheck"));
         }
-        catch (Exception ex) { LogApplicationIssue("Recover organized import", ex); await ReportOnlineActionErrorAsync(ex.Message, T("ExistingModImport.CannotInspectImportRecord"), ex); }
+        catch (Exception ex) { LogApplicationIssue("Recover organized import", ex); await _onlineView.ReportOnlineActionErrorAsync(ex.Message, T("ExistingModImport.CannotInspectImportRecord"), ex); }
         finally { _existingModImportBusy = false; }
     }
 
@@ -153,7 +153,7 @@ public sealed partial class MainWindow
             {
                 var record = RecoveryJsonFile.Read<ExistingModImportManifest>(path);
                 if (record.Version == 2 && !record.Complete && record.Pending is { Count: > 0 }
-                    && (repositoryPath is null || IsPathInsideDirectory(record.DestinationRoot, repositoryPath))) records.Add(path);
+                    && (repositoryPath is null || OnlinePage.IsPathInsideDirectory(record.DestinationRoot, repositoryPath))) records.Add(path);
             }
             catch (Exception ex) { LogApplicationIssue("Inspect interrupted import record", ex); }
         }
@@ -165,7 +165,7 @@ public sealed partial class MainWindow
         try
         {
             int count = (await Task.Run(() => FindInterruptedImports())).Length;
-            if (count > 0 && !_onlineWindowClosed)
+            if (count > 0 && !_onlineView._onlineWindowClosed)
                 ShowAppNotification(T("ExistingModImport.InterruptedFound", count));
         }
         catch (Exception ex) { LogApplicationIssue("Inspect import recovery on startup", ex); }

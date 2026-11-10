@@ -29,24 +29,12 @@ public sealed partial class MainWindow : Window
     private const string DefaultOnlineCategoryId = "42770";
     private const string DefaultOnlineGameName = "Arknights: Endfield";
     private const string EndfieldOfficialWikiUrl = "https://wiki.skland.com/endfield";
-    private const int OnlineDisplayPageSize = 40;
-    private const int OnlineRawPageLimit = 80;
-    private static readonly TimeSpan OnlineModListRequestTimeout = TimeSpan.FromSeconds(5);
-    private static readonly TimeSpan OnlinePreviewImageRequestTimeout = TimeSpan.FromSeconds(15);
-    // How long a page may wait for its download counts before it is shown without them.
-    private static readonly TimeSpan OnlineDownloadCountInlineBudget = TimeSpan.FromSeconds(2);
-    private const long MaxOnlinePreviewImageBytes = 20L * 1024 * 1024;
     private const int ArchiveToolTimeoutMinutes = 10;
     private const int InitialShortcutRows = 1;
     private const int ShortcutScanSafetyLimit = 256;
     private static readonly IReadOnlyList<string> SupportedArchiveExtensions = ArchiveExtractor.SupportedExtensions;
     private static readonly ArchiveExtractor ArchiveExtraction = new(
         FindSevenZipExecutable, FindBandizipExecutable, TimeSpan.FromMinutes(ArchiveToolTimeoutMinutes));
-    private static readonly HashSet<string> GenericOnlineCharacterNames = new(StringComparer.OrdinalIgnoreCase)
-    {
-        "operator", "operators", "character", "characters", "skin", "skins",
-        "other", "others", "misc", "miscellaneous", "uncategorized", "unclassified"
-    };
 
     private enum PrimarySection
     {
@@ -79,18 +67,12 @@ public sealed partial class MainWindow : Window
         Weekly
     }
 
-    private static readonly string[] ImageExtensions = [".png", ".jpg", ".jpeg", ".bmp", ".gif", ".webp"];
+    internal static readonly string[] ImageExtensions = [".png", ".jpg", ".jpeg", ".bmp", ".gif", ".webp"];
     private static readonly SolidColorBrush CopiedBrush = new(ColorHelper.FromArgb(255, 36, 124, 76));
     private static readonly SolidColorBrush MissingBrush = new(ColorHelper.FromArgb(255, 177, 76, 55));
     private static readonly SolidColorBrush NeutralBrush = new(ColorHelper.FromArgb(255, 60, 60, 60));
 
-    private readonly string _onlineImageCachePath = Path.Combine(AppContext.BaseDirectory, "cache", "online-images");
-    private readonly string _onlinePageCachePath = Path.Combine(AppContext.BaseDirectory, "cache", "online-pages");
-    private readonly string _onlineDetailsCachePath = Path.Combine(AppContext.BaseDirectory, "cache", "online-details");
-    private readonly string _onlineCharacterCachePath = Path.Combine(AppContext.BaseDirectory, "cache", "online-characters");
     private readonly HttpClient _httpClient = CreateHttpClient();
-    private readonly RequestCooldown _onlineRateLimit = new();
-    private readonly SemaphoreSlim _onlineCharacterAvatarDownloadGate = new(3, 3);
     private readonly CharacterListViewModel _characters = new();
     private readonly BatchObservableCollection<SecondLevelFolderItem> _secondLevelItems = [];
     private readonly List<Border> _shortcutKeyBorders = [];
@@ -100,7 +82,6 @@ public sealed partial class MainWindow : Window
     private readonly Dictionary<string, string> _modLinks = new(StringComparer.CurrentCultureIgnoreCase);
     private readonly Dictionary<string, TrackedModOrigin> _trackedModOrigins = new(StringComparer.CurrentCultureIgnoreCase);
     private readonly GameBananaMetadataService _gameBananaMetadataService;
-    private readonly List<string> _onlineDetailImageUrls = [];
     private readonly List<TrackedModUpdateResult> _trackedModUpdateResults = [];
     private readonly List<ModConfigurationProfile> _configurationProfiles = [];
     private readonly List<ModPersistentSlot> _modPersistentSlots = [];
@@ -113,12 +94,9 @@ public sealed partial class MainWindow : Window
     private bool? _legacyDarkTheme;
     private bool _isCheckingUpdates;
     private bool _isCheckingModUpdates;
-    private bool _isLoadingOnlineMods;
-    private readonly HashSet<string> _loadingOnlineCharacterCatalogKeys = new(StringComparer.Ordinal);
     private bool _isLoadingBindings;
     private bool _isLoadingModLink;
     private bool _hasPromptedForLocalUpdate;
-    private bool _isApplyingOnlineCharacterSelection;
     private bool _isApplyingUpdateCheckIntervalSelection;
     private bool _isApplyingModUpdateIntervalSelection;
     private bool _isApplyingConfigurationProfileSelection;
@@ -135,16 +113,10 @@ public sealed partial class MainWindow : Window
     private string? _latestReleaseUrl;
     private string? _localUpdatePackagePath;
     private Version? _localUpdatePackageVersion;
-    private string? _lastLoadedOnlineConfigKey;
-    private string? _blockedOnlineAutoLoadConfigKey;
-    private string? _onlineCharacterStripSignature;
-    private string? _onlineCharacterCatalogKey;
-    private bool _useHorizontalOnlineCharacterRail;
     private string? _selectedConfigurationProfileId;
     private string? _lastInstallTransactionPath;
     private UiMessage? _modUpdateStatus;
     private UiMessage? _updateStatus;
-    private OnlineModCard? _activeOnlineDetailMod;
     private PrimarySection _currentPrimarySection = PrimarySection.Dashboard;
     private ShellLayoutMode _shellLayoutMode = (ShellLayoutMode)(-1);
     private bool _primaryNavExpanded;
@@ -155,18 +127,7 @@ public sealed partial class MainWindow : Window
     private DateTimeOffset? _lastModUpdateCheckUtc;
     private TextBox? _lastFocusedTextBox;
     private int _notificationVersion;
-    private int _onlineHeroImageRequestVersion;
-    private int _onlineDetailImageIndex;
-    private int _onlineCharacterAnimationVersion;
-    private int _onlineCharacterAvatarRequestVersion;
-    private CancellationTokenSource _onlineCharacterAvatarCancellation = new();
-    private int _onlineDetailAnimationVersion;
-    private int _onlineDownloadEnrichmentVersion;
-    private int _onlineModRequestVersion;
     private int _previewImageRequestVersion;
-    private string? _foregroundDownloadTaskId;
-    private CancellationTokenSource? _onlineModListCancellation;
-    private bool _animateOnlineCardsOnNextRefresh;
     private int? _savedWindowX;
     private int? _savedWindowY;
     private int? _savedWindowWidth;
@@ -174,6 +135,7 @@ public sealed partial class MainWindow : Window
     private Microsoft.UI.Windowing.OverlappedPresenterState? _lastPresenterState;
     private int? _savedWindowHeight;
     private InterfaceDensity _interfaceDensity = InterfaceDensity.Comfortable;
+    private readonly OnlinePage _onlineView;
 
     public MainWindow()
     {
@@ -182,9 +144,12 @@ public sealed partial class MainWindow : Window
             Path.Combine(AppContext.BaseDirectory, "cache", "app-index.db"),
             LogPersistentDataStoreIssue);
         _gameBananaMetadataService = new GameBananaMetadataService(_httpClient,
-            new OnlineMetadataCacheAdapter(_appDataStore, _onlineDetailsCachePath, LogApplicationIssue),
+            new OnlineMetadataCacheAdapter(_appDataStore, OnlinePage._onlineDetailsCachePath, LogApplicationIssue),
             diagnostics: LogApplicationIssue);
         InitializeComponent();
+        // Stage J6: the Online page; it reaches the window only through IOnlineHost.
+        _onlineView = new OnlinePage(_services, this);
+        _services.Images.Attach(_httpClient, LogApplicationIssue);
         _services.Dialogs.Attach(() => RootGrid.XamlRoot, () => RootGrid.ActualTheme);
         _services.Status.NotificationRequested += OnNotificationRequested;
         InitializeSettingsHost();
@@ -201,8 +166,8 @@ public sealed partial class MainWindow : Window
         InitializeCommandPaletteShortcut();
         FirstLevelListView.ItemsSource = _characters.Visible;
         SecondLevelListView.ItemsSource = _secondLevelItems;
-        OnlineVirtualizedListView.ItemsSource = _onlinePage.VisibleMods;
-        OnlineVirtualizedGridView.ItemsSource = _onlinePage.VisibleMods;
+        _onlineView.OnlineVirtualizedListView.ItemsSource = _onlineView._onlinePage.VisibleMods;
+        _onlineView.OnlineVirtualizedGridView.ItemsSource = _onlineView._onlinePage.VisibleMods;
         TraceStartupStage("List sources attached");
         RegisterTrackedTextInputs();
         BuildShortcutRows();
@@ -227,12 +192,12 @@ public sealed partial class MainWindow : Window
             throw;
         }
         TraceStartupStage("Configuration loaded");
-        LoadDownloadTasks();
+        _onlineView.LoadDownloadTasks();
         InitializeAppearanceSettings();
         ApplyLanguage();
         TraceStartupStage("Theme and language applied");
-        InitializeOnlineControls();
-        InitializeBrowseSessionTracking();
+        _onlineView.InitializeOnlineControls();
+        _onlineView.InitializeBrowseSessionTracking();
         DetectLocalUpdatePackage();
         TraceStartupStage("Online controls and local update detection initialized");
         RefreshSettingsPane();
@@ -255,9 +220,6 @@ public sealed partial class MainWindow : Window
 
         TraceStartupStage("MainWindow constructor completed");
     }
-
-    /// <summary>A folder the user may choose to have created (issue #6); created only after confirmation.</summary>
-    private sealed record NewCharacterFolderChoice(string Path);
 
     private int _folderRefreshGeneration;
     private CancellationTokenSource? _folderRefreshCancellation;

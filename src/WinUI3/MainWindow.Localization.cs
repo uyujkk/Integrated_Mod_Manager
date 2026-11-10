@@ -40,29 +40,29 @@ public sealed partial class MainWindow
 
         ApplyPrimaryNavigationContent();
 
-        ToolTipService.SetToolTip(RefreshOnlineButton, T("Localization.RefreshOnlineModList"));
-        ToolTipService.SetToolTip(OnlinePrevPageButton, null);
-        ToolTipService.SetToolTip(OnlineNextPageButton, null);
-        ToolTipService.SetToolTip(OnlineSearchTextBox, T("Localization.SearchThisPageByCharacterMod2"));
-        ToolTipService.SetToolTip(OnlineSortComboBox, T("Localization.ChangeTheSortOrderForThe"));
+        ToolTipService.SetToolTip(_onlineView.RefreshOnlineButton, T("Localization.RefreshOnlineModList"));
+        ToolTipService.SetToolTip(_onlineView.OnlinePrevPageButton, null);
+        ToolTipService.SetToolTip(_onlineView.OnlineNextPageButton, null);
+        ToolTipService.SetToolTip(_onlineView.OnlineSearchTextBox, T("Localization.SearchThisPageByCharacterMod2"));
+        ToolTipService.SetToolTip(_onlineView.OnlineSortComboBox, T("Localization.ChangeTheSortOrderForThe"));
         ToolTipService.SetToolTip(PreviewImage, T("Localization.ClickToViewFullSize"));
-        ToolTipService.SetToolTip(OnlineDetailHeroImage, T("Localization.ClickToViewFullSize"));
-        AutomationProperties.SetName(RefreshOnlineButton, T("Localization.RefreshOnlineModList"));
-        AutomationProperties.SetName(OnlinePrevPageButton, T("Localization.PreviousPage"));
-        AutomationProperties.SetName(OnlineNextPageButton, T("Localization.NextPage"));
-        AutomationProperties.SetName(OnlineSearchTextBox, T("Localization.SearchThisPageByCharacterMod"));
-        AutomationProperties.SetName(OnlineSortComboBox, T("Localization.OnlineListSort"));
+        ToolTipService.SetToolTip(_onlineView.OnlineDetailHeroImage, T("Localization.ClickToViewFullSize"));
+        AutomationProperties.SetName(_onlineView.RefreshOnlineButton, T("Localization.RefreshOnlineModList"));
+        AutomationProperties.SetName(_onlineView.OnlinePrevPageButton, T("Localization.PreviousPage"));
+        AutomationProperties.SetName(_onlineView.OnlineNextPageButton, T("Localization.NextPage"));
+        AutomationProperties.SetName(_onlineView.OnlineSearchTextBox, T("Localization.SearchThisPageByCharacterMod"));
+        AutomationProperties.SetName(_onlineView.OnlineSortComboBox, T("Localization.OnlineListSort"));
         AutomationProperties.SetName(PreviewImage, T("Localization.OpenFullSizeModPreview"));
-        AutomationProperties.SetName(OnlineDetailHeroImage, T("Localization.OpenFullSizeOnlineModImage"));
-        InitializeOnlineControls();
+        AutomationProperties.SetName(_onlineView.OnlineDetailHeroImage, T("Localization.OpenFullSizeOnlineModImage"));
+        _onlineView.InitializeOnlineControls();
 
         // The dashboard labels itself (Pages/DashboardPage.xaml.cs).
         RefreshDashboard();
 
-        OnlineTitleTextBlock.Text = T("Common.OnlineModBrowser");
-        OnlineSubtitleTextBlock.Text = T("Localization.ThisPageKeepsTheOnlineMod");
-        OnlinePreviewTitleTextBlock.Text = T("Common.OnlineModList");
-        OnlinePreviewHintTextBlock.Text = T("Localization.ThisPageLoadsDataFromAn");
+        _onlineView.OnlineTitleTextBlock.Text = T("Common.OnlineModBrowser");
+        _onlineView.OnlineSubtitleTextBlock.Text = T("Localization.ThisPageKeepsTheOnlineMod");
+        _onlineView.OnlinePreviewTitleTextBlock.Text = T("Common.OnlineModList");
+        _onlineView.OnlinePreviewHintTextBlock.Text = T("Localization.ThisPageLoadsDataFromAn");
 
         // The Settings page labels itself (Pages/SettingsPage.xaml.cs).
         RefreshAppearanceSettings();

@@ -13,7 +13,7 @@ public sealed partial class MainWindow
         _services.EndfieldBridge.LogIssue = LogApplicationIssue;
         _services.EndfieldBridge.BusyChanged += (_, _) =>
         {
-            if (!_onlineWindowClosed) RefreshEndfieldBridgeControls();
+            if (!_onlineView._onlineWindowClosed) RefreshEndfieldBridgeControls();
         };
         Paths.PropertyChanged += (_, args) =>
         {
@@ -115,11 +115,11 @@ public sealed partial class MainWindow
 
     private string DescribeRepositorySource(WorkspaceRepository repository)
     {
-        string game = GetEffectiveOnlineGameName(repository).Trim();
-        string category = GetEffectiveOnlineCategoryId(repository).Trim();
+        string game = _onlineView.GetEffectiveOnlineGameName(repository).Trim();
+        string category = _onlineView.GetEffectiveOnlineCategoryId(repository).Trim();
         string source = string.IsNullOrWhiteSpace(category)
             ? string.Empty
-            : $"{GetEffectiveOnlineSource(repository)} {category}";
+            : $"{_onlineView.GetEffectiveOnlineSource(repository)} {category}";
         string[] parts = [.. new[] { game, source }.Where(part => !string.IsNullOrWhiteSpace(part))];
         return parts.Length == 0 ? T("Dashboard.NoOnlineCategory") : string.Join(" · ", parts);
     }

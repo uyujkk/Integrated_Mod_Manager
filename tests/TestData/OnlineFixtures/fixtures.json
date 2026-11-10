@@ -1,0 +1,197 @@
+{
+ "about": "Synthetic samples for IMM_ONLINE_FIXTURES (screenshots and UI tests only); made up, no real site data.",
+ "responses": [
+  {
+   "prefix": "https://gamebanana.com/apiv11/Mod/Index?_aFilters%5BGeneric_Category%5D=90001&",
+   "file": "index-90001.json"
+  },
+  {
+   "prefix": "https://gamebanana.com/apiv11/Mod/Index?_aFilters%5BGeneric_Category%5D=90011&",
+   "file": "index-90011.json"
+  },
+  {
+   "prefix": "https://gamebanana.com/apiv11/Mod/Index?_aFilters%5BGeneric_Category%5D=90012&",
+   "file": "index-90012.json"
+  },
+  {
+   "prefix": "https://gamebanana.com/apiv11/Mod/Index?_aFilters%5BGeneric_Category%5D=90013&",
+   "file": "index-90013.json"
+  },
+  {
+   "prefix": "https://gamebanana.com/apiv11/Mod/Categories?_idCategoryRow=90001&",
+   "file": "categories-90001.json"
+  },
+  {
+   "prefix": "https://images.example.invalid/samples/",
+   "file": "img/mod-01.png"
+  },
+  {
+   "prefix": "https://images.example.invalid/samples/mod-01.png",
+   "file": "img/mod-01.png"
+  },
+  {
+   "prefix": "https://images.example.invalid/samples/mod-02.png",
+   "file": "img/mod-02.png"
+  },
+  {
+   "prefix": "https://images.example.invalid/samples/mod-03.png",
+   "file": "img/mod-03.png"
+  },
+  {
+   "prefix": "https://images.example.invalid/samples/mod-04.png",
+   "file": "img/mod-04.png"
+  },
+  {
+   "prefix": "https://images.example.invalid/samples/mod-05.png",
+   "file": "img/mod-05.png"
+  },
+  {
+   "prefix": "https://images.example.invalid/samples/mod-06.png",
+   "file": "img/mod-06.png"
+  },
+  {
+   "prefix": "https://images.example.invalid/samples/mod-07.png",
+   "file": "img/mod-07.png"
+  },
+  {
+   "prefix": "https://images.example.invalid/samples/mod-08.png",
+   "file": "img/mod-08.png"
+  },
+  {
+   "prefix": "https://images.example.invalid/samples/mod-09.png",
+   "file": "img/mod-09.png"
+  },
+  {
+   "prefix": "https://images.example.invalid/samples/mod-10.png",
+   "file": "img/mod-10.png"
+  },
+  {
+   "prefix": "https://images.example.invalid/samples/mod-11.png",
+   "file": "img/mod-11.png"
+  },
+  {
+   "prefix": "https://images.example.invalid/samples/mod-12.png",
+   "file": "img/mod-12.png"
+  },
+  {
+   "prefix": "https://images.example.invalid/samples/hero-90011.png",
+   "file": "img/hero-90011.png"
+  },
+  {
+   "prefix": "https://images.example.invalid/samples/hero-90012.png",
+   "file": "img/hero-90012.png"
+  },
+  {
+   "prefix": "https://images.example.invalid/samples/hero-90013.png",
+   "file": "img/hero-90013.png"
+  },
+  {
+   "prefix": "https://api.gamebanana.com/Core/Item/Data?itemtype=Mod&itemid=990100&fields=name%2Cdescription",
+   "file": "details-990100.json"
+  },
+  {
+   "prefix": "https://api.gamebanana.com/Core/Item/Data?itemtype=Mod&itemid=990100&fields=name%2CCategory",
+   "file": "card-990100.json"
+  },
+  {
+   "prefix": "https://api.gamebanana.com/Core/Item/Data?itemtype=Mod&itemid=990101&fields=name%2Cdescription",
+   "file": "details-990101.json"
+  },
+  {
+   "prefix": "https://api.gamebanana.com/Core/Item/Data?itemtype=Mod&itemid=990101&fields=name%2CCategory",
+   "file": "card-990101.json"
+  },
+  {
+   "prefix": "https://api.gamebanana.com/Core/Item/Data?itemtype=Mod&itemid=990102&fields=name%2Cdescription",
+   "file": "details-990102.json"
+  },
+  {
+   "prefix": "https://api.gamebanana.com/Core/Item/Data?itemtype=Mod&itemid=990102&fields=name%2CCategory",
+   "file": "card-990102.json"
+  },
+  {
+   "prefix": "https://api.gamebanana.com/Core/Item/Data?itemtype=Mod&itemid=990103&fields=name%2Cdescription",
+   "file": "details-990103.json"
+  },
+  {
+   "prefix": "https://api.gamebanana.com/Core/Item/Data?itemtype=Mod&itemid=990103&fields=name%2CCategory",
+   "file": "card-990103.json"
+  },
+  {
+   "prefix": "https://api.gamebanana.com/Core/Item/Data?itemtype=Mod&itemid=990104&fields=name%2Cdescription",
+   "file": "details-990104.json"
+  },
+  {
+   "prefix": "https://api.gamebanana.com/Core/Item/Data?itemtype=Mod&itemid=990104&fields=name%2CCategory",
+   "file": "card-990104.json"
+  },
+  {
+   "prefix": "https://api.gamebanana.com/Core/Item/Data?itemtype=Mod&itemid=990105&fields=name%2Cdescription",
+   "file": "details-990105.json"
+  },
+  {
+   "prefix": "https://api.gamebanana.com/Core/Item/Data?itemtype=Mod&itemid=990105&fields=name%2CCategory",
+   "file": "card-990105.json"
+  },
+  {
+   "prefix": "https://api.gamebanana.com/Core/Item/Data?itemtype=Mod&itemid=990106&fields=name%2Cdescription",
+   "file": "details-990106.json"
+  },
+  {
+   "prefix": "https://api.gamebanana.com/Core/Item/Data?itemtype=Mod&itemid=990106&fields=name%2CCategory",
+   "file": "card-990106.json"
+  },
+  {
+   "prefix": "https://api.gamebanana.com/Core/Item/Data?itemtype=Mod&itemid=990107&fields=name%2Cdescription",
+   "file": "details-990107.json"
+  },
+  {
+   "prefix": "https://api.gamebanana.com/Core/Item/Data?itemtype=Mod&itemid=990107&fields=name%2CCategory",
+   "file": "card-990107.json"
+  },
+  {
+   "prefix": "https://api.gamebanana.com/Core/Item/Data?itemtype=Mod&itemid=990108&fields=name%2Cdescription",
+   "file": "details-990108.json"
+  },
+  {
+   "prefix": "https://api.gamebanana.com/Core/Item/Data?itemtype=Mod&itemid=990108&fields=name%2CCategory",
+   "file": "card-990108.json"
+  },
+  {
+   "prefix": "https://api.gamebanana.com/Core/Item/Data?itemtype=Mod&itemid=990109&fields=name%2Cdescription",
+   "file": "details-990109.json"
+  },
+  {
+   "prefix": "https://api.gamebanana.com/Core/Item/Data?itemtype=Mod&itemid=990109&fields=name%2CCategory",
+   "file": "card-990109.json"
+  },
+  {
+   "prefix": "https://api.gamebanana.com/Core/Item/Data?itemtype=Mod&itemid=990110&fields=name%2Cdescription",
+   "file": "details-990110.json"
+  },
+  {
+   "prefix": "https://api.gamebanana.com/Core/Item/Data?itemtype=Mod&itemid=990110&fields=name%2CCategory",
+   "file": "card-990110.json"
+  },
+  {
+   "prefix": "https://api.gamebanana.com/Core/Item/Data?itemtype=Mod&itemid=990111&fields=name%2Cdescription",
+   "file": "details-990111.json"
+  },
+  {
+   "prefix": "https://api.gamebanana.com/Core/Item/Data?itemtype=Mod&itemid=990111&fields=name%2CCategory",
+   "file": "card-990111.json"
+  },
+  {
+   "prefix": "https://translate.googleapis.com/translate_a/single?client=gtx&sl=auto&tl=zh-CN&",
+   "file": "translate-zh-CN.json"
+  },
+  {
+   "prefix": "https://translate.googleapis.com/translate_a/single?client=gtx&sl=auto&tl=ru&",
+   "file": "translate-ru.json"
+  },
+  {
+   "prefix": "https://translate.googleapis.com/translate_a/single?client=gtx&sl=auto&tl=en&",
+   "file": "translate-en.json"
+  }
+ ]
+}

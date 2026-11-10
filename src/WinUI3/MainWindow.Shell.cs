@@ -47,42 +47,6 @@ public sealed partial class MainWindow
         }
     }
 
-    // A selectable button drawn like a toggle: the online page's list and grid buttons.
-    private void ApplySecondaryNavButtonVisual(Button button, bool isSelected)
-    {
-        Brush backgroundBrush = isSelected
-            ? GetAppThemeBrush("AppSecondarySelectedBrush")
-            : GetAppThemeBrush("AppSecondaryDefaultBrush");
-        Brush borderBrush = isSelected
-            ? GetAppThemeBrush("AppNavSelectedBorderBrush")
-            : GetAppThemeBrush("AppCardBorderBrush");
-        Brush foregroundBrush = isSelected
-            ? GetAppThemeBrush("AppSecondarySelectedForegroundBrush")
-            : GetAppThemeBrush("AppSecondaryDefaultForegroundBrush");
-        Brush disabledForegroundBrush = GetAppThemeBrush("AppDisabledForegroundBrush");
-        Brush disabledBackgroundBrush = GetAppThemeBrush("AppSecondaryDefaultBrush");
-        Brush disabledBorderBrush = GetAppThemeBrush("AppCardBorderBrush");
-
-        button.Background = backgroundBrush;
-        button.BorderBrush = borderBrush;
-        button.Foreground = foregroundBrush;
-
-        button.Resources["ButtonBackground"] = backgroundBrush;
-        button.Resources["ButtonBackgroundPointerOver"] = backgroundBrush;
-        button.Resources["ButtonBackgroundPressed"] = backgroundBrush;
-        button.Resources["ButtonBackgroundDisabled"] = disabledBackgroundBrush;
-
-        button.Resources["ButtonBorderBrush"] = borderBrush;
-        button.Resources["ButtonBorderBrushPointerOver"] = borderBrush;
-        button.Resources["ButtonBorderBrushPressed"] = borderBrush;
-        button.Resources["ButtonBorderBrushDisabled"] = disabledBorderBrush;
-
-        button.Resources["ButtonForeground"] = foregroundBrush;
-        button.Resources["ButtonForegroundPointerOver"] = foregroundBrush;
-        button.Resources["ButtonForegroundPressed"] = foregroundBrush;
-        button.Resources["ButtonForegroundDisabled"] = disabledForegroundBrush;
-    }
-
     // Set by a page switch whose refreshes have not run yet, so a quick second switch still refreshes the lists.
     private bool _pendingRepositoryRefresh;
     private int _shellStateVersion;
@@ -109,7 +73,7 @@ public sealed partial class MainWindow
         int version = ++_shellStateVersion;
         RootGrid.DispatcherQueue.TryEnqueue(Microsoft.UI.Dispatching.DispatcherQueuePriority.Low, () =>
         {
-            if (version != _shellStateVersion || _onlineWindowClosed) return;
+            if (version != _shellStateVersion || _onlineView._onlineWindowClosed) return;
             RefreshShellStateAfterSwitch();
         });
     }
@@ -131,7 +95,7 @@ public sealed partial class MainWindow
         }
 
         RefreshDashboard();
-        RefreshOnlinePaneV2();
+        _onlineView.RefreshOnlinePaneV2();
         RefreshUpdatesPane();
         RefreshRepositoryActionButtons();
         SaveShellConfig();
@@ -145,13 +109,14 @@ public sealed partial class MainWindow
     {
         foreach ((PrimarySection section, FrameworkElement container) in new (PrimarySection, FrameworkElement)[]
         {
-            (PrimarySection.Repository, WorkspacePageHost),
-            (PrimarySection.Online, OnlineScrollViewer)
+            (PrimarySection.Repository, WorkspacePageHost)
         })
         {
             PagesHostGrid.Children.Remove(container);
             _pages[section] = new WrapperPage(container);
         }
+        // Stage J6: the Online page, created with the window.
+        _pages[PrimarySection.Online] = _onlineView;
         // Stage J2: the Settings page is a page of its own.
         _pages[PrimarySection.Settings] = new SettingsPage(_services);
         // Stage J4: the dashboard.
@@ -168,7 +133,7 @@ public sealed partial class MainWindow
         {
             PrimarySection.Dashboard => _pages[PrimarySection.Dashboard],
             PrimarySection.Repository => WorkspacePageHost,
-            PrimarySection.Online => OnlineScrollViewer,
+            PrimarySection.Online => _pages[PrimarySection.Online],
             PrimarySection.Updates => _pages[PrimarySection.Updates],
             PrimarySection.Shortcuts => _pages[PrimarySection.Shortcuts],
             _ => _pages[PrimarySection.Settings]
@@ -229,7 +194,7 @@ public sealed partial class MainWindow
             return;
         }
 
-        UpdateOnlineResponsiveLayout(width);
+        _onlineView.UpdateOnlineResponsiveLayout(width);
         ApplyTitleBarSearchVisibility();
         // The Settings and Updates pages lay themselves out when their own size changes.
         UpdateRefinedWorkspaceLayout();
@@ -376,7 +341,7 @@ public sealed partial class MainWindow
         WorkspaceRepository? repository = GetSelectedRepository();
         if (repository is not null)
         {
-            _ = EnsureOnlineCharacterCatalogAsync(repository, forceReload: false);
+            _ = _onlineView.EnsureOnlineCharacterCatalogAsync(repository, forceReload: false);
         }
     }
 
@@ -405,14 +370,14 @@ public sealed partial class MainWindow
             ApplyTheme(_services.Appearance.IsDark);
             ApplyTitleBarSearchVisibility();
             RestoreWindowPlacement();
-            UpdateOnlineWorkspaceWidthConstraint();
-            DispatcherQueue.TryEnqueue(UpdateOnlineWorkspaceWidthConstraint);
-            TrimOnlineImageCache();
+            _onlineView.UpdateOnlineWorkspaceWidthConstraint();
+            DispatcherQueue.TryEnqueue(_onlineView.UpdateOnlineWorkspaceWidthConstraint);
+            _services.Images.TrimCache();
             DetectLocalUpdatePackage();
             await RefreshInstallBackupListAsync();
 
-            if (_restoredInterruptedDownloads > 0)
-                ShowAppNotification(T("Shell.InterruptedTasksRestored", _restoredInterruptedDownloads));
+            if (_onlineView._restoredInterruptedDownloads > 0)
+                ShowAppNotification(T("Shell.InterruptedTasksRestored", _onlineView._restoredInterruptedDownloads));
             await NotifyInterruptedImportsAsync();
             await ChooseFirstInstallGameAsync();
             // Waits for any startup dialog (including the update prompt below) before showing; the
@@ -441,25 +406,25 @@ public sealed partial class MainWindow
     private void OnWindowClosed(object sender, WindowEventArgs args)
     {
         CloseShortcutPanel();
-        CaptureOnlineBrowseSession();
-        _browseSaveTimer?.Stop();
-        ++_browseRestoreRevision;
+        _onlineView.CaptureOnlineBrowseSession();
+        _onlineView._browseSaveTimer?.Stop();
+        ++_onlineView._browseRestoreRevision;
         UiCrashDiagnostics.RecordAction("Window closed", width: RootGrid.ActualWidth, height: RootGrid.ActualHeight, closed: true);
-        _onlineWindowClosed = true;
-        ++_onlineDetailAnimationVersion;
-        PersistDownloadTasks();
+        _onlineView._onlineWindowClosed = true;
+        ++_onlineView._onlineDetailAnimationVersion;
+        _onlineView.PersistDownloadTasks();
         _bundleOperationCancellation?.Cancel();
         _existingModImportCancellation?.Cancel();
-        _onlineWindowClosed = true;
-        InvalidateOnlineDetailRequest();
-        _onlineDownloadActions.CancelPreparation();
+        _onlineView._onlineWindowClosed = true;
+        _onlineView.InvalidateOnlineDetailRequest();
+        _onlineView._onlineDownloadActions.CancelPreparation();
         foreach (DownloadTaskItem task in _services.Downloads.Tasks.Where(task => DownloadProgressPolicy.IsActive(task.State)))
             if (task.Session?.CanCancel != false) task.Cancellation.Cancel();
         ++_folderRefreshGeneration;
         _folderRefreshCancellation?.Cancel();
-        CancelOnlineModListRequest();
-        _onlineCharacterAvatarCancellation.Cancel();
-        _onlineCharacterAvatarCancellation.Dispose();
+        _onlineView.CancelOnlineModListRequest();
+        _onlineView._onlineCharacterAvatarCancellation.Cancel();
+        _onlineView._onlineCharacterAvatarCancellation.Dispose();
         RootGrid.ActualThemeChanged -= OnRootActualThemeChanged;
         SaveWindowPlacement();
         SaveShellConfig();
@@ -484,7 +449,7 @@ public sealed partial class MainWindow
 
             if (controlDown && e.Key == VirtualKey.F)
             {
-                (_currentPrimarySection == PrimarySection.Online ? OnlineSearchTextBox : FirstLevelSearchTextBox).Focus(FocusState.Keyboard);
+                (_currentPrimarySection == PrimarySection.Online ? _onlineView.OnlineSearchTextBox : FirstLevelSearchTextBox).Focus(FocusState.Keyboard);
                 e.Handled = true;
                 return;
             }
@@ -503,9 +468,9 @@ public sealed partial class MainWindow
                 return;
             }
 
-            if (e.Key == VirtualKey.Escape && OnlineDetailDrawer.Visibility == Visibility.Visible)
+            if (e.Key == VirtualKey.Escape && _onlineView.OnlineDetailDrawer.Visibility == Visibility.Visible)
             {
-                await CloseOnlineDetailPaneAsync();
+                await _onlineView.CloseOnlineDetailPaneAsync();
                 e.Handled = true;
                 return;
             }
@@ -519,7 +484,7 @@ public sealed partial class MainWindow
             {
                 if (_currentPrimarySection == PrimarySection.Online)
                 {
-                    await LoadOnlineModsAsync(forceReload: true);
+                    await _onlineView.LoadOnlineModsAsync(forceReload: true);
                 }
                 else
                 {

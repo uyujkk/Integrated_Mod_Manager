@@ -15,9 +15,8 @@ public sealed partial class MainWindow
     {
         UpdatesView.ActionRequested += OnUpdatesActionRequested;
         UpdatesView.PropertyChanged += OnUpdatesViewChanged;
-        _services.Images.Loader = SetCachedOnlineImageAsync;
         _services.Appearance.ReduceAnimations = () => ShouldReduceAnimations;
-        _services.Downloads.IsRetryBlocked = () => _onlineDownloadActions.IsPreparing;
+        _services.Downloads.IsRetryBlocked = () => _onlineView._onlineDownloadActions.IsPreparing;
         // The navigation shows the running downloads; the Updates page lists the finished ones itself.
         _services.Downloads.Changed += (_, _) =>
         {
@@ -154,7 +153,7 @@ public sealed partial class MainWindow
                 break;
             case UpdatesAction.OpenOldBackup: OpenDirectory(request.Item as string, T("Updates.OldBackup")); break;
             case UpdatesAction.RemoveTracking when request.Item is TrackedModUpdateResult result:
-                await RunUiActionAsync("RemoveTrackedModRecordAsync", () => RemoveTrackedModRecordAsync(result));
+                await RunUiActionAsync("_onlineView.RemoveTrackedModRecordAsync", () => _onlineView.RemoveTrackedModRecordAsync(result));
                 break;
             case UpdatesAction.BrowseOnline: OnOnlineNavClicked(this, args); break;
             case UpdatesAction.ClearFinishedDownloads: OnClearDownloadTasksClicked(this, args); break;

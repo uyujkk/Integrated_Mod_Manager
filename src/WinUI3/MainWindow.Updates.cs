@@ -168,7 +168,7 @@ public sealed partial class MainWindow
             return;
         }
 
-        bool deduplicatedTrackedMods = DeduplicateTrackedModOrigins();
+        bool deduplicatedTrackedMods = _onlineView.DeduplicateTrackedModOrigins();
         if (deduplicatedTrackedMods)
         {
             SaveConfig();
@@ -259,7 +259,7 @@ public sealed partial class MainWindow
         OnlineModCard? latest = null;
         try
         {
-            latest = await FetchGameBananaModCardAsyncV2(origin.ItemId);
+            latest = await _onlineView.FetchGameBananaModCardAsyncV2(origin.ItemId);
         }
         catch (Exception ex)
         {

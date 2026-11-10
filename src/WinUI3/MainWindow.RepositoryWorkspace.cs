@@ -833,7 +833,7 @@ public sealed partial class MainWindow
                 }
             }));
             mod.SizeBytes = bytes;
-            mod.SizeText = FormatFileSize(bytes);
+            mod.SizeText = OnlinePage.FormatFileSize(bytes);
             return bytes;
         }
         catch (Exception ex)
@@ -929,7 +929,7 @@ public sealed partial class MainWindow
         string target = Paths.Target.Trim();
         // The game counts as chosen when the repository has one, its own or the default preset.
         return new RepositorySetup(
-            repository is not null && !string.IsNullOrWhiteSpace(GetEffectiveOnlineGameName(repository)),
+            repository is not null && !string.IsNullOrWhiteSpace(_onlineView.GetEffectiveOnlineGameName(repository)),
             source.Length > 0 && Directory.Exists(source),
             target.Length > 0 && Directory.Exists(target));
     }
@@ -943,7 +943,7 @@ public sealed partial class MainWindow
         (bool Done, string Title, string Detail, string Action)[] steps =
         [
             (setup.HasGame, T("RepositoryWorkspace.SetupGame"),
-                setup.HasGame ? GetEffectiveOnlineGameName(repository) : T("RepositoryWorkspace.SetupGameHint"),
+                setup.HasGame ? _onlineView.GetEffectiveOnlineGameName(repository) : T("RepositoryWorkspace.SetupGameHint"),
                 T("RepositoryWorkspace.SetupEdit")),
             (setup.HasRepositoryFolder, T("RepositoryWorkspace.SetupRepository"),
                 setup.HasRepositoryFolder ? source : T("RepositoryWorkspace.SetupRepositoryHint"), T("RepositoryWorkspace.SetupChoose")),
@@ -1026,8 +1026,8 @@ public sealed partial class MainWindow
             try
             {
                 string? path = FindPreviewImage(mod.Files);
-                if (path is null || !File.Exists(path) || new FileInfo(path).Length > MaxOnlinePreviewImageBytes) return;
-                BitmapImage bitmap = await LoadLocalBitmapAsync(path, decodePixelWidth: 420);
+                if (path is null || !File.Exists(path) || new FileInfo(path).Length > ImageService.MaxImageBytes) return;
+                BitmapImage bitmap = await ImageService.LoadLocalBitmapAsync(path, decodePixelWidth: 420);
                 mod.CoverImageSource = bitmap;
             }
             catch (Exception exception) { LogApplicationIssue("Repository cover", exception); }
@@ -1128,8 +1128,8 @@ public sealed partial class MainWindow
         }
         _repositoryInfoSize.Text = "…";
         long? bytes = mod.SizeBytes ?? await EnsureModSizeAsync(mod);
-        if (bytes is long size && revision == _repositorySizeRevision && !_onlineWindowClosed)
-            _repositoryInfoSize.Text = T("RepositoryWorkspace.SizeAndFiles", FormatFileSize(size), mod.Files.Count);
+        if (bytes is long size && revision == _repositorySizeRevision && !_onlineView._onlineWindowClosed)
+            _repositoryInfoSize.Text = T("RepositoryWorkspace.SizeAndFiles", OnlinePage.FormatFileSize(size), mod.Files.Count);
     }
 
     private void CopySelectedModPath()

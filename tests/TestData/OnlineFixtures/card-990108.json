@@ -1,0 +1,29 @@
+{
+ "name": "Sample Mod 09",
+ "Category().name": "Sample Hero Cobalt",
+ "catid": 90013,
+ "RootCategory().name": "Skins",
+ "likes": 16,
+ "views": 2600,
+ "downloads": 420,
+ "userid": 880000,
+ "Owner().name": "Sample Author 1",
+ "mdate": 1766534400,
+ "Preview().sSubFeedImageUrl()": "https://images.example.invalid/samples/mod-09.png",
+ "Url().sProfileUrl()": "https://gamebanana.com/mods/990108",
+ "Url().sDownloadUrl()": "https://files.example.invalid/sample-990108.zip",
+ "Files().aFiles()": {
+  "770008": {
+   "_idRow": "770008",
+   "_sFile": "sample-mod-09.zip",
+   "_nFilesize": 2048,
+   "_tsDateAdded": 1766534400,
+   "_nDownloadCount": 420,
+   "_sDownloadUrl": "https://files.example.invalid/sample-990108.zip",
+   "_sVersion": "1.0",
+   "_sDescription": "Sample archive",
+   "_bIsArchived": false
+  }
+ },
+ "Updates().bSubmissionHasUpdates()": false
+}

@@ -23,23 +23,23 @@ public sealed partial class MainWindow
 
         EnsureShortcutRowCapacity(InitialShortcutRows);
 
-        OnlineTitleTextBlock.Text = T("Common.OnlineModBrowser");
-        OnlineSubtitleTextBlock.Text = T("ShortcutBindings.ThisPageNowFocusesOnThe");
-        OnlinePreviewTitleTextBlock.Text = T("Common.OnlineModList");
-        OnlinePreviewHintTextBlock.Text = T("ShortcutBindings.ThisPageLoadsDataFromAn");
-        RefreshOnlineNavigationButtonLabels();
-        OpenOnlineDetailPageButton.Content = T("Common.OpenOriginalPage");
-        SelectOnlineDetailDownloadButton.Content = T("Common.SelectFile");
-        DownloadOnlineDetailButton.Content = T("Common.DownloadLatestArchive");
-        if (_activeOnlineDetailMod is null)
+        _onlineView.OnlineTitleTextBlock.Text = T("Common.OnlineModBrowser");
+        _onlineView.OnlineSubtitleTextBlock.Text = T("ShortcutBindings.ThisPageNowFocusesOnThe");
+        _onlineView.OnlinePreviewTitleTextBlock.Text = T("Common.OnlineModList");
+        _onlineView.OnlinePreviewHintTextBlock.Text = T("ShortcutBindings.ThisPageLoadsDataFromAn");
+        _onlineView.RefreshOnlineNavigationButtonLabels();
+        _onlineView.OpenOnlineDetailPageButton.Content = T("Common.OpenOriginalPage");
+        _onlineView.SelectOnlineDetailDownloadButton.Content = T("Common.SelectFile");
+        _onlineView.DownloadOnlineDetailButton.Content = T("Common.DownloadLatestArchive");
+        if (_onlineView._activeOnlineDetailMod is null)
         {
-            ResetOnlineDetailPaneToPlaceholder();
+            _onlineView.ResetOnlineDetailPaneToPlaceholder();
         }
         else
         {
-            UpdateOnlineDetailDownloadControls(_activeOnlineDetailMod);
+            _onlineView.UpdateOnlineDetailDownloadControls(_onlineView._activeOnlineDetailMod);
         }
-        OnlineDetailRequirementTitleTextBlock.Text = T("Common.PossibleExtraAccessRequirements");
+        _onlineView.OnlineDetailRequirementTitleTextBlock.Text = T("Common.PossibleExtraAccessRequirements");
         ApplyShortcutPlaceholders();
         UpdateShortcutRowVisibility();
         UpdateShortcutKeyFocusVisuals();
@@ -674,26 +674,6 @@ public sealed partial class MainWindow
             VirtualKey.Divide => "/",
             _ => key.ToString()
         };
-    }
-
-    private static string NormalizeShortcut(string? shortcut)
-    {
-        return string.Join("+", (shortcut ?? string.Empty)
-            .Split('+', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries)
-            .Select(part =>
-            {
-                if (string.Equals(part, "control", StringComparison.OrdinalIgnoreCase))
-                {
-                    return "Ctrl";
-                }
-
-                if (string.Equals(part, "menu", StringComparison.OrdinalIgnoreCase))
-                {
-                    return "Alt";
-                }
-
-                return part.Length == 1 ? part.ToUpperInvariant() : char.ToUpperInvariant(part[0]) + part[1..].ToLowerInvariant();
-            }));
     }
 
     private static string NormalizeLink(string link)

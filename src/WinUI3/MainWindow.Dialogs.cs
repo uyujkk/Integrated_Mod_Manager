@@ -151,7 +151,7 @@ public sealed partial class MainWindow
             int requestVersion = ++loadVersion;
             image.Source = null;
             loadingText.Visibility = Visibility.Visible;
-            BitmapImage? cachedImage = await LoadOnlineBitmapAsync(navigationImages[currentIndex]);
+            BitmapImage? cachedImage = await _services.Images.LoadOnlineBitmapAsync(navigationImages[currentIndex]);
             if (requestVersion != loadVersion)
             {
                 return;
@@ -251,7 +251,7 @@ public sealed partial class MainWindow
             // Done and for-your-information notes close themselves; warnings and errors stay until closed.
             if (severity is not (InfoBarSeverity.Success or InfoBarSeverity.Informational)) return;
             await Task.Delay(TimeSpan.FromSeconds(5));
-            if (notificationVersion == _notificationVersion && !_onlineWindowClosed)
+            if (notificationVersion == _notificationVersion && !_onlineView._onlineWindowClosed)
             {
                 AppInfoBar.IsOpen = false;
             }

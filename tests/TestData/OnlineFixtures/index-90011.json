@@ -1,0 +1,133 @@
+{
+ "_aMetadata": {
+  "_nRecordCount": 4,
+  "_nPerpage": 40,
+  "_bIsComplete": true
+ },
+ "_aRecords": [
+  {
+   "_idRow": 990100,
+   "_sName": "Sample Mod 01",
+   "_sProfileUrl": "https://gamebanana.com/mods/990100",
+   "_aSubmitter": {
+    "_sName": "Sample Author 1",
+    "_idRow": "880000"
+   },
+   "_aRootCategory": {
+    "_sName": "Skins"
+   },
+   "_aSubCategory": {
+    "_sName": "Sample Hero Aster",
+    "_sProfileUrl": "https://gamebanana.com/mods/cats/90011/"
+   },
+   "_aPreviewMedia": {
+    "_aImages": [
+     {
+      "_sBaseUrl": "https://images.example.invalid/samples",
+      "_sFile530": "mod-01.png",
+      "_sFile": "mod-01.png"
+     }
+    ]
+   },
+   "_tsDateModified": 1767225600,
+   "_tsDateUpdated": 1767225600,
+   "_tsDateAdded": 1764633600,
+   "_nLikeCount": 40,
+   "_nViewCount": 5000,
+   "_nDownloadCount": 900
+  },
+  {
+   "_idRow": 990103,
+   "_sName": "Sample Mod 04",
+   "_sProfileUrl": "https://gamebanana.com/mods/990103",
+   "_aSubmitter": {
+    "_sName": "Sample Author 4",
+    "_idRow": "880003"
+   },
+   "_aRootCategory": {
+    "_sName": "Skins"
+   },
+   "_aSubCategory": {
+    "_sName": "Sample Hero Aster",
+    "_sProfileUrl": "https://gamebanana.com/mods/cats/90011/"
+   },
+   "_aPreviewMedia": {
+    "_aImages": [
+     {
+      "_sBaseUrl": "https://images.example.invalid/samples",
+      "_sFile530": "mod-04.png",
+      "_sFile": "mod-04.png"
+     }
+    ]
+   },
+   "_tsDateModified": 1766966400,
+   "_tsDateUpdated": 1766966400,
+   "_tsDateAdded": 1764374400,
+   "_nLikeCount": 31,
+   "_nViewCount": 4100,
+   "_nDownloadCount": 720
+  },
+  {
+   "_idRow": 990106,
+   "_sName": "Sample Mod 07",
+   "_sProfileUrl": "https://gamebanana.com/mods/990106",
+   "_aSubmitter": {
+    "_sName": "Sample Author 3",
+    "_idRow": "880002"
+   },
+   "_aRootCategory": {
+    "_sName": "Skins"
+   },
+   "_aSubCategory": {
+    "_sName": "Sample Hero Aster",
+    "_sProfileUrl": "https://gamebanana.com/mods/cats/90011/"
+   },
+   "_aPreviewMedia": {
+    "_aImages": [
+     {
+      "_sBaseUrl": "https://images.example.invalid/samples",
+      "_sFile530": "mod-07.png",
+      "_sFile": "mod-07.png"
+     }
+    ]
+   },
+   "_tsDateModified": 1766707200,
+   "_tsDateUpdated": 1766707200,
+   "_tsDateAdded": 1764115200,
+   "_nLikeCount": 22,
+   "_nViewCount": 3200,
+   "_nDownloadCount": 540
+  },
+  {
+   "_idRow": 990109,
+   "_sName": "Sample Mod 10",
+   "_sProfileUrl": "https://gamebanana.com/mods/990109",
+   "_aSubmitter": {
+    "_sName": "Sample Author 2",
+    "_idRow": "880001"
+   },
+   "_aRootCategory": {
+    "_sName": "Skins"
+   },
+   "_aSubCategory": {
+    "_sName": "Sample Hero Aster",
+    "_sProfileUrl": "https://gamebanana.com/mods/cats/90011/"
+   },
+   "_aPreviewMedia": {
+    "_aImages": [
+     {
+      "_sBaseUrl": "https://images.example.invalid/samples",
+      "_sFile530": "mod-10.png",
+      "_sFile": "mod-10.png"
+     }
+    ]
+   },
+   "_tsDateModified": 1766448000,
+   "_tsDateUpdated": 1766448000,
+   "_tsDateAdded": 1763856000,
+   "_nLikeCount": 13,
+   "_nViewCount": 2300,
+   "_nDownloadCount": 360
+  }
+ ]
+}

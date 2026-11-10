@@ -13,7 +13,7 @@ public sealed partial class MainWindow
         var task = new DownloadTaskItem
         {
             Title = mod.Title,
-            SourceIdentity = GetOnlineDownloadIdentity(mod),
+            SourceIdentity = OnlinePage.GetOnlineDownloadIdentity(mod),
             DestinationPath = destinationPath,
             State = DownloadTaskState.Queued,
             Status = M("DownloadTasks.WaitingToStart"),
@@ -54,7 +54,7 @@ public sealed partial class MainWindow
         task.Status = status;
         task.StatusZh = status.Resolve(UiLanguagePolicy.Chinese);
         task.StatusEn = status.Resolve(UiLanguagePolicy.English);
-        if (!_onlineWindowClosed && (phaseChanged || DownloadProgressPolicy.IsTerminal(state))) PersistDownloadTasks();
+        if (!_onlineView._onlineWindowClosed && (phaseChanged || DownloadProgressPolicy.IsTerminal(state))) _onlineView.PersistDownloadTasks();
 
         DateTimeOffset now = DateTimeOffset.UtcNow;
         if (!forceRefresh && now - task.LastUiRefreshUtc < TimeSpan.FromMilliseconds(125))
@@ -64,14 +64,11 @@ public sealed partial class MainWindow
         task.LastUiRefreshUtc = now;
         DispatcherQueue.TryEnqueue(() =>
         {
-            if (_onlineWindowClosed) return;
+            if (_onlineView._onlineWindowClosed) return;
             RefreshDownloadTaskCard(task);
-            RefreshOnlineCardStates(refreshInstalled: DownloadProgressPolicy.IsTerminal(task.State));
+            _onlineView.RefreshOnlineCardStates(refreshInstalled: DownloadProgressPolicy.IsTerminal(task.State));
         });
     }
-
-    // Tasks restored from the history file have only the stored Chinese and English status.
-    private string DownloadTaskStatusText(DownloadTaskItem task) => DownloadTaskViews.StatusText(task, _services.Language);
 
     // The Updates page lists the finished tasks, the navigation the running ones; both follow the service.
     private void RefreshDownloadTaskCenter() => _services.Downloads.NotifyChanged();
@@ -103,7 +100,7 @@ public sealed partial class MainWindow
             }
 
             if (task.State is DownloadTaskState.Failed or DownloadTaskState.Canceled && task.RetryRequest is not null)
-                await RetryOnlineDownloadAsync(task);
+                await _onlineView.RetryOnlineDownloadAsync(task);
             else OpenDirectory(task.DestinationPath, T("DownloadTasks.DownloadFolder"));
         }
         catch (Exception ex)
@@ -164,7 +161,7 @@ public sealed partial class MainWindow
     }
 
     private void RefreshDownloadTaskCardView(DownloadTaskItem task, DownloadTaskCardView view)
-        => DownloadTaskViews.Refresh(task, view, _services.Language, _onlineDownloadActions.IsPreparing);
+        => DownloadTaskViews.Refresh(task, view, _services.Language, _onlineView._onlineDownloadActions.IsPreparing);
 
     // Navigation summary: always present so the history stays one click away; the badge and
     // bar follow the running downloads.
@@ -223,7 +220,7 @@ public sealed partial class MainWindow
             task.Cancellation.Dispose();
         }
         RefreshDownloadTaskCenter();
-        RefreshOnlineCardStates();
-        PersistDownloadTasks();
+        _onlineView.RefreshOnlineCardStates();
+        _onlineView.PersistDownloadTasks();
     }
 }

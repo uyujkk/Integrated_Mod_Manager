@@ -194,6 +194,28 @@ J0 结果（2026-11-04，分支 `claude/ui-j0-prep`）：
 
 范围：上面这些合计约 3100 行、10 个文件，比阶段表里估的 M 大。
 
+#### J6 牵连清单（在线页）
+
+2026-11-09 清点（`claude/ui-j6-online`，叠在 J8 之上）。在线页的 15 个 partial 文件共 5,414 行：`OnlineFeed`（1,036）、`OnlineDetails`（1,040）、`OnlineCharacters`（1,044）、`OnlineDownloadFlow`（758）、`OnlineCards`（476）、`OnlineImageCache`（204）、`OnlineBrowse`（179）、`OnlineLibrary`（146）、`BatchDownloads`（131）、`OnlineDownloads`（99）、`OnlineInstall`（83）、`DownloadRecovery`（76）、`OnlineState`（73）、`AuthorWorkspace`（35）、`OnlineImages`（34）；另有和它们紧绑在一起的 `BrowseSessions.cs`（168 行，浏览位置和恢复）。XAML 在 `MainWindow.xaml:664-1141`（约 480 行、61 个以 `Online` 开头的命名控件）。
+
+| 方向 | 数量 | 主要内容 | 打算改成 |
+| --- | --- | --- | --- |
+| 别的文件用在线页的成员 | 约 50 个 | 下载流水线（`DownloadOnlineModArchiveAsync`、`_onlineDownloadScheduler`、`RetryOnlineDownloadAsync`、`PersistDownloadTasks`）被 Mod 更新、下载任务、更新页用；`_trackedModOrigins` 相关（`DeduplicateTrackedModOrigins`、`RemoveTrackedModRecordAsync`）被配置和更新页用；角色目录（`EnsureOnlineCharacterCatalogAsync` 等）被角色头像、仓库设置用；`GetEffectiveOnlineSource/CategoryId/GameName` 被仪表盘、设置、托盘用；图片加载（`LoadLocalBitmapAsync`、`LoadOnlineBitmapAsync`、`SetCachedOnlineImageAsync`）被工作区、头像、更新页用；`IsPathInsideDirectory`、`FormatFileSize` 等通用小函数 | 下载流水线进 `DownloadService`；图片缓存进 `ImageService`；角色目录和“有效在线来源”进新的 `OnlineCatalogService`；通用小函数进 Core；页面自己的状态留在 `OnlinePageViewModel` |
+| 在线页用窗口的成员 | 约 100 个 | `_services`、`GetSelectedRepository`、`SaveShellConfig`、对话框、通知、`_httpClient`、`_gameBananaMetadataService`、`_appDataStore`、`_trackedModOrigins`/`_modLinks`/`_modBindings`、本地库刷新（`RefreshListsAsync`、`SelectSecondLevelByPath`）、浏览会话、快捷键自动绑定、下载任务卡片 | 经服务和请求事件：仓库服务、对话框服务、状态服务、新的在线服务；安装后刷新工作区、选中新 Mod 用请求事件交给窗口 |
+
+规模：L 偏大（约 5,600 行代码 + 480 行 XAML，两个方向约 150 处牵连），加上 J6-b 的外观和流程，按步骤分开提交：服务 → 纯移动（分几次）→ 外观 → 测试和截图。
+
+#### J6 后续：拆开 `IOnlineHost`
+
+这次（用户 2026-11-09 选 A）在线页整体移到 `Pages/OnlinePage.xaml` 和 `Pages/Online/`，页面不引用 `MainWindow`，用到的窗口功能都经 `IOnlineHost`。移动后接口有 **47 个成员**，按用途分 8 组：外壳（页面是否显示、根元素和窗口大小、主题画刷、密度和动画、选文件夹、打开链接、看图）、错误和日志、保存设置、仓库和 Mod 工作区、快捷键绑定、追踪的 Mod 和下载任务、HTTP 客户端和本地索引、共用常量和小函数。角色目录和“有效在线来源”这次仍在页面里，窗口经 `_onlineView` 调用。
+
+以后拆成服务，每拆一块就从接口里删掉对应的成员：
+- 角色目录服务：`EndfieldCharacters`、`IsFavoriteCharacter`、`ToggleFavoriteCharacter`、`BuiltInRepositoryPresets`、`IsRepositoryForPreset`、`EndfieldOfficialWikiUrl`，以及页面里的角色目录代码（窗口的头像和仓库设置也在用）；
+- 在线来源服务：`DefaultOnlineCategoryId`、`DefaultOnlineSourceSite`、`Http`、`Metadata`、`DataStore`，以及页面里的 `GetEffectiveOnline*`（仪表盘、设置、托盘在用）；
+- 安装流程服务：`ExtractArchiveToDirectory`、`IsSupportedArchiveFile`、`FindPreviewImage`、`DeleteDirectoryTreeSafely`、`ModBindings`、`ModLinks`、`CreateAutomaticShortcutBinding`、`ShortcutScanSafetyLimit`、`TrackedModOrigins`、`TrackedModUpdateResults`、下载任务的四个成员；
+- 安装后刷新工作区（`RefreshListsAsync`、`SelectSecondLevelByPath`、`SetBusyState`）改成请求事件；
+- 窗口还在用的页面小函数（`IsPathInsideDirectory`、`FormatFileSize` 等，现在是 `OnlinePage` 的静态成员）移进 Core。
+
 ### J8. 对话框与资源
 
 - 每种对话框一个类（`Dialogs/` 下），由 `DialogService` 统一设置 `XamlRoot` 并保证同一时间只有一个对话框。

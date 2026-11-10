@@ -15,7 +15,7 @@ public sealed partial class MainWindow
 
     private void SaveSelectedRepositoryFromInputs()
     {
-        CaptureOnlineBrowseSession();
+        _onlineView.CaptureOnlineBrowseSession();
         WorkspaceRepository? repository = GetSelectedRepository();
         if (repository is null)
         {
@@ -76,21 +76,21 @@ public sealed partial class MainWindow
 
     private void ResetOnlineRepositoryContext()
     {
-        _activeBrowseSessionKey = null;
-        _pendingBrowsePosition = null;
-        ++_browseRestoreRevision;
-        CancelOnlineModListRequest();
-        InvalidateOnlineDetailRequest();
-        _onlineDownloadEnrichmentVersion++;
-        _onlinePage.ResetPaging();
-        _onlinePage.CharacterFilter = string.Empty;
-        _onlinePage.KnownCharacters.Clear();
-        _onlinePage.AuthorId = 0;
-        _onlinePage.AuthorName = string.Empty;
-        _lastLoadedOnlineConfigKey = null;
-        _onlinePage.Mods.Clear();
-        _activeOnlineDetailMod = null;
-        ResetOnlineDetailPaneToPlaceholder();
+        _onlineView._activeBrowseSessionKey = null;
+        _onlineView._pendingBrowsePosition = null;
+        ++_onlineView._browseRestoreRevision;
+        _onlineView.CancelOnlineModListRequest();
+        _onlineView.InvalidateOnlineDetailRequest();
+        _onlineView._onlineDownloadEnrichmentVersion++;
+        _onlineView._onlinePage.ResetPaging();
+        _onlineView._onlinePage.CharacterFilter = string.Empty;
+        _onlineView._onlinePage.KnownCharacters.Clear();
+        _onlineView._onlinePage.AuthorId = 0;
+        _onlineView._onlinePage.AuthorName = string.Empty;
+        _onlineView._lastLoadedOnlineConfigKey = null;
+        _onlineView._onlinePage.Mods.Clear();
+        _onlineView._activeOnlineDetailMod = null;
+        _onlineView.ResetOnlineDetailPaneToPlaceholder();
     }
 
     // A game preset from the dashboard's "New repository" menu.
@@ -212,11 +212,11 @@ public sealed partial class MainWindow
 
             _services.Repositories.Items.Add(repository);
             _services.Repositories.SelectedId = repository.Id;
-            _onlinePage.ResetPaging();
-            _onlinePage.CharacterFilter = string.Empty;
-            _onlinePage.KnownCharacters.Clear();
-            _lastLoadedOnlineConfigKey = null;
-            _onlinePage.Mods.Clear();
+            _onlineView._onlinePage.ResetPaging();
+            _onlineView._onlinePage.CharacterFilter = string.Empty;
+            _onlineView._onlinePage.KnownCharacters.Clear();
+            _onlineView._lastLoadedOnlineConfigKey = null;
+            _onlineView._onlinePage.Mods.Clear();
             _currentPrimarySection = PrimarySection.Repository;
             ApplySelectedRepositoryToInputs();
             SaveConfig();
@@ -291,11 +291,11 @@ public sealed partial class MainWindow
             _services.Repositories.Items.Add(repository);
             _services.Repositories.SelectedId = repository.Id;
             _currentPrimarySection = PrimarySection.Repository;
-            _onlinePage.ResetPaging();
-            _onlinePage.CharacterFilter = string.Empty;
-            _onlinePage.KnownCharacters.Clear();
-            _lastLoadedOnlineConfigKey = null;
-            _onlinePage.Mods.Clear();
+            _onlineView._onlinePage.ResetPaging();
+            _onlineView._onlinePage.CharacterFilter = string.Empty;
+            _onlineView._onlinePage.KnownCharacters.Clear();
+            _onlineView._lastLoadedOnlineConfigKey = null;
+            _onlineView._onlinePage.Mods.Clear();
             ApplySelectedRepositoryToInputs();
             SaveConfig();
             ApplyShellState(refreshRepository: false);
@@ -389,8 +389,8 @@ public sealed partial class MainWindow
 
             SaveShellConfig();
             RefreshSettingsPane();
-            RefreshOnlinePaneV2();
-            ResetOnlineDetailPaneToPlaceholder();
+            _onlineView.RefreshOnlinePaneV2();
+            _onlineView.ResetOnlineDetailPaneToPlaceholder();
             StatusTextBlock.Text = T("Repositories.UpdatedOnlineCategorySettings", repository.Name);
         }
         catch (Exception ex)
@@ -412,17 +412,17 @@ public sealed partial class MainWindow
                 return;
             }
 
-            EnsureOnlineCharacterOptionsForRepository(repository);
-            if (!_onlinePage.CharacterOptions.Any(character => character.IsWikiCharacter))
+            _onlineView.EnsureOnlineCharacterOptionsForRepository(repository);
+            if (!_onlineView._onlinePage.CharacterOptions.Any(character => character.IsWikiCharacter))
             {
-                _ = EnsureOnlineCharacterCatalogAsync(repository, forceReload: false);
-                for (int attempt = 0; attempt < 12 && !_onlinePage.CharacterOptions.Any(character => character.IsWikiCharacter); attempt++)
+                _ = _onlineView.EnsureOnlineCharacterCatalogAsync(repository, forceReload: false);
+                for (int attempt = 0; attempt < 12 && !_onlineView._onlinePage.CharacterOptions.Any(character => character.IsWikiCharacter); attempt++)
                 {
                     await Task.Delay(250);
                 }
             }
 
-            List<OnlineCharacterOption> wikiCharacters = _onlinePage.CharacterOptions
+            List<OnlineCharacterOption> wikiCharacters = _onlineView._onlinePage.CharacterOptions
                 .Where(character => character.IsWikiCharacter)
                 .OrderBy(character => character.WikiOrder)
                 .ToList();
@@ -434,7 +434,7 @@ public sealed partial class MainWindow
                 return;
             }
 
-            List<OnlineCharacterOption> categoryCandidates = _onlinePage.CharacterOptions
+            List<OnlineCharacterOption> categoryCandidates = _onlineView._onlinePage.CharacterOptions
                 .Where(character => !string.IsNullOrWhiteSpace(character.CategoryId))
                 .GroupBy(character => character.CategoryId, StringComparer.OrdinalIgnoreCase)
                 .Select(group => group.First())
@@ -474,10 +474,10 @@ public sealed partial class MainWindow
 
             SaveShellConfig();
             ResetOnlineRepositoryContext();
-            EnsureOnlineCharacterOptionsForRepository(repository);
-            _ = EnsureOnlineCharacterCatalogAsync(repository, forceReload: false);
+            _onlineView.EnsureOnlineCharacterOptionsForRepository(repository);
+            _ = _onlineView.EnsureOnlineCharacterCatalogAsync(repository, forceReload: false);
             RefreshSettingsPane();
-            RefreshOnlinePaneV2();
+            _onlineView.RefreshOnlinePaneV2();
             ShowAppNotification(T("Repositories.CategoryMappingUpdated"));
         }
         catch (Exception ex)
