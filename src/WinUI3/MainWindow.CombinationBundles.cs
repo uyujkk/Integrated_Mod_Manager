@@ -17,15 +17,15 @@ public sealed partial class MainWindow
         // makes Parent unreliable and can throw when it is added to a second owner.
         // Bundle commands span the workspace, not the constrained preset-list footer.
         var actions = new StackPanel { Spacing = 8, Orientation = Orientation.Horizontal };
-        _exportCombinationBundleButton = RepositoryButton("\uE896", async (_, _) => await ExportCombinationBundleAsync());
-        _importCombinationBundleButton = RepositoryButton("\uE898", async (_, _) => await ImportCombinationBundleAsync());
-        _cancelCombinationBundleButton = RepositoryButton("\uE711", (_, _) =>
+        _exportCombinationBundleButton = WorkspacePage.RepositoryButton("\uE896", async (_, _) => await ExportCombinationBundleAsync());
+        _importCombinationBundleButton = WorkspacePage.RepositoryButton("\uE898", async (_, _) => await ImportCombinationBundleAsync());
+        _cancelCombinationBundleButton = WorkspacePage.RepositoryButton("\uE711", (_, _) =>
         {
             _bundleOperationCancellation?.Cancel();
             RefreshCombinationBundleActions();
         });
-        _exportPresetShareButton = RepositoryButton("\uE72D", async (_, _) => await RunUiActionAsync("Share preset", ExportPresetShareAsync));
-        _importPresetShareButton = RepositoryButton("\uE8B5", async (_, _) => await RunUiActionAsync("Import shared preset", ImportPresetShareAsync));
+        _exportPresetShareButton = WorkspacePage.RepositoryButton("\uE72D", async (_, _) => await RunUiActionAsync("Share preset", ExportPresetShareAsync));
+        _importPresetShareButton = WorkspacePage.RepositoryButton("\uE8B5", async (_, _) => await RunUiActionAsync("Import shared preset", ImportPresetShareAsync));
         AutomationProperties.SetAutomationId(_exportPresetShareButton, "PresetShareExportButton");
         AutomationProperties.SetAutomationId(_importPresetShareButton, "PresetShareImportButton");
         foreach (Button button in new[] { _exportCombinationBundleButton, _importCombinationBundleButton, _exportPresetShareButton, _importPresetShareButton, _cancelCombinationBundleButton })
@@ -34,7 +34,7 @@ public sealed partial class MainWindow
             actions.Children.Add(button);
         }
         Grid.SetColumnSpan(actions, 3);
-        _combinationWorkspace!.Children.Add(actions);
+        _workspaceView._combinationWorkspace!.Children.Add(actions);
         RefreshCombinationBundleActions();
     }
 
@@ -57,7 +57,7 @@ public sealed partial class MainWindow
 
         static void SetLabel(Button button, string glyph, string text)
         {
-            button.Content = RepositoryIconLabel(glyph, text);
+            button.Content = WorkspacePage.RepositoryIconLabel(glyph, text);
             ToolTipService.SetToolTip(button, text);
             AutomationProperties.SetName(button, text);
         }
@@ -67,7 +67,7 @@ public sealed partial class MainWindow
         new Progress<CombinationBundleProgress>(info =>
         {
             if (!_onlineView._onlineWindowClosed && !token.IsCancellationRequested && _bundleOperationCancellation?.Token == token)
-                UpdateProgress(info.Percent, operation + (info.RelativePath.Length == 0 ? "" : " · " + info.RelativePath));
+                _workspaceView.UpdateProgress(info.Percent, operation + (info.RelativePath.Length == 0 ? "" : " · " + info.RelativePath));
         });
 
     private async Task ExportCombinationBundleAsync()
@@ -178,7 +178,7 @@ public sealed partial class MainWindow
             restore = confirmation.Restore;
             if (!_onlineView._onlineWindowClosed)
             {
-                await RefreshListsAsync();
+                await _workspaceView.RefreshListsAsync();
                 ShowAppNotification(T("CombinationBundles.InstalledAndSaved", profile.Name));
             }
         }

@@ -270,11 +270,11 @@ public sealed partial class MainWindow
                     break;
                 case "cmd" when value == "import":
                     NavigateToPrimarySection(PrimarySection.Repository);
-                    OnImportZipClicked(ImportZipButton, new RoutedEventArgs());
+                    _workspaceView.OnImportZipClicked(_workspaceView.ImportZipButton, new RoutedEventArgs());
                     break;
                 case "cmd" when value == "refresh":
                     NavigateToPrimarySection(PrimarySection.Repository);
-                    await RefreshListsAsync();
+                    await _workspaceView.RefreshListsAsync();
                     break;
                 case "char":
                     ShowRepositoryItemFromPalette(value, modPath: null);
@@ -300,24 +300,24 @@ public sealed partial class MainWindow
             _currentPrimarySection = PrimarySection.Repository;
             ApplyShellState(refreshRepository: false);
         }
-        if (_repositoryWorkspaceBusy)
+        if (_workspaceView._repositoryWorkspaceBusy)
         {
-            StatusTextBlock.Text = T("CommandPalette.Busy");
+            _workspaceView.StatusTextBlock.Text = T("CommandPalette.Busy");
             return;
         }
         // TextChanged is raised later, so apply each cleared filter right away as well.
-        if (!string.IsNullOrEmpty(FirstLevelSearchTextBox.Text))
+        if (!string.IsNullOrEmpty(_workspaceView.FirstLevelSearchTextBox.Text))
         {
-            FirstLevelSearchTextBox.Text = string.Empty;
-            ApplyFirstLevelFilter();
+            _workspaceView.FirstLevelSearchTextBox.Text = string.Empty;
+            _workspaceView.ApplyFirstLevelFilter();
         }
-        if (_repositoryModSearch is not null && !string.IsNullOrEmpty(_repositoryModSearch.Text))
+        if (_workspaceView._repositoryModSearch is not null && !string.IsNullOrEmpty(_workspaceView._repositoryModSearch.Text))
         {
-            _repositoryModSearch.Text = string.Empty;
-            RefreshRepositoryModView();
+            _workspaceView._repositoryModSearch.Text = string.Empty;
+            _workspaceView.RefreshRepositoryModView();
         }
-        if (_modList.View == RepositoryWorkspaceView.Presets) SetRepositoryWorkspaceViewV4(RepositoryWorkspaceView.List);
-        if (modPath is not null) SelectSecondLevelByPath(modPath);
-        else SelectFirstLevelByPath(characterPath);
+        if (_workspaceView._modList.View == RepositoryWorkspaceView.Presets) _workspaceView.SetRepositoryWorkspaceViewV4(RepositoryWorkspaceView.List);
+        if (modPath is not null) _workspaceView.SelectSecondLevelByPath(modPath);
+        else _workspaceView.SelectFirstLevelByPath(characterPath);
     }
 }

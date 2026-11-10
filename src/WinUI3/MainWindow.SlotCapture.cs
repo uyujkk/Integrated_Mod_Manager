@@ -76,7 +76,7 @@ public sealed partial class MainWindow
         _loaderAutoSaveOriginals.TryAdd(path, current.Value);
         if (_loaderAutoSaveOriginals[path] == seconds) _loaderAutoSaveOriginals.Remove(path);
         SaveShellConfig();
-        StatusTextBlock.Text = T("SlotCapture.AutoSaveChanged", seconds, backup);
+        _workspaceView.StatusTextBlock.Text = T("SlotCapture.AutoSaveChanged", seconds, backup);
         RefreshLoaderAutoSave();
     }
 }

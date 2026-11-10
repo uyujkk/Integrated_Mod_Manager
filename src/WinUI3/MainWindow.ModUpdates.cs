@@ -94,7 +94,7 @@ public sealed partial class MainWindow
             UpdateDownloadTask(task, DownloadTaskState.Completed, 100, M("ModUpdates.ReplacedBackup", replaced.BackupPath), forceRefresh: true);
             if (!SaveConfig()) throw new IOException(T("ModUpdates.UpdatedFilesWereReplacedButTracking"));
             SaveShellConfig(throwOnError: true);
-            if (GetSelectedRepository()?.Id == repositoryId) await RefreshListsAsync();
+            if (GetSelectedRepository()?.Id == repositoryId) await _workspaceView.RefreshListsAsync();
             ShowAppNotification(T("ModUpdates.Updated", origin.Title));
         }
         catch (OperationCanceledException) when (!committed)

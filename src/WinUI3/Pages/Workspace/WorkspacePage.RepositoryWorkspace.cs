@@ -11,7 +11,7 @@ using Microsoft.UI.Xaml.Media.Imaging;
 
 namespace ModFolderCopier.WinUI;
 
-public sealed partial class MainWindow
+public sealed partial class WorkspacePage
 {
     private bool _repositoryV4Ready;
     private bool _syncingRepositorySelection;
@@ -20,12 +20,12 @@ public sealed partial class MainWindow
     private bool _refreshingRepositoryPicker;
     private bool _refreshingCombinationWorkspace;
     private bool _repositoryDetailDialogOpen;
-    private bool _repositoryWorkspaceBusy;
-    private readonly ModListViewModel _modList = new();
+    internal bool _repositoryWorkspaceBusy;
+    internal readonly ModListViewModel _modList = new();
     private readonly ModDetailsViewModel _modDetails = new();
     private readonly HashSet<SecondLevelFolderItem> _repositoryCoversLoading = [];
     private ToggleButton[] _repositoryModeButtons = [];
-    private TextBox? _repositoryModSearch;
+    internal TextBox? _repositoryModSearch;
     private EmptyState? _repositoryEmptyState;
     private StackPanel? _repositoryEmptyButtons;
     private HyperlinkButton? _repositoryEmptyAdopt;
@@ -61,7 +61,7 @@ public sealed partial class MainWindow
     private TextBlock? _repositorySelectedPath;
     private TextBlock? _repositoryTaskStatusText;
     private FontIcon? _repositoryTaskStatusIcon;
-    private Grid? _combinationWorkspace;
+    internal Grid? _combinationWorkspace;
     private ListView? _combinationPresetList;
     private StackPanel? _combinationMemberPanel;
     private TextBlock? _combinationWorkspaceTitle;
@@ -72,7 +72,7 @@ public sealed partial class MainWindow
     private Border? _combinationRecoveryCard;
 
     // Reuse the real controls and handlers. No parallel deployment or persistence implementation.
-    private void InitializeRepositoryWorkspaceV4()
+    internal void InitializeRepositoryWorkspaceV4()
     {
         _repositoryModSearch = new TextBox { Height = 36, MinWidth = 0 };
         _repositoryModSearch.TextChanged += (_, _) => RefreshRepositoryModView();
@@ -105,7 +105,7 @@ public sealed partial class MainWindow
         _repositoryCoverRepeater = new ItemsRepeater
         {
             ItemsSource = _modList.VisibleMods,
-            ItemTemplate = (DataTemplate)RootGrid.Resources["RepositoryCoverTemplate"],
+            ItemTemplate = (DataTemplate)Resources["RepositoryCoverTemplate"],
             Layout = _repositoryCoverWrap,
             // A finite positive width is required before the first measure pass.
             Width = 236,
@@ -156,11 +156,11 @@ public sealed partial class MainWindow
         InitializeCombinationWorkspaceV4();
         InitializeRepositoryToolbarV4();
         // The repository is initially hidden on a clean install. Its first real
-        // viewport is measured only when the user opens it, not when RootGrid loads.
+        // viewport is measured only when the user opens it, not when _host.Root loads.
         WorkspaceScrollViewer.SizeChanged += (_, _) => UpdateRepositoryWorkspaceLayoutV4();
-        _secondLevelItems.CollectionChanged += OnRepositoryCatalogChanged;
+        _host.SecondLevelItems.CollectionChanged += OnRepositoryCatalogChanged;
         _repositoryV4Ready = true;
-        RootGrid.ActualThemeChanged += (_, _) => UpdateRepositoryWorkspaceLanguageV4();
+        _host.Root.ActualThemeChanged += (_, _) => UpdateRepositoryWorkspaceLanguageV4();
         UpdateRepositoryWorkspaceLanguageV4();
         RefreshRepositoryModView();
         SetRepositoryWorkspaceViewV4(_modList.View, save: false);
@@ -168,7 +168,7 @@ public sealed partial class MainWindow
 
     private void OnCharacterMoreClicked(object sender, RoutedEventArgs e)
     {
-        if (_characters.Selected is { } item)
+        if (_host.Characters.Selected is { } item)
             CreateFirstLevelMenu(item).ShowAt((FrameworkElement)sender,
                 new FlyoutShowOptions { Placement = FlyoutPlacementMode.BottomEdgeAlignedLeft });
     }
@@ -178,12 +178,12 @@ public sealed partial class MainWindow
         if (_refreshingRepositoryPicker || _repositoryWorkspaceBusy) return;
         if (RepositoryWorkspacePicker.SelectedItem is ComboBoxItem { Tag: string id }
             && !string.Equals(id, _services.Repositories.SelectedId, StringComparison.Ordinal))
-            SwitchRepository(id, openManager: true);
+            _host.SwitchRepository(id, openManager: true);
     }
 
     private void OnRepositoryOpenModFolderClicked(object sender, RoutedEventArgs e)
     {
-        if (GetSelectedSecondLevelItem() is { } mod) OpenDirectory(mod.Path, T("Common.ModFolder"));
+        if (GetSelectedSecondLevelItem() is { } mod) _host.OpenDirectory(mod.Path, T("Common.ModFolder"));
     }
 
     private void InitializeRepositoryToolbarV4()
@@ -288,7 +288,7 @@ public sealed partial class MainWindow
             string target = Paths.Target.Trim();
             bool connected = target.Length > 0 && Directory.Exists(target);
             _repositoryTargetStatus.Text = connected ? T("RepositoryWorkspace.TargetConnected") : T("RepositoryWorkspace.TargetMissing");
-            _repositoryTargetStatus.Foreground = GetAppThemeBrush(connected ? "AppSuccessBrush" : "AppDangerBrush");
+            _repositoryTargetStatus.Foreground = _host.GetAppThemeBrush(connected ? "AppSuccessBrush" : "AppDangerBrush");
         }
     }
 
@@ -457,7 +457,7 @@ public sealed partial class MainWindow
         Value(_repositoryInfoNoTags, 2);
         _repositoryAddTags = RowButton("\uE710", 2, async (_, _) =>
         {
-            if (GetSelectedSecondLevelItem() is { } mod) await RunUiActionAsync("EditLocalTagsAsync", () => EditLocalTagsAsync(mod));
+            if (GetSelectedSecondLevelItem() is { } mod) await _host.RunUiActionAsync("EditLocalTagsAsync", () => EditLocalTagsAsync(mod));
         });
 
         _repositoryInfoSize = RepositoryText(12);
@@ -484,7 +484,7 @@ public sealed partial class MainWindow
         RepositoryMove(CreateConfigurationProfileButton, list, 2);
         CreateConfigurationProfileButton.HorizontalAlignment = HorizontalAlignment.Stretch;
         RepositoryDecorateButton(CreateConfigurationProfileButton, "\uE710");
-        InitializeCombinationBundleActions();
+        _host.InitializeCombinationBundleActions();
         var presetCard = RepositoryCard(list); Grid.SetRow(presetCard, 1);
         _combinationWorkspace.Children.Add(presetCard);
 
@@ -540,7 +540,7 @@ public sealed partial class MainWindow
         WorkspaceContentGrid.Children.Add(_combinationWorkspace);
     }
 
-    private void SetRepositoryWorkspaceViewV4(RepositoryWorkspaceView view, bool save = true)
+    internal void SetRepositoryWorkspaceViewV4(RepositoryWorkspaceView view, bool save = true)
     {
         if (!_repositoryV4Ready || _repositoryWorkspaceBusy || _repositoryDetailDialogOpen) return;
         _modList.View = view;
@@ -552,7 +552,7 @@ public sealed partial class MainWindow
         UpdateRepositoryWorkspaceLanguageV4();
         SyncRepositorySelectionV4(GetSelectedSecondLevelItem());
         UpdateRepositoryWorkspaceLayoutV4();
-        if (save) SaveShellConfig();
+        if (save) _host.SaveShellConfig();
     }
 
     private void UpdateRepositoryWorkspaceLanguageV4()
@@ -560,7 +560,7 @@ public sealed partial class MainWindow
         if (!_repositoryV4Ready) return;
         WorkspaceTitleTextBlock.Text = _modList.View == RepositoryWorkspaceView.Presets ? T("RepositoryWorkspace.CombinationPresets") : T("Common.ModWorkspace");
         RepositoryCategoryTitleTextBlock.Text = T("RepositoryWorkspace.Characters");
-        RepositoryModTitleTextBlock.Text = _characters.Selected is { } role ? role.Name : T("RepositoryWorkspace.ModFiles");
+        RepositoryModTitleTextBlock.Text = _host.Characters.Selected is { } role ? role.Name : T("RepositoryWorkspace.ModFiles");
         _repositoryModSearch!.PlaceholderText = T("RepositoryWorkspace.SearchThisCharacterSMods");
         if (_localTagsButton is not null) _localTagsButton.Content = T("Common.Tags");
         AutomationProperties.SetName(_repositoryModSearch, T("RepositoryWorkspace.SearchMods"));
@@ -573,9 +573,9 @@ public sealed partial class MainWindow
             AutomationProperties.SetName(_repositoryModeButtons[index], labels[index]);
             foreach (string state in new[] { "Checked", "CheckedPointerOver", "CheckedPressed" })
             {
-                _repositoryModeButtons[index].Resources["ToggleButtonBackground" + state] = GetAppThemeBrush("AppSecondarySelectedBrush");
-                _repositoryModeButtons[index].Resources["ToggleButtonForeground" + state] = GetAppThemeBrush("AppSecondarySelectedForegroundBrush");
-                _repositoryModeButtons[index].Resources["ToggleButtonBorderBrush" + state] = GetAppThemeBrush("AppNavSelectedBorderBrush");
+                _repositoryModeButtons[index].Resources["ToggleButtonBackground" + state] = _host.GetAppThemeBrush("AppSecondarySelectedBrush");
+                _repositoryModeButtons[index].Resources["ToggleButtonForeground" + state] = _host.GetAppThemeBrush("AppSecondarySelectedForegroundBrush");
+                _repositoryModeButtons[index].Resources["ToggleButtonBorderBrush" + state] = _host.GetAppThemeBrush("AppNavSelectedBorderBrush");
             }
         }
         _repositoryOpenDetails!.Content = RepositoryIconLabel("\uE8A5", T("RepositoryWorkspace.Details"));
@@ -586,7 +586,7 @@ public sealed partial class MainWindow
         AutomationProperties.SetName(_repositoryCopyModPath, T("RepositoryWorkspace.CopyPath"));
         PreviewTab.Header = T("RepositoryWorkspace.Preview");
         SelectionEyebrowTextBlock.Text = T("RepositoryWorkspace.CURRENTMOD");
-        CurrentFolderTextBlock.Foreground = GetAppThemeBrush("AppNavDefaultForegroundBrush");
+        CurrentFolderTextBlock.Foreground = _host.GetAppThemeBrush("AppNavDefaultForegroundBrush");
         DeploymentStateLabelTextBlock.Visibility = Visibility.Collapsed;
         _combinationWorkspaceTitle!.Text = T("RepositoryWorkspace.MyPresets");
         AutomationProperties.SetName(DeleteConfigurationProfileButton, T("RepositoryWorkspace.DeletePreset"));
@@ -595,16 +595,16 @@ public sealed partial class MainWindow
         _combinationRecoveryTitle!.Text = T("RepositoryWorkspace.SaveRestore");
         _combinationRecoveryHint!.Text = T("RepositoryWorkspace.N1CloseTheGameAndLoader");
         _combinationNoProfiles!.Text = T("RepositoryWorkspace.OnlyRecognizedDeploymentsInThisRepository");
-        foreach (var mod in _secondLevelItems) mod.CoverPlaceholder = T("RepositoryWorkspace.NoPreviewImage");
+        foreach (var mod in _host.SecondLevelItems) mod.CoverPlaceholder = T("RepositoryWorkspace.NoPreviewImage");
         string[] chipLabels = [T("RepositoryWorkspace.FilterAll"), T("RepositoryWorkspace.FilterDeployed"), T("RepositoryWorkspace.FilterNotDeployed")];
         for (int index = 0; index < _repositoryStateChips.Length; index++)
         {
             _repositoryStateChips[index].Content = chipLabels[index];
             foreach (string state in new[] { "Checked", "CheckedPointerOver", "CheckedPressed" })
             {
-                _repositoryStateChips[index].Resources["ToggleButtonBackground" + state] = GetAppThemeBrush("AppSecondarySelectedBrush");
-                _repositoryStateChips[index].Resources["ToggleButtonForeground" + state] = GetAppThemeBrush("AppSecondarySelectedForegroundBrush");
-                _repositoryStateChips[index].Resources["ToggleButtonBorderBrush" + state] = GetAppThemeBrush("AppNavSelectedBorderBrush");
+                _repositoryStateChips[index].Resources["ToggleButtonBackground" + state] = _host.GetAppThemeBrush("AppSecondarySelectedBrush");
+                _repositoryStateChips[index].Resources["ToggleButtonForeground" + state] = _host.GetAppThemeBrush("AppSecondarySelectedForegroundBrush");
+                _repositoryStateChips[index].Resources["ToggleButtonBorderBrush" + state] = _host.GetAppThemeBrush("AppNavSelectedBorderBrush");
             }
         }
         CharacterFolderHintTextBlock.Text = T("RepositoryWorkspace.CharacterFolderHint");
@@ -628,7 +628,7 @@ public sealed partial class MainWindow
     {
         if (!_repositoryV4Ready) return;
         double width = WorkspaceScrollViewer.ActualWidth;
-        if (width <= 0) width = Math.Max(320, Bounds.Width - 220);
+        if (width <= 0) width = Math.Max(320, _host.Bounds.Width - 220);
         RefreshRepositoryStatusV4();
         var layout = RepositoryWorkspacePolicy.Layout(width);
         WorkspaceWorkbench.ColumnDefinitions.Clear();
@@ -691,7 +691,7 @@ public sealed partial class MainWindow
     private void ApplyRepositoryCoverLayoutV4()
     {
         if (_repositoryCoverWrap is null || _repositoryCoverGrid!.ActualWidth <= 0) return;
-        using var timing = MeasureRepositoryUi(RepositoryPerformanceOperation.CoverLayout, _modList.VisibleMods.Count);
+        using var timing = _host.MeasureRepositoryUi(RepositoryPerformanceOperation.CoverLayout, _modList.VisibleMods.Count);
         RepositoryCoverGrid grid = RepositoryWorkspacePolicy.CoverGrid(_repositoryCoverGrid.ActualWidth, _repositoryCoverGrid.ActualHeight);
         if (double.IsNaN(_repositoryCoverRepeater!.Width) || Math.Abs(_repositoryCoverRepeater.Width - grid.GalleryWidth) > .5)
             _repositoryCoverRepeater.Width = grid.GalleryWidth;
@@ -720,16 +720,16 @@ public sealed partial class MainWindow
         })) _repositoryRefreshQueued = false;
     }
 
-    private void RefreshRepositoryModView()
+    internal void RefreshRepositoryModView()
     {
         if (!_repositoryV4Ready) return;
-        using var timing = MeasureRepositoryUi(RepositoryPerformanceOperation.Filter, _secondLevelItems.Count);
-        string? current = _modList.SelectedMod?.Path ?? _currentSecondLevelPath;
-        string? path = RepositoryWorkspacePolicy.PreserveSelection(_secondLevelItems.Select(mod => mod.Path), current);
-        _modList.SelectedMod = _secondLevelItems.FirstOrDefault(mod => string.Equals(mod.Path, path, StringComparison.OrdinalIgnoreCase));
+        using var timing = _host.MeasureRepositoryUi(RepositoryPerformanceOperation.Filter, _host.SecondLevelItems.Count);
+        string? current = _modList.SelectedMod?.Path ?? _host.CurrentSecondLevelPath;
+        string? path = RepositoryWorkspacePolicy.PreserveSelection(_host.SecondLevelItems.Select(mod => mod.Path), current);
+        _modList.SelectedMod = _host.SecondLevelItems.FirstOrDefault(mod => string.Equals(mod.Path, path, StringComparison.OrdinalIgnoreCase));
         SelectedLocalLibrary();
-        foreach (var mod in _secondLevelItems) ApplyModRowState(mod);
-        var visible = _secondLevelItems
+        foreach (var mod in _host.SecondLevelItems) ApplyModRowState(mod);
+        var visible = _host.SecondLevelItems
             .Where(mod => MatchesLocalLibraryFilter(mod) && RepositoryWorkspacePolicy.MatchesStateFilter(mod.Tone, _modList.StateFilter))
             .ToArray();
         _syncingRepositorySelection = true;
@@ -744,8 +744,8 @@ public sealed partial class MainWindow
         // A search or filter that hides the selected Mod moves the selection to the first match,
         // so the details never describe a Mod the list no longer shows.
         if (SecondLevelListView.SelectedItem is null && visible.Length > 0) SecondLevelListView.SelectedItem = visible[0];
-        RepositoryModTitleTextBlock.Text = _characters.Selected is { } role ? role.Name : T("RepositoryWorkspace.ModFiles");
-        RepositoryModCountTextBlock.Text = T("RepositoryWorkspace.Mods", visible.Length, _secondLevelItems.Count);
+        RepositoryModTitleTextBlock.Text = _host.Characters.Selected is { } role ? role.Name : T("RepositoryWorkspace.ModFiles");
+        RepositoryModCountTextBlock.Text = T("RepositoryWorkspace.Mods", visible.Length, _host.SecondLevelItems.Count);
         if (_localFiltersButton is not null)
         {
             _localFiltersButton.Content = string.IsNullOrEmpty(_localTagFilter) ? T("Common.Filters") : T("RepositoryWorkspace.TagActive");
@@ -780,7 +780,7 @@ public sealed partial class MainWindow
 
     // Saved bindings when the Mod has them (they may be edited), otherwise the INI scan of its key sections.
     private int ModShortcutCount(SecondLevelFolderItem mod)
-        => _modBindings.TryGetValue(mod.Path, out List<ShortcutBinding>? bindings)
+        => _host.ModBindings.TryGetValue(mod.Path, out List<ShortcutBinding>? bindings)
             ? bindings.Count(binding => !string.IsNullOrWhiteSpace(binding.Shortcut))
             : _scannedShortcutCounts.TryGetValue(mod.Path, out int scanned) ? scanned : 0;
 
@@ -790,17 +790,17 @@ public sealed partial class MainWindow
     // Rows of Mods without saved bindings count their INI key sections once, off the UI thread.
     private async Task EnsureModShortcutCountAsync(SecondLevelFolderItem mod)
     {
-        if (_modBindings.ContainsKey(mod.Path) || _scannedShortcutCounts.ContainsKey(mod.Path) || !_shortcutCountScans.Add(mod.Path)) return;
+        if (_host.ModBindings.ContainsKey(mod.Path) || _scannedShortcutCounts.ContainsKey(mod.Path) || !_shortcutCountScans.Add(mod.Path)) return;
         try
         {
             int count = await Task.Run(() => ModShortcutScanner.ScanDirectory(mod.Path, activeOnly: true)
-                .Take(ShortcutScanSafetyLimit).Count(shortcut => !string.IsNullOrWhiteSpace(shortcut.Shortcut)));
+                .Take(_host.ShortcutScanSafetyLimit).Count(shortcut => !string.IsNullOrWhiteSpace(shortcut.Shortcut)));
             _scannedShortcutCounts[mod.Path] = count;
             ApplyModRowState(mod);
         }
         catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
         {
-            LogApplicationIssue("Count Mod shortcuts", ex);
+            _host.LogApplicationIssue("Count Mod shortcuts", ex);
         }
         finally { _shortcutCountScans.Remove(mod.Path); }
     }
@@ -838,7 +838,7 @@ public sealed partial class MainWindow
         }
         catch (Exception ex)
         {
-            LogApplicationIssue("Mod size", ex);
+            _host.LogApplicationIssue("Mod size", ex);
             return null;
         }
     }
@@ -855,13 +855,13 @@ public sealed partial class MainWindow
     {
         _repositoryEmptyImport = new Button { Style = (Style)Application.Current.Resources["PrimaryButtonStyle"], MinHeight = 36 };
         _repositoryEmptyImport.Click += (_, args) => OnImportZipClicked(ImportZipButton, args);
-        _repositoryEmptyOnline = RepositoryButton("\uE774", (_, args) => OnOnlineNavClicked(OnlineNavButton, args));
+        _repositoryEmptyOnline = RepositoryButton("\uE774", (_, args) => _host.OnOnlineNavClicked(_host.OnlineNavButton, args));
         _repositoryEmptyOnline.MinHeight = 36;
         _repositoryEmptyButtons = new StackPanel { Orientation = Orientation.Horizontal, Spacing = 8, HorizontalAlignment = HorizontalAlignment.Center };
         _repositoryEmptyButtons.Children.Add(_repositoryEmptyImport);
         _repositoryEmptyButtons.Children.Add(_repositoryEmptyOnline);
         _repositoryEmptyAdopt = new HyperlinkButton { HorizontalAlignment = HorizontalAlignment.Center };
-        _repositoryEmptyAdopt.Click += async (_, _) => await RunUiActionAsync("ShowExistingModImportAsync", ShowExistingModImportAsync);
+        _repositoryEmptyAdopt.Click += async (_, _) => await _host.RunUiActionAsync("ShowExistingModImportAsync", ShowExistingModImportAsync);
         var actions = new StackPanel { Spacing = 8 };
         actions.Children.Add(_repositoryEmptyButtons);
         actions.Children.Add(_repositoryEmptyAdopt);
@@ -880,7 +880,7 @@ public sealed partial class MainWindow
         panel.Children.Add(_repositorySetupProgress);
         RoutedEventHandler[] handlers =
         [
-            (_, args) => OnEditRepositoryDetailsClicked(this, args),
+            (_, args) => _host.OnEditRepositoryDetailsClicked(this, args),
             (_, args) => OnPickSourceClicked(this, args),
             (_, args) => OnPickTargetClicked(this, args)
         ];
@@ -888,11 +888,11 @@ public sealed partial class MainWindow
         {
             var row = RepositoryColumns(GridLength.Auto, new GridLength(1, GridUnitType.Star), GridLength.Auto);
             row.ColumnSpacing = 10;
-            var done = new FontIcon { Glyph = "\uE73E", FontSize = 14, Foreground = GetAppThemeBrush("AppSuccessBrush"), VerticalAlignment = VerticalAlignment.Center };
+            var done = new FontIcon { Glyph = "\uE73E", FontSize = 14, Foreground = _host.GetAppThemeBrush("AppSuccessBrush"), VerticalAlignment = VerticalAlignment.Center };
             var number = new Border
             {
                 Width = 20, Height = 20, CornerRadius = new CornerRadius(10), BorderThickness = new Thickness(1),
-                BorderBrush = GetAppThemeBrush("AppStrongBorderBrush"), VerticalAlignment = VerticalAlignment.Center,
+                BorderBrush = _host.GetAppThemeBrush("AppStrongBorderBrush"), VerticalAlignment = VerticalAlignment.Center,
                 Child = new TextBlock { Text = (index + 1).ToString(System.Globalization.CultureInfo.InvariantCulture), FontSize = 11, HorizontalAlignment = HorizontalAlignment.Center, VerticalAlignment = VerticalAlignment.Center }
             };
             var marks = new Grid { Width = 20, VerticalAlignment = VerticalAlignment.Center };
@@ -924,12 +924,12 @@ public sealed partial class MainWindow
 
     private RepositorySetup CurrentRepositorySetup()
     {
-        WorkspaceRepository? repository = GetSelectedRepository();
+        WorkspaceRepository? repository = _host.GetSelectedRepository();
         string source = Paths.Source.Trim();
         string target = Paths.Target.Trim();
         // The game counts as chosen when the repository has one, its own or the default preset.
         return new RepositorySetup(
-            repository is not null && !string.IsNullOrWhiteSpace(_onlineView.GetEffectiveOnlineGameName(repository)),
+            repository is not null && !string.IsNullOrWhiteSpace(_host.OnlineView.GetEffectiveOnlineGameName(repository)),
             source.Length > 0 && Directory.Exists(source),
             target.Length > 0 && Directory.Exists(target));
     }
@@ -938,12 +938,12 @@ public sealed partial class MainWindow
     {
         _repositorySetupTitle!.Text = T("RepositoryWorkspace.SetupTitle");
         _repositorySetupProgress!.Text = T("RepositoryWorkspace.SetupProgress", setup.Done, RepositorySetup.Total);
-        WorkspaceRepository? repository = GetSelectedRepository();
+        WorkspaceRepository? repository = _host.GetSelectedRepository();
         string source = Paths.Source.Trim();
         (bool Done, string Title, string Detail, string Action)[] steps =
         [
             (setup.HasGame, T("RepositoryWorkspace.SetupGame"),
-                setup.HasGame ? _onlineView.GetEffectiveOnlineGameName(repository) : T("RepositoryWorkspace.SetupGameHint"),
+                setup.HasGame ? _host.OnlineView.GetEffectiveOnlineGameName(repository) : T("RepositoryWorkspace.SetupGameHint"),
                 T("RepositoryWorkspace.SetupEdit")),
             (setup.HasRepositoryFolder, T("RepositoryWorkspace.SetupRepository"),
                 setup.HasRepositoryFolder ? source : T("RepositoryWorkspace.SetupRepositoryHint"), T("RepositoryWorkspace.SetupChoose")),
@@ -965,11 +965,11 @@ public sealed partial class MainWindow
     private void UpdateRepositoryEmptyState()
     {
         if (_repositoryEmptyState is null) return;
-        _modList.UpdateEmptyKind(_secondLevelItems.Count, _characters.Selected is not null);
+        _modList.UpdateEmptyKind(_host.SecondLevelItems.Count, _host.Characters.Selected is not null);
         ModListEmptyKind kind = _modList.EmptyKind;
         _repositoryEmptyState.Visibility = kind == ModListEmptyKind.None ? Visibility.Collapsed : Visibility.Visible;
         _repositoryEmptyState.Glyph = kind == ModListEmptyKind.NoMatches ? "\uE721" : "\uE8B5";
-        string character = _characters.Selected?.Name ?? string.Empty;
+        string character = _host.Characters.Selected?.Name ?? string.Empty;
         _repositoryEmptyState.Title = kind switch
         {
             ModListEmptyKind.NoMatches => T("RepositoryWorkspace.NoMatchingModsTryAnotherSearch"),
@@ -989,7 +989,7 @@ public sealed partial class MainWindow
         _repositoryEmptyOnline!.Content = RepositoryIconLabel("\uE774", T("RepositoryWorkspace.FindOnline"));
         _repositoryEmptyAdopt.Content = T("RepositoryWorkspace.AdoptExistingFolder");
         _repositoryEmptyImport.IsEnabled = _repositoryEmptyOnline.IsEnabled = _repositoryEmptyAdopt.IsEnabled = !_repositoryWorkspaceBusy;
-        CharacterFolderHintTextBlock.Visibility = _characters.All.Sum(item => item.Children.Count) == 0 ? Visibility.Visible : Visibility.Collapsed;
+        CharacterFolderHintTextBlock.Visibility = _host.Characters.All.Sum(item => item.Children.Count) == 0 ? Visibility.Visible : Visibility.Collapsed;
     }
 
     private void SyncRepositorySelectionV4(SecondLevelFolderItem? item)
@@ -1030,12 +1030,12 @@ public sealed partial class MainWindow
                 BitmapImage bitmap = await ImageService.LoadLocalBitmapAsync(path, decodePixelWidth: 420);
                 mod.CoverImageSource = bitmap;
             }
-            catch (Exception exception) { LogApplicationIssue("Repository cover", exception); }
+            catch (Exception exception) { _host.LogApplicationIssue("Repository cover", exception); }
             finally { _repositoryCoversLoading.Remove(mod); }
         }
         catch (Exception ex)
         {
-            ReportUiActionFailure("LoadRepositoryCoverV4", ex);
+            _host.ReportUiActionFailure("LoadRepositoryCoverV4", ex);
         }
     }
 
@@ -1057,7 +1057,7 @@ public sealed partial class MainWindow
             _repositoryInfoTags.Children.Add(new Border
             {
                 Padding = new Thickness(8, 1, 8, 2), CornerRadius = new CornerRadius(4),
-                Background = GetAppThemeBrush("AppSecondaryDefaultBrush"),
+                Background = _host.GetAppThemeBrush("AppSecondaryDefaultBrush"),
                 Child = new TextBlock { Text = tag, FontSize = 12 }
             });
         }
@@ -1067,13 +1067,13 @@ public sealed partial class MainWindow
         int shortcuts = mod is null ? 0 : ModShortcutCount(mod);
         if (ShortcutTab is not null) ShortcutTab.Header = shortcuts > 0 ? T("Common.Shortcuts") + " · " + shortcuts : T("Common.Shortcuts");
         // With links, deploying replaces the character's deployed Mod (unless it keeps several); say which one.
-        WorkspaceRepository? repository = GetSelectedRepository();
+        WorkspaceRepository? repository = _host.GetSelectedRepository();
         bool links = repository?.UseDirectoryLinks == true;
         bool several = links && mod is not null && AllowsMultipleMods(repository!, mod.Path);
         string? replaced = mod is null || !links || ModTone(mod) == ModStateTone.Deployed || several ? null
-            : RepositoryWorkspacePolicy.ReplacedByDeploy(_secondLevelItems.Select(item => (item.Name, ModTone(item))), mod.Name);
+            : RepositoryWorkspacePolicy.ReplacedByDeploy(_host.SecondLevelItems.Select(item => (item.Name, ModTone(item))), mod.Name);
         RepositoryDeploymentHintTextBlock.Text = replaced is not null
-            ? T("RepositoryWorkspace.DeployReplaces", _characters.Selected?.Name ?? string.Empty, replaced)
+            ? T("RepositoryWorkspace.DeployReplaces", _host.Characters.Selected?.Name ?? string.Empty, replaced)
             : several ? T("RepositoryWorkspace.LinkDeploymentKeepsOtherMods")
             : links ? T("RepositoryWorkspace.LinkDeploymentReplacesTheSameCharacter")
             : T("RepositoryWorkspace.CopyDeploymentKeepsARecoverableBackup");
@@ -1081,7 +1081,7 @@ public sealed partial class MainWindow
     }
 
     // The deploy button toggles: on a deployed Mod it removes it, so say so.
-    private void UpdateDeployButtonLabel()
+    internal void UpdateDeployButtonLabel()
     {
         SecondLevelFolderItem? mod = GetSelectedSecondLevelItem();
         bool removes = mod is not null && ModTone(mod) == ModStateTone.Deployed;
@@ -1128,7 +1128,7 @@ public sealed partial class MainWindow
         }
         _repositoryInfoSize.Text = "…";
         long? bytes = mod.SizeBytes ?? await EnsureModSizeAsync(mod);
-        if (bytes is long size && revision == _repositorySizeRevision && !_onlineView._onlineWindowClosed)
+        if (bytes is long size && revision == _repositorySizeRevision && !_host.OnlineView._onlineWindowClosed)
             _repositoryInfoSize.Text = T("RepositoryWorkspace.SizeAndFiles", OnlinePage.FormatFileSize(size), mod.Files.Count);
     }
 
@@ -1144,7 +1144,7 @@ public sealed partial class MainWindow
         }
         catch (Exception ex)
         {
-            LogApplicationIssue("Copy Mod path", ex);
+            _host.LogApplicationIssue("Copy Mod path", ex);
             StatusTextBlock.Text = T("RepositoryWorkspace.PathNotCopied");
         }
     }
@@ -1152,7 +1152,7 @@ public sealed partial class MainWindow
     private void RefreshRepositoryCountsV4()
     {
         if (RepositoryCountTextBlock is null) return;
-        int deployed = _characters.All.Sum(character => character.Children.Count(mod => ModTone(mod) == ModStateTone.Deployed));
+        int deployed = _host.Characters.All.Sum(character => character.Children.Count(mod => ModTone(mod) == ModStateTone.Deployed));
         RepositoryCountTextBlock.Text = T("RepositoryWorkspace.CharactersMods", FirstCountTextBlock.Text, SecondCountTextBlock.Text, deployed);
     }
 
@@ -1170,32 +1170,32 @@ public sealed partial class MainWindow
         finally { _refreshingRepositoryPicker = false; }
     }
 
-    private void RefreshCombinationWorkspaceV4()
+    internal void RefreshCombinationWorkspaceV4()
     {
         if (_combinationPresetList is null || _refreshingCombinationWorkspace) return;
         _refreshingCombinationWorkspace = true;
         try
         {
             _combinationPresetList.Items.Clear();
-            foreach (var profile in GetCurrentRepositoryProfiles())
+            foreach (var profile in _host.GetCurrentRepositoryProfiles())
             {
                 var label = new StackPanel { Spacing = 5, Margin = new Thickness(2, 8, 2, 8) };
                 var name = RepositoryColumns(GridLength.Auto, new GridLength(1, GridUnitType.Star));
                 name.Children.Add(new FontIcon { Glyph = "\uE8F1", FontSize = 15, VerticalAlignment = VerticalAlignment.Center });
                 var nameText = new TextBlock { Text = profile.Name, TextWrapping = TextWrapping.Wrap, MaxLines = 2, TextTrimming = TextTrimming.CharacterEllipsis };
                 Grid.SetColumn(nameText, 1); name.Children.Add(nameText);
-                if (CreatePresetPreviewImage(profile.PreviewFile, 160, 90) is { } thumbnail) label.Children.Add(thumbnail);
+                if (_host.CreatePresetPreviewImage(profile.PreviewFile, 160, 90) is { } thumbnail) label.Children.Add(thumbnail);
                 label.Children.Add(name);
                 label.Children.Add(new TextBlock { Text = T("RepositoryWorkspace.Mods2", profile.ModRelativePaths.Count, T(profile.IncludesPersistentState ? "RepositoryWorkspace.SetAndState" : "RepositoryWorkspace.SetOnly")), FontSize = 12 });
                 _combinationPresetList.Items.Add(new ListViewItem { Content = label, Tag = profile.Id, HorizontalContentAlignment = HorizontalAlignment.Stretch });
             }
-            _combinationPresetList.SelectedItem = _combinationPresetList.Items.OfType<ListViewItem>().FirstOrDefault(item => (string?)item.Tag == _selectedConfigurationProfileId);
-            var selected = GetSelectedConfigurationProfile();
+            _combinationPresetList.SelectedItem = _combinationPresetList.Items.OfType<ListViewItem>().FirstOrDefault(item => (string?)item.Tag == _host.SelectedConfigurationProfileId);
+            var selected = _host.GetSelectedConfigurationProfile();
             _combinationMemberTitle!.Text = selected?.Name ?? T("RepositoryWorkspace.ModsInPreset");
             _combinationMemberPanel!.Children.Clear();
             if (selected is not null)
-                _combinationMemberPanel.Children.Add(CreatePresetPreviewEditor(selected.RepositoryId, selected.Id, selected.PreviewFile,
-                    file => selected.PreviewFile = file, RefreshConfigurationProfiles));
+                _combinationMemberPanel.Children.Add(_host.CreatePresetPreviewEditor(selected.RepositoryId, selected.Id, selected.PreviewFile,
+                    file => selected.PreviewFile = file, _host.RefreshConfigurationProfiles));
             if (selected is null)
             {
                 var empty = new TextBlock { Text = T("RepositoryWorkspace.NoCombinationPresetsYetDeployYour"), TextWrapping = TextWrapping.Wrap, Margin = new Thickness(8, 20, 8, 8) };
@@ -1238,7 +1238,7 @@ public sealed partial class MainWindow
         _repositoryDetailDialogOpen = true;
         RepositoryDetach(WorkspaceDetailHost);
         WorkspaceDetailHost.Visibility = Visibility.Visible;
-        WorkspaceDetailHost.Height = Math.Clamp(RootGrid.ActualHeight - 150, 320, 600);
+        WorkspaceDetailHost.Height = Math.Clamp(_host.Root.ActualHeight - 150, 320, 600);
         // The dialog can be short; scroll only its preview body, not the pinned deploy action.
         var previewContent = PreviewCard.Child;
         PreviewCard.Child = null;
@@ -1288,7 +1288,7 @@ public sealed partial class MainWindow
         Padding = new Thickness(12), CornerRadius = new CornerRadius(6)
     };
 
-    private static StackPanel RepositoryIconLabel(string glyph, string label)
+    internal static StackPanel RepositoryIconLabel(string glyph, string label)
     {
         var panel = new StackPanel { Orientation = Orientation.Horizontal, Spacing = 8, VerticalAlignment = VerticalAlignment.Center };
         panel.Children.Add(new FontIcon { Glyph = glyph, FontSize = 15, VerticalAlignment = VerticalAlignment.Center });
@@ -1296,7 +1296,7 @@ public sealed partial class MainWindow
         return panel;
     }
 
-    private static Button RepositoryButton(string glyph, RoutedEventHandler click)
+    internal static Button RepositoryButton(string glyph, RoutedEventHandler click)
     {
         var button = new Button { Style = (Style)Application.Current.Resources["SecondaryButtonStyle"], MinHeight = 34,
             CornerRadius = new CornerRadius(4), Content = new FontIcon { Glyph = glyph, FontSize = 16 } };
@@ -1329,7 +1329,7 @@ public sealed partial class MainWindow
         }
         // During construction, WinUI may not expose Parent for an unloaded subtree.
         // Detach through the owned logical children, before assigning a second parent.
-        foreach (var root in new FrameworkElement?[] { RootGrid, CategoryCard, ModCard, WorkspaceActionsGrid,
+        foreach (var root in new FrameworkElement?[] { _host.Root, CategoryCard, ModCard, WorkspaceActionsGrid,
             WorkspaceDetailHost, PreviewCard, ShortcutCard, CombinationProfileControlsHost, WorkspaceStatusCard })
             if (root is not null && RepositoryRemoveOwnedChild(root, element)) return;
     }
@@ -1366,22 +1366,22 @@ public sealed partial class MainWindow
     }
 
     // The dashboard's copy/link switch.
-    private void OnLinkDeploymentChanged()
+    internal void OnLinkDeploymentChanged()
     {
-        if (_isApplyingRepositoryDeploymentMode)
+        if (_host.IsApplyingRepositoryDeploymentMode)
         {
             return;
         }
 
-        WorkspaceRepository? repository = GetSelectedRepository();
+        WorkspaceRepository? repository = _host.GetSelectedRepository();
         if (repository is null)
         {
             return;
         }
 
         repository.UseDirectoryLinks = Paths.UseDirectoryLinks;
-        SaveShellConfig();
-        RefreshLocalizedStates();
+        _host.SaveShellConfig();
+        _host.RefreshLocalizedStates();
         ApplySecondLevelSelectionState(GetSelectedSecondLevelItem(), preserveStatus: true);
     }
 }

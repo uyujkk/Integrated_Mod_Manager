@@ -29,7 +29,7 @@ public sealed partial class MainWindow : IOnlineHost
     string IOnlineHost.Density => _interfaceDensity.ToString();
     bool IOnlineHost.ReduceMotion => _reduceMotion;
     bool IOnlineHost.ShouldReduceAnimations => ShouldReduceAnimations;
-    void IOnlineHost.AnimateImageReveal(UIElement image) => AnimateImageReveal(image);
+    void IOnlineHost.AnimateImageReveal(UIElement image) => _workspaceView.AnimateImageReveal(image);
     Task<string?> IOnlineHost.PickFolderAsync(string? preferredPath) => PickFolderAsync(preferredPath);
     Task IOnlineHost.OpenExternalUrlAsync(string? url, string failureTitle) => OpenExternalUrlAsync(url, failureTitle);
     Task IOnlineHost.ShowImageViewerAsync(ImageSource? source, string title, IReadOnlyList<string>? imageUrls, int selectedIndex)
@@ -43,9 +43,9 @@ public sealed partial class MainWindow : IOnlineHost
     bool IOnlineHost.SaveConfig() => SaveConfig();
 
     WorkspaceRepository? IOnlineHost.GetSelectedRepository() => GetSelectedRepository();
-    Task IOnlineHost.RefreshListsAsync() => RefreshListsAsync();
-    void IOnlineHost.SelectSecondLevelByPath(string? path) => SelectSecondLevelByPath(path);
-    void IOnlineHost.SetBusyState(bool busy) => SetBusyState(busy);
+    Task IOnlineHost.RefreshListsAsync() => _workspaceView.RefreshListsAsync();
+    void IOnlineHost.SelectSecondLevelByPath(string? path) => _workspaceView.SelectSecondLevelByPath(path);
+    void IOnlineHost.SetBusyState(bool busy) => _workspaceView.SetBusyState(busy);
     bool IOnlineHost.IsFavoriteCharacter(string characterKey) => IsFavoriteCharacter(characterKey);
     void IOnlineHost.ToggleFavoriteCharacter(string characterKey) => ToggleFavoriteCharacter(characterKey);
 
@@ -76,6 +76,6 @@ public sealed partial class MainWindow : IOnlineHost
     IReadOnlyList<string> IOnlineHost.ImageExtensions => ImageExtensions;
     bool IOnlineHost.IsRepositoryForPreset(WorkspaceRepository repository, RepositoryPresetInfo preset) => IsRepositoryForPreset(repository, preset);
     bool IOnlineHost.IsSupportedArchiveFile(string path) => IsSupportedArchiveFile(path);
-    string? IOnlineHost.FindPreviewImage(List<string> files) => FindPreviewImage(files);
+    string? IOnlineHost.FindPreviewImage(List<string> files) => _workspaceView.FindPreviewImage(files);
     void IOnlineHost.DeleteDirectoryTreeSafely(string path) => DeleteDirectoryTreeSafely(path);
 }

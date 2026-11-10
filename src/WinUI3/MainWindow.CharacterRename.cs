@@ -61,7 +61,7 @@ public sealed partial class MainWindow
         log.Rekey(repository.CharacterAvatarBindings, plan.MapName);
         log.Rekey(repository.CharacterSelectionOverrides, plan.MapName);
         CopyDeploymentLedger.RenameCharacter(_copyDeployments, repository.Id, plan, log);
-        if (_localLibraries.TryGetValue(WorkspaceIdentity.Library(repository.Id, repository.SourcePath), out LocalLibraryState? tags))
+        if (_workspaceView._localLibraries.TryGetValue(WorkspaceIdentity.Library(repository.Id, repository.SourcePath), out LocalLibraryState? tags))
         {
             log.Rekey(tags.ModTags, plan.MapRelative);
             foreach (LocalModFilter filter in tags.Filters)

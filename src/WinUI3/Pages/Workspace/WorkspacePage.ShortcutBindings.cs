@@ -1,6 +1,5 @@
 using System.Diagnostics;
 using IntegratedModManager.Core.Configuration;
-using IntegratedModManager.Core.Shortcuts;
 using Microsoft.UI;
 using Microsoft.UI.Input;
 using Microsoft.UI.Xaml;
@@ -12,35 +11,35 @@ using Windows.UI.Core;
 
 namespace ModFolderCopier.WinUI;
 
-public sealed partial class MainWindow
+public sealed partial class WorkspacePage
 {
-    private void BuildShortcutRows()
+    internal void BuildShortcutRows()
     {
         ShortcutRowsPanel.Children.Clear();
         _shortcutKeyBorders.Clear();
-        _shortcutKeyBoxes.Clear();
-        _shortcutActionBoxes.Clear();
+        _host.ShortcutKeyBoxes.Clear();
+        _host.ShortcutActionBoxes.Clear();
 
         EnsureShortcutRowCapacity(InitialShortcutRows);
 
-        _onlineView.OnlineTitleTextBlock.Text = T("Common.OnlineModBrowser");
-        _onlineView.OnlineSubtitleTextBlock.Text = T("ShortcutBindings.ThisPageNowFocusesOnThe");
-        _onlineView.OnlinePreviewTitleTextBlock.Text = T("Common.OnlineModList");
-        _onlineView.OnlinePreviewHintTextBlock.Text = T("ShortcutBindings.ThisPageLoadsDataFromAn");
-        _onlineView.RefreshOnlineNavigationButtonLabels();
-        _onlineView.OpenOnlineDetailPageButton.Content = T("Common.OpenOriginalPage");
-        _onlineView.SelectOnlineDetailDownloadButton.Content = T("Common.SelectFile");
-        _onlineView.DownloadOnlineDetailButton.Content = T("Common.DownloadLatestArchive");
-        if (_onlineView._activeOnlineDetailMod is null)
+        _host.OnlineView.OnlineTitleTextBlock.Text = T("Common.OnlineModBrowser");
+        _host.OnlineView.OnlineSubtitleTextBlock.Text = T("ShortcutBindings.ThisPageNowFocusesOnThe");
+        _host.OnlineView.OnlinePreviewTitleTextBlock.Text = T("Common.OnlineModList");
+        _host.OnlineView.OnlinePreviewHintTextBlock.Text = T("ShortcutBindings.ThisPageLoadsDataFromAn");
+        _host.OnlineView.RefreshOnlineNavigationButtonLabels();
+        _host.OnlineView.OpenOnlineDetailPageButton.Content = T("Common.OpenOriginalPage");
+        _host.OnlineView.SelectOnlineDetailDownloadButton.Content = T("Common.SelectFile");
+        _host.OnlineView.DownloadOnlineDetailButton.Content = T("Common.DownloadLatestArchive");
+        if (_host.OnlineView._activeOnlineDetailMod is null)
         {
-            _onlineView.ResetOnlineDetailPaneToPlaceholder();
+            _host.OnlineView.ResetOnlineDetailPaneToPlaceholder();
         }
         else
         {
-            _onlineView.UpdateOnlineDetailDownloadControls(_onlineView._activeOnlineDetailMod);
+            _host.OnlineView.UpdateOnlineDetailDownloadControls(_host.OnlineView._activeOnlineDetailMod);
         }
-        _onlineView.OnlineDetailRequirementTitleTextBlock.Text = T("Common.PossibleExtraAccessRequirements");
-        ApplyShortcutPlaceholders();
+        _host.OnlineView.OnlineDetailRequirementTitleTextBlock.Text = T("Common.PossibleExtraAccessRequirements");
+        _host.ApplyShortcutPlaceholders();
         UpdateShortcutRowVisibility();
         UpdateShortcutKeyFocusVisuals();
         RefreshRefinedActionIcons();
@@ -49,7 +48,7 @@ public sealed partial class MainWindow
     private void EnsureShortcutRowCapacity(int requiredRows)
     {
         requiredRows = Math.Max(InitialShortcutRows, requiredRows);
-        while (_shortcutKeyBoxes.Count < requiredRows)
+        while (_host.ShortcutKeyBoxes.Count < requiredRows)
         {
             AddShortcutRowControls();
         }
@@ -69,7 +68,7 @@ public sealed partial class MainWindow
             PlaceholderText = T("Common.Shortcut")
         };
         ConfigureShortcutTextBoxTheme(keyBox);
-        AttachTrackedTextInput(keyBox);
+        _host.AttachTrackedTextInput(keyBox);
         keyBox.TextChanged += OnShortcutTextChanged;
         keyBox.KeyDown += OnShortcutKeyBoxKeyDown;
         keyBox.GotFocus += OnShortcutKeyBoxGotFocus;
@@ -83,7 +82,7 @@ public sealed partial class MainWindow
             PlaceholderText = T("Common.Description")
         };
         ConfigureShortcutTextBoxTheme(actionBox);
-        AttachTrackedTextInput(actionBox);
+        _host.AttachTrackedTextInput(actionBox);
         actionBox.TextChanged += OnShortcutTextChanged;
         actionBorder.Child = actionBox;
 
@@ -94,8 +93,8 @@ public sealed partial class MainWindow
 
         ShortcutRowsPanel.Children.Add(rowGrid);
         _shortcutKeyBorders.Add(keyBorder);
-        _shortcutKeyBoxes.Add(keyBox);
-        _shortcutActionBoxes.Add(actionBox);
+        _host.ShortcutKeyBoxes.Add(keyBox);
+        _host.ShortcutActionBoxes.Add(actionBox);
     }
 
     private static Border CreateInsetBorder()
@@ -119,7 +118,7 @@ public sealed partial class MainWindow
         box.Resources["TextControlBorderBrushPointerOver"] = transparentBrush;
         box.Resources["TextControlBorderBrushDisabled"] = transparentBrush;
         box.Resources["TextControlBorderBrushReadOnly"] = transparentBrush;
-        box.Resources["TextControlForegroundReadOnly"] = GetAppThemeBrush("AppNavDefaultForegroundBrush");
+        box.Resources["TextControlForegroundReadOnly"] = _host.GetAppThemeBrush("AppNavDefaultForegroundBrush");
     }
 
     private void OnShortcutKeyBoxGotFocus(object sender, RoutedEventArgs e)
@@ -138,21 +137,21 @@ public sealed partial class MainWindow
         UpdateShortcutKeyFocusVisuals();
     }
 
-    private void UpdateShortcutKeyFocusVisuals()
+    internal void UpdateShortcutKeyFocusVisuals()
     {
-        Brush normalBackground = GetAppThemeBrush("AppInsetBackgroundBrush");
-        Brush normalBorder = GetAppThemeBrush("AppCardBorderBrush");
-        Brush activeBackground = GetAppThemeBrush("AppAccentSoftBrush");
-        Brush activeBorder = GetAppThemeBrush("AppNavSelectedBorderBrush");
+        Brush normalBackground = _host.GetAppThemeBrush("AppInsetBackgroundBrush");
+        Brush normalBorder = _host.GetAppThemeBrush("AppCardBorderBrush");
+        Brush activeBackground = _host.GetAppThemeBrush("AppAccentSoftBrush");
+        Brush activeBorder = _host.GetAppThemeBrush("AppNavSelectedBorderBrush");
         object? focusedElement = Content is FrameworkElement root && root.XamlRoot is not null
             ? FocusManager.GetFocusedElement(root.XamlRoot)
             : null;
 
         for (int i = 0; i < _shortcutKeyBorders.Count; i++)
         {
-            bool isActive = i < _shortcutKeyBoxes.Count &&
-                ReferenceEquals(_shortcutKeyBoxes[i], _activeShortcutKeyBox) &&
-                ReferenceEquals(_shortcutKeyBoxes[i], focusedElement);
+            bool isActive = i < _host.ShortcutKeyBoxes.Count &&
+                ReferenceEquals(_host.ShortcutKeyBoxes[i], _activeShortcutKeyBox) &&
+                ReferenceEquals(_host.ShortcutKeyBoxes[i], focusedElement);
             _shortcutKeyBorders[i].Background = isActive ? activeBackground : normalBackground;
             _shortcutKeyBorders[i].BorderBrush = isActive ? activeBorder : normalBorder;
             _shortcutKeyBorders[i].BorderThickness = isActive ? new Thickness(2) : new Thickness(1);
@@ -163,7 +162,7 @@ public sealed partial class MainWindow
     {
         try
         {
-            if (string.IsNullOrEmpty(_currentSecondLevelPath))
+            if (string.IsNullOrEmpty(_host.CurrentSecondLevelPath))
             {
                 await ShowMessageAsync(
                     T("Common.SelectASecondLevelModFirst"),
@@ -174,12 +173,12 @@ public sealed partial class MainWindow
             _visibleShortcutRows++;
             EnsureShortcutRowCapacity(_visibleShortcutRows);
             UpdateShortcutRowVisibility();
-            _shortcutKeyBoxes[_visibleShortcutRows - 1].Focus(FocusState.Programmatic);
+            _host.ShortcutKeyBoxes[_visibleShortcutRows - 1].Focus(FocusState.Programmatic);
             SaveCurrentModBindings();
         }
         catch (Exception ex)
         {
-            ReportUiActionFailure("OnAddShortcutRowClicked", ex);
+            _host.ReportUiActionFailure("OnAddShortcutRowClicked", ex);
         }
     }
 
@@ -251,7 +250,7 @@ public sealed partial class MainWindow
 
             try
             {
-                string normalized = NormalizeLink(currentLink);
+                string normalized = _host.NormalizeLink(currentLink);
                 Process.Start(new ProcessStartInfo
                 {
                     FileName = normalized,
@@ -268,20 +267,20 @@ public sealed partial class MainWindow
         }
         catch (Exception ex)
         {
-            ReportUiActionFailure("OnOpenModLinkClicked", ex);
+            _host.ReportUiActionFailure("OnOpenModLinkClicked", ex);
         }
     }
 
-    private void LoadDefaultShortcutTemplate()
+    internal void LoadDefaultShortcutTemplate()
     {
         _isLoadingBindings = true;
         _activeShortcutKeyBox = null;
-        foreach (TextBox box in _shortcutKeyBoxes)
+        foreach (TextBox box in _host.ShortcutKeyBoxes)
         {
             box.Text = string.Empty;
         }
 
-        foreach (TextBox box in _shortcutActionBoxes)
+        foreach (TextBox box in _host.ShortcutActionBoxes)
         {
             box.Text = string.Empty;
         }
@@ -297,24 +296,24 @@ public sealed partial class MainWindow
         _isLoadingBindings = true;
         _activeShortcutKeyBox = null;
 
-        foreach (TextBox box in _shortcutKeyBoxes)
+        foreach (TextBox box in _host.ShortcutKeyBoxes)
         {
             box.Text = string.Empty;
         }
 
-        foreach (TextBox box in _shortcutActionBoxes)
+        foreach (TextBox box in _host.ShortcutActionBoxes)
         {
             box.Text = string.Empty;
         }
 
-        if (item is not null && _modBindings.TryGetValue(item.Path, out List<ShortcutBinding>? bindings) && bindings.Count > 0)
+        if (item is not null && _host.ModBindings.TryGetValue(item.Path, out List<ShortcutBinding>? bindings) && bindings.Count > 0)
         {
             _visibleShortcutRows = Math.Max(InitialShortcutRows, bindings.Count);
             EnsureShortcutRowCapacity(_visibleShortcutRows);
             for (int i = 0; i < _visibleShortcutRows; i++)
             {
-                _shortcutKeyBoxes[i].Text = bindings[i].Shortcut;
-                _shortcutActionBoxes[i].Text = GetShortcutBindingDisplayAction(bindings[i]);
+                _host.ShortcutKeyBoxes[i].Text = bindings[i].Shortcut;
+                _host.ShortcutActionBoxes[i].Text = _host.GetShortcutBindingDisplayAction(bindings[i]);
             }
         }
         else
@@ -327,19 +326,19 @@ public sealed partial class MainWindow
         _isLoadingBindings = false;
     }
 
-    private void SaveCurrentModBindings()
+    internal void SaveCurrentModBindings()
     {
-        if (_isLoadingBindings || string.IsNullOrEmpty(_currentSecondLevelPath))
+        if (_isLoadingBindings || string.IsNullOrEmpty(_host.CurrentSecondLevelPath))
         {
             return;
         }
 
-        _modBindings.TryGetValue(_currentSecondLevelPath, out List<ShortcutBinding>? previousBindings);
+        _host.ModBindings.TryGetValue(_host.CurrentSecondLevelPath, out List<ShortcutBinding>? previousBindings);
         var bindings = new List<ShortcutBinding>();
         for (int i = 0; i < _visibleShortcutRows; i++)
         {
-            string shortcut = (_shortcutKeyBoxes[i].Text ?? string.Empty).Trim();
-            string action = (_shortcutActionBoxes[i].Text ?? string.Empty).Trim();
+            string shortcut = (_host.ShortcutKeyBoxes[i].Text ?? string.Empty).Trim();
+            string action = (_host.ShortcutActionBoxes[i].Text ?? string.Empty).Trim();
             if (!string.IsNullOrWhiteSpace(shortcut) || !string.IsNullOrWhiteSpace(action))
             {
                 ShortcutBinding? previous = previousBindings is not null && i < previousBindings.Count
@@ -348,7 +347,7 @@ public sealed partial class MainWindow
                 bool unchangedAutomaticBinding = previous is not null
                     && previous.HasAutoDescription
                     && string.Equals(shortcut, previous.Shortcut, StringComparison.Ordinal)
-                    && string.Equals(action, GetShortcutBindingDisplayAction(previous), StringComparison.Ordinal);
+                    && string.Equals(action, _host.GetShortcutBindingDisplayAction(previous), StringComparison.Ordinal);
                 bindings.Add(unchangedAutomaticBinding
                     ? previous!
                     : new ShortcutBinding(shortcut, action));
@@ -357,28 +356,28 @@ public sealed partial class MainWindow
 
         if (bindings.Count == 0)
         {
-            _modBindings.Remove(_currentSecondLevelPath);
+            _host.ModBindings.Remove(_host.CurrentSecondLevelPath);
         }
         else
         {
-            _modBindings[_currentSecondLevelPath] = bindings;
+            _host.ModBindings[_host.CurrentSecondLevelPath] = bindings;
         }
 
-        SaveConfig();
+        _host.SaveConfig();
         UpdateShortcutRowVisibility();
     }
 
-    private void LoadLinkForCurrentMod(SecondLevelFolderItem? item)
+    internal void LoadLinkForCurrentMod(SecondLevelFolderItem? item)
     {
         _isLoadingModLink = true;
-        ModLinkTextBox.Text = item is not null && _modLinks.TryGetValue(item.Path, out string? link) ? link : string.Empty;
+        ModLinkTextBox.Text = item is not null && _host.ModLinks.TryGetValue(item.Path, out string? link) ? link : string.Empty;
         _isLoadingModLink = false;
         UpdateLinkButtonState();
     }
 
     private void SaveCurrentModLink()
     {
-        if (_isLoadingModLink || string.IsNullOrEmpty(_currentSecondLevelPath))
+        if (_isLoadingModLink || string.IsNullOrEmpty(_host.CurrentSecondLevelPath))
         {
             UpdateLinkButtonState();
             return;
@@ -387,23 +386,23 @@ public sealed partial class MainWindow
         string link = (ModLinkTextBox.Text ?? string.Empty).Trim();
         if (string.IsNullOrWhiteSpace(link))
         {
-            _modLinks.Remove(_currentSecondLevelPath);
+            _host.ModLinks.Remove(_host.CurrentSecondLevelPath);
         }
         else
         {
-            _modLinks[_currentSecondLevelPath] = link;
+            _host.ModLinks[_host.CurrentSecondLevelPath] = link;
         }
 
-        SaveConfig();
+        _host.SaveConfig();
         UpdateLinkButtonState();
     }
 
-    private void UpdateLinkButtonState()
+    internal void UpdateLinkButtonState()
     {
         OpenModLinkButton.IsEnabled = !string.IsNullOrWhiteSpace(ModLinkTextBox.Text);
     }
 
-    private void UpdateShortcutRowVisibility()
+    internal void UpdateShortcutRowVisibility()
     {
         EnsureShortcutRowCapacity(_visibleShortcutRows);
         for (int i = 0; i < ShortcutRowsPanel.Children.Count; i++)
@@ -414,10 +413,10 @@ public sealed partial class MainWindow
         ShortcutRowsTextBlock.Text = T("ShortcutBindings.Rows", _visibleShortcutRows);
     }
 
-    private void RefreshVisibleShortcutDescriptionsForLanguage()
+    internal void RefreshVisibleShortcutDescriptionsForLanguage()
     {
-        if (string.IsNullOrWhiteSpace(_currentSecondLevelPath)
-            || !_modBindings.TryGetValue(_currentSecondLevelPath, out List<ShortcutBinding>? bindings)
+        if (string.IsNullOrWhiteSpace(_host.CurrentSecondLevelPath)
+            || !_host.ModBindings.TryGetValue(_host.CurrentSecondLevelPath, out List<ShortcutBinding>? bindings)
             || bindings.Count == 0)
         {
             return;
@@ -431,7 +430,7 @@ public sealed partial class MainWindow
             {
                 if (bindings[i].HasAutoDescription)
                 {
-                    _shortcutActionBoxes[i].Text = GetShortcutBindingDisplayAction(bindings[i]);
+                    _host.ShortcutActionBoxes[i].Text = _host.GetShortcutBindingDisplayAction(bindings[i]);
                 }
             }
         }
@@ -470,7 +469,7 @@ public sealed partial class MainWindow
         return string.Join("+", parts);
     }
 
-    private static bool IsModifierDown(VirtualKey key)
+    internal static bool IsModifierDown(VirtualKey key)
     {
         CoreVirtualKeyStates state = InputKeyboardSource.GetKeyStateForCurrentThread(key);
         return (state & CoreVirtualKeyStates.Down) == CoreVirtualKeyStates.Down;

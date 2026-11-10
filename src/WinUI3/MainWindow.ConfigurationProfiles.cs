@@ -22,7 +22,7 @@ public sealed partial class MainWindow
 
     private void RefreshConfigurationProfiles()
     {
-        if (ConfigurationProfileComboBox is null)
+        if (_workspaceView.ConfigurationProfileComboBox is null)
         {
             return;
         }
@@ -36,10 +36,10 @@ public sealed partial class MainWindow
         _isApplyingConfigurationProfileSelection = true;
         try
         {
-            ConfigurationProfileComboBox.Items.Clear();
+            _workspaceView.ConfigurationProfileComboBox.Items.Clear();
             foreach (ModConfigurationProfile profile in profiles)
             {
-                ConfigurationProfileComboBox.Items.Add(new ComboBoxItem
+                _workspaceView.ConfigurationProfileComboBox.Items.Add(new ComboBoxItem
                 {
                     Content = $"{profile.Name}  ·  {profile.ModRelativePaths.Count} Mod" + (profile.IncludesPersistentState
                         ? T("ConfigurationProfiles.Values", profile.PersistentStates.Sum(state => state.Values.Count)) : T("ConfigurationProfiles.SetOnly")),
@@ -47,10 +47,10 @@ public sealed partial class MainWindow
                 });
             }
 
-            ConfigurationProfileComboBox.PlaceholderText = profiles.Count == 0
+            _workspaceView.ConfigurationProfileComboBox.PlaceholderText = profiles.Count == 0
                 ? T("ConfigurationProfiles.NoProfilesForThisRepository")
                 : T("ConfigurationProfiles.SelectAProfile");
-            ConfigurationProfileComboBox.SelectedItem = ConfigurationProfileComboBox.Items
+            _workspaceView.ConfigurationProfileComboBox.SelectedItem = _workspaceView.ConfigurationProfileComboBox.Items
                 .OfType<ComboBoxItem>()
                 .FirstOrDefault(item => string.Equals(item.Tag as string, _selectedConfigurationProfileId, StringComparison.Ordinal));
         }
@@ -61,17 +61,17 @@ public sealed partial class MainWindow
 
         ModConfigurationProfile? selected = GetSelectedConfigurationProfile();
         bool hasRepository = GetSelectedRepository() is not null && !_applyingCombinationProfile && !_restoringPersistentRuntime;
-        CreateConfigurationProfileButton.IsEnabled = hasRepository;
-        UpdateConfigurationProfileButton.IsEnabled = selected is not null && hasRepository;
-        ApplyConfigurationProfileButton.IsEnabled = selected is not null && hasRepository;
-        DeleteConfigurationProfileButton.IsEnabled = selected is not null && hasRepository;
-        ConfigurationProfileComboBox.IsEnabled = hasRepository;
-        CaptureCombinationStateCheckBox.IsEnabled = hasRepository;
-        BrowseCombinationUserIniButton.IsEnabled = hasRepository;
-        CombinationUserIniTextBox.IsEnabled = hasRepository;
-        CombinationUserIniTextBox.Text = GetSelectedRepository()?.PersistentUserIniPath is { Length: > 0 } userIni
+        _workspaceView.CreateConfigurationProfileButton.IsEnabled = hasRepository;
+        _workspaceView.UpdateConfigurationProfileButton.IsEnabled = selected is not null && hasRepository;
+        _workspaceView.ApplyConfigurationProfileButton.IsEnabled = selected is not null && hasRepository;
+        _workspaceView.DeleteConfigurationProfileButton.IsEnabled = selected is not null && hasRepository;
+        _workspaceView.ConfigurationProfileComboBox.IsEnabled = hasRepository;
+        _workspaceView.CaptureCombinationStateCheckBox.IsEnabled = hasRepository;
+        _workspaceView.BrowseCombinationUserIniButton.IsEnabled = hasRepository;
+        _workspaceView.CombinationUserIniTextBox.IsEnabled = hasRepository;
+        _workspaceView.CombinationUserIniTextBox.Text = GetSelectedRepository()?.PersistentUserIniPath is { Length: > 0 } userIni
             ? userIni : TryGetDefaultPersistentIniPath(GetSelectedRepository()) ?? string.Empty;
-        ConfigurationProfileSummaryTextBlock.Text = selected is null
+        _workspaceView.ConfigurationProfileSummaryTextBlock.Text = selected is null
             ? T("ConfigurationProfiles.ProfilesOnlyManageModsRecognizedIn")
             : T("ConfigurationProfiles.Summary", selected.Name, selected.ModRelativePaths.Count, selected.PersistentStates.Sum(state => state.Values.Count))
                 + (selected.IncludesPersistentState ? T("ConfigurationProfiles.SummaryWithState") : T("ConfigurationProfiles.SummarySetOnly"));
@@ -80,7 +80,7 @@ public sealed partial class MainWindow
         UpdatesView.SetRollback(canUndo, canUndo
             ? T("ConfigurationProfiles.UndoCoversModDeploymentCombinationParameters")
             : T("ConfigurationProfiles.ThereIsNoModOperationTo"));
-        RefreshCombinationWorkspaceV4();
+        _workspaceView.RefreshCombinationWorkspaceV4();
         RefreshCombinationBundleActions();
     }
 
@@ -179,7 +179,7 @@ public sealed partial class MainWindow
             return;
         }
 
-        _selectedConfigurationProfileId = (ConfigurationProfileComboBox.SelectedItem as ComboBoxItem)?.Tag as string;
+        _selectedConfigurationProfileId = (_workspaceView.ConfigurationProfileComboBox.SelectedItem as ComboBoxItem)?.Tag as string;
         SaveShellConfig();
         RefreshConfigurationProfiles();
     }

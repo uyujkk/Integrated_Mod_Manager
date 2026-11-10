@@ -7,7 +7,7 @@ namespace ModFolderCopier.WinUI;
 // Single or multiple selection per character folder (CharacterSelectionPolicy). With single
 // selection, enabling a Mod as a directory link replaces the links of its sibling Mods; copy
 // mode never removes sibling copies.
-public sealed partial class MainWindow
+public sealed partial class WorkspacePage
 {
     private static bool AllowsMultipleMods(WorkspaceRepository repository, string modPath)
     {
@@ -18,7 +18,7 @@ public sealed partial class MainWindow
 
     private void AddCharacterSelectionMenuItem(MenuFlyout menu, FirstLevelFolderItem item)
     {
-        WorkspaceRepository? repository = GetSelectedRepository();
+        WorkspaceRepository? repository = _host.GetSelectedRepository();
         if (repository is null)
         {
             return;
@@ -45,7 +45,7 @@ public sealed partial class MainWindow
         {
             repository.CharacterSelectionOverrides[item.Name] = allowsMultiple;
         }
-        SaveShellConfig();
+        _host.SaveShellConfig();
         StatusTextBlock.Text = allowsMultiple
             ? T("CharacterSelection.NowAllowsSeveral", item.Name)
             : T("CharacterSelection.NowSingle", item.Name);
@@ -56,8 +56,8 @@ public sealed partial class MainWindow
     private void UpdateCharacterHeaderActions()
     {
         if (CharacterMultipleModsToggle is null || CharacterAvatarButton is null) return;
-        WorkspaceRepository? repository = GetSelectedRepository();
-        var item = _characters.Selected;
+        WorkspaceRepository? repository = _host.GetSelectedRepository();
+        var item = _host.Characters.Selected;
         bool allows = repository is not null && item is not null
             && CharacterSelectionPolicy.AllowsMultiple(item.Name, repository.AllowMultipleModsPerCharacter, repository.CharacterSelectionOverrides);
         CharacterMultipleModsToggle.IsEnabled = item is not null && repository is not null;
@@ -82,7 +82,7 @@ public sealed partial class MainWindow
 
     private void OnCharacterMultipleModsToggleClicked(object sender, RoutedEventArgs e)
     {
-        if (GetSelectedRepository() is { } repository && _characters.Selected is { } item)
+        if (_host.GetSelectedRepository() is { } repository && _host.Characters.Selected is { } item)
         {
             SetCharacterAllowsMultiple(repository, item, CharacterMultipleModsToggle.IsChecked == true);
         }
@@ -93,7 +93,7 @@ public sealed partial class MainWindow
     }
 
     // Asks before restoring a combination that enables several Mods of a single-selection character.
-    private async Task<bool> ConfirmSingleSelectionViolationsAsync(WorkspaceRepository repository, IEnumerable<string> modSourcePaths)
+    internal async Task<bool> ConfirmSingleSelectionViolationsAsync(WorkspaceRepository repository, IEnumerable<string> modSourcePaths)
     {
         IReadOnlyList<string> characters = CharacterSelectionPolicy.SingleSelectionViolations(
             repository.SourcePath, modSourcePaths, repository.AllowMultipleModsPerCharacter, repository.CharacterSelectionOverrides);

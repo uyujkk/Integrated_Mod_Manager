@@ -14,7 +14,7 @@ public sealed partial class MainWindow
 
     private void RefreshPersistentSlotMoreMenu(WorkspaceRepository? repository, string? relative)
     {
-        PersistentSlotMoreButton.Content = T("PersistentVariants.More");
+        _workspaceView.PersistentSlotMoreButton.Content = T("PersistentVariants.More");
         bool idle = !_restoringPersistentRuntime && !_applyingCombinationProfile;
         bool hasSlot = relative is not null && _selectedModPersistentSlotId is not null;
         var menu = new MenuFlyout { Placement = Microsoft.UI.Xaml.Controls.Primitives.FlyoutPlacementMode.Bottom };
@@ -50,8 +50,8 @@ public sealed partial class MainWindow
             OpenDirectory(directory, T("PersistentVariants.SnapshotFolder"));
             return Task.CompletedTask;
         }));
-        PersistentSlotMoreButton.Flyout = menu;
-        PersistentSlotMoreButton.IsEnabled = repository is not null && idle;
+        _workspaceView.PersistentSlotMoreButton.Flyout = menu;
+        _workspaceView.PersistentSlotMoreButton.IsEnabled = repository is not null && idle;
     }
 
     // The selected slot of the current Mod, with what is needed to capture or write it.
@@ -71,7 +71,7 @@ public sealed partial class MainWindow
     private async Task UpdateSelectedPersistentSlotAsync()
     {
         if (SelectedSlotContext() is not { } context) return;
-        string userIni = PersistentUserIniTextBox.Text.Trim();
+        string userIni = _workspaceView.PersistentUserIniTextBox.Text.Trim();
         string deployedName = ModDeploymentLayout.DeployedName(context.ModPath);
         IReadOnlyList<ModPersistentValue> values;
         try
@@ -105,7 +105,7 @@ public sealed partial class MainWindow
         context.Repository.PersistentUserIniPath = userIni;
         SaveShellConfig();
         RefreshPersistentSlotControls();
-        PersistentSlotStatusTextBlock.Text = T("PersistentVariants.SlotUpdated", context.Slot.Name, values.Count);
+        _workspaceView.PersistentSlotStatusTextBlock.Text = T("PersistentVariants.SlotUpdated", context.Slot.Name, values.Count);
     }
 
     private async Task RenameSelectedPersistentSlotAsync()
@@ -180,7 +180,7 @@ public sealed partial class MainWindow
         }
 
         string backupsText = string.Join("\n", applied.SelectMany(item => item.Backups));
-        PersistentSlotStatusTextBlock.Text = T("PersistentVariants.ModDefaultsWritten", context.Slot.Name, changed, backupsText);
+        _workspaceView.PersistentSlotStatusTextBlock.Text = T("PersistentVariants.ModDefaultsWritten", context.Slot.Name, changed, backupsText);
         ShowAppNotification(T("PersistentVariants.ModDefaultsWrittenShort", context.Slot.Name));
     }
 
@@ -254,7 +254,7 @@ public sealed partial class MainWindow
 
     private async Task<string?> RequireUserIniPathAsync(string title)
     {
-        string userIni = PersistentUserIniTextBox.Text.Trim();
+        string userIni = _workspaceView.PersistentUserIniTextBox.Text.Trim();
         if (string.Equals(Path.GetFileName(userIni), "d3dx_user.ini", StringComparison.OrdinalIgnoreCase) && File.Exists(userIni))
         {
             return userIni;
@@ -275,7 +275,7 @@ public sealed partial class MainWindow
         try
         {
             UserIniSnapshot snapshot = await Task.Run(() => UserIniSnapshots.Save(userIni, UserIniSnapshotDirectory(repository), name, DateTimeOffset.Now));
-            PersistentSlotStatusTextBlock.Text = T("PersistentVariants.SnapshotSaved", snapshot.Name, snapshot.Path);
+            _workspaceView.PersistentSlotStatusTextBlock.Text = T("PersistentVariants.SnapshotSaved", snapshot.Name, snapshot.Path);
         }
         catch (Exception ex) when (ex is IOException or UnauthorizedAccessException or InvalidDataException or ArgumentException)
         {
@@ -300,9 +300,9 @@ public sealed partial class MainWindow
         try
         {
             string backup = await Task.Run(() => UserIniSnapshots.Restore(chosen, userIni, DateTimeOffset.Now));
-            PersistentSlotStatusTextBlock.Text = T("PersistentVariants.SnapshotRestored", chosen.Name, backup);
+            _workspaceView.PersistentSlotStatusTextBlock.Text = T("PersistentVariants.SnapshotRestored", chosen.Name, backup);
             if (hotReload)
-                PersistentSlotStatusTextBlock.Text += "\n" + await HotReloadLoaderAsync(userIni);
+                _workspaceView.PersistentSlotStatusTextBlock.Text += "\n" + await HotReloadLoaderAsync(userIni);
         }
         catch (Exception ex) when (ex is IOException or UnauthorizedAccessException or InvalidDataException)
         {

@@ -59,7 +59,7 @@ public sealed partial class MainWindow
                     ArchiveExtractionStage.Extracting => T("Archives.ExtractingFiles"),
                     _ => T("Archives.ExtractionComplete")
                 };
-                DispatcherQueue.TryEnqueue(() => UpdateProgress(progress.Percent, message));
+                DispatcherQueue.TryEnqueue(() => _workspaceView.UpdateProgress(progress.Percent, message));
             });
         }
         catch (Exception ex) when (LocalizeArchiveError(ex) is Exception localized)
