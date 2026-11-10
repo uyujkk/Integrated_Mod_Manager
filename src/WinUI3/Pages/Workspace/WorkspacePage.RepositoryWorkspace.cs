@@ -200,6 +200,7 @@ public sealed partial class WorkspacePage
             return button;
         }).ToArray();
         _repositoryOpenDetails = RepositoryButton("\uE8A5", async (_, _) => await ShowRepositoryDetailsV4Async());
+        AutomationProperties.SetAutomationId(_repositoryOpenDetails, "RepositoryOpenDetailsButton");
         RepositoryViewButtonsPanel.Children.Add(_repositoryOpenDetails);
         InitializeExistingModImportCommands(RepositoryViewButtonsPanel);
 
@@ -542,7 +543,8 @@ public sealed partial class WorkspacePage
 
     internal void SetRepositoryWorkspaceViewV4(RepositoryWorkspaceView view, bool save = true)
     {
-        if (!_repositoryV4Ready || _repositoryWorkspaceBusy || _repositoryDetailDialogOpen) return;
+        if (!_repositoryV4Ready || _repositoryWorkspaceBusy) return;
+        CloseModDetailsDrawer();
         _modList.View = view;
         WorkspaceWorkbench.Visibility = view == RepositoryWorkspaceView.Presets ? Visibility.Collapsed : Visibility.Visible;
         _combinationWorkspace!.Visibility = view == RepositoryWorkspaceView.Presets ? Visibility.Visible : Visibility.Collapsed;
@@ -700,7 +702,16 @@ public sealed partial class WorkspacePage
         }
         Place(CategoryCard, 0, 0); Place(_characterSplitter!, 0, 1); Place(ModCard, 0, 2); Place(_detailSplitter!, 0, 3); Place(WorkspaceDetailHost, 0, 4);
         _detailSplitter!.Visibility = layout.InlineDetails ? Visibility.Visible : Visibility.Collapsed;
+        _workspaceDetailsInline = layout.InlineDetails;
+        if (_repositoryDetailDialogOpen && (layout.InlineDetails || _modList.View == RepositoryWorkspaceView.Presets)) CloseModDetailsDrawer();
         if (!_repositoryDetailDialogOpen) WorkspaceDetailHost.Visibility = layout.InlineDetails ? Visibility.Visible : Visibility.Collapsed;
+        EnsureModDetailsDrawer();
+        {
+            // The drawer lies over the Mod list and the empty details column, at most 420 px wide.
+            Place(_detailDrawer!, 0, 2, 3);
+            Place(_detailDrawerShadowReceiver!, 0, 0, 5);
+            _detailDrawer!.Width = Math.Clamp(width * .6, 320, 420);
+        }
         _repositoryOpenDetails!.Visibility = layout.InlineDetails || _modList.View == RepositoryWorkspaceView.Presets ? Visibility.Collapsed : Visibility.Visible;
         WorkspaceContentGrid.VerticalAlignment = VerticalAlignment.Stretch;
         double height = WorkspaceScrollViewer.ActualHeight;
@@ -1294,34 +1305,128 @@ public sealed partial class WorkspacePage
         UpdateRepositoryEmptyState();
     }
 
-    private async Task ShowRepositoryDetailsV4Async()
+    // Narrow windows show the details pane as a drawer over the Mod list (stage J7-b, the design canvas's
+    // half-screen board) instead of a dialog: the Details button or tapping a Mod opens it; its close button, Esc,
+    // the presets view or a window wide enough for three columns close it.
+    private Grid? _detailDrawer;
+    private Grid? _detailDrawerBody;
+    private Border? _detailDrawerShadowReceiver;
+    private Button? _detailDrawerClose;
+    private TextBlock? _detailDrawerTitle;
+    private ScrollViewer? _detailDrawerPreviewScroll;
+    private UIElement? _detailDrawerPreviewContent;
+    private bool _workspaceDetailsInline = true;
+
+    internal bool IsModDetailsDrawerOpen => _repositoryDetailDialogOpen;
+
+    private Task ShowRepositoryDetailsV4Async()
     {
-        if (_repositoryDetailDialogOpen || _repositoryWorkspaceBusy || GetSelectedSecondLevelItem() is null) return;
+        OpenModDetailsDrawer();
+        return Task.CompletedTask;
+    }
+
+    private void EnsureModDetailsDrawer()
+    {
+        if (_detailDrawer is not null) return;
+        _detailDrawerShadowReceiver = new Border { Background = new SolidColorBrush(Microsoft.UI.Colors.Transparent), IsHitTestVisible = false, Visibility = Visibility.Collapsed };
+        Canvas.SetZIndex(_detailDrawerShadowReceiver, 9);
+        _detailDrawerTitle = new TextBlock { FontSize = 15, FontWeight = Microsoft.UI.Text.FontWeights.SemiBold, VerticalAlignment = VerticalAlignment.Center };
+        _detailDrawerClose = new Button { Width = 32, Height = 32, Padding = new Thickness(0), Content = new FontIcon { Glyph = "\uE711", FontSize = 14 }, Style = (Style)Application.Current.Resources["SecondaryButtonStyle"] };
+        AutomationProperties.SetAutomationId(_detailDrawerClose, "CloseModDetailsDrawerButton");
+        _detailDrawerClose.Click += (_, _) => CloseModDetailsDrawer();
+        var header = RepositoryColumns(new GridLength(1, GridUnitType.Star), GridLength.Auto);
+        header.Children.Add(_detailDrawerTitle);
+        Grid.SetColumn(_detailDrawerClose, 1);
+        header.Children.Add(_detailDrawerClose);
+        _detailDrawerBody = new Grid();
+        var content = RepositoryRows(GridLength.Auto, new GridLength(1, GridUnitType.Star));
+        content.Children.Add(header);
+        Grid.SetRow(_detailDrawerBody, 1);
+        content.Children.Add(_detailDrawerBody);
+        var surface = new Border
+        {
+            Child = content,
+            Padding = new Thickness(12),
+            CornerRadius = new CornerRadius(8),
+            BorderThickness = new Thickness(1),
+            Background = (Brush)Application.Current.Resources["AcrylicInAppFillColorDefaultBrush"],
+            BorderBrush = (Brush)Application.Current.Resources["SurfaceStrokeColorFlyoutBrush"]
+        };
+        var shadow = new ThemeShadow();
+        shadow.Receivers.Add(_detailDrawerShadowReceiver);
+        surface.Shadow = shadow;
+        surface.Translation = new System.Numerics.Vector3(0, 0, 32);
+        _detailDrawer = new Grid { HorizontalAlignment = HorizontalAlignment.Right, Visibility = Visibility.Collapsed, Children = { surface } };
+        AutomationProperties.SetAutomationId(_detailDrawer, "ModDetailsDrawer");
+        Canvas.SetZIndex(_detailDrawer, 10);
+        WorkspaceWorkbench.Children.Add(_detailDrawerShadowReceiver);
+        WorkspaceWorkbench.Children.Add(_detailDrawer);
+        // Esc closes the drawer before anything else on the page sees it.
+        WorkspacePageHost.AddHandler(UIElement.KeyDownEvent, new Microsoft.UI.Xaml.Input.KeyEventHandler((_, args) =>
+        {
+            if (args.Key != Windows.System.VirtualKey.Escape || !_repositoryDetailDialogOpen) return;
+            CloseModDetailsDrawer();
+            args.Handled = true;
+        }), true);
+        // Tapping a Mod in a narrow window opens its details.
+        SecondLevelListView.AddHandler(UIElement.TappedEvent, new Microsoft.UI.Xaml.Input.TappedEventHandler((_, args) =>
+        {
+            if (_workspaceDetailsInline || args.OriginalSource is not DependencyObject source || !IsInsideListItem(source)) return;
+            OpenModDetailsDrawer();
+        }), true);
+    }
+
+    private static bool IsInsideListItem(DependencyObject source)
+    {
+        for (DependencyObject? node = source; node is not null; node = VisualTreeHelper.GetParent(node))
+            if (node is ListViewItem) return true;
+        return false;
+    }
+
+    private void OpenModDetailsDrawer()
+    {
+        if (_repositoryDetailDialogOpen || _repositoryWorkspaceBusy || _workspaceDetailsInline || GetSelectedSecondLevelItem() is null) return;
+        EnsureModDetailsDrawer();
         _repositoryDetailDialogOpen = true;
         RepositoryDetach(WorkspaceDetailHost);
         WorkspaceDetailHost.Visibility = Visibility.Visible;
-        WorkspaceDetailHost.Height = Math.Clamp(_host.Root.ActualHeight - 150, 320, 600);
-        // The dialog can be short; scroll only its preview body, not the pinned deploy action.
-        var previewContent = PreviewCard.Child;
+        // A short window scrolls the preview body, never the pinned deploy action.
+        _detailDrawerPreviewContent = PreviewCard.Child;
         PreviewCard.Child = null;
-        var previewScroll = new ScrollViewer
+        _detailDrawerPreviewScroll = new ScrollViewer
         {
-            Content = previewContent,
+            Content = _detailDrawerPreviewContent,
             HorizontalScrollMode = ScrollMode.Disabled,
             HorizontalScrollBarVisibility = ScrollBarVisibility.Disabled,
             VerticalScrollBarVisibility = ScrollBarVisibility.Auto
         };
-        PreviewCard.Child = previewScroll;
-        try { await ModDetailsDialog.ShowAsync(_services, WorkspaceDetailHost); }
-        finally
+        PreviewCard.Child = _detailDrawerPreviewScroll;
+        _detailDrawerBody!.Children.Add(WorkspaceDetailHost);
+        _detailDrawerTitle!.Text = T("RepositoryWorkspace.ModDetails");
+        ToolTipService.SetToolTip(_detailDrawerClose!, T("Common.Close"));
+        AutomationProperties.SetName(_detailDrawerClose!, T("Common.Close"));
+        _detailDrawer!.Visibility = Visibility.Visible;
+        _detailDrawerShadowReceiver!.Visibility = Visibility.Visible;
+        UpdateRepositoryWorkspaceLayoutV4();
+        _detailDrawerClose!.Focus(FocusState.Programmatic);
+    }
+
+    private void CloseModDetailsDrawer()
+    {
+        if (!_repositoryDetailDialogOpen) return;
+        _detailDrawerBody!.Children.Remove(WorkspaceDetailHost);
+        if (_detailDrawerPreviewScroll is not null)
         {
-            previewScroll.Content = null;
-            PreviewCard.Child = previewContent;
-            WorkspaceDetailHost.Height = double.NaN;
-            WorkspaceWorkbench.Children.Add(WorkspaceDetailHost);
-            _repositoryDetailDialogOpen = false;
-            UpdateRepositoryWorkspaceLayoutV4();
+            _detailDrawerPreviewScroll.Content = null;
+            PreviewCard.Child = _detailDrawerPreviewContent;
+            _detailDrawerPreviewScroll = null;
         }
+        WorkspaceWorkbench.Children.Add(WorkspaceDetailHost);
+        _detailDrawer!.Visibility = Visibility.Collapsed;
+        _detailDrawerShadowReceiver!.Visibility = Visibility.Collapsed;
+        _repositoryDetailDialogOpen = false;
+        UpdateRepositoryWorkspaceLayoutV4();
+        if (_repositoryOpenDetails is { Visibility: Visibility.Visible }) _repositoryOpenDetails.Focus(FocusState.Programmatic);
     }
 
     private static Grid RepositoryRows(params GridLength[] rows)

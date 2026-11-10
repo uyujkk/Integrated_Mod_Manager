@@ -62,4 +62,35 @@ public sealed class WorkspaceLayoutTests
         Assert.True(Math.Abs(restored - dragged) <= 2, $"The column should keep its width: {dragged} -> {restored}");
         app.AssertNoErrors();
     }
+
+    [Fact]
+    public void Workspace_NarrowWindowShowsDetailsInADrawerThatCloses()
+    {
+        using AppSession app = AppSession.Configured((shell, _) => shell["CurrentPrimarySection"] = "repository").Start();
+        app.Resize(670, 530);
+        app.FindByName("TestCharacter", TimeSpan.FromSeconds(15));
+        Thread.Sleep(800);
+        bool DrawerOpen() => app.MainWindow.FindFirstDescendant(cf => cf.ByAutomationId("CloseModDetailsDrawerButton")) is { IsOffscreen: false };
+        AutomationElement Visible(string name) => app.MainWindow.FindAllDescendants(cf => cf.ByName(name)).First(element => !element.IsOffscreen);
+
+        // Tapping a Mod opens its details over the list; Esc closes them.
+        Assert.False(DrawerOpen());
+        Mouse.Click(Visible("TestModB").GetClickablePoint());
+        Wait(DrawerOpen, "Tapping a Mod should open the drawer");
+        Keyboard.Type(FlaUI.Core.WindowsAPI.VirtualKeyShort.ESCAPE);
+        Wait(() => !DrawerOpen(), "Esc should close the drawer");
+
+        // The Details button opens them too; the drawer's close button closes them.
+        AppSession.Invoke(app.Find("RepositoryOpenDetailsButton"));
+        Wait(DrawerOpen, "The Details button should open the drawer");
+        AppSession.Invoke(app.Find("CloseModDetailsDrawerButton"));
+        Wait(() => !DrawerOpen(), "The close button should close the drawer");
+
+        // A window wide enough for three columns shows the details inline, without the drawer.
+        AppSession.Invoke(app.Find("RepositoryOpenDetailsButton"));
+        Wait(DrawerOpen, "The drawer should open again");
+        app.Resize(1400, 900);
+        Wait(() => !DrawerOpen(), "A wide window should close the drawer");
+        app.AssertNoErrors();
+    }
 }
