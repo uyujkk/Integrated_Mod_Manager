@@ -6,6 +6,7 @@ using Microsoft.UI.Xaml;
 using Microsoft.UI.Xaml.Automation;
 using Microsoft.UI.Xaml.Controls;
 using Microsoft.UI.Xaml.Hosting;
+using Microsoft.UI.Xaml.Media;
 using Windows.System;
 
 namespace ModFolderCopier.WinUI;
@@ -115,6 +116,9 @@ public sealed partial class OnlinePage
         if (resultsWidth <= 0) return;
         double controlsWidth = 176 + OnlineToolbarButtonsPanel.DesiredSize.Width + 16;
         bool twoRows = _onlineCharacterRailCollapsed || OnlineLayoutPolicy.ToolbarOnTwoRows(resultsWidth, controlsWidth);
+        // Row spacing only between rows that are used (the error bar carries its own top margin).
+        OnlineToolbarGrid.RowSpacing = 0;
+        OnlineSortComboBox.Margin = OnlineToolbarButtonsPanel.Margin = OnlineCharacterComboBox.Margin = new Thickness(0, twoRows ? 8 : 0, 0, 0);
         Grid.SetRow(OnlineSearchTextBox, 0);
         Grid.SetColumnSpan(OnlineSearchTextBox, twoRows ? 3 : 1);
         int row = twoRows ? 1 : 0;
@@ -174,13 +178,13 @@ public sealed partial class OnlinePage
         string label = _onlineDetailDrawerFullWidth ? T("OnlineDetails.BackToResults") : T("Common.Close");
         ((FontIcon)CloseOnlineDetailButton.Content).Glyph = _onlineDetailDrawerFullWidth ? "\uE72B" : "\uE711";
         ToolTipService.SetToolTip(CloseOnlineDetailButton, label);
-        Microsoft.UI.Xaml.Automation.AutomationProperties.SetName(CloseOnlineDetailButton, label);
+        AutomationProperties.SetName(CloseOnlineDetailButton, label);
     }
 
     // The drawer floats over the cards with the system shadow on the transparent layer under it.
     private void InitializeOnlineDetailShadow()
     {
-        var shadow = new Microsoft.UI.Xaml.Media.ThemeShadow();
+        var shadow = new ThemeShadow();
         shadow.Receivers.Add(OnlineDetailShadowReceiver);
         OnlineDetailPaneBorder.Shadow = shadow;
         OnlineDetailPaneBorder.Translation = new System.Numerics.Vector3(0, 0, 32);
@@ -207,35 +211,68 @@ public sealed partial class OnlinePage
         DispatcherQueue.TryEnqueue(UpdateOnlineWorkspaceWidthConstraint);
     }
 
-    private UIElement CreateOnlinePreviewCard(string title, string body, string status)
+    // Empty and not-ready states use the shared EmptyState (stage J6-b) instead of a hand-built card.
+    private EmptyState CreateOnlineEmptyState(string glyph, string title, string hint, UIElement? action = null)
+        => new() { Glyph = glyph, Title = title, Hint = hint, Actions = action, Margin = new Thickness(0, 24, 0, 0), VerticalAlignment = VerticalAlignment.Top };
+
+    private void OnOnlineEmptyClearFiltersClicked(object sender, RoutedEventArgs e) => OnClearOnlineFiltersClicked(sender, e);
+
+    // Placeholder cards shaped like the current view (rows or tiles), shown under the loading ring.
+    private void ShowOnlineLoadingPlaceholders()
     {
-        Border border = new()
+        Brush fill = _host.GetAppThemeBrush("AppInsetBackgroundBrush");
+        Brush shade = _host.GetAppThemeBrush("AppAccentSoftBrush");
+        if (_onlinePage.CardLayoutMode == OnlineCardLayoutMode.Grid)
         {
-            Style = (Style)Application.Current.Resources["InsetBorderStyle"],
-            Padding = new Thickness(14)
-        };
+            double width = OnlineResultsHost.ActualWidth > 0 ? OnlineResultsHost.ActualWidth - 12 : OnlineLayoutPolicy.PreferredTileWidth;
+            OnlineGridTileLayout tiles = OnlineLayoutPolicy.GridTiles(width);
+            var row = new StackPanel { Orientation = Orientation.Horizontal };
+            for (int i = 0; i < tiles.Columns; i++)
+            {
+                var tile = new Border
+                {
+                    Width = tiles.ItemWidth - 2 * OnlineLayoutPolicy.TileMargin,
+                    Height = tiles.ItemHeight - 2 * OnlineLayoutPolicy.TileMargin,
+                    Margin = new Thickness(OnlineLayoutPolicy.TileMargin),
+                    CornerRadius = new CornerRadius(8),
+                    Background = fill
+                };
+                tile.Child = new Border { Height = tiles.ImageHeight, VerticalAlignment = VerticalAlignment.Top, CornerRadius = new CornerRadius(8, 8, 0, 0), Background = shade };
+                row.Children.Add(tile);
+            }
+            OnlineLoadingPlaceholderHost.Content = row;
+            return;
+        }
 
-        StackPanel stackPanel = new() { Spacing = 6 };
-        stackPanel.Children.Add(new TextBlock
+        var rows = new StackPanel { Spacing = 7, Margin = new Thickness(0, 0, 12, 0) };
+        for (int i = 0; i < 4; i++)
         {
-            Text = title,
-            FontSize = 18,
-            FontWeight = Microsoft.UI.Text.FontWeights.SemiBold
-        });
-        stackPanel.Children.Add(new TextBlock
-        {
-            Text = body,
-            TextWrapping = TextWrapping.Wrap,
-            Style = (Style)Application.Current.Resources["MutedTextStyle"]
-        });
-        stackPanel.Children.Add(new TextBlock
-        {
-            Text = status,
-            Style = (Style)Application.Current.Resources["CaptionTextStyle"]
-        });
+            var card = new Border { Height = 166, CornerRadius = new CornerRadius(8), Background = fill, Padding = new Thickness(16) };
+            card.Child = new Border { Width = 264, HorizontalAlignment = HorizontalAlignment.Left, CornerRadius = new CornerRadius(8), Background = shade };
+            rows.Children.Add(card);
+        }
+        OnlineLoadingPlaceholderHost.Content = rows;
+    }
 
-        border.Child = stackPanel;
-        return border;
+    private void ShowOnlineLoadError(string message)
+    {
+        OnlineErrorInfoBar.Title = T("OnlineFeed.OnlineLoadFailed");
+        OnlineErrorInfoBar.Message = message;
+        if (OnlineErrorInfoBar.ActionButton is not Button retry)
+        {
+            retry = new Button();
+            retry.Click += OnRefreshOnlineModsClicked;
+            OnlineErrorInfoBar.ActionButton = retry;
+        }
+        retry.Content = T("DownloadTasks.Retry");
+        OnlineErrorInfoBar.Visibility = Visibility.Visible;
+        OnlineErrorInfoBar.IsOpen = true;
+    }
+
+    private void HideOnlineLoadError()
+    {
+        OnlineErrorInfoBar.IsOpen = false;
+        OnlineErrorInfoBar.Visibility = Visibility.Collapsed;
     }
 
     private void AnimateOnlineCardsEntrance()

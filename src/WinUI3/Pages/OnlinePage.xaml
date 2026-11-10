@@ -209,7 +209,7 @@
                                 <!-- Search, sort, then the page filters and options. When the search box would get too
                                      narrow it takes a row of its own; without the character rail the character list joins
                                      the second row (OnlinePage.UpdateOnlineToolbarLayout). -->
-                                <Grid x:Name="OnlineToolbarGrid" ColumnSpacing="8" RowSpacing="8" Canvas.ZIndex="1">
+                                <Grid x:Name="OnlineToolbarGrid" ColumnSpacing="8" RowSpacing="0" Canvas.ZIndex="1">
                                     <Grid.ColumnDefinitions>
                                         <ColumnDefinition Width="*" />
                                         <ColumnDefinition x:Name="OnlineSortColumn" Width="176" />
@@ -218,7 +218,17 @@
                                     <Grid.RowDefinitions>
                                         <RowDefinition Height="Auto" />
                                         <RowDefinition Height="Auto" />
+                                        <RowDefinition Height="Auto" />
                                     </Grid.RowDefinitions>
+                                    <!-- A failed list load: what went wrong and a retry, above the results (no dialog). -->
+                                    <InfoBar
+                                        x:Name="OnlineErrorInfoBar"
+                                        Grid.Row="2"
+                                        Grid.ColumnSpan="3"
+                                        Margin="0,8,0,0"
+                                        Severity="Error"
+                                        IsOpen="False"
+                                        Visibility="Collapsed" />
                                     <TextBox
                                         x:Name="OnlineSearchTextBox" x:FieldModifier="internal"
                                         MinHeight="36"
@@ -324,22 +334,24 @@
                                     VerticalContentAlignment="Top"
                                     Margin="0,0,12,0"
                                     Visibility="Collapsed" />
-                                <Border
+                                <!-- Loading: placeholder cards shaped like the current view, with the ring and text over them. -->
+                                <Grid
                                     x:Name="OnlineLoadingOverlay"
                                     Grid.Row="1"
                                     Background="{ThemeResource AppCardBackgroundBrush}"
                                     CornerRadius="12"
                                     Visibility="Collapsed">
-                                    <StackPanel HorizontalAlignment="Center" VerticalAlignment="Center" Spacing="12">
+                                    <ContentControl
+                                        x:Name="OnlineLoadingPlaceholderHost"
+                                        HorizontalContentAlignment="Stretch"
+                                        VerticalContentAlignment="Top"
+                                        IsTabStop="False"
+                                        Opacity="0.6" />
+                                    <StackPanel HorizontalAlignment="Center" VerticalAlignment="Center" Spacing="12" Padding="20,16" CornerRadius="8" Background="{ThemeResource AppCardBackgroundBrush}">
                                         <ProgressRing Width="36" Height="36" IsActive="True" />
                                         <TextBlock x:Name="OnlineLoadingTextBlock" Style="{StaticResource MutedTextStyle}" TextAlignment="Center" TextWrapping="Wrap" />
-                                        <StackPanel Width="260" Spacing="8" Opacity="0.55">
-                                            <Border Height="10" CornerRadius="5" Background="{ThemeResource AppAccentSoftBrush}" />
-                                            <Border Height="10" Width="210" HorizontalAlignment="Left" CornerRadius="5" Background="{ThemeResource AppAccentSoftBrush}" />
-                                            <Border Height="10" Width="235" HorizontalAlignment="Left" CornerRadius="5" Background="{ThemeResource AppAccentSoftBrush}" />
-                                        </StackPanel>
                                     </StackPanel>
-                                </Border>
+                                </Grid>
             <!-- Transparent: only the drawer's ThemeShadow falls on it (a shadow outside a popup needs a receiver). -->
             <Border x:Name="OnlineDetailShadowReceiver" Grid.Row="1" Background="Transparent" IsHitTestVisible="False" Canvas.ZIndex="9" />
             <Grid
@@ -492,7 +504,7 @@
                                         Grid.Column="1"
                                         Click="OnOnlinePrevPageClicked"
                                         MinHeight="32"
-                                        MinWidth="84"
+                                        MinWidth="96"
                                         Padding="12,4"
                                         HorizontalContentAlignment="Center"
                                         Style="{StaticResource SecondaryButtonStyle}" />
@@ -507,7 +519,7 @@
                                         Grid.Column="3"
                                         Click="OnOnlineNextPageClicked"
                                         MinHeight="32"
-                                        MinWidth="84"
+                                        MinWidth="96"
                                         Padding="12,4"
                                         HorizontalContentAlignment="Center"
                                         Style="{StaticResource SecondaryButtonStyle}" />

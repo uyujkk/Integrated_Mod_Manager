@@ -54,6 +54,7 @@ public sealed partial class OnlinePage
         }
 
         RefreshOnlineButton.IsEnabled = canLoadOnlineMods && !_isLoadingOnlineMods;
+        if (_isLoadingOnlineMods && OnlineLoadingOverlay.Visibility != Visibility.Visible) ShowOnlineLoadingPlaceholders();
         OnlineLoadingOverlay.Visibility = _isLoadingOnlineMods ? Visibility.Visible : Visibility.Collapsed;
         OnlineLoadingTextBlock.Text = T("OnlineFeed.LoadingOnlineModsPleaseWait");
         OnlineStatusTextBlock.Text = _onlinePage.HasStatus
@@ -92,39 +93,39 @@ public sealed partial class OnlinePage
 
         if (!hasRepository)
         {
-            ShowOnlineEmptyResults(CreateOnlinePreviewCard(
+            ShowOnlineEmptyResults(CreateOnlineEmptyState("\uE8B7",
                 T("OnlineFeed.WaitingForRepository"),
-                T("OnlineFeed.SelectARepositoryFromTheLeft2"),
-                T("OnlineFeed.NotStarted")));
+                T("OnlineFeed.SelectARepositoryFromTheLeft2")));
             AnimateOnlineCardsEntrance();
             return;
         }
 
         if (!isSupportedSource)
         {
-            ShowOnlineEmptyResults(CreateOnlinePreviewCard(
+            ShowOnlineEmptyResults(CreateOnlineEmptyState("\uE774",
                 T("OnlineFeed.SourceNotSupportedYet"),
-                T("OnlineFeed.ThisOnlinePageCurrentlySupportsGameBanana"),
-                effectiveSource));
+                T("OnlineFeed.ThisOnlinePageCurrentlySupportsGameBanana") + "\n" + effectiveSource));
             AnimateOnlineCardsEntrance();
             return;
         }
 
         if (_onlinePage.Mods.Count == 0)
         {
-            ShowOnlineEmptyResults(CreateOnlinePreviewCard(
+            ShowOnlineEmptyResults(CreateOnlineEmptyState("\uE72C",
                 T("OnlineFeed.ReadyToLoadRealData"),
-                T("OnlineFeed.ThisPageNowUsesTheRepository"),
-                _isLoadingOnlineMods ? T("OnlineFeed.Loading") : T("OnlineFeed.ReadyToRefresh")));
+                T("OnlineFeed.ThisPageNowUsesTheRepository")));
         }
         else
         {
             if (visibleMods.Count == 0)
             {
-                ShowOnlineEmptyResults(CreateOnlinePreviewCard(
+                // Nothing matches the search or filters: say so and offer to clear them.
+                var clear = new Button { Content = T("OnlineLibrary.ClearFilters"), Style = (Style)Application.Current.Resources["SecondaryButtonStyle"] };
+                clear.Click += OnOnlineEmptyClearFiltersClicked;
+                ShowOnlineEmptyResults(CreateOnlineEmptyState("\uE721",
                     T("OnlineFeed.NoMatchingSkinMods"),
                     T("OnlineFeed.ThisPageShowsSkinsEntriesClear"),
-                    T("OnlineFeed.NoResults")));
+                    clear));
             }
         }
 
@@ -545,6 +546,7 @@ public sealed partial class OnlinePage
 
             _lastLoadedOnlineConfigKey = configKey;
             _blockedOnlineAutoLoadConfigKey = null;
+            HideOnlineLoadError();
 
             if (!loadedDuringRateLimit && pageResult.Mods.Any(mod => mod.Downloads <= 0))
             {
@@ -626,9 +628,7 @@ public sealed partial class OnlinePage
             _blockedOnlineAutoLoadConfigKey = configKey;
             SetOnlineStatus(M("OnlineFeed.LoadFailed"));
             SetOnlineCacheStatus(M("OnlineFeed.ConnectionFailed"));
-            await ShowMessageAsync(
-                T("OnlineFeed.FailedToLoadTheGameBananaList") + ex.Message,
-                T("OnlineFeed.OnlineLoadFailed"));
+            ShowOnlineLoadError(T("OnlineFeed.FailedToLoadTheGameBananaList") + ex.Message);
         }
         finally
         {
