@@ -19,9 +19,9 @@ powershell.exe -NoProfile -ExecutionPolicy Bypass -File .\tools\ui-baseline\Capt
 | `-Languages` | `zh-CN,en-US,ru-RU` | |
 | `-Sizes` | `1400x900,1000x800` | 窗口外框大小，单位是 DIP（与界面测试的 `Resize` 一致），脚本按系统 DPI 换算成像素；`maximized` 表示最大化窗口（如 `-Sizes 1400x900,maximized`） |
 | `-Themes` | `light,dark` | 应用自己的主题设置 |
-| `-Pages` | `dashboard,repository,online,shortcuts,updates,updates-downloads,updates-recovery,settings,whatsnew,firstrun` | `whatsnew` 是带“新功能”对话框的仪表盘；`firstrun` 是首次安装弹窗；`gettingstarted` 是带首次安装引导提示的仪表盘，`nosearch` 是关掉标题栏搜索框的仪表盘（J4-b 起，都需要显式指定）；`updates-downloads`、`updates-recovery` 是更新页的另外两个视图（J3-b 起，通过 `UpdatesView` 设置）；`overlay` 是快捷键页加上用快捷键打开的浮窗，另存一张只有浮窗的 `-window` 图（J5b 起，需要显式指定） |
+| `-Pages` | `dashboard,repository,online,shortcuts,updates,updates-downloads,updates-recovery,settings,whatsnew,firstrun` | `whatsnew` 是带“新功能”对话框的仪表盘；`firstrun` 是首次安装弹窗；`gettingstarted` 是带首次安装引导提示的仪表盘，`nosearch` 是关掉标题栏搜索框的仪表盘（J4-b 起，都需要显式指定）；`updates-downloads`、`updates-recovery` 是更新页的另外两个视图（J3-b 起，通过 `UpdatesView` 设置）；`overlay` 是快捷键页加上用快捷键打开的浮窗，另存一张只有浮窗的 `-window` 图（J5b 起，需要显式指定）；`palette` 是 Mod 工作区加上用 Ctrl+K 打开、搜索“test”的命令面板（4.8 主页截图起，需要显式指定） |
 | `-SettleSeconds` | `7` | 窗口出现后等待多久再截图 |
-| `-SampleData` | 关 | 加入 `tests\TestData\SampleState` 里合成的已跟踪 Mod、下载记录和安装备份（J4 起），用来拍更新页等页面“有数据”的样子；地址都是 `example.invalid`，不联网 |
+| `-SampleData` | 关 | 加入 `tests\TestData\SampleState` 里合成的已跟踪 Mod、下载记录和安装备份（J4 起），用来拍更新页等页面“有数据”的样子；地址都是 `example.invalid`，不联网。4.8 起同时打开在线页的样例模式：每次启动都设置 `IMM_ONLINE_FIXTURES`，仓库使用样例分类 90001，在线请求只由 `tests\TestData\OnlineFixtures` 应答 |
 | `-MissingGameFolder` | 关 | 把仓库的游戏 Mod 目录指向不存在的文件夹，用来拍“需要设置”的样子 |
 
 例如只重拍俄语设置页：`-Languages ru-RU -Pages settings`。
