@@ -1,0 +1,26 @@
+[
+ {
+  "_idRow": 90001,
+  "_sName": "Characters",
+  "_nItemCount": 12,
+  "_nCategoryCount": 3,
+  "_sUrl": "https://gamebanana.com/mods/cats/90001",
+  "_bIsObsolete": false
+ },
+ {
+  "_idRow": 90102,
+  "_sName": "Entities/NPCs",
+  "_nItemCount": 1,
+  "_nCategoryCount": 0,
+  "_sUrl": "https://gamebanana.com/mods/cats/90102",
+  "_bIsObsolete": false
+ },
+ {
+  "_idRow": 90101,
+  "_sName": "Weapons",
+  "_nItemCount": 2,
+  "_nCategoryCount": 1,
+  "_sUrl": "https://gamebanana.com/mods/cats/90101",
+  "_bIsObsolete": false
+ }
+]

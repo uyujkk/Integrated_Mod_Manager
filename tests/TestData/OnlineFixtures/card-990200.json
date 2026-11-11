@@ -1,0 +1,29 @@
+{
+ "name": "Sample Blade",
+ "Category().name": "Weapons",
+ "catid": 90101,
+ "RootCategory().name": "Skins",
+ "likes": 18,
+ "views": 2160,
+ "downloads": 300,
+ "userid": 880000,
+ "Owner().name": "Sample Author 1",
+ "mdate": 1766966400,
+ "Preview().sSubFeedImageUrl()": "https://images.example.invalid/samples/mod-05.png",
+ "Url().sProfileUrl()": "https://gamebanana.com/mods/990200",
+ "Url().sDownloadUrl()": "https://files.example.invalid/sample-990200.zip",
+ "Files().aFiles()": {
+  "770100": {
+   "_idRow": "770100",
+   "_sFile": "sample-blade.zip",
+   "_nFilesize": 2048,
+   "_tsDateAdded": 1766966400,
+   "_nDownloadCount": 300,
+   "_sDownloadUrl": "https://files.example.invalid/sample-990200.zip",
+   "_sVersion": "1.0",
+   "_sDescription": "Sample archive",
+   "_bIsArchived": false
+  }
+ },
+ "Updates().bSubmissionHasUpdates()": false
+}

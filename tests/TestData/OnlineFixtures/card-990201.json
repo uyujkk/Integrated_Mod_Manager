@@ -1,0 +1,29 @@
+{
+ "name": "Sample Sword",
+ "Category().name": "Swords",
+ "catid": 90111,
+ "RootCategory().name": "Skins",
+ "likes": 55,
+ "views": 6600,
+ "downloads": 120,
+ "userid": 880001,
+ "Owner().name": "Sample Author 2",
+ "mdate": 1766448000,
+ "Preview().sSubFeedImageUrl()": "https://images.example.invalid/samples/mod-06.png",
+ "Url().sProfileUrl()": "https://gamebanana.com/mods/990201",
+ "Url().sDownloadUrl()": "https://files.example.invalid/sample-990201.zip",
+ "Files().aFiles()": {
+  "770101": {
+   "_idRow": "770101",
+   "_sFile": "sample-sword.zip",
+   "_nFilesize": 2048,
+   "_tsDateAdded": 1766448000,
+   "_nDownloadCount": 120,
+   "_sDownloadUrl": "https://files.example.invalid/sample-990201.zip",
+   "_sVersion": "1.0",
+   "_sDescription": "Sample archive",
+   "_bIsArchived": false
+  }
+ },
+ "Updates().bSubmissionHasUpdates()": false
+}

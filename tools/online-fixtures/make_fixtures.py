@@ -102,6 +102,88 @@ for lang, text in (("zh-CN", "（合成样例的说明译文，只用于截图�
     write(f"translate-{lang}.json", [[[text, "sample", None, None, 10]], None, "en"])
     responses.append({"prefix": f"https://translate.googleapis.com/translate_a/single?client=gtx&sl=auto&tl={lang}&", "file": f"translate-{lang}.json"})
 
+# Issue #129: the sample game's top-level categories, Mods outside the characters, and site-sorted lists.
+# The repository category 90001 ("Characters") sits under "Skins"; "UI" and "Other/Misc" are other top-level categories.
+GAME, SKINS, WEAPONS, SWORDS, NPCS, UI, HUD, MENUS, OTHER = 90000, 90100, 90101, 90111, 90102, 90200, 90201, 90202, 90300
+API = "https://gamebanana.com/apiv11/"
+
+def category(id_, name, items, subs):
+    return {"_idRow": id_, "_sName": name, "_nItemCount": items, "_nCategoryCount": subs,
+            "_sUrl": f"https://gamebanana.com/mods/cats/{id_}", "_bIsObsolete": False}
+
+write("profile-90001.json", {"_idRow": CATEGORY, "_sName": "Characters", "_aGame": {"_idRow": GAME, "_sName": "Sample Game"}})
+responses.append({"prefix": f"{API}ModCategory/{CATEGORY}/ProfilePage", "file": "profile-90001.json"})
+write("categories-game-90000.json", [category(OTHER, "Other/Misc", 2, 0), category(SKINS, "Skins", 16, 3), category(UI, "UI", 2, 2)])
+responses.append({"prefix": f"{API}Mod/Categories?_idGameRow={GAME}&", "file": "categories-game-90000.json"})
+write("categories-90100.json", [category(CATEGORY, "Characters", 12, 3), category(NPCS, "Entities/NPCs", 1, 0), category(WEAPONS, "Weapons", 2, 1)])
+responses.append({"prefix": f"{API}Mod/Categories?_idCategoryRow={SKINS}&", "file": "categories-90100.json"})
+write("categories-90101.json", [category(SWORDS, "Swords", 1, 0)])
+responses.append({"prefix": f"{API}Mod/Categories?_idCategoryRow={WEAPONS}&", "file": "categories-90101.json"})
+write("categories-90200.json", [category(HUD, "HUD", 1, 0), category(MENUS, "Menus", 1, 0)])
+responses.append({"prefix": f"{API}Mod/Categories?_idCategoryRow={UI}&", "file": "categories-90200.json"})
+
+# item, name, root, (subcategory id, name), picture, likes, downloads, days since the update, author
+others = []
+for item, name, root, (sub_id, sub_name), picture, likes, downloads, days, author in [
+        (990200, "Sample Blade", "Skins", (WEAPONS, "Weapons"), 5, 18, 300, 3, 1),
+        (990201, "Sample Sword", "Skins", (SWORDS, "Swords"), 6, 55, 120, 9, 2),
+        (990202, "Sample Guard", "Skins", (NPCS, "Entities/NPCs"), 7, 7, 80, 1, 3),
+        (990203, "Sample Palette", "Skins", (SKINS, "Skins"), 8, 12, 950, 20, 4),
+        (990204, "Sample HUD", "UI", (HUD, "HUD"), 9, 33, 400, 2, 1),
+        (990205, "Sample Menu", "UI", (MENUS, "Menus"), 10, 4, 640, 12, 2),
+        (990206, "Sample Tweak", "Other/Misc", (OTHER, "Other/Misc"), 11, 61, 210, 6, 3),
+        (990207, "Sample Effect", "Other/Misc", (OTHER, "Other/Misc"), 12, 26, 75, 15, 4)]:
+    updated = 1767225600 - days * 86400
+    picture_url = f"{IMG}/mod-{picture:02d}.png"
+    others.append({
+        "_idRow": item, "_sName": name, "_sProfileUrl": f"https://gamebanana.com/mods/{item}",
+        "_aSubmitter": {"_sName": f"Sample Author {author}", "_idRow": str(880000 + author - 1)},
+        "_aRootCategory": {"_sName": root},
+        "_aSubCategory": {"_sName": sub_name, "_sProfileUrl": f"https://gamebanana.com/mods/cats/{sub_id}/"},
+        "_aPreviewMedia": {"_aImages": [{"_sBaseUrl": IMG, "_sFile530": f"mod-{picture:02d}.png", "_sFile": f"mod-{picture:02d}.png"}]},
+        "_tsDateModified": updated, "_tsDateUpdated": updated, "_tsDateAdded": updated - 30 * 86400,
+        "_nLikeCount": likes, "_nViewCount": likes * 120, "_nDownloadCount": downloads,
+    })
+    write(f"details-{item}.json", {
+        "name": name,
+        "description": f"A made-up sample Mod for screenshots and UI tests ({name}).",
+        "text": "Synthetic description text. Line one of the sample.<br>Line two: nothing here comes from a real site.",
+        "screenshots": json.dumps([{"_sFile800": picture_url}]),
+        "Preview().sSubFeedImageUrl()": picture_url})
+    responses.append({"prefix": f"https://api.gamebanana.com/Core/Item/Data?itemtype=Mod&itemid={item}&fields=name%2Cdescription",
+                      "file": f"details-{item}.json"})
+    file_id = str(770000 + item - 990100)
+    write(f"card-{item}.json", {
+        "name": name, "Category().name": sub_name, "catid": sub_id, "RootCategory().name": root,
+        "likes": likes, "views": likes * 120, "downloads": downloads,
+        "userid": 880000 + author - 1, "Owner().name": f"Sample Author {author}", "mdate": updated,
+        "Preview().sSubFeedImageUrl()": picture_url, "Url().sProfileUrl()": f"https://gamebanana.com/mods/{item}",
+        "Url().sDownloadUrl()": f"https://files.example.invalid/sample-{item}.zip",
+        "Files().aFiles()": {file_id: {"_idRow": file_id, "_sFile": name.lower().replace(" ", "-") + ".zip",
+                                       "_nFilesize": 2048, "_tsDateAdded": updated, "_nDownloadCount": downloads,
+                                       "_sDownloadUrl": f"https://files.example.invalid/sample-{item}.zip", "_sVersion": "1.0",
+                                       "_sDescription": "Sample archive", "_bIsArchived": False}},
+        "Updates().bSubmissionHasUpdates()": False})
+    responses.append({"prefix": f"https://api.gamebanana.com/Core/Item/Data?itemtype=Mod&itemid={item}&fields=name%2CCategory",
+                      "file": f"card-{item}.json"})
+
+by_id = {mod["_idRow"]: mod for mod in others}
+lists = {SKINS: mods + [by_id[i] for i in (990200, 990201, 990202, 990203)], WEAPONS: [by_id[990200], by_id[990201]],
+         SWORDS: [by_id[990201]], NPCS: [by_id[990202]], UI: [by_id[990204], by_id[990205]], HUD: [by_id[990204]],
+         MENUS: [by_id[990205]], OTHER: [by_id[990206], by_id[990207]]}
+for cat_id, records in lists.items():
+    write(f"index-{cat_id}.json", page(records))
+    responses.append({"prefix": f"{API}Mod/Index?_aFilters%5BGeneric_Category%5D={cat_id}&", "file": f"index-{cat_id}.json"})
+
+# Likes, downloads and update time sorted by the site (_sSort), for the characters and every category above.
+SORTS = [("Generic_MostLiked", "likes", "_nLikeCount"), ("Generic_MostDownloaded", "downloads", "_nDownloadCount"),
+         ("Generic_LatestUpdated", "updated", "_tsDateUpdated")]
+for cat_id, records in [(CATEGORY, mods)] + list(lists.items()):
+    for sort, short, field in SORTS:
+        write(f"index-{cat_id}-{short}.json", page(sorted(records, key=lambda mod: -mod[field])))
+        responses.append({"prefix": f"{API}Mod/Index?_aFilters%5BGeneric_Category%5D={cat_id}&_sSort={sort}&", "file": f"index-{cat_id}-{short}.json"})
+
+
 write("fixtures.json", {"about": "Synthetic samples for IMM_ONLINE_FIXTURES (screenshots and UI tests only); made up, no real site data.",
                         "responses": responses})
 print(len(responses), "responses")

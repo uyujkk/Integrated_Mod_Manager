@@ -1,0 +1,40 @@
+{
+ "_aMetadata": {
+  "_nRecordCount": 1,
+  "_nPerpage": 40,
+  "_bIsComplete": true
+ },
+ "_aRecords": [
+  {
+   "_idRow": 990201,
+   "_sName": "Sample Sword",
+   "_sProfileUrl": "https://gamebanana.com/mods/990201",
+   "_aSubmitter": {
+    "_sName": "Sample Author 2",
+    "_idRow": "880001"
+   },
+   "_aRootCategory": {
+    "_sName": "Skins"
+   },
+   "_aSubCategory": {
+    "_sName": "Swords",
+    "_sProfileUrl": "https://gamebanana.com/mods/cats/90111/"
+   },
+   "_aPreviewMedia": {
+    "_aImages": [
+     {
+      "_sBaseUrl": "https://images.example.invalid/samples",
+      "_sFile530": "mod-06.png",
+      "_sFile": "mod-06.png"
+     }
+    ]
+   },
+   "_tsDateModified": 1766448000,
+   "_tsDateUpdated": 1766448000,
+   "_tsDateAdded": 1763856000,
+   "_nLikeCount": 55,
+   "_nViewCount": 6600,
+   "_nDownloadCount": 120
+  }
+ ]
+}

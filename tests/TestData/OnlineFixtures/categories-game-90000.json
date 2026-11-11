@@ -1,0 +1,26 @@
+[
+ {
+  "_idRow": 90300,
+  "_sName": "Other/Misc",
+  "_nItemCount": 2,
+  "_nCategoryCount": 0,
+  "_sUrl": "https://gamebanana.com/mods/cats/90300",
+  "_bIsObsolete": false
+ },
+ {
+  "_idRow": 90100,
+  "_sName": "Skins",
+  "_nItemCount": 16,
+  "_nCategoryCount": 3,
+  "_sUrl": "https://gamebanana.com/mods/cats/90100",
+  "_bIsObsolete": false
+ },
+ {
+  "_idRow": 90200,
+  "_sName": "UI",
+  "_nItemCount": 2,
+  "_nCategoryCount": 2,
+  "_sUrl": "https://gamebanana.com/mods/cats/90200",
+  "_bIsObsolete": false
+ }
+]

@@ -268,6 +268,40 @@ public sealed class OnlineCategoryTests
         finally { Directory.Delete(root, recursive: true); }
     }
 
+    // ---------------------------------------------------------------- the offline samples (IMM_ONLINE_FIXTURES)
+
+    [Fact]
+    public async Task TheSamplesHaveTheCategoriesAndTheSortedLists()
+    {
+        string samples = Path.Combine(FindRepositoryRoot(), "tests", "TestData", "OnlineFixtures");
+        using HttpClient client = OnlineHttpClientFactory.Create("IntegratedModManager/test", samples);
+
+        OnlineCategoryIndex index = (await GameBananaCategoryTreeClient.ReadAsync(client, "90001", Now))!;
+        Assert.Equal(["Other/Misc", "Skins", "UI"], index.TopCategories.Select(top => top.Name));
+        Assert.Equal("90100", index.CharacterTopId);
+        Assert.Equal("90101", index.CharacterTopBranches["90111"]);
+        Assert.Equal(["HUD", "Menus"], (await GameBananaCategoryTreeClient.ReadSubcategoriesAsync(client, "90200")).Select(child => child.Name));
+
+        OnlineCategoryPageResult liked = await GameBananaCategoryClient.GetPageAsync(client, "90100", 1, 40, 0, Now, serverSort: "Generic_MostLiked");
+        Assert.Equal(liked.Mods.Select(mod => mod.Likes).OrderByDescending(likes => likes), liked.Mods.Select(mod => mod.Likes));
+        Assert.Equal(16, liked.TotalCount);
+        OnlineCategoryPageResult ui = await GameBananaCategoryClient.GetPageAsync(client, "90200", 1, 40, 0, Now);
+        Assert.Equal(["UI", "UI"], ui.Mods.Select(mod => mod.RootCategoryName));
+        Assert.Equal(["UI", "UI"], ui.Mods.Select(mod => OnlineCategoryPlacement.CategoryName(index, mod.RootCategoryName, mod.CategoryId, mod.CharacterName)));
+        OnlineCategoryPageResult weapons = await GameBananaCategoryClient.GetPageAsync(client, "90101", 1, 40, 0, Now);
+        Assert.Equal(["Weapons", "Weapons"], weapons.Mods.Select(mod => OnlineCategoryPlacement.CategoryName(index, mod.RootCategoryName, mod.CategoryId, mod.CharacterName)));
+
+        // A request the samples do not have still fails.
+        await Assert.ThrowsAsync<HttpRequestException>(() => GameBananaCategoryClient.GetPageAsync(client, "90999", 1, 40, 0, Now, serverSort: "Generic_MostLiked"));
+    }
+
+    private static string FindRepositoryRoot()
+    {
+        for (DirectoryInfo? directory = new(AppContext.BaseDirectory); directory is not null; directory = directory.Parent)
+            if (File.Exists(Path.Combine(directory.FullName, "IntegratedModManager.sln"))) return directory.FullName;
+        throw new DirectoryNotFoundException("IntegratedModManager.sln was not found above the test output.");
+    }
+
     private static HttpResponseMessage Json(string body)
         => new(HttpStatusCode.OK) { Content = new StringContent(body, Encoding.UTF8, "application/json") };
 

@@ -1,0 +1,29 @@
+{
+ "name": "Sample Effect",
+ "Category().name": "Other/Misc",
+ "catid": 90300,
+ "RootCategory().name": "Other/Misc",
+ "likes": 26,
+ "views": 3120,
+ "downloads": 75,
+ "userid": 880003,
+ "Owner().name": "Sample Author 4",
+ "mdate": 1765929600,
+ "Preview().sSubFeedImageUrl()": "https://images.example.invalid/samples/mod-12.png",
+ "Url().sProfileUrl()": "https://gamebanana.com/mods/990207",
+ "Url().sDownloadUrl()": "https://files.example.invalid/sample-990207.zip",
+ "Files().aFiles()": {
+  "770107": {
+   "_idRow": "770107",
+   "_sFile": "sample-effect.zip",
+   "_nFilesize": 2048,
+   "_tsDateAdded": 1765929600,
+   "_nDownloadCount": 75,
+   "_sDownloadUrl": "https://files.example.invalid/sample-990207.zip",
+   "_sVersion": "1.0",
+   "_sDescription": "Sample archive",
+   "_bIsArchived": false
+  }
+ },
+ "Updates().bSubmissionHasUpdates()": false
+}

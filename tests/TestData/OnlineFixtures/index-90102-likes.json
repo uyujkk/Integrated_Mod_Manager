@@ -1,0 +1,40 @@
+{
+ "_aMetadata": {
+  "_nRecordCount": 1,
+  "_nPerpage": 40,
+  "_bIsComplete": true
+ },
+ "_aRecords": [
+  {
+   "_idRow": 990202,
+   "_sName": "Sample Guard",
+   "_sProfileUrl": "https://gamebanana.com/mods/990202",
+   "_aSubmitter": {
+    "_sName": "Sample Author 3",
+    "_idRow": "880002"
+   },
+   "_aRootCategory": {
+    "_sName": "Skins"
+   },
+   "_aSubCategory": {
+    "_sName": "Entities/NPCs",
+    "_sProfileUrl": "https://gamebanana.com/mods/cats/90102/"
+   },
+   "_aPreviewMedia": {
+    "_aImages": [
+     {
+      "_sBaseUrl": "https://images.example.invalid/samples",
+      "_sFile530": "mod-07.png",
+      "_sFile": "mod-07.png"
+     }
+    ]
+   },
+   "_tsDateModified": 1767139200,
+   "_tsDateUpdated": 1767139200,
+   "_tsDateAdded": 1764547200,
+   "_nLikeCount": 7,
+   "_nViewCount": 840,
+   "_nDownloadCount": 80
+  }
+ ]
+}

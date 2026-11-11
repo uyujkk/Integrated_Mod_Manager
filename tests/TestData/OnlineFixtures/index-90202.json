@@ -1,0 +1,40 @@
+{
+ "_aMetadata": {
+  "_nRecordCount": 1,
+  "_nPerpage": 40,
+  "_bIsComplete": true
+ },
+ "_aRecords": [
+  {
+   "_idRow": 990205,
+   "_sName": "Sample Menu",
+   "_sProfileUrl": "https://gamebanana.com/mods/990205",
+   "_aSubmitter": {
+    "_sName": "Sample Author 2",
+    "_idRow": "880001"
+   },
+   "_aRootCategory": {
+    "_sName": "UI"
+   },
+   "_aSubCategory": {
+    "_sName": "Menus",
+    "_sProfileUrl": "https://gamebanana.com/mods/cats/90202/"
+   },
+   "_aPreviewMedia": {
+    "_aImages": [
+     {
+      "_sBaseUrl": "https://images.example.invalid/samples",
+      "_sFile530": "mod-10.png",
+      "_sFile": "mod-10.png"
+     }
+    ]
+   },
+   "_tsDateModified": 1766188800,
+   "_tsDateUpdated": 1766188800,
+   "_tsDateAdded": 1763596800,
+   "_nLikeCount": 4,
+   "_nViewCount": 480,
+   "_nDownloadCount": 640
+  }
+ ]
+}

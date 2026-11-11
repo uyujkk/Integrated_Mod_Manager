@@ -1,0 +1,71 @@
+{
+ "_aMetadata": {
+  "_nRecordCount": 2,
+  "_nPerpage": 40,
+  "_bIsComplete": true
+ },
+ "_aRecords": [
+  {
+   "_idRow": 990206,
+   "_sName": "Sample Tweak",
+   "_sProfileUrl": "https://gamebanana.com/mods/990206",
+   "_aSubmitter": {
+    "_sName": "Sample Author 3",
+    "_idRow": "880002"
+   },
+   "_aRootCategory": {
+    "_sName": "Other/Misc"
+   },
+   "_aSubCategory": {
+    "_sName": "Other/Misc",
+    "_sProfileUrl": "https://gamebanana.com/mods/cats/90300/"
+   },
+   "_aPreviewMedia": {
+    "_aImages": [
+     {
+      "_sBaseUrl": "https://images.example.invalid/samples",
+      "_sFile530": "mod-11.png",
+      "_sFile": "mod-11.png"
+     }
+    ]
+   },
+   "_tsDateModified": 1766707200,
+   "_tsDateUpdated": 1766707200,
+   "_tsDateAdded": 1764115200,
+   "_nLikeCount": 61,
+   "_nViewCount": 7320,
+   "_nDownloadCount": 210
+  },
+  {
+   "_idRow": 990207,
+   "_sName": "Sample Effect",
+   "_sProfileUrl": "https://gamebanana.com/mods/990207",
+   "_aSubmitter": {
+    "_sName": "Sample Author 4",
+    "_idRow": "880003"
+   },
+   "_aRootCategory": {
+    "_sName": "Other/Misc"
+   },
+   "_aSubCategory": {
+    "_sName": "Other/Misc",
+    "_sProfileUrl": "https://gamebanana.com/mods/cats/90300/"
+   },
+   "_aPreviewMedia": {
+    "_aImages": [
+     {
+      "_sBaseUrl": "https://images.example.invalid/samples",
+      "_sFile530": "mod-12.png",
+      "_sFile": "mod-12.png"
+     }
+    ]
+   },
+   "_tsDateModified": 1765929600,
+   "_tsDateUpdated": 1765929600,
+   "_tsDateAdded": 1763337600,
+   "_nLikeCount": 26,
+   "_nViewCount": 3120,
+   "_nDownloadCount": 75
+  }
+ ]
+}
