@@ -43,7 +43,8 @@ public sealed partial class OnlinePage
         bool canLoadOnlineMods = hasRepository && isSupportedSource && !string.IsNullOrWhiteSpace(effectiveCategoryId);
         string requestCategoryId = GetOnlineRequestCategoryId(repository);
         string configKey = hasRepository
-            ? $"{repository!.Id}|{effectiveSource}|{requestCategoryId}|character={_services.Online.Page.CharacterFilter}|page={_services.Online.Page.CurrentPage}{OnlineAuthorKey}"
+            ? OnlineListConfigKey(repository!, effectiveSource, requestCategoryId, OnlineScopeCategoryId(),
+                OnlineBrowseOrder.ServerSort(_services.Online.Page.SortMode))
             : string.Empty;
 
         if (!string.IsNullOrEmpty(_lastLoadedOnlineConfigKey)
@@ -153,6 +154,10 @@ public sealed partial class OnlinePage
         OnlineEmptyResultsContentControl.Content = content;
         OnlineEmptyResultsContentControl.Visibility = Visibility.Visible;
     }
+
+    private string OnlineListConfigKey(WorkspaceRepository repository, string source, string categoryId, string? scopeCategoryId, string? serverSort)
+        => $"{repository.Id}|{source}|{categoryId}|character={_services.Online.Page.CharacterFilter}|page={_services.Online.Page.CurrentPage}{OnlineAuthorKey}"
+            + $"|scope={scopeCategoryId}|sort={serverSort}";
 
     private static bool IsAllowedSkinCategory(string? categoryName)
     {
@@ -327,8 +332,7 @@ public sealed partial class OnlinePage
         string? serverSort = OnlineBrowseOrder.ServerSort(_services.Online.Page.SortMode);
         string? scopeCategoryId = OnlineScopeCategoryId();
         _requestedOnlineScope = scopeCategoryId ?? string.Empty;
-        string configKey = $"{repository.Id}|{source}|{categoryId}|character={_services.Online.Page.CharacterFilter}|page={_services.Online.Page.CurrentPage}{OnlineAuthorKey}"
-            + $"|scope={scopeCategoryId}|sort={serverSort}";
+        string configKey = OnlineListConfigKey(repository, source, categoryId, scopeCategoryId, serverSort);
         if (forceReload)
         {
             _blockedOnlineAutoLoadConfigKey = null;

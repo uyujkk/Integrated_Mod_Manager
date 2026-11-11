@@ -89,6 +89,24 @@ public sealed class OnlineTests
     }
 
     [Fact]
+    public void Online_CategorySelectionKeepsThePageResponsive()
+    {
+        using AppSession app = StartOnline();
+        app.Resize(1400, 900);
+        Visible(app, "Sample Mod 01");
+
+        AppSession.Invoke(Visible(app, "UI"));
+        Visible(app, "Sample Menu");
+        AppSession.Invoke(Visible(app, "HUD"));
+        Visible(app, "Sample HUD");
+        WaitUntil(() => app.MainWindow.FindFirstDescendant(cf => cf.ByName("Sample Menu")) is null, "HUD Mods only");
+
+        AppSession.Invoke(Visible(app, "Skins"));
+        Visible(app, "Sample Mod 01");
+        AssertNoErrorsBesidesSampleMode(app);
+    }
+
+    [Fact]
     public void Online_NarrowWindowFoldsTheRailAndDetailsCoverTheResults()
     {
         using AppSession app = StartOnline();
