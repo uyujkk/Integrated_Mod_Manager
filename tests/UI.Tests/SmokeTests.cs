@@ -17,10 +17,10 @@ public sealed class SmokeTests
 
         AppSession.Invoke(app.FindByName(app.Text("FirstRun.Later"), TimeSpan.FromSeconds(20)));
 
-        JsonNode repository = app.ShellConfig()["Repositories"]![0]!;
+        JsonNode shell = app.WaitForSaved(saved => saved["RepositoryGamesExplicit"]!.GetValue<bool>(), "The game choice should be saved");
+        JsonNode repository = shell["Repositories"]![0]!;
         Assert.Equal(string.Empty, (string?)repository["OnlineGameName"] ?? string.Empty);
         Assert.Equal(string.Empty, (string?)repository["OnlineCategoryId"] ?? string.Empty);
-        Assert.True(app.ShellConfig()["RepositoryGamesExplicit"]!.GetValue<bool>());
         app.AssertNoErrors();
     }
 
@@ -32,7 +32,8 @@ public sealed class SmokeTests
         AppSession.Invoke(app.Find("FirstRunGame_genshin", TimeSpan.FromSeconds(20)));
         AppSession.Invoke(app.FindByName(app.Text("FirstRun.Use")));
 
-        JsonNode repository = app.ShellConfig()["Repositories"]![0]!;
+        JsonNode repository = app.WaitForSaved(saved => (string?)saved["Repositories"]![0]!["OnlineGameName"] == "Genshin Impact",
+            "The chosen game should be saved")["Repositories"]![0]!;
         Assert.Equal("Genshin Impact", (string?)repository["OnlineGameName"]);
         Assert.Equal("18140", (string?)repository["OnlineCategoryId"]);
         app.AssertNoErrors();
@@ -63,7 +64,7 @@ public sealed class SmokeTests
         Keyboard.Type(VirtualKeyShort.ESCAPE);
         Thread.Sleep(1000);
         Assert.False(app.Shows("GettingStartedNextButton"), "Esc should close the tips");
-        Assert.False(app.ShellConfig()["GettingStartedTipsPending"]!.GetValue<bool>());
+        app.WaitForSaved(saved => !saved["GettingStartedTipsPending"]!.GetValue<bool>(), "Closing the tips should be saved");
 
         app.Restart();
         Thread.Sleep(5000);
@@ -82,7 +83,7 @@ public sealed class SmokeTests
         AppSession.Invoke(app.Find("TitleBarSearchToggleSwitch"));
         Thread.Sleep(600);
         Assert.False(app.Shows("TitleBarSearchBox"), "The search box should be hidden");
-        Assert.False(app.ShellConfig()["ShowTitleBarSearch"]!.GetValue<bool>());
+        app.WaitForSaved(saved => !saved["ShowTitleBarSearch"]!.GetValue<bool>(), "The hidden search box should be saved");
 
         app.MainWindow.Focus();
         Keyboard.TypeSimultaneously(VirtualKeyShort.CONTROL, VirtualKeyShort.KEY_K);
@@ -164,8 +165,7 @@ public sealed class SmokeTests
 
         Assert.True(app.IsRunning);
         // The selection is saved right after the switch shows, so wait for the file instead of reading it at once.
-        Assert.True(SpinWait.SpinUntil(() => SelectedRepositoryId(app) == "empty-repository", TimeSpan.FromSeconds(5)),
-            SelectedRepositoryId(app));
+        app.WaitForSaved(saved => (string?)saved["SelectedRepositoryId"] == "empty-repository", "The repository choice should be saved");
         app.AssertNoErrors();
     }
 
@@ -230,9 +230,8 @@ public sealed class SmokeTests
             ?? throw new InvalidOperationException("The overlay did not open.");
 
         AppSession.Invoke(AppSession.FindIn(overlay, cf => cf.ByAutomationId("OverlayCompactButton"), "compact button"));
-        Thread.Sleep(600);
 
-        Assert.True(app.ShellConfig()["OverlayCompactView"]!.GetValue<bool>());
+        app.WaitForSaved(saved => saved["OverlayCompactView"]!.GetValue<bool>(), "The compact view should be saved");
         app.AssertNoErrors();
     }
 
@@ -256,9 +255,8 @@ public sealed class SmokeTests
 
         app.FindByName(string.Format(app.Text("ShortcutPanel.ReadBindingsInGameConditionsAre"), 2), TimeSpan.FromSeconds(15));
         AppSession.Invoke(app.Find("ShortcutHideUnsupportedToggle"));
-        Thread.Sleep(600);
 
-        Assert.True(app.ShellConfig()["ShortcutHideUnsupported"]!.GetValue<bool>());
+        app.WaitForSaved(saved => saved["ShortcutHideUnsupported"]!.GetValue<bool>(), "Hiding unsendable bindings should be saved");
         app.AssertNoErrors();
     }
 
@@ -286,9 +284,9 @@ public sealed class SmokeTests
         Assert.NotNull(toggle);
 
         AppSession.Invoke(toggle);
-        Assert.False(app.ShellConfig()["ShortcutPanelHotkeyEnabled"]!.GetValue<bool>());
+        app.WaitForSaved(saved => !saved["ShortcutPanelHotkeyEnabled"]!.GetValue<bool>(), "Turning the hotkey off should be saved");
         AppSession.Invoke(toggle);
-        Assert.True(app.ShellConfig()["ShortcutPanelHotkeyEnabled"]!.GetValue<bool>());
+        app.WaitForSaved(saved => saved["ShortcutPanelHotkeyEnabled"]!.GetValue<bool>(), "Turning the hotkey on should be saved");
         app.AssertNoErrors();
     }
 
@@ -313,9 +311,8 @@ public sealed class SmokeTests
         picker.Patterns.ExpandCollapse.Pattern.Expand();
         Thread.Sleep(500);
         AppSession.Invoke(app.FindByName(app.Text("ShortcutPanel.VirtualKeysLegacyCompatibility")));
-        Thread.Sleep(1000);
 
-        Assert.Equal("VirtualKey", (string?)app.ShellConfig()["ShortcutInputMode"]);
+        app.WaitForSaved(saved => (string?)saved["ShortcutInputMode"] == "VirtualKey", "The input method should be saved");
         app.AssertNoErrors();
     }
 
@@ -342,8 +339,7 @@ public sealed class SmokeTests
         app.Find("TargetTextBox").Patterns.Value.Pattern.SetValue(newTarget);
         AppSession.Invoke(app.Find("RepositoryNavButton"));
 
-        Assert.True(SpinWait.SpinUntil(() => (string?)app.ShellConfig()["Repositories"]![0]!["TargetPath"] == newTarget, TimeSpan.FromSeconds(5)),
-            (string?)app.ShellConfig()["Repositories"]![0]!["TargetPath"]);
+        app.WaitForSaved(saved => (string?)saved["Repositories"]![0]!["TargetPath"] == newTarget, "The new target path should be saved");
         AppSession.Invoke(app.Find("DashboardNavButton"));
         app.Expand("DashboardPathsExpander");
         Assert.Equal(newTarget, app.Find("TargetTextBox").Patterns.Value.Pattern.Value.Value);
@@ -379,7 +375,8 @@ public sealed class SmokeTests
 
         AppSession.Invoke(app.Find("RepositoryView" + view));
 
-        Assert.Equal(view, (string?)app.ShellConfig()["RepositoryWorkspaceView"], ignoreCase: true);
+        app.WaitForSaved(saved => string.Equals((string?)saved["RepositoryWorkspaceView"], view, StringComparison.OrdinalIgnoreCase),
+            "The workspace view should be saved");
         Assert.Equal(view == "Presets", app.Shows("PresetShareImportButton"));
         Assert.Equal(view == "List", app.Shows("SecondLevelListView"));
         app.AssertNoErrors();
@@ -418,8 +415,7 @@ public sealed class SmokeTests
         languages.Select(1);
         string englishTitle = AppSession.TextIn("en-US", "Common.IntegratedModManager").Split('{')[0].Trim();
         Assert.True(SpinWait.SpinUntil(() => app.MainWindow.Title.StartsWith(englishTitle, StringComparison.Ordinal), TimeSpan.FromSeconds(5)), app.MainWindow.Title);
-        string[] config = File.ReadAllLines(Path.Combine(app.AppFolder, "config.ini"));
-        Assert.Contains("language=" + Convert.ToBase64String(System.Text.Encoding.UTF8.GetBytes("en")), config);
+        app.WaitForConfigLine("language=" + Convert.ToBase64String(System.Text.Encoding.UTF8.GetBytes("en")), "English should be saved in config.ini");
         app.Capture(nameof(Settings_LanguageListComesFromTheFilesAndSwitchesTheWindow));
         app.AssertNoErrors();
     }
@@ -434,11 +430,9 @@ public sealed class SmokeTests
         ComboBox themes = app.Find("ThemeComboBox").AsComboBox();
         themes.Select(2);
 
-        Assert.True(SpinWait.SpinUntil(() => (string?)app.ShellConfig()["ThemePreference"] == "dark", TimeSpan.FromSeconds(5)),
-            (string?)app.ShellConfig()["ThemePreference"]);
+        app.WaitForSaved(saved => (string?)saved["ThemePreference"] == "dark", "The dark theme should be saved");
         themes.Select(1);
-        Assert.True(SpinWait.SpinUntil(() => (string?)app.ShellConfig()["ThemePreference"] == "light", TimeSpan.FromSeconds(5)),
-            (string?)app.ShellConfig()["ThemePreference"]);
+        app.WaitForSaved(saved => (string?)saved["ThemePreference"] == "light", "The light theme should be saved");
         app.Capture(nameof(Settings_ThemeChoiceIsSaved));
         app.AssertNoErrors();
     }
@@ -469,7 +463,8 @@ public sealed class SmokeTests
         Assert.True(app.Shows("OnlineSearchTextBox"));
         AppSession.Invoke(app.Find("Online" + layout + "LayoutButton"));
 
-        Assert.Equal(layout, (string?)app.ShellConfig()["OnlineCardLayout"], ignoreCase: true);
+        app.WaitForSaved(saved => string.Equals((string?)saved["OnlineCardLayout"], layout, StringComparison.OrdinalIgnoreCase),
+            "The card layout should be saved");
         Assert.True(app.Shows(shownView), shownView);
         Assert.True(app.IsRunning);
         app.AssertNoErrors();
@@ -485,7 +480,7 @@ public sealed class SmokeTests
         AppSession.Invoke(app.Find("UpdatesViewDownloads"));
         Assert.True(app.Shows("ClearDownloadTasksButton"));
         AppSession.Invoke(app.Find("UpdatesViewMods"));
-        string? before = (string?)app.ShellConfig()["ModUpdateCheckInterval"];
+        string? before = (string?)app.ReadSaved()["ModUpdateCheckInterval"];
 
         AutomationElement picker = app.Find("ModUpdateIntervalComboBox");
         picker.Patterns.ExpandCollapse.Pattern.Expand();
@@ -493,11 +488,9 @@ public sealed class SmokeTests
         AutomationElement[] options = picker.FindAllChildren(cf => cf.ByControlType(FlaUI.Core.Definitions.ControlType.ListItem));
         AutomationElement other = options.First(option => !option.Patterns.SelectionItem.Pattern.IsSelected.Value);
         AppSession.Invoke(other);
-        Thread.Sleep(800);
 
-        string? after = (string?)app.ShellConfig()["ModUpdateCheckInterval"];
-        Assert.False(string.IsNullOrEmpty(after));
-        Assert.NotEqual(before, after);
+        app.WaitForSaved(saved => (string?)saved["ModUpdateCheckInterval"] is { Length: > 0 } after && after != before,
+            "The new check interval should be saved");
         app.AssertNoErrors();
     }
 
@@ -508,12 +501,11 @@ public sealed class SmokeTests
         using AppSession app = AppSession.Configured((shell, _) => shell["CurrentPrimarySection"] = "updates").Start();
         AppSession.Invoke(app.Find("UpdatesViewRecovery"));
         Assert.True(app.Shows("OpenCombinationPresetsButton"));
-        bool before = (bool?)app.ShellConfig()["EnableConflictDetection"] ?? true;
+        bool before = (bool?)app.ReadSaved()["EnableConflictDetection"] ?? true;
 
         AppSession.Invoke(app.Find("ConflictDetectionToggleSwitch"));
 
-        Assert.True(SpinWait.SpinUntil(() => (bool?)app.ShellConfig()["EnableConflictDetection"] == !before, TimeSpan.FromSeconds(5)),
-            "EnableConflictDetection stayed " + before);
+        app.WaitForSaved(saved => (bool?)saved["EnableConflictDetection"] == !before, "EnableConflictDetection stayed " + before);
         app.Capture(nameof(Updates_ConflictDetectionSwitchIsSaved));
         app.AssertNoErrors();
     }
@@ -546,8 +538,7 @@ public sealed class SmokeTests
             "The recovery view did not open; selected: " + string.Join(",", new[] { "UpdatesViewMods", "UpdatesViewDownloads", "UpdatesViewRecovery" }
                 .Where(id => app.Find(id).Patterns.SelectionItem.PatternOrDefault?.IsSelected.ValueOrDefault == true))
             + "; after Tab: " + afterTab + "; focused: " + app.MainWindow.Automation.FocusedElement()?.Properties.AutomationId.ValueOrDefault);
-        Assert.True(SpinWait.SpinUntil(() => (string?)app.ShellConfig()["UpdatesView"] == "recovery", TimeSpan.FromSeconds(5)),
-            (string?)app.ShellConfig()["UpdatesView"]);
+        app.WaitForSaved(saved => (string?)saved["UpdatesView"] == "recovery", "The recovery view should be saved");
         app.Capture(nameof(Updates_ViewsSwitchByKeyboardAndAreSaved));
         app.AssertNoErrors();
     }
@@ -567,13 +558,6 @@ public sealed class SmokeTests
             Thread.Sleep(250);
         }
         return null;
-    }
-
-    // Read while the app may be writing the file: a half-written or locked file counts as "not yet".
-    private static string? SelectedRepositoryId(AppSession app)
-    {
-        try { return (string?)app.ShellConfig()["SelectedRepositoryId"]; }
-        catch (Exception ex) when (ex is IOException or System.Text.Json.JsonException) { return null; }
     }
 
     private static nint TopWindowAt(Point point) => GetAncestor(WindowFromPoint(point), 2);

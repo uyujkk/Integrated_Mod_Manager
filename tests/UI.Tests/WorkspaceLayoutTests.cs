@@ -52,7 +52,7 @@ public sealed class WorkspaceLayoutTests
         Assert.True(dragged - before > 30, $"The splitter should move right: {before} -> {dragged}");
 
         // The width is saved when the drag ends (the file is written just after; wait for it).
-        Wait(() => app.ShellConfig()["WorkspaceCharacterWidth"]?.GetValue<double>() is > 0, "The width should be saved");
+        Wait(() => app.TryShellConfig()?["WorkspaceCharacterWidth"]?.GetValue<double>() is > 0, "The width should be saved");
 
         app.Restart();
         app.Resize(1400, 900);

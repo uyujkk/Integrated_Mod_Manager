@@ -69,7 +69,7 @@ public sealed class PageHostTests
         string englishTitle = AppSession.TextIn("en-US", "Common.IntegratedModManager").Split('{')[0].Trim();
         Wait(() => app.MainWindow.Title.StartsWith(englishTitle, StringComparison.Ordinal), "The window should switch to English");
         app.Find("ThemeComboBox").AsComboBox().Select(2);
-        Wait(() => (string?)app.ShellConfig()["ThemePreference"] == "dark", "The dark theme should be saved");
+        Wait(() => (string?)app.TryShellConfig()?["ThemePreference"] == "dark", "The dark theme should be saved");
 
         // Every page, made before or after the change, is in English and dark.
         foreach ((string nav, string titleKey) in Pages)
