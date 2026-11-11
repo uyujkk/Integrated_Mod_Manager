@@ -11,13 +11,16 @@ param(
     # updates-downloads and updates-recovery are the Updates page's other two views (stage J3-b);
     # gettingstarted is the dashboard with the tips a first install shows, nosearch the dashboard with the title
     # bar's search box turned off (stage J4-b); overlay is the Shortcuts page with its overlay opened by the hotkey
-    # (stage J5b). None of these three is in the default set.
+    # (stage J5b); palette is the Mod workspace with the command palette open, searching for "test" (4.8 README).
+    # None of these is in the default set.
     [string[]]$Pages = @('dashboard', 'repository', 'online', 'shortcuts', 'updates', 'updates-downloads', 'updates-recovery', 'settings', 'whatsnew', 'firstrun'),
     # How long to wait after the window appears before taking the picture.
     [int]$SettleSeconds = 7,
     # Point the repository's game folder at a folder that does not exist, to show the "setup needed" states.
     [switch]$MissingGameFolder,
-    # Add the synthetic tracked Mods, download history and install backups of tests\TestData\SampleState.
+    # Add the synthetic tracked Mods, download history and install backups of tests\TestData\SampleState, and
+    # answer every online request from tests\TestData\OnlineFixtures (IMM_ONLINE_FIXTURES): the repository uses the
+    # sample category, so the Online page shows the sample characters and Mods and nothing goes to the network.
     [switch]$SampleData
 )
 
@@ -95,6 +98,23 @@ public static class ImmCapture
         for (int i = keys.Length - 1; i >= 0; i--) keybd_event(keys[i], 0, 2, UIntPtr.Zero);
     }
 
+    // Ctrl+K opens the command palette; then type lower-case letters into its search box.
+    public static void OpenPaletteAndType(string text)
+    {
+        keybd_event(0x11, 0, 0, UIntPtr.Zero);
+        keybd_event(0x4B, 0, 0, UIntPtr.Zero);
+        System.Threading.Thread.Sleep(80);
+        keybd_event(0x4B, 0, 2, UIntPtr.Zero);
+        keybd_event(0x11, 0, 2, UIntPtr.Zero);
+        System.Threading.Thread.Sleep(1200);
+        foreach (char letter in text.ToUpperInvariant())
+        {
+            keybd_event((byte)letter, 0, 0, UIntPtr.Zero);
+            keybd_event((byte)letter, 0, 2, UIntPtr.Zero);
+            System.Threading.Thread.Sleep(120);
+        }
+    }
+
     // The overlay of this process: a visible top-level window titled "IMM ...".
     public static IntPtr FindOverlay(int processId)
     {
@@ -164,7 +184,7 @@ function Write-Configuration([string]$page, [string]$language, [string]$theme, [
     $target = Join-Path $testData $(if ($MissingGameFolder) { 'Loader\NoSuchFolder' } else { 'Loader\Mods' })
     $shell = [ordered]@{
         SelectedRepositoryId = 'ui-repository'
-        CurrentPrimarySection = $(if ($page -in 'whatsnew', 'gettingstarted', 'nosearch') { 'dashboard' } elseif ($page -eq 'overlay') { 'shortcuts' } elseif ($page -like 'updates-*') { 'updates' } else { $page })
+        CurrentPrimarySection = $(if ($page -in 'whatsnew', 'gettingstarted', 'nosearch') { 'dashboard' } elseif ($page -eq 'overlay') { 'shortcuts' } elseif ($page -eq 'palette') { 'repository' } elseif ($page -like 'updates-*') { 'updates' } else { $page })
         UpdatesView = $(if ($page -like 'updates-*') { $page.Substring('updates-'.Length) } else { 'mods' })
         CheckAppUpdatesOnStartup = $false
         WhatsNewSeenVersion = $(if ($page -eq 'whatsnew') { '' } else { $whatsNewSet })
@@ -178,6 +198,10 @@ function Write-Configuration([string]$page, [string]$language, [string]$theme, [
             Id = 'ui-repository'; Name = 'UI repository'; SourcePath = $mods; TargetPath = $target
             PersistentUserIniPath = (Join-Path $testData 'Loader\d3dx_user.ini'); OnlineSourceSite = 'GameBanana'
         })
+    }
+    if ($SampleData) {
+        $shell.Repositories[0].OnlineCategoryId = '90001'
+        $shell.Repositories[0].OnlineGameName = 'Sample Game'
     }
     [IO.File]::WriteAllText((Join-Path $appFolder 'beta-shell.json'), ($shell | ConvertTo-Json -Depth 5), [Text.UTF8Encoding]::new($false))
     [IO.File]::WriteAllLines((Join-Path $appFolder 'config.ini'), [string[]]@(
@@ -210,7 +234,10 @@ function Add-SampleData {
 }
 
 function Capture([string]$name, [int]$width, [int]$height) {
-    $process = Start-Process -FilePath $exe -WorkingDirectory $appFolder -PassThru
+    # Sample mode for this launch only: every online request is answered from the samples or fails.
+    $env:IMM_ONLINE_FIXTURES = $(if ($SampleData) { Join-Path $testData 'OnlineFixtures' } else { $null })
+    try { $process = Start-Process -FilePath $exe -WorkingDirectory $appFolder -PassThru }
+    finally { $env:IMM_ONLINE_FIXTURES = $null }
     try {
         $deadline = (Get-Date).AddSeconds(60)
         while ($process.MainWindowHandle -eq 0 -and (Get-Date) -lt $deadline) { Start-Sleep -Milliseconds 500; $process.Refresh() }
@@ -222,6 +249,7 @@ function Capture([string]$name, [int]$width, [int]$height) {
         Start-Sleep -Seconds $SettleSeconds
         if ($width -eq 0) { [ImmCapture]::Maximize($handle) } else { [ImmCapture]::Place($handle, 40, 40, $width, $height) }
         Start-Sleep -Milliseconds 800
+        if ($name -like 'palette-*') { [ImmCapture]::OpenPaletteAndType('test'); Start-Sleep -Seconds 2 }
         $size = [ImmCapture]::Save($handle, (Join-Path $output "$name.png"))
         [ImmCapture]::Release($handle)
         if ($name -like 'overlay-*') {
@@ -236,7 +264,7 @@ function Capture([string]$name, [int]$width, [int]$height) {
         $errors = @()
         foreach ($log in 'startup.log', 'app-errors.log') {
             $path = Join-Path $appFolder $log
-            if (Test-Path -LiteralPath $path) { $errors += @(Get-Content -LiteralPath $path | Where-Object { $_ -match 'Unhandled|Exception' }) }
+            if (Test-Path -LiteralPath $path) { $errors += @(Get-Content -LiteralPath $path | Where-Object { $_ -match 'Unhandled|Exception' -and $_ -notmatch 'Online test fixture mode' }) }
         }
         [pscustomobject]@{ Name = $name; Pixels = $size; Errors = $errors.Count }
     }

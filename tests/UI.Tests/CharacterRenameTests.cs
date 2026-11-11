@@ -43,13 +43,13 @@ public sealed class CharacterRenameTests
         app.Find("PromptTextBox", TimeSpan.FromSeconds(10)).Patterns.Value.Pattern.SetValue("RenamedCharacter");
         AppSession.Invoke(app.FindByName(app.Text("Dialogs.Rename")));
         Wait(() => Directory.Exists(newSource) && Target(junction).Equals(newSource, StringComparison.OrdinalIgnoreCase)
-            && (string?)app.ShellConfig()["ConfigurationProfiles"]![0]!["ModRelativePaths"]![0] == @"RenamedCharacter\TestModA");
+            && (string?)app.TryShellConfig()?["ConfigurationProfiles"]?[0]?["ModRelativePaths"]?[0] == @"RenamedCharacter\TestModA");
 
         Assert.True(Directory.Exists(newSource));
         Assert.False(Directory.Exists(oldSource));
         Assert.Equal(newSource, Target(junction), StringComparer.OrdinalIgnoreCase);
         Assert.True(File.Exists(Path.Combine(junction, "mod.ini")));
-        Assert.Equal(@"RenamedCharacter\TestModA", (string?)app.ShellConfig()["ConfigurationProfiles"]![0]!["ModRelativePaths"]![0]);
+        Assert.Equal(@"RenamedCharacter\TestModA", (string?)app.ReadSaved()["ConfigurationProfiles"]![0]!["ModRelativePaths"]![0]);
         Assert.Equal(@"RenamedCharacter\TestModB", CopySource(app));
 
         // After a restart and a rescan the junction still works and the preset still finds the same Mod.
@@ -57,13 +57,13 @@ public sealed class CharacterRenameTests
         AppSession.Invoke(app.FindByName("RenamedCharacter", TimeSpan.FromSeconds(15)));
         app.FindByName("TestModA");
         Assert.Equal(newSource, Target(junction), StringComparer.OrdinalIgnoreCase);
-        Assert.Equal(@"RenamedCharacter\TestModA", (string?)app.ShellConfig()["ConfigurationProfiles"]![0]!["ModRelativePaths"]![0]);
+        Assert.Equal(@"RenamedCharacter\TestModA", (string?)app.ReadSaved()["ConfigurationProfiles"]![0]!["ModRelativePaths"]![0]);
         Assert.Equal(@"RenamedCharacter\TestModB", CopySource(app));
         Assert.True(app.IsRunning);
         app.AssertNoErrors();
     }
 
-    private static string? CopySource(AppSession app) => (string?)app.ShellConfig()["CopyDeployments"]![0]!["SourceRelativePath"];
+    private static string? CopySource(AppSession app) => (string?)app.ReadSaved()["CopyDeployments"]![0]!["SourceRelativePath"];
 
     private static string Target(string link) => (new DirectoryInfo(link).LinkTarget ?? string.Empty).Replace(@"\??\", string.Empty);
 

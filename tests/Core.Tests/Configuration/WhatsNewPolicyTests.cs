@@ -20,6 +20,14 @@ public sealed class WhatsNewPolicyTests
     }
 
     [Fact]
+    public void UpgradeFrom47_ShowsThe48SetOnce()
+    {
+        string? seen = WhatsNewPolicy.SeenAfterLoad("4.7.0", "4.8.0", firstInstall: false);
+        Assert.True(WhatsNewPolicy.ShouldShow(seen, "4.8.0"));
+        Assert.False(WhatsNewPolicy.ShouldShow("4.8.0", "4.8.0"));
+    }
+
+    [Fact]
     public void Upgrade_KeepsWhatWasSeen()
         => Assert.Equal("4.7.0", WhatsNewPolicy.SeenAfterLoad("4.7.0", "4.7.0", firstInstall: false));
 }

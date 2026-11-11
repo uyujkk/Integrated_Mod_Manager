@@ -13,14 +13,14 @@ public sealed class SettingsPersistenceTests
         AppSession.Invoke(app.Find("TitleBarSearchToggleSwitch", TimeSpan.FromSeconds(10)));
         app.Restart();
 
-        Assert.False(app.ShellConfig()["ShowTitleBarSearch"]!.GetValue<bool>());
+        Assert.False(app.ReadSaved()["ShowTitleBarSearch"]!.GetValue<bool>());
         Thread.Sleep(2000);
         Assert.False(app.Shows("TitleBarSearchBox"), "The search box should stay off after closing right after the change");
 
         AppSession.Invoke(app.Find("UpdatesNavButton", TimeSpan.FromSeconds(10)));
         AppSession.Invoke(app.Find("UpdatesViewRecovery", TimeSpan.FromSeconds(10)));
         app.Restart();
-        Assert.Equal("recovery", (string?)app.ShellConfig()["UpdatesView"]);
+        Assert.Equal("recovery", (string?)app.ReadSaved()["UpdatesView"]);
         Assert.True(app.IsRunning);
         app.AssertNoErrors();
     }

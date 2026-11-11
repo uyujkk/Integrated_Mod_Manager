@@ -1,4 +1,4 @@
-> **v4.7.3 stable release.** The interface is available in Russian. **4.7.2:** online character lists for Genshin, Star Rail and ZZZ load reliably again. **4.7.1:** the updater no longer trips antivirus false positives. **4.7:** Preset pictures and pick by picture, overlay looks, click-through and automatic contrast, sharing a preset without Mod files, a language and game choice on first install with XXMI launch for other games, a Default slot for every Mod, and batch actions; see the [4.7.0 notes](docs/releases/v4.7.0.md), [4.7.1](docs/releases/v4.7.1.md), [4.7.2](docs/releases/v4.7.2.md) and [4.7.3](docs/releases/v4.7.3.md). **4.6:** Every page is redesigned: a collapsible navigation with a Ctrl+K command palette, a richer Mod list and details, a details drawer online, and an Updates page that fills the window. Local preview builds no longer turn off update checks. See the [release notes](docs/releases/v4.6.0.md).
+> **v4.8.0 stable release.** Every page is redesigned, and five problems in 4.7.3 and earlier that could delete the wrong files or leave broken links are fixed; see the [4.8.0 notes](docs/releases/v4.8.0.md). **4.7:** preset pictures and pick by picture, overlay looks, click-through and automatic contrast, sharing a preset without Mod files, a language and game choice on first install, a Default slot for every Mod, and batch actions; 4.7.1–4.7.3 brought a .NET 8 updater, more reliable online character lists and a Russian interface. See the [4.7.0 notes](docs/releases/v4.7.0.md).
 
 <div align="center">
   <img src="./src/WinUI3/Assets/AppIcon.png" width="96" alt="Integrated Mod Manager icon">
@@ -28,52 +28,56 @@
 
 ## Overview
 
-**Current stable version: [v4.7.3](https://github.com/uyujkk/Integrated_Mod_Manager/releases/tag/v4.7.3).** 4.7 adds preset pictures, overlay looks, preset sharing and other games; 4.6 redesigned every page. Characters in a repository show avatars, a character can keep several Mods enabled, each Mod can keep named state slots, and the always-on-top overlay can save presets (sending F10 first), switch slots in game and refresh after Mod changes. The shortcut panel, integrated Endfield launch, browsing and downloading, library tools and combination presets remain. See the [4.6.0 release notes](./docs/releases/v4.6.0.md), the [shortcut panel guide](./docs/guides/en/Shortcut-Panel.md) and the [launch and risk guide](./docs/guides/en/Endfield-Launch.md).
+**Current stable version: [v4.8.0](https://github.com/uyujkk/Integrated_Mod_Manager/releases/tag/v4.8.0).** 4.8 redesigns every page (a navigation pane with title-bar search, card-based Dashboard and Settings, a Mod workspace with a command bar and resizable columns, an Online page with a details drawer, and clearer dialogs) and fixes five data-safety problems; 4.7 added preset pictures, overlay looks, preset sharing and other games. Characters in a repository show avatars, a character can keep several Mods enabled, each Mod can keep named state slots, and the always-on-top overlay can save presets (sending F10 first), switch slots in game and refresh after Mod changes. The shortcut panel, integrated Endfield launch, browsing and downloading, library tools and combination presets remain. See the [4.8.0 release notes](./docs/releases/v4.8.0.md), the [shortcut panel guide](./docs/guides/en/Shortcut-Panel.md) and the [launch and risk guide](./docs/guides/en/Endfield-Launch.md).
 
 Integrated Mod Manager organizes different games or mod environments into independent repositories. It copies or removes complete mod folders between a local library and the target directory read by the game, while keeping preview images, source links, shortcut notes, online downloads, update records, profiles, and installation backups in one application.
 
-The application, launcher, and updater use version **4.7.3** (`4.7.3.0`). The tool is maintained by `uyujkk`. The Bandizip extraction fallback was contributed by [CaramelizedCUDA](https://github.com/CaramelizedCUDA). The earlier [4.0-beta](https://github.com/uyujkk/Integrated_Mod_Manager/releases/tag/v4.0-beta) remains archived separately.
+The application, launcher, and updater use version **4.8.0** (`4.8.0.0`). The tool is maintained by `uyujkk`. The Bandizip extraction fallback was contributed by [CaramelizedCUDA](https://github.com/CaramelizedCUDA). The earlier [4.0-beta](https://github.com/uyujkk/Integrated_Mod_Manager/releases/tag/v4.0-beta) remains archived separately.
 
 ## Interface Preview
 
-Screenshots come from an isolated copy of the 4.6.0 release with a synthetic demo repository: placeholder characters with generated avatars, generated preview images and demonstration Mods. No game, loader, real Mod or online content is shown. See [how they were captured](./docs/assets/screenshots/README.md).
+Screenshots come from an isolated copy of a 4.8.0 build with the repository's synthetic test data: a sample character with two test Mods, sample tracked Mods and download history, and the Online page in its offline sample mode (sample characters and Mods with generated pictures; nothing is requested from the network). No game, loader, real Mod or online content is shown. See [how they were captured](./docs/assets/screenshots/README.md).
 
-**Repository workspace** — characters with avatars on the left; Mod rows with thumbnails, tags, size and deploy state, filtered by All Mods / Deployed only / Not deployed; the details show the preview and an information table with the source link, folder, tags and size.
+**Mod workspace** — characters on the left; the character's Mods with size and deploy state, filtered by All Mods / Deployed only / Not deployed, under a command bar; the details show the preview, source link, folder, tags and size, with the red Remove from target button.
 
-![Repository page: four demo characters, Demo A's three Mods with thumbnails, tags and deploy state, and the details of Outfit-Casual](./docs/assets/screenshots/repository-v4.6.png)
+![Mod workspace: the sample character, its two test Mods with size and deploy state, and the details of TestModA](./docs/assets/screenshots/repository-v4.8.png)
 
-**Dashboard** — the current repository's status and counts, its paths, a character overview that opens a character's Mods, repository cards and quick actions.
+**Dashboard** — the current repository (click its name to switch), quick actions as cards, the paths in one section, the characters and all repositories.
 
-![Dashboard: the demo repository strip, paths, four characters, the repository card and quick actions](./docs/assets/screenshots/dashboard-v4.6.png)
+![Dashboard: the sample repository, three quick-action cards, the paths section, one character and the repository card](./docs/assets/screenshots/dashboard-v4.8.png)
+
+**Online** — browse by character, search, sort and filter; each card shows the picture, character, author and counts, with buttons for the source page and download.
+
+![Online page in sample mode: three sample characters and sample Mods with generated pictures](./docs/assets/screenshots/online-v4.8.png)
 
 <p align="center">
-  <img src="./docs/assets/screenshots/command-palette-v4.6.png" width="560" alt="Command palette searching for out: three matching Mods with their character and deploy state">
+  <img src="./docs/assets/screenshots/command-palette-v4.8.png" width="560" alt="Command palette searching for test: the sample character and its two Mods, grouped by type">
   &nbsp;
   <img src="./docs/assets/screenshots/state-slots-v4.6.png" width="260" alt="State Slots tab: the current slot Battle with its three saved values">
 </p>
 
-**Command palette (Ctrl+K)** — one search over the pages, commands and the current repository's characters and Mods. **State slots (4.5)** — save a Mod's persistent values as named slots; More… updates or renames a slot, writes it as the Mod's defaults (with backups), imports a variant file and snapshots the whole `d3dx_user.ini`.
+**Command palette (Ctrl+K)** — one search over the pages, commands and the current repository's characters and Mods, grouped by type. **State slots (4.5, 4.6 screenshot)** — save a Mod's persistent values as named slots; More… updates or renames a slot, writes it as the Mod's defaults (with backups), imports a variant file and snapshots the whole `d3dx_user.ini`.
 
-**Mod shortcut panel** — pick a Mod and the bindings from its INI files appear as key caps; click one to send it to the game. The in-game overlay, character follow and sending settings are collapsible modules on the right.
+**Mod shortcut panel** — one column of cards: the Mod, the target window and input, a status bar, the Mod's key bindings as key caps with Send, then the overlay and its settings.
 
-![Shortcuts page: the Mod and window toolbar, three key-cap bindings and the collapsed overlay, character follow and sending modules](./docs/assets/screenshots/shortcut-panel-v4.6.png)
+![Shortcuts page: the Mod, window and input cards, the status bar and two key-cap bindings](./docs/assets/screenshots/shortcut-panel-v4.8.png)
 
 <p align="center">
   <img src="./docs/assets/screenshots/shortcut-overlay-v4.5.png" width="290" alt="Overlay with save buttons, state slot buttons and key bindings">
 </p>
 
-**Overlay** — over the game, switch enabled Mods, hot-switch slots (experimental), save a combination or a named single-Mod preset (F10 is sent first), and refresh after Mod changes.
+**Overlay (4.5 screenshot)** — over the game, switch enabled Mods, hot-switch slots (experimental), save a combination or a named single-Mod preset (F10 is sent first), and refresh after Mod changes.
 
 <details>
 <summary>Updates and Settings</summary>
 
-The Updates page fills the window: tracked Mods and download history are compact lists with filters, beside install safety and backups.
+The Updates page has a status area with Check now and three views: Mod updates, Download history, and Install and recovery.
 
-![Updates page: six tracked demo Mods, a filtered download history and install safety](./docs/assets/screenshots/updates-v4.6.png)
+![Updates page: the status area, the three views and two sample tracked Mods](./docs/assets/screenshots/updates-v4.8.png)
 
-Settings shows a two-column overview: appearance and language, app updates, the repository's online category, diagnostics and open-source components.
+Settings uses cards, in two columns on wide windows: appearance and language on the left; app updates, project links and diagnostics on the right. The picture is cropped below the diagnostics.
 
-![Settings page: appearance and language, project links and app version, online category and diagnostics](./docs/assets/screenshots/settings-v4.6.png)
+![Settings page: appearance and language, app updates, the project link and diagnostics](./docs/assets/screenshots/settings-v4.8.png)
 
 Combination presets (4.1 screenshot): save a Mod set with persistent values, review its members, and export or install a combination bundle.
 
@@ -82,6 +86,14 @@ Combination presets (4.1 screenshot): save a Mod set with persistent values, rev
 </details>
 
 Guides: [user guide](./docs/guides/en/User-Guide.md) · [shortcut panel and overlay](./docs/guides/en/Shortcut-Panel.md) · [state slots](./docs/guides/en/State-Slots.md) · [combination presets](./docs/guides/en/Combination-Presets.md)
+
+## What's New in 4.8
+
+- **A new interface:** a navigation pane with a search box in the title bar (Ctrl+K), the Dashboard and Settings as cards, a Mod workspace with a command bar, resizable columns and a details drawer, an Online page with a wider drawer and clear loading, empty and error states, an Updates page in three views, Shortcuts as one column of cards, and dialogs whose buttons name their action, with red buttons for destructive ones.
+- **Data safety:** fixes for turning a single Mod on or off when the source and target overlap, the preset picture cleanup at startup following a link, deleting a Mod while the loader folder is unavailable, copy-mode preset restores deleting a same-named folder, and a character rename leaving links and saved paths behind. All five are in 4.7.3 and earlier.
+- **Faster start:** four pages are created when first opened, so the app starts about 80–120 ms faster.
+
+[4.8.0 release notes](./docs/releases/v4.8.0.md) · [Verification scope](./docs/verification/v4.8.0.md)
 
 ## What's New in 4.7
 

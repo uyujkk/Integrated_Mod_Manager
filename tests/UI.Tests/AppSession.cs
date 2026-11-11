@@ -172,6 +172,45 @@ public sealed class AppSession : IDisposable
 
     public JsonNode ShellConfig() => JsonNode.Parse(File.ReadAllText(Path.Combine(AppFolder, "beta-shell.json")))!;
 
+    // The app saves its settings just after a change, so a test reads the file while it may be being written (#121).
+    // A half-written or locked file counts as "not saved yet".
+    public JsonNode? TryShellConfig()
+    {
+        try { return ShellConfig(); }
+        catch (Exception ex) when (ex is IOException or UnauthorizedAccessException or JsonException) { return null; }
+    }
+
+    // Waits up to five seconds until the saved settings show the change. A file that can't be read yet, or a value that
+    // isn't there yet, counts as "not saved yet"; returns the settings that showed it.
+    public JsonNode WaitForSaved(Func<JsonNode, bool> saved, string what)
+    {
+        JsonNode? last = null;
+        bool Shows()
+        {
+            last = TryShellConfig();
+            if (last is null) return false;
+            try { return saved(last); }
+            catch (Exception ex) when (ex is NullReferenceException or InvalidOperationException or FormatException) { return false; }
+        }
+        Assert.True(SpinWait.SpinUntil(Shows, TimeSpan.FromSeconds(5)), what + (last is null ? " (the settings file could not be read)" : ""));
+        return last!;
+    }
+
+    // The saved settings when no change is expected: waits only until the file can be read whole.
+    public JsonNode ReadSaved() => WaitForSaved(_ => true, "The settings file should be readable");
+
+    // config.ini, written by the window the same way: waits up to five seconds for a line.
+    public void WaitForConfigLine(string line, string what)
+    {
+        string path = Path.Combine(AppFolder, "config.ini");
+        bool Shows()
+        {
+            try { return File.ReadAllLines(path).Contains(line); }
+            catch (Exception ex) when (ex is IOException or UnauthorizedAccessException) { return false; }
+        }
+        Assert.True(SpinWait.SpinUntil(Shows, TimeSpan.FromSeconds(5)), what);
+    }
+
     /// <summary>Unhandled exceptions and issues the app logged during the session.</summary>
     public IReadOnlyList<string> Errors()
     {

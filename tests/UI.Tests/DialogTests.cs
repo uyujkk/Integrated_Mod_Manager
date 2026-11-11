@@ -39,7 +39,7 @@ public sealed class DialogTests
             Assert.True(FlaUI.Core.Tools.Retry.WhileTrue(
                 () => app.MainWindow.FindFirstDescendant(cf => cf.ByName(app.Text("Dialogs.Delete"))) is not null, TimeSpan.FromSeconds(5)).Result,
                 "The dialog should close");
-            JsonArray profiles = app.ShellConfig()["ConfigurationProfiles"]!.AsArray();
+            JsonArray profiles = app.ReadSaved()["ConfigurationProfiles"]!.AsArray();
             Assert.Equal("keep-me", (string?)Assert.Single(profiles)!["Id"]);
         }
         Assert.True(app.IsRunning);
