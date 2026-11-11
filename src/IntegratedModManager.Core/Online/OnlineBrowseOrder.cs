@@ -14,6 +14,25 @@ public enum OnlineSortMode
 
 public static class OnlineBrowseOrder
 {
+    /// <summary>
+    /// The site's own order for this mode (issue #129): likes, downloads and update time are sorted by GameBanana across
+    /// every page, so paging keeps the order. Hotness and views stay a sort of the current page (null here).
+    /// </summary>
+    public static string? ServerSort(OnlineSortMode mode) => mode switch
+    {
+        OnlineSortMode.Likes => "Generic_MostLiked",
+        OnlineSortMode.Downloads => "Generic_MostDownloaded",
+        OnlineSortMode.Updated => "Generic_LatestUpdated",
+        _ => null
+    };
+
+    /// <summary>
+    /// The order a page is shown in: as the server sent it when the server sorted it (re-sorting would undo that,
+    /// for example by download counts that are still being filled in), otherwise sorted here.
+    /// </summary>
+    public static IEnumerable<OnlineModCard> Arrange(IEnumerable<OnlineModCard> mods, OnlineSortMode mode)
+        => ServerSort(mode) is null ? Sort(mods, mode) : mods;
+
     /// <summary>Orders a page of Mods; ties fall back to hotness (to downloads when sorting by hotness).</summary>
     public static IEnumerable<OnlineModCard> Sort(IEnumerable<OnlineModCard> mods, OnlineSortMode mode) => mode switch
     {

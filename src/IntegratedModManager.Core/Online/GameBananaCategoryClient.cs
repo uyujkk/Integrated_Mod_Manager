@@ -46,10 +46,10 @@ public sealed class OnlineCategoryPageResult
 public static class GameBananaCategoryClient
 {
     public static async Task<OnlineCategoryPageResult> GetPageAsync(HttpClient client, string categoryId, int page, int pageSize,
-        int authorId, DateTimeOffset now, CancellationToken cancellationToken = default)
+        int authorId, DateTimeOffset now, CancellationToken cancellationToken = default, string? serverSort = null)
     {
         pageSize = Math.Clamp(pageSize, 1, 50);
-        using HttpResponseMessage response = await client.GetAsync(OnlineBrowsePolicy.CategoryPageUrl(categoryId, page, pageSize, authorId), cancellationToken);
+        using HttpResponseMessage response = await client.GetAsync(OnlineBrowsePolicy.CategoryPageUrl(categoryId, page, pageSize, authorId, serverSort), cancellationToken);
         if (response.StatusCode == HttpStatusCode.TooManyRequests) throw new OnlineRateLimitException(response.Headers.RetryAfter?.Delta);
         response.EnsureSuccessStatusCode();
 
