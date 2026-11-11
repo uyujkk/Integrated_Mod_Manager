@@ -23,6 +23,8 @@ public sealed partial class OnlinePage
                 Content = T("OnlineCharacters.AllCharacters"),
                 Tag = string.Empty
             });
+            if (CurrentOnlineCategories() is { CharacterTop: { } characterTop } index && index.CharacterTopId != OnlineRepositoryCategoryId())
+                OnlineCharacterComboBox.Items.Add(new ComboBoxItem { Content = T("OnlineCategories.AllOfTop", characterTop.Name), Tag = AllCharacterTopKey });
 
             foreach (OnlineCharacterOption character in visibleCharacters)
             {
@@ -33,9 +35,10 @@ public sealed partial class OnlinePage
                 });
             }
 
+            string selectedKey = ShowsAllOfCharacterTop() ? AllCharacterTopKey : _services.Online.Page.CharacterFilter;
             ComboBoxItem? selectedItem = OnlineCharacterComboBox.Items
                 .OfType<ComboBoxItem>()
-                .FirstOrDefault(item => string.Equals(item.Tag as string ?? string.Empty, _services.Online.Page.CharacterFilter, StringComparison.OrdinalIgnoreCase));
+                .FirstOrDefault(item => string.Equals(item.Tag as string ?? string.Empty, selectedKey, StringComparison.OrdinalIgnoreCase));
 
             OnlineCharacterComboBox.SelectedItem = selectedItem ?? OnlineCharacterComboBox.Items.OfType<ComboBoxItem>().FirstOrDefault();
         }
@@ -213,7 +216,9 @@ public sealed partial class OnlinePage
         EnsureOnlineCharacterOptionsForRepository(_services.Repositories.Selected);
         IReadOnlyList<OnlineCharacterOption> visibleCharacters = GetVisibleOnlineCharacterOptions();
         string characterSignature = string.Join(";", visibleCharacters.Select(item => $"{item.Key}:{item.DisplayNameZh}:{item.DisplayNameEn}:{item.CategoryId}:{item.AvatarUrl}:{item.WikiOrder}"));
-        string signature = $"{_services.Language.Current}|{_services.Appearance.IsDark}|{_isLoadingOnlineMods}|{_services.Online.Page.CharacterFilter}|{_services.Online.Page.TotalCount}|horizontal={_useHorizontalOnlineCharacterRail}|{characterSignature}";
+        OnlineCategory? allTop = CurrentOnlineCategories() is { CharacterTop: { } top } categories && categories.CharacterTopId != OnlineRepositoryCategoryId() ? top : null;
+        string signature = $"{_services.Language.Current}|{_services.Appearance.IsDark}|{_isLoadingOnlineMods}|{_services.Online.Page.CharacterFilter}|{_services.Online.Page.TotalCount}|horizontal={_useHorizontalOnlineCharacterRail}|{characterSignature}"
+            + $"|allTop={allTop?.Name}:{ShowsAllOfCharacterTop()}";
         if (string.Equals(signature, _onlineCharacterStripSignature, StringComparison.Ordinal))
         {
             return;
@@ -231,9 +236,21 @@ public sealed partial class OnlinePage
             string.Empty,
             T("OnlineCharacters.All"),
             null,
-            string.IsNullOrWhiteSpace(_services.Online.Page.CharacterFilter) ? _services.Online.Page.TotalCount : null,
+            string.IsNullOrWhiteSpace(_services.Online.Page.CharacterFilter) && !ShowsAllOfCharacterTop() ? _services.Online.Page.TotalCount : null,
             avatarRequestVersion,
             avatarCancellationToken));
+
+        // Issue #129: every Mod under the top-level category, including weapons, NPCs and Mods without a character.
+        if (allTop is not null)
+        {
+            OnlineCharacterAvatarPanel.Children.Add(CreateOnlineCharacterButton(
+                AllCharacterTopKey,
+                T("OnlineCategories.AllOfTop", allTop.Name),
+                null,
+                ShowsAllOfCharacterTop() ? _services.Online.Page.TotalCount : null,
+                avatarRequestVersion,
+                avatarCancellationToken));
+        }
 
         foreach (OnlineCharacterOption character in visibleCharacters)
         {
@@ -263,7 +280,8 @@ public sealed partial class OnlinePage
         int avatarRequestVersion,
         CancellationToken avatarCancellationToken)
     {
-        bool isSelected = string.Equals(character, _services.Online.Page.CharacterFilter, StringComparison.OrdinalIgnoreCase);
+        bool isSelected = character == AllCharacterTopKey ? ShowsAllOfCharacterTop()
+            : !ShowsAllOfCharacterTop() && string.Equals(character, _services.Online.Page.CharacterFilter, StringComparison.OrdinalIgnoreCase);
         double avatarSize = _useHorizontalOnlineCharacterRail ? 46 : 42;
         var avatarHost = new Border
         {
@@ -412,10 +430,11 @@ public sealed partial class OnlinePage
         string tooltip = characterOption is null
             ? label
             : $"{characterOption.DisplayNameZh} / {characterOption.DisplayNameEn}";
-        ToolTipService.SetToolTip(button, string.IsNullOrWhiteSpace(character) ? T("OnlineCharacters.ShowAllCharacters") : tooltip);
+        ToolTipService.SetToolTip(button, string.IsNullOrWhiteSpace(character) ? T("OnlineCharacters.ShowAllCharacters")
+            : character == AllCharacterTopKey ? T("OnlineCategories.AllOfTopHint", CurrentOnlineCategories()?.CharacterTop?.Name ?? label) : tooltip);
         AutomationProperties.SetName(button, string.IsNullOrWhiteSpace(character) ? T("OnlineCharacters.AllCharacters") : label);
         button.Click += async (_, _) => await _host.RunUiActionAsync("SelectOnlineCharacterAsync", () => SelectOnlineCharacterAsync(character));
-        return WrapCharacterButtonWithFavorite(button, character);
+        return character == AllCharacterTopKey ? button : WrapCharacterButtonWithFavorite(button, character);
     }
 
     private string GetOnlineCharacterDisplayName(EndfieldCharacterInfo character)
@@ -543,9 +562,17 @@ public sealed partial class OnlinePage
     private async Task SelectOnlineCharacterAsync(string character)
     {
         character ??= string.Empty;
-        if (string.Equals(character, _services.Online.Page.CharacterFilter, StringComparison.OrdinalIgnoreCase))
+        bool allOfTop = character == AllCharacterTopKey;
+        if (allOfTop) character = string.Empty;
+        if (allOfTop == ShowsAllOfCharacterTop()
+            && string.Equals(character, _services.Online.Page.CharacterFilter, StringComparison.OrdinalIgnoreCase))
         {
             return;
+        }
+        if (allOfTop != _services.Online.Page.ShowAllOfCharacterTop)
+        {
+            _services.Online.Page.ShowAllOfCharacterTop = allOfTop;
+            SaveOnlineCategorySelection();
         }
 
         // The new character's cards fade in when they arrive; the old ones no longer fade out first,
@@ -558,9 +585,10 @@ public sealed partial class OnlinePage
         _isApplyingOnlineCharacterSelection = true;
         try
         {
+            string comboKey = allOfTop ? AllCharacterTopKey : character;
             OnlineCharacterComboBox.SelectedItem = OnlineCharacterComboBox.Items
                 .OfType<ComboBoxItem>()
-                .FirstOrDefault(item => string.Equals(item.Tag as string ?? string.Empty, character, StringComparison.OrdinalIgnoreCase));
+                .FirstOrDefault(item => string.Equals(item.Tag as string ?? string.Empty, comboKey, StringComparison.OrdinalIgnoreCase));
         }
         finally
         {
@@ -674,6 +702,12 @@ public sealed partial class OnlinePage
 
     private CharacterFolderPlan PlanCharacterFolder(OnlineModCard mod, string repositoryPath, IReadOnlyCollection<string> aliases)
     {
+        // Issue #129: weapons, UI, other… go to a folder named after the category, planned and created like a character's.
+        if (GetOnlineCategoryFolderName(mod) is { } category)
+        {
+            return CategoryFolderPlanner.Plan(repositoryPath, Directory.GetDirectories(repositoryPath),
+                Directory.GetFiles(repositoryPath).Select(Path.GetFileName).OfType<string>().ToArray(), category);
+        }
         (string? chinese, string? english) = GetCharacterFolderNames(mod);
         return CharacterFolderPlanner.Plan(repositoryPath,
             Directory.GetDirectories(repositoryPath),

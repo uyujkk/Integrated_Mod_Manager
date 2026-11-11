@@ -37,11 +37,14 @@ public sealed partial class OnlinePage
             : windowWidth;
 
         OnlineCharacterRailLayout railLayout = OnlineLayoutPolicy.CharacterRail(onlineContentWidth, _host.Root.ActualHeight);
-        // Narrow pages fold the rail into the toolbar's character list (stage J6-b).
-        _onlineCharacterRailCollapsed = railLayout.Collapsed;
-        OnlineCharacterRailHost.Visibility = railLayout.Collapsed ? Visibility.Collapsed : Visibility.Visible;
-        OnlineCharacterComboBox.Visibility = railLayout.Collapsed ? Visibility.Visible : Visibility.Collapsed;
-        bool useHorizontalCharacterRail = railLayout.Horizontal;
+        // Narrow pages fold the rail into the toolbar's character list (stage J6-b); categories without characters
+        // have neither (issue #129).
+        bool showCharacters = IsOnlineCharacterView();
+        bool railHidden = railLayout.Collapsed || !showCharacters;
+        _onlineCharacterRailCollapsed = railLayout.Collapsed && showCharacters;
+        OnlineCharacterRailHost.Visibility = railHidden ? Visibility.Collapsed : Visibility.Visible;
+        OnlineCharacterComboBox.Visibility = _onlineCharacterRailCollapsed ? Visibility.Visible : Visibility.Collapsed;
+        bool useHorizontalCharacterRail = railLayout.Horizontal && showCharacters;
         bool characterRailModeChanged = _useHorizontalOnlineCharacterRail != useHorizontalCharacterRail;
         _useHorizontalOnlineCharacterRail = useHorizontalCharacterRail;
         if (useHorizontalCharacterRail)
@@ -66,8 +69,8 @@ public sealed partial class OnlinePage
         }
         else
         {
-            OnlineCharacterRailColumn.Width = new GridLength(railLayout.ColumnWidth);
-            OnlineWorkspaceGrid.ColumnSpacing = railLayout.Collapsed ? 0 : 12;
+            OnlineCharacterRailColumn.Width = new GridLength(showCharacters ? railLayout.ColumnWidth : 0);
+            OnlineWorkspaceGrid.ColumnSpacing = railHidden ? 0 : 12;
             OnlineResultsColumn.Width = new GridLength(1, GridUnitType.Star);
             OnlineCharacterRailRow.Height = new GridLength(1, GridUnitType.Star);
             OnlineResultsRow.Height = new GridLength(0);
@@ -309,7 +312,15 @@ public sealed partial class OnlinePage
         {
             if (_services.Online.Page.SortMode == sortMode) return;
             ResetOnlineBrowsePosition();
+            bool newRequest = OnlineBrowseOrder.ServerSort(_services.Online.Page.SortMode) != OnlineBrowseOrder.ServerSort(sortMode);
             _services.Online.Page.SortMode = sortMode;
+            if (newRequest)
+            {
+                // Issue #129: a site-sorted list is another request, from its first page.
+                _services.Online.Page.ResetPaging();
+                _lastLoadedOnlineConfigKey = null;
+                _ = LoadOnlineModsAsync(forceReload: false);
+            }
             RefreshOnlinePaneV2();
             _host.SaveShellConfig();
         }

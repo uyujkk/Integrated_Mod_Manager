@@ -701,9 +701,12 @@ public sealed partial class OnlinePage
 
             var options = new List<(string Label, object Tag)> { (T("OnlineDownloadFlow.UseTheRepositoryRootFolder"), repository.SourcePath) };
             int suggestedIndex = 0;
+            string? category = GetOnlineCategoryFolderName(mod);
             if (plan.Action == CharacterFolderAction.Create)
             {
-                options.Add((T("OnlineDownloadFlow.NewCharacterFolderRecommended", Path.GetFileName(plan.Path)), new NewCharacterFolderChoice(plan.Path!)));
+                options.Add((category is null
+                    ? T("OnlineDownloadFlow.NewCharacterFolderRecommended", Path.GetFileName(plan.Path))
+                    : T("OnlineCategories.NewFolderRecommended", Path.GetFileName(plan.Path)), new NewCharacterFolderChoice(plan.Path!)));
                 suggestedIndex = 1;
             }
 
@@ -721,7 +724,7 @@ public sealed partial class OnlinePage
             }
 
             string characterDisplayName = GetOnlineCharacterDisplayName(mod.CharacterName);
-            string destinationHint = plan.Action switch
+            string destinationHint = category is not null ? CategoryFolderHint(plan, category) : plan.Action switch
             {
                 CharacterFolderAction.UseExisting => T("OnlineDownloadFlow.RecognizedAndPreselected", characterDisplayName, Path.GetFileName(suggestedFolder)),
                 CharacterFolderAction.Create => T("OnlineDownloadFlow.ThisRepositoryHasNoFolderFor", characterDisplayName, plan.Path),

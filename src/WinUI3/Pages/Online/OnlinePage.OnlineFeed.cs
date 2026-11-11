@@ -162,10 +162,13 @@ public sealed partial class OnlinePage
 
     private List<OnlineModCard> GetFilteredOnlineMods()
     {
-        IEnumerable<OnlineModCard> query = _services.Online.Page.Mods
-            .Where(mod => IsAllowedSkinCategory(mod.RootCategoryName));
+        // Issue #129: only the character list keeps to skins and filters by character; other categories show everything.
+        bool characterList = IsOnlineCharacterView() && !ShowsAllOfCharacterTop();
+        IEnumerable<OnlineModCard> query = characterList
+            ? _services.Online.Page.Mods.Where(mod => IsAllowedSkinCategory(mod.RootCategoryName))
+            : _services.Online.Page.Mods;
 
-        if (!string.IsNullOrWhiteSpace(_services.Online.Page.CharacterFilter))
+        if (characterList && !string.IsNullOrWhiteSpace(_services.Online.Page.CharacterFilter))
         {
             query = query.Where(mod => DoesOnlineModMatchCharacter(
                 _services.Online.Page.CharacterFilter,
@@ -180,7 +183,7 @@ public sealed partial class OnlinePage
         if (_services.Online.Page.AuthorWorkFilter == 1) query = query.Where(mod => FindInstalledOnlineMod(mod) is not null);
         else if (_services.Online.Page.AuthorWorkFilter == 2) query = query.Where(IsSavedOnlineMod);
 
-        return OnlineBrowseOrder.Sort(query, _services.Online.Page.SortMode).ToList();
+        return OnlineBrowseOrder.Arrange(query, _services.Online.Page.SortMode).ToList();
     }
 
     private List<OnlineModCard> GetVisibleOnlineMods(List<OnlineModCard> filteredMods)
@@ -192,6 +195,7 @@ public sealed partial class OnlinePage
     private string GetOnlineRequestCategoryId(WorkspaceRepository? repository)
     {
         EnsureOnlineCharacterOptionsForRepository(repository);
+        if (OnlineScopeCategoryId() is { } scope) return scope;
         OnlineCharacterOption? selectedCharacter = _services.Online.Page.CharacterOptions.FirstOrDefault(character =>
             string.Equals(character.Key, _services.Online.Page.CharacterFilter, StringComparison.OrdinalIgnoreCase));
         return selectedCharacter is not null && !string.IsNullOrWhiteSpace(selectedCharacter.CategoryId)
@@ -317,8 +321,14 @@ public sealed partial class OnlinePage
             return;
         }
 
+        _ = EnsureOnlineCategoriesAsync();
         int authorId = _services.Online.Page.AuthorId;
-        string configKey = $"{repository.Id}|{source}|{categoryId}|character={_services.Online.Page.CharacterFilter}|page={_services.Online.Page.CurrentPage}{OnlineAuthorKey}";
+        // Issue #129: likes, downloads and update time come sorted from the site, so the sort is part of the request.
+        string? serverSort = OnlineBrowseOrder.ServerSort(_services.Online.Page.SortMode);
+        string? scopeCategoryId = OnlineScopeCategoryId();
+        _requestedOnlineScope = scopeCategoryId ?? string.Empty;
+        string configKey = $"{repository.Id}|{source}|{categoryId}|character={_services.Online.Page.CharacterFilter}|page={_services.Online.Page.CurrentPage}{OnlineAuthorKey}"
+            + $"|scope={scopeCategoryId}|sort={serverSort}";
         if (forceReload)
         {
             _blockedOnlineAutoLoadConfigKey = null;
@@ -357,11 +367,12 @@ public sealed partial class OnlinePage
 
         try
         {
-            bool needsCharacterFallback = !string.IsNullOrWhiteSpace(_services.Online.Page.CharacterFilter)
+            bool needsCharacterFallback = scopeCategoryId is null && !string.IsNullOrWhiteSpace(_services.Online.Page.CharacterFilter)
                 && string.Equals(categoryId, baseCategoryId, StringComparison.OrdinalIgnoreCase);
             string cacheCategoryKey = (needsCharacterFallback
                 ? $"category-v3|{baseCategoryId}-character-{_services.Online.Page.CharacterFilter}"
-                : $"category-v3|{categoryId}") + (authorId > 0 ? $"|author={authorId}" : string.Empty);
+                : $"category-v3|{categoryId}") + (authorId > 0 ? $"|author={authorId}" : string.Empty)
+                + (serverSort is null ? string.Empty : $"|sort={serverSort}");
             OnlineCategoryPageResult? cachedPage = forceReload
                 ? null
                 : await TryReadOnlineCategoryPageCacheAsync(cacheCategoryKey, _services.Online.Page.CurrentPage);
@@ -400,13 +411,15 @@ public sealed partial class OnlinePage
                                 _services.Online.Page.CurrentPage,
                                 useEndfieldMetadata,
                                 cacheCategoryKey,
-                                linkedCancellation.Token)
+                                linkedCancellation.Token,
+                                serverSort)
                             : await FetchGameBananaCategoryPageAsync(
                                 categoryId,
                                 _services.Online.Page.CurrentPage,
                                 useEndfieldMetadata: useEndfieldMetadata,
                                 cancellationToken: linkedCancellation.Token,
-                                authorId: authorId));
+                                authorId: authorId,
+                                serverSort: serverSort));
                     if (!loadedFromCache)
                     {
                         ResetOnlineRateLimit();
@@ -502,7 +515,7 @@ public sealed partial class OnlinePage
             if (pageResult.Mods.Count == 0)
             {
                 _lastLoadedOnlineConfigKey = configKey;
-                SetOnlineStatus(M("OnlineFeed.NoSkinMods"));
+                SetOnlineStatus(scopeCategoryId is null ? M("OnlineFeed.NoSkinMods") : M("OnlineCategories.NoModsInCategory"));
                 return;
             }
 
@@ -523,12 +536,13 @@ public sealed partial class OnlinePage
             // cache hit, so paging forward stays instant). Never while throttled or after a timeout.
             if (!needsCharacterFallback && !loadedDuringRateLimit && !loadedAfterTimeout && _services.Online.Page.CurrentPage < _services.Online.Page.TotalPages)
             {
-                _ = PrefetchNextOnlinePageAsync(categoryId, _services.Online.Page.CurrentPage + 1, useEndfieldMetadata, authorId, cacheCategoryKey, configKey);
+                _ = PrefetchNextOnlinePageAsync(categoryId, _services.Online.Page.CurrentPage + 1, useEndfieldMetadata, authorId, cacheCategoryKey, configKey, serverSort);
             }
 
             OnlineCharacterOption? selectedCharacter = _services.Online.Page.CharacterOptions.FirstOrDefault(character =>
                 string.Equals(character.Key, _services.Online.Page.CharacterFilter, StringComparison.OrdinalIgnoreCase));
-            string roleLabel = selectedCharacter is null
+            string roleLabel = OnlineScopeCategoryName() is { } scopeName ? scopeName
+                : selectedCharacter is null
                 ? T("OnlineFeed.AllCategories")
                 : IsChineseUi ? selectedCharacter.DisplayNameZh : selectedCharacter.DisplayNameEn;
             SetOnlineCacheStatus(loadedFromCache
@@ -609,7 +623,7 @@ public sealed partial class OnlinePage
 
     /// <summary>Best-effort single request so "Next page" opens from cache. Never shows errors.</summary>
     private async Task PrefetchNextOnlinePageAsync(
-        string categoryId, int nextPage, bool useEndfieldMetadata, int authorId, string cacheCategoryKey, string configKey)
+        string categoryId, int nextPage, bool useEndfieldMetadata, int authorId, string cacheCategoryKey, string configKey, string? serverSort)
     {
         try
         {
@@ -620,7 +634,7 @@ public sealed partial class OnlinePage
                 || await TryReadOnlineCategoryPageCacheAsync(cacheCategoryKey, nextPage) is not null) return;
             using var timeout = new CancellationTokenSource(OnlineModListRequestTimeout);
             OnlineCategoryPageResult next = await FetchGameBananaCategoryPageAsync(
-                categoryId, nextPage, useEndfieldMetadata: useEndfieldMetadata, cancellationToken: timeout.Token, authorId: authorId);
+                categoryId, nextPage, useEndfieldMetadata: useEndfieldMetadata, cancellationToken: timeout.Token, authorId: authorId, serverSort: serverSort);
             if (next.Mods.Count == 0) return;
             // Cache the page complete with download counts, so opening it needs no request at all.
             try { await FillOnlineDownloadCountsAsync(next.Mods, timeout.Token); }
@@ -643,7 +657,8 @@ public sealed partial class OnlinePage
         int page,
         bool useEndfieldMetadata,
         string cacheCategoryKey,
-        CancellationToken cancellationToken = default)
+        CancellationToken cancellationToken = default,
+        string? serverSort = null)
     {
         const int scanPageSize = 50;
         // A whole-category scan used to run page by page (about 14 x 350 ms for Endfield, at the
@@ -652,7 +667,7 @@ public sealed partial class OnlinePage
         IReadOnlyList<OnlineModCard> all = await OnlinePageScanner.ScanAsync(async (sourcePage, token) =>
         {
             OnlineCategoryPageResult sourceResult = await FetchGameBananaCategoryPageAsync(
-                categoryId, sourcePage, scanPageSize, useEndfieldMetadata: useEndfieldMetadata, cancellationToken: token);
+                categoryId, sourcePage, scanPageSize, useEndfieldMetadata: useEndfieldMetadata, cancellationToken: token, serverSort: serverSort);
             return new OnlineScanPage<OnlineModCard>(sourceResult.Mods, sourceResult.TotalPages);
         }, OnlineRawPageLimit, maxConcurrency: 3, cancellationToken);
 
@@ -679,10 +694,11 @@ public sealed partial class OnlinePage
         int pageSize = OnlineDisplayPageSize,
         bool? useEndfieldMetadata = null,
         CancellationToken cancellationToken = default,
-        int authorId = 0)
+        int authorId = 0,
+        string? serverSort = null)
     {
         bool shouldUseEndfieldMetadata = useEndfieldMetadata ?? _services.OnlineSource.IsEndfieldCategory(categoryId);
-        OnlineCategoryPageResult result = await GameBananaCategoryClient.GetPageAsync(_host.Http, categoryId, page, pageSize, authorId, DateTimeOffset.Now, cancellationToken);
+        OnlineCategoryPageResult result = await GameBananaCategoryClient.GetPageAsync(_host.Http, categoryId, page, pageSize, authorId, DateTimeOffset.Now, cancellationToken, serverSort);
         foreach (OnlineModCard card in result.Mods) AdaptGameBananaCategoryMod(card, shouldUseEndfieldMetadata);
         return result;
     }

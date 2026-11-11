@@ -35,6 +35,7 @@
                     <Grid RowSpacing="12">
                         <Grid.RowDefinitions>
                             <RowDefinition Height="Auto" />
+                            <RowDefinition Height="Auto" />
                             <RowDefinition Height="*" />
                         </Grid.RowDefinitions>
 
@@ -137,9 +138,30 @@
                             </StackPanel>
                         </Grid>
 
+                        <!-- Issue #129: the game's top-level Mod categories, read from the site, and the chosen one's
+                             subcategories. Hidden until they are known; the character category keeps the rail. -->
+                        <StackPanel x:Name="OnlineCategoryBarPanel" Grid.Row="1" Spacing="2" Visibility="Collapsed">
+                            <ScrollViewer
+                                HorizontalScrollBarVisibility="Auto"
+                                HorizontalScrollMode="Enabled"
+                                VerticalScrollBarVisibility="Disabled"
+                                VerticalScrollMode="Disabled">
+                                <SelectorBar x:Name="OnlineCategorySelectorBar" SelectionChanged="OnOnlineCategorySelectionChanged" />
+                            </ScrollViewer>
+                            <ScrollViewer
+                                x:Name="OnlineSubcategoryScrollViewer"
+                                HorizontalScrollBarVisibility="Auto"
+                                HorizontalScrollMode="Enabled"
+                                VerticalScrollBarVisibility="Disabled"
+                                VerticalScrollMode="Disabled"
+                                Visibility="Collapsed">
+                                <SelectorBar x:Name="OnlineSubcategorySelectorBar" SelectionChanged="OnOnlineSubcategorySelectionChanged" />
+                            </ScrollViewer>
+                        </StackPanel>
+
                         <Grid
                             x:Name="OnlineWorkspaceGrid"
-                            Grid.Row="1"
+                            Grid.Row="2"
                             HorizontalAlignment="Stretch"
                             ColumnSpacing="12"
                             RowSpacing="12"

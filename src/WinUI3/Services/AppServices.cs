@@ -37,6 +37,9 @@ internal sealed class AppServices
     /// <summary>The character catalog of each repository's game (stage J finish, step 3).</summary>
     public CharacterCatalogService CharacterCatalog { get; }
 
+    /// <summary>The Mod categories of each repository's game (issue #129).</summary>
+    public OnlineCategoryService OnlineCategories { get; } = new();
+
     /// <summary>The Online page's view model and preferences (stage J finish, step 3).</summary>
     public OnlineState Online { get; } = new();
 
