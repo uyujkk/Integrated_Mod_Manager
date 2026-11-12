@@ -103,6 +103,7 @@ public sealed partial class MainWindow
         _workspaceView.ModLinkTextBox.PlaceholderText = T("Localization.PasteTheWebLinkForThe");
         _workspaceView.PreviewFooterTextBlock.Text = T("Localization.ThePreviewShowsTheCurrentSecond");
         _workspaceView.OpenModLinkButton.Content = T("Localization.OpenLink");
+        RefreshCombinationProfileText();
 
         _workspaceView.ProgressTextBlock.Text = string.IsNullOrWhiteSpace(_workspaceView.ProgressTextBlock.Text)
             ? T("Common.NoActiveCopyTask")

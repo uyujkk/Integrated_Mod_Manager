@@ -76,24 +76,38 @@ public sealed partial class MainWindow
 
     private void RefreshShellStateAfterSwitch()
     {
-        ApplyLanguage();
-        RefreshSettingsPane();
-
         if (_currentPrimarySection is PrimarySection.Dashboard or PrimarySection.Repository or PrimarySection.Online)
         {
             ApplySelectedRepositoryToInputs();
         }
 
-        if (_pendingRepositoryRefresh && _currentPrimarySection == PrimarySection.Repository)
+        // Language changes and background operations update their own controls. A page switch
+        // only refreshes the destination, so hidden pages don't rebuild lists or rescan files.
+        switch (_currentPrimarySection)
         {
-            _pendingRepositoryRefresh = false;
-            _ = _workspaceView.RefreshListsAsync();
+            case PrimarySection.Dashboard:
+                RefreshDashboard();
+                RefreshRepositoryActionButtons();
+                break;
+            case PrimarySection.Repository:
+                RefreshConfigurationProfiles();
+                if (_pendingRepositoryRefresh)
+                {
+                    _pendingRepositoryRefresh = false;
+                    _ = _workspaceView.RefreshListsAsync();
+                }
+                break;
+            case PrimarySection.Online:
+                _onlineView.RefreshOnlinePaneV2();
+                break;
+            case PrimarySection.Updates:
+                RefreshUpdatesPane();
+                break;
+            case PrimarySection.Settings:
+                RefreshSettingsPane();
+                break;
         }
 
-        RefreshDashboard();
-        _onlineView.RefreshOnlinePaneV2();
-        RefreshUpdatesPane();
-        RefreshRepositoryActionButtons();
         SaveShellConfig();
     }
 
@@ -193,10 +207,12 @@ public sealed partial class MainWindow
             return;
         }
 
-        _onlineView.UpdateOnlineResponsiveLayout(width);
+        if (_currentPrimarySection == PrimarySection.Online)
+            _onlineView.UpdateOnlineResponsiveLayout(width);
         ApplyTitleBarSearchVisibility();
         // The Settings and Updates pages lay themselves out when their own size changes.
-        _workspaceView.UpdateRefinedWorkspaceLayout();
+        if (_currentPrimarySection == PrimarySection.Repository)
+            _workspaceView.UpdateRefinedWorkspaceLayout();
 
         // The navigation view opens its labelled pane from 1440 px (ExpandedModeThresholdWidth) unless
         // the user collapsed it; below that it shows icons.
