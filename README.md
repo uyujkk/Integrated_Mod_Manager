@@ -1,4 +1,4 @@
-> **v4.8.0 stable release.** Every page is redesigned, and five problems in 4.7.3 and earlier that could delete the wrong files or leave broken links are fixed; see the [4.8.0 notes](docs/releases/v4.8.0.md). **4.7:** preset pictures and pick by picture, overlay looks, click-through and automatic contrast, sharing a preset without Mod files, a language and game choice on first install, a Default slot for every Mod, and batch actions; 4.7.1–4.7.3 brought a .NET 8 updater, more reliable online character lists and a Russian interface. See the [4.7.0 notes](docs/releases/v4.7.0.md).
+> **v4.8.1 stable release.** Browse more GameBanana categories, sort across pages, and switch pages with less delay. See the [4.8.1 notes](docs/releases/v4.8.1.md). **4.8.0:** Every page is redesigned, and five problems in 4.7.3 and earlier that could delete the wrong files or leave broken links are fixed; see the [4.8.0 notes](docs/releases/v4.8.0.md). **4.7:** preset pictures and pick by picture, overlay looks, click-through and automatic contrast, sharing a preset without Mod files, a language and game choice on first install, a Default slot for every Mod, and batch actions; 4.7.1–4.7.3 brought a .NET 8 updater, more reliable online character lists and a Russian interface. See the [4.7.0 notes](docs/releases/v4.7.0.md).
 
 <div align="center">
   <img src="./src/WinUI3/Assets/AppIcon.png" width="96" alt="Integrated Mod Manager icon">
@@ -28,11 +28,11 @@
 
 ## Overview
 
-**Current stable version: [v4.8.0](https://github.com/uyujkk/Integrated_Mod_Manager/releases/tag/v4.8.0).** 4.8 redesigns every page (a navigation pane with title-bar search, card-based Dashboard and Settings, a Mod workspace with a command bar and resizable columns, an Online page with a details drawer, and clearer dialogs) and fixes five data-safety problems; 4.7 added preset pictures, overlay looks, preset sharing and other games. Characters in a repository show avatars, a character can keep several Mods enabled, each Mod can keep named state slots, and the always-on-top overlay can save presets (sending F10 first), switch slots in game and refresh after Mod changes. The shortcut panel, integrated Endfield launch, browsing and downloading, library tools and combination presets remain. See the [4.8.0 release notes](./docs/releases/v4.8.0.md), the [shortcut panel guide](./docs/guides/en/Shortcut-Panel.md) and the [launch and risk guide](./docs/guides/en/Endfield-Launch.md).
+**Current stable version: [v4.8.1](https://github.com/uyujkk/Integrated_Mod_Manager/releases/tag/v4.8.1).** 4.8 redesigns every page (a navigation pane with title-bar search, card-based Dashboard and Settings, a Mod workspace with a command bar and resizable columns, an Online page with a details drawer, and clearer dialogs) and fixes five data-safety problems; 4.7 added preset pictures, overlay looks, preset sharing and other games. Characters in a repository show avatars, a character can keep several Mods enabled, each Mod can keep named state slots, and the always-on-top overlay can save presets (sending F10 first), switch slots in game and refresh after Mod changes. The shortcut panel, integrated Endfield launch, browsing and downloading, library tools and combination presets remain. See the [4.8.0 release notes](./docs/releases/v4.8.0.md), the [shortcut panel guide](./docs/guides/en/Shortcut-Panel.md) and the [launch and risk guide](./docs/guides/en/Endfield-Launch.md).
 
 Integrated Mod Manager organizes different games or mod environments into independent repositories. It copies or removes complete mod folders between a local library and the target directory read by the game, while keeping preview images, source links, shortcut notes, online downloads, update records, profiles, and installation backups in one application.
 
-The application, launcher, and updater use version **4.8.0** (`4.8.0.0`). The tool is maintained by `uyujkk`. The Bandizip extraction fallback was contributed by [CaramelizedCUDA](https://github.com/CaramelizedCUDA). The earlier [4.0-beta](https://github.com/uyujkk/Integrated_Mod_Manager/releases/tag/v4.0-beta) remains archived separately.
+The application, launcher, and updater use version **4.8.1** (`4.8.1.0`). The tool is maintained by `uyujkk`. The Bandizip extraction fallback was contributed by [CaramelizedCUDA](https://github.com/CaramelizedCUDA). The earlier [4.0-beta](https://github.com/uyujkk/Integrated_Mod_Manager/releases/tag/v4.0-beta) remains archived separately.
 
 ## Interface Preview
 
@@ -93,7 +93,7 @@ Guides: [user guide](./docs/guides/en/User-Guide.md) · [shortcut panel and over
 - **Data safety:** fixes for turning a single Mod on or off when the source and target overlap, the preset picture cleanup at startup following a link, deleting a Mod while the loader folder is unavailable, copy-mode preset restores deleting a same-named folder, and a character rename leaving links and saved paths behind. All five are in 4.7.3 and earlier.
 - **Faster start:** four pages are created when first opened, so the app starts about 80–120 ms faster.
 
-[4.8.0 release notes](./docs/releases/v4.8.0.md) · [Verification scope](./docs/verification/v4.8.0.md)
+[4.8.1 release notes](./docs/releases/v4.8.1.md) · [Verification scope](./docs/verification/v4.8.1.md)
 
 ## What's New in 4.7
 

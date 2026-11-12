@@ -6,7 +6,13 @@
 
 This document records version changes in Integrated Mod Manager. Unpublished versions are marked separately.
 
-## v4.8.0 — 未发布（正式版 / Stable）
+## v4.8.1（正式版 / Stable）
+
+在线页支持 GameBanana 一级分类和子分类，以及跨页点赞、下载量和更新时间排序。修复在线页重复加载导致的无响应，以及 Windows 11 拖拽最大化黑屏，减少切页时的重复刷新。见 [v4.8.1](v4.8.1.md)。
+
+Adds GameBanana category and subcategory browsing and sorting across pages by likes, downloads, and last updated. Fixes an Online reload loop and a black area after drag-to-maximize on Windows 11. Reduces redundant work on page switches. See [v4.8.1](v4.8.1.md).
+
+## v4.8.0 — 2026-11-10（正式版 / Stable）
 
 重新设计整个界面：导航栏和标题栏搜索、卡片式的仪表盘与设置、带命令栏和可调分栏的 Mod 工作区、带抽屉和清晰状态的在线页、分成三个视图的更新页、一列卡片的快捷键页，以及写明动作、危险操作用红色按钮的对话框；启动快约 80–120 毫秒。修复 4.7.3 及更早版本中可能误删文件或留下失效链接的五个问题：源和目标重叠时开关单个 Mod（#105）、启动时清理预设图片进入目录联接（#106）、加载器文件夹不可用时删除 Mod（#109）、复制模式恢复组合预设删除同名文件夹（#107）、重命名角色后链接和保存的路径失效（#108）。见 [v4.8.0](v4.8.0.md)。
 
