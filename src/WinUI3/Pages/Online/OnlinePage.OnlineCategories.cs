@@ -6,9 +6,8 @@ using Microsoft.UI.Xaml.Controls;
 
 namespace ModFolderCopier.WinUI;
 
-// Issue #129: a row of the game's top-level Mod categories above the results. The category that holds the characters
-// keeps the character rail (with an extra "all of it" entry); any other category lists its Mods directly, with its
-// subcategories as a second row. The choice is remembered per repository, like the rest of the browse session.
+// Issue #129: top-level Mod categories and their direct subcategories sit above the results. The character
+// category keeps its character rail. The category choice is remembered per repository.
 public sealed partial class OnlinePage
 {
     // The rail's entry for every Mod under the character top-level category; never a character name.
@@ -23,13 +22,25 @@ public sealed partial class OnlinePage
 
     private OnlineCategoryIndex? CurrentOnlineCategories() => _services.OnlineCategories.Current(OnlineRepositoryCategoryId());
 
-    /// <summary>The character rail is shown: no categories known, or the top-level category that holds the characters.</summary>
+    private string SelectedOnlineTopId(OnlineCategoryIndex index)
+    {
+        string topId = _services.Online.Page.CategoryTopId;
+        return index.TopCategories.Any(category => category.Id == topId) ? topId : index.CharacterTopId;
+    }
+
+    private string? SelectedOnlineSubcategoryId(OnlineCategoryIndex index, string topId)
+    {
+        string subId = _services.Online.Page.CategorySubId;
+        return subId.Length > 0 && subId != index.RepositoryCategoryId
+            && index.SubcategoriesOf(topId).Any(category => category.Id == subId) ? subId : null;
+    }
+
+    /// <summary>Whether the selected category uses the character rail.</summary>
     private bool IsOnlineCharacterView()
     {
         OnlineCategoryIndex? index = CurrentOnlineCategories();
-        string top = _services.Online.Page.CategoryTopId;
-        return index?.CharacterTop is null || top.Length == 0 || top == index.CharacterTopId
-            || !index.TopCategories.Any(category => category.Id == top);
+        return index?.CharacterTop is null || (SelectedOnlineTopId(index) == index.CharacterTopId
+            && SelectedOnlineSubcategoryId(index, index.CharacterTopId) is null);
     }
 
     /// <summary>"All" of the character top-level category, characters or not; only when it is not the repository category itself.</summary>
@@ -46,10 +57,9 @@ public sealed partial class OnlinePage
         OnlineCategoryIndex? index = CurrentOnlineCategories();
         if (index is null) return null;
         if (ShowsAllOfCharacterTop()) return index.CharacterTopId;
-        if (IsOnlineCharacterView()) return null;
-        string top = _services.Online.Page.CategoryTopId;
-        string sub = _services.Online.Page.CategorySubId;
-        return sub.Length > 0 && index.SubcategoriesOf(top).Any(category => category.Id == sub) ? sub : top;
+        string topId = SelectedOnlineTopId(index);
+        return SelectedOnlineSubcategoryId(index, topId)
+            ?? (topId.Length > 0 && topId != index.CharacterTopId ? topId : null);
     }
 
     /// <summary>The name of the category shown instead of characters, for the status line; null in the character list.</summary>
@@ -88,8 +98,7 @@ public sealed partial class OnlinePage
             string categoryId = OnlineRepositoryCategoryId();
             OnlineCategoryIndex? index = await _services.OnlineCategories.EnsureAsync(categoryId, forceReload);
             if (index is null || _services.IsClosing || categoryId != OnlineRepositoryCategoryId()) return;
-            if (!IsOnlineCharacterView())
-                await _services.OnlineCategories.EnsureSubcategoriesAsync(categoryId, _services.Online.Page.CategoryTopId);
+            await _services.OnlineCategories.EnsureSubcategoriesAsync(categoryId, SelectedOnlineTopId(index));
         }
         catch (Exception ex)
         {
@@ -121,13 +130,19 @@ public sealed partial class OnlinePage
         {
             OnlineCategorySelectorBar.Items.Clear();
             OnlineSubcategorySelectorBar.Items.Clear();
-            if (index?.CharacterTop is null || index.TopCategories.Count < 2)
+            if (index?.CharacterTop is null)
             {
                 OnlineCategoryBarPanel.Visibility = Visibility.Collapsed;
                 return;
             }
 
-            string selectedTop = IsOnlineCharacterView() ? index.CharacterTopId : _services.Online.Page.CategoryTopId;
+            string selectedTop = SelectedOnlineTopId(index);
+            List<OnlineCategory> children = index.SubcategoriesOf(selectedTop);
+            if (index.TopCategories.Count == 1 && children.Count == 0)
+            {
+                OnlineCategoryBarPanel.Visibility = Visibility.Collapsed;
+                return;
+            }
             foreach (OnlineCategory top in index.TopCategories)
             {
                 var item = new SelectorBarItem { Text = top.Name, Tag = top.Id };
@@ -137,7 +152,6 @@ public sealed partial class OnlinePage
             }
             OnlineCategoryBarPanel.Visibility = Visibility.Visible;
 
-            List<OnlineCategory> children = IsOnlineCharacterView() ? [] : index.SubcategoriesOf(selectedTop);
             if (children.Count == 0)
             {
                 OnlineSubcategoryScrollViewer.Visibility = Visibility.Collapsed;
@@ -145,14 +159,18 @@ public sealed partial class OnlinePage
             }
             var all = new SelectorBarItem { Text = T("OnlineCategories.All"), Tag = string.Empty };
             OnlineSubcategorySelectorBar.Items.Add(all);
-            OnlineSubcategorySelectorBar.SelectedItem = all;
+            string selectedSub = SelectedOnlineSubcategoryId(index, selectedTop)
+                ?? (selectedTop == index.CharacterTopId && !ShowsAllOfCharacterTop()
+                    && children.Any(child => child.Id == index.RepositoryCategoryId) ? index.RepositoryCategoryId : string.Empty);
+            SelectorBarItem selectedItem = all;
             foreach (OnlineCategory child in children)
             {
                 var item = new SelectorBarItem { Text = child.Name, Tag = child.Id };
                 ToolTipService.SetToolTip(item, T("OnlineCategories.ItemCount", child.Name, child.ItemCount));
                 OnlineSubcategorySelectorBar.Items.Add(item);
-                if (child.Id == _services.Online.Page.CategorySubId) OnlineSubcategorySelectorBar.SelectedItem = item;
+                if (child.Id == selectedSub) selectedItem = item;
             }
+            OnlineSubcategorySelectorBar.SelectedItem = selectedItem;
             OnlineSubcategoryScrollViewer.Visibility = Visibility.Visible;
         }
         finally { _applyingOnlineCategoryBars = false; }
@@ -171,8 +189,6 @@ public sealed partial class OnlinePage
             _services.Online.Page.ShowAllOfCharacterTop = false;
             if (newTop.Length > 0) _services.Online.Page.CharacterFilter = string.Empty;
             await ApplyOnlineCategoryChangeAsync();
-            if (newTop.Length > 0 && await _services.OnlineCategories.EnsureSubcategoriesAsync(OnlineRepositoryCategoryId(), newTop) is { Count: > 0 })
-                PopulateOnlineCategoryBars();
         }
         catch (Exception ex) { _host.ReportUiActionFailure(nameof(OnOnlineCategorySelectionChanged), ex); }
     }
@@ -181,8 +197,14 @@ public sealed partial class OnlinePage
     {
         try
         {
-            if (_applyingOnlineCategoryBars || sender.SelectedItem?.Tag is not string subId || subId == _services.Online.Page.CategorySubId) return;
-            _services.Online.Page.CategorySubId = subId;
+            if (_applyingOnlineCategoryBars || sender.SelectedItem?.Tag is not string subId || CurrentOnlineCategories() is not { } index) return;
+            bool allOfTop = subId.Length == 0 && SelectedOnlineTopId(index) == index.CharacterTopId
+                && index.CharacterTopId != index.RepositoryCategoryId;
+            string newSub = subId == index.RepositoryCategoryId ? string.Empty : subId;
+            if (newSub == _services.Online.Page.CategorySubId && allOfTop == _services.Online.Page.ShowAllOfCharacterTop) return;
+            _services.Online.Page.CategorySubId = newSub;
+            _services.Online.Page.ShowAllOfCharacterTop = allOfTop;
+            _services.Online.Page.CharacterFilter = string.Empty;
             await ApplyOnlineCategoryChangeAsync();
         }
         catch (Exception ex) { _host.ReportUiActionFailure(nameof(OnOnlineSubcategorySelectionChanged), ex); }

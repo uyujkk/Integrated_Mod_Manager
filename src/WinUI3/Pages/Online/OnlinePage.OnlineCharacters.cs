@@ -573,6 +573,7 @@ public sealed partial class OnlinePage
         {
             _services.Online.Page.ShowAllOfCharacterTop = allOfTop;
             SaveOnlineCategorySelection();
+            PopulateOnlineCategoryBars();
         }
 
         // The new character's cards fade in when they arrive; the old ones no longer fade out first,
