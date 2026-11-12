@@ -399,12 +399,24 @@
                                         <ColumnDefinition Width="Auto" />
                                         <ColumnDefinition Width="Auto" />
                                         <ColumnDefinition Width="Auto" />
+                                        <ColumnDefinition Width="Auto" />
                                     </Grid.ColumnDefinitions>
                                     <TextBlock x:Name="OnlineDetailPaneTitleTextBlock" Style="{StaticResource SectionTitleTextStyle}" TextWrapping="Wrap" />
+                                    <Button
+                                        x:Name="LikeOnlineDetailButton"
+                                        Grid.Column="1"
+                                        Width="40"
+                                        Height="40"
+                                        Padding="0"
+                                        Click="OnLikeOnlineDetailClicked"
+                                        Visibility="Collapsed"
+                                        Style="{StaticResource SecondaryButtonStyle}">
+                                        <FontIcon FontSize="16" Glyph="&#xEB51;" />
+                                    </Button>
                                     <!-- Step through the Mods shown on this page without closing the drawer. -->
                                     <Button
                                         x:Name="OnlineDetailPreviousButton"
-                                        Grid.Column="1"
+                                        Grid.Column="2"
                                         Width="40"
                                         Height="40"
                                         Padding="0"
@@ -414,7 +426,7 @@
                                     </Button>
                                     <Button
                                         x:Name="OnlineDetailNextButton"
-                                        Grid.Column="2"
+                                        Grid.Column="3"
                                         Width="40"
                                         Height="40"
                                         Padding="0"
@@ -424,7 +436,7 @@
                                     </Button>
                                     <Button
                                         x:Name="CloseOnlineDetailButton"
-                                        Grid.Column="3"
+                                        Grid.Column="4"
                                         Width="40"
                                         Height="40"
                                         Padding="0"

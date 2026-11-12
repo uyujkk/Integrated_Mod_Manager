@@ -136,6 +136,7 @@ public sealed class OnlineTests
         Mouse.Click(Visible(app, "Sample Mod 01").GetClickablePoint());
         WaitUntil(() => app.MainWindow.FindFirstDescendant(cf => cf.ByAutomationId("OnlineDetailPaneTitleTextBlock"))?.Name == "Sample Mod 01",
             "details for Sample Mod 01");
+        Visible(app, app.Text("OnlineDetails.LikeOnGameBanana"));
         // Covering the results, the drawer's close button takes the reader back to them.
         AutomationElement back = app.Find("CloseOnlineDetailButton");
         Assert.Equal(app.Text("OnlineDetails.BackToResults"), back.Name);

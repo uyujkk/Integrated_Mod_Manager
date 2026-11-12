@@ -441,6 +441,7 @@ public sealed partial class OnlinePage
         OpenOnlineDetailPageButton.Content = T("Common.OpenOriginalPage");
         DownloadOnlineDetailButton.Content = T("Common.Loading");
         OpenOnlineDetailPageButton.IsEnabled = !string.IsNullOrWhiteSpace(mod.ProfileUrl);
+        UpdateOnlineLikeAction(mod);
         DownloadOnlineDetailButton.IsEnabled = false;
         SelectOnlineDetailDownloadButton.IsEnabled = false;
         PopulateOnlineDetailImages([]);
@@ -672,6 +673,7 @@ public sealed partial class OnlinePage
             : T("OnlineDetails.NoDownload");
 
         OpenOnlineDetailPageButton.IsEnabled = !string.IsNullOrWhiteSpace(mod.ProfileUrl);
+        UpdateOnlineLikeAction(mod);
         SelectOnlineDetailDownloadButton.IsEnabled = mod.ItemId > 0;
         DownloadOnlineDetailButton.IsEnabled = !string.IsNullOrWhiteSpace(mod.DownloadUrl) || mod.ItemId > 0;
         if (_onlineDetailState.IsLoading || IsOnlineDownloadActionBlocked(mod))
@@ -715,6 +717,7 @@ public sealed partial class OnlinePage
         OnlineDetailTranslationNoteTextBlock.Visibility = Visibility.Collapsed;
         OnlineDetailTranslationNoteTextBlock.Text = string.Empty;
         OpenOnlineDetailPageButton.IsEnabled = false;
+        LikeOnlineDetailButton.Visibility = Visibility.Collapsed;
         SelectOnlineDetailDownloadButton.IsEnabled = false;
         DownloadOnlineDetailButton.IsEnabled = false;
         OpenOnlineDetailPageButton.Content = T("Common.OpenOriginalPage");
@@ -954,6 +957,23 @@ public sealed partial class OnlinePage
         {
             _host.ReportUiActionFailure("OnOpenOnlineDetailPageClicked", ex);
         }
+    }
+
+    private void UpdateOnlineLikeAction(OnlineModCard mod)
+    {
+        string label = T("OnlineDetails.LikeOnGameBanana");
+        Microsoft.UI.Xaml.Automation.AutomationProperties.SetName(LikeOnlineDetailButton, label);
+        ToolTipService.SetToolTip(LikeOnlineDetailButton, label);
+        LikeOnlineDetailButton.Visibility = GameBananaPageDialog.ModPage(mod) is not null
+            ? Visibility.Visible : Visibility.Collapsed;
+    }
+
+    private async void OnLikeOnlineDetailClicked(object sender, RoutedEventArgs e)
+    {
+        if (_activeOnlineDetailMod is not { } mod || GameBananaPageDialog.ModPage(mod) is not { } page) return;
+
+        try { await GameBananaPageDialog.ShowAsync(_services, page); }
+        catch (Exception ex) { _host.ReportUiActionFailure(nameof(OnLikeOnlineDetailClicked), ex); }
     }
 
     private async void OnDownloadOnlineDetailClicked(object sender, RoutedEventArgs e)
