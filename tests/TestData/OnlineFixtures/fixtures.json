@@ -192,6 +192,230 @@
   {
    "prefix": "https://translate.googleapis.com/translate_a/single?client=gtx&sl=auto&tl=en&",
    "file": "translate-en.json"
+  },
+  {
+   "prefix": "https://gamebanana.com/apiv11/ModCategory/90001/ProfilePage",
+   "file": "profile-90001.json"
+  },
+  {
+   "prefix": "https://gamebanana.com/apiv11/Mod/Categories?_idGameRow=90000&",
+   "file": "categories-game-90000.json"
+  },
+  {
+   "prefix": "https://gamebanana.com/apiv11/Mod/Categories?_idCategoryRow=90100&",
+   "file": "categories-90100.json"
+  },
+  {
+   "prefix": "https://gamebanana.com/apiv11/Mod/Categories?_idCategoryRow=90101&",
+   "file": "categories-90101.json"
+  },
+  {
+   "prefix": "https://gamebanana.com/apiv11/Mod/Categories?_idCategoryRow=90200&",
+   "file": "categories-90200.json"
+  },
+  {
+   "prefix": "https://api.gamebanana.com/Core/Item/Data?itemtype=Mod&itemid=990200&fields=name%2Cdescription",
+   "file": "details-990200.json"
+  },
+  {
+   "prefix": "https://api.gamebanana.com/Core/Item/Data?itemtype=Mod&itemid=990200&fields=name%2CCategory",
+   "file": "card-990200.json"
+  },
+  {
+   "prefix": "https://api.gamebanana.com/Core/Item/Data?itemtype=Mod&itemid=990201&fields=name%2Cdescription",
+   "file": "details-990201.json"
+  },
+  {
+   "prefix": "https://api.gamebanana.com/Core/Item/Data?itemtype=Mod&itemid=990201&fields=name%2CCategory",
+   "file": "card-990201.json"
+  },
+  {
+   "prefix": "https://api.gamebanana.com/Core/Item/Data?itemtype=Mod&itemid=990202&fields=name%2Cdescription",
+   "file": "details-990202.json"
+  },
+  {
+   "prefix": "https://api.gamebanana.com/Core/Item/Data?itemtype=Mod&itemid=990202&fields=name%2CCategory",
+   "file": "card-990202.json"
+  },
+  {
+   "prefix": "https://api.gamebanana.com/Core/Item/Data?itemtype=Mod&itemid=990203&fields=name%2Cdescription",
+   "file": "details-990203.json"
+  },
+  {
+   "prefix": "https://api.gamebanana.com/Core/Item/Data?itemtype=Mod&itemid=990203&fields=name%2CCategory",
+   "file": "card-990203.json"
+  },
+  {
+   "prefix": "https://api.gamebanana.com/Core/Item/Data?itemtype=Mod&itemid=990204&fields=name%2Cdescription",
+   "file": "details-990204.json"
+  },
+  {
+   "prefix": "https://api.gamebanana.com/Core/Item/Data?itemtype=Mod&itemid=990204&fields=name%2CCategory",
+   "file": "card-990204.json"
+  },
+  {
+   "prefix": "https://api.gamebanana.com/Core/Item/Data?itemtype=Mod&itemid=990205&fields=name%2Cdescription",
+   "file": "details-990205.json"
+  },
+  {
+   "prefix": "https://api.gamebanana.com/Core/Item/Data?itemtype=Mod&itemid=990205&fields=name%2CCategory",
+   "file": "card-990205.json"
+  },
+  {
+   "prefix": "https://api.gamebanana.com/Core/Item/Data?itemtype=Mod&itemid=990206&fields=name%2Cdescription",
+   "file": "details-990206.json"
+  },
+  {
+   "prefix": "https://api.gamebanana.com/Core/Item/Data?itemtype=Mod&itemid=990206&fields=name%2CCategory",
+   "file": "card-990206.json"
+  },
+  {
+   "prefix": "https://api.gamebanana.com/Core/Item/Data?itemtype=Mod&itemid=990207&fields=name%2Cdescription",
+   "file": "details-990207.json"
+  },
+  {
+   "prefix": "https://api.gamebanana.com/Core/Item/Data?itemtype=Mod&itemid=990207&fields=name%2CCategory",
+   "file": "card-990207.json"
+  },
+  {
+   "prefix": "https://gamebanana.com/apiv11/Mod/Index?_aFilters%5BGeneric_Category%5D=90100&",
+   "file": "index-90100.json"
+  },
+  {
+   "prefix": "https://gamebanana.com/apiv11/Mod/Index?_aFilters%5BGeneric_Category%5D=90101&",
+   "file": "index-90101.json"
+  },
+  {
+   "prefix": "https://gamebanana.com/apiv11/Mod/Index?_aFilters%5BGeneric_Category%5D=90111&",
+   "file": "index-90111.json"
+  },
+  {
+   "prefix": "https://gamebanana.com/apiv11/Mod/Index?_aFilters%5BGeneric_Category%5D=90102&",
+   "file": "index-90102.json"
+  },
+  {
+   "prefix": "https://gamebanana.com/apiv11/Mod/Index?_aFilters%5BGeneric_Category%5D=90200&",
+   "file": "index-90200.json"
+  },
+  {
+   "prefix": "https://gamebanana.com/apiv11/Mod/Index?_aFilters%5BGeneric_Category%5D=90201&",
+   "file": "index-90201.json"
+  },
+  {
+   "prefix": "https://gamebanana.com/apiv11/Mod/Index?_aFilters%5BGeneric_Category%5D=90202&",
+   "file": "index-90202.json"
+  },
+  {
+   "prefix": "https://gamebanana.com/apiv11/Mod/Index?_aFilters%5BGeneric_Category%5D=90300&",
+   "file": "index-90300.json"
+  },
+  {
+   "prefix": "https://gamebanana.com/apiv11/Mod/Index?_aFilters%5BGeneric_Category%5D=90001&_sSort=Generic_MostLiked&",
+   "file": "index-90001-likes.json"
+  },
+  {
+   "prefix": "https://gamebanana.com/apiv11/Mod/Index?_aFilters%5BGeneric_Category%5D=90001&_sSort=Generic_MostDownloaded&",
+   "file": "index-90001-downloads.json"
+  },
+  {
+   "prefix": "https://gamebanana.com/apiv11/Mod/Index?_aFilters%5BGeneric_Category%5D=90001&_sSort=Generic_LatestUpdated&",
+   "file": "index-90001-updated.json"
+  },
+  {
+   "prefix": "https://gamebanana.com/apiv11/Mod/Index?_aFilters%5BGeneric_Category%5D=90100&_sSort=Generic_MostLiked&",
+   "file": "index-90100-likes.json"
+  },
+  {
+   "prefix": "https://gamebanana.com/apiv11/Mod/Index?_aFilters%5BGeneric_Category%5D=90100&_sSort=Generic_MostDownloaded&",
+   "file": "index-90100-downloads.json"
+  },
+  {
+   "prefix": "https://gamebanana.com/apiv11/Mod/Index?_aFilters%5BGeneric_Category%5D=90100&_sSort=Generic_LatestUpdated&",
+   "file": "index-90100-updated.json"
+  },
+  {
+   "prefix": "https://gamebanana.com/apiv11/Mod/Index?_aFilters%5BGeneric_Category%5D=90101&_sSort=Generic_MostLiked&",
+   "file": "index-90101-likes.json"
+  },
+  {
+   "prefix": "https://gamebanana.com/apiv11/Mod/Index?_aFilters%5BGeneric_Category%5D=90101&_sSort=Generic_MostDownloaded&",
+   "file": "index-90101-downloads.json"
+  },
+  {
+   "prefix": "https://gamebanana.com/apiv11/Mod/Index?_aFilters%5BGeneric_Category%5D=90101&_sSort=Generic_LatestUpdated&",
+   "file": "index-90101-updated.json"
+  },
+  {
+   "prefix": "https://gamebanana.com/apiv11/Mod/Index?_aFilters%5BGeneric_Category%5D=90111&_sSort=Generic_MostLiked&",
+   "file": "index-90111-likes.json"
+  },
+  {
+   "prefix": "https://gamebanana.com/apiv11/Mod/Index?_aFilters%5BGeneric_Category%5D=90111&_sSort=Generic_MostDownloaded&",
+   "file": "index-90111-downloads.json"
+  },
+  {
+   "prefix": "https://gamebanana.com/apiv11/Mod/Index?_aFilters%5BGeneric_Category%5D=90111&_sSort=Generic_LatestUpdated&",
+   "file": "index-90111-updated.json"
+  },
+  {
+   "prefix": "https://gamebanana.com/apiv11/Mod/Index?_aFilters%5BGeneric_Category%5D=90102&_sSort=Generic_MostLiked&",
+   "file": "index-90102-likes.json"
+  },
+  {
+   "prefix": "https://gamebanana.com/apiv11/Mod/Index?_aFilters%5BGeneric_Category%5D=90102&_sSort=Generic_MostDownloaded&",
+   "file": "index-90102-downloads.json"
+  },
+  {
+   "prefix": "https://gamebanana.com/apiv11/Mod/Index?_aFilters%5BGeneric_Category%5D=90102&_sSort=Generic_LatestUpdated&",
+   "file": "index-90102-updated.json"
+  },
+  {
+   "prefix": "https://gamebanana.com/apiv11/Mod/Index?_aFilters%5BGeneric_Category%5D=90200&_sSort=Generic_MostLiked&",
+   "file": "index-90200-likes.json"
+  },
+  {
+   "prefix": "https://gamebanana.com/apiv11/Mod/Index?_aFilters%5BGeneric_Category%5D=90200&_sSort=Generic_MostDownloaded&",
+   "file": "index-90200-downloads.json"
+  },
+  {
+   "prefix": "https://gamebanana.com/apiv11/Mod/Index?_aFilters%5BGeneric_Category%5D=90200&_sSort=Generic_LatestUpdated&",
+   "file": "index-90200-updated.json"
+  },
+  {
+   "prefix": "https://gamebanana.com/apiv11/Mod/Index?_aFilters%5BGeneric_Category%5D=90201&_sSort=Generic_MostLiked&",
+   "file": "index-90201-likes.json"
+  },
+  {
+   "prefix": "https://gamebanana.com/apiv11/Mod/Index?_aFilters%5BGeneric_Category%5D=90201&_sSort=Generic_MostDownloaded&",
+   "file": "index-90201-downloads.json"
+  },
+  {
+   "prefix": "https://gamebanana.com/apiv11/Mod/Index?_aFilters%5BGeneric_Category%5D=90201&_sSort=Generic_LatestUpdated&",
+   "file": "index-90201-updated.json"
+  },
+  {
+   "prefix": "https://gamebanana.com/apiv11/Mod/Index?_aFilters%5BGeneric_Category%5D=90202&_sSort=Generic_MostLiked&",
+   "file": "index-90202-likes.json"
+  },
+  {
+   "prefix": "https://gamebanana.com/apiv11/Mod/Index?_aFilters%5BGeneric_Category%5D=90202&_sSort=Generic_MostDownloaded&",
+   "file": "index-90202-downloads.json"
+  },
+  {
+   "prefix": "https://gamebanana.com/apiv11/Mod/Index?_aFilters%5BGeneric_Category%5D=90202&_sSort=Generic_LatestUpdated&",
+   "file": "index-90202-updated.json"
+  },
+  {
+   "prefix": "https://gamebanana.com/apiv11/Mod/Index?_aFilters%5BGeneric_Category%5D=90300&_sSort=Generic_MostLiked&",
+   "file": "index-90300-likes.json"
+  },
+  {
+   "prefix": "https://gamebanana.com/apiv11/Mod/Index?_aFilters%5BGeneric_Category%5D=90300&_sSort=Generic_MostDownloaded&",
+   "file": "index-90300-downloads.json"
+  },
+  {
+   "prefix": "https://gamebanana.com/apiv11/Mod/Index?_aFilters%5BGeneric_Category%5D=90300&_sSort=Generic_LatestUpdated&",
+   "file": "index-90300-updated.json"
   }
  ]
 }

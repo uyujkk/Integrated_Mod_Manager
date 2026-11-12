@@ -20,12 +20,9 @@
                 <RowDefinition Height="*" />
             </Grid.RowDefinitions>
 
-            <!-- The window title bar (Windows App SDK TitleBar): icon, name, version, and in the middle the
-                 search box that opens the Ctrl+K palette, like the search of Windows Settings and Store. -->
+            <!-- WinUI #10374: setting TitleBar.IconSource on SDK 1.7 can leave the content at its
+                 old size when the window is snapped. ApplyWindowIcon still sets the window icon. -->
             <TitleBar x:Name="AppTitleBar" IsBackButtonVisible="False" IsPaneToggleButtonVisible="False">
-                <TitleBar.IconSource>
-                    <ImageIconSource ImageSource="Assets/AppIcon.png" />
-                </TitleBar.IconSource>
                 <!-- Below 1120 px the box becomes a search button, so the title bar keeps room (J8). -->
                 <Grid>
                     <AutoSuggestBox x:Name="TitleBarSearchBox" MinWidth="200" MaxWidth="440" VerticalAlignment="Center"

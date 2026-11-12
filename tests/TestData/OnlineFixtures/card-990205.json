@@ -1,0 +1,29 @@
+{
+ "name": "Sample Menu",
+ "Category().name": "Menus",
+ "catid": 90202,
+ "RootCategory().name": "UI",
+ "likes": 4,
+ "views": 480,
+ "downloads": 640,
+ "userid": 880001,
+ "Owner().name": "Sample Author 2",
+ "mdate": 1766188800,
+ "Preview().sSubFeedImageUrl()": "https://images.example.invalid/samples/mod-10.png",
+ "Url().sProfileUrl()": "https://gamebanana.com/mods/990205",
+ "Url().sDownloadUrl()": "https://files.example.invalid/sample-990205.zip",
+ "Files().aFiles()": {
+  "770105": {
+   "_idRow": "770105",
+   "_sFile": "sample-menu.zip",
+   "_nFilesize": 2048,
+   "_tsDateAdded": 1766188800,
+   "_nDownloadCount": 640,
+   "_sDownloadUrl": "https://files.example.invalid/sample-990205.zip",
+   "_sVersion": "1.0",
+   "_sDescription": "Sample archive",
+   "_bIsArchived": false
+  }
+ },
+ "Updates().bSubmissionHasUpdates()": false
+}

@@ -1,0 +1,40 @@
+{
+ "_aMetadata": {
+  "_nRecordCount": 1,
+  "_nPerpage": 40,
+  "_bIsComplete": true
+ },
+ "_aRecords": [
+  {
+   "_idRow": 990204,
+   "_sName": "Sample HUD",
+   "_sProfileUrl": "https://gamebanana.com/mods/990204",
+   "_aSubmitter": {
+    "_sName": "Sample Author 1",
+    "_idRow": "880000"
+   },
+   "_aRootCategory": {
+    "_sName": "UI"
+   },
+   "_aSubCategory": {
+    "_sName": "HUD",
+    "_sProfileUrl": "https://gamebanana.com/mods/cats/90201/"
+   },
+   "_aPreviewMedia": {
+    "_aImages": [
+     {
+      "_sBaseUrl": "https://images.example.invalid/samples",
+      "_sFile530": "mod-09.png",
+      "_sFile": "mod-09.png"
+     }
+    ]
+   },
+   "_tsDateModified": 1767052800,
+   "_tsDateUpdated": 1767052800,
+   "_tsDateAdded": 1764460800,
+   "_nLikeCount": 33,
+   "_nViewCount": 3960,
+   "_nDownloadCount": 400
+  }
+ ]
+}

@@ -2,16 +2,34 @@ namespace IntegratedModManager.Core.Online;
 
 public static class OnlineBrowsePolicy
 {
-    public static string CategoryPageUrl(string categoryId, int page, int pageSize, int authorId = 0)
+    /// <summary>One page of a category; <paramref name="serverSort"/> is a GameBanana sort (OnlineBrowseOrder.ServerSort) or null.</summary>
+    public static string CategoryPageUrl(string categoryId, int page, int pageSize, int authorId = 0, string? serverSort = null)
     {
-        if (!long.TryParse(categoryId, out long category) || category <= 0)
-            throw new ArgumentException("A positive category ID is required.", nameof(categoryId));
+        long category = PositiveId(categoryId, nameof(categoryId));
         if (page <= 0) throw new ArgumentOutOfRangeException(nameof(page));
         if (authorId < 0) throw new ArgumentOutOfRangeException(nameof(authorId));
+        if (serverSort is not null && (serverSort.Length == 0 || !serverSort.All(c => char.IsAsciiLetterOrDigit(c) || c == '_')))
+            throw new ArgumentException("Unexpected sort name.", nameof(serverSort));
         return $"https://gamebanana.com/apiv11/Mod/Index?_aFilters%5BGeneric_Category%5D={category}"
             + (authorId > 0 ? $"&_aFilters%5BGeneric_Submitter%5D={authorId}" : string.Empty)
+            + (serverSort is null ? string.Empty : $"&_sSort={serverSort}")
             + $"&_nPerpage={Math.Clamp(pageSize, 1, 50)}&_nPage={page}";
     }
+
+    /// <summary>A category's profile, which names its game (issue #129).</summary>
+    public static string CategoryProfileUrl(string categoryId)
+        => $"https://gamebanana.com/apiv11/ModCategory/{PositiveId(categoryId, nameof(categoryId))}/ProfilePage";
+
+    /// <summary>A game's top-level Mod categories (issue #129).</summary>
+    public static string GameCategoriesUrl(string gameId)
+        => $"https://gamebanana.com/apiv11/Mod/Categories?_idGameRow={PositiveId(gameId, nameof(gameId))}&_sSort=a_to_z&_bShowEmpty=true";
+
+    /// <summary>A category's direct subcategories, the same request the character catalog makes.</summary>
+    public static string SubcategoriesUrl(string categoryId)
+        => $"https://gamebanana.com/apiv11/Mod/Categories?_idCategoryRow={PositiveId(categoryId, nameof(categoryId))}&_sSort=a_to_z&_bShowEmpty=true";
+
+    private static long PositiveId(string? value, string name)
+        => long.TryParse(value, out long id) && id > 0 ? id : throw new ArgumentException("A positive ID is required.", name);
 }
 
 public enum OnlineDuplicateKind { None, SameFile, OtherFile, UnknownFile }

@@ -3,7 +3,7 @@ param(
     [Parameter(Mandatory)][string]$BasePackage,
     [Parameter(Mandatory)][string]$Package,
     [Parameter(Mandatory)][string]$Application,
-    [string]$Version = '4.8.0',
+    [string]$Version = '4.8.1',
     [string]$OutputDirectory = 'artifacts\preview-upgrade'
 )
 $ErrorActionPreference = 'Stop'
@@ -30,7 +30,7 @@ function Encode([string]$value) { [Convert]::ToBase64String([Text.Encoding]::UTF
     Set-Content (Join-Path $taskInstall 'WinUI3\config.ini') -Encoding utf8
 $taskShell = [ordered]@{
     SelectedRepositoryId='preview-upgrade'; CurrentPrimarySection='dashboard'; CheckAppUpdatesOnStartup=$false
-    WhatsNewSeenVersion=$Version; ShortcutPanelHotkeyEnabled=$false; MinimizeToTray=$false
+    WhatsNewSeenVersion=$taskOldVersion; ShortcutPanelHotkeyEnabled=$false; MinimizeToTray=$false
     Repositories=@(@{Id='preview-upgrade';Name='Synthetic upgrade';SourcePath=$taskSource;TargetPath=$taskTarget;UseDirectoryLinks=$false
         AllowMultipleModsPerCharacter=$true;CharacterSelectionOverrides=@{Character=$false};CharacterAvatarBindings=@{Character='test-character'}})
     OnlinePreferences=@{ConcurrentDownloads=3;RememberDownloadFolders=$true;DownloadFolders=@{synthetic=$taskSource}}

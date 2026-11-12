@@ -1,0 +1,29 @@
+{
+ "name": "Sample HUD",
+ "Category().name": "HUD",
+ "catid": 90201,
+ "RootCategory().name": "UI",
+ "likes": 33,
+ "views": 3960,
+ "downloads": 400,
+ "userid": 880000,
+ "Owner().name": "Sample Author 1",
+ "mdate": 1767052800,
+ "Preview().sSubFeedImageUrl()": "https://images.example.invalid/samples/mod-09.png",
+ "Url().sProfileUrl()": "https://gamebanana.com/mods/990204",
+ "Url().sDownloadUrl()": "https://files.example.invalid/sample-990204.zip",
+ "Files().aFiles()": {
+  "770104": {
+   "_idRow": "770104",
+   "_sFile": "sample-hud.zip",
+   "_nFilesize": 2048,
+   "_tsDateAdded": 1767052800,
+   "_nDownloadCount": 400,
+   "_sDownloadUrl": "https://files.example.invalid/sample-990204.zip",
+   "_sVersion": "1.0",
+   "_sDescription": "Sample archive",
+   "_bIsArchived": false
+  }
+ },
+ "Updates().bSubmissionHasUpdates()": false
+}

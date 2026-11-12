@@ -27,6 +27,7 @@ public sealed partial class OnlinePage
         string? key = CurrentBrowseSessionKey();
         if (key == _activeBrowseSessionKey) return;
         _activeBrowseSessionKey = key;
+        RestoreOnlineCategorySelection(key);
         CancelOnlineModListRequest();
         _lastLoadedOnlineConfigKey = null;
         _services.Online.Page.Mods.Clear();

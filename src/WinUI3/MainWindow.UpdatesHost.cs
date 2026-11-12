@@ -27,7 +27,6 @@ public sealed partial class MainWindow
     // Writes the window's state into the page's view model; the page shows it again.
     private void RefreshUpdatesPane()
     {
-        RefreshCombinationProfileText();
         _isApplyingConflictDetection = true;
         UpdatesView.ConflictDetection = _enableConflictDetection;
         _isApplyingConflictDetection = false;

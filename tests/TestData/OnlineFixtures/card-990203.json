@@ -1,0 +1,29 @@
+{
+ "name": "Sample Palette",
+ "Category().name": "Skins",
+ "catid": 90100,
+ "RootCategory().name": "Skins",
+ "likes": 12,
+ "views": 1440,
+ "downloads": 950,
+ "userid": 880003,
+ "Owner().name": "Sample Author 4",
+ "mdate": 1765497600,
+ "Preview().sSubFeedImageUrl()": "https://images.example.invalid/samples/mod-08.png",
+ "Url().sProfileUrl()": "https://gamebanana.com/mods/990203",
+ "Url().sDownloadUrl()": "https://files.example.invalid/sample-990203.zip",
+ "Files().aFiles()": {
+  "770103": {
+   "_idRow": "770103",
+   "_sFile": "sample-palette.zip",
+   "_nFilesize": 2048,
+   "_tsDateAdded": 1765497600,
+   "_nDownloadCount": 950,
+   "_sDownloadUrl": "https://files.example.invalid/sample-990203.zip",
+   "_sVersion": "1.0",
+   "_sDescription": "Sample archive",
+   "_bIsArchived": false
+  }
+ },
+ "Updates().bSubmissionHasUpdates()": false
+}

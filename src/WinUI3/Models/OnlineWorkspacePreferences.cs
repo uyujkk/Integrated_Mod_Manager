@@ -7,6 +7,14 @@ namespace ModFolderCopier.WinUI;
 
 public sealed record OnlineAuthorBookmark(int Id, string Name, string CategoryId);
 public sealed record OnlineSavedMod(string RepositoryId, string RepositoryPath, OnlineModCard Mod);
+/// <summary>The Online page's category for one browse session (issue #129); empty IDs mean the characters.</summary>
+public sealed class OnlineCategorySelection
+{
+    public string TopId { get; set; } = string.Empty;
+    public string SubId { get; set; } = string.Empty;
+    public bool AllOfCharacterTop { get; set; }
+}
+
 public sealed class OnlineWorkspacePreferences
 {
     public Dictionary<string, OnlineBrowseSession> BrowseSessions { get; set; } = [];
@@ -17,6 +25,7 @@ public sealed class OnlineWorkspacePreferences
     public List<OnlineAuthorBookmark> Authors { get; set; } = [];
     public List<OnlineSavedMod> SavedMods { get; set; } = [];
     public string? LastImportManifest { get; set; }
+    public Dictionary<string, OnlineCategorySelection> CategorySelections { get; set; } = [];
 
     [JsonExtensionData]
     public Dictionary<string, JsonElement>? ExtensionData { get; set; }

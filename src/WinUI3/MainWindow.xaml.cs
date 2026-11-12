@@ -142,6 +142,7 @@ public sealed partial class MainWindow : Window
         _workspaceView = new WorkspacePage(_services, this);
         AttachWorkspacePageEvents();
         _services.Images.Attach(_httpClient, LogApplicationIssue);
+        _services.OnlineCategories.Attach(_httpClient, LogApplicationIssue);
         _services.CharacterCatalog.Attach(_httpClient, _appDataStore, LogApplicationIssue,
             repository => BuiltInRepositoryPresets.FirstOrDefault(preset => IsRepositoryForPreset(repository, preset))?.WikiUrl);
         _services.Dialogs.Attach(() => RootGrid.XamlRoot, () => RootGrid.ActualTheme);

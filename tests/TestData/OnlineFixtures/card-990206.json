@@ -1,0 +1,29 @@
+{
+ "name": "Sample Tweak",
+ "Category().name": "Other/Misc",
+ "catid": 90300,
+ "RootCategory().name": "Other/Misc",
+ "likes": 61,
+ "views": 7320,
+ "downloads": 210,
+ "userid": 880002,
+ "Owner().name": "Sample Author 3",
+ "mdate": 1766707200,
+ "Preview().sSubFeedImageUrl()": "https://images.example.invalid/samples/mod-11.png",
+ "Url().sProfileUrl()": "https://gamebanana.com/mods/990206",
+ "Url().sDownloadUrl()": "https://files.example.invalid/sample-990206.zip",
+ "Files().aFiles()": {
+  "770106": {
+   "_idRow": "770106",
+   "_sFile": "sample-tweak.zip",
+   "_nFilesize": 2048,
+   "_tsDateAdded": 1766707200,
+   "_nDownloadCount": 210,
+   "_sDownloadUrl": "https://files.example.invalid/sample-990206.zip",
+   "_sVersion": "1.0",
+   "_sDescription": "Sample archive",
+   "_bIsArchived": false
+  }
+ },
+ "Updates().bSubmissionHasUpdates()": false
+}

@@ -20,6 +20,9 @@ public sealed partial class OnlinePageViewModel : ObservableObject
     private int _authorId;
     private string _authorName = string.Empty;
     private int _authorWorkFilter;
+    private string _categoryTopId = string.Empty;
+    private string _categorySubId = string.Empty;
+    private bool _showAllOfCharacterTop;
 
     /// <summary>Every Mod on the current server page, before the local filters.</summary>
     public List<OnlineModCard> Mods { get; } = [];
@@ -53,6 +56,15 @@ public sealed partial class OnlinePageViewModel : ObservableObject
     public bool HasNextPage => _paging.HasNext;
 
     public string CharacterFilter { get => _characterFilter; set => SetProperty(ref _characterFilter, value); }
+
+    /// <summary>The chosen top-level category (issue #129); empty for the one that holds the characters.</summary>
+    public string CategoryTopId { get => _categoryTopId; set => SetProperty(ref _categoryTopId, value ?? string.Empty); }
+
+    /// <summary>The chosen subcategory of <see cref="CategoryTopId"/>; empty for all of it.</summary>
+    public string CategorySubId { get => _categorySubId; set => SetProperty(ref _categorySubId, value ?? string.Empty); }
+
+    /// <summary>Every Mod under the character top-level category, characters or not (the rail's extra entry).</summary>
+    public bool ShowAllOfCharacterTop { get => _showAllOfCharacterTop; set => SetProperty(ref _showAllOfCharacterTop, value); }
 
     public string SearchText { get => _searchText; set => SetProperty(ref _searchText, value); }
 

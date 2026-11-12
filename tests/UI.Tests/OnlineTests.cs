@@ -89,6 +89,40 @@ public sealed class OnlineTests
     }
 
     [Fact]
+    public void Online_CategorySelectionKeepsThePageResponsive()
+    {
+        using AppSession app = StartOnline();
+        app.Resize(1400, 900);
+        Visible(app, "Sample Mod 01");
+
+        AppSession.Invoke(Visible(app, "UI"));
+        Visible(app, "Sample Menu");
+        AppSession.Invoke(Visible(app, "HUD"));
+        Visible(app, "Sample HUD");
+        WaitUntil(() => app.MainWindow.FindFirstDescendant(cf => cf.ByName("Sample Menu")) is null, "HUD Mods only");
+
+        AppSession.Invoke(Visible(app, "Skins"));
+        Visible(app, "Sample Mod 01");
+
+        AutomationElement Subcategory(string name) => AppSession.FindIn(
+            app.FindByName(app.Text("OnlineCategories.SubBarName")), cf => cf.ByName(name), name);
+
+        AppSession.Invoke(Subcategory("Weapons"));
+        Visible(app, "Sample Blade");
+        Assert.DoesNotContain(app.MainWindow.FindAllDescendants(cf => cf.ByName("Sample Hero Aster")), element => !element.IsOffscreen);
+        Assert.Null(app.MainWindow.FindFirstDescendant(cf => cf.ByName("Sample Mod 01")));
+
+        AppSession.Invoke(Subcategory(app.Text("OnlineCategories.All")));
+        string allSkins = string.Format(app.Text("OnlineFeed.PageModsTotal"), 1, 1, 16);
+        WaitUntil(() => app.Find("OnlinePaginationTextBlock").Name == allSkins, "all 16 Skins Mods");
+        AppSession.Invoke(Subcategory("Characters"));
+        Visible(app, "Sample Mod 01");
+        Visible(app, "Sample Hero Aster");
+        Assert.Null(app.MainWindow.FindFirstDescendant(cf => cf.ByName("Sample Blade")));
+        AssertNoErrorsBesidesSampleMode(app);
+    }
+
+    [Fact]
     public void Online_NarrowWindowFoldsTheRailAndDetailsCoverTheResults()
     {
         using AppSession app = StartOnline();
