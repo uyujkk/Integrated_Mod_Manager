@@ -27,6 +27,7 @@
         </Style>
     </UserControl.Resources>
 
+    <Grid>
     <Grid x:Name="OnlineScrollViewer" Margin="6">
         <!-- One card: header row, then character rail beside the results. Details open in a
              drawer floating over the right side, so the page never shrinks while it is open. -->
@@ -563,5 +564,11 @@
                     </Grid>
                 </Border>
         </Grid>
+    </Grid>
+        <ContentControl x:Name="GameBananaPageHost"
+                        Visibility="Collapsed"
+                        IsTabStop="False"
+                        HorizontalContentAlignment="Stretch"
+                        VerticalContentAlignment="Stretch" />
     </Grid>
 </UserControl>
