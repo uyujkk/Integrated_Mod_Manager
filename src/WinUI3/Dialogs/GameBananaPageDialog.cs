@@ -23,14 +23,15 @@ internal static class GameBananaPageDialog
     public static async Task ShowAsync(AppServices services, Uri modPage)
     {
         string T(string key) => services.Language.T(key);
-        var viewport = services.Dialogs.Viewport;
+        var windowSize = services.Dialogs.Root?.Size ?? default;
+        double dialogWidth = Math.Clamp(windowSize.Width - 64, 280, 1120);
         var view = new WebView2();
         var returnToMod = new Button { Content = T("OnlineDetails.ReturnToGameBananaMod"), IsEnabled = false };
         var status = new TextBlock { Text = T("Common.Loading"), TextWrapping = TextWrapping.Wrap };
         var content = new Grid
         {
-            Width = viewport.MaxWidth - 48,
-            Height = Math.Clamp((services.Dialogs.Root?.Size.Height ?? 0) - 150, 160, 800),
+            Width = dialogWidth - 48,
+            Height = Math.Clamp(windowSize.Height - 150, 160, 880),
             RowSpacing = 8
         };
         content.RowDefinitions.Add(new RowDefinition { Height = GridLength.Auto });
@@ -48,7 +49,7 @@ internal static class GameBananaPageDialog
             Content = content,
             CloseButtonText = T("Common.Close")
         };
-        dialog.Resources["ContentDialogMaxWidth"] = viewport.MaxWidth;
+        dialog.Resources["ContentDialogMaxWidth"] = dialogWidth;
         void ShowUnavailable()
         {
             status.Text = T("OnlineDetails.GameBananaPageUnavailable");
