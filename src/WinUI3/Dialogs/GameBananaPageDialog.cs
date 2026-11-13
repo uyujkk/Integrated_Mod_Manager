@@ -1,6 +1,7 @@
 using System.Globalization;
 using IntegratedModManager.Core.Online;
 using Microsoft.UI.Xaml;
+using Microsoft.UI.Xaml.Automation;
 using Microsoft.UI.Xaml.Controls;
 using Microsoft.Web.WebView2.Core;
 
@@ -23,37 +24,55 @@ internal static class GameBananaPageDialog
     public static async Task ShowAsync(AppServices services, Uri modPage)
     {
         string T(string key) => services.Language.T(key);
-        var windowSize = services.Dialogs.Root?.Size ?? default;
-        double dialogWidth = Math.Clamp(windowSize.Width - 64, 280, 1120);
         var view = new WebView2();
         var returnToMod = new Button { Content = T("OnlineDetails.ReturnToGameBananaMod"), IsEnabled = false };
+        var close = new Button { Content = T("Common.Close"), HorizontalAlignment = HorizontalAlignment.Right };
+        var toolbar = new Grid { ColumnSpacing = 8 };
+        toolbar.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(1, GridUnitType.Star) });
+        toolbar.ColumnDefinitions.Add(new ColumnDefinition { Width = GridLength.Auto });
+        toolbar.Children.Add(returnToMod);
+        Grid.SetColumn(close, 1);
+        toolbar.Children.Add(close);
         var status = new TextBlock { Text = T("Common.Loading"), TextWrapping = TextWrapping.Wrap };
-        var content = new Grid
-        {
-            Width = dialogWidth - 48,
-            Height = Math.Clamp(windowSize.Height - 150, 160, 880),
-            RowSpacing = 8
-        };
+        var content = new Grid { RowSpacing = 4 };
         content.RowDefinitions.Add(new RowDefinition { Height = GridLength.Auto });
         content.RowDefinitions.Add(new RowDefinition { Height = GridLength.Auto });
         content.RowDefinitions.Add(new RowDefinition { Height = new GridLength(1, GridUnitType.Star) });
-        content.Children.Add(returnToMod);
+        content.Children.Add(toolbar);
         Grid.SetRow(status, 1);
         content.Children.Add(status);
         Grid.SetRow(view, 2);
         content.Children.Add(view);
 
-        var dialog = new ContentDialog
+        var dialog = new ContentDialog { Content = content };
+        AutomationProperties.SetName(dialog, "GameBanana");
+        const double padding = 8;
+        const double maxWidth = 1600;
+        const double maxHeight = 1100;
+        dialog.Resources["ContentDialogPadding"] = new Thickness(padding);
+        dialog.Resources["ContentDialogMinWidth"] = 0d;
+        dialog.Resources["ContentDialogMinHeight"] = 0d;
+        dialog.Resources["ContentDialogMaxWidth"] = maxWidth;
+        dialog.Resources["ContentDialogMaxHeight"] = maxHeight;
+        close.Click += (_, _) => services.Dialogs.Close(dialog);
+
+        XamlRoot? root = services.Dialogs.Root;
+        void Resize()
         {
-            Title = "GameBanana",
-            Content = content,
-            CloseButtonText = T("Common.Close")
-        };
-        dialog.Resources["ContentDialogMaxWidth"] = dialogWidth;
+            var size = root?.Size ?? default;
+            double width = Math.Clamp(size.Width - 24, 260, maxWidth);
+            double height = Math.Clamp(size.Height - 24, 180, maxHeight);
+            content.Width = width - 2 * (padding + 1);
+            content.Height = height - 2 * (padding + 1)
+                - (string.IsNullOrEmpty(dialog.PrimaryButtonText) ? 0 : 52);
+        }
+        void OnRootChanged(XamlRoot sender, XamlRootChangedEventArgs args) => Resize();
+        Resize();
         void ShowUnavailable()
         {
             status.Text = T("OnlineDetails.GameBananaPageUnavailable");
             dialog.PrimaryButtonText = T("Common.OpenOriginalPage");
+            Resize();
         }
 
         bool closed = false;
@@ -84,6 +103,7 @@ internal static class GameBananaPageDialog
                     {
                         status.Text = T("OnlineDetails.GameBananaLikeHint");
                         dialog.PrimaryButtonText = string.Empty;
+                        Resize();
                     }
                     else if (args.WebErrorStatus != CoreWebView2WebErrorStatus.OperationCanceled)
                         ShowUnavailable();
@@ -99,8 +119,13 @@ internal static class GameBananaPageDialog
         };
 
         ContentDialogResult result;
+        if (root is not null) root.Changed += OnRootChanged;
         try { result = await services.Dialogs.ShowAsync(dialog); }
-        finally { view.Close(); }
+        finally
+        {
+            if (root is not null) root.Changed -= OnRootChanged;
+            view.Close();
+        }
         if (result == ContentDialogResult.Primary)
             await services.Dialogs.OpenExternalUrlAsync(modPage.AbsoluteUri, T("Common.OpenPageFailed"));
     }
