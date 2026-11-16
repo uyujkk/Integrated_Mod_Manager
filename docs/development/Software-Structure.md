@@ -1,8 +1,8 @@
 # 软件结构 / Software Structure
 
-本文说明 Integrated Mod Manager 由哪些部分组成、各部分如何协作、数据存放在哪里，以及代码如何构建、测试和发布。适用于 4.7.0。
+本文说明 Integrated Mod Manager 由哪些部分组成、各部分如何协作、数据存放在哪里，以及代码如何构建、测试和发布。适用于 4.7.0；游戏内浮窗、页面切换和在线页的 GameBanana 网页已按 4.8.2 更新。
 
-This document describes how Integrated Mod Manager is put together: its parts, how they work together, where data lives, and how the code is built, tested and released. It reflects 4.7.0.
+This document describes how Integrated Mod Manager is put together: its parts, how they work together, where data lives, and how the code is built, tested and released. It reflects 4.7.0; the in-game overlay, page switching and the Online page's GameBanana page are updated for 4.8.2.
 
 相关文档 / Related: [测试与构建 / Testing](./TESTING.md) · [组合包格式 / Combination bundles](./Combination-Bundles.md) · [用户手册 / User guide](../guides/zh-CN/用户手册.md) · [许可证 / Licensing](../LICENSING.md)
 
@@ -129,13 +129,17 @@ flowchart TD
 | 快捷键与浮窗 / Shortcuts and overlay | `ShortcutBindings`, `ShortcutPanel`, `ShortcutPresets`, `ShortcutCapture`, `HotReload`, `CharacterFollow`, `OverlayAppearance`, `OverlayAutoContrast`, `ProductivityFeatures` |
 | 终末地与 XXMI / Endfield and XXMI | `EndfieldBridge`（含其他游戏通过 XXMI 启动 / including other games through XXMI） |
 
+切页（`MainWindow.Shell.cs` 的 `ShowPage`）：页面第一次显示时加入宿主，之后一直留在窗口里，切换只改哪一页可见；4.8.1 及以前每次切换都把页面移出、再放回窗口，整页重新加载和排版。Page switching (`ShowPage` in `MainWindow.Shell.cs`): a page joins the host the first time it is shown and stays in the window; a switch only changes which page is visible. Up to 4.8.1 every switch took the page out of the window and put it back, reloading and laying out all of it.
+
 ### 5.2 其他界面类 / Other UI classes
 
 | 文件 / File | 作用 / Role |
 | --- | --- |
 | `Program.cs`, `App.xaml(.cs)` | 入口、单实例、全局异常记录。Entry point, single instance, unhandled-exception logging. |
 | `UiText.cs`、`UiMessage.cs` + `Strings/*.json` | 界面文案，每种语言一个文件（嵌入资源）。UI text, one embedded file per language. |
-| `ShortcutOverlayWindow.cs` | 不抢焦点的置顶浮窗（`WS_EX_NOACTIVATE`）；命名预设时临时允许键盘输入。Non-activating always-on-top overlay; takes keyboard input only while naming a preset. |
+| `ShortcutOverlayWindow.cs` | 不抢焦点的置顶浮窗（`WS_EX_NOACTIVATE`）；命名预设时临时允许键盘输入。4.8.2 起自己画标题栏（拖动区域）、高度跟随内容、可调大小、按显示器记住位置（`OverlayLayoutPolicy`）、拖到边缘贴边，并跟随应用主题。Non-activating always-on-top overlay; takes keyboard input only while naming a preset. Since 4.8.2 it draws its own title bar (the drag region), fits its height to the content, can be resized, remembers its place per display (`OverlayLayoutPolicy`), snaps to edges and follows the app theme. |
+| `Overlay/ShortcutOverlayController.cs` | 浮窗的内容：标题栏（状态圆点、Mod 名称、状态图标、⋯ 菜单、关闭）、Mod 和目标窗口、发送开关、状态槽位、键帽、“保存预设”下拉按钮；动作经 `IShortcutOverlayActions` 交给窗口原有的代码。The overlay's content: title bar (status dot, Mod name, status icon, ⋯ menu, close), Mod and target window, send switch, state slots, key caps and the Save preset drop-down; actions go through `IShortcutOverlayActions` to the window's existing code. |
+| `Services/GameBananaWebSession.cs` | 在线页里打开 Mod 的 GameBanana 页面（点赞）用的 WebView2 配置文件 `cache\gamebanana-webview2`；允许的网址由 Core 的 `GameBananaWeb` 判断，设置页可以删除这份登录。The WebView2 profile (`cache\gamebanana-webview2`) for the Mod's GameBanana page in the Online page (likes); `GameBananaWeb` in Core decides which addresses may load, and Settings can delete the sign-in. |
 | `ShortcutInputService.cs`, `ShortcutProcessSecurity.cs`, `ShortcutPanelHotkey.cs` | 用 `SendInput` 向游戏窗口发送按键、检查进程权限、注册全局快捷键。Sends keys with `SendInput`, checks process integrity, registers the global hotkey. |
 | `CharacterScreenCapture.cs` | 跟随出场角色时截取 HUD 区域。Captures the HUD region to follow the active character. |
 | `Online*Adapter.cs` | 在线页状态与图片加载的适配层。Adapters for online page state and image loading. |
@@ -178,12 +182,12 @@ In 4.6 the pages moved to "control + view model + Core layout policy" without ch
 | `Configuration` | `config.ini` 读写（`LegacyConfigFile`）、原子写入与损坏恢复（`ConfigurationFileStore`）、主题偏好（`ThemePreference`，含跟随系统）。config.ini format, atomic writes and recovery, theme preference (including follow-system). |
 | `Deployment` | 部署布局与按角色单选/多选（`ModDeploymentLayout`、`CharacterSelectionPolicy`）、目录联接、安装事务与回滚、文件与 INI 冲突检测、组合部署、旧库整理导入、角色文件夹规划。Layout and per-character selection, junctions, transactions and rollback, file and INI conflicts, combination deployment, library import. |
 | `Presets` | 组合预设与恢复预览、组合包、持久参数引擎（含写入 Mod 默认值）、变体文件导入、整份 `d3dx_user.ini` 快照、热重载（`LoaderHotReload`）、保存前刷新加载器状态（`LoaderStateCapture`）、不含文件的方案分享（`PresetShareService`）、默认槽位（`DefaultSlotPolicy`）、菜单状态变量（`TransientVariablePolicy`）、预设图片（`PresetPreviewStore`）、加载器自动保存间隔（`LoaderAutoSaveSetting`）。Presets, restore preview, bundles, persistent state engine, variant import, snapshots, hot reload, flush-before-capture, preset sharing, Default slots, menu-state variables, preset pictures, the loader auto-save interval. |
-| `Online` | 所有在线请求与解析：GameBanana 分类列表（`GameBananaCategoryClient`）、角色目录（`CharacterCatalogClient`：米游社 Wiki、终末地官网、GameBanana 角色分类、HoYoWiki 英文名）、翻译（`TextTranslationClient`）、图片下载（`OnlineImageDownloader`）、下载数（`GameBananaDownloadCounts`）、元数据、角色目录匹配、下载调度与会话、下载日志、浏览与预览策略、排序与分页（`OnlineBrowseOrder`）、请求冷却。Every online request and its parsing: GameBanana categories, character catalogs (miHoYo wiki, the Endfield site, GameBanana, HoYoWiki), translation, images, download counts, metadata; character catalog matching, download scheduling and sessions, journal, browse policies, sorting and paging, cooldown. |
+| `Online` | 所有在线请求与解析：GameBanana 分类列表（`GameBananaCategoryClient`）、角色目录（`CharacterCatalogClient`：米游社 Wiki、终末地官网、GameBanana 角色分类、HoYoWiki 英文名）、翻译（`TextTranslationClient`）、图片下载（`OnlineImageDownloader`）、下载数（`GameBananaDownloadCounts`）、元数据、角色目录匹配、下载调度与会话、下载日志、浏览与预览策略、排序与分页（`OnlineBrowseOrder`）、请求冷却。Every online request and its parsing: GameBanana categories, character catalogs (miHoYo wiki, the Endfield site, GameBanana, HoYoWiki), translation, images, download counts, metadata; character catalog matching, download scheduling and sessions, journal, browse policies, sorting and paging, cooldown. 在线页里打开的 GameBanana 网页能去哪些地址（`GameBananaWeb`：只允许 Mod 自己的页面和 GameBanana 本站），以及删除它的登录数据。Which addresses the GameBanana page in the Online page may open (`GameBananaWeb`: only the Mod's own page and GameBanana itself), and deleting its sign-in data. |
 | `Shortcuts` | INI 按键扫描与缓存（`ModShortcutScanner`、`ModShortcutScanCache`）、按键计划、描述格式化、游戏窗口识别、权限策略。Key binding scanning and cache, key plans, descriptions, game window detection, privilege policy. |
 | `Updates` | 版本与发布策略（`ApplicationReleasePolicy`，含预览版不改写更新设置）、读取最新版本、下载与 SHA-256 校验（`ApplicationUpdateClient`）、更新包与校验文件、Mod 更新替换与恢复、更新页列表的状态、筛选、搜索与排序（`UpdatesListPolicy`）。Release policy (including previews leaving update settings unchanged), the latest release, download and SHA-256 check (`ApplicationUpdateClient`), update packages and checksums, Mod update replacement, and the Updates lists' statuses, filters, search and order. |
 | `Repository` | 仓库扫描、仪表板的角色与 Mod 计数及路径状态（`RepositoryContentSummary`、`PathFieldStatuses`）、角色文件夹头像（`CharacterFolderAvatars`）、命令面板搜索（`CommandPaletteSearch`）、工作区策略（Mod 状态筛选、设置步骤、空状态，`RepositoryWorkspacePolicy`）、通过 XXMI 启动（`XxmiLaunchPolicy`）、批量集合、性能记录。Repository scanning, dashboard counts and path status, character avatars, command palette search, workspace policies (state filters, setup steps, empty states), XXMI launch (`XxmiLaunchPolicy`), batch collections, performance. |
 | `Endfield` | 桥接迁移与资格判断、干员目录解析、内置干员表 `endfield-characters.json`（嵌入资源）。Bridge integration, operator catalog, embedded operator list. |
-| `Layout` | 与控件无关的窗口、弹窗和页面布局策略：仪表板、在线、设置、快捷键、更新（如最大化还原到 80%、页面断点、列数和更新页固定列高）。Control-free window, dialog and page layout policies for the dashboard, online, settings, shortcuts and updates pages, such as restoring to 80% of the work area, breakpoints, column counts and the Updates page's fixed column height. |
+| `Layout` | 与控件无关的窗口、弹窗和页面布局策略：仪表板、在线、设置、快捷键、更新、浮窗（如最大化还原到 80%、页面断点、列数、更新页固定列高、浮窗按显示器的位置和贴边 `OverlayLayoutPolicy`）。Control-free window, dialog and page layout policies for the dashboard, online, settings, shortcuts and updates pages, such as restoring to 80% of the work area, breakpoints, column counts and the Updates page's fixed column height. |
 | `Infrastructure` | 路径安全（`PathSafety`）、不跟随链接的目录操作（`SafeDirectoryTree`）、错误标记（`ErrorTags`）、恢复用 JSON、日志轮换、单实例策略。Path safety, link-safe tree operations, error tags, recovery JSON, log rotation, single instance. |
 
 ## 7. 数据与状态 / Data and state

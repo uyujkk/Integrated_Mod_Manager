@@ -23,6 +23,8 @@ Online data comes from external sites; a proxy may be needed if loading is slow 
 
 Click a card (or press `Enter` on it) to open a drawer on the right with author, character, category, update date, images, description and actions. The cards re-flow beside the drawer and the one you're viewing stays in view; the drawer's previous and next buttons move between the Mods on the page, and `Esc` closes it. Click the main image for the full-size viewer; use Left/Right and `Esc` to close. Descriptions can be translated automatically (experimental) and may be inaccurate.
 
+**Like on GameBanana (4.8.2):** the heart button in the drawer opens the Mod's own GameBanana page inside the manager, below the Online navigation, where you can sign in and like or unlike it. The sign-in is GameBanana's own page (user name, password, an optional two-factor code and its security check); the manager never sees or fills it in. Only that Mod's page and GameBanana's own pages open there; **Back to Mod** returns to the Mod, and if the page cannot load you can open the original page in your browser. The sign-in is saved only on this computer, in the manager's own browser data (`cache\gamebanana-webview2`), and is separate from your browser. To remove it, use Settings → **Clear GameBanana sign-in**.
+
 The app tries to detect Patreon, subscriptions, payment, like-to-unlock, delayed free releases and dependencies and shows a hint; the author's page is authoritative. It never bypasses logins, captchas, payments, subscriptions or permissions.
 
 ## Download and install
