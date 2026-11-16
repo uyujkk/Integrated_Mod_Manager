@@ -57,7 +57,16 @@ This directory contains the usage, release, development, and research documentat
 
 ## 开发文档 / Development
 
-- [软件结构 / Software Structure](./development/Software-Structure.md)
+当前技术文档 / Current technical docs:
+
+- [软件结构 / Software Structure](./development/Software-Structure.md)：项目、进程、窗口与页面、Core 模块、数据、关键流程和发布流程，含结构图 / projects, processes, window and pages, Core modules, data, key flows and the release pipeline, with diagrams
+- [测试与构建说明 / Testing and Build Guide](./development/TESTING.md)
+- [界面外观 / UI Fluent Design](./development/UI-Fluent-Design-Plan.md)（已完成，含 4.8.2 浮窗 / done, including the 4.8.2 overlay）
+- [界面自动化名称 / UI Automation Names](./development/UI-Automation-Names.md) · [界面截图基线 / UI Baseline Screenshots](./development/UI-Baseline-Screenshots.md)
+- [回归检查清单 / Regression Checklist](./development/Regression-Checklist.md) · [后续路线图 / Roadmap](./development/Roadmap.md)
+
+验证记录与历史文档 / Verification records and history:
+
 - [v4.8.2 正式版验证 / Stable Release Verification](./verification/v4.8.2.md)
 - [v4.8.1 正式版验证 / Stable Release Verification](./verification/v4.8.1.md)
 - [v4.8.0 正式版验证 / Stable Release Verification](./verification/v4.8.0.md)
@@ -81,11 +90,8 @@ This directory contains the usage, release, development, and research documentat
 - [4.1 源码优化总览 / Source Optimization Record](./development/Source-Optimization-v4.1.md)
 - [v4.1.0 验证记录 / Verification Record](./verification/v4.1.0.md)
 - [v4.0.0 验证记录 / Verification Record](./verification/v4.0.0.md)
-- [测试与构建说明 / Testing and Build Guide](./development/TESTING.md)
-- [后续路线图 / Roadmap](./development/Roadmap.md)
-- [界面结构拆分计划 / UI Structure Plan](./development/UI-Structure-Plan.md)
+- [界面结构拆分计划 / UI Structure Plan](./development/UI-Structure-Plan.md)（已完成，历史 / done, history）
 - [分步优化路线 / Incremental Optimization](./development/Optimization-Roadmap.md)
-- [回归检查清单 / Regression Checklist](./development/Regression-Checklist.md)
 - [仓库扫描优化本地验证 / Local Repository Scan Verification](./verification/repository-scan-opt1-20261005.md)
 - [组合恢复预览本地验证 / Local Combination Preview Verification](./verification/combination-preview-opt2-20261005.md)
 - [仓库性能诊断 / Repository Performance](./development/Repository-Performance.md)

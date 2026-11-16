@@ -1,6 +1,8 @@
 # Testing / 测试说明
 
-[English README](../../README.md) · [中文首页](../README.zh-CN.md) · [4.1.1 verification / 验证记录](../verification/v4.1.1.md)
+[English README](../../README.md) · [中文首页](../README.zh-CN.md) · [软件结构 / Software structure](./Software-Structure.md) · [v4.8.2 verification / 验证记录](../verification/v4.8.2.md)
+
+Updated for 4.8.2 (2026-11-16). 按 4.8.2 更新。
 
 ## One entry point / 统一入口
 
@@ -24,6 +26,7 @@ CI 在每个分支推送时运行（只改文档的推送除外），指向 `mai
 | --- | --- | --- |
 | `build-and-test.yml` | Every push and PR / 每次推送和 PR | Code style, `test-all`, UI smoke tests, a table of UI text by language in the job summary, the verified package as an artifact / 代码风格、`test-all`、界面冒烟测试、作业摘要里的各语言文案统计，并上传已验证的包 |
 | `release.yml` | A pushed tag `vX.Y.Z`; a PR that changes the release scripts / 推送 `vX.Y.Z` 标签；修改发布脚本的 PR | Tests, `package-stable-release.ps1` with this run as the CI link, upgrade and rollback from the previous published release, UI smoke tests, a build provenance attestation, then a **draft** release with the notes from `docs/releases/vX.Y.Z.md`, re-downloaded and hash-checked. A PR runs the same steps for the current version without the attestation or a release. / 测试、以本次运行为 CI 链接打包、从上一个已发布版本升级并回退、界面冒烟测试、构建来源证明，然后用 `docs/releases/vX.Y.Z.md` 创建**草稿** Release，重新下载核对哈希。PR 只演练同样的步骤，不生成证明也不建 Release。 |
+| `discord-release.yml` | A release is published / Release 发布时 | Posts the bilingual release notes to the Discord server (`.github/scripts/notify-discord-release.mjs`). / 把中英文发布说明发到 Discord 服务器。 |
 | `online-sources.yml` | Daily and on demand / 每天一次，也可手动 | `tests/Online.Tests` asks the miHoYo wiki, HoYoWiki, the Endfield site and GameBanana what the app asks, with the Core clients. A failure means a site changed or is down. / 用 Core 客户端请求米游社 Wiki、HoYoWiki、终末地官网和 GameBanana；失败说明网站变了或暂时不可用。 |
 | `codeql.yml` | PRs, `main`, weekly / PR、`main`、每周 | CodeQL security analysis of the C# sources without a build; results under Security → Code scanning. / 不构建直接分析 C# 源码，结果在 Security → Code scanning。 |
 | `dependabot.yml` | Weekly / 每周 | Grouped pull requests for minor and patch NuGet updates and for GitHub Actions; major NuGet updates are left for a deliberate upgrade. / 合并的 NuGet 小版本更新与 Actions 更新 PR；NuGet 大版本升级另行安排。 |
@@ -32,9 +35,11 @@ To release: merge the version PR, then push the tag. Review and publish the draf
 发布方式：合并版本 PR 后推送标签，检查工作流生成的草稿后手动发布。代码签名尚未接入。
 
 ```powershell
-git tag v4.7.3
-git push origin v4.7.3
+git tag vX.Y.Z
+git push origin vX.Y.Z
 ```
+
+The whole pipeline is drawn in [Software Structure §9.1](./Software-Structure.md#91-工作流--workflows). 完整流程图见软件结构 9.1 节。
 
 ## Code style / 代码风格
 
@@ -53,8 +58,8 @@ Builds every project with the `.editorconfig` rules enabled (for example IDE0005
 ./scripts/test-ui.ps1 -Filter "FullyQualifiedName~Overlay"
 ```
 
-`tests/UI.Tests` drives the built application through Windows UI Automation (FlaUI). Each test copies the runtime that `test-all` staged in `artifacts/verification/ReleaseSource` (or `-Application <folder>`) and the synthetic `tests/TestData` into a temporary folder, starts it, and checks windows, the saved configuration and the error logs. Tests run one at a time and press a global hotkey, so use an unlocked desktop and leave the mouse and keyboard alone. They are not part of `test-all`; CI runs them after `test-all`. There are 19 tests: first install, every page, the repository views and batch dialog, both settings layouts, the online layout buttons, the updates check interval, the Shortcuts page and overlay click-through. Controls built in code carry an `AutomationProperties.AutomationId`; give new ones an id too, so tests do not depend on the display language.
-`tests/UI.Tests` 通过 Windows UI Automation（FlaUI）操作已构建的程序。每个测试把 `test-all` 在 `artifacts/verification/ReleaseSource` 生成的运行文件（或 `-Application <文件夹>`）和合成数据 `tests/TestData` 复制到临时目录后启动，检查窗口、保存的配置和错误日志。测试逐个运行并会按全局快捷键，请在解锁的桌面上运行，期间不要操作鼠标键盘。它不属于 `test-all`，CI 会在 `test-all` 之后运行。共 19 个测试：首次安装、各页面、仓库视图和批量对话框、设置页两种布局、在线页布局按钮、更新页检查间隔、快捷键页和浮窗鼠标穿透。代码里创建的控件设有 `AutomationProperties.AutomationId`；新增控件也请设置，测试就不依赖界面语言。
+`tests/UI.Tests` drives the built application through Windows UI Automation (FlaUI). Each test copies the runtime that `test-all` staged in `artifacts/verification/ReleaseSource` (or `-Application <folder>`) and the synthetic `tests/TestData` into a temporary folder, starts it, and checks windows, the saved configuration and the error logs. Tests run one at a time and press a global hotkey, so use an unlocked desktop and leave the mouse and keyboard alone. They are not part of `test-all`; CI runs them after `test-all`, in `build-and-test.yml` and in `release.yml`. There are 56 test methods (79 cases with their data) in 14 files: `SmokeTests` (first install, every page, settings, updates, shortcuts and the overlay), `OverlayTests` (height, target window and send switch, ⋯ menu, place after a restart, status icon), `OnlineTests` (sample mode), `GameBananaPageTests`, `PageHostTests`, `SettingsLayoutTests`, `SettingsPersistenceTests`, `WorkspaceLayoutTests`, `GettingStartedTipTests`, `WhatsNewTests`, `DialogTests`, `DeleteSafetyTests`, `CopyOwnershipTests` and `CharacterRenameTests`. `OverlaySamples` adds synthetic copy records and state slots so the test Mods count as enabled. A lookup that times out saves `screenshots\NotFound-*.png` beside the test output, which CI keeps with the results. Controls built in code carry an `AutomationProperties.AutomationId`; give new ones an id too, so tests do not depend on the display language.
+`tests/UI.Tests` 通过 Windows UI Automation（FlaUI）操作已构建的程序。每个测试把 `test-all` 在 `artifacts/verification/ReleaseSource` 生成的运行文件（或 `-Application <文件夹>`）和合成数据 `tests/TestData` 复制到临时目录后启动，检查窗口、保存的配置和错误日志。测试逐个运行并会按全局快捷键，请在解锁的桌面上运行，期间不要操作鼠标键盘。它不属于 `test-all`，CI 会在 `test-all` 之后运行（`build-and-test.yml` 和 `release.yml`）。共 14 个文件、56 个测试方法（带数据展开后 79 个用例）：首次安装、各页面、设置、更新、快捷键与浮窗（高度、目标窗口和发送开关、⋯ 菜单、重启后的位置、状态图标）、在线样例模式、GameBanana 网页、页面宿主、设置页布局与保存、工作区布局、入门提示、新功能、对话框、删除安全、复制记录和角色重命名。`OverlaySamples` 加入合成的复制记录和状态槽位，让测试 Mod 算作已启用。查找元素超时会在测试输出旁保存 `screenshots\NotFound-*.png`，CI 会和测试结果一起保留。代码里创建的控件设有 `AutomationProperties.AutomationId`；新增控件也请设置，测试就不依赖界面语言。
 
 ### Online samples: `IMM_ONLINE_FIXTURES` / 在线样例：`IMM_ONLINE_FIXTURES`
 
@@ -62,14 +67,20 @@ For screenshots and UI tests only. When the environment variable `IMM_ONLINE_FIX
 
 只供截图和界面测试使用。环境变量 `IMM_ONLINE_FIXTURES` 指向一个文件夹时，程序的所有在线请求都由该文件夹 `fixtures.json` 里列出的合成样例应答（按 URL 前缀最长匹配），一个请求也不会发到网上；样例里没有的请求一律失败，并在 `app-errors.log` 记为“Online test fixture mode（测试样例模式）”。文件夹只读，不写入也不删除。不设置这个变量时，程序用原来的 HTTP 客户端，请求内容、频率和缓存规则都不变（`OnlineHttpClientFactory`，有单元测试）。`tests/TestData/OnlineFixtures` 里的样例全部是编造的名称、数字和生成的占位图（#129 起还包括样例游戏的一级分类 Skins、UI、Other/Misc，角色以外的 Mod，以及由网站排序的列表），用 `python tools/online-fixtures/make_fixtures.py tests/TestData/OnlineFixtures` 重新生成。不要指向真实数据，也不要在测试以外使用。
 
-## Four suites / 四组测试
+## Test projects / 测试项目
+
+`test-all` runs the four unit suites; `Online.Tests` runs daily against the live sites; `UI.Tests` runs after `test-all`; `Performance` is run by hand. The project graph is in [Software Structure §3.2](./Software-Structure.md#32-测试与工具--tests-and-tools).
+`test-all` 运行四组单元测试；`Online.Tests` 每天检查真实网站；`UI.Tests` 在 `test-all` 之后运行；`Performance` 手动运行。项目关系图见软件结构 3.2 节。
 
 | Project | Scope / 范围 |
 | --- | --- |
-| tests/Core.Tests | Paths, presets/bundles, archive safety, scanning, downloads, metadata, adapters, layouts / 路径、预设与组合包、解压安全、扫描、下载、元数据、适配器及布局 |
+| tests/Core.Tests | Paths, presets/bundles, archive safety, scanning, downloads, metadata, adapters, layouts (including the overlay's placement), the embedded GameBanana page's address rules / 路径、预设与组合包、解压安全、扫描、下载、元数据、适配器及布局（含浮窗位置），以及内嵌 GameBanana 网页的地址规则 |
 | tests/DataStore.Tests | Actual isolated SQLite cache/index transactions / 真实隔离 SQLite 缓存与索引事务 |
 | tests/UpdateAgent.Tests | Checksums, downloads, extraction, configuration preservation and rollback / 校验、下载、解压、配置保留与回滚 |
 | tests/EndfieldLaunch.Tests | Isolated launch, configuration and lifecycle tests / 隔离启动、配置和生命周期测试 |
+| tests/Online.Tests | The live sites, asked with the Core clients (`online-sources.yml`, not in `test-all`) / 用 Core 客户端请求真实网站（不在 `test-all` 里） |
+| tests/UI.Tests | The built app through UI Automation, see above / 通过界面自动化操作构建好的程序，见上文 |
+| tests/Performance | Repository and shortcut benchmarks, by hand / 仓库和快捷键基准，手动运行 |
 
 Shared references live in `tests/TestDependencies.props`. Each suite remains independent; safety cases are retained. Developer-only fixtures/harnesses are excluded from release payloads.
 依赖统一放在 `tests/TestDependencies.props`，保留四组独立测试和安全用例。开发测试数据及基准工具不随主程序发布。
@@ -79,6 +90,7 @@ Shared references live in `tests/TestDependencies.props`. Each suite remains ind
 | Core | 90% | 85% |
 | Data | 70% | 60% |
 | UpdateAgent.Core | 60% | 55% |
+| EndfieldLaunch | 75% | 65% |
 
 Coverage selects each named assembly, not aggregate coverage. Four script self-checks cover missing/duplicate assemblies and misleading aggregates. Full verification also builds WinUI x64 and all four EXEs, checks versions, and validates the minimal ZIP. TRX, coverage and build/package outputs go under the selected directory.
 覆盖率按程序集计算，四项脚本自测验证缺失、重复及汇总值干扰。完整验证另包含 WinUI x64、四个 EXE、版本一致性和精简 ZIP；结果位于所选输出目录。

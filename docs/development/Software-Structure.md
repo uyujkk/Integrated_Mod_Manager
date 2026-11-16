@@ -1,21 +1,37 @@
 # 软件结构 / Software Structure
 
-本文说明 Integrated Mod Manager 由哪些部分组成、各部分如何协作、数据存放在哪里，以及代码如何构建、测试和发布。适用于 4.7.0；游戏内浮窗、页面切换和在线页的 GameBanana 网页已按 4.8.2 更新。
+本文说明 Integrated Mod Manager 由哪些部分组成、各部分如何协作、数据存放在哪里，以及代码如何构建、测试和发布。适用于 4.8.2（`main`，2026-11-16）。
 
-This document describes how Integrated Mod Manager is put together: its parts, how they work together, where data lives, and how the code is built, tested and released. It reflects 4.7.0; the in-game overlay, page switching and the Online page's GameBanana page are updated for 4.8.2.
+This document describes how Integrated Mod Manager is put together: its parts, how they work together, where data lives, and how the code is built, tested and released. It reflects 4.8.2 (`main`, 2026-11-16).
 
-相关文档 / Related: [测试与构建 / Testing](./TESTING.md) · [组合包格式 / Combination bundles](./Combination-Bundles.md) · [用户手册 / User guide](../guides/zh-CN/用户手册.md) · [许可证 / Licensing](../LICENSING.md)
+相关文档 / Related: [测试与构建 / Testing](./TESTING.md) · [组合包格式 / Combination bundles](./Combination-Bundles.md) · [界面外观 / UI design](./UI-Fluent-Design-Plan.md) · [用户手册 / User guide](../guides/zh-CN/用户手册.md) · [许可证 / Licensing](../LICENSING.md)
+
+图中的标签只用英文和代码里的名字，说明放在图的上方。The diagram labels use English and code names only; each diagram is explained above it.
+
+## 目录 / Contents
+
+1. [技术栈 / Technology](#1-技术栈--technology)
+2. [仓库目录 / Repository layout](#2-仓库目录--repository-layout)
+3. [项目与依赖 / Projects and dependencies](#3-项目与依赖--projects-and-dependencies)
+4. [运行时结构 / Runtime layout](#4-运行时结构--runtime-layout)
+5. [主程序内部 / Inside the application](#5-主程序内部--inside-the-application)
+6. [Core 模块 / Core modules](#6-core-模块--core-modules)
+7. [数据与状态 / Data and state](#7-数据与状态--data-and-state)
+8. [关键流程 / Key flows](#8-关键流程--key-flows)
+9. [构建、测试与发布 / Build, test and release](#9-构建测试与发布--build-test-and-release)
+10. [约定 / Conventions](#10-约定--conventions)
+11. [许可证边界 / Licensing boundary](#11-许可证边界--licensing-boundary)
 
 ## 1. 技术栈 / Technology
 
 | 部分 / Part | 技术 / Technology |
 | --- | --- |
-| 主程序 / Application | C# 12、.NET 8、WinUI 3（Windows App SDK 1.7，自包含 / self-contained），`net8.0-windows10.0.19041.0` |
+| 主程序 / Application | C# 12、.NET 8、WinUI 3（Windows App SDK 1.7，自包含 / self-contained），`net8.0-windows10.0.19041.0`；CommunityToolkit.Mvvm 与 WinUI 设置控件 / settings controls；WebView2（在线页里的 GameBanana 网页 / the GameBanana page in Online） |
 | 核心库与数据 / Core and data | .NET 8 类库 / class libraries；SQLite（`Microsoft.Data.Sqlite` 8.0） |
 | 启动器 / Launcher | .NET Framework 4.x，由 `csc.exe` 编译的单文件程序 / a single-file program compiled with `csc.exe` |
-| 更新器 / Updater | .NET 8，依赖框架的单文件程序（`dotnet publish`），不用 Windows Forms，只需要主程序同样需要的 .NET 8 运行时 / a framework-dependent .NET 8 single file without Windows Forms, needing only the runtime the app needs |
-| 测试 / Tests | xUnit、coverlet 覆盖率 / coverage、Roslyn（文案检查 / UI text checks） |
-| 构建与 CI / Build and CI | MSBuild、PowerShell 脚本 / scripts、GitHub Actions（`windows-latest`） |
+| 更新器 / Updater | .NET 8，依赖框架的单文件程序（`dotnet publish`），只需要主程序同样需要的 .NET 8 运行时 / a framework-dependent .NET 8 single file needing only the runtime the app needs |
+| 测试 / Tests | xUnit、coverlet 覆盖率 / coverage、Roslyn（文案检查 / UI text checks）、FlaUI（界面自动化 / UI automation） |
+| 构建与 CI / Build and CI | MSBuild、PowerShell 脚本 / scripts、GitHub Actions（`windows-latest`）、CodeQL、Dependabot |
 
 `Directory.Build.props` 统一设置 `LangVersion=12`、可空引用和隐式 using；`.editorconfig` 的规则由 `scripts/check-code-style.ps1` 在 CI 中检查。
 `Directory.Build.props` pins `LangVersion=12`, nullable references and implicit usings for every project; `scripts/check-code-style.ps1` enforces `.editorconfig` in CI.
@@ -28,48 +44,102 @@ src/
   IntegratedModManager.Data/              SQLite 缓存与索引 / SQLite caches and index
   IntegratedModManager.EndfieldLaunch/    内置终末地启动（AGPL-3.0-only）/ integrated Endfield launch
   IntegratedModManager.UpdateAgent.Core/  把更新器编译成可测试的程序集 / updater as a testable assembly
-  Launcher/                               WinUILauncher.cs；LocalUpdateAgent.cs、.csproj、.manifest（更新器 / updater）
+  Launcher/                               WinUILauncher.cs；LocalUpdateAgent.cs、.csproj（更新器 / updater）
   WinUI3/                                 主程序 ModFolderCopier.WinUI / the WinUI application
 tests/
-  Core.Tests/  DataStore.Tests/  UpdateAgent.Tests/  EndfieldLaunch.Tests/
-  UI.Tests/                               界面自动化测试（FlaUI，不在 CI 中运行）/ UI automation, not run in CI
+  Core.Tests/  DataStore.Tests/  UpdateAgent.Tests/  EndfieldLaunch.Tests/   单元测试 / unit tests
+  Online.Tests/                           真实网站检查（每日 CI）/ live-site checks, daily in CI
+  UI.Tests/                               界面自动化（FlaUI，CI 中运行）/ UI automation, run in CI
   Performance/                            性能基准 / benchmarks
-  TestData/                               合成测试数据 / synthetic fixtures
-tools/DeveloperTools/                     独立发布的开发者工具 / standalone developer tools
+  TestData/                               合成测试数据与在线样例 / synthetic fixtures and online samples
+tools/
+  DeveloperTools/                         独立发布的开发者工具 / standalone developer tools
+  online-fixtures/                        生成在线样例 / generates the online samples
+  ui-baseline/                            截图基线脚本 / screenshot baseline script
 scripts/                                  构建、测试、打包与测试夹具脚本 / build, test, packaging and fixture scripts
 docs/                                     手册、发布说明、验证记录、开发文档 / manuals, releases, verification, development
-.github/                                  CI、Issue/PR 模板、贡献与安全说明 / CI, templates, contributing, security
+.github/                                  工作流、Issue/PR 模板、贡献与安全说明 / workflows, templates, contributing, security
 ```
 
 打开 [`IntegratedModManager.sln`](../../IntegratedModManager.sln) 可一次加载全部项目。Open the solution to load every project.
 
 ## 3. 项目与依赖 / Projects and dependencies
 
+### 3.1 发布的项目 / Shipped projects
+
+图：箭头表示“引用”。主程序引用 Core、Data 和 EndfieldLaunch；Data 引用 Core。启动器和更新器各自是独立的可执行文件，不引用其他项目。
+Diagram: an arrow means "references". The app references Core, Data and EndfieldLaunch; Data references Core. The launcher and the updater are separate executables with no project references.
+
 ```mermaid
-flowchart LR
-  WinUI["WinUI3<br/>ModFolderCopier.WinUI"] --> Core["IntegratedModManager.Core"]
-  WinUI --> Data["IntegratedModManager.Data"]
-  WinUI --> Launch["IntegratedModManager.EndfieldLaunch<br/>(AGPL-3.0-only)"]
+flowchart TB
+  subgraph exe["Executables"]
+    direction LR
+    L["Launcher<br/>IntegratedModManager.exe"]
+    App["WinUI3<br/>ModFolderCopier.WinUI.exe"]
+    Upd["Updater<br/>LocalUpdateAgent.exe"]
+  end
+  subgraph lib["Libraries"]
+    direction LR
+    EL["EndfieldLaunch<br/>AGPL-3.0"]
+    Data["Data<br/>SQLite"]
+    Core["Core"]
+  end
+  App --> EL
+  App --> Data
+  App --> Core
   Data --> Core
-  Agent["UpdateAgent.Core"] -. "编译 / compiles" .-> AgentSrc["Launcher/LocalUpdateAgent.cs"]
-  Tools["tools/DeveloperTools"] --> Core
-  CoreTests["tests/Core.Tests"] --> Core
-  DataTests["tests/DataStore.Tests"] --> Data
-  AgentTests["tests/UpdateAgent.Tests"] --> Agent
-  LaunchTests["tests/EndfieldLaunch.Tests"] --> Launch
-  Perf["tests/Performance"] --> Core
-  UiTests["tests/UI.Tests"] -. "启动构建好的程序 / launches the built app" .-> WinUI
-  Perf --> Data
 ```
 
 | 项目 / Project | 职责 / Responsibility |
 | --- | --- |
-| `IntegratedModManager.Core` | 不依赖控件的全部业务逻辑：解压、部署、预设、在线数据、快捷键、更新等，几乎全部有单元测试。All business logic that needs no controls; nearly all of it is unit tested. |
+| `IntegratedModManager.Core` | 不依赖控件的全部业务逻辑：解压、部署、预设、在线数据、快捷键、更新、布局策略等，几乎全部有单元测试。All business logic that needs no controls; nearly all of it is unit tested. |
 | `IntegratedModManager.Data` | `AppDataStore` 管理 SQLite 数据库；在线元数据缓存与仓库索引的适配器。SQLite store plus adapters for online metadata and the repository index. |
 | `IntegratedModManager.EndfieldLaunch` | 以官方签名的 `Games.exe` 为父进程启动终末地、与 XXMI/EFMI 集成、保存启动设置与恢复点。唯一的 AGPL 组件。Launches Endfield under the signed `Games.exe`, integrates with XXMI/EFMI, stores launch settings and restore points. The only AGPL component. |
-| `Launcher/LocalUpdateAgent.csproj` | 把更新器发布成单个 `LocalUpdateAgent.exe`。4.7.0 之前它是用 `csc.exe` 编译的 .NET Framework 程序，被几家机器学习扫描引擎误报（GameBanana 因此暂扣了上传）；改用 .NET 8 构建后基本不再报。Publishes the updater as one `LocalUpdateAgent.exe`; until 4.7.0 it was a .NET Framework program compiled with `csc.exe` that several machine-learning scanners flagged, which the .NET 8 build mostly avoids. |
+| `Launcher/WinUILauncher.cs` | 启动器：找到并启动 `WinUI3/ModFolderCopier.WinUI.exe`；找不到程序文件或 Windows 拦截启动时，用中文或英文说明怎么处理。The launcher: finds and starts the app, and explains in Chinese or English what to do when the program file is missing or Windows blocks the start. |
+| `Launcher/LocalUpdateAgent.csproj` | 把更新器发布成单个 `LocalUpdateAgent.exe`（.NET 8，不再被机器学习扫描引擎误报）。Publishes the updater as one `LocalUpdateAgent.exe` on .NET 8. |
 | `IntegratedModManager.UpdateAgent.Core` | 不含自己的源码，只把 `src/Launcher/LocalUpdateAgent.cs` 编译成程序集供测试使用。Has no sources of its own; compiles the updater source for tests. |
-| `WinUI3` | 主程序：窗口、页面、置顶浮窗、按键发送、本地化文案。依赖 Core、Data、EndfieldLaunch。The application: window, pages, overlay, key input, localized text. |
+| `WinUI3` | 主程序：窗口、六个页面、服务层、置顶浮窗、按键发送、本地化文案。The application: window, six pages, services, overlay, key input, localized text. |
+
+### 3.2 测试与工具 / Tests and tools
+
+图：每个测试项目指向它测试的项目。`UI.Tests` 不引用项目，而是启动构建好的程序；`UpdateAgent.Core` 编译更新器的源文件。
+Diagram: each test project points at what it tests. `UI.Tests` references no project; it starts the built app. `UpdateAgent.Core` compiles the updater's source file.
+
+```mermaid
+flowchart LR
+  subgraph tests["tests/ and tools/"]
+    direction TB
+    CT["Core.Tests"]
+    OT["Online.Tests"]
+    DT["DataStore.Tests"]
+    ET["EndfieldLaunch.Tests"]
+    UT["UpdateAgent.Tests"]
+    PF["Performance"]
+    UI["UI.Tests"]
+    DevT["DeveloperTools"]
+  end
+  subgraph src["src/"]
+    direction TB
+    Core["Core"]
+    Data["Data"]
+    EL["EndfieldLaunch"]
+    UAC["UpdateAgent.Core"]
+    App["WinUI3 app"]
+    Upd["LocalUpdateAgent.cs"]
+  end
+  CT --> Core
+  OT --> Core
+  DevT --> Core
+  DT --> Data
+  PF --> Data
+  ET --> EL
+  UT --> UAC
+  UAC -. "compiles" .-> Upd
+  UI -. "starts" .-> App
+```
+
+`Core.Tests` 还把主程序里几个不依赖控件的文件（如 `BetaShellConfig`、`ShortcutPageViewModel`、`SettingsViewModel`、在线状态适配器）一起编译来测试；公共依赖在 `tests/TestDependencies.props`。
+`Core.Tests` also compiles a few control-free files of the app (such as `BetaShellConfig`, `ShortcutPageViewModel`, `SettingsViewModel` and the online state adapters); shared test dependencies are in `tests/TestDependencies.props`.
 
 ## 4. 运行时结构 / Runtime layout
 
@@ -83,7 +153,7 @@ LICENSE, LICENSE-AGPL-3.0.txt, LICENSING.md, README.md, 开始使用.md, PACKAGE
 docs/                           手册、发布说明、截图、验证记录 / manuals, release notes, screenshots, verification
 WinUI3/
   ModFolderCopier.WinUI.exe     主程序 / the application
-  *.dll                         .NET、Windows App SDK、核心库 / runtime, Windows App SDK, project libraries
+  *.dll                         .NET、Windows App SDK、项目库 / runtime, Windows App SDK, project libraries
   Tools/                        7-Zip（7z.exe、7z.dll、许可证 / license）
   licenses/                     MIT、AGPL、NOTICE、LICENSING
   config.ini, beta-shell.json, cache/, backups/, snapshots/, diagnostics/   用户数据（运行后生成）/ user data, created at run time
@@ -92,156 +162,398 @@ WinUI3/
 安装包目录结构在多个版本间保持不变，旧版本的更新器依赖它。`scripts/release-file-policy.ps1` 规定哪些文件进入安装包，并排除用户数据。
 The package layout stays the same across releases because older updaters depend on it. `scripts/release-file-policy.ps1` decides which files ship and excludes user data.
 
-### 4.2 进程与入口 / Processes and entry points
+### 4.2 进程 / Processes
+
+图：用户启动启动器，启动器启动主程序。主程序在需要时启动其他进程：解压用 7-Zip，在线页里的 GameBanana 网页由 WebView2 运行，确认更新后启动更新器，终末地由启动组件经 `Games.exe` 启动。按键用 `SendInput` 发给选中的游戏窗口。
+Diagram: the user starts the launcher, which starts the app. The app starts other processes when needed: 7-Zip for archives, WebView2 for the GameBanana page in Online, the updater after an update is confirmed, and Endfield through `Games.exe`. Keys go to the chosen game window with `SendInput`.
 
 ```mermaid
-flowchart TD
-  User["用户双击 / user starts"] --> L["IntegratedModManager.exe<br/>启动器 / launcher"]
-  L --> App["WinUI3/ModFolderCopier.WinUI.exe"]
-  App -->|"已在运行 / already running"| Redirect["激活已有窗口后退出<br/>activate existing window, exit"]
-  App -->|"--endfield-game-only --from-xxmi"| Launch["无窗口启动游戏<br/>windowless game launch"]
-  App -->|"确认更新 / update confirmed"| Agent["LocalUpdateAgent.exe"]
-  Agent -->|"替换文件、校验、重启或回滚<br/>replace, verify, restart or roll back"| L
-  App -->|"以管理员身份重启 / restart elevated"| App
+flowchart TB
+  U(["User"]) --> L["Launcher"]
+  L --> App["WinUI3 app"]
+  App -->|"archives"| Z["7z.exe"]
+  App -->|"likes page"| WV["WebView2"]
+  App -->|"update"| Upd["Updater"]
+  Upd -->|"restart"| L
+  App -->|"Endfield"| G["Games.exe"]
+  App -.->|"SendInput"| W["Game window"]
 ```
 
-- `Program.cs` 替换了 XAML 生成的入口：先处理终末地启动命令（不创建窗口、不占用单实例），再检查单实例，同一目录的第二次启动会激活已有窗口。
-  `Program.cs` replaces the XAML entry point: it handles Endfield launch commands first (no window, no single-instance key), then enforces one instance per install folder.
-- 更新器在主程序退出后替换文件，检查安装后的版本，失败时从 `backups/updates` 回滚；`config.ini`、`beta-shell.json`、`cache/`、`backups/`、`snapshots/`、`diagnostics/` 不会被覆盖。
-  The updater replaces files after the app exits, checks the installed version, and rolls back from `backups/updates` on failure; user data folders are preserved.
-- `--restart-after <pid>` 让以管理员身份重启的新进程等待旧进程退出。
-  `--restart-after <pid>` makes an elevated restart wait for the previous process.
+- `Program.cs` 替换了 XAML 生成的入口：先处理终末地启动命令（`--endfield-game-only --from-xxmi`，不创建窗口、不占用单实例），再检查单实例；同一目录的第二次启动会激活已有窗口后退出。
+  `Program.cs` replaces the XAML entry point: it handles Endfield launch commands first (no window, no single-instance key), then enforces one instance per install folder; a second start activates the existing window and exits.
+- `--restart-after <pid>` 让以管理员身份重启的新进程等待旧进程退出（终末地需要管理员权限才能接收按键）。
+  `--restart-after <pid>` makes an elevated restart wait for the previous process (Endfield only accepts keys from an elevated sender).
+- WebView2 使用自己的配置文件夹 `WinUI3/cache/gamebanana-webview2`，和用户的浏览器分开；设置页可以删除它。
+  WebView2 uses its own profile folder, `WinUI3/cache/gamebanana-webview2`, separate from the user's browser; Settings can delete it.
 
 ## 5. 主程序内部 / Inside the application
 
-### 5.1 MainWindow
+### 5.1 窗口与页面 / Window and pages
 
-`MainWindow` 是 partial 类：`MainWindow.xaml.cs` 只保留字段、常量和构造函数，每个功能一个 `MainWindow.<功能>.cs` 文件。
-`MainWindow` is a partial class: `MainWindow.xaml.cs` holds fields, constants and the constructor; each feature has its own `MainWindow.<Feature>.cs`.
+图：`MainWindow` 是外壳：标题栏（带搜索框）、`NavigationView` 和页面宿主 `PageContentHost`。六个页面由宿主显示，全局消息用底部的 `InfoBar`，对话框都经 `DialogService` 显示，置顶浮窗是单独的窗口。
+Diagram: `MainWindow` is the shell: a title bar with search, a `NavigationView` and the page host `PageContentHost`. The host shows the six pages; app-wide messages use the `InfoBar` at the bottom; every dialog goes through `DialogService`; the overlay is a window of its own.
 
-| 分组 / Group | 文件 / Files |
+```mermaid
+flowchart LR
+  MW["MainWindow"]
+  MW --> TB["TitleBar<br/>search, Ctrl+K"]
+  MW --> NV["NavigationView"]
+  MW --> IB["AppInfoBar"]
+  NV --> Host["PageContentHost"]
+  Host --> P1["Dashboard"]
+  Host --> P2["Workspace"]
+  Host --> P3["Online"]
+  Host --> P4["Updates"]
+  Host --> P5["Shortcuts"]
+  Host --> P6["Settings"]
+  MW --> DS["DialogService"]
+  MW --> OW["Overlay window"]
+```
+
+| 页面 / Page | 文件 / Files | 创建时机 / Created |
+| --- | --- | --- |
+| 仪表盘 / Dashboard | `Pages/DashboardPage.xaml(.cs)` | 第一次显示 / first shown |
+| Mod 工作区 / Workspace | `Pages/WorkspacePage.xaml(.cs)`、`Pages/Workspace/*` | 随窗口 / with the window |
+| 在线 / Online | `Pages/OnlinePage.xaml(.cs)`、`Pages/Online/*` | 随窗口 / with the window |
+| 更新 / Updates | `Pages/UpdatesPage.xaml(.cs)` | 第一次显示 / first shown |
+| 快捷键 / Shortcuts | `Pages/ShortcutsPage.xaml(.cs)` | 第一次显示 / first shown |
+| 设置 / Settings | `Pages/SettingsPage.xaml(.cs)` | 第一次显示 / first shown |
+
+**页面宿主 / Page hosting.** 页面第一次显示时加入 `PageContentHost`，之后一直留在窗口里；切换只改哪一页可见（`MainWindow.Shell.cs` 的 `ShowPage`），所以滚动位置、选中项和进行中的加载都保留。4.8.1 及以前每次切换都把页面移出再放回，整页重新加载和排版（#135）。唯一的例外：仪表盘的入门提示（`TeachingTip`）打开时，页面只是折叠的话提示不会关，所以这时仪表盘仍从宿主移出。
+A page joins `PageContentHost` the first time it is shown and then stays; a switch only changes which page is visible (`ShowPage` in `MainWindow.Shell.cs`), so scroll positions, selections and loading work are kept. Up to 4.8.1 every switch took the page out and put it back, reloading and laying out all of it (#135). The one exception: a collapsed page does not close the Dashboard's getting-started `TeachingTip`, so while it is open the Dashboard still leaves the host.
+
+图：一个页面在宿主里的状态。
+Diagram: the states of a page in the host.
+
+```mermaid
+stateDiagram-v2
+  [*] --> NotCreated
+  NotCreated --> Shown: first visit
+  Shown --> Hidden: other page
+  Hidden --> Shown: visit again
+  Shown --> Removed: Dashboard with tip open
+  Removed --> Shown: visit again
+```
+
+页面里依赖“是否在屏幕上”的逻辑看 `IsLoaded && Visibility == Visible`，而不是只看 `IsLoaded`（仪表盘的提示和路径展开、快捷键页的按键渲染）。
+Code that depends on "is the page on screen" checks `IsLoaded && Visibility == Visible`, not `IsLoaded` alone (the Dashboard's tip and paths, the Shortcuts page's bindings).
+
+### 5.2 服务与页面接口 / Services and page interfaces
+
+图：页面通过 `AppServices` 共享状态和服务，只在需要窗口的地方通过接口回调窗口。在线页和工作区页的接口由窗口实现（`MainWindow.OnlineHost.cs`、`MainWindow.WorkspaceHost.cs`）；浮窗通过 `IShortcutOverlayActions` 请求窗口做事，窗口通过 `IShortcutOverlay` 控制浮窗。
+Diagram: pages share state and services through `AppServices` and call back into the window only through interfaces. The window implements the Online and Workspace interfaces (`MainWindow.OnlineHost.cs`, `MainWindow.WorkspaceHost.cs`); the overlay asks the window through `IShortcutOverlayActions`, and the window drives the overlay through `IShortcutOverlay`.
+
+```mermaid
+flowchart LR
+  Pages["Six pages"]
+  MW["MainWindow"]
+  AS["AppServices<br/>services and<br/>view models"]
+  OC["Overlay<br/>controller"]
+  Pages -->|"use"| AS
+  MW -->|"owns"| AS
+  OC -->|"reads"| AS
+  Pages -.->|"IOnlineHost<br/>IWorkspaceHost"| MW
+  OC -.->|"IShortcutOverlay-<br/>Actions"| MW
+  MW -.->|"IShortcutOverlay"| OC
+```
+
+| 服务 / Service（`Services/`） | 作用 / Role |
 | --- | --- |
-| 外壳与通用 / Shell | `Shell`, `CommandPalette`, `PageLayout`, `Localization`, `Settings`, `Configuration`, `Dialogs`, `Tray`, `SingleInstance`, `UiActionGuard`, `UiDiagnostics`, `BuiltInData`, `WhatsNew`, `FirstRun` |
-| 仓库与本地库 / Repositories | `Dashboard`, `Repositories`, `LocalLibrary`, `RepositoryWorkspace`, `RefinedWorkspace`, `RepositoryPerformance`, `LocalTags`, `ExistingModImport`, `CharacterAvatars`, `CharacterSelection`, `BatchModActions` |
-| 安装、部署与预设 / Install and presets | `Archives`, `InstallTransactions`, `IniConflicts`, `ConfigurationProfiles`, `CombinationPresets`, `CombinationBundles`, `PresetShare`, `PresetPreviews`, `PersistentSlots`, `PersistentVariants`, `DefaultSlots`, `SlotCapture` |
-| 在线浏览 / Online | `OnlineFeed`, `OnlineCharacters`, `OnlineCards`, `OnlineDetails`, `OnlineImageCache`, `OnlineImages`, `OnlineBrowse`, `OnlineState`, `OnlineLibrary`, `BrowseSessions`, `AuthorWorkspace` |
-| 下载与更新 / Downloads and updates | `OnlineDownloadFlow`, `OnlineDownloads`, `OnlineInstall`, `DownloadTasks`, `DownloadRecovery`, `BatchDownloads`, `Updates`, `ModUpdates` |
-| 快捷键与浮窗 / Shortcuts and overlay | `ShortcutBindings`, `ShortcutPanel`, `ShortcutPresets`, `ShortcutCapture`, `HotReload`, `CharacterFollow`, `OverlayAppearance`, `OverlayAutoContrast`, `ProductivityFeatures` |
-| 终末地与 XXMI / Endfield and XXMI | `EndfieldBridge`（含其他游戏通过 XXMI 启动 / including other games through XXMI） |
+| `AppServices` | 窗口创建一次，所有页面共用：下面的服务和共享的 ViewModel（设置、更新、仪表盘、路径、快捷键）。Created once by the window and shared by every page. |
+| `LanguageService`、`AppearanceService` | 界面语言与 `T()`/`M()` 文案查找；主题和密度，变化时通知页面。UI language and text lookup; theme and density, announced to pages. |
+| `ShellConfigService` | `beta-shell.json` 和 `config.ini` 的位置、读写与备份。Where the two settings files live and how they are read, written and backed up. |
+| `RepositoryService` | 已配置的仓库和当前仓库。The configured repositories and the current one. |
+| `DialogService` | 显示所有对话框：设置 `XamlRoot`、主题和默认样式，同一时间只开一个。Shows every dialog: XamlRoot, theme, default style, one at a time. |
+| `StatusService` | 全局通知，由窗口显示在 `InfoBar`。App-wide notifications shown in the InfoBar. |
+| `DeploymentService`、`DownloadService`、`LaunchService` | 部署备份位置；下载任务及其日志；启动加载器或启动器。Deployment backups; download tasks and their journal; starting the loader or launcher. |
+| `OnlineState`、`OnlineSourceService`、`OnlineCategoryService`、`CharacterCatalogService`、`ImageService` | 在线页的状态、仓库的在线来源、游戏分类（缓存一天）、角色目录、在线图片缓存。Online page state, a repository's online source, categories (kept a day), character catalogs, the image cache. |
+| `GameBananaWebSession` | 点赞用的 GameBanana 网页的登录：保存位置、关闭网页、删除登录。The sign-in of the GameBanana page used for likes: where it lives, closing the page, deleting it. |
+| `EndfieldBridgeService` | 终末地仓库的内置启动：是否适用、XXMI 位置、启动设置。The integrated Endfield launch. |
+| `IShortcutOverlay` | 窗口控制浮窗的接口（打开、隐藏、切换、刷新）。How the window drives the overlay. |
 
-切页（`MainWindow.Shell.cs` 的 `ShowPage`）：页面第一次显示时加入宿主，之后一直留在窗口里，切换只改哪一页可见；4.8.1 及以前每次切换都把页面移出、再放回窗口，整页重新加载和排版。Page switching (`ShowPage` in `MainWindow.Shell.cs`): a page joins the host the first time it is shown and stays in the window; a switch only changes which page is visible. Up to 4.8.1 every switch took the page out of the window and put it back, reloading and laying out all of it.
+### 5.3 MainWindow 的 partial 文件 / MainWindow partial files
 
-### 5.2 其他界面类 / Other UI classes
+`MainWindow.xaml.cs` 只保留字段、常量和构造函数；页面专属的代码已在阶段 J 移进 `Pages/`，窗口里留下的是外壳、页面宿主接口和跨页面的功能。
+`MainWindow.xaml.cs` holds fields, constants and the constructor; page-specific code moved into `Pages/` in stage J, and the window keeps the shell, the page host interfaces and cross-page features.
+
+| 分组 / Group | `MainWindow.<名称>.cs` |
+| --- | --- |
+| 外壳 / Shell | `Shell`, `TitleBarSearch`, `CommandPalette`, `Localization`, `Configuration`, `Dialogs`, `AppearanceEvents`, `Tray`, `SingleInstance`, `UiActionGuard`, `UiDiagnostics`, `BuiltInData`, `WhatsNew`, `FirstRun` |
+| 页面宿主 / Page hosts | `DashboardHost`, `WorkspaceHost`, `OnlineHost`, `UpdatesHost`, `ShortcutsHost`, `SettingsHost` |
+| 仓库与安装 / Repositories and installs | `Repositories`, `RepositoryPerformance`, `Archives`, `InstallTransactions`, `IniConflicts`, `CopyOwnership`, `CharacterRename` |
+| 预设与状态 / Presets and state | `ConfigurationProfiles`, `CombinationPresets`, `CombinationBundles`, `PresetShare`, `PresetPreviews`, `PersistentSlots`, `PersistentVariants`, `DefaultSlots`, `SlotCapture`, `HotReload` |
+| 更新与下载 / Updates and downloads | `Updates`, `ModUpdates`, `DownloadTasks` |
+| 快捷键与浮窗 / Shortcuts and overlay | `ShortcutPanel`, `ShortcutPresets`, `ShortcutCapture`, `ShortcutBindingRules`, `CharacterFollow`, `ProductivityFeatures` |
+| 终末地与 XXMI / Endfield and XXMI | `EndfieldBridge` |
+
+### 5.4 浮窗 / Overlay
+
+图：浮窗是不抢焦点的置顶窗口（`ShortcutOverlayWindow`，`WS_EX_NOACTIVATE`），内容由 `ShortcutOverlayController` 搭建。按钮的动作经 `IShortcutOverlayActions` 交给窗口原有的代码（发送按键、F10、保存预设、切换槽位）；位置和贴边的计算在 Core 的 `OverlayLayoutPolicy`。
+Diagram: the overlay is a non-activating always-on-top window (`ShortcutOverlayWindow`, `WS_EX_NOACTIVATE`) whose content `ShortcutOverlayController` builds. Its actions go through `IShortcutOverlayActions` to the window's existing code (send keys, F10, save presets, switch slots); placement and snapping are computed by `OverlayLayoutPolicy` in Core.
+
+```mermaid
+flowchart TB
+  OW["ShortcutOverlayWindow<br/>title bar, size, place"]
+  OC["ShortcutOverlayController<br/>content"]
+  OLP["OverlayLayoutPolicy<br/>Core.Layout"]
+  VM["ShortcutPageViewModel"]
+  MW["MainWindow<br/>ShortcutsHost"]
+  OW --> OC
+  OW --> OLP
+  OC --> VM
+  OC -->|"IShortcutOverlayActions"| MW
+```
+
+- 窗口：自己画的标题栏是拖动区域；高度跟随内容；可调大小；按显示器（设备名加分辨率）以 DIP 记住位置，保存在 `beta-shell.json` 的 `OverlayPlacements`；拖到工作区边缘 16 DIP 内贴边；跟随应用主题。
+  Window: its own title bar is the drag region; the height follows the content; it can be resized; its place is remembered per display in DIP (`OverlayPlacements` in `beta-shell.json`); it snaps within 16 DIP of an edge; it follows the app theme.
+- 内容：标题栏（状态圆点、Mod 名称、状态图标、⋯ 菜单、关闭）、Mod 和目标窗口、发送开关、状态槽位、键帽、“保存预设”下拉按钮。需要用户处理的失败由 `ShortcutPageViewModel.ReportError` 标记，显示成红色 `InfoBar`。
+  Content: title bar (status dot, Mod name, status icon, ⋯ menu, close), Mod and target window, send switch, state slots, key caps, the Save preset drop-down. Failures the user must act on are marked by `ShortcutPageViewModel.ReportError` and shown as a red InfoBar.
+
+### 5.5 其他界面类 / Other UI classes
 
 | 文件 / File | 作用 / Role |
 | --- | --- |
 | `Program.cs`, `App.xaml(.cs)` | 入口、单实例、全局异常记录。Entry point, single instance, unhandled-exception logging. |
 | `UiText.cs`、`UiMessage.cs` + `Strings/*.json` | 界面文案，每种语言一个文件（嵌入资源）。UI text, one embedded file per language. |
-| `ShortcutOverlayWindow.cs` | 不抢焦点的置顶浮窗（`WS_EX_NOACTIVATE`）；命名预设时临时允许键盘输入。4.8.2 起自己画标题栏（拖动区域）、高度跟随内容、可调大小、按显示器记住位置（`OverlayLayoutPolicy`）、拖到边缘贴边，并跟随应用主题。Non-activating always-on-top overlay; takes keyboard input only while naming a preset. Since 4.8.2 it draws its own title bar (the drag region), fits its height to the content, can be resized, remembers its place per display (`OverlayLayoutPolicy`), snaps to edges and follows the app theme. |
-| `Overlay/ShortcutOverlayController.cs` | 浮窗的内容：标题栏（状态圆点、Mod 名称、状态图标、⋯ 菜单、关闭）、Mod 和目标窗口、发送开关、状态槽位、键帽、“保存预设”下拉按钮；动作经 `IShortcutOverlayActions` 交给窗口原有的代码。The overlay's content: title bar (status dot, Mod name, status icon, ⋯ menu, close), Mod and target window, send switch, state slots, key caps and the Save preset drop-down; actions go through `IShortcutOverlayActions` to the window's existing code. |
-| `Services/GameBananaWebSession.cs` | 在线页里打开 Mod 的 GameBanana 页面（点赞）用的 WebView2 配置文件 `cache\gamebanana-webview2`；允许的网址由 Core 的 `GameBananaWeb` 判断，设置页可以删除这份登录。The WebView2 profile (`cache\gamebanana-webview2`) for the Mod's GameBanana page in the Online page (likes); `GameBananaWeb` in Core decides which addresses may load, and Settings can delete the sign-in. |
-| `ShortcutInputService.cs`, `ShortcutProcessSecurity.cs`, `ShortcutPanelHotkey.cs` | 用 `SendInput` 向游戏窗口发送按键、检查进程权限、注册全局快捷键。Sends keys with `SendInput`, checks process integrity, registers the global hotkey. |
+| `Themes/Tokens.xaml`、`Styles/Controls.xaml`、`Styles/Pages.xaml` | 设计令牌（画刷、间距、圆角）和共用控件样式。Design tokens and shared control styles. |
+| `Dialogs/` | 每个对话框一个类，由 `DialogService` 显示。One class per dialog, shown by `DialogService`. |
+| `ShortcutInputService.cs`, `ShortcutProcessSecurity.cs`, `ShortcutPanelHotkey.cs` | 用 `SendInput` 发送按键、检查进程权限、注册全局快捷键。Sends keys with `SendInput`, checks process integrity, registers the global hotkey. |
 | `CharacterScreenCapture.cs` | 跟随出场角色时截取 HUD 区域。Captures the HUD region to follow the active character. |
-| `Online*Adapter.cs` | 在线页状态与图片加载的适配层。Adapters for online page state and image loading. |
+| `Online*Adapter.cs` | 在线页状态与图片加载的适配层（与 Core 测试共用）。Adapters for online page state and image loading, also compiled into Core tests. |
 | `UiCrashDiagnostics.cs` | 界面崩溃的本地诊断。Local diagnostics for UI crashes. |
-| `Models/` | 窗口使用的记录与配置类型，每个类型一个文件（如 `BetaShellConfig`、`WorkspaceRepository`、`ModPersistentSlot`）。Records and configuration types used by the window, one per file. |
-| `Controls/` | XAML 控件：通用页头 `PageHeader`、设置行 `SettingRow`、空状态 `EmptyState`，在线卡片 `OnlineModRow`（列表与网格共用）和 `OnlineModTile`；`DelegateElementFactory` 让代码构建的 `ItemsRepeater` 只创建可见行（更新页列表）。XAML controls: the shared `PageHeader`, `SettingRow` and `EmptyState`, the online `OnlineModRow` (one card for list and grid) and `OnlineModTile`; `DelegateElementFactory` lets code-built `ItemsRepeater`s create only visible rows (the Updates lists). |
-| `ViewModels/` | 可绑定的 ViewModel，写法见 5.3：设置页 `AppearanceSettingsViewModel`；仪表板 `DashboardViewModel`、`RepositoryCardViewModel`、`CharacterChipViewModel`；在线页 `OnlinePageViewModel`（分页、筛选、搜索、排序、布局）与 `OnlineModTileViewModel`；仓库页 `CharacterListViewModel`、`ModListViewModel`（可见 Mod、选中项、视图、空状态、状态筛选）、`ModDetailsViewModel`；快捷键页 `ShortcutPageViewModel`（保存的设置、发送状态、检测到的绑定）。Bindable view models, see 5.3: `AppearanceSettingsViewModel` for Settings; `DashboardViewModel`, `RepositoryCardViewModel` and `CharacterChipViewModel` for the dashboard; `OnlinePageViewModel` (paging, filters, search, sort, layout) and `OnlineModTileViewModel` for Online; `CharacterListViewModel`, `ModListViewModel` (visible Mods, selection, view, empty state, state filter) and `ModDetailsViewModel` for the repository page; `ShortcutPageViewModel` (saved settings, sending state, detected bindings) for Shortcuts. |
+| `Models/` | 窗口使用的记录与配置类型，每个类型一个文件（如 `BetaShellConfig`、`WorkspaceRepository`、`ModPersistentSlot`）。Records and configuration types, one per file. |
+| `Controls/` | XAML 控件：`PageHeader`、`EmptyState`、`KeyVisual`（键帽）、`OnlineModRow`、`OnlineModTile`、`PaneSplitter`；`DelegateElementFactory` 让代码构建的 `ItemsRepeater` 只创建可见行。XAML controls; `DelegateElementFactory` lets code-built repeaters create only visible rows. |
+| `ViewModels/` | 可绑定的 ViewModel：设置、仪表盘、仓库卡片、路径、工作区（角色列表、Mod 列表、详情）、在线页与卡片、更新、快捷键。Bindable view models for each page. |
 
-### 5.3 页面、控件与 ViewModel / Pages, controls and view models
+### 5.6 写法 / How pages are written
 
-4.6 把各页面迁移到“控件 + ViewModel + Core 布局策略”，部署和数据逻辑没有跟着改；4.7 补上了快捷键页的 `ShortcutPageViewModel`。各页面的框架（设置页分区与总览、仪表板路径区、仓库页的工具栏、角色与 Mod 卡片、详情页签与页脚）都在 `MainWindow.xaml` 中声明，代码只添加按数据生成的内容（视图按钮、状态筛选、封面视图、标签工具），并按断点调整行列。
-In 4.6 the pages moved to "control + view model + Core layout policy" without changing deployment or data logic; 4.7 added `ShortcutPageViewModel` for the Shortcuts page. Every page frame (the settings sections and overview, the dashboard paths, the repository toolbar, character and Mod cards, detail tabs and footer) is declared in `MainWindow.xaml`; code adds only what is generated from data (view buttons, state chips, cover view, tag tools) and moves rows and columns at breakpoints.
-
-- **控件**放在 `src/WinUI3/Controls`，是 XAML `UserControl`，用 `x:Bind` 绑定。通用控件（如 `PageHeader`）用依赖属性对外暴露；页面控件只绑定自己的 ViewModel。
-  **Controls** live in `src/WinUI3/Controls` as XAML `UserControl`s bound with `x:Bind`. Shared controls such as `PageHeader` expose dependency properties; page controls bind only to their own view model.
-- 每个页面用 `PageHeader`：一行标题，说明放在 ⓘ 提示里，右侧放操作按钮（`Actions`）。不要再写两行的大标题横幅。
-  Every page uses `PageHeader`: a one-line title, the description in the ⓘ tooltip and actions on the right (`Actions`). No two-line banner headers.
-- **ViewModel** 放在 `src/WinUI3/ViewModels`，命名 `<名称>ViewModel`，`public sealed partial class`，继承 CommunityToolkit.Mvvm 的 `ObservableObject`。
-  **View models** live in `src/WinUI3/ViewModels`, are named `<Name>ViewModel`, and are `public sealed partial class`es deriving from CommunityToolkit.Mvvm's `ObservableObject`.
-  - 属性写成字段加 `SetProperty`。不用字段上的 `[ObservableProperty]`（MVVMTK0045，WinRT/AOT 不安全）；partial 属性需要预览版语言，也不用。
-    Properties are a field plus `SetProperty`. No field-based `[ObservableProperty]` (MVVMTK0045, not WinRT/AOT-safe); partial properties need a preview language version, so not those either.
-  - 操作用 `[RelayCommand]`；能否执行由 `CanExecute = nameof(...)` 的属性决定，该属性变化时调用 `XxxCommand.NotifyCanExecuteChanged()`。
-    Actions are `[RelayCommand]`s; availability comes from a `CanExecute = nameof(...)` property that calls `XxxCommand.NotifyCanExecuteChanged()` when it changes.
-  - ViewModel 不引用控件、不调用 `T()`。需要窗口做的事（打开对话框、部署、下载）通过构造函数传入 `Func<Task>` 或接口；显示用的文本由窗口本地化后赋值，或者由 ViewModel 暴露状态、在 XAML 里转换。
-    View models reference no controls and do not call `T()`. Work only the window can do (dialogs, deployment, downloads) comes in through constructor `Func<Task>`s or interfaces; display text is localized by the window and assigned, or the view model exposes state that XAML converts.
-  - 判断逻辑尽量放在 Core，ViewModel 只组合结果。参考 `OnlineModTileViewModel`。
-    Decisions belong in Core where possible; the view model only combines results. See `OnlineModTileViewModel`.
-- **布局**：页面在自己的 `SizeChanged` 里重新排版（`MainWindow.PageLayout.cs` 的 `AttachPageLayout`），用页面自身宽度而不是窗口宽度。窗口的 `SizeChanged` 触发时页面还没重新测量，读到的是旧宽度。断点和列数写成 `Core/Layout` 里的策略并补测试（如 `DashboardLayoutPolicy`）。
-  **Layout**: a page lays itself out in its own `SizeChanged` (`AttachPageLayout` in `MainWindow.PageLayout.cs`) from its own width, not the window's; when the window's `SizeChanged` fires the pages still report their previous size. Breakpoints and column counts are policies in `Core/Layout` with tests (for example `DashboardLayoutPolicy`).
-- 用名字（`x:Name`）找控件，不用 `Children[n]` 这样的位置序号；调整 XAML 顺序不应让布局失效。
-  Find elements by `x:Name`, never by position such as `Children[n]`; reordering XAML must not break a layout.
+- **控件**放在 `src/WinUI3/Controls`，是 XAML `UserControl`，用 `x:Bind` 绑定。通用控件用依赖属性对外暴露；页面控件只绑定自己的 ViewModel。
+  **Controls** are XAML `UserControl`s in `src/WinUI3/Controls`, bound with `x:Bind`. Shared controls expose dependency properties; page controls bind only to their own view model.
+- 每个页面用 `PageHeader`：一行标题，说明放在 ⓘ 提示里，右侧放操作按钮（`Actions`）。
+  Every page uses `PageHeader`: a one-line title, the description in the ⓘ tooltip and actions on the right.
+- **ViewModel** 放在 `src/WinUI3/ViewModels`，命名 `<名称>ViewModel`，`public sealed partial class`，继承 CommunityToolkit.Mvvm 的 `ObservableObject`。属性写成字段加 `SetProperty`（不用字段上的 `[ObservableProperty]`，MVVMTK0045）；操作用 `[RelayCommand]`。ViewModel 不引用控件、不调用 `T()`；需要窗口做的事通过构造函数传入 `Func<Task>` 或接口。
+  **View models** live in `src/WinUI3/ViewModels`, named `<Name>ViewModel`, `public sealed partial class`es deriving from `ObservableObject`. Properties are a field plus `SetProperty` (no field-based `[ObservableProperty]`, MVVMTK0045); actions are `[RelayCommand]`s. View models reference no controls and do not call `T()`; work only the window can do comes in through constructor `Func<Task>`s or interfaces.
+- **布局**：页面在自己的 `SizeChanged` 里按自身宽度排版；断点和列数写成 `Core/Layout` 里的策略并补测试（如 `DashboardLayoutPolicy`、`SettingsLayoutPolicy`）。
+  **Layout**: a page lays itself out in its own `SizeChanged` from its own width; breakpoints and column counts are policies in `Core/Layout` with tests.
+- 用名字（`x:Name`）找控件，不用 `Children[n]`；代码里创建的控件设置 `AutomationProperties.AutomationId`，界面测试才不依赖语言。
+  Find elements by `x:Name`, never by position; give controls built in code an `AutomationProperties.AutomationId` so UI tests do not depend on the language.
 
 ## 6. Core 模块 / Core modules
 
-命名空间与目录一致，例如 `Presets` 目录下是 `IntegratedModManager.Core.Presets`。Namespaces follow folders.
+图：Core 的目录按功能分组。`Infrastructure` 提供路径安全、不跟随链接的目录操作和错误标记，被其他模块共用；`Layout` 只放与控件无关的布局计算。
+Diagram: Core's folders grouped by purpose. `Infrastructure` (path safety, link-safe tree operations, error tags) is shared by the others; `Layout` holds only control-free layout calculations.
+
+```mermaid
+flowchart TB
+  subgraph files["Mods and files"]
+    direction LR
+    Dep["Deployment"]
+    Arc["Archives"]
+    Pre["Presets"]
+    Rep["Repository"]
+  end
+  subgraph net["Online and updates"]
+    direction LR
+    Onl["Online"]
+    Upd["Updates"]
+  end
+  subgraph other["App and input"]
+    direction LR
+    Cfg["Configuration"]
+    Sc["Shortcuts"]
+    Lay["Layout"]
+    End["Endfield"]
+  end
+  Inf["Infrastructure"]
+  files --> Inf
+  net --> Inf
+  other --> Inf
+```
 
 | 目录 / Folder | 内容 / Contents |
 | --- | --- |
-| `Archives` | `ArchiveExtractor`（ZIP、7-Zip、Bandizip、Windows tar）、RAR5 与 7-Zip 清单校验、错误分类、导入布局。Extraction, RAR5 and 7-Zip listing checks, error kinds, import layout. |
-| `Configuration` | `config.ini` 读写（`LegacyConfigFile`）、原子写入与损坏恢复（`ConfigurationFileStore`）、主题偏好（`ThemePreference`，含跟随系统）。config.ini format, atomic writes and recovery, theme preference (including follow-system). |
-| `Deployment` | 部署布局与按角色单选/多选（`ModDeploymentLayout`、`CharacterSelectionPolicy`）、目录联接、安装事务与回滚、文件与 INI 冲突检测、组合部署、旧库整理导入、角色文件夹规划。Layout and per-character selection, junctions, transactions and rollback, file and INI conflicts, combination deployment, library import. |
-| `Presets` | 组合预设与恢复预览、组合包、持久参数引擎（含写入 Mod 默认值）、变体文件导入、整份 `d3dx_user.ini` 快照、热重载（`LoaderHotReload`）、保存前刷新加载器状态（`LoaderStateCapture`）、不含文件的方案分享（`PresetShareService`）、默认槽位（`DefaultSlotPolicy`）、菜单状态变量（`TransientVariablePolicy`）、预设图片（`PresetPreviewStore`）、加载器自动保存间隔（`LoaderAutoSaveSetting`）。Presets, restore preview, bundles, persistent state engine, variant import, snapshots, hot reload, flush-before-capture, preset sharing, Default slots, menu-state variables, preset pictures, the loader auto-save interval. |
-| `Online` | 所有在线请求与解析：GameBanana 分类列表（`GameBananaCategoryClient`）、角色目录（`CharacterCatalogClient`：米游社 Wiki、终末地官网、GameBanana 角色分类、HoYoWiki 英文名）、翻译（`TextTranslationClient`）、图片下载（`OnlineImageDownloader`）、下载数（`GameBananaDownloadCounts`）、元数据、角色目录匹配、下载调度与会话、下载日志、浏览与预览策略、排序与分页（`OnlineBrowseOrder`）、请求冷却。Every online request and its parsing: GameBanana categories, character catalogs (miHoYo wiki, the Endfield site, GameBanana, HoYoWiki), translation, images, download counts, metadata; character catalog matching, download scheduling and sessions, journal, browse policies, sorting and paging, cooldown. 在线页里打开的 GameBanana 网页能去哪些地址（`GameBananaWeb`：只允许 Mod 自己的页面和 GameBanana 本站），以及删除它的登录数据。Which addresses the GameBanana page in the Online page may open (`GameBananaWeb`: only the Mod's own page and GameBanana itself), and deleting its sign-in data. |
-| `Shortcuts` | INI 按键扫描与缓存（`ModShortcutScanner`、`ModShortcutScanCache`）、按键计划、描述格式化、游戏窗口识别、权限策略。Key binding scanning and cache, key plans, descriptions, game window detection, privilege policy. |
-| `Updates` | 版本与发布策略（`ApplicationReleasePolicy`，含预览版不改写更新设置）、读取最新版本、下载与 SHA-256 校验（`ApplicationUpdateClient`）、更新包与校验文件、Mod 更新替换与恢复、更新页列表的状态、筛选、搜索与排序（`UpdatesListPolicy`）。Release policy (including previews leaving update settings unchanged), the latest release, download and SHA-256 check (`ApplicationUpdateClient`), update packages and checksums, Mod update replacement, and the Updates lists' statuses, filters, search and order. |
-| `Repository` | 仓库扫描、仪表板的角色与 Mod 计数及路径状态（`RepositoryContentSummary`、`PathFieldStatuses`）、角色文件夹头像（`CharacterFolderAvatars`）、命令面板搜索（`CommandPaletteSearch`）、工作区策略（Mod 状态筛选、设置步骤、空状态，`RepositoryWorkspacePolicy`）、通过 XXMI 启动（`XxmiLaunchPolicy`）、批量集合、性能记录。Repository scanning, dashboard counts and path status, character avatars, command palette search, workspace policies (state filters, setup steps, empty states), XXMI launch (`XxmiLaunchPolicy`), batch collections, performance. |
-| `Endfield` | 桥接迁移与资格判断、干员目录解析、内置干员表 `endfield-characters.json`（嵌入资源）。Bridge integration, operator catalog, embedded operator list. |
-| `Layout` | 与控件无关的窗口、弹窗和页面布局策略：仪表板、在线、设置、快捷键、更新、浮窗（如最大化还原到 80%、页面断点、列数、更新页固定列高、浮窗按显示器的位置和贴边 `OverlayLayoutPolicy`）。Control-free window, dialog and page layout policies for the dashboard, online, settings, shortcuts and updates pages, such as restoring to 80% of the work area, breakpoints, column counts and the Updates page's fixed column height. |
+| `Archives` | `ArchiveExtractor`（ZIP、7-Zip、Bandizip、Windows tar）、RAR5 与 7-Zip 清单校验、错误分类、导入布局。Extraction, listing checks, error kinds, import layout. |
+| `Configuration` | `config.ini` 读写、原子写入与损坏恢复（`ConfigurationFileStore`）、主题偏好、“新功能”何时显示（`WhatsNewPolicy`）。config.ini, atomic writes and recovery, theme preference, when What's New shows. |
+| `Deployment` | 部署布局与按角色单选/多选、目录联接、安装事务与回滚、复制记录（`CopyDeploymentLedger`）、文件与 INI 冲突检测、组合部署、旧库整理导入、角色文件夹规划。Layout and selection, junctions, transactions, copy records, conflicts, combination deployment, library import. |
+| `Presets` | 组合预设与恢复预览、组合包、持久参数引擎、变体导入、`d3dx_user.ini` 快照、热重载（`LoaderHotReload`）、保存前刷新加载器状态（`LoaderStateCapture`）、方案分享、默认槽位、菜单状态变量、预设图片、加载器自动保存间隔。Presets, bundles, persistent state, snapshots, hot reload, flush-before-capture, sharing, Default slots, preset pictures. |
+| `Online` | 所有在线请求与解析（GameBanana 列表、分类和下载数，角色目录，翻译，图片）、`OnlineHttpClientFactory`（含测试样例模式 `IMM_ONLINE_FIXTURES`）、下载调度与日志（`OnlineDownloadScheduler`、`DownloadTaskJournal`）、浏览与排序策略、请求冷却，以及内嵌 GameBanana 网页能打开的地址（`GameBananaWeb`）。Every online request and its parsing, the HTTP client factory with sample mode, download scheduling and journal, browse and sort policies, cooldown, and which addresses the embedded GameBanana page may open. |
+| `Shortcuts` | INI 按键扫描与缓存、按键计划、描述格式化、游戏窗口识别、权限策略。Key binding scanning and cache, key plans, descriptions, game window detection, privilege policy. |
+| `Updates` | 版本与发布策略（`ApplicationReleasePolicy`）、读取最新版本、下载与 SHA-256 校验（`ApplicationUpdateClient`）、Mod 更新替换与恢复、更新页列表的状态、筛选、搜索与排序。Release policy, latest release, download and checksum, Mod update replacement, Updates list policies. |
+| `Repository` | 仓库扫描、仪表盘计数与路径状态、角色文件夹头像、命令面板搜索、工作区策略、通过 XXMI 启动、批量集合、性能记录。Scanning, dashboard counts and path status, avatars, command palette search, workspace policies, XXMI launch, batch collections. |
+| `Endfield` | 桥接迁移与资格判断、干员目录解析、内置干员表（嵌入资源）。Bridge integration, operator catalog, embedded operator list. |
+| `Layout` | 窗口、弹窗和页面布局策略：仪表盘、在线、设置（`SettingsLayoutPolicy`）、快捷键、更新、浮窗（`OverlayLayoutPolicy`）。Window, dialog and page layout policies, including the overlay's placement. |
 | `Infrastructure` | 路径安全（`PathSafety`）、不跟随链接的目录操作（`SafeDirectoryTree`）、错误标记（`ErrorTags`）、恢复用 JSON、日志轮换、单实例策略。Path safety, link-safe tree operations, error tags, recovery JSON, log rotation, single instance. |
 
 ## 7. 数据与状态 / Data and state
 
+图：谁写哪些文件。设置和仓库在 `beta-shell.json`；SQLite 数据库是可重建的缓存；加载器的 `d3dx_user.ini` 和目标 Mods 文件夹属于用户，只在用户操作时写入，写入前备份。
+Diagram: who writes which files. Settings and repositories are in `beta-shell.json`; the SQLite database is a re-creatable cache; the loader's `d3dx_user.ini` and the target Mods folder belong to the user and are written only on user actions, with a backup first.
+
+```mermaid
+flowchart LR
+  subgraph writers["Writers"]
+    direction TB
+    SCS["ShellConfigService"]
+    ADS["AppDataStore"]
+    IMG["ImageService"]
+    GBW["GameBananaWebSession"]
+    DEP["Core.Deployment"]
+    PRE["Core.Presets"]
+    UPD["Updater"]
+  end
+  subgraph app["WinUI3 folder"]
+    direction TB
+    BSJ["beta-shell.json<br/>config.ini"]
+    DB["cache/app-index.db"]
+    CI["cache/online-images"]
+    WVP["cache/<br/>gamebanana-webview2"]
+    BK["backups/"]
+    SN["snapshots/"]
+  end
+  subgraph user["User folders"]
+    direction TB
+    TM["Target Mods folder"]
+    UI["d3dx_user.ini"]
+  end
+  SCS --> BSJ
+  ADS --> DB
+  IMG --> CI
+  GBW --> WVP
+  DEP --> TM
+  DEP --> BK
+  PRE --> UI
+  PRE --> SN
+  UPD --> BK
+```
+
 | 位置 / Location | 内容 / Contents | 写入方 / Written by |
 | --- | --- | --- |
-| `WinUI3/config.ini` | 主题、语言、快捷键说明、Mod 链接、在线安装来源（值为 Base64）。Theme, language, shortcut notes, Mod links, install origins (Base64 values). | `ConfigurationFileStore` |
-| `WinUI3/beta-shell.json` | 仓库与路径、界面状态、在线偏好、组合预设 `ConfigurationProfiles`、状态槽位 `ModPersistentSlots`、浮窗设置。Repositories, UI state, online preferences, presets, state slots, overlay settings. | `ConfigurationFileStore` |
-| `WinUI3/cache/app-index.db` | SQLite：在线分页、角色目录、详情、指标、收藏、仓库索引。SQLite: online pages, characters, details, metrics, favorites, repository index. | `AppDataStore` |
-| `WinUI3/cache/online-images` | 在线图片缓存，可重新生成。Re-creatable image cache. | 在线页 / Online page |
-| `WinUI3/snapshots/user-ini` | 整份 `d3dx_user.ini` 快照。Whole `d3dx_user.ini` snapshots. | `UserIniSnapshots` |
-| `WinUI3/snapshots/preset-previews` | 状态槽位与组合预设的图片，不进诊断报告。Pictures of slots and presets, never in diagnostics. | `PresetPreviewStore` |
-| `WinUI3/backups`, `backups/` | 配置备份、安装事务备份、软件更新备份、终末地启动设置与恢复点。Configuration, install transaction, update and Endfield launch backups. | Core、更新器、启动组件 / Core, updater, launch component |
+| `WinUI3/config.ini` | 主题、语言、快捷键说明、Mod 链接、在线安装来源（值为 Base64）。Theme, language, shortcut notes, Mod links, install origins (Base64 values). | `ShellConfigService` |
+| `WinUI3/beta-shell.json` | 仓库与路径（`Repositories`）、当前页面与界面状态、在线偏好、组合预设（`ConfigurationProfiles`）、状态槽位（`ModPersistentSlots`）、复制记录（`CopyDeployments`）、浮窗设置与位置（`OverlayPlacements`）、已看过的“新功能”。Repositories, UI state, online preferences, presets, state slots, copy records, overlay settings and places, the What's New marker. | `ShellConfigService` |
+| `WinUI3/cache/app-index.db` | SQLite：在线分页、角色目录、详情、指标、收藏、仓库索引。Online pages, characters, details, metrics, favorites, repository index. | `AppDataStore` |
+| `WinUI3/cache/online-images` | 在线图片缓存，可重新生成。Re-creatable image cache. | `ImageService` |
+| `WinUI3/cache/gamebanana-webview2` | 点赞用的 GameBanana 网页的 WebView2 配置文件（含登录）。The WebView2 profile of the GameBanana page, including its sign-in. | WebView2；`GameBananaWebSession` 删除 / deletes |
+| `WinUI3/snapshots/user-ini`、`snapshots/preset-previews` | 整份 `d3dx_user.ini` 快照；状态槽位与组合预设的图片（不进诊断报告）。Whole `d3dx_user.ini` snapshots; preset pictures (never in diagnostics). | `Core.Presets` |
+| `WinUI3/backups` | 配置备份、安装事务备份、软件更新备份（`backups/updates`）、终末地启动设置与恢复点。Configuration, install, update and Endfield launch backups. | Core、更新器、启动组件 / Core, updater, launch component |
 | `WinUI3/diagnostics` | 快捷键发送记录、界面操作记录、崩溃诊断。Shortcut send log, UI action trail, crash diagnostics. | 主程序 / Application |
 | 加载器的 `d3dx_user.ini` / the loader's `d3dx_user.ini` | 加载器保存的 `global persist` 值；只在用户操作时读写，写入前备份。Loader-saved persistent values; read or written only on user actions, backed up first. | `ModPersistentPresetEngine`、`LoaderHotReload` |
+| 目标 Mods 文件夹 / target Mods folder | 部署的 Mod（复制或目录联接）。Deployed Mods (copies or junctions). | `Core.Deployment` |
 | Mod 文件夹 / Mod folders | `.imm_avatar.*` 头像、写入默认值时的 `.imm-persist-*.bak`。Avatars and default-write backups. | `CharacterFolderAvatars`、`ModPersistentPresetEngine` |
 
-配置写入采用临时文件替换和轮换备份。外部网络只访问 GameBanana、米游社与 HoYoWiki、终末地官网、Google 翻译接口和 GitHub Releases（更新检查与下载）；请求都在 Core 的客户端里，窗口层不直接发请求。
-Configuration is written atomically with rotated backups. Network access is limited to GameBanana, the miHoYo wiki and HoYoWiki, the Endfield site, the Google translate endpoint and GitHub Releases; every request is made by a Core client, never by the window directly.
+配置写入采用临时文件替换和轮换备份。外部网络只访问 GameBanana、米游社与 HoYoWiki、终末地官网、Google 翻译接口和 GitHub Releases；请求都在 Core 的客户端里，只有点赞用的 GameBanana 网页由 WebView2 直接加载。
+Configuration is written atomically with rotated backups. Network access is limited to GameBanana, the miHoYo wiki and HoYoWiki, the Endfield site, the Google translate endpoint and GitHub Releases; every request is made by a Core client, except the GameBanana page for likes, which WebView2 loads itself.
 
 ## 8. 关键流程 / Key flows
 
 ### 8.1 部署 Mod / Deploying a Mod
 
+图：启用一个 Mod。Core 先检查冲突和同角色的选择规则，再在事务里备份、复制或建立联接；复制会留下复制记录，之后据此判断目标里的文件夹是不是本程序复制的。失败时回滚。
+Diagram: enabling a Mod. Core checks conflicts and the per-character rule, then backs up and copies or links inside a transaction; a copy leaves a copy record, used later to tell whether a target folder was copied by the app. A failure rolls back.
+
 ```mermaid
 sequenceDiagram
-  participant UI as MainWindow
+  participant W as Workspace page
   participant D as Core.Deployment
-  participant FS as 目标目录 / target folder
-  UI->>D: 选择 Mod、仓库设置 / Mod and repository settings
-  D->>D: 冲突检测、单选/多选策略 / conflicts, per-character selection
-  D->>FS: 事务：备份 → 复制或建立联接（替换同角色旧联接）/ transaction: back up, copy or link
-  alt 失败 / failure
-    D->>FS: 回滚 / roll back
+  participant T as Target folder
+  participant S as beta-shell.json
+  W->>D: enable Mod
+  D->>D: conflicts and selection rule
+  D->>T: back up, copy or link
+  alt failure
+    D->>T: roll back
+  else copied
+    D->>S: copy record
   end
-  D-->>UI: 结果、刷新浮窗 / result, refresh overlay
+  D-->>W: result
+  W->>W: refresh overlay and lists
 ```
 
-### 8.2 在线下载 / Online download
+### 8.2 在线下载与安装 / Online download and install
 
-在线页解析 GameBanana 列表（`GameBananaListingParser`）→ 用户确认文件与角色文件夹 → `OnlineDownloadScheduler` 按并发数排队 → 下载与校验 → `ArchiveExtractor` 解压 → 安装到角色文件夹并记录来源，`DownloadTaskJournal` 记录任务以便中断后重试。
-The Online page parses GameBanana listings, the user confirms the file and folder, the scheduler queues the task, then the archive is downloaded, extracted, installed and its origin recorded; the task journal allows retry after interruption.
+图：在线页确认文件和目标文件夹后交给调度器排队；下载完成后解压、安装到角色或分类文件夹并记录来源。任务日志让中断的下载可以重试。
+Diagram: once the file and destination are confirmed, the Online page queues the task; after the download the archive is extracted, installed into the character or category folder, and its origin recorded. The task journal lets an interrupted download be retried.
 
-### 8.3 状态参数 / Persistent state
+```mermaid
+sequenceDiagram
+  participant P as Online page
+  participant Q as Scheduler
+  participant G as GameBanana
+  participant X as Extractor
+  participant R as Mod folder
+  P->>Q: queue file and folder
+  Q->>G: download
+  G-->>Q: archive
+  Q->>X: extract
+  X->>R: install Mod folder
+  P->>P: record origin, update task
+```
 
-- **保存槽位或组合**：读取 `d3dx_user.ini` 中该 Mod 声明的数值型 `global persist` 键（`ModPersistentPresetEngine`），缺少的值不会用默认值代替。浮窗保存会先发送 F10，由 `LoaderStateCapture` 等待文件稳定后再读取。
-  **Capture:** read the Mod's declared numeric `global persist` keys from `d3dx_user.ini`; missing values are never filled with defaults. Overlay saves first send F10 and wait for a stable file (`LoaderStateCapture`).
-- **恢复**：游戏退出时直接写入（先备份）；游戏运行时由 `LoaderHotReload` 写入后在发送 F10 的几秒内把文件设为只读，让加载器读取新值。
-  **Restore:** written directly (with a backup) when the game is closed; while it runs, `LoaderHotReload` writes, keeps the file read-only around F10, then restores its attributes.
+### 8.3 浮窗保存预设 / Overlay preset save
 
-### 8.4 软件更新 / App update
+图：保存前先发 F10，让加载器把内存里的值写进 `d3dx_user.ini`；等文件变化并且两次读取相同后再读取。5 秒内没有变化时由用户决定读取现有文件还是取消。
+Diagram: before saving, F10 makes the loader write its values to `d3dx_user.ini`; the app waits for the file to change and read the same twice. If nothing changes within five seconds, the user chooses between the existing file and cancelling.
 
-`ApplicationUpdateClient` 读取 GitHub `releases/latest`，用 `UpdateReleaseAssetSelector` 选出 ZIP 和校验文件 → 下载并按 `.sha256` 校验 → 启动 `LocalUpdateAgent.exe` → 主程序退出 → 更新器备份、替换、检查版本 → 启动新版，或失败时回滚。
-Pick the ZIP from GitHub `releases/latest`, download and verify against `.sha256`, start the updater, exit, then the updater backs up, replaces, checks the version and starts the new build or rolls back.
+```mermaid
+sequenceDiagram
+  participant O as Overlay
+  participant MW as MainWindow
+  participant G as Game and loader
+  participant F as d3dx_user.ini
+  O->>MW: Save preset
+  MW->>G: F10 (SendInput)
+  G->>F: write values
+  MW->>F: wait until stable
+  alt no change in 5 s
+    MW->>O: ask: read existing or cancel
+  end
+  MW->>MW: capture values, save slot
+  MW-->>O: status
+```
+
+### 8.4 浮窗切换状态槽位 / Overlay slot switch
+
+图：热切换（实验）。写入前备份；发送 F10 的前后几秒把文件设为只读，防止加载器用内存里的旧值覆盖它。
+Diagram: hot switching (experimental). The file is backed up first and kept read-only for a few seconds around F10, so the loader cannot overwrite it with its old in-memory values.
+
+```mermaid
+sequenceDiagram
+  participant O as Overlay
+  participant H as LoaderHotReload
+  participant F as d3dx_user.ini
+  participant G as Game and loader
+  O->>H: switch to slot
+  H->>F: back up, write values
+  H->>F: set read-only
+  H->>G: F10
+  G->>F: reload values
+  H->>F: restore attributes
+  H-->>O: result
+```
+
+### 8.5 软件更新与回滚 / App update and rollback
+
+图：主程序下载并校验更新包后启动更新器并退出；更新器备份、替换、检查版本，成功就启动新版，失败就从备份恢复。
+Diagram: the app downloads and verifies the package, starts the updater and exits; the updater backs up, replaces and checks the version, then starts the new build or restores the backup.
+
+```mermaid
+sequenceDiagram
+  participant A as App
+  participant GH as GitHub Releases
+  participant U as Updater
+  participant D as Install folder
+  A->>GH: latest release
+  A->>GH: ZIP and .sha256
+  A->>A: verify SHA-256
+  A->>U: start, then exit
+  U->>D: back up to backups/updates
+  U->>D: replace files
+  alt version check fails
+    U->>D: restore backup
+  end
+  U->>A: start the launcher
+```
+
+用户数据（`config.ini`、`beta-shell.json`、`cache/`、`backups/`、`snapshots/`、`diagnostics/`）不会被覆盖。User data folders are never overwritten.
 
 ## 9. 构建、测试与发布 / Build, test and release
 
@@ -249,24 +561,54 @@ Pick the ZIP from GitHub `releases/latest`, download and verify against `.sha256
 | --- | --- |
 | 本地构建 / Local build | `scripts\build_winui.bat`（输出到 `dist/` / outputs to `dist/`） |
 | 代码风格 / Code style | `scripts\check-code-style.ps1` |
-| 完整验证 / Full verification | `scripts\test-all.ps1`：四个测试套件与覆盖率门槛、WinUI x64 Release 构建、启动器与更新器编译、组装 `ReleaseSource` 与验证包。Four suites with coverage gates, WinUI x64 Release build, launcher/updater compile, staged release source and verification package. |
-| 界面测试 / UI tests | `scripts\test-ui.ps1`：在 `test-all.ps1` 之后启动构建好的程序，用 FlaUI 检查首次安装、各页面布局和主要操作；需要桌面会话，不在 CI 中运行。After test-all, starts the built app and checks first run, page layouts and main actions with FlaUI; needs a desktop session, not run in CI. |
-| 正式版打包 / Stable package | `scripts\package-stable-release.ps1 -ForGitHubRelease -CiUrl …`：要求干净源码和对应 CI，写入 `PACKAGE-INFO.json`（版本、源码提交、运行程序集哈希、测试结果）。Requires clean source and its CI run; writes `PACKAGE-INFO.json`. |
-| 预览包 / Preview package | `scripts\package-prerelease.ps1`（关闭软件自身更新，且不改写已保存的更新设置 / self-update off, saved update settings left unchanged） |
-| 测试夹具 / Fixtures | `scripts\new-*-fixture.ps1`、`scripts\fake-3dmigoto-loader.ps1`（模拟加载器 / simulated loader） |
-| CI | `.github/workflows/build-and-test.yml`：每次推送和 PR 运行代码风格检查、`test-all.ps1` 和开发者工具打包，上传测试结果与验证包。Runs style check, test-all and the developer tools package on every push and PR. |
+| 完整验证 / Full verification | `scripts\test-all.ps1`：四个单元测试套件与覆盖率门槛、WinUI x64 Release 构建、启动器与更新器编译、组装 `ReleaseSource` 与验证包。Four unit suites with coverage gates, WinUI x64 Release build, launcher and updater, staged release source and verification package. |
+| 界面测试 / UI tests | `scripts\test-ui.ps1 -Application <ReleaseSource>`：在 `test-all.ps1` 之后启动构建好的程序，用 FlaUI 检查首次安装、各页面、对话框、浮窗等；CI 在 `test-all` 之后运行。Starts the built app and checks it with FlaUI; CI runs it after test-all. |
+| 正式版打包 / Stable package | `scripts\package-stable-release.ps1`：写入 `PACKAGE-INFO.json`（版本、源码提交、程序集哈希、测试结果）；`-ForGitHubRelease` 要求干净源码和对应 CI。Writes `PACKAGE-INFO.json`; `-ForGitHubRelease` requires clean source and its CI run. |
+| 发布说明 / Release notes | `scripts\new-release-notes.ps1`：从 `docs/releases/v<版本>.md` 生成 Release 正文，相对链接指向该标签。Builds the release body from `docs/releases/v<version>.md`. |
+| 升级演练 / Upgrade rehearsal | `scripts\test-preview-upgrade.ps1`：用上一版公开安装包自带的更新器升级隔离副本，再回滚（路径用绝对路径）。The previous public package's updater upgrades an isolated copy and rolls it back. |
+| 测试夹具 / Fixtures | `scripts\new-*-fixture.ps1`、`scripts\fake-3dmigoto-loader.ps1`（模拟加载器）、`tools/online-fixtures`（在线样例）、`tools/ui-baseline`（截图基线）。Fixture scripts, a simulated loader, online samples, screenshot baselines. |
 
-发布前还会用上一版公开安装包自带的更新器做隔离升级与回退测试（`scripts\test-preview-upgrade.ps1`，路径请用绝对路径），并在发布后重新下载公开附件核对 SHA-256。验证记录在 [`docs/verification`](../verification/)。
-Before each release, the previous public package's own updater upgrades an isolated copy and rolls it back (`scripts\test-preview-upgrade.ps1`, with absolute paths); after publishing, the public assets are downloaded again and their SHA-256 checked. Records are in `docs/verification`.
+### 9.1 工作流 / Workflows
+
+| 工作流 / Workflow | 何时 / When | 做什么 / What |
+| --- | --- | --- |
+| `build-and-test.yml` | 每次推送和 PR / every push and PR | 代码风格、`test-all`、界面测试、各语言文案统计、开发者工具打包，上传验证包。Style, test-all, UI tests, UI text report, developer tools, verified package. |
+| `release.yml` | 推送 `vX.Y.Z` 标签；修改发布脚本的 PR / a version tag; PRs touching release scripts | 见下图；PR 只演练，不建 Release。See below; a PR only rehearses. |
+| `discord-release.yml` | Release 发布时 / a release is published | 把中英文发布说明发到 Discord。Posts the bilingual notes to Discord. |
+| `online-sources.yml` | 每天 / daily | `tests/Online.Tests` 用 Core 客户端检查真实网站是否变了。Checks the live sites with the Core clients. |
+| `codeql.yml` | PR、`main`、每周 / PRs, `main`, weekly | CodeQL 安全分析。Security analysis. |
+
+图：发布流程。推送标签后 `release.yml` 在干净的 Windows 机器上测试、打包、演练升级与回滚、运行界面测试，然后建一个草稿 Release 并重新下载核对哈希；维护者检查后手动发布，发布会触发 `discord-release.yml`。
+Diagram: the release pipeline. After a tag is pushed, `release.yml` tests, packages, rehearses the upgrade and rollback and runs the UI tests on a clean Windows runner, then creates a draft release and re-downloads it to check the hash; the maintainer reviews and publishes it, which triggers `discord-release.yml`.
+
+```mermaid
+sequenceDiagram
+  actor M as Maintainer
+  participant GH as GitHub
+  participant R as release.yml
+  participant D as discord-release.yml
+  M->>GH: push tag vX.Y.Z
+  GH->>R: run
+  R->>R: style, test-all, package
+  R->>R: upgrade and roll back
+  R->>R: UI tests, notes, attestation
+  R->>GH: draft release
+  R->>GH: re-download, check SHA-256
+  M->>GH: review and publish
+  GH->>D: published
+  D->>D: post notes to Discord
+```
+
+验证记录在 [`docs/verification`](../verification/)。Records are in `docs/verification`.
 
 ## 10. 约定 / Conventions
 
-- 不需要控件的逻辑放进 Core 并写单元测试；窗口只负责调用、显示和本地化。
-  Logic that needs no controls goes into Core with unit tests; the window calls it, displays results and localizes them.
-- 界面文案放在 `Strings/<语言>.json`（`zh-CN.json`、`en-US.json`……），代码用 `T("功能.名称", 值…)` 读取；要保存下来、切换语言后重新显示的状态用 `M("功能.名称", 值…)` 生成 `UiMessage`，显示时再翻译。`UiTextResourceTests` 检查键与参数个数。`L(中, 英)` 只剩运行时才有的中英两份内容（游戏名、下载记录文件里保存的状态、终末地启动组件返回的消息）。
-  UI text lives in `Strings/<language>.json` and is read with `T("Feature.Name", values…)`; a status that is kept and shown again after a language switch is a `UiMessage` from `M("Feature.Name", values…)`, translated when shown. `UiTextResourceTests` checks keys and placeholder counts. `L(zh, en)` is left only for content that exists in both languages at run time (game names, statuses saved in the download history, messages from the Endfield launch component).
-- **添加一种语言**：复制 `en-US.json` 为 `<代码>.json`（如 `ru-RU.json`），翻译其中的文字，并把 `Language.Name` 改成该语言自己的名称。它会自动出现在“设置 → 语言”里，系统语言相同的新安装会默认使用它；没翻译的键显示英文。占位符 `{0}`、`{1}` 只能用英文版有的。角色名、Wiki 名称等在线内容，除中文外都显示英文；启动器的出错提示只有中文和英文。
-  **Adding a language:** copy `en-US.json` to `<code>.json` (for example `ru-RU.json`), translate the texts, and set `Language.Name` to the language's own name. It appears in Settings → Language, and a first install on a system with that language uses it; keys left out show English. Placeholders `{0}`, `{1}` may only be ones the English text has. Online content such as character and wiki names is English in every language except Chinese, and the launcher's error dialogs are Chinese or English only.
+- 不需要控件的逻辑放进 Core 并写单元测试；窗口和页面只负责调用、显示和本地化。
+  Logic that needs no controls goes into Core with unit tests; the window and pages call it, display results and localize them.
+- 界面文案放在 `Strings/<语言>.json`，代码用 `T("功能.名称", 值…)` 读取；要保存下来、切换语言后重新显示的状态用 `M("功能.名称", 值…)` 生成 `UiMessage`。`UiTextResourceTests` 检查键与参数个数。键只新增不改名，不用的键在同一分支删除；新文字同时写中文、英文和俄语。
+  UI text lives in `Strings/<language>.json` and is read with `T(...)`; a status kept across a language switch is a `UiMessage` from `M(...)`. `UiTextResourceTests` checks keys and placeholders. Keys are added, never renamed; unused keys are removed in the same branch; new text goes into Chinese, English and Russian.
+- **添加一种语言**：复制 `en-US.json` 为 `<代码>.json`，翻译，并把 `Language.Name` 改成该语言自己的名称；它会自动出现在“设置 → 语言”里，没翻译的键显示英文。
+  **Adding a language:** copy `en-US.json` to `<code>.json`, translate it and set `Language.Name`; it appears in Settings → Language, and missing keys show English.
 - Core 用 `ErrorTags` 给异常附加错误类型，界面按类型映射提示文字，不匹配异常消息。
   Core tags exceptions with a kind through `ErrorTags`; the UI maps kinds to messages instead of matching text.
 - 路径包含判断统一用 `PathSafety`；目录遍历、复制、删除用不跟随链接的 `SafeDirectoryTree`。
@@ -275,6 +617,8 @@ Before each release, the previous public package's own updater upgrades an isola
   Back up user files before writing and restore on failure; never modify game files or game memory.
 - PowerShell 脚本含中文时保存为带 BOM 的 UTF-8，Windows PowerShell 5.1 才能正确读取。
   PowerShell scripts containing Chinese are saved as UTF-8 with BOM so Windows PowerShell 5.1 reads them correctly.
+- 文档里的 Mermaid 图：短节点名、短标签，长标签用 `<br/>` 换行，标签只用一种语言；优先 `flowchart TB` 和子图；只用 flowchart、sequenceDiagram、stateDiagram-v2 的基本写法，GitHub 才能完整显示。
+  Mermaid diagrams in the docs: short node ids and labels, `<br/>` for line breaks, one language per label; prefer `flowchart TB` and subgraphs; use only basic flowchart, sequenceDiagram and stateDiagram-v2 so GitHub renders them in full.
 
 ## 11. 许可证边界 / Licensing boundary
 
