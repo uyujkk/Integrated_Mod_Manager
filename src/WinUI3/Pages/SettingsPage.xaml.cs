@@ -102,6 +102,7 @@ public sealed partial class SettingsPage : UserControl
         SettingsOnlineExpander.Header = T("Settings.RepositoryOnlineInformation");
         SetCard(EditOnlineRepositoryButton, T("Localization.EditCurrentRepositoryOnlineCategory"), null);
         SetCard(EditCharacterMappingsButton, T("Common.CharacterCategoryMapping"), null);
+        SetCard(ClearGameBananaSignInButton, T("Settings.ClearGameBananaSignIn"), T("Settings.ClearGameBananaSignInDescription"));
 
         // Diagnostics and feedback.
         DiagnosticsTitleTextBlock.Text = T("ProductivityFeatures.DiagnosticsAndIssueReport");
@@ -220,6 +221,8 @@ public sealed partial class SettingsPage : UserControl
     private void OnEditOnlineRepositoryClicked(object sender, RoutedEventArgs e) => ViewModel.Request(SettingsAction.EditOnlineRepository);
 
     private void OnEditCharacterMappingsClicked(object sender, RoutedEventArgs e) => ViewModel.Request(SettingsAction.EditCharacterMappings);
+
+    private void OnClearGameBananaSignInClicked(object sender, RoutedEventArgs e) => ViewModel.Request(SettingsAction.ClearGameBananaSignIn);
 
     private void OnExportDiagnosticsClicked(object sender, RoutedEventArgs e) => ViewModel.Request(SettingsAction.ExportDiagnostics);
 

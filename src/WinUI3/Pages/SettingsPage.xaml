@@ -215,6 +215,12 @@
                             <FontIcon Glyph="&#xE716;" />
                         </toolkit:SettingsCard.HeaderIcon>
                     </toolkit:SettingsCard>
+                    <!-- Issue #129: the GameBanana page opened for likes keeps its sign-in on this computer; this deletes it. -->
+                    <toolkit:SettingsCard x:Name="ClearGameBananaSignInButton" IsClickEnabled="True" Click="OnClearGameBananaSignInClicked">
+                        <toolkit:SettingsCard.HeaderIcon>
+                            <FontIcon Glyph="&#xF3B1;" />
+                        </toolkit:SettingsCard.HeaderIcon>
+                    </toolkit:SettingsCard>
                 </StackPanel>
                 <StackPanel x:Name="SettingsDiagnosticsGroup" Spacing="4">
                     <!-- Diagnostics and feedback. -->
