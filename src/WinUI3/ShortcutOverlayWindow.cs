@@ -1,6 +1,7 @@
 using System.Runtime.InteropServices;
 using IntegratedModManager.Core.Presets;
 using Microsoft.UI.Composition;
+using Microsoft.UI.Input;
 using Microsoft.UI.Windowing;
 using Microsoft.UI.Xaml;
 using Microsoft.UI.Xaml.Controls;
@@ -18,13 +19,19 @@ internal sealed record RegionSelectionText(string Hint, string LockSize, string 
 internal sealed class ShortcutOverlayWindow : Window
 {
     public const int MinimumOpacity = ShortcutPageViewModel.MinimumOverlayOpacity;
-    private const int DefaultWidth = 420, DefaultHeight = 860, TitleRowHeight = 32, FadeMilliseconds = 90, MoveMilliseconds = 220;
+    // The title bar is the panel's own (40 DIP): drag area, Mod name, status dot, menu and close. The height follows the
+    // content up to DefaultHeight; MinimumHeight keeps the title and one row visible.
+    public const int TitleRowHeight = 40;
+    private const int DefaultWidth = 420, DefaultHeight = 860, MinimumHeight = 120, FadeMilliseconds = 90, MoveMilliseconds = 220;
     private readonly nint handle;
     private readonly SubclassProc callback;
     private bool keyboardInputEnabled;
     private bool hiddenForCapture;
     private readonly Grid rootGrid;
     private readonly UIElement panelContent;
+    private readonly FrameworkElement titleBar;
+    private readonly Func<IEnumerable<FrameworkElement>> titleBarControls;
+    private double contentHeight;
     private readonly Brush textBrush, elementBrush;
     private FrameworkElement? activeLayer;
     private RectInt32 boundsBeforeLayer;
@@ -32,19 +39,20 @@ internal sealed class ShortcutOverlayWindow : Window
     // Only the background carries the opacity; text and buttons stay fully opaque.
     private readonly SolidColorBrush background = new(Color.FromArgb(255, 28, 31, 38));
 
-    public ShortcutOverlayWindow(UIElement content, Brush textBrush, Brush elementBrush, string title)
+    /// <param name="titleBar">The panel's title bar; the window makes it the drag area.</param>
+    /// <param name="titleBarControls">The buttons in the title bar, which stay clickable instead of dragging.</param>
+    public ShortcutOverlayWindow(UIElement content, FrameworkElement titleBar, Func<IEnumerable<FrameworkElement>> titleBarControls,
+        Brush textBrush, Brush elementBrush, string title)
     {
         // Keep the "IMM · " prefix in every language: it identifies the overlay in window lists.
         Title = "IMM · " + title;
         SystemBackdrop = new TransparentBackdrop();
+        // No system caption: the panel draws its own title bar, whose close button hides the panel (with the hotkey
+        // in its tooltip) instead of destroying it.
         ExtendsContentIntoTitleBar = true;
-        var titleBar = new Grid { Height = TitleRowHeight, Padding = new Thickness(12, 0, 140, 0) };
-        titleBar.Children.Add(new Border
-        {
-            Background = elementBrush, CornerRadius = new CornerRadius(4), Padding = new Thickness(6, 1, 6, 2),
-            HorizontalAlignment = HorizontalAlignment.Left, VerticalAlignment = VerticalAlignment.Center,
-            Child = new TextBlock { Text = Title, FontSize = 12, Foreground = textBrush }
-        });
+        titleBar.Height = TitleRowHeight;
+        this.titleBar = titleBar;
+        this.titleBarControls = titleBarControls;
         this.textBrush = textBrush;
         this.elementBrush = elementBrush;
         panelContent = content;
@@ -55,8 +63,9 @@ internal sealed class ShortcutOverlayWindow : Window
         rootGrid.Children.Add(titleBar);
         rootGrid.Children.Add(content);
         Content = rootGrid;
-        SetTitleBar(titleBar);
         handle = WinRT.Interop.WindowNative.GetWindowHandle(this);
+        titleBar.SizeChanged += (_, _) => UpdateDragRegions();
+        rootGrid.LayoutUpdated += (_, _) => UpdateDragRegions();
         // Without this DWM composes transparent pixels over black. An empty blur region makes DWM
         // honour per-pixel alpha without blurring (verified: 10% background shows the desktop, text stays opaque).
         nint region = CreateRectRgn(-2, -2, -1, -1);
@@ -79,6 +88,7 @@ internal sealed class ShortcutOverlayWindow : Window
             presenter.IsAlwaysOnTop = true;
             presenter.IsMaximizable = false;
             presenter.IsMinimizable = false;
+            presenter.SetBorderAndTitleBar(true, false);
         }
         // Keep pointer interaction without taking keyboard focus from the game.
         // Expose the independent panel in window switching, while retaining no-activation clicks.
@@ -90,6 +100,50 @@ internal sealed class ShortcutOverlayWindow : Window
     }
 
     public void ShowPanel() => AppWindow.Show(false);
+
+    // The title bar drags the window; its buttons stay buttons. Rects are in client pixels.
+    private RectInt32[] lastCaption = [], lastPassthrough = [];
+
+    private void UpdateDragRegions()
+    {
+        if (titleBar.XamlRoot is null || titleBar.ActualWidth <= 0) return;
+        double scale = titleBar.XamlRoot.RasterizationScale;
+        RectInt32 Bounds(FrameworkElement element)
+        {
+            Windows.Foundation.Rect rect = element.TransformToVisual(null).TransformBounds(new Windows.Foundation.Rect(0, 0, element.ActualWidth, element.ActualHeight));
+            return new RectInt32((int)Math.Round(rect.X * scale), (int)Math.Round(rect.Y * scale), (int)Math.Round(rect.Width * scale), (int)Math.Round(rect.Height * scale));
+        }
+        RectInt32[] caption = [Bounds(titleBar)];
+        RectInt32[] passthrough = titleBarControls().Where(control => control.Visibility == Visibility.Visible && control.ActualWidth > 0).Select(Bounds).ToArray();
+        if (caption.SequenceEqual(lastCaption) && passthrough.SequenceEqual(lastPassthrough)) return;
+        lastCaption = caption;
+        lastPassthrough = passthrough;
+        InputNonClientPointerSource source = InputNonClientPointerSource.GetForWindowId(AppWindow.Id);
+        source.SetRegionRects(NonClientRegionKind.Caption, caption);
+        source.SetRegionRects(NonClientRegionKind.Passthrough, passthrough);
+    }
+
+    /// <summary>
+    /// The panel's height follows its content (DIP below the title bar): at least the title and a row, at most
+    /// <see cref="DefaultHeight"/> and the screen; longer content scrolls.
+    /// </summary>
+    public void FitContentHeight(double contentDip)
+    {
+        if (activeLayer is not null || double.IsNaN(contentDip) || contentDip <= 0) return;
+        contentHeight = contentDip;
+        double scale = GetDpiForWindow(handle) / 96.0;
+        RectInt32 area = DisplayArea.GetFromWindowId(AppWindow.Id, DisplayAreaFallback.Primary).WorkArea;
+        // The window's size includes its resize frame; the content gets what the XAML root has.
+        // Before the first layout the root has no size yet; a frame is only ever a few pixels.
+        int frame = rootGrid.XamlRoot is { Size.Height: > 0 } root ? AppWindow.Size.Height - (int)Math.Round(root.Size.Height * root.RasterizationScale) : 0;
+        frame = frame is > 0 and < 32 ? frame : 0;
+        int wanted = (int)Math.Round(Math.Clamp(TitleRowHeight + contentDip, MinimumHeight, DefaultHeight) * scale) + frame;
+        wanted = Math.Min(wanted, area.Height - (int)(40 * scale));
+        if (Math.Abs(AppWindow.Size.Height - wanted) > 1) AppWindow.Resize(new SizeInt32(AppWindow.Size.Width, wanted));
+    }
+
+    /// <summary>The content height last fitted, in DIP (for tests and the layout after a layer).</summary>
+    public double ContentHeight => contentHeight;
 
     // Pointer input reaches whatever is behind the window. Windows only honours this on a layered window.
     public void SetClickThrough(bool enabled)
