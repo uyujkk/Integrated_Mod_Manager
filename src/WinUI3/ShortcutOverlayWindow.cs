@@ -41,13 +41,16 @@ internal sealed class ShortcutOverlayWindow : Window
     private RectInt32 boundsBeforeLayer;
     private Color backgroundBeforeLayer;
     // Only the background carries the opacity; text and buttons stay fully opaque.
-    private readonly SolidColorBrush background = new(Color.FromArgb(255, 28, 31, 38));
+    private readonly SolidColorBrush background = new();
+    // The panel's base colour in the app's theme (the AppElevatedBackgroundBrush token); the opacity is the user's.
+    private Color baseColor;
+    private int opacityPercent = 100;
 
     /// <param name="titleBar">The panel's title bar; the window makes it the drag area.</param>
     /// <param name="titleBarControls">The buttons in the title bar, which stay clickable instead of dragging.</param>
     /// <param name="placements">Where it was on each display, last used first (OverlayLayoutPolicy).</param>
     public ShortcutOverlayWindow(UIElement content, FrameworkElement titleBar, Func<IEnumerable<FrameworkElement>> titleBarControls,
-        Brush textBrush, Brush elementBrush, string title, IReadOnlyList<OverlayPlacement> placements)
+        Brush textBrush, Brush elementBrush, string title, IReadOnlyList<OverlayPlacement> placements, ElementTheme theme, Color themeBackground)
     {
         // Keep the "IMM · " prefix in every language: it identifies the overlay in window lists.
         Title = "IMM · " + title;
@@ -61,7 +64,9 @@ internal sealed class ShortcutOverlayWindow : Window
         this.textBrush = textBrush;
         this.elementBrush = elementBrush;
         panelContent = content;
-        rootGrid = new Grid { Background = background, RequestedTheme = ElementTheme.Dark };
+        baseColor = themeBackground;
+        background.Color = themeBackground;
+        rootGrid = new Grid { Background = background, RequestedTheme = theme };
         rootGrid.RowDefinitions.Add(new RowDefinition { Height = GridLength.Auto });
         rootGrid.RowDefinitions.Add(new RowDefinition { Height = new GridLength(1, GridUnitType.Star) });
         Grid.SetRow((FrameworkElement)content, 1);
@@ -240,7 +245,7 @@ internal sealed class ShortcutOverlayWindow : Window
         layer.Children.Add(bar);
         int titleHeight = TitleHeightInPixels;
         // Nearly invisible, but the frame still receives the pointer.
-        await EnterLayerAsync(layer, new PixelRect(start.X, start.Y - titleHeight, start.Width, start.Height + titleHeight), Color.FromArgb(1, 28, 31, 38), animate);
+        await EnterLayerAsync(layer, new PixelRect(start.X, start.Y - titleHeight, start.Width, start.Height + titleHeight), Color.FromArgb(1, baseColor.R, baseColor.G, baseColor.B), animate);
         return await result.Task;
     }
 
@@ -363,8 +368,19 @@ internal sealed class ShortcutOverlayWindow : Window
         if (enabled) Activate();
     }
 
-    public void SetBackgroundOpacity(int percent) =>
-        background.Color = Color.FromArgb((byte)Math.Round(Math.Clamp(percent, MinimumOpacity, 100) * 2.55), 28, 31, 38);
+    public void SetBackgroundOpacity(int percent)
+    {
+        opacityPercent = percent;
+        if (activeLayer is null) background.Color = Color.FromArgb((byte)Math.Round(Math.Clamp(percent, MinimumOpacity, 100) * 2.55), baseColor.R, baseColor.G, baseColor.B);
+    }
+
+    /// <summary>The app's theme changed: the controls follow it and the panel takes the theme's base colour.</summary>
+    public void ApplyTheme(ElementTheme theme, Color themeBackground, int percent)
+    {
+        rootGrid.RequestedTheme = theme;
+        baseColor = themeBackground;
+        SetBackgroundOpacity(percent);
+    }
 
     private nint OnMessage(nint hwnd, uint message, nuint wParam, nint lParam, nuint id, nuint data)
     {

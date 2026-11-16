@@ -30,6 +30,9 @@ internal sealed class ShortcutOverlayController : IShortcutOverlay
 
     private readonly ShortcutPageViewModel _shortcuts;
     private readonly LanguageService _language;
+    private readonly AppearanceService _appearance;
+    private StackPanel? _moreMenu;
+    private InfoBar? _statusBar;
     private readonly IShortcutOverlayActions _actions;
     private readonly DispatcherQueue _dispatcher;
     private readonly Dictionary<DetectedModShortcut, Button> _bindingControls = new();
@@ -37,7 +40,6 @@ internal sealed class ShortcutOverlayController : IShortcutOverlay
     private readonly SolidColorBrush _elementHoverBrush = new();
     private Slider? _opacitySlider;
     private bool _opacitySyncing;
-    private TextBlock? _statusText;
     private ComboBox? _modPicker, _targetPicker;
     private ToggleSwitch? _sendSwitch;
     // The title bar: status dot, the Mod's name and close (hide).
@@ -80,10 +82,14 @@ internal sealed class ShortcutOverlayController : IShortcutOverlay
     private Color? _autoTextColor;
     private DispatcherQueueTimer? _contrastTimer;
 
-    public ShortcutOverlayController(ShortcutPageViewModel shortcuts, LanguageService language, IShortcutOverlayActions actions, DispatcherQueue dispatcher)
+    public ShortcutOverlayController(ShortcutPageViewModel shortcuts, LanguageService language, AppearanceService appearance,
+        IShortcutOverlayActions actions, DispatcherQueue dispatcher)
     {
         _shortcuts = shortcuts;
         _language = language;
+        _appearance = appearance;
+        // The overlay follows the app's light or dark theme, like the main window.
+        _appearance.ThemeChanged += (_, _) => ApplyTheme();
         _actions = actions;
         _dispatcher = dispatcher;
         _shortcuts.PropertyChanged += OnSettingChanged;
@@ -106,6 +112,48 @@ internal sealed class ShortcutOverlayController : IShortcutOverlay
 
     private string T(string key) => _language.T(key);
 
+    private ElementTheme Theme => _appearance.IsDark ? ElementTheme.Dark : ElementTheme.Light;
+
+    // A colour of the shared design tokens (Themes/Tokens.xaml) in the app's current theme.
+    private Color TokenColor(string key)
+    {
+        static Color? Find(ResourceDictionary dictionary, string theme, string key)
+        {
+            if (dictionary.ThemeDictionaries.TryGetValue(theme, out object? themed) && themed is ResourceDictionary themeDictionary
+                && themeDictionary.TryGetValue(key, out object? value) && value is SolidColorBrush brush)
+                return brush.Color;
+            foreach (ResourceDictionary merged in dictionary.MergedDictionaries)
+                if (Find(merged, theme, key) is { } color) return color;
+            return null;
+        }
+        return Find(Application.Current.Resources, _appearance.IsDark ? "Dark" : "Light", key)
+            ?? (_appearance.IsDark ? Color.FromArgb(255, 255, 255, 255) : Color.FromArgb(228, 0, 0, 0));
+    }
+
+    // The default text colour (#FFFFFF, as saved before themes) means "the theme's text"; any other is the user's own.
+    private Color UserTextColor()
+    {
+        string? saved = _shortcuts.OverlayTextColor;
+        return string.IsNullOrEmpty(saved) || string.Equals(saved, "#FFFFFF", StringComparison.OrdinalIgnoreCase)
+            ? Opaque(TokenColor("AppSecondaryDefaultForegroundBrush")) : ParseTextColor(saved);
+    }
+
+    // Text drawn over a translucent panel needs a solid colour; the token's alpha only softens it on an opaque surface.
+    private static Color Opaque(Color color) => color.A == 255 ? color
+        : Color.FromArgb(255, (byte)(255 - color.A + color.R * color.A / 255), (byte)(255 - color.A + color.G * color.A / 255), (byte)(255 - color.A + color.B * color.A / 255));
+
+    private void ApplyTheme()
+    {
+        ElementTheme theme = Theme;
+        if (_titleBar is not null) _titleBar.RequestedTheme = theme;
+        if (_contentRoot is not null) _contentRoot.RequestedTheme = theme;
+        if (_moreMenu is not null) _moreMenu.RequestedTheme = theme;
+        Window?.ApplyTheme(theme, TokenColor("AppElevatedBackgroundBrush"), _shortcuts.OverlayOpacity);
+        _userTextColor = UserTextColor();
+        if (_autoTextColor is null) TextBrush.Color = _userTextColor;
+        ApplyAppearance();
+    }
+
     private string T(string key, params object?[] values) => _language.T(key, values);
 
     internal static Color ParseTextColor(string? value) =>
@@ -123,7 +171,7 @@ internal sealed class ShortcutOverlayController : IShortcutOverlay
             {
                 UIElement content = BuildContent();
                 var overlay = new ShortcutOverlayWindow(content, _titleBar!, TitleBarControls, TextBrush, ElementBrush, T("Common.ModShortcuts"),
-                    _shortcuts.OverlayPlacements);
+                    _shortcuts.OverlayPlacements, Theme, TokenColor("AppElevatedBackgroundBrush"));
                 // Moved or resized by the user: remembered for that display (saved with the settings).
                 overlay.PlacementChanged += (bounds, display, maxHeight) =>
                     _shortcuts.OverlayPlacements = OverlayLayoutPolicy.Remember(_shortcuts.OverlayPlacements, bounds, display, maxHeight);
@@ -233,7 +281,7 @@ internal sealed class ShortcutOverlayController : IShortcutOverlay
                 ApplyAppearance();
                 break;
             case nameof(ShortcutPageViewModel.OverlayTextColor):
-                _userTextColor = ParseTextColor(_shortcuts.OverlayTextColor);
+                _userTextColor = UserTextColor();
                 _autoTextColor = null;
                 TextBrush.Color = _userTextColor;
                 ApplyAppearance();
@@ -271,7 +319,7 @@ internal sealed class ShortcutOverlayController : IShortcutOverlay
     // The panel's own title bar: status dot, the Mod's name, close. The window makes it the drag area.
     private Grid BuildTitleBar()
     {
-        _titleBar = new Grid { Padding = new Thickness(12, 0, 4, 0), ColumnSpacing = 8, RequestedTheme = ElementTheme.Dark };
+        _titleBar = new Grid { Padding = new Thickness(12, 0, 4, 0), ColumnSpacing = 8, RequestedTheme = Theme };
         _titleBar.ColumnDefinitions.Add(new ColumnDefinition { Width = GridLength.Auto });
         _titleBar.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(1, GridUnitType.Star) });
         _titleBar.ColumnDefinitions.Add(new ColumnDefinition { Width = GridLength.Auto });
@@ -280,13 +328,13 @@ internal sealed class ShortcutOverlayController : IShortcutOverlay
         AutomationProperties.SetAutomationId(_stateDot, "OverlayStateDot");
         _titleText = new TextBlock
         {
-            FontSize = 14, FontWeight = Microsoft.UI.Text.FontWeights.SemiBold, VerticalAlignment = VerticalAlignment.Center,
+            Style = (Style)Application.Current.Resources["CaptionTextStyle"], VerticalAlignment = VerticalAlignment.Center,
             TextTrimming = TextTrimming.CharacterEllipsis, Foreground = TextBrush
         };
         AutomationProperties.SetAutomationId(_titleText, "OverlayTitleText");
         _closeButton = new Button
         {
-            Content = new FontIcon { Glyph = "\uE8BB", FontSize = 12 }, Width = 36, Height = 32, Padding = new Thickness(0),
+            Content = new FontIcon { Glyph = "\uE8BB", FontSize = 10 }, Width = 40, Height = 32, Padding = new Thickness(0),
             Background = new SolidColorBrush(Color.FromArgb(0, 0, 0, 0)), BorderThickness = new Thickness(0),
             Foreground = TextBrush, AllowFocusOnInteraction = false, VerticalAlignment = VerticalAlignment.Center
         };
@@ -295,14 +343,14 @@ internal sealed class ShortcutOverlayController : IShortcutOverlay
         UpdateCloseTooltip();
         _moreButton = new Button
         {
-            Content = new FontIcon { Glyph = "\uE712", FontSize = 14 }, Width = 36, Height = 32, Padding = new Thickness(0),
+            Content = new FontIcon { Glyph = "\uE712", FontSize = 16 }, Width = 40, Height = 32, Padding = new Thickness(0),
             Background = new SolidColorBrush(Color.FromArgb(0, 0, 0, 0)), BorderThickness = new Thickness(0),
             Foreground = TextBrush, AllowFocusOnInteraction = false, VerticalAlignment = VerticalAlignment.Center,
             Flyout = BuildMoreFlyout()
         };
         AutomationProperties.SetAutomationId(_moreButton, "OverlayMoreButton");
-        AutomationProperties.SetName(_moreButton, T("Overlay.More"));
-        ToolTipService.SetToolTip(_moreButton, T("Overlay.More"));
+        AutomationProperties.SetName(_moreButton, T("Dashboard.MoreActions"));
+        ToolTipService.SetToolTip(_moreButton, T("Dashboard.MoreActions"));
         Grid.SetColumn(_titleText, 1);
         Grid.SetColumn(_moreButton, 2);
         Grid.SetColumn(_closeButton, 3);
@@ -324,10 +372,11 @@ internal sealed class ShortcutOverlayController : IShortcutOverlay
     // The settings used now and then: compact view, click-through, background opacity, reading the files again.
     private Flyout BuildMoreFlyout()
     {
-        var menu = new StackPanel { Spacing = 8, Width = 280, RequestedTheme = ElementTheme.Dark };
+        var menu = new StackPanel { Spacing = 8, Width = 280, RequestedTheme = Theme };
+        _moreMenu = menu;
         _compactToggle = new ToggleSwitch
         {
-            Header = T("OverlayView.Compact"), IsOn = _shortcuts.OverlayCompactView, OnContent = T("Overlay.On"), OffContent = T("Overlay.Off")
+            Header = T("OverlayView.Compact"), IsOn = _shortcuts.OverlayCompactView, OnContent = T("Common.On"), OffContent = T("Common.Off")
         };
         ToolTipService.SetToolTip(_compactToggle, T("OverlayView.CompactHint"));
         AutomationProperties.SetAutomationId(_compactToggle, "OverlayCompactButton");
@@ -347,7 +396,8 @@ internal sealed class ShortcutOverlayController : IShortcutOverlay
         menu.Children.Add(fontSize);
         _clickThroughButton = new Button
         {
-            Content = T("OverlayView.ClickThrough"), HorizontalAlignment = HorizontalAlignment.Stretch, AllowFocusOnInteraction = false
+            Content = T("OverlayView.ClickThrough"), HorizontalAlignment = HorizontalAlignment.Stretch, AllowFocusOnInteraction = false,
+            Style = SecondaryButton
         };
         ToolTipService.SetToolTip(_clickThroughButton, T("OverlayView.ClickThroughHint"));
         AutomationProperties.SetAutomationId(_clickThroughButton, "OverlayClickThroughButton");
@@ -362,7 +412,7 @@ internal sealed class ShortcutOverlayController : IShortcutOverlay
         AutomationProperties.SetAutomationId(_opacitySlider, "OverlayOpacitySlider");
         ToolTipService.SetToolTip(_opacitySlider, T("ShortcutPanel.OverlayBackgroundOpacity"));
         menu.Children.Add(_opacitySlider);
-        var refresh = new Button { Content = T("Overlay.RefreshFromDisk"), HorizontalAlignment = HorizontalAlignment.Stretch, AllowFocusOnInteraction = false };
+        var refresh = new Button { Content = T("ShortcutPanel.ReloadINI"), HorizontalAlignment = HorizontalAlignment.Stretch, AllowFocusOnInteraction = false, Style = SecondaryButton };
         AutomationProperties.SetAutomationId(refresh, "OverlayRefreshButton");
         refresh.Click += (_, _) =>
         {
@@ -379,7 +429,7 @@ internal sealed class ShortcutOverlayController : IShortcutOverlay
     {
         if (_closeButton is null) return;
         (string modifiers, string key) = _shortcuts.HotkeyLabel();
-        string text = _shortcuts.HotkeyEnabled ? T("Overlay.HideWithHotkey", modifiers + "+" + key) : T("Overlay.Hide");
+        string text = _shortcuts.HotkeyEnabled ? $"{T("ShortcutPanel.ShowHideOverlay")} ({modifiers}+{key})" : T("ShortcutPanel.ShowHideOverlay");
         ToolTipService.SetToolTip(_closeButton, text);
         AutomationProperties.SetName(_closeButton, text);
     }
@@ -394,7 +444,7 @@ internal sealed class ShortcutOverlayController : IShortcutOverlay
         BuildTitleBar();
         // The overlay window draws the (translucent) background; this content stays transparent.
         // Spacing on the 4/8/12 grid of the J1T tokens (docs/development/UI-Fluent-Design-Plan.md).
-        var root = new Grid { Padding = new Thickness(12, 0, 12, 12), RowSpacing = 12, RequestedTheme = ElementTheme.Dark };
+        var root = new Grid { Padding = new Thickness(12, 0, 12, 12), RowSpacing = 12, RequestedTheme = Theme };
         _contentRoot = root;
         ApplyElementResources(root);
         ApplyElementResources(_titleBar!);
@@ -424,10 +474,11 @@ internal sealed class ShortcutOverlayController : IShortcutOverlay
         _targetPicker = new ComboBox
         {
             HorizontalAlignment = HorizontalAlignment.Stretch, Foreground = TextBrush, DisplayMemberPath = nameof(ShortcutTarget.Label),
-            PlaceholderText = T("Overlay.ChooseTargetWindow")
+            PlaceholderText = T("ShortcutPanel.SelectAWindow")
         };
         AutomationProperties.SetAutomationId(_targetPicker, "OverlayTargetPicker");
-        AutomationProperties.SetName(_targetPicker, T("Overlay.TargetWindow"));
+        AutomationProperties.SetName(_targetPicker, T("ShortcutPanel.TargetGameWindow"));
+        ToolTipService.SetToolTip(_targetPicker, T("ShortcutPanel.TargetGameWindow"));
         _targetPicker.SelectionChanged += (_, _) =>
         {
             if (_syncing || _targetPicker.SelectedItem is not ShortcutTarget target || ReferenceEquals(target, _shortcuts.SelectedTarget)) return;
@@ -436,11 +487,11 @@ internal sealed class ShortcutOverlayController : IShortcutOverlay
         _refreshTargets = new Button
         {
             Content = new FontIcon { Glyph = "\uE72C", FontSize = 14 }, Width = 36, Height = 32, Padding = new Thickness(0),
-            Foreground = TextBrush, AllowFocusOnInteraction = false
+            Foreground = TextBrush, AllowFocusOnInteraction = false, Style = SecondaryButton
         };
         AutomationProperties.SetAutomationId(_refreshTargets, "OverlayRefreshTargetsButton");
-        AutomationProperties.SetName(_refreshTargets, T("Overlay.RefreshTargets"));
-        ToolTipService.SetToolTip(_refreshTargets, T("Overlay.RefreshTargets"));
+        AutomationProperties.SetName(_refreshTargets, T("ShortcutPanel.RefreshWindows"));
+        ToolTipService.SetToolTip(_refreshTargets, T("ShortcutPanel.RefreshWindows"));
         _refreshTargets.Click += (_, _) => { _actions.RefreshTargets(); Refresh(); };
         Grid.SetColumn(_refreshTargets, 1);
         targetRow.Children.Add(_targetPicker); targetRow.Children.Add(_refreshTargets);
@@ -452,7 +503,7 @@ internal sealed class ShortcutOverlayController : IShortcutOverlay
             MinWidth = 0, VerticalAlignment = VerticalAlignment.Center
         };
         AutomationProperties.SetAutomationId(_sendSwitch, "OverlaySendSwitch");
-        AutomationProperties.SetName(_sendSwitch, T("Overlay.SendKeys"));
+        AutomationProperties.SetName(_sendSwitch, T("ShortcutPanel.EnableInputToSelectedWindow"));
         ToolTipService.SetToolTip(_sendSwitch, T("ShortcutPanel.ArmOrPauseInputToThe"));
         var sending = new SolidColorBrush(SendingColor);
         foreach (string key in new[] { "ToggleSwitchFillOn", "ToggleSwitchFillOnPointerOver", "ToggleSwitchFillOnPressed", "ToggleSwitchStrokeOn" })
@@ -483,9 +534,10 @@ internal sealed class ShortcutOverlayController : IShortcutOverlay
         Grid.SetRow(_scroll, 1);
 
         // ---- Footer: the status line and one button for both kinds of preset.
-        _statusText = FixedStatusText(lines: 2, fontSize: 12);
-        _statusText.Foreground = TextBrush;
-        var statusRow = Label(_statusText);
+        // The status as an InfoBar, like the Shortcuts page's; a warning while no window is chosen.
+        _statusBar = new InfoBar { IsOpen = true, IsClosable = false, Severity = InfoBarSeverity.Informational };
+        AutomationProperties.SetAutomationId(_statusBar, "OverlayStatusBar");
+        var statusRow = _statusBar;
         var savePreset = new DropDownButton
         {
             Content = T("ShortcutPanel.SavePreset"), Foreground = TextBrush, HorizontalAlignment = HorizontalAlignment.Stretch,
@@ -538,23 +590,14 @@ internal sealed class ShortcutOverlayController : IShortcutOverlay
         });
     }
 
+    // The main window's secondary button (Styles/Controls.xaml); the overlay's backing colour still applies on top.
+    private static Style SecondaryButton => (Style)Application.Current.Resources["SecondaryButtonStyle"];
+
     private static Button ActionButton(string label, Action action)
     {
-        var button = new Button { Content = label };
+        var button = new Button { Content = label, Style = SecondaryButton };
         button.Click += (_, _) => action();
         return button;
-    }
-
-    private static TextBlock FixedStatusText(int lines, double fontSize)
-    {
-        var text = new TextBlock
-        {
-            FontSize = fontSize, TextWrapping = TextWrapping.Wrap, MaxLines = lines,
-            TextTrimming = TextTrimming.CharacterEllipsis, Height = Math.Ceiling(fontSize * 1.34 * lines)
-        };
-        // The full message stays available when trimmed.
-        text.RegisterPropertyChangedCallback(TextBlock.TextProperty, (_, _) => ToolTipService.SetToolTip(text, string.IsNullOrEmpty(text.Text) ? null : text.Text));
-        return text;
     }
 
     private Slider CreateOpacitySlider()
@@ -610,14 +653,15 @@ internal sealed class ShortcutOverlayController : IShortcutOverlay
         }
         finally { _syncing = false; }
         UpdateTitle(current);
-        _statusText!.Text = _shortcuts.StatusText;
+        _statusBar!.Message = _shortcuts.StatusText;
+        _statusBar.Severity = _shortcuts.SelectedTarget is null ? InfoBarSeverity.Warning : InfoBarSeverity.Informational;
         // Status-only updates never enumerate bindings or rebuild slots.
         if (!bindingsChanged) return;
         UpdateSlotSection();
         DetectedModShortcut[] visible = current is null ? [] : _shortcuts.VisibleShortcuts();
-        string? empty = current is null ? (_modOptions.Length == 0 ? T("Overlay.EmptyNoEnabledMods") : T("Overlay.EmptyPickMod"))
+        string? empty = current is null ? (_modOptions.Length == 0 ? T("Overlay.EmptyNoEnabledMods") : T("ShortcutPanel.SelectAMod"))
             : !currentEnabled ? T("Overlay.ModNotEnabled", current.Label)
-            : visible.Length == 0 ? T("Overlay.EmptyNoBindings") : null;
+            : visible.Length == 0 ? T("ShortcutPanel.NoBindingsTitle") : null;
         _emptyText!.Text = empty ?? string.Empty;
         string listSignature = $"{currentEnabled}|{empty}";
         if (_bindings.SequenceEqual(visible) && listSignature == _listSignature) return;
@@ -644,10 +688,12 @@ internal sealed class ShortcutOverlayController : IShortcutOverlay
     private void UpdateTitle(ShortcutModOption? current)
     {
         if (_titleText is null || _stateDot is null) return;
-        _titleText.Text = current?.Label ?? T("Overlay.NoModTitle");
-        (Color color, string state) = _shortcuts.SelectedTarget is not { } target ? (NoTargetColor, T("Overlay.StateNoTarget"))
-            : _shortcuts.InputEnabled ? (SendingColor, T("Overlay.StateSending", target.Label))
-            : (ReadyColor, T("Overlay.StateReady", target.Label));
+        _titleText.Text = current?.Label ?? T("ShortcutPanel.SelectAMod");
+        // In the Shortcuts page's words: the target game window and whether input is on.
+        string input = _shortcuts.InputEnabled ? T("ShortcutPanel.InputOn") : T("ShortcutPanel.InputOff");
+        (Color color, string state) = _shortcuts.SelectedTarget is not { } target
+            ? (NoTargetColor, $"{T("ShortcutPanel.TargetGameWindow")}: {T("ShortcutPanel.NoTargetYet")} · {input}")
+            : (_shortcuts.InputEnabled ? SendingColor : ReadyColor, $"{T("ShortcutPanel.TargetGameWindow")}: {target.Label} · {input}");
         ((SolidColorBrush)_stateDot.Fill).Color = color;
         ToolTipService.SetToolTip(_stateDot, state);
         AutomationProperties.SetName(_stateDot, state);
@@ -683,7 +729,7 @@ internal sealed class ShortcutOverlayController : IShortcutOverlay
         row.Children.Add(text);
         var button = new Button
         {
-            Content = row, IsEnabled = supported, HorizontalAlignment = HorizontalAlignment.Stretch,
+            Content = row, IsEnabled = supported, HorizontalAlignment = HorizontalAlignment.Stretch, Style = SecondaryButton,
             HorizontalContentAlignment = HorizontalAlignment.Stretch, Padding = new Thickness(12, 8, 12, 8),
             AllowFocusOnInteraction = false
         };
@@ -919,7 +965,7 @@ internal sealed class ShortcutOverlayController : IShortcutOverlay
             string label = ReferenceEquals(slot, current) ? "● " + slot.Name : slot.Name;
             var button = new Button
             {
-                Content = label,
+                Content = label, Style = SecondaryButton,
                 Foreground = TextBrush, AllowFocusOnInteraction = false, Padding = new Thickness(10, 4, 10, 5), FontSize = 13,
                 VerticalAlignment = VerticalAlignment.Top
             };

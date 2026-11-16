@@ -11,7 +11,7 @@ public sealed partial class MainWindow : IShortcutOverlayActions
 {
     private void AttachShortcutServices()
     {
-        _overlay = new ShortcutOverlayController(_shortcuts, _services.Language, this, DispatcherQueue);
+        _overlay = new ShortcutOverlayController(_shortcuts, _services.Language, _services.Appearance, this, DispatcherQueue);
         _services.Overlay = _overlay;
         _shortcuts.ActionRequested += OnShortcutPageRequested;
     }
