@@ -45,6 +45,13 @@ public sealed partial class ShortcutsPage : UserControl
         Loaded += (_, _) => RenderBindings();
         // The loader's d3dx.ini may have changed while the page was away.
         Loaded += (_, _) => { if (_built) ViewModel.Request(ShortcutPageAction.RefreshLoaderAutoSave); };
+        // The window keeps a shown page and only hides it while another section is chosen: coming back counts too.
+        RegisterPropertyChangedCallback(VisibilityProperty, (_, _) =>
+        {
+            if (Visibility != Visibility.Visible) return;
+            RenderBindings();
+            if (_built) ViewModel.Request(ShortcutPageAction.RefreshLoaderAutoSave);
+        });
         ShortcutOverlayOpacitySlider.Minimum = ShortcutOverlayWindow.MinimumOpacity;
         foreach (Slider slider in new[] { ShortcutOverlayOpacitySlider, ShortcutOverlayElementOpacitySlider })
         {
@@ -587,7 +594,8 @@ public sealed partial class ShortcutsPage : UserControl
     // Only while the page is on screen; it renders again when shown.
     private void RenderBindings()
     {
-        if (!_built || !IsLoaded) return;
+        // On screen: loaded, and not hidden while another section is shown (the window keeps a shown page).
+        if (!_built || !IsLoaded || Visibility != Visibility.Visible) return;
         DetectedModShortcut[] visible = ViewModel.VisibleShortcuts();
         if (_shownBindings.SequenceEqual(visible)) return;
         _shownBindings = visible;

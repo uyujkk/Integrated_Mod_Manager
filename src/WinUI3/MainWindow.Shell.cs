@@ -51,7 +51,7 @@ public sealed partial class MainWindow
     {
         // What the click must show at once: the page and the navigation's selection, in this frame. The refreshes
         // below used to run first and held the selection back by 50-100 ms on every switch (J8 follow-up).
-        PageContentHost.Content = GetPage(_currentPrimarySection);
+        ShowPage(GetPage(_currentPrimarySection));
         RefreshPrimaryNavigationVisuals();
         if (_currentPrimarySection == PrimarySection.Shortcuts)
         {
@@ -109,6 +109,24 @@ public sealed partial class MainWindow
         }
 
         SaveShellConfig();
+    }
+
+    // A page joins the host the first time it is shown and then stays in the window; a switch only changes which page
+    // is visible. Taking the page out of the window and putting it back (until 4.8.1) unloaded all of it and laid it out
+    // again on every switch: each Online card reloaded and looked up its install state, which held the first frame for
+    // 100-200 ms with real data and stalled the navigation's selection animation. Hidden (collapsed) pages take no
+    // layout, input or Narrator time; the pages that did work on Loaded/Unloaded follow their visibility instead.
+    private void ShowPage(UserControl page)
+    {
+        if (!PageContentHost.Children.Contains(page)) PageContentHost.Children.Add(page);
+        foreach (UIElement child in PageContentHost.Children.ToArray())
+        {
+            bool shown = ReferenceEquals(child, page);
+            // An open teaching tip stays on screen when its page is only collapsed (it does not finish closing), so a
+            // dashboard showing its getting-started tip leaves the window as before; it closes the tip when unloaded.
+            if (!shown && child is DashboardPage { HasOpenTip: true }) PageContentHost.Children.Remove(child);
+            else child.Visibility = shown ? Visibility.Visible : Visibility.Collapsed;
+        }
     }
 
     // Each page container stays alive in its wrapper, so switching keeps scroll positions,

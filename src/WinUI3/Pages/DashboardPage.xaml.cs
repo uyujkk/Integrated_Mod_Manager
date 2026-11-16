@@ -51,13 +51,30 @@ public sealed partial class DashboardPage : UserControl
         services.Appearance.ThemeChanged += (_, _) => RefreshPathsState();
         // The language is read from the settings after the page is made, so label again when it is shown.
         Loaded += (_, _) => ApplyLanguage();
-        // The getting-started tips show while the page is on screen and wait while it is not.
+        // The getting-started tips show while the page is on screen and wait while it is not. The window keeps a shown
+        // page and only hides it when another section is chosen, so the tips follow the page's visibility as well.
         Loaded += (_, _) => ShowGettingStartedTip();
         Unloaded += (_, _) => GettingStartedTip.IsOpen = false;
+        RegisterPropertyChangedCallback(VisibilityProperty, (_, _) =>
+        {
+            if (Visibility != Visibility.Visible)
+            {
+                GettingStartedTip.IsOpen = false;
+                return;
+            }
+            RefreshPathsState();
+            ShowGettingStartedTip();
+        });
         ApplyLanguage();
     }
 
     public DashboardViewModel ViewModel { get; }
+
+    /// <summary>The getting-started tip is open (the window then takes the page out instead of hiding it).</summary>
+    internal bool HasOpenTip => GettingStartedTip.IsOpen;
+
+    // On screen: loaded, and not hidden while another section is shown (the window keeps a shown page).
+    private bool IsShown => IsLoaded && Visibility == Visibility.Visible;
 
     public RepositoryPathsViewModel Paths { get; }
 
@@ -230,7 +247,7 @@ public sealed partial class DashboardPage : UserControl
         bool hasRepository = !string.IsNullOrEmpty(ViewModel.CurrentRepositoryName);
         DashboardPathsInfoBar.IsOpen = hasRepository && Paths.SourceStatus != PathFieldStatus.Ready;
         // Opened only once the page is on screen: opening the expander before it is loaded leaves the window blank.
-        if (hasRepository && missing > 0 && IsLoaded && _autoExpandedFor != ViewModel.CurrentRepositoryName)
+        if (hasRepository && missing > 0 && IsShown && _autoExpandedFor != ViewModel.CurrentRepositoryName)
         {
             _autoExpandedFor = ViewModel.CurrentRepositoryName;
             DashboardPathsExpander.IsExpanded = true;
@@ -352,7 +369,7 @@ public sealed partial class DashboardPage : UserControl
     /// <summary>Opens the getting-started tip at the current step, or closes it when there is nothing to show.</summary>
     private void ShowGettingStartedTip()
     {
-        if (ViewModel.GettingStarted is not { } tips || !tips.ShouldShow(IsLoaded, _services.Dialogs.IsDialogOpen))
+        if (ViewModel.GettingStarted is not { } tips || !tips.ShouldShow(IsShown, _services.Dialogs.IsDialogOpen))
         {
             GettingStartedTip.IsOpen = false;
             return;
