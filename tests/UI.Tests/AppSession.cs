@@ -118,9 +118,26 @@ public sealed class AppSession : IDisposable
     public static IEnumerable<string> LanguageFiles() =>
         Directory.EnumerateFiles(Path.Combine(RepositoryRoot.Value, "src", "WinUI3", "Strings"), "*.json").Select(Path.GetFileNameWithoutExtension)!;
 
-    public AutomationElement Find(string automationId, TimeSpan? timeout = null) => FindIn(MainWindow, cf => cf.ByAutomationId(automationId), automationId, timeout);
+    public AutomationElement Find(string automationId, TimeSpan? timeout = null)
+        => CaptureOnFailure(() => FindIn(MainWindow, cf => cf.ByAutomationId(automationId), automationId, timeout), automationId);
 
-    public AutomationElement FindByName(string name, TimeSpan? timeout = null) => FindIn(MainWindow, cf => cf.ByName(name), name, timeout);
+    public AutomationElement FindByName(string name, TimeSpan? timeout = null)
+        => CaptureOnFailure(() => FindIn(MainWindow, cf => cf.ByName(name), name, timeout), name);
+
+    // A lookup that times out leaves a picture of the window (screenshots\NotFound-*.png, kept with the CI test results).
+    private AutomationElement CaptureOnFailure(Func<AutomationElement> find, string what)
+    {
+        try
+        {
+            return find();
+        }
+        catch (InvalidOperationException)
+        {
+            string name = new(what.Select(c => char.IsLetterOrDigit(c) ? c : '_').Take(60).ToArray());
+            Capture($"NotFound-{name}-{DateTime.Now:HHmmss}");
+            throw;
+        }
+    }
 
     /// <summary>Whether the element is in the automation tree now; collapsed elements are not.</summary>
     public bool Shows(string automationId) => MainWindow.FindFirstDescendant(cf => cf.ByAutomationId(automationId)) is not null;
@@ -151,15 +168,40 @@ public sealed class AppSession : IDisposable
     /// </summary>
     public void Expand(string automationId)
     {
-        AutomationElement element = Find(automationId);
-        AutomationElement target = element.Patterns.ExpandCollapse.IsSupported
-            ? element
-            : element.FindFirstDescendant(cf => cf.ByClassName("Microsoft.UI.Xaml.Controls.Expander"))
-                ?? throw new InvalidOperationException(automationId + " has nothing to expand");
+        AutomationElement target = ExpandTarget(Find(automationId), automationId);
         if (target.Patterns.ExpandCollapse.Pattern.ExpandCollapseState.Value != FlaUI.Core.Definitions.ExpandCollapseState.Expanded)
             target.Patterns.ExpandCollapse.Pattern.Expand();
         Thread.Sleep(600);
     }
+
+    /// <summary>Folds a section opened with <see cref="Expand"/>.</summary>
+    public void Collapse(string automationId)
+    {
+        AutomationElement target = ExpandTarget(Find(automationId), automationId);
+        if (target.Patterns.ExpandCollapse.Pattern.ExpandCollapseState.Value != FlaUI.Core.Definitions.ExpandCollapseState.Collapsed)
+            target.Patterns.ExpandCollapse.Pattern.Collapse();
+        Thread.Sleep(600);
+    }
+
+    public static FlaUI.Core.Definitions.ExpandCollapseState ExpandState(AutomationElement element)
+        => ExpandTarget(element, element.Properties.AutomationId.ValueOrDefault ?? "element").Patterns.ExpandCollapse.Pattern.ExpandCollapseState.Value;
+
+    /// <summary>Scrolls the element (with an open section, its content) into the visible part of its page.</summary>
+    public static void ScrollIntoView(AutomationElement element)
+    {
+        AutomationElement target = element.Patterns.ExpandCollapse.IsSupported || !element.Patterns.ScrollItem.IsSupported
+            ? element
+            : element.FindFirstDescendant(cf => cf.ByClassName("Microsoft.UI.Xaml.Controls.Expander")) ?? element;
+        if (target.Patterns.ScrollItem.IsSupported) target.Patterns.ScrollItem.Pattern.ScrollIntoView();
+        Thread.Sleep(600);
+    }
+
+    // The element with the expand pattern: itself, or for a Toolkit SettingsExpander the Expander inside it.
+    private static AutomationElement ExpandTarget(AutomationElement element, string description)
+        => element.Patterns.ExpandCollapse.IsSupported
+            ? element
+            : element.FindFirstDescendant(cf => cf.ByClassName("Microsoft.UI.Xaml.Controls.Expander"))
+                ?? throw new InvalidOperationException(description + " has nothing to expand");
 
     public static void Invoke(AutomationElement element)
     {

@@ -24,12 +24,14 @@ public sealed class SettingsLayoutTests
         Thread.Sleep(1500);
         ScrollToEnd(app);
         var before = app.Find("AboutExpander").BoundingRectangle;
-        // The card has no expand pattern for automation: click its header like a user.
-        FlaUI.Core.Input.Mouse.Click(new System.Drawing.Point(before.X + 120, before.Y + 30));
-        Thread.Sleep(1500);
+        // Opened and closed through the Expander inside the card, and checked to be open, so the test cannot pass
+        // on a click that opened nothing.
+        app.Expand("AboutExpander");
+        Thread.Sleep(900);
+        Assert.Equal(ExpandCollapseState.Expanded, AppSession.ExpandState(app.Find("AboutExpander")));
         var opened = app.Find("AboutExpander").BoundingRectangle;
         Assert.True(opened.Left == before.Left && Math.Abs(opened.Top - before.Top) < 4, $"The opened group moved: {before} -> {opened}");
-        FlaUI.Core.Input.Mouse.Click(new System.Drawing.Point(opened.X + 120, opened.Y + 30));
+        app.Collapse("AboutExpander");
         Thread.Sleep(1500);
         var closed = app.Find("AboutExpander").BoundingRectangle;
         Assert.True(closed.Left == before.Left && Math.Abs(closed.Top - before.Top) < 4, $"The closed group moved: {before} -> {closed}");

@@ -1,5 +1,4 @@
 using FlaUI.Core.AutomationElements;
-using FlaUI.Core.Input;
 
 namespace IntegratedModManager.UI.Tests;
 
@@ -21,11 +20,12 @@ public sealed class WhatsNewTests
     public void ReleaseNotes_OfferTheDiscordServer()
     {
         using AppSession app = AppSession.Configured((shell, _) => shell["CurrentPrimarySection"] = "settings").Start();
-        AutomationElement notes = app.Find("ReleaseNotesExpander", TimeSpan.FromSeconds(10));
-        // The settings expander has no expand pattern for automation: click its header like a user.
-        System.Drawing.Rectangle header = notes.BoundingRectangle;
-        Mouse.Click(new System.Drawing.Point(header.X + 120, header.Y + 30));
-        AutomationElement button = app.Find("ReleaseNotesDiscordButton", TimeSpan.FromSeconds(5));
+        app.Find("ReleaseNotesExpander", TimeSpan.FromSeconds(10));
+        // Opened through the Expander inside the card (a mouse click at a fixed offset did not open it on CI),
+        // then scrolled into view: the card's items are only made while they are on screen.
+        app.Expand("ReleaseNotesExpander");
+        AppSession.ScrollIntoView(app.Find("ReleaseNotesExpander"));
+        AutomationElement button = app.Find("ReleaseNotesDiscordButton");
         Assert.Equal(app.Text("WhatsNew.JoinDiscord"), button.Name);
         app.AssertNoErrors();
     }
