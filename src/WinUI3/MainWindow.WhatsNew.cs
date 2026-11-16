@@ -36,9 +36,10 @@ public sealed partial class MainWindow
         var dialog = WhatsNewDialog.Create(_services, WhatsNewFeatureSet, RootGrid.ActualHeight);
         _whatsNewSeenVersion = WhatsNewFeatureSet;
         SaveShellConfig();
-        if (await _services.Dialogs.ShowAsync(dialog) == ContentDialogResult.Primary)
+        switch (await _services.Dialogs.ShowAsync(dialog))
         {
-            OpenWhatsNewDetails();
+            case ContentDialogResult.Primary: OpenWhatsNewDetails(); break;
+            case ContentDialogResult.Secondary: OpenFeedbackDiscord(); break;
         }
     }
 

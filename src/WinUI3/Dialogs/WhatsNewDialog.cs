@@ -6,7 +6,7 @@ namespace ModFolderCopier.WinUI;
 /// <summary>What is new in this version (moved from the window in stage J8).</summary>
 internal static class WhatsNewDialog
 {
-    /// <summary>The dialog; the caller shows it and opens the details when the primary button is chosen.</summary>
+    /// <summary>The dialog; the caller shows it and opens the details (primary) or the Discord server (secondary).</summary>
     public static ContentDialog Create(AppServices services, string featureSet, double windowHeight)
     {
         string T(string key, params object?[] values) => services.Language.T(key, values);
@@ -20,6 +20,7 @@ internal static class WhatsNewDialog
                 Content = new TextBlock { Text = T("WhatsNew.Body"), TextWrapping = TextWrapping.Wrap, IsTextSelectionEnabled = true }
             },
             PrimaryButtonText = T("WhatsNew.OpenDetails"),
+            SecondaryButtonText = T("WhatsNew.JoinDiscord"),
             CloseButtonText = T("WhatsNew.Close"),
             DefaultButton = ContentDialogButton.Close
         };

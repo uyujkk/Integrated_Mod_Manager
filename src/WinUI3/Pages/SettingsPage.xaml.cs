@@ -114,6 +114,7 @@ public sealed partial class SettingsPage : UserControl
         SetCard(FeedbackDiscordSettingsCard, T("Settings.FeedbackDiscord"), T("Settings.FeedbackDiscordHint"));
         OpenFeedbackDiscordButton.Content = T("Settings.OpenDiscord");
         AutomationProperties.SetName(OpenFeedbackDiscordButton, T("Settings.OpenDiscord"));
+        ReleaseNotesDiscordButton.Content = T("WhatsNew.JoinDiscord");
 
         // About.
         ProjectResourcesTitleTextBlock.Text = T("Settings.ProjectAndOpenSourceComponents");
