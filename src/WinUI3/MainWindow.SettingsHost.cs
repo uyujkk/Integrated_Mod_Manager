@@ -192,6 +192,26 @@ public sealed partial class MainWindow
             case SettingsAction.CopyFeedbackGroup: CopyFeedbackGroupNumber(); break;
             case SettingsAction.OpenDiscord: OpenFeedbackDiscord(); break;
             case SettingsAction.OpenLink: OpenProjectResource(request.Argument!); break;
+            case SettingsAction.ClearGameBananaSignIn: _ = ClearGameBananaSignInAsync(); break;
+        }
+    }
+
+    // Issue #129: asks first, closes the GameBanana page if it is open, then deletes its saved sign-in.
+    private async Task ClearGameBananaSignInAsync()
+    {
+        try
+        {
+            if (!await _services.Dialogs.DangerConfirmAsync(T("Settings.ClearGameBananaSignInConfirmTitle"),
+                    T("Settings.ClearGameBananaSignInConfirm"), T("Settings.ClearGameBananaSignInClear")))
+                return;
+            bool cleared = await _services.GameBananaWeb.ClearAsync();
+            ShowAppNotification(T(cleared ? "Settings.GameBananaSignInCleared" : "Settings.GameBananaSignInNothingToClear"),
+                cleared ? InfoBarSeverity.Success : InfoBarSeverity.Informational);
+        }
+        catch (Exception ex) when (ex is IOException or UnauthorizedAccessException or InvalidOperationException)
+        {
+            LogApplicationIssue("Clear GameBanana sign-in", ex);
+            ShowAppNotification(T("Settings.GameBananaSignInNotCleared"), InfoBarSeverity.Error, ex);
         }
     }
 

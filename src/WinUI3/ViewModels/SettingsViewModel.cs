@@ -16,7 +16,10 @@ public enum SettingsAction
     OpenDiscord,
 
     /// <summary>Open the address in <see cref="SettingsActionRequest.Argument"/>.</summary>
-    OpenLink
+    OpenLink,
+
+    /// <summary>Delete the sign-in kept by the GameBanana page opened for likes (issue #129).</summary>
+    ClearGameBananaSignIn
 }
 
 public sealed record SettingsActionRequest(SettingsAction Action, string? Argument = null);

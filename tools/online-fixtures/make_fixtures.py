@@ -184,6 +184,17 @@ for cat_id, records in [(CATEGORY, mods)] + list(lists.items()):
         responses.append({"prefix": f"{API}Mod/Index?_aFilters%5BGeneric_Category%5D={cat_id}&_sSort={sort}&", "file": f"index-{cat_id}-{short}.json"})
 
 
+# Issue #129: the Mod page the Online page opens for likes, as a plain offline sample (no site look, no sign-in).
+with io.open(os.path.join(out, "mod-page.html"), "w", encoding="utf-8", newline="\n") as f:
+    f.write("<!doctype html><html><head><meta charset='utf-8'><title>Sample Mod page</title>"
+            "<style>body{font-family:Segoe UI,sans-serif;margin:32px;color:#333;background:#f6f6f6}"
+            "h1{font-size:22px}p{max-width:560px;line-height:1.5}.like{display:inline-block;padding:8px 16px;border:1px solid #999;border-radius:6px}</style>"
+            "</head><body><h1>Sample Mod page (offline sample)</h1>"
+            "<p>In a real run this is the Mod's own page on the site, where a signed-in user can like it. "
+            "This sample comes from the test samples; nothing was loaded from the network.</p>"
+            "<span class='like'>&#9825; Like (sample, does nothing)</span></body></html>\n")
+responses.append({"prefix": "https://gamebanana.com/mods/", "file": "mod-page.html", "contentType": "text/html"})
+
 write("fixtures.json", {"about": "Synthetic samples for IMM_ONLINE_FIXTURES (screenshots and UI tests only); made up, no real site data.",
                         "responses": responses})
 print(len(responses), "responses")

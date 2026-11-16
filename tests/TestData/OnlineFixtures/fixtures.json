@@ -416,6 +416,11 @@
   {
    "prefix": "https://gamebanana.com/apiv11/Mod/Index?_aFilters%5BGeneric_Category%5D=90300&_sSort=Generic_LatestUpdated&",
    "file": "index-90300-updated.json"
+  },
+  {
+   "prefix": "https://gamebanana.com/mods/",
+   "file": "mod-page.html",
+   "contentType": "text/html"
   }
  ]
 }

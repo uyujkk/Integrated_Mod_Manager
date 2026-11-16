@@ -964,13 +964,13 @@ public sealed partial class OnlinePage
         string label = T("OnlineDetails.LikeOnGameBanana");
         Microsoft.UI.Xaml.Automation.AutomationProperties.SetName(LikeOnlineDetailButton, label);
         ToolTipService.SetToolTip(LikeOnlineDetailButton, label);
-        LikeOnlineDetailButton.Visibility = GameBananaModPage(mod) is not null
+        LikeOnlineDetailButton.Visibility = GameBananaWeb.ModPage(mod.ItemId, mod.ProfileUrl) is not null
             ? Visibility.Visible : Visibility.Collapsed;
     }
 
     private async void OnLikeOnlineDetailClicked(object sender, RoutedEventArgs e)
     {
-        if (_activeOnlineDetailMod is not { } mod || GameBananaModPage(mod) is not { } page) return;
+        if (_activeOnlineDetailMod is not { } mod || GameBananaWeb.ModPage(mod.ItemId, mod.ProfileUrl) is not { } page) return;
 
         try { await ShowGameBananaPageAsync(page); }
         catch (Exception ex) { _host.ReportUiActionFailure(nameof(OnLikeOnlineDetailClicked), ex); }
