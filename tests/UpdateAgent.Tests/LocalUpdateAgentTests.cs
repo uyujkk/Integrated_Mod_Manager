@@ -120,6 +120,8 @@ public sealed class LocalUpdateAgentTests
     [InlineData("WinUI3/config.ini", true)]
     [InlineData("WinUI3/cache/app-index.db", true)]
     [InlineData("WinUI3/cache/images/preview.jpg", true)]
+    // The embedded GameBanana page's sign-in (issue #129) is user data: an update keeps it.
+    [InlineData("WinUI3/cache/gamebanana-webview2/EBWebView/Default/Network/Cookies", true)]
     [InlineData("backups/updates/backup.zip", true)]
     [InlineData("WinUI3/snapshots/user-ini/repo/20261023-120000-a.ini", true)]
     [InlineData("snapshots/a.ini", false)]
