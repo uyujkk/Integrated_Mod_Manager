@@ -99,6 +99,16 @@ public sealed class OverlayLayoutPolicyTests
     }
 
     [Theory]
+    [InlineData(null, 14)]
+    [InlineData(12, 12)]
+    [InlineData(20, 20)]
+    [InlineData(15, 14)]
+    [InlineData(0, 14)]
+    [InlineData(99, 14)]
+    public void TheCompactFontSizeIsOneOfTheOfferedSizes(int? saved, int expected)
+        => Assert.Equal(expected, OverlayLayoutPolicy.CompactFontSize(saved));
+
+    [Theory]
     [InlineData(400, 860, 1.5, 2100, 0, 600)]   // follows the content
     [InlineData(1200, 860, 1.5, 2100, 0, 1290)] // up to what the user allowed
     [InlineData(50, 860, 1.5, 2100, 0, 180)]    // at least the minimum

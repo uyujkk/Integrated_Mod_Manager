@@ -238,6 +238,9 @@ internal sealed class ShortcutOverlayController : IShortcutOverlay
                 TextBrush.Color = _userTextColor;
                 ApplyAppearance();
                 break;
+            case nameof(ShortcutPageViewModel.OverlayCompactFontSize):
+                ApplyKeyFontSize();
+                break;
             case nameof(ShortcutPageViewModel.OverlayCompactView):
                 ApplyCompactView();
                 if (_compactToggle is not null) _compactToggle.IsOn = _shortcuts.OverlayCompactView;
@@ -331,6 +334,17 @@ internal sealed class ShortcutOverlayController : IShortcutOverlay
         AutomationProperties.SetName(_compactToggle, T("OverlayView.Compact"));
         _compactToggle.Toggled += (_, _) => _shortcuts.OverlayCompactView = _compactToggle.IsOn;
         menu.Children.Add(_compactToggle);
+        // The keys' text size in the compact view, where the panel is small and the text should still read well.
+        var fontSize = new ComboBox { Header = T("Overlay.CompactFontSize"), HorizontalAlignment = HorizontalAlignment.Stretch };
+        foreach (int size in OverlayLayoutPolicy.CompactFontSizes) fontSize.Items.Add(size);
+        fontSize.SelectedItem = _shortcuts.OverlayCompactFontSize;
+        AutomationProperties.SetAutomationId(fontSize, "OverlayCompactFontSize");
+        AutomationProperties.SetName(fontSize, T("Overlay.CompactFontSize"));
+        fontSize.SelectionChanged += (_, _) =>
+        {
+            if (fontSize.SelectedItem is int size) _shortcuts.OverlayCompactFontSize = size;
+        };
+        menu.Children.Add(fontSize);
         _clickThroughButton = new Button
         {
             Content = T("OverlayView.ClickThrough"), HorizontalAlignment = HorizontalAlignment.Stretch, AllowFocusOnInteraction = false
@@ -675,6 +689,7 @@ internal sealed class ShortcutOverlayController : IShortcutOverlay
         };
         AutomationProperties.SetName(button, shortcut.Shortcut + " · " + description.Text);
         button.Click += async (_, _) => await _actions.RunAsync("Send shortcut", () => _actions.SendShortcutAsync(shortcut));
+        button.FontSize = _shortcuts.OverlayCompactView ? _shortcuts.OverlayCompactFontSize : 14;
         return button;
     }
 
@@ -767,6 +782,15 @@ internal sealed class ShortcutOverlayController : IShortcutOverlay
     {
         Visibility visibility = _shortcuts.OverlayCompactView ? Visibility.Collapsed : Visibility.Visible;
         foreach (FrameworkElement row in _detailRows) row.Visibility = visibility;
+        ApplyKeyFontSize();
+        QueueFit();
+    }
+
+    // The compact view uses the chosen text size for the keys; the full view the body size.
+    private void ApplyKeyFontSize()
+    {
+        double size = _shortcuts.OverlayCompactView ? _shortcuts.OverlayCompactFontSize : 14;
+        foreach (Button key in _bindingControls.Values) key.FontSize = size;
     }
 
     private void SetClickThrough(bool enabled)

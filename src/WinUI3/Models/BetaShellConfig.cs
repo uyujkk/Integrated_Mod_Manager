@@ -19,6 +19,8 @@ public sealed class BetaShellConfig
     public bool CapturePresetPreviews { get; set; }
     public bool OverlayCompactSlots { get; set; }
     public bool OverlayCompactView { get; set; }
+    /// <summary>The text size of the overlay's keys in its compact view.</summary>
+    public int? OverlayCompactFontSize { get; set; }
     /// <summary>The overlay's place and size on each display, last used first.</summary>
     public List<IntegratedModManager.Core.Layout.OverlayPlacement>? OverlayPlacements { get; set; }
     public bool OverlayAutoContrast { get; set; }

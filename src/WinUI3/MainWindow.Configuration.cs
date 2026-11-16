@@ -111,6 +111,7 @@ public sealed partial class MainWindow
             _shortcuts.OverlayCompactSlots = config?.OverlayCompactSlots ?? false;
             _shortcuts.OverlayCompactView = config?.OverlayCompactView ?? false;
             _shortcuts.OverlayPlacements = config?.OverlayPlacements ?? [];
+            _shortcuts.OverlayCompactFontSize = OverlayLayoutPolicy.CompactFontSize(config?.OverlayCompactFontSize);
             _shortcuts.KeepMenuStateVariables = config?.KeepMenuStateVariables ?? false;
             _loaderAutoSaveOriginals = new Dictionary<string, int>(config?.LoaderAutoSaveOriginals ?? [], StringComparer.OrdinalIgnoreCase);
             _presetPreviewFrameLocked = config?.PresetPreviewFrameLocked ?? false;
@@ -283,6 +284,7 @@ public sealed partial class MainWindow
                 OverlayCompactSlots = _shortcuts.OverlayCompactSlots,
                 OverlayCompactView = _shortcuts.OverlayCompactView,
                 OverlayPlacements = _shortcuts.OverlayPlacements.Count == 0 ? null : _shortcuts.OverlayPlacements.ToList(),
+                OverlayCompactFontSize = _shortcuts.OverlayCompactFontSize,
                 OverlayAutoContrast = _shortcuts.OverlayAutoContrast,
                 KeepMenuStateVariables = _shortcuts.KeepMenuStateVariables,
                 LoaderAutoSaveOriginals = _loaderAutoSaveOriginals.Count == 0 ? null : new Dictionary<string, int>(_loaderAutoSaveOriginals),

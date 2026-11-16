@@ -984,6 +984,7 @@
   "OnlineLibrary.RemovedFromSaved": "Removed from saved items.",
   "OnlineLibrary.Saved": "Saved for later.",
   "Overlay.ChooseTargetWindow": "Choose the target window",
+  "Overlay.CompactFontSize": "Text size in compact view",
   "Overlay.EmptyNoBindings": "This Mod’s INI files have no keys to show.",
   "Overlay.EmptyNoEnabledMods": "No Mod of this repository is enabled in the game. Deploy one in the main window’s Mod workspace and its keys show here.",
   "Overlay.EmptyPickMod": "Pick a Mod above and its keys show here.",

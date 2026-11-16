@@ -984,6 +984,7 @@
   "OnlineLibrary.RemovedFromSaved": "已移出稍后下载。",
   "OnlineLibrary.Saved": "已加入稍后下载。",
   "Overlay.ChooseTargetWindow": "选择目标窗口",
+  "Overlay.CompactFontSize": "紧凑模式字号",
   "Overlay.EmptyNoBindings": "这个 Mod 的 INI 文件里没有可以显示的按键。",
   "Overlay.EmptyNoEnabledMods": "这个仓库还没有在游戏里启用的 Mod。在主窗口的 Mod 工作区部署 Mod 后，它的按键会显示在这里。",
   "Overlay.EmptyPickMod": "在上面选择一个 Mod，它的按键会显示在这里。",

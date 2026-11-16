@@ -25,6 +25,14 @@ public static class OverlayLayoutPolicy
 {
     public const double DefaultWidth = 420, DefaultMaxHeight = 860, MinimumWidth = 300, MinimumHeight = 120, Margin = 20, SnapDistance = 16;
 
+    /// <summary>Text sizes the compact view offers for the keys; the full view uses the body size (14).</summary>
+    public static readonly int[] CompactFontSizes = [12, 14, 16, 18, 20];
+
+    public const int DefaultCompactFontSize = 14;
+
+    /// <summary>A saved size, or the default when it is missing or not one of the offered sizes.</summary>
+    public static int CompactFontSize(int? saved) => saved is { } size && CompactFontSizes.Contains(size) ? size : DefaultCompactFontSize;
+
     /// <summary>The display a key names, or null when it is not connected now.</summary>
     public static OverlayDisplay? Find(IReadOnlyList<OverlayDisplay> displays, string? key)
         => string.IsNullOrEmpty(key) ? null : displays.FirstOrDefault(display => display.Key == key);

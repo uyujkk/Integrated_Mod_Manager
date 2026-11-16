@@ -984,6 +984,7 @@
   "OnlineLibrary.RemovedFromSaved": "Убрано из сохранённых.",
   "OnlineLibrary.Saved": "Сохранено на потом.",
   "Overlay.ChooseTargetWindow": "Выберите целевое окно",
+  "Overlay.CompactFontSize": "Размер текста в компактном виде",
   "Overlay.EmptyNoBindings": "В INI-файлах этого мода нет клавиш для показа.",
   "Overlay.EmptyNoEnabledMods": "Ни один мод этого репозитория не включён в игре. Разверните мод в рабочей области модов главного окна, и его клавиши появятся здесь.",
   "Overlay.EmptyPickMod": "Выберите мод выше, и его клавиши появятся здесь.",
