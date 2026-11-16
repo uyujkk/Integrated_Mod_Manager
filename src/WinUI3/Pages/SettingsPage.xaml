@@ -144,6 +144,8 @@
                                            Text="{x:Bind ViewModel.ReleaseMeta, Mode=OneWay}" Visibility="{x:Bind ViewModel.HasReleaseDetails, Mode=OneWay}" />
                                 <TextBlock x:Name="UpdateNotesTextBlock" TextWrapping="Wrap" IsTextSelectionEnabled="True"
                                            Text="{x:Bind ViewModel.ReleaseNotes, Mode=OneWay}" />
+                                <!-- Talk about the update with other users (the same server as the feedback card). -->
+                                <Button x:Name="ReleaseNotesDiscordButton" Click="OnOpenFeedbackDiscordClicked" />
                             </StackPanel>
                         </toolkit:SettingsCard>
                     </toolkit:SettingsExpander.Items>

@@ -404,7 +404,13 @@ public sealed partial class OnlinePage
         {
             try
             {
-                if (!Directory.Exists(origin.Path))
+                // The Mod comparison first: it is cheap, and the disk is only asked about the record that matches
+                // (each card asks this whenever the page refreshes, once per tracked download).
+                if (!OnlineInstallationDetectionPolicy.Matches(
+                    mod.ItemId,
+                    mod.ProfileUrl,
+                    origin.ItemId,
+                    origin.ProfileUrl))
                 {
                     continue;
                 }
@@ -415,11 +421,7 @@ public sealed partial class OnlinePage
                     continue;
                 }
 
-                if (OnlineInstallationDetectionPolicy.Matches(
-                    mod.ItemId,
-                    mod.ProfileUrl,
-                    origin.ItemId,
-                    origin.ProfileUrl))
+                if (Directory.Exists(origin.Path))
                 {
                     return origin;
                 }

@@ -36,6 +36,12 @@ public sealed partial class SettingsPage : UserControl
         // A page made while hidden lays its groups out later; balance again once their heights are known.
         SettingsMainPanel.SizeChanged += (_, args) => { if (Math.Abs(args.NewSize.Height - args.PreviousSize.Height) > 0.5) QueueBalanceColumns(); };
         SettingsRailPanel.SizeChanged += (_, args) => { if (Math.Abs(args.NewSize.Height - args.PreviousSize.Height) > 0.5) QueueBalanceColumns(); };
+        // Opening or closing a card is the user's own doing: the groups stay in their columns until the width changes.
+        // Balancing on the new height moved the opened group (for example "project and open-source components") to
+        // the other column, away from under the pointer, and it did not come back when closed.
+        foreach (CommunityToolkit.WinUI.Controls.SettingsExpander expander in new[] { ReleaseNotesExpander, SettingsOnlineExpander, AboutExpander })
+            expander.RegisterPropertyChangedCallback(CommunityToolkit.WinUI.Controls.SettingsExpander.IsExpandedProperty,
+                (_, _) => _heldWidth = Math.Round(SettingsScrollViewer.ActualWidth));
         ApplyLanguage();
     }
 
@@ -115,6 +121,7 @@ public sealed partial class SettingsPage : UserControl
         SetCard(FeedbackDiscordSettingsCard, T("Settings.FeedbackDiscord"), T("Settings.FeedbackDiscordHint"));
         OpenFeedbackDiscordButton.Content = T("Settings.OpenDiscord");
         AutomationProperties.SetName(OpenFeedbackDiscordButton, T("Settings.OpenDiscord"));
+        ReleaseNotesDiscordButton.Content = T("WhatsNew.JoinDiscord");
 
         // About.
         ProjectResourcesTitleTextBlock.Text = T("Settings.ProjectAndOpenSourceComponents");
@@ -259,6 +266,7 @@ public sealed partial class SettingsPage : UserControl
     }
 
     private double _balancedWidth = -1;
+    private double _heldWidth = -1;
     private double _balancedContent;
     private int _balanceRounds;
 
@@ -281,6 +289,11 @@ public sealed partial class SettingsPage : UserControl
             if (movable.Any(group => group.ActualHeight <= 0) || SettingsMainPanel.DesiredSize.Height <= 0) return;
             double content = SettingsMainPanel.DesiredSize.Height + SettingsRailPanel.DesiredSize.Height;
             double width = Math.Round(SettingsScrollViewer.ActualWidth);
+            if (_heldWidth >= 0)
+            {
+                if (width == _heldWidth) return;
+                _heldWidth = -1;
+            }
             if (width != _balancedWidth) { _balancedWidth = width; _balanceRounds = 0; }
             else if (Math.Abs(content - _balancedContent) < 40 || _balanceRounds >= 3) return;
             _balancedContent = content;

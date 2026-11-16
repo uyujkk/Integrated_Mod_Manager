@@ -122,10 +122,9 @@
             <Grid x:Name="PagesHostGrid">
                 <!-- Repository page. RepositoryWorkspace.cs fills the cards and places the workbench columns. -->
 
-                <!-- The page containers above are moved into wrapper pages at startup (MainWindow.Shell.cs);
-                     this host shows the current one. -->
-                <ContentControl x:Name="PageContentHost" IsTabStop="False"
-                                HorizontalContentAlignment="Stretch" VerticalContentAlignment="Stretch" />
+                <!-- The page containers above are moved into wrapper pages at startup (MainWindow.Shell.cs). Each page
+                     joins this host when first shown and stays; switching only shows one and hides the others. -->
+                <Grid x:Name="PageContentHost" />
             </Grid>
             </NavigationView>
         </Grid>

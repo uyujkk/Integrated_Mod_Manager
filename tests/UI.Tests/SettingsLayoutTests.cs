@@ -14,6 +14,30 @@ public sealed class SettingsLayoutTests
         Thread.Sleep(800);
     }
 
+    // Opening a card must not move its group to the other column (it used to jump away from under the pointer).
+    [Fact]
+    public void Settings_OpeningACardKeepsItsGroupInPlace()
+    {
+        using AppSession app = AppSession.Configured((shell, _) => shell["CurrentPrimarySection"] = "settings").Start();
+        app.Find("AboutExpander", TimeSpan.FromSeconds(10));
+        app.MainWindow.Patterns.Window.Pattern.SetWindowVisualState(WindowVisualState.Maximized);
+        Thread.Sleep(1500);
+        ScrollToEnd(app);
+        var before = app.Find("AboutExpander").BoundingRectangle;
+        // Opened and closed through the Expander inside the card, and checked to be open, so the test cannot pass
+        // on a click that opened nothing.
+        app.Expand("AboutExpander");
+        Thread.Sleep(900);
+        Assert.Equal(ExpandCollapseState.Expanded, AppSession.ExpandState(app.Find("AboutExpander")));
+        var opened = app.Find("AboutExpander").BoundingRectangle;
+        Assert.True(opened.Left == before.Left && Math.Abs(opened.Top - before.Top) < 4, $"The opened group moved: {before} -> {opened}");
+        app.Collapse("AboutExpander");
+        Thread.Sleep(1500);
+        var closed = app.Find("AboutExpander").BoundingRectangle;
+        Assert.True(closed.Left == before.Left && Math.Abs(closed.Top - before.Top) < 4, $"The closed group moved: {before} -> {closed}");
+        app.AssertNoErrors();
+    }
+
     [Fact]
     public void Settings_WideColumnsEndTogetherAndNarrowKeepsItsOrder()
     {
