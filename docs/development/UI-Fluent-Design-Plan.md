@@ -1,5 +1,7 @@
 # 界面外观优化方案 / UI Fluent design plan
 
+> **已完成 / Done.** J1T、J1N 和各页的 `-b` 外观改进已随 4.8.0 发布；“游戏内浮窗”一节随 4.8.2 发布（#134）。下面保留当时的方案；现在的结构见[软件结构](./Software-Structure.md)。The J1T, J1N and per-page `-b` work shipped in 4.8.0, and the in-game overlay section in 4.8.2 (#134). The plan below is kept as written; see [Software Structure](./Software-Structure.md) for the current structure.
+
 2026-11-04，基于 `49fcca2`（界面结构拆分计划）。这是设计方案，不是已实现功能。它是[界面结构拆分计划](./UI-Structure-Plan.md)（阶段 J）的配套文档：拆分计划规定**结构怎么拆**，这里规定**每页的外观怎么改、改在哪个阶段**。工作量粗估沿用：S ≈ 1–2 天，M ≈ 3–5 天，L ≈ 2 周以上。
 
 参考只用微软公开的设计文档、控件文档和公开截图里能看到的布局模式；不复制微软应用的图标、插画、配色或其他品牌素材。

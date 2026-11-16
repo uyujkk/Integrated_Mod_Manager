@@ -1,5 +1,7 @@
 ﻿# 界面结构拆分计划 / UI structure plan
 
+> **已完成（历史文档）/ Done (history).** 阶段 J 的 J0–J8 和收尾三步已全部合并，随 4.8.0（2026-11-10）发布。现在的结构见[软件结构](./Software-Structure.md)（页面、`AppServices`、页面接口、页面宿主）。本文保留当时的计划和决定，不再更新。Stage J (J0–J8 and the three finishing steps) is merged and shipped in 4.8.0; see [Software Structure](./Software-Structure.md) for the current structure. This plan is kept as written.
+
 2026-11-04，基于 v4.7.3 之后的 main（`5dfe728`）。这是计划，不是已实现功能。工作量粗估：S ≈ 1–2 天，M ≈ 3–5 天，L ≈ 2 周以上。路线图里记为阶段 J，见 [Roadmap](./Roadmap.md)。
 
 ## 为什么要做
