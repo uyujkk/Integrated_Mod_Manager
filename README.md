@@ -7,6 +7,7 @@
 
   [![Build and Test](https://github.com/uyujkk/Integrated_Mod_Manager/actions/workflows/build-and-test.yml/badge.svg)](https://github.com/uyujkk/Integrated_Mod_Manager/actions/workflows/build-and-test.yml)
   [![Latest Release](https://img.shields.io/github/v/release/uyujkk/Integrated_Mod_Manager?display_name=tag&sort=semver)](https://github.com/uyujkk/Integrated_Mod_Manager/releases/latest)
+  [![Downloads](https://img.shields.io/github/downloads/uyujkk/Integrated_Mod_Manager/total?label=downloads)](https://github.com/uyujkk/Integrated_Mod_Manager/releases)
   [![License](https://img.shields.io/github/license/uyujkk/Integrated_Mod_Manager)](./LICENSE)
   [![Platform](https://img.shields.io/badge/platform-Windows%20x64-0078D4)](#requirements)
   [![Ko-fi](https://img.shields.io/badge/Ko--fi-Support%20Development-FF5E5B?logo=ko-fi&logoColor=white)](https://ko-fi.com/uyujkk)
