@@ -102,6 +102,7 @@ public sealed partial class MainWindow
             case nameof(ShortcutPageViewModel.OverlayOpacity):
             case nameof(ShortcutPageViewModel.OverlayElementOpacity):
             case nameof(ShortcutPageViewModel.OverlayCompactView):
+            case nameof(ShortcutPageViewModel.OverlayPlacements):
             case nameof(ShortcutPageViewModel.OverlayAutoContrast):
             case nameof(ShortcutPageViewModel.OverlaySlotSwitchEnabled):
             case nameof(ShortcutPageViewModel.OverlayCompactSlots):

@@ -122,7 +122,11 @@ internal sealed class ShortcutOverlayController : IShortcutOverlay
             if (Window is null)
             {
                 UIElement content = BuildContent();
-                var overlay = new ShortcutOverlayWindow(content, _titleBar!, TitleBarControls, TextBrush, ElementBrush, T("Common.ModShortcuts"));
+                var overlay = new ShortcutOverlayWindow(content, _titleBar!, TitleBarControls, TextBrush, ElementBrush, T("Common.ModShortcuts"),
+                    _shortcuts.OverlayPlacements);
+                // Moved or resized by the user: remembered for that display (saved with the settings).
+                overlay.PlacementChanged += (bounds, display, maxHeight) =>
+                    _shortcuts.OverlayPlacements = OverlayLayoutPolicy.Remember(_shortcuts.OverlayPlacements, bounds, display, maxHeight);
                 Window = overlay;
                 Window.Closed += (_, _) =>
                 {

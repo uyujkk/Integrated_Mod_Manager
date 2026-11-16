@@ -1,4 +1,5 @@
 using System.Runtime.InteropServices;
+using IntegratedModManager.Core.Layout;
 using IntegratedModManager.Core.Presets;
 using Microsoft.UI.Composition;
 using Microsoft.UI.Input;
@@ -22,7 +23,7 @@ internal sealed class ShortcutOverlayWindow : Window
     // The title bar is the panel's own (40 DIP): drag area, Mod name, status dot, menu and close. The height follows the
     // content up to DefaultHeight; MinimumHeight keeps the title and one row visible.
     public const int TitleRowHeight = 40;
-    private const int DefaultWidth = 420, DefaultHeight = 860, MinimumHeight = 120, FadeMilliseconds = 90, MoveMilliseconds = 220;
+    private const int FadeMilliseconds = 90, MoveMilliseconds = 220;
     private readonly nint handle;
     private readonly SubclassProc callback;
     private bool keyboardInputEnabled;
@@ -32,6 +33,9 @@ internal sealed class ShortcutOverlayWindow : Window
     private readonly FrameworkElement titleBar;
     private readonly Func<IEnumerable<FrameworkElement>> titleBarControls;
     private double contentHeight;
+    // The tallest the user made the panel (DIP); its content decides the height up to this.
+    private double maxHeight = OverlayLayoutPolicy.DefaultMaxHeight;
+    private bool sizing, resized;
     private readonly Brush textBrush, elementBrush;
     private FrameworkElement? activeLayer;
     private RectInt32 boundsBeforeLayer;
@@ -41,8 +45,9 @@ internal sealed class ShortcutOverlayWindow : Window
 
     /// <param name="titleBar">The panel's title bar; the window makes it the drag area.</param>
     /// <param name="titleBarControls">The buttons in the title bar, which stay clickable instead of dragging.</param>
+    /// <param name="placements">Where it was on each display, last used first (OverlayLayoutPolicy).</param>
     public ShortcutOverlayWindow(UIElement content, FrameworkElement titleBar, Func<IEnumerable<FrameworkElement>> titleBarControls,
-        Brush textBrush, Brush elementBrush, string title)
+        Brush textBrush, Brush elementBrush, string title, IReadOnlyList<OverlayPlacement> placements)
     {
         // Keep the "IMM · " prefix in every language: it identifies the overlay in window lists.
         Title = "IMM · " + title;
@@ -78,11 +83,6 @@ internal sealed class ShortcutOverlayWindow : Window
         bar.ButtonHoverBackgroundColor = Color.FromArgb(60, 255, 255, 255);
         bar.ButtonHoverForegroundColor = Color.FromArgb(255, 255, 255, 255);
         bar.ButtonPressedBackgroundColor = Color.FromArgb(90, 255, 255, 255);
-        var area = DisplayArea.GetFromWindowId(AppWindow.Id, DisplayAreaFallback.Primary).WorkArea;
-        double scale = GetDpiForWindow(handle) / 96.0;
-        int width = Math.Min((int)(DefaultWidth * scale), area.Width);
-        int height = Math.Min((int)(DefaultHeight * scale), area.Height - (int)(40 * scale));
-        AppWindow.Resize(new SizeInt32(width, height));
         if (AppWindow.Presenter is OverlappedPresenter presenter)
         {
             presenter.IsAlwaysOnTop = true;
@@ -96,8 +96,48 @@ internal sealed class ShortcutOverlayWindow : Window
         callback = OnMessage;
         if (!SetWindowSubclass(handle, callback, 79, 0)) throw new InvalidOperationException("Overlay window setup failed.");
         Closed += (_, _) => RemoveWindowSubclass(handle, callback, 79);
-        AppWindow.Move(new PointInt32(area.X + Math.Max(0, area.Width - width - (int)(20 * scale)), area.Y + (int)(20 * scale)));
+        // Where it was on a display that is still connected, else the top right of the primary display.
+        IReadOnlyList<ConnectedDisplay> displays = Displays();
+        OverlayDisplay primary = displays.FirstOrDefault(display => display.IsPrimary)?.Display ?? Fallback();
+        var (bounds, savedMaxHeight, _) = OverlayLayoutPolicy.Restore(placements, displays.Select(display => display.Display).ToArray(), primary);
+        maxHeight = savedMaxHeight;
+        AppWindow.MoveAndResize(new RectInt32(bounds.X, bounds.Y, bounds.Width, bounds.Height));
     }
+
+    /// <summary>The user moved or resized the panel: its place on that display, to remember (last used first).</summary>
+    public event Action<WindowRect, OverlayDisplay, double>? PlacementChanged;
+
+    private sealed record ConnectedDisplay(OverlayDisplay Display, bool IsPrimary);
+
+    // The connected displays: device name and resolution as the key, the work area and the scale.
+    private static IReadOnlyList<ConnectedDisplay> Displays()
+    {
+        var displays = new List<ConnectedDisplay>();
+        EnumDisplayMonitors(0, 0, (nint monitor, nint hdc, ref Rect clip, nint data) =>
+        {
+            var info = new MonitorInfoEx { Size = Marshal.SizeOf<MonitorInfoEx>() };
+            if (!GetMonitorInfoW(monitor, ref info)) return true;
+            uint dpi = GetDpiForMonitor(monitor, 0, out uint dpiX, out _) == 0 && dpiX > 0 ? dpiX : 96;
+            Rect bounds = info.Monitor, work = info.Work;
+            string key = $"{info.Device}|{bounds.Right - bounds.Left}x{bounds.Bottom - bounds.Top}";
+            displays.Add(new ConnectedDisplay(new OverlayDisplay(key, new WindowRect(work.Left, work.Top, work.Right - work.Left, work.Bottom - work.Top), dpi / 96.0),
+                (info.Flags & 1) != 0));
+            return true;
+        }, 0);
+        return displays;
+    }
+
+    private OverlayDisplay Fallback()
+    {
+        RectInt32 area = DisplayArea.GetFromWindowId(AppWindow.Id, DisplayAreaFallback.Primary).WorkArea;
+        return new OverlayDisplay(string.Empty, new WindowRect(area.X, area.Y, area.Width, area.Height), GetDpiForWindow(handle) / 96.0);
+    }
+
+    private WindowRect CurrentBounds() => new(AppWindow.Position.X, AppWindow.Position.Y, AppWindow.Size.Width, AppWindow.Size.Height);
+
+    // The display the panel is mostly on now.
+    private OverlayDisplay CurrentDisplay(WindowRect bounds)
+        => OverlayLayoutPolicy.DisplayOf(Displays().Select(display => display.Display).ToArray(), bounds) ?? Fallback();
 
     public void ShowPanel() => AppWindow.Show(false);
 
@@ -133,13 +173,14 @@ internal sealed class ShortcutOverlayWindow : Window
         contentHeight = contentDip;
         double scale = GetDpiForWindow(handle) / 96.0;
         RectInt32 area = DisplayArea.GetFromWindowId(AppWindow.Id, DisplayAreaFallback.Primary).WorkArea;
+        if (sizing) return;
         // The window's size includes its resize frame; the content gets what the XAML root has.
         // Before the first layout the root has no size yet; a frame is only ever a few pixels.
         int frame = rootGrid.XamlRoot is { Size.Height: > 0 } root ? AppWindow.Size.Height - (int)Math.Round(root.Size.Height * root.RasterizationScale) : 0;
         frame = frame is > 0 and < 32 ? frame : 0;
-        int wanted = (int)Math.Round(Math.Clamp(TitleRowHeight + contentDip, MinimumHeight, DefaultHeight) * scale) + frame;
-        wanted = Math.Min(wanted, area.Height - (int)(40 * scale));
-        if (Math.Abs(AppWindow.Size.Height - wanted) > 1) AppWindow.Resize(new SizeInt32(AppWindow.Size.Width, wanted));
+        int wanted = OverlayLayoutPolicy.FitHeight(TitleRowHeight + contentDip, maxHeight, scale, area.Height, frame);
+        if (Math.Abs(AppWindow.Size.Height - wanted) <= 1) return;
+        AppWindow.Resize(new SizeInt32(AppWindow.Size.Width, wanted));
     }
 
     /// <summary>The content height last fitted, in DIP (for tests and the layout after a layer).</summary>
@@ -327,7 +368,52 @@ internal sealed class ShortcutOverlayWindow : Window
 
     private nint OnMessage(nint hwnd, uint message, nuint wParam, nint lParam, nuint id, nuint data)
     {
-        if (message == 0x0021 && !keyboardInputEnabled) return 3; // WM_MOUSEACTIVATE -> MA_NOACTIVATE, still deliver the click.
+        switch (message)
+        {
+            case 0x0021 when !keyboardInputEnabled:
+                return 3; // WM_MOUSEACTIVATE -> MA_NOACTIVATE, still deliver the click.
+            case 0x0024 when activeLayer is null: // WM_GETMINMAXINFO: no smaller than the title bar and a row
+            {
+                nint result = DefSubclassProc(hwnd, message, wParam, lParam);
+                double scale = GetDpiForWindow(hwnd) / 96.0;
+                MinMaxInfo info = Marshal.PtrToStructure<MinMaxInfo>(lParam);
+                info.MinTrackWidth = (int)Math.Round(OverlayLayoutPolicy.MinimumWidth * scale);
+                info.MinTrackHeight = (int)Math.Round(OverlayLayoutPolicy.MinimumHeight * scale);
+                Marshal.StructureToPtr(info, lParam, false);
+                return result;
+            }
+            case 0x0231: // WM_ENTERSIZEMOVE
+                sizing = true;
+                resized = false;
+                break;
+            case 0x0214: // WM_SIZING: the user drags an edge
+                resized = true;
+                break;
+            case 0x0216 when activeLayer is null: // WM_MOVING: stick to the work area's edges
+            {
+                Rect rect = Marshal.PtrToStructure<Rect>(lParam);
+                var moving = new WindowRect(rect.Left, rect.Top, rect.Right - rect.Left, rect.Bottom - rect.Top);
+                WindowRect snapped = OverlayLayoutPolicy.Snap(moving, CurrentDisplay(moving));
+                if (snapped != moving)
+                {
+                    rect = new Rect { Left = snapped.X, Top = snapped.Y, Right = snapped.X + snapped.Width, Bottom = snapped.Y + snapped.Height };
+                    Marshal.StructureToPtr(rect, lParam, false);
+                    return 1;
+                }
+                break;
+            }
+            case 0x0232: // WM_EXITSIZEMOVE: remember where it is now, and how tall the user allows it to be
+            {
+                sizing = false;
+                if (activeLayer is not null) break;
+                WindowRect bounds = CurrentBounds();
+                OverlayDisplay display = CurrentDisplay(bounds);
+                if (resized) maxHeight = Math.Max(OverlayLayoutPolicy.MinimumHeight, bounds.Height / display.Scale);
+                PlacementChanged?.Invoke(bounds, display, maxHeight);
+                if (resized && contentHeight > 0) FitContentHeight(contentHeight);
+                break;
+            }
+        }
         return DefSubclassProc(hwnd, message, wParam, lParam);
     }
 
@@ -363,6 +449,18 @@ internal sealed class ShortcutOverlayWindow : Window
     [DllImport("CoreMessaging.dll")] private static extern int CreateDispatcherQueueController(DispatcherQueueOptions options, out nint controller);
     private delegate nint SubclassProc(nint hwnd, uint message, nuint wParam, nint lParam, nuint id, nuint data);
     [DllImport("user32.dll")] private static extern uint GetDpiForWindow(nint hwnd);
+    [StructLayout(LayoutKind.Sequential)] private struct Rect { public int Left, Top, Right, Bottom; }
+    [StructLayout(LayoutKind.Sequential)] private struct MinMaxInfo
+    { public int ReservedX, ReservedY, MaxSizeX, MaxSizeY, MaxPositionX, MaxPositionY, MinTrackWidth, MinTrackHeight, MaxTrackWidth, MaxTrackHeight; }
+    [StructLayout(LayoutKind.Sequential, CharSet = CharSet.Unicode)] private struct MonitorInfoEx
+    {
+        public int Size; public Rect Monitor; public Rect Work; public uint Flags;
+        [MarshalAs(UnmanagedType.ByValTStr, SizeConst = 32)] public string Device;
+    }
+    private delegate bool MonitorEnumProc(nint monitor, nint hdc, ref Rect rect, nint data);
+    [DllImport("user32.dll")] private static extern bool EnumDisplayMonitors(nint hdc, nint clip, MonitorEnumProc callback, nint data);
+    [DllImport("user32.dll", CharSet = CharSet.Unicode)] private static extern bool GetMonitorInfoW(nint monitor, ref MonitorInfoEx info);
+    [DllImport("shcore.dll")] private static extern int GetDpiForMonitor(nint monitor, int type, out uint dpiX, out uint dpiY);
     [DllImport("user32.dll")] private static extern bool SetWindowDisplayAffinity(nint hwnd, uint affinity);
     [DllImport("user32.dll")] private static extern bool SetLayeredWindowAttributes(nint hwnd, uint colorKey, byte alpha, uint flags);
     [DllImport("user32.dll", EntryPoint = "GetWindowLongPtrW")] private static extern nint GetWindowLongPtr(nint hwnd, int index);
