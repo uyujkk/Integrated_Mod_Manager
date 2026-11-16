@@ -49,7 +49,8 @@ internal sealed class ShortcutOverlayController : IShortcutOverlay
     private Border? _emptyLabel;
     private TextBlock? _emptyText;
     private Grid? _contentRoot;
-    private StackPanel? _headerPanel;
+    private StackPanel? _headerPanel, _mainPanel;
+    private FrameworkElement? _footer;
     private bool _fitQueued;
     // Green when keys go to the game, amber when a window is chosen but sending is off, grey without a window.
     private static readonly Color SendingColor = Color.FromArgb(255, 76, 175, 80), ReadyColor = Color.FromArgb(255, 230, 162, 60),
@@ -307,6 +308,8 @@ internal sealed class ShortcutOverlayController : IShortcutOverlay
         AutomationProperties.SetName(_closeButton, text);
     }
 
+    // Three parts below the title bar: the controls (Mod, window, sending), the main area (state slots and keys, which
+    // scrolls) and the footer (status and one "Save preset" button for both kinds of preset).
     private UIElement BuildContent()
     {
         // A closed window still owns its controls. Never reparent cached buttons into a new XamlRoot.
@@ -322,11 +325,12 @@ internal sealed class ShortcutOverlayController : IShortcutOverlay
         ApplyAppearance();
         root.RowDefinitions.Add(new RowDefinition { Height = GridLength.Auto });
         root.RowDefinitions.Add(new RowDefinition { Height = new GridLength(1, GridUnitType.Star) });
+        root.RowDefinitions.Add(new RowDefinition { Height = GridLength.Auto });
+
+        // ---- Controls: only in-game-safe actions live here: switching Mod and window and arming input. Restoring
+        // presets needs the game closed and stays in the main window.
         var panel = new StackPanel { Spacing = 8 };
         _headerPanel = panel;
-        // Only in-game-safe actions live here: switching Mod and window, arming input and a read-only preset save.
-        // Restoring presets needs the game closed and stays in the main window. State slots can be
-        // switched here only when the user turns on hot switching.
         _modPicker = new ComboBox { HorizontalAlignment = HorizontalAlignment.Stretch, Foreground = TextBrush,
             PlaceholderText = T("ShortcutPanel.SelectAMod") };
         AutomationProperties.SetAutomationId(_modPicker, "OverlayModPicker");
@@ -336,10 +340,8 @@ internal sealed class ShortcutOverlayController : IShortcutOverlay
             if (_syncing || _modPicker.SelectedItem is not OverlayModChoice chosen) return;
             if (!ReferenceEquals(_shortcuts.SelectedMod, chosen.Option)) _shortcuts.SelectedMod = chosen.Option;
         };
-        // Caption size (12) of the type ramp.
-        _statusText = FixedStatusText(lines: 2, fontSize: 12);
-        _statusText.Foreground = TextBrush;
-        panel.Children.Add(_modPicker); panel.Children.Add(CreateViewRow());
+        panel.Children.Add(_modPicker);
+        panel.Children.Add(CreateViewRow());
         // The window keys go to, chosen here like on the Shortcuts page, with the list read again on demand.
         var targetRow = new Grid { ColumnSpacing = 8 };
         targetRow.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(1, GridUnitType.Star) });
@@ -368,9 +370,6 @@ internal sealed class ShortcutOverlayController : IShortcutOverlay
         Grid.SetColumn(_refreshTargets, 1);
         targetRow.Children.Add(_targetPicker); targetRow.Children.Add(_refreshTargets);
         panel.Children.Add(targetRow);
-        var actions = new Grid { ColumnSpacing = 8 };
-        actions.ColumnDefinitions.Add(new ColumnDefinition { Width = GridLength.Auto });
-        actions.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(1, GridUnitType.Star) });
         // Sending is a switch: on (green) the keys go to the chosen window, off they go nowhere.
         _sendSwitch = new ToggleSwitch
         {
@@ -389,24 +388,14 @@ internal sealed class ShortcutOverlayController : IShortcutOverlay
             _actions.SetInputEnabled(_sendSwitch.IsOn);
             Refresh();
         };
-        var savePreset = ActionButton(T("ShortcutPanel.SavePreset"), () => _ = _actions.SaveCombinationPresetAsync());
-        ToolTipService.SetToolTip(savePreset, T("ShortcutPanel.SaveTheEnabledModCombinationAnd"));
-        savePreset.Foreground = TextBrush;
-        savePreset.HorizontalAlignment = HorizontalAlignment.Stretch;
-        Grid.SetColumn(savePreset, 1);
-        actions.Children.Add(_sendSwitch); actions.Children.Add(savePreset);
-        panel.Children.Add(actions);
-        var saveSingle = ActionButton(T("ShortcutPanel.SaveSingleModPreset"), () => _ = _actions.SaveSingleModPresetAsync());
-        saveSingle.Foreground = TextBrush;
-        saveSingle.HorizontalAlignment = HorizontalAlignment.Stretch;
+        var sendRow = new Grid { ColumnSpacing = 8 };
+        sendRow.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(1, GridUnitType.Star) });
+        sendRow.ColumnDefinitions.Add(new ColumnDefinition { Width = GridLength.Auto });
         var refresh = ActionButton(T("ShortcutCapture.Refresh"), () => _ = _actions.RunAsync("Refresh overlay", _actions.RefreshFromDiskAsync));
         refresh.Foreground = TextBrush;
-        var secondaryActions = new Grid { ColumnSpacing = 8 };
-        secondaryActions.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(1, GridUnitType.Star) });
-        secondaryActions.ColumnDefinitions.Add(new ColumnDefinition { Width = GridLength.Auto });
         Grid.SetColumn(refresh, 1);
-        secondaryActions.Children.Add(saveSingle); secondaryActions.Children.Add(refresh);
-        panel.Children.Add(secondaryActions);
+        sendRow.Children.Add(_sendSwitch); sendRow.Children.Add(refresh);
+        panel.Children.Add(sendRow);
         var opacityRow = new Grid { ColumnSpacing = 8 };
         opacityRow.ColumnDefinitions.Add(new ColumnDefinition { Width = GridLength.Auto });
         opacityRow.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(1, GridUnitType.Star) });
@@ -417,25 +406,54 @@ internal sealed class ShortcutOverlayController : IShortcutOverlay
         Grid.SetColumn(_opacitySlider, 1);
         opacityRow.Children.Add(Label(opacityLabel)); opacityRow.Children.Add(_opacitySlider);
         panel.Children.Add(opacityRow);
-        AddSlotSection(panel);
-        var statusRow = Label(_statusText);
-        panel.Children.Add(statusRow);
-        _detailRows = [targetRow, actions, secondaryActions, opacityRow, statusRow];
-        ApplyCompactView();
-        // What to do next when there are no keys to show.
+
+        // ---- Main area: state slots, then the keys (or what to do next when there are none). It scrolls.
+        var main = new StackPanel { Spacing = 8, VerticalAlignment = VerticalAlignment.Top };
+        _mainPanel = main;
+        AddSlotSection(main);
         _emptyText = new TextBlock { FontSize = 13, TextWrapping = TextWrapping.Wrap, Foreground = TextBrush };
         AutomationProperties.SetAutomationId(_emptyText, "OverlayEmptyText");
         _emptyLabel = Label(_emptyText);
         _emptyLabel.Padding = new Thickness(12, 10, 12, 10);
-        // Top-aligned, so its height is its content's and not the viewport's (the window fits to it).
-        _buttonList = new StackPanel { Spacing = 8, VerticalAlignment = VerticalAlignment.Top };
-        _scroll = new ScrollViewer { Content = _buttonList, VerticalScrollBarVisibility = ScrollBarVisibility.Auto,
+        _buttonList = new StackPanel { Spacing = 6 };
+        main.Children.Add(_buttonList);
+        _scroll = new ScrollViewer { Content = main, VerticalScrollBarVisibility = ScrollBarVisibility.Auto,
             HorizontalScrollBarVisibility = ScrollBarVisibility.Disabled };
+        AutomationProperties.SetAutomationId(_scroll, "OverlayMainScroll");
         Grid.SetRow(_scroll, 1);
-        root.Children.Add(panel); root.Children.Add(_scroll);
+
+        // ---- Footer: the status line and one button for both kinds of preset.
+        _statusText = FixedStatusText(lines: 2, fontSize: 12);
+        _statusText.Foreground = TextBrush;
+        var statusRow = Label(_statusText);
+        var savePreset = new DropDownButton
+        {
+            Content = T("ShortcutPanel.SavePreset"), Foreground = TextBrush, HorizontalAlignment = HorizontalAlignment.Stretch,
+            AllowFocusOnInteraction = false
+        };
+        AutomationProperties.SetAutomationId(savePreset, "OverlaySavePresetButton");
+        var saveMenu = new MenuFlyout { Placement = Microsoft.UI.Xaml.Controls.Primitives.FlyoutPlacementMode.TopEdgeAlignedLeft };
+        var saveCombination = new MenuFlyoutItem { Text = T("Overlay.SaveCombinationPreset") };
+        ToolTipService.SetToolTip(saveCombination, T("ShortcutPanel.SaveTheEnabledModCombinationAnd"));
+        saveCombination.Click += (_, _) => _ = _actions.SaveCombinationPresetAsync();
+        var saveSingle = new MenuFlyoutItem { Text = T("ShortcutPanel.SaveSingleModPreset") };
+        saveSingle.Click += (_, _) => _ = _actions.SaveSingleModPresetAsync();
+        saveMenu.Items.Add(saveCombination);
+        saveMenu.Items.Add(saveSingle);
+        savePreset.Flyout = saveMenu;
+        var footer = new StackPanel { Spacing = 8 };
+        footer.Children.Add(statusRow);
+        footer.Children.Add(savePreset);
+        _footer = footer;
+        Grid.SetRow(footer, 2);
+
+        _detailRows = [targetRow, sendRow, opacityRow, footer];
+        ApplyCompactView();
+        root.Children.Add(panel); root.Children.Add(_scroll); root.Children.Add(footer);
         // The window's height follows these (ShortcutOverlayWindow.FitContentHeight).
         panel.SizeChanged += (_, _) => QueueFit();
-        _buttonList.SizeChanged += (_, _) => QueueFit();
+        main.SizeChanged += (_, _) => QueueFit();
+        footer.SizeChanged += (_, _) => QueueFit();
         _bindings = [];
         _listSignature = string.Empty;
         _modOptionsSource = null;
@@ -443,7 +461,7 @@ internal sealed class ShortcutOverlayController : IShortcutOverlay
         return root;
     }
 
-    // After a layout pass: the header, the list's own height and the padding, so the panel is as tall as what it shows.
+    // After a layout pass: the three parts and the spacing between them, so the panel is as tall as what it shows.
     private void QueueFit()
     {
         if (_fitQueued) return;
@@ -451,9 +469,12 @@ internal sealed class ShortcutOverlayController : IShortcutOverlay
         _dispatcher.TryEnqueue(DispatcherQueuePriority.Low, () =>
         {
             _fitQueued = false;
-            if (Window is null || _contentRoot is null || _headerPanel is null || _buttonList is null) return;
-            double list = _buttonList.Children.Count == 0 ? 0 : _buttonList.ActualHeight + _contentRoot.RowSpacing;
-            Window.FitContentHeight(_contentRoot.Padding.Top + _headerPanel.ActualHeight + list + _contentRoot.Padding.Bottom);
+            if (Window is null || _contentRoot is null || _headerPanel is null || _mainPanel is null || _footer is null) return;
+            // The grid keeps the spacing between its three rows even when a row is empty or collapsed (the compact view).
+            double height = _contentRoot.Padding.Top + _headerPanel.ActualHeight + _mainPanel.ActualHeight
+                + 2 * _contentRoot.RowSpacing + _contentRoot.Padding.Bottom;
+            if (_footer.Visibility == Visibility.Visible) height += _footer.ActualHeight;
+            Window.FitContentHeight(height);
         });
     }
 
@@ -572,36 +593,41 @@ internal sealed class ShortcutOverlayController : IShortcutOverlay
         AutomationProperties.SetName(_stateDot, state);
     }
 
-    // A binding on the overlay; the page draws its own rows (ShortcutsPage).
+    // A binding on the overlay: its keys as key caps (as on the Shortcuts page) beside what it does; the row sends it.
     private Button CreateBindingButton(DetectedModShortcut shortcut)
     {
         ShortcutUnsupportedReason reason = ShortcutKeyPlan.Explain(shortcut.RawKey);
         bool supported = reason == ShortcutUnsupportedReason.None;
-        var content = new StackPanel { Spacing = 3 };
-        // The keys at the subtitle size (20) of the type ramp, the rest at body and caption size.
-        var title = new TextBlock { Text = shortcut.Shortcut, FontSize = 20, FontWeight = Microsoft.UI.Text.FontWeights.SemiBold, TextWrapping = TextWrapping.Wrap };
+        var row = new Grid { ColumnSpacing = 12 };
+        row.ColumnDefinitions.Add(new ColumnDefinition { Width = GridLength.Auto });
+        row.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(1, GridUnitType.Star) });
+        var keys = new KeyVisual { Keys = shortcut.Shortcut, VerticalAlignment = VerticalAlignment.Center };
+        var text = new StackPanel { Spacing = 2, VerticalAlignment = VerticalAlignment.Center };
         var description = new TextBlock { Text = ModShortcutDescriptionFormatter.Describe(shortcut, useEnglish: !_language.IsChinese), TextWrapping = TextWrapping.Wrap };
         string source = $"{shortcut.SourceFile} · [{shortcut.Section}]";
         if (shortcut.Condition.Length > 0) source += " · " + T("ShortcutPanel.Condition") + shortcut.Condition;
         if (shortcut.Behavior.Equals("hold", StringComparison.OrdinalIgnoreCase)) source += " · " + T("ShortcutPanel.HoldForConfiguredDuration");
         var sourceText = new TextBlock { Text = source, FontSize = 12, Opacity = .65, TextWrapping = TextWrapping.Wrap };
-        title.Foreground = description.Foreground = sourceText.Foreground = TextBrush;
-        content.Children.Add(WithTextShadow(title));
-        content.Children.Add(WithTextShadow(description));
-        content.Children.Add(sourceText);
+        description.Foreground = sourceText.Foreground = TextBrush;
+        text.Children.Add(WithTextShadow(description));
+        text.Children.Add(sourceText);
         if (!supported)
-            content.Children.Add(new TextBlock
+            text.Children.Add(new TextBlock
             {
                 Text = T("ShortcutPanel.CannotSend") + UnsupportedReasonText(reason) + T("ShortcutPanel.Key", shortcut.RawKey),
                 FontSize = 12, TextWrapping = TextWrapping.Wrap,
                 Foreground = new SolidColorBrush(Color.FromArgb(255, 230, 150, 60))
             });
+        Grid.SetColumn(text, 1);
+        row.Children.Add(keys);
+        row.Children.Add(text);
         var button = new Button
         {
-            Content = content, IsEnabled = supported, HorizontalAlignment = HorizontalAlignment.Stretch,
-            HorizontalContentAlignment = HorizontalAlignment.Left, Padding = new Thickness(14, 10, 14, 10),
+            Content = row, IsEnabled = supported, HorizontalAlignment = HorizontalAlignment.Stretch,
+            HorizontalContentAlignment = HorizontalAlignment.Stretch, Padding = new Thickness(12, 8, 12, 8),
             AllowFocusOnInteraction = false
         };
+        AutomationProperties.SetName(button, shortcut.Shortcut + " · " + description.Text);
         button.Click += async (_, _) => await _actions.RunAsync("Send shortcut", () => _actions.SendShortcutAsync(shortcut));
         return button;
     }

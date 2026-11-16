@@ -993,6 +993,7 @@
   "Overlay.NoModTitle": "No Mod selected",
   "Overlay.NotEnabledSuffix": "{0} (not enabled)",
   "Overlay.RefreshTargets": "Refresh the window list",
+  "Overlay.SaveCombinationPreset": "Save combination preset",
   "Overlay.SendKeys": "Send keys to the target window",
   "Overlay.StateNoTarget": "No target window chosen",
   "Overlay.StateReady": "“{0}” is chosen; sending is off",

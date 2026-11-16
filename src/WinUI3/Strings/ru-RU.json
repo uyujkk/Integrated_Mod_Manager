@@ -993,6 +993,7 @@
   "Overlay.NoModTitle": "Мод не выбран",
   "Overlay.NotEnabledSuffix": "{0} (не включён)",
   "Overlay.RefreshTargets": "Обновить список окон",
+  "Overlay.SaveCombinationPreset": "Сохранить пресет комбинации",
   "Overlay.SendKeys": "Отправлять клавиши в целевое окно",
   "Overlay.StateNoTarget": "Целевое окно не выбрано",
   "Overlay.StateReady": "Выбрано «{0}»; отправка выключена",

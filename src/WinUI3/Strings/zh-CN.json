@@ -993,6 +993,7 @@
   "Overlay.NoModTitle": "未选择 Mod",
   "Overlay.NotEnabledSuffix": "{0}（未启用）",
   "Overlay.RefreshTargets": "刷新窗口列表",
+  "Overlay.SaveCombinationPreset": "保存组合预设",
   "Overlay.SendKeys": "向目标窗口发送按键",
   "Overlay.StateNoTarget": "未选择目标窗口",
   "Overlay.StateReady": "已选择“{0}”，发送已关闭",
