@@ -64,6 +64,7 @@ public sealed partial class ShortcutPageViewModel : ObservableObject
     private ShortcutModOption? _selectedMod;
     private IReadOnlyList<ShortcutTarget> _targets = [];
     private ShortcutTarget? _selectedTarget;
+    private bool _statusIsError;
     private string _statusText = string.Empty;
     private double _tapDuration = 200, _holdDuration = 300;
     private string _privilegeText = string.Empty;
@@ -100,7 +101,25 @@ public sealed partial class ShortcutPageViewModel : ObservableObject
     }
 
     /// <summary>The last read, send or capture result, shown on the page and the overlay.</summary>
-    public string StatusText { get => _statusText; set => SetProperty(ref _statusText, value ?? string.Empty); }
+    public string StatusText
+    {
+        get => _statusText;
+        set
+        {
+            StatusIsError = false;
+            SetProperty(ref _statusText, value ?? string.Empty);
+        }
+    }
+
+    /// <summary>The status is a failure the user should act on (the overlay keeps it in view instead of behind its icon).</summary>
+    public bool StatusIsError { get => _statusIsError; private set => SetProperty(ref _statusIsError, value); }
+
+    /// <summary>Shows a failure: like setting <see cref="StatusText"/>, but marked as an error.</summary>
+    public void ReportError(string message)
+    {
+        StatusText = message;
+        StatusIsError = true;
+    }
 
     /// <summary>How long a key is pressed, in ms; a cleared box is NaN and sending falls back to 200.</summary>
     public double TapDuration { get => _tapDuration; set => SetProperty(ref _tapDuration, value); }

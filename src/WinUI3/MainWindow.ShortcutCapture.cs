@@ -44,7 +44,7 @@ public sealed partial class MainWindow
             && await AskToReadExistingFileAsync(T("ShortcutCapture.NoNewWrite"), T("ShortcutCapture.NoNewWriteWarning"));
         if (!readExisting && !_services.IsClosing)
         {
-            _shortcuts.StatusText = T("ShortcutPanel.PresetNotSaved") + T("ShortcutCapture.TimedOut");
+            _shortcuts.ReportError(T("ShortcutPanel.PresetNotSaved") + T("ShortcutCapture.TimedOut"));
             RefreshShortcutOverlay();
         }
         return readExisting;

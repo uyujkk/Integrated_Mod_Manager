@@ -84,7 +84,7 @@ public sealed partial class MainWindow
         catch (Exception ex)
         {
             LogApplicationIssue("Overlay single Mod preset capture", ex);
-            if (!_services.IsClosing) _shortcuts.StatusText = T("ShortcutPanel.PresetNotSaved") + OverlayCaptureError(ex);
+            if (!_services.IsClosing) _shortcuts.ReportError(T("ShortcutPanel.PresetNotSaved") + OverlayCaptureError(ex));
         }
         finally
         {

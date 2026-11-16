@@ -135,7 +135,7 @@ public sealed partial class MainWindow
         catch (Exception ex)
         {
             LogApplicationIssue("Preset preview framing", ex);
-            if (!_services.IsClosing) _shortcuts.StatusText = T("PresetPreview.CannotUse");
+            if (!_services.IsClosing) _shortcuts.ReportError(T("PresetPreview.CannotUse"));
         }
         finally
         {

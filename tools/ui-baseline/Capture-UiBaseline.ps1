@@ -202,8 +202,24 @@ function Write-Configuration([string]$page, [string]$language, [string]$theme, [
     if ($SampleData) {
         $shell.Repositories[0].OnlineCategoryId = '90001'
         $shell.Repositories[0].OnlineGameName = 'Sample Game'
+        # The overlay's sample: the test Mods recorded as copies the manager made (an unrecorded copy that differs from
+        # its source is someone else's folder since #107, so no Mod would count as enabled), TestModA's state slots, and
+        # hot switching on. The same as tests\UI.Tests\OverlaySamples.cs.
+        $loader = Join-Path $testData 'Loader\Mods'
+        $shell.CopyDeployments = @(foreach ($mod in 'TestModA', 'TestModB') {
+            [ordered]@{ RepositoryId = 'ui-repository'; SourceRelativePath = "TestCharacter\$mod"; DeployedPath = (Join-Path $loader $mod); Origin = 'Copied' } })
+        $shell.OverlaySlotSwitchEnabled = $true
+        function Slot($id, $name, $hair, $coat, $activated) {
+            $slot = [ordered]@{ Id = $id; RepositoryId = 'ui-repository'; ModRelativePath = 'TestCharacter\TestModA'; Name = $name
+                Values = @(foreach ($pair in @(@('hair', $hair), @('coat', $coat))) {
+                    [ordered]@{ RelativeIniPath = 'mod.ini'; Variable = $pair[0]; RuntimeKey = '$\Mods\TestModA\mod.ini\' + $pair[0]; Value = [string]$pair[1] } }) }
+            if ($activated) { $slot.ActivatedAtUtc = $activated }
+            $slot
+        }
+        $shell.ModPersistentSlots = @((Slot 'sample-battle' 'Battle' 2 1 $null), (Slot 'sample-casual' 'Casual' 0 0 $null),
+            (Slot 'sample-everyday' 'Everyday' 1 0 '2026-11-01T10:00:00Z'))
     }
-    [IO.File]::WriteAllText((Join-Path $appFolder 'beta-shell.json'), ($shell | ConvertTo-Json -Depth 5), [Text.UTF8Encoding]::new($false))
+    [IO.File]::WriteAllText((Join-Path $appFolder 'beta-shell.json'), ($shell | ConvertTo-Json -Depth 8), [Text.UTF8Encoding]::new($false))
     [IO.File]::WriteAllLines((Join-Path $appFolder 'config.ini'), [string[]]@(
         "source_dir=$(Encode $mods)", "target_dir=$(Encode $target)", 'launcher_path=',
         "theme=$(Encode $theme)", "language=$(Encode (ConfigLanguage $language))"))

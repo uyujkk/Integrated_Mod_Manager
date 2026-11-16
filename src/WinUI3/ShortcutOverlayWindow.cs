@@ -1,6 +1,8 @@
 using System.Runtime.InteropServices;
+using IntegratedModManager.Core.Layout;
 using IntegratedModManager.Core.Presets;
 using Microsoft.UI.Composition;
+using Microsoft.UI.Input;
 using Microsoft.UI.Windowing;
 using Microsoft.UI.Xaml;
 using Microsoft.UI.Xaml.Controls;
@@ -18,45 +20,62 @@ internal sealed record RegionSelectionText(string Hint, string LockSize, string 
 internal sealed class ShortcutOverlayWindow : Window
 {
     public const int MinimumOpacity = ShortcutPageViewModel.MinimumOverlayOpacity;
-    private const int DefaultWidth = 420, DefaultHeight = 860, TitleRowHeight = 32, FadeMilliseconds = 90, MoveMilliseconds = 220;
+    // The title bar is the panel's own (40 DIP): drag area, Mod name, status dot, menu and close. The height follows the
+    // content up to DefaultHeight; MinimumHeight keeps the title and one row visible.
+    public const int TitleRowHeight = 40;
+    private const int FadeMilliseconds = 90, MoveMilliseconds = 220;
     private readonly nint handle;
     private readonly SubclassProc callback;
     private bool keyboardInputEnabled;
     private bool hiddenForCapture;
     private readonly Grid rootGrid;
     private readonly UIElement panelContent;
+    private readonly FrameworkElement titleBar;
+    private readonly Func<IEnumerable<FrameworkElement>> titleBarControls;
+    private double contentHeight;
+    // The tallest the user made the panel (DIP); its content decides the height up to this.
+    private double maxHeight = OverlayLayoutPolicy.DefaultMaxHeight;
+    private bool sizing, resized;
     private readonly Brush textBrush, elementBrush;
     private FrameworkElement? activeLayer;
     private RectInt32 boundsBeforeLayer;
     private Color backgroundBeforeLayer;
     // Only the background carries the opacity; text and buttons stay fully opaque.
-    private readonly SolidColorBrush background = new(Color.FromArgb(255, 28, 31, 38));
+    private readonly SolidColorBrush background = new();
+    // The panel's base colour in the app's theme (the AppElevatedBackgroundBrush token); the opacity is the user's.
+    private Color baseColor;
+    private int opacityPercent = 100;
 
-    public ShortcutOverlayWindow(UIElement content, Brush textBrush, Brush elementBrush, string title)
+    /// <param name="titleBar">The panel's title bar; the window makes it the drag area.</param>
+    /// <param name="titleBarControls">The buttons in the title bar, which stay clickable instead of dragging.</param>
+    /// <param name="placements">Where it was on each display, last used first (OverlayLayoutPolicy).</param>
+    public ShortcutOverlayWindow(UIElement content, FrameworkElement titleBar, Func<IEnumerable<FrameworkElement>> titleBarControls,
+        Brush textBrush, Brush elementBrush, string title, IReadOnlyList<OverlayPlacement> placements, ElementTheme theme, Color themeBackground)
     {
         // Keep the "IMM · " prefix in every language: it identifies the overlay in window lists.
         Title = "IMM · " + title;
         SystemBackdrop = new TransparentBackdrop();
+        // No system caption: the panel draws its own title bar, whose close button hides the panel (with the hotkey
+        // in its tooltip) instead of destroying it.
         ExtendsContentIntoTitleBar = true;
-        var titleBar = new Grid { Height = TitleRowHeight, Padding = new Thickness(12, 0, 140, 0) };
-        titleBar.Children.Add(new Border
-        {
-            Background = elementBrush, CornerRadius = new CornerRadius(4), Padding = new Thickness(6, 1, 6, 2),
-            HorizontalAlignment = HorizontalAlignment.Left, VerticalAlignment = VerticalAlignment.Center,
-            Child = new TextBlock { Text = Title, FontSize = 12, Foreground = textBrush }
-        });
+        titleBar.Height = TitleRowHeight;
+        this.titleBar = titleBar;
+        this.titleBarControls = titleBarControls;
         this.textBrush = textBrush;
         this.elementBrush = elementBrush;
         panelContent = content;
-        rootGrid = new Grid { Background = background, RequestedTheme = ElementTheme.Dark };
+        baseColor = themeBackground;
+        background.Color = themeBackground;
+        rootGrid = new Grid { Background = background, RequestedTheme = theme };
         rootGrid.RowDefinitions.Add(new RowDefinition { Height = GridLength.Auto });
         rootGrid.RowDefinitions.Add(new RowDefinition { Height = new GridLength(1, GridUnitType.Star) });
         Grid.SetRow((FrameworkElement)content, 1);
         rootGrid.Children.Add(titleBar);
         rootGrid.Children.Add(content);
         Content = rootGrid;
-        SetTitleBar(titleBar);
         handle = WinRT.Interop.WindowNative.GetWindowHandle(this);
+        titleBar.SizeChanged += (_, _) => UpdateDragRegions();
+        rootGrid.LayoutUpdated += (_, _) => UpdateDragRegions();
         // Without this DWM composes transparent pixels over black. An empty blur region makes DWM
         // honour per-pixel alpha without blurring (verified: 10% background shows the desktop, text stays opaque).
         nint region = CreateRectRgn(-2, -2, -1, -1);
@@ -69,16 +88,12 @@ internal sealed class ShortcutOverlayWindow : Window
         bar.ButtonHoverBackgroundColor = Color.FromArgb(60, 255, 255, 255);
         bar.ButtonHoverForegroundColor = Color.FromArgb(255, 255, 255, 255);
         bar.ButtonPressedBackgroundColor = Color.FromArgb(90, 255, 255, 255);
-        var area = DisplayArea.GetFromWindowId(AppWindow.Id, DisplayAreaFallback.Primary).WorkArea;
-        double scale = GetDpiForWindow(handle) / 96.0;
-        int width = Math.Min((int)(DefaultWidth * scale), area.Width);
-        int height = Math.Min((int)(DefaultHeight * scale), area.Height - (int)(40 * scale));
-        AppWindow.Resize(new SizeInt32(width, height));
         if (AppWindow.Presenter is OverlappedPresenter presenter)
         {
             presenter.IsAlwaysOnTop = true;
             presenter.IsMaximizable = false;
             presenter.IsMinimizable = false;
+            presenter.SetBorderAndTitleBar(true, false);
         }
         // Keep pointer interaction without taking keyboard focus from the game.
         // Expose the independent panel in window switching, while retaining no-activation clicks.
@@ -86,10 +101,95 @@ internal sealed class ShortcutOverlayWindow : Window
         callback = OnMessage;
         if (!SetWindowSubclass(handle, callback, 79, 0)) throw new InvalidOperationException("Overlay window setup failed.");
         Closed += (_, _) => RemoveWindowSubclass(handle, callback, 79);
-        AppWindow.Move(new PointInt32(area.X + Math.Max(0, area.Width - width - (int)(20 * scale)), area.Y + (int)(20 * scale)));
+        // Where it was on a display that is still connected, else the top right of the primary display.
+        IReadOnlyList<ConnectedDisplay> displays = Displays();
+        OverlayDisplay primary = displays.FirstOrDefault(display => display.IsPrimary)?.Display ?? Fallback();
+        var (bounds, savedMaxHeight, _) = OverlayLayoutPolicy.Restore(placements, displays.Select(display => display.Display).ToArray(), primary);
+        maxHeight = savedMaxHeight;
+        AppWindow.MoveAndResize(new RectInt32(bounds.X, bounds.Y, bounds.Width, bounds.Height));
     }
 
+    /// <summary>The user moved or resized the panel: its place on that display, to remember (last used first).</summary>
+    public event Action<WindowRect, OverlayDisplay, double>? PlacementChanged;
+
+    private sealed record ConnectedDisplay(OverlayDisplay Display, bool IsPrimary);
+
+    // The connected displays: device name and resolution as the key, the work area and the scale.
+    private static IReadOnlyList<ConnectedDisplay> Displays()
+    {
+        var displays = new List<ConnectedDisplay>();
+        EnumDisplayMonitors(0, 0, (nint monitor, nint hdc, ref Rect clip, nint data) =>
+        {
+            var info = new MonitorInfoEx { Size = Marshal.SizeOf<MonitorInfoEx>() };
+            if (!GetMonitorInfoW(monitor, ref info)) return true;
+            uint dpi = GetDpiForMonitor(monitor, 0, out uint dpiX, out _) == 0 && dpiX > 0 ? dpiX : 96;
+            Rect bounds = info.Monitor, work = info.Work;
+            string key = $"{info.Device}|{bounds.Right - bounds.Left}x{bounds.Bottom - bounds.Top}";
+            displays.Add(new ConnectedDisplay(new OverlayDisplay(key, new WindowRect(work.Left, work.Top, work.Right - work.Left, work.Bottom - work.Top), dpi / 96.0),
+                (info.Flags & 1) != 0));
+            return true;
+        }, 0);
+        return displays;
+    }
+
+    private OverlayDisplay Fallback()
+    {
+        RectInt32 area = DisplayArea.GetFromWindowId(AppWindow.Id, DisplayAreaFallback.Primary).WorkArea;
+        return new OverlayDisplay(string.Empty, new WindowRect(area.X, area.Y, area.Width, area.Height), GetDpiForWindow(handle) / 96.0);
+    }
+
+    private WindowRect CurrentBounds() => new(AppWindow.Position.X, AppWindow.Position.Y, AppWindow.Size.Width, AppWindow.Size.Height);
+
+    // The display the panel is mostly on now.
+    private OverlayDisplay CurrentDisplay(WindowRect bounds)
+        => OverlayLayoutPolicy.DisplayOf(Displays().Select(display => display.Display).ToArray(), bounds) ?? Fallback();
+
     public void ShowPanel() => AppWindow.Show(false);
+
+    // The title bar drags the window; its buttons stay buttons. Rects are in client pixels.
+    private RectInt32[] lastCaption = [], lastPassthrough = [];
+
+    private void UpdateDragRegions()
+    {
+        if (titleBar.XamlRoot is null || titleBar.ActualWidth <= 0) return;
+        double scale = titleBar.XamlRoot.RasterizationScale;
+        RectInt32 Bounds(FrameworkElement element)
+        {
+            Windows.Foundation.Rect rect = element.TransformToVisual(null).TransformBounds(new Windows.Foundation.Rect(0, 0, element.ActualWidth, element.ActualHeight));
+            return new RectInt32((int)Math.Round(rect.X * scale), (int)Math.Round(rect.Y * scale), (int)Math.Round(rect.Width * scale), (int)Math.Round(rect.Height * scale));
+        }
+        RectInt32[] caption = [Bounds(titleBar)];
+        RectInt32[] passthrough = titleBarControls().Where(control => control.Visibility == Visibility.Visible && control.ActualWidth > 0).Select(Bounds).ToArray();
+        if (caption.SequenceEqual(lastCaption) && passthrough.SequenceEqual(lastPassthrough)) return;
+        lastCaption = caption;
+        lastPassthrough = passthrough;
+        InputNonClientPointerSource source = InputNonClientPointerSource.GetForWindowId(AppWindow.Id);
+        source.SetRegionRects(NonClientRegionKind.Caption, caption);
+        source.SetRegionRects(NonClientRegionKind.Passthrough, passthrough);
+    }
+
+    /// <summary>
+    /// The panel's height follows its content (DIP below the title bar): at least the title and a row, at most
+    /// <see cref="DefaultHeight"/> and the screen; longer content scrolls.
+    /// </summary>
+    public void FitContentHeight(double contentDip)
+    {
+        if (activeLayer is not null || double.IsNaN(contentDip) || contentDip <= 0) return;
+        contentHeight = contentDip;
+        double scale = GetDpiForWindow(handle) / 96.0;
+        RectInt32 area = DisplayArea.GetFromWindowId(AppWindow.Id, DisplayAreaFallback.Primary).WorkArea;
+        if (sizing) return;
+        // The window's size includes its resize frame; the content gets what the XAML root has.
+        // Before the first layout the root has no size yet; a frame is only ever a few pixels.
+        int frame = rootGrid.XamlRoot is { Size.Height: > 0 } root ? AppWindow.Size.Height - (int)Math.Round(root.Size.Height * root.RasterizationScale) : 0;
+        frame = frame is > 0 and < 32 ? frame : 0;
+        int wanted = OverlayLayoutPolicy.FitHeight(TitleRowHeight + contentDip, maxHeight, scale, area.Height, frame);
+        if (Math.Abs(AppWindow.Size.Height - wanted) <= 1) return;
+        AppWindow.Resize(new SizeInt32(AppWindow.Size.Width, wanted));
+    }
+
+    /// <summary>The content height last fitted, in DIP (for tests and the layout after a layer).</summary>
+    public double ContentHeight => contentHeight;
 
     // Pointer input reaches whatever is behind the window. Windows only honours this on a layered window.
     public void SetClickThrough(bool enabled)
@@ -145,7 +245,7 @@ internal sealed class ShortcutOverlayWindow : Window
         layer.Children.Add(bar);
         int titleHeight = TitleHeightInPixels;
         // Nearly invisible, but the frame still receives the pointer.
-        await EnterLayerAsync(layer, new PixelRect(start.X, start.Y - titleHeight, start.Width, start.Height + titleHeight), Color.FromArgb(1, 28, 31, 38), animate);
+        await EnterLayerAsync(layer, new PixelRect(start.X, start.Y - titleHeight, start.Width, start.Height + titleHeight), Color.FromArgb(1, baseColor.R, baseColor.G, baseColor.B), animate);
         return await result.Task;
     }
 
@@ -268,12 +368,68 @@ internal sealed class ShortcutOverlayWindow : Window
         if (enabled) Activate();
     }
 
-    public void SetBackgroundOpacity(int percent) =>
-        background.Color = Color.FromArgb((byte)Math.Round(Math.Clamp(percent, MinimumOpacity, 100) * 2.55), 28, 31, 38);
+    public void SetBackgroundOpacity(int percent)
+    {
+        opacityPercent = percent;
+        if (activeLayer is null) background.Color = Color.FromArgb((byte)Math.Round(Math.Clamp(percent, MinimumOpacity, 100) * 2.55), baseColor.R, baseColor.G, baseColor.B);
+    }
+
+    /// <summary>The app's theme changed: the controls follow it and the panel takes the theme's base colour.</summary>
+    public void ApplyTheme(ElementTheme theme, Color themeBackground, int percent)
+    {
+        rootGrid.RequestedTheme = theme;
+        baseColor = themeBackground;
+        SetBackgroundOpacity(percent);
+    }
 
     private nint OnMessage(nint hwnd, uint message, nuint wParam, nint lParam, nuint id, nuint data)
     {
-        if (message == 0x0021 && !keyboardInputEnabled) return 3; // WM_MOUSEACTIVATE -> MA_NOACTIVATE, still deliver the click.
+        switch (message)
+        {
+            case 0x0021 when !keyboardInputEnabled:
+                return 3; // WM_MOUSEACTIVATE -> MA_NOACTIVATE, still deliver the click.
+            case 0x0024 when activeLayer is null: // WM_GETMINMAXINFO: no smaller than the title bar and a row
+            {
+                nint result = DefSubclassProc(hwnd, message, wParam, lParam);
+                double scale = GetDpiForWindow(hwnd) / 96.0;
+                MinMaxInfo info = Marshal.PtrToStructure<MinMaxInfo>(lParam);
+                info.MinTrackWidth = (int)Math.Round(OverlayLayoutPolicy.MinimumWidth * scale);
+                info.MinTrackHeight = (int)Math.Round(OverlayLayoutPolicy.MinimumHeight * scale);
+                Marshal.StructureToPtr(info, lParam, false);
+                return result;
+            }
+            case 0x0231: // WM_ENTERSIZEMOVE
+                sizing = true;
+                resized = false;
+                break;
+            case 0x0214: // WM_SIZING: the user drags an edge
+                resized = true;
+                break;
+            case 0x0216 when activeLayer is null: // WM_MOVING: stick to the work area's edges
+            {
+                Rect rect = Marshal.PtrToStructure<Rect>(lParam);
+                var moving = new WindowRect(rect.Left, rect.Top, rect.Right - rect.Left, rect.Bottom - rect.Top);
+                WindowRect snapped = OverlayLayoutPolicy.Snap(moving, CurrentDisplay(moving));
+                if (snapped != moving)
+                {
+                    rect = new Rect { Left = snapped.X, Top = snapped.Y, Right = snapped.X + snapped.Width, Bottom = snapped.Y + snapped.Height };
+                    Marshal.StructureToPtr(rect, lParam, false);
+                    return 1;
+                }
+                break;
+            }
+            case 0x0232: // WM_EXITSIZEMOVE: remember where it is now, and how tall the user allows it to be
+            {
+                sizing = false;
+                if (activeLayer is not null) break;
+                WindowRect bounds = CurrentBounds();
+                OverlayDisplay display = CurrentDisplay(bounds);
+                if (resized) maxHeight = Math.Max(OverlayLayoutPolicy.MinimumHeight, bounds.Height / display.Scale);
+                PlacementChanged?.Invoke(bounds, display, maxHeight);
+                if (resized && contentHeight > 0) FitContentHeight(contentHeight);
+                break;
+            }
+        }
         return DefSubclassProc(hwnd, message, wParam, lParam);
     }
 
@@ -309,6 +465,18 @@ internal sealed class ShortcutOverlayWindow : Window
     [DllImport("CoreMessaging.dll")] private static extern int CreateDispatcherQueueController(DispatcherQueueOptions options, out nint controller);
     private delegate nint SubclassProc(nint hwnd, uint message, nuint wParam, nint lParam, nuint id, nuint data);
     [DllImport("user32.dll")] private static extern uint GetDpiForWindow(nint hwnd);
+    [StructLayout(LayoutKind.Sequential)] private struct Rect { public int Left, Top, Right, Bottom; }
+    [StructLayout(LayoutKind.Sequential)] private struct MinMaxInfo
+    { public int ReservedX, ReservedY, MaxSizeX, MaxSizeY, MaxPositionX, MaxPositionY, MinTrackWidth, MinTrackHeight, MaxTrackWidth, MaxTrackHeight; }
+    [StructLayout(LayoutKind.Sequential, CharSet = CharSet.Unicode)] private struct MonitorInfoEx
+    {
+        public int Size; public Rect Monitor; public Rect Work; public uint Flags;
+        [MarshalAs(UnmanagedType.ByValTStr, SizeConst = 32)] public string Device;
+    }
+    private delegate bool MonitorEnumProc(nint monitor, nint hdc, ref Rect rect, nint data);
+    [DllImport("user32.dll")] private static extern bool EnumDisplayMonitors(nint hdc, nint clip, MonitorEnumProc callback, nint data);
+    [DllImport("user32.dll", CharSet = CharSet.Unicode)] private static extern bool GetMonitorInfoW(nint monitor, ref MonitorInfoEx info);
+    [DllImport("shcore.dll")] private static extern int GetDpiForMonitor(nint monitor, int type, out uint dpiX, out uint dpiY);
     [DllImport("user32.dll")] private static extern bool SetWindowDisplayAffinity(nint hwnd, uint affinity);
     [DllImport("user32.dll")] private static extern bool SetLayeredWindowAttributes(nint hwnd, uint colorKey, byte alpha, uint flags);
     [DllImport("user32.dll", EntryPoint = "GetWindowLongPtrW")] private static extern nint GetWindowLongPtr(nint hwnd, int index);

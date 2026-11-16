@@ -17,6 +17,8 @@ public sealed partial class ShortcutPageViewModel
     private int _overlayElementOpacity = OverlayAppearancePolicy.DefaultElementOpacity;
     private string _overlayTextColor = "#FFFFFF";
     private bool _overlayCompactView;
+    private IReadOnlyList<OverlayPlacement> _overlayPlacements = [];
+    private int _overlayCompactFontSize = OverlayLayoutPolicy.DefaultCompactFontSize;
     private bool _overlayAutoContrast;
     private bool _overlaySlotSwitchEnabled;
     private bool _overlayCompactSlots;
@@ -34,6 +36,12 @@ public sealed partial class ShortcutPageViewModel
 
     /// <summary>The user's overlay text colour as #RRGGBB (automatic contrast may show another for a while).</summary>
     public string OverlayTextColor { get => _overlayTextColor; set => SetProperty(ref _overlayTextColor, value ?? "#FFFFFF"); }
+
+    /// <summary>The text size of the keys in the compact view (OverlayLayoutPolicy.CompactFontSizes).</summary>
+    public int OverlayCompactFontSize { get => _overlayCompactFontSize; set => SetProperty(ref _overlayCompactFontSize, OverlayLayoutPolicy.CompactFontSize(value)); }
+
+    /// <summary>Where the overlay was on each display, last used first (OverlayLayoutPolicy).</summary>
+    public IReadOnlyList<OverlayPlacement> OverlayPlacements { get => _overlayPlacements; set => SetProperty(ref _overlayPlacements, value ?? []); }
 
     /// <summary>The overlay shows only the Mod picker, the view row and the bindings.</summary>
     public bool OverlayCompactView { get => _overlayCompactView; set => SetProperty(ref _overlayCompactView, value); }

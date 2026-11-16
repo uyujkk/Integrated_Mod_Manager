@@ -10,6 +10,7 @@ using Microsoft.UI.Xaml.Controls;
 using Microsoft.UI.Xaml.Controls.Primitives;
 using Microsoft.UI.Xaml.Hosting;
 using Microsoft.UI.Xaml.Media;
+using Microsoft.UI.Xaml.Shapes;
 using Windows.UI;
 
 namespace ModFolderCopier.WinUI;
@@ -29,6 +30,12 @@ internal sealed class ShortcutOverlayController : IShortcutOverlay
 
     private readonly ShortcutPageViewModel _shortcuts;
     private readonly LanguageService _language;
+    private readonly AppearanceService _appearance;
+    private StackPanel? _moreMenu;
+    private InfoBar? _statusBar;
+    private Button? _statusButton;
+    private FontIcon? _statusIcon;
+    private TextBlock? _statusDetails;
     private readonly IShortcutOverlayActions _actions;
     private readonly DispatcherQueue _dispatcher;
     private readonly Dictionary<DetectedModShortcut, Button> _bindingControls = new();
@@ -36,16 +43,32 @@ internal sealed class ShortcutOverlayController : IShortcutOverlay
     private readonly SolidColorBrush _elementHoverBrush = new();
     private Slider? _opacitySlider;
     private bool _opacitySyncing;
-    private TextBlock? _targetText, _statusText;
-    private ComboBox? _modPicker;
-    private ToggleButton? _inputToggle;
+    private ComboBox? _modPicker, _targetPicker;
+    private ToggleSwitch? _sendSwitch;
+    // The title bar: status dot, the Mod's name and close (hide).
+    private Grid? _titleBar;
+    private Ellipse? _stateDot;
+    private TextBlock? _titleText;
+    private Button? _closeButton;
+    private Button? _refreshTargets;
+    private Border? _emptyLabel;
+    private TextBlock? _emptyText;
+    private Grid? _contentRoot;
+    private StackPanel? _headerPanel, _mainPanel;
+    private FrameworkElement? _footer;
+    private bool _fitQueued;
+    // Green when keys go to the game, amber when a window is chosen but sending is off, grey without a window.
+    private static readonly Color SendingColor = Color.FromArgb(255, 76, 175, 80), ReadyColor = Color.FromArgb(255, 230, 162, 60),
+        NoTargetColor = Color.FromArgb(255, 140, 140, 140);
     private bool _syncing;
     private ShortcutModOption[] _modOptions = [];
     private object? _modOptionsSource;
     private StackPanel? _buttonList;
     private ScrollViewer? _scroll;
     private DetectedModShortcut[] _bindings = [];
-    private ToggleButton? _compactToggle;
+    private ToggleSwitch? _compactToggle;
+    private Button? _moreButton;
+    private Flyout? _moreFlyout;
     private Button? _clickThroughButton;
     private FrameworkElement[] _detailRows = [];
     private bool _clickThrough;
@@ -62,10 +85,14 @@ internal sealed class ShortcutOverlayController : IShortcutOverlay
     private Color? _autoTextColor;
     private DispatcherQueueTimer? _contrastTimer;
 
-    public ShortcutOverlayController(ShortcutPageViewModel shortcuts, LanguageService language, IShortcutOverlayActions actions, DispatcherQueue dispatcher)
+    public ShortcutOverlayController(ShortcutPageViewModel shortcuts, LanguageService language, AppearanceService appearance,
+        IShortcutOverlayActions actions, DispatcherQueue dispatcher)
     {
         _shortcuts = shortcuts;
         _language = language;
+        _appearance = appearance;
+        // The overlay follows the app's light or dark theme, like the main window.
+        _appearance.ThemeChanged += (_, _) => ApplyTheme();
         _actions = actions;
         _dispatcher = dispatcher;
         _shortcuts.PropertyChanged += OnSettingChanged;
@@ -88,6 +115,48 @@ internal sealed class ShortcutOverlayController : IShortcutOverlay
 
     private string T(string key) => _language.T(key);
 
+    private ElementTheme Theme => _appearance.IsDark ? ElementTheme.Dark : ElementTheme.Light;
+
+    // A colour of the shared design tokens (Themes/Tokens.xaml) in the app's current theme.
+    private Color TokenColor(string key)
+    {
+        static Color? Find(ResourceDictionary dictionary, string theme, string key)
+        {
+            if (dictionary.ThemeDictionaries.TryGetValue(theme, out object? themed) && themed is ResourceDictionary themeDictionary
+                && themeDictionary.TryGetValue(key, out object? value) && value is SolidColorBrush brush)
+                return brush.Color;
+            foreach (ResourceDictionary merged in dictionary.MergedDictionaries)
+                if (Find(merged, theme, key) is { } color) return color;
+            return null;
+        }
+        return Find(Application.Current.Resources, _appearance.IsDark ? "Dark" : "Light", key)
+            ?? (_appearance.IsDark ? Color.FromArgb(255, 255, 255, 255) : Color.FromArgb(228, 0, 0, 0));
+    }
+
+    // The default text colour (#FFFFFF, as saved before themes) means "the theme's text"; any other is the user's own.
+    private Color UserTextColor()
+    {
+        string? saved = _shortcuts.OverlayTextColor;
+        return string.IsNullOrEmpty(saved) || string.Equals(saved, "#FFFFFF", StringComparison.OrdinalIgnoreCase)
+            ? Opaque(TokenColor("AppSecondaryDefaultForegroundBrush")) : ParseTextColor(saved);
+    }
+
+    // Text drawn over a translucent panel needs a solid colour; the token's alpha only softens it on an opaque surface.
+    private static Color Opaque(Color color) => color.A == 255 ? color
+        : Color.FromArgb(255, (byte)(255 - color.A + color.R * color.A / 255), (byte)(255 - color.A + color.G * color.A / 255), (byte)(255 - color.A + color.B * color.A / 255));
+
+    private void ApplyTheme()
+    {
+        ElementTheme theme = Theme;
+        if (_titleBar is not null) _titleBar.RequestedTheme = theme;
+        if (_contentRoot is not null) _contentRoot.RequestedTheme = theme;
+        if (_moreMenu is not null) _moreMenu.RequestedTheme = theme;
+        Window?.ApplyTheme(theme, TokenColor("AppElevatedBackgroundBrush"), _shortcuts.OverlayOpacity);
+        _userTextColor = UserTextColor();
+        if (_autoTextColor is null) TextBrush.Color = _userTextColor;
+        ApplyAppearance();
+    }
+
     private string T(string key, params object?[] values) => _language.T(key, values);
 
     internal static Color ParseTextColor(string? value) =>
@@ -103,7 +172,12 @@ internal sealed class ShortcutOverlayController : IShortcutOverlay
         {
             if (Window is null)
             {
-                var overlay = new ShortcutOverlayWindow(BuildContent(), TextBrush, ElementBrush, T("Common.ModShortcuts"));
+                UIElement content = BuildContent();
+                var overlay = new ShortcutOverlayWindow(content, _titleBar!, TitleBarControls, TextBrush, ElementBrush, T("Common.ModShortcuts"),
+                    _shortcuts.OverlayPlacements, Theme, TokenColor("AppElevatedBackgroundBrush"));
+                // Moved or resized by the user: remembered for that display (saved with the settings).
+                overlay.PlacementChanged += (bounds, display, maxHeight) =>
+                    _shortcuts.OverlayPlacements = OverlayLayoutPolicy.Remember(_shortcuts.OverlayPlacements, bounds, display, maxHeight);
                 Window = overlay;
                 Window.Closed += (_, _) =>
                 {
@@ -184,8 +258,15 @@ internal sealed class ShortcutOverlayController : IShortcutOverlay
     /// <summary>The Mod list is filtered again on the next refresh (enabled Mods changed).</summary>
     public void InvalidateModOptions() => _modOptionsSource = null;
 
-    /// <summary>The Mod chosen on the overlay: the page's Mod when it is enabled in game, else none.</summary>
-    public ShortcutModOption? ModOnOverlay => _modPicker?.SelectedItem as ShortcutModOption;
+    /// <summary>The Mod chosen on the overlay: the page's Mod when it is enabled in game, else none (slots and presets
+    /// from the overlay only ever use an enabled Mod).</summary>
+    public ShortcutModOption? ModOnOverlay => _modPicker?.SelectedItem is OverlayModChoice { Enabled: true } choice ? choice.Option : null;
+
+    /// <summary>A Mod in the overlay's list: the page's Mod is always there, marked when it is not enabled in game.</summary>
+    private sealed record OverlayModChoice(ShortcutModOption Option, string Label, bool Enabled)
+    {
+        public override string ToString() => Label;
+    }
 
     // The page's settings, applied to the open overlay; the window saves them.
     private void OnSettingChanged(object? sender, PropertyChangedEventArgs e)
@@ -203,14 +284,17 @@ internal sealed class ShortcutOverlayController : IShortcutOverlay
                 ApplyAppearance();
                 break;
             case nameof(ShortcutPageViewModel.OverlayTextColor):
-                _userTextColor = ParseTextColor(_shortcuts.OverlayTextColor);
+                _userTextColor = UserTextColor();
                 _autoTextColor = null;
                 TextBrush.Color = _userTextColor;
                 ApplyAppearance();
                 break;
+            case nameof(ShortcutPageViewModel.OverlayCompactFontSize):
+                ApplyKeyFontSize();
+                break;
             case nameof(ShortcutPageViewModel.OverlayCompactView):
                 ApplyCompactView();
-                if (_compactToggle is not null) _compactToggle.IsChecked = _shortcuts.OverlayCompactView;
+                if (_compactToggle is not null) _compactToggle.IsOn = _shortcuts.OverlayCompactView;
                 break;
             case nameof(ShortcutPageViewModel.OverlayAutoContrast):
                 UpdateContrastTimer();
@@ -221,113 +305,322 @@ internal sealed class ShortcutOverlayController : IShortcutOverlay
                 InvalidateSlots();
                 Refresh(bindingsChanged: true);
                 break;
+            // The window list, the chosen window and sending show in the overlay as they change on the page.
+            case nameof(ShortcutPageViewModel.Targets):
+            case nameof(ShortcutPageViewModel.SelectedTarget):
+            case nameof(ShortcutPageViewModel.InputEnabled):
+                Refresh();
+                break;
+            case nameof(ShortcutPageViewModel.StatusText):
+            case nameof(ShortcutPageViewModel.StatusIsError):
+                UpdateStatus();
+                break;
+            case nameof(ShortcutPageViewModel.HotkeyEnabled):
+            case nameof(ShortcutPageViewModel.HotkeyModifiers):
+            case nameof(ShortcutPageViewModel.HotkeyKey):
+                UpdateCloseTooltip();
+                break;
         }
     }
 
+    // The panel's own title bar: status dot, the Mod's name, close. The window makes it the drag area.
+    private Grid BuildTitleBar()
+    {
+        _titleBar = new Grid { Padding = new Thickness(12, 0, 4, 0), ColumnSpacing = 8, RequestedTheme = Theme };
+        _titleBar.ColumnDefinitions.Add(new ColumnDefinition { Width = GridLength.Auto });
+        _titleBar.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(1, GridUnitType.Star) });
+        _titleBar.ColumnDefinitions.Add(new ColumnDefinition { Width = GridLength.Auto });
+        _titleBar.ColumnDefinitions.Add(new ColumnDefinition { Width = GridLength.Auto });
+        _titleBar.ColumnDefinitions.Add(new ColumnDefinition { Width = GridLength.Auto });
+        _stateDot = new Ellipse { Width = 10, Height = 10, VerticalAlignment = VerticalAlignment.Center, Fill = new SolidColorBrush(NoTargetColor) };
+        AutomationProperties.SetAutomationId(_stateDot, "OverlayStateDot");
+        _titleText = new TextBlock
+        {
+            Style = (Style)Application.Current.Resources["CaptionTextStyle"], VerticalAlignment = VerticalAlignment.Center,
+            TextTrimming = TextTrimming.CharacterEllipsis, Foreground = TextBrush
+        };
+        AutomationProperties.SetAutomationId(_titleText, "OverlayTitleText");
+        _closeButton = new Button
+        {
+            Content = new FontIcon { Glyph = "\uE8BB", FontSize = 10 }, Width = 40, Height = 32, Padding = new Thickness(0),
+            Background = new SolidColorBrush(Color.FromArgb(0, 0, 0, 0)), BorderThickness = new Thickness(0),
+            Foreground = TextBrush, AllowFocusOnInteraction = false, VerticalAlignment = VerticalAlignment.Center
+        };
+        AutomationProperties.SetAutomationId(_closeButton, "OverlayCloseButton");
+        _closeButton.Click += (_, _) => Hide();
+        UpdateCloseTooltip();
+        _moreButton = new Button
+        {
+            Content = new FontIcon { Glyph = "\uE712", FontSize = 16 }, Width = 40, Height = 32, Padding = new Thickness(0),
+            Background = new SolidColorBrush(Color.FromArgb(0, 0, 0, 0)), BorderThickness = new Thickness(0),
+            Foreground = TextBrush, AllowFocusOnInteraction = false, VerticalAlignment = VerticalAlignment.Center,
+            Flyout = BuildMoreFlyout()
+        };
+        // The last read or send result as a small icon: hovering or focusing it shows the text, clicking it pins the text open.
+        // Failures stay in view in the footer instead (UpdateStatus).
+        _statusIcon = new FontIcon { Glyph = "\uE946", FontSize = 14 };
+        _statusDetails = new TextBlock { TextWrapping = TextWrapping.Wrap, MaxWidth = 280 };
+        _statusButton = new Button
+        {
+            Content = _statusIcon, Width = 36, Height = 32, Padding = new Thickness(0),
+            Background = new SolidColorBrush(Color.FromArgb(0, 0, 0, 0)), BorderThickness = new Thickness(0),
+            Foreground = TextBrush, AllowFocusOnInteraction = false, VerticalAlignment = VerticalAlignment.Center,
+            Flyout = new Flyout { Content = _statusDetails, Placement = FlyoutPlacementMode.Bottom }
+        };
+        AutomationProperties.SetAutomationId(_statusButton, "OverlayStatusButton");
+        AutomationProperties.SetAutomationId(_moreButton, "OverlayMoreButton");
+        AutomationProperties.SetName(_moreButton, T("Dashboard.MoreActions"));
+        ToolTipService.SetToolTip(_moreButton, T("Dashboard.MoreActions"));
+        Grid.SetColumn(_titleText, 1);
+        Grid.SetColumn(_statusButton, 2);
+        Grid.SetColumn(_moreButton, 3);
+        Grid.SetColumn(_closeButton, 4);
+        _titleBar.Children.Add(_stateDot);
+        FrameworkElement titleHost = WithTextShadow(_titleText);
+        Grid.SetColumn(titleHost, 1);
+        _titleBar.Children.Add(titleHost);
+        _titleBar.Children.Add(_statusButton);
+        _titleBar.Children.Add(_moreButton);
+        _titleBar.Children.Add(_closeButton);
+        return _titleBar;
+    }
+
+    private IEnumerable<FrameworkElement> TitleBarControls()
+    {
+        if (_statusButton is not null) yield return _statusButton;
+        if (_moreButton is not null) yield return _moreButton;
+        if (_closeButton is not null) yield return _closeButton;
+    }
+
+    // The settings used now and then: compact view, click-through, background opacity, reading the files again.
+    private Flyout BuildMoreFlyout()
+    {
+        var menu = new StackPanel { Spacing = 8, Width = 280, RequestedTheme = Theme };
+        _moreMenu = menu;
+        _compactToggle = new ToggleSwitch
+        {
+            Header = T("OverlayView.Compact"), IsOn = _shortcuts.OverlayCompactView, OnContent = T("Common.On"), OffContent = T("Common.Off")
+        };
+        ToolTipService.SetToolTip(_compactToggle, T("OverlayView.CompactHint"));
+        AutomationProperties.SetAutomationId(_compactToggle, "OverlayCompactButton");
+        AutomationProperties.SetName(_compactToggle, T("OverlayView.Compact"));
+        _compactToggle.Toggled += (_, _) => _shortcuts.OverlayCompactView = _compactToggle.IsOn;
+        menu.Children.Add(_compactToggle);
+        // The keys' text size in the compact view, where the panel is small and the text should still read well.
+        var fontSize = new ComboBox { Header = T("Overlay.CompactFontSize"), HorizontalAlignment = HorizontalAlignment.Stretch };
+        foreach (int size in OverlayLayoutPolicy.CompactFontSizes) fontSize.Items.Add(size);
+        fontSize.SelectedItem = _shortcuts.OverlayCompactFontSize;
+        AutomationProperties.SetAutomationId(fontSize, "OverlayCompactFontSize");
+        AutomationProperties.SetName(fontSize, T("Overlay.CompactFontSize"));
+        fontSize.SelectionChanged += (_, _) =>
+        {
+            if (fontSize.SelectedItem is int size) _shortcuts.OverlayCompactFontSize = size;
+        };
+        menu.Children.Add(fontSize);
+        _clickThroughButton = new Button
+        {
+            Content = T("OverlayView.ClickThrough"), HorizontalAlignment = HorizontalAlignment.Stretch, AllowFocusOnInteraction = false,
+            Style = SecondaryButton
+        };
+        ToolTipService.SetToolTip(_clickThroughButton, T("OverlayView.ClickThroughHint"));
+        AutomationProperties.SetAutomationId(_clickThroughButton, "OverlayClickThroughButton");
+        _clickThroughButton.Click += (_, _) =>
+        {
+            _moreFlyout?.Hide();
+            SetClickThrough(true);
+        };
+        menu.Children.Add(_clickThroughButton);
+        _opacitySlider = CreateOpacitySlider();
+        _opacitySlider.Header = T("ShortcutPanel.Opacity");
+        AutomationProperties.SetAutomationId(_opacitySlider, "OverlayOpacitySlider");
+        ToolTipService.SetToolTip(_opacitySlider, T("ShortcutPanel.OverlayBackgroundOpacity"));
+        menu.Children.Add(_opacitySlider);
+        var refresh = new Button { Content = T("ShortcutPanel.ReloadINI"), HorizontalAlignment = HorizontalAlignment.Stretch, AllowFocusOnInteraction = false, Style = SecondaryButton };
+        AutomationProperties.SetAutomationId(refresh, "OverlayRefreshButton");
+        refresh.Click += (_, _) =>
+        {
+            _moreFlyout?.Hide();
+            _ = _actions.RunAsync("Refresh overlay", _actions.RefreshFromDiskAsync);
+        };
+        menu.Children.Add(refresh);
+        _moreFlyout = new Flyout { Content = menu, Placement = FlyoutPlacementMode.BottomEdgeAlignedRight };
+        return _moreFlyout;
+    }
+
+    // Close only hides the panel; the hotkey brings it back, so the tooltip says which one.
+    private void UpdateCloseTooltip()
+    {
+        if (_closeButton is null) return;
+        (string modifiers, string key) = _shortcuts.HotkeyLabel();
+        string text = _shortcuts.HotkeyEnabled ? $"{T("ShortcutPanel.ShowHideOverlay")} ({modifiers}+{key})" : T("ShortcutPanel.ShowHideOverlay");
+        ToolTipService.SetToolTip(_closeButton, text);
+        AutomationProperties.SetName(_closeButton, text);
+    }
+
+    // Three parts below the title bar: the controls (Mod, window, sending), the main area (state slots and keys, which
+    // scrolls) and the footer (status and one "Save preset" button for both kinds of preset).
     private UIElement BuildContent()
     {
         // A closed window still owns its controls. Never reparent cached buttons into a new XamlRoot.
         _bindingControls.Clear();
         _textShadows.Clear();
+        BuildTitleBar();
         // The overlay window draws the (translucent) background; this content stays transparent.
         // Spacing on the 4/8/12 grid of the J1T tokens (docs/development/UI-Fluent-Design-Plan.md).
-        var root = new Grid { Padding = new Thickness(12, 4, 12, 12), RowSpacing = 12, RequestedTheme = ElementTheme.Dark };
+        var root = new Grid { Padding = new Thickness(12, 0, 12, 12), RowSpacing = 12, RequestedTheme = Theme };
+        _contentRoot = root;
         ApplyElementResources(root);
+        ApplyElementResources(_titleBar!);
         ApplyAppearance();
         root.RowDefinitions.Add(new RowDefinition { Height = GridLength.Auto });
         root.RowDefinitions.Add(new RowDefinition { Height = new GridLength(1, GridUnitType.Star) });
+        root.RowDefinitions.Add(new RowDefinition { Height = GridLength.Auto });
+
+        // ---- Controls: only in-game-safe actions live here: switching Mod and window and arming input. Restoring
+        // presets needs the game closed and stays in the main window.
         var panel = new StackPanel { Spacing = 8 };
-        // Every header row has a fixed height so status changes never shift the list (row 1).
-        // Only in-game-safe actions live here: switching Mod, arming input and a read-only preset save.
-        // Restoring presets needs the game closed and stays in the main window. State slots can be
-        // switched here only when the user turns on hot switching.
+        _headerPanel = panel;
         _modPicker = new ComboBox { HorizontalAlignment = HorizontalAlignment.Stretch, Foreground = TextBrush,
             PlaceholderText = T("ShortcutPanel.SelectAMod") };
+        AutomationProperties.SetAutomationId(_modPicker, "OverlayModPicker");
         ToolTipService.SetToolTip(_modPicker, T("ShortcutPanel.SwitchTheModWhoseShortcutsAre"));
         _modPicker.SelectionChanged += (_, _) =>
         {
-            if (_syncing || _modPicker.SelectedItem is not ShortcutModOption chosen) return;
-            if (!ReferenceEquals(_shortcuts.SelectedMod, chosen)) _shortcuts.SelectedMod = chosen;
+            if (_syncing || _modPicker.SelectedItem is not OverlayModChoice chosen) return;
+            if (!ReferenceEquals(_shortcuts.SelectedMod, chosen.Option)) _shortcuts.SelectedMod = chosen.Option;
         };
-        // Caption size (12) of the type ramp.
-        _targetText = FixedStatusText(lines: 1, fontSize: 12);
-        _statusText = FixedStatusText(lines: 2, fontSize: 12);
-        _targetText.Foreground = _statusText.Foreground = TextBrush;
-        var targetRow = Label(_targetText);
-        panel.Children.Add(_modPicker); panel.Children.Add(CreateViewRow()); panel.Children.Add(targetRow);
-        var actions = new Grid { ColumnSpacing = 8 };
-        for (int i = 0; i < 3; i++) actions.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(1, GridUnitType.Star) });
-        _inputToggle = new ToggleButton { HorizontalAlignment = HorizontalAlignment.Stretch, Foreground = TextBrush };
-        ToolTipService.SetToolTip(_inputToggle, T("ShortcutPanel.ArmOrPauseInputToThe"));
-        _inputToggle.Click += (_, _) => _actions.SetInputEnabled(_inputToggle.IsChecked == true);
-        var savePreset = ActionButton(T("ShortcutPanel.SavePreset"), () => _ = _actions.SaveCombinationPresetAsync());
-        ToolTipService.SetToolTip(savePreset, T("ShortcutPanel.SaveTheEnabledModCombinationAnd"));
-        var hide = ActionButton(T("ShortcutPanel.Hide"), Hide);
-        savePreset.Foreground = hide.Foreground = TextBrush;
-        savePreset.HorizontalAlignment = hide.HorizontalAlignment = HorizontalAlignment.Stretch;
-        // Three equal columns at the default 420 DIP width: default padding cut "Input: off" / "Save preset".
-        foreach (Control action in new Control[] { _inputToggle, savePreset, hide })
+        panel.Children.Add(_modPicker);
+        // The window keys go to, chosen here like on the Shortcuts page, with the list read again on demand.
+        var targetRow = new Grid { ColumnSpacing = 8 };
+        targetRow.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(1, GridUnitType.Star) });
+        targetRow.ColumnDefinitions.Add(new ColumnDefinition { Width = GridLength.Auto });
+        _targetPicker = new ComboBox
         {
-            action.Padding = new Thickness(4, 5, 4, 6);
-            action.FontSize = 13;
-        }
-        Grid.SetColumn(savePreset, 1); Grid.SetColumn(hide, 2);
-        actions.Children.Add(_inputToggle); actions.Children.Add(savePreset); actions.Children.Add(hide);
-        panel.Children.Add(actions);
-        var saveSingle = ActionButton(T("ShortcutPanel.SaveSingleModPreset"), () => _ = _actions.SaveSingleModPresetAsync());
-        saveSingle.Foreground = TextBrush;
-        saveSingle.HorizontalAlignment = HorizontalAlignment.Stretch;
-        var refresh = ActionButton(T("ShortcutCapture.Refresh"), () => _ = _actions.RunAsync("Refresh overlay", _actions.RefreshFromDiskAsync));
-        refresh.Foreground = TextBrush;
-        var secondaryActions = new Grid { ColumnSpacing = 8 };
-        secondaryActions.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(1, GridUnitType.Star) });
-        secondaryActions.ColumnDefinitions.Add(new ColumnDefinition { Width = GridLength.Auto });
-        Grid.SetColumn(refresh, 1);
-        secondaryActions.Children.Add(saveSingle); secondaryActions.Children.Add(refresh);
-        panel.Children.Add(secondaryActions);
-        var opacityRow = new Grid { ColumnSpacing = 8 };
-        opacityRow.ColumnDefinitions.Add(new ColumnDefinition { Width = GridLength.Auto });
-        opacityRow.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(1, GridUnitType.Star) });
-        var opacityLabel = new TextBlock { Text = T("ShortcutPanel.Opacity"), VerticalAlignment = VerticalAlignment.Center, FontSize = 12, Foreground = TextBrush };
-        _opacitySlider = CreateOpacitySlider();
-        _opacitySlider.VerticalAlignment = VerticalAlignment.Center;
-        ToolTipService.SetToolTip(_opacitySlider, T("ShortcutPanel.OverlayBackgroundOpacity"));
-        Grid.SetColumn(_opacitySlider, 1);
-        opacityRow.Children.Add(Label(opacityLabel)); opacityRow.Children.Add(_opacitySlider);
-        panel.Children.Add(opacityRow);
-        AddSlotSection(panel);
-        var statusRow = Label(_statusText);
-        panel.Children.Add(statusRow);
-        _detailRows = [targetRow, actions, secondaryActions, opacityRow, statusRow];
-        ApplyCompactView();
-        _buttonList = new StackPanel { Spacing = 8 };
-        _scroll = new ScrollViewer { Content = _buttonList, VerticalScrollBarVisibility = ScrollBarVisibility.Auto,
+            HorizontalAlignment = HorizontalAlignment.Stretch, Foreground = TextBrush, DisplayMemberPath = nameof(ShortcutTarget.Label),
+            PlaceholderText = T("ShortcutPanel.SelectAWindow")
+        };
+        AutomationProperties.SetAutomationId(_targetPicker, "OverlayTargetPicker");
+        AutomationProperties.SetName(_targetPicker, T("ShortcutPanel.TargetGameWindow"));
+        ToolTipService.SetToolTip(_targetPicker, T("ShortcutPanel.TargetGameWindow"));
+        _targetPicker.SelectionChanged += (_, _) =>
+        {
+            if (_syncing || _targetPicker.SelectedItem is not ShortcutTarget target || ReferenceEquals(target, _shortcuts.SelectedTarget)) return;
+            _shortcuts.SelectedTarget = target;
+        };
+        _refreshTargets = new Button
+        {
+            Content = new FontIcon { Glyph = "\uE72C", FontSize = 14 }, Width = 36, Height = 32, Padding = new Thickness(0),
+            Foreground = TextBrush, AllowFocusOnInteraction = false, Style = SecondaryButton
+        };
+        AutomationProperties.SetAutomationId(_refreshTargets, "OverlayRefreshTargetsButton");
+        AutomationProperties.SetName(_refreshTargets, T("ShortcutPanel.RefreshWindows"));
+        ToolTipService.SetToolTip(_refreshTargets, T("ShortcutPanel.RefreshWindows"));
+        _refreshTargets.Click += (_, _) => { _actions.RefreshTargets(); Refresh(); };
+        Grid.SetColumn(_refreshTargets, 1);
+        targetRow.Children.Add(_targetPicker); targetRow.Children.Add(_refreshTargets);
+        panel.Children.Add(targetRow);
+        // Sending is a switch: on (green) the keys go to the chosen window, off they go nowhere.
+        _sendSwitch = new ToggleSwitch
+        {
+            OnContent = T("ShortcutPanel.InputOn"), OffContent = T("ShortcutPanel.InputOff"), Foreground = TextBrush,
+            MinWidth = 0, VerticalAlignment = VerticalAlignment.Center
+        };
+        AutomationProperties.SetAutomationId(_sendSwitch, "OverlaySendSwitch");
+        AutomationProperties.SetName(_sendSwitch, T("ShortcutPanel.EnableInputToSelectedWindow"));
+        ToolTipService.SetToolTip(_sendSwitch, T("ShortcutPanel.ArmOrPauseInputToThe"));
+        var sending = new SolidColorBrush(SendingColor);
+        foreach (string key in new[] { "ToggleSwitchFillOn", "ToggleSwitchFillOnPointerOver", "ToggleSwitchFillOnPressed", "ToggleSwitchStrokeOn" })
+            _sendSwitch.Resources[key] = sending;
+        _sendSwitch.Toggled += (_, _) =>
+        {
+            if (_syncing || _sendSwitch.IsOn == _shortcuts.InputEnabled) return;
+            _actions.SetInputEnabled(_sendSwitch.IsOn);
+            Refresh();
+        };
+        var sendRow = new Grid();
+        sendRow.Children.Add(_sendSwitch);
+        panel.Children.Add(sendRow);
+
+        // ---- Main area: state slots, then the keys (or what to do next when there are none). It scrolls.
+        var main = new StackPanel { Spacing = 8, VerticalAlignment = VerticalAlignment.Top };
+        _mainPanel = main;
+        AddSlotSection(main);
+        _emptyText = new TextBlock { FontSize = 13, TextWrapping = TextWrapping.Wrap, Foreground = TextBrush };
+        AutomationProperties.SetAutomationId(_emptyText, "OverlayEmptyText");
+        _emptyLabel = Label(_emptyText);
+        _emptyLabel.Padding = new Thickness(12, 10, 12, 10);
+        _buttonList = new StackPanel { Spacing = 6 };
+        main.Children.Add(_buttonList);
+        _scroll = new ScrollViewer { Content = main, VerticalScrollBarVisibility = ScrollBarVisibility.Auto,
             HorizontalScrollBarVisibility = ScrollBarVisibility.Disabled };
+        AutomationProperties.SetAutomationId(_scroll, "OverlayMainScroll");
         Grid.SetRow(_scroll, 1);
-        root.Children.Add(panel); root.Children.Add(_scroll);
+
+        // ---- Footer: the status line and one button for both kinds of preset.
+        // The status as an InfoBar, like the Shortcuts page's; a warning while no window is chosen.
+        _statusBar = new InfoBar { IsOpen = true, IsClosable = false, Severity = InfoBarSeverity.Error };
+        AutomationProperties.SetAutomationId(_statusBar, "OverlayStatusBar");
+        var statusRow = _statusBar;
+        var savePreset = new DropDownButton
+        {
+            Content = T("ShortcutPanel.SavePreset"), Foreground = TextBrush, HorizontalAlignment = HorizontalAlignment.Stretch,
+            AllowFocusOnInteraction = false
+        };
+        AutomationProperties.SetAutomationId(savePreset, "OverlaySavePresetButton");
+        var saveMenu = new MenuFlyout { Placement = FlyoutPlacementMode.TopEdgeAlignedLeft };
+        var saveCombination = new MenuFlyoutItem { Text = T("Overlay.SaveCombinationPreset") };
+        ToolTipService.SetToolTip(saveCombination, T("ShortcutPanel.SaveTheEnabledModCombinationAnd"));
+        saveCombination.Click += (_, _) => _ = _actions.SaveCombinationPresetAsync();
+        var saveSingle = new MenuFlyoutItem { Text = T("ShortcutPanel.SaveSingleModPreset") };
+        saveSingle.Click += (_, _) => _ = _actions.SaveSingleModPresetAsync();
+        saveMenu.Items.Add(saveCombination);
+        saveMenu.Items.Add(saveSingle);
+        savePreset.Flyout = saveMenu;
+        var footer = new StackPanel { Spacing = 8 };
+        footer.Children.Add(statusRow);
+        footer.Children.Add(savePreset);
+        _footer = footer;
+        Grid.SetRow(footer, 2);
+
+        _detailRows = [targetRow, sendRow, footer];
+        ApplyCompactView();
+        root.Children.Add(panel); root.Children.Add(_scroll); root.Children.Add(footer);
+        // The window's height follows these (ShortcutOverlayWindow.FitContentHeight).
+        panel.SizeChanged += (_, _) => QueueFit();
+        main.SizeChanged += (_, _) => QueueFit();
+        footer.SizeChanged += (_, _) => QueueFit();
         _bindings = [];
+        _listSignature = string.Empty;
         _modOptionsSource = null;
         UpdateControls();
         return root;
     }
 
-    private static Button ActionButton(string label, Action action)
+    // After a layout pass: the three parts and the spacing between them, so the panel is as tall as what it shows.
+    private void QueueFit()
     {
-        var button = new Button { Content = label };
-        button.Click += (_, _) => action();
-        return button;
+        if (_fitQueued) return;
+        _fitQueued = true;
+        _dispatcher.TryEnqueue(DispatcherQueuePriority.Low, () =>
+        {
+            _fitQueued = false;
+            if (Window is null || _contentRoot is null || _headerPanel is null || _mainPanel is null || _footer is null) return;
+            // The grid keeps the spacing between its three rows even when a row is empty or collapsed (the compact view).
+            double height = _contentRoot.Padding.Top + _headerPanel.ActualHeight + _mainPanel.ActualHeight
+                + 2 * _contentRoot.RowSpacing + _contentRoot.Padding.Bottom;
+            if (_footer.Visibility == Visibility.Visible) height += _footer.ActualHeight;
+            Window.FitContentHeight(height);
+        });
     }
 
-    private static TextBlock FixedStatusText(int lines, double fontSize)
+    // The main window's secondary button (Styles/Controls.xaml); the overlay's backing colour still applies on top.
+    private static Style SecondaryButton => (Style)Application.Current.Resources["SecondaryButtonStyle"];
+
+    private static Button ActionButton(string label, Action action)
     {
-        var text = new TextBlock
-        {
-            FontSize = fontSize, TextWrapping = TextWrapping.Wrap, MaxLines = lines,
-            TextTrimming = TextTrimming.CharacterEllipsis, Height = Math.Ceiling(fontSize * 1.34 * lines)
-        };
-        // The full message stays available when trimmed.
-        text.RegisterPropertyChangedCallback(TextBlock.TextProperty, (_, _) => ToolTipService.SetToolTip(text, string.IsNullOrEmpty(text.Text) ? null : text.Text));
-        return text;
+        var button = new Button { Content = label, Style = SecondaryButton };
+        button.Click += (_, _) => action();
+        return button;
     }
 
     private Slider CreateOpacitySlider()
@@ -357,77 +650,114 @@ internal sealed class ShortcutOverlayController : IShortcutOverlay
     private void UpdateControls(bool bindingsChanged = true)
     {
         if (_buttonList is null) return;
+        ShortcutModOption? current = _shortcuts.SelectedMod;
+        bool currentEnabled = current is not null && _actions.IsModDeployed(current);
         _syncing = true;
         try
         {
-            // In game only enabled Mods matter, so the overlay lists those; it forwards choices to the page.
+            // The overlay shows the same Mod as the page. In game only enabled Mods do anything, so the list holds those,
+            // plus the page's Mod marked "not enabled" when it is not (its keys are shown but cannot be sent).
             object? source = _shortcuts.ModOptions;
-            if (!ReferenceEquals(_modOptionsSource, source))
+            ShortcutModOption[] all = source as ShortcutModOption[] ?? [];
+            if (!ReferenceEquals(_modOptionsSource, source) || (current is not null && !_modOptions.Contains(current)))
             {
                 _modOptionsSource = source;
-                _modOptions = (source as ShortcutModOption[] ?? []).Where(_actions.IsModDeployed).ToArray();
-                _modPicker!.ItemsSource = _modOptions;
+                _modOptions = all.Where(_actions.IsModDeployed).ToArray();
+                var choices = _modOptions.Select(option => new OverlayModChoice(option, option.Label, true)).ToList();
+                if (current is not null && !currentEnabled)
+                    choices.Insert(0, new OverlayModChoice(current, T("Overlay.NotEnabledSuffix", current.Label), false));
+                _modPicker!.ItemsSource = choices;
             }
-            ShortcutModOption? current = _shortcuts.SelectedMod;
-            _modPicker!.SelectedItem = current is not null && _modOptions.Contains(current) ? current : null;
-            _modPicker.PlaceholderText = _modOptions.Length == 0
-                ? T("ShortcutPanel.NoEnabledMods")
-                : current is null ? T("ShortcutPanel.SelectAMod") : T("ShortcutPanel.CurrentModNotEnabledPickAn");
-            _inputToggle!.IsChecked = _shortcuts.InputEnabled;
-            _inputToggle.Content = _shortcuts.InputEnabled ? T("ShortcutPanel.InputOn") : T("ShortcutPanel.InputOff");
+            _modPicker!.SelectedItem = (_modPicker.ItemsSource as List<OverlayModChoice>)?.FirstOrDefault(choice => ReferenceEquals(choice.Option, current));
+            _modPicker.PlaceholderText = _modOptions.Length == 0 ? T("ShortcutPanel.NoEnabledMods") : T("ShortcutPanel.SelectAMod");
+            if (!ReferenceEquals(_targetPicker!.ItemsSource, _shortcuts.Targets)) _targetPicker.ItemsSource = _shortcuts.Targets;
+            _targetPicker.SelectedItem = _shortcuts.SelectedTarget is { } target ? _shortcuts.Targets.FirstOrDefault(item => ReferenceEquals(item, target)) : null;
+            _sendSwitch!.IsOn = _shortcuts.InputEnabled;
         }
         finally { _syncing = false; }
-        _targetText!.Text = _shortcuts.SelectedTarget?.Label ?? T("ShortcutPanel.NoTargetWindowSelectItIn");
-        _statusText!.Text = _shortcuts.StatusText;
+        UpdateTitle(current);
+        UpdateStatus();
         // Status-only updates never enumerate bindings or rebuild slots.
         if (!bindingsChanged) return;
         UpdateSlotSection();
-        bool enabled = _shortcuts.SelectedMod is ShortcutModOption selected && _actions.IsModDeployed(selected);
-        DetectedModShortcut[] visible = enabled ? _shortcuts.VisibleShortcuts() : [];
-        if (_bindings.SequenceEqual(visible)) return;
+        DetectedModShortcut[] visible = current is null ? [] : _shortcuts.VisibleShortcuts();
+        string? empty = current is null ? (_modOptions.Length == 0 ? T("Overlay.EmptyNoEnabledMods") : T("ShortcutPanel.SelectAMod"))
+            : !currentEnabled ? T("Overlay.ModNotEnabled", current.Label)
+            : visible.Length == 0 ? T("ShortcutPanel.NoBindingsTitle") : null;
+        _emptyText!.Text = empty ?? string.Empty;
+        string listSignature = $"{currentEnabled}|{empty}";
+        if (_bindings.SequenceEqual(visible) && listSignature == _listSignature) return;
         _bindings = visible;
+        _listSignature = listSignature;
         _buttonList.Children.Clear();
+        if (empty is not null) _buttonList.Children.Add(_emptyLabel!);
         foreach (var shortcut in _bindings)
         {
             if (!_bindingControls.TryGetValue(shortcut, out Button? control))
                 _bindingControls[shortcut] = control = CreateBindingButton(shortcut);
+            // A Mod that is not enabled shows its keys, but they cannot be sent.
+            control.IsEnabled = currentEnabled && ShortcutKeyPlan.Explain(shortcut.RawKey) == ShortcutUnsupportedReason.None;
             _buttonList.Children.Add(control);
         }
         if (_bindingControls.Count > 768) _bindingControls.Clear();
         _scroll?.ChangeView(null, 0, null, true);
+        QueueFit();
     }
 
-    // A binding on the overlay; the page draws its own rows (ShortcutsPage).
+    private string _listSignature = string.Empty;
+
+    // The Mod's name in the title bar and the dot: green sending, amber a window but not sending, grey no window.
+    private void UpdateTitle(ShortcutModOption? current)
+    {
+        if (_titleText is null || _stateDot is null) return;
+        _titleText.Text = current?.Label ?? T("ShortcutPanel.SelectAMod");
+        // In the Shortcuts page's words: the target game window and whether input is on.
+        string input = _shortcuts.InputEnabled ? T("ShortcutPanel.InputOn") : T("ShortcutPanel.InputOff");
+        (Color color, string state) = _shortcuts.SelectedTarget is not { } target
+            ? (NoTargetColor, $"{T("ShortcutPanel.TargetGameWindow")}: {T("ShortcutPanel.NoTargetYet")} · {input}")
+            : (_shortcuts.InputEnabled ? SendingColor : ReadyColor, $"{T("ShortcutPanel.TargetGameWindow")}: {target.Label} · {input}");
+        ((SolidColorBrush)_stateDot.Fill).Color = color;
+        ToolTipService.SetToolTip(_stateDot, state);
+        AutomationProperties.SetName(_stateDot, state);
+    }
+
+    // A binding on the overlay: its keys as key caps (as on the Shortcuts page) beside what it does; the row sends it.
     private Button CreateBindingButton(DetectedModShortcut shortcut)
     {
         ShortcutUnsupportedReason reason = ShortcutKeyPlan.Explain(shortcut.RawKey);
         bool supported = reason == ShortcutUnsupportedReason.None;
-        var content = new StackPanel { Spacing = 3 };
-        // The keys at the subtitle size (20) of the type ramp, the rest at body and caption size.
-        var title = new TextBlock { Text = shortcut.Shortcut, FontSize = 20, FontWeight = Microsoft.UI.Text.FontWeights.SemiBold, TextWrapping = TextWrapping.Wrap };
+        var row = new Grid { ColumnSpacing = 12 };
+        row.ColumnDefinitions.Add(new ColumnDefinition { Width = GridLength.Auto });
+        row.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(1, GridUnitType.Star) });
+        var keys = new KeyVisual { Keys = shortcut.Shortcut, VerticalAlignment = VerticalAlignment.Center };
+        var text = new StackPanel { Spacing = 2, VerticalAlignment = VerticalAlignment.Center };
         var description = new TextBlock { Text = ModShortcutDescriptionFormatter.Describe(shortcut, useEnglish: !_language.IsChinese), TextWrapping = TextWrapping.Wrap };
         string source = $"{shortcut.SourceFile} · [{shortcut.Section}]";
         if (shortcut.Condition.Length > 0) source += " · " + T("ShortcutPanel.Condition") + shortcut.Condition;
         if (shortcut.Behavior.Equals("hold", StringComparison.OrdinalIgnoreCase)) source += " · " + T("ShortcutPanel.HoldForConfiguredDuration");
         var sourceText = new TextBlock { Text = source, FontSize = 12, Opacity = .65, TextWrapping = TextWrapping.Wrap };
-        title.Foreground = description.Foreground = sourceText.Foreground = TextBrush;
-        content.Children.Add(WithTextShadow(title));
-        content.Children.Add(WithTextShadow(description));
-        content.Children.Add(sourceText);
+        description.Foreground = sourceText.Foreground = TextBrush;
+        text.Children.Add(WithTextShadow(description));
+        text.Children.Add(sourceText);
         if (!supported)
-            content.Children.Add(new TextBlock
+            text.Children.Add(new TextBlock
             {
                 Text = T("ShortcutPanel.CannotSend") + UnsupportedReasonText(reason) + T("ShortcutPanel.Key", shortcut.RawKey),
                 FontSize = 12, TextWrapping = TextWrapping.Wrap,
                 Foreground = new SolidColorBrush(Color.FromArgb(255, 230, 150, 60))
             });
+        Grid.SetColumn(text, 1);
+        row.Children.Add(keys);
+        row.Children.Add(text);
         var button = new Button
         {
-            Content = content, IsEnabled = supported, HorizontalAlignment = HorizontalAlignment.Stretch,
-            HorizontalContentAlignment = HorizontalAlignment.Left, Padding = new Thickness(14, 10, 14, 10),
+            Content = row, IsEnabled = supported, HorizontalAlignment = HorizontalAlignment.Stretch, Style = SecondaryButton,
+            HorizontalContentAlignment = HorizontalAlignment.Stretch, Padding = new Thickness(12, 8, 12, 8),
             AllowFocusOnInteraction = false
         };
+        AutomationProperties.SetName(button, shortcut.Shortcut + " · " + description.Text);
         button.Click += async (_, _) => await _actions.RunAsync("Send shortcut", () => _actions.SendShortcutAsync(shortcut));
+        button.FontSize = _shortcuts.OverlayCompactView ? _shortcuts.OverlayCompactFontSize : 14;
         return button;
     }
 
@@ -516,38 +846,39 @@ internal sealed class ShortcutOverlayController : IShortcutOverlay
         return host;
     }
 
-    // Two ways to keep the overlay out of the way in game: fewer rows, and ignoring the mouse.
-    private Grid CreateViewRow()
+    // Read results and hints sit behind the title-row icon (a warning icon while no window is chosen); a failure
+    // the user should act on is shown in full above the save button until the next result replaces it.
+    private void UpdateStatus()
     {
-        _compactToggle = new ToggleButton
-        {
-            Content = T("OverlayView.Compact"), IsChecked = _shortcuts.OverlayCompactView, Foreground = TextBrush,
-            HorizontalAlignment = HorizontalAlignment.Stretch, AllowFocusOnInteraction = false, FontSize = 13
-        };
-        ToolTipService.SetToolTip(_compactToggle, T("OverlayView.CompactHint"));
-        AutomationProperties.SetAutomationId(_compactToggle, "OverlayCompactButton");
-        _compactToggle.Click += (_, _) => _shortcuts.OverlayCompactView = _compactToggle.IsChecked == true;
-        _clickThroughButton = new Button
-        {
-            Content = T("OverlayView.ClickThrough"), Foreground = TextBrush,
-            HorizontalAlignment = HorizontalAlignment.Stretch, AllowFocusOnInteraction = false, FontSize = 13
-        };
-        ToolTipService.SetToolTip(_clickThroughButton, T("OverlayView.ClickThroughHint"));
-        AutomationProperties.SetAutomationId(_clickThroughButton, "OverlayClickThroughButton");
-        _clickThroughButton.Click += (_, _) => SetClickThrough(true);
-        var row = new Grid { ColumnSpacing = 8 };
-        row.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(1, GridUnitType.Star) });
-        row.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(1, GridUnitType.Star) });
-        Grid.SetColumn(_clickThroughButton, 1);
-        row.Children.Add(_compactToggle);
-        row.Children.Add(_clickThroughButton);
-        return row;
+        if (_statusBar is null || _statusButton is null || _statusIcon is null || _statusDetails is null) return;
+        string text = _shortcuts.StatusText;
+        bool error = _shortcuts.StatusIsError && text.Length > 0;
+        _statusBar.Message = text;
+        _statusBar.Visibility = error ? Visibility.Visible : Visibility.Collapsed;
+        bool warning = _shortcuts.SelectedTarget is null;
+        _statusIcon.Glyph = warning ? "\uE7BA" : "\uE946";
+        _statusButton.Visibility = text.Length == 0 || error ? Visibility.Collapsed : Visibility.Visible;
+        _statusDetails.Text = text;
+        ToolTipService.SetToolTip(_statusButton, text);
+        string name = T("Overlay.Status");
+        AutomationProperties.SetName(_statusButton, name);
+        AutomationProperties.SetHelpText(_statusButton, text);
+        QueueFit();
     }
 
     private void ApplyCompactView()
     {
         Visibility visibility = _shortcuts.OverlayCompactView ? Visibility.Collapsed : Visibility.Visible;
         foreach (FrameworkElement row in _detailRows) row.Visibility = visibility;
+        ApplyKeyFontSize();
+        QueueFit();
+    }
+
+    // The compact view uses the chosen text size for the keys; the full view the body size.
+    private void ApplyKeyFontSize()
+    {
+        double size = _shortcuts.OverlayCompactView ? _shortcuts.OverlayCompactFontSize : 14;
+        foreach (Button key in _bindingControls.Values) key.FontSize = size;
     }
 
     private void SetClickThrough(bool enabled)
@@ -556,7 +887,7 @@ internal sealed class ShortcutOverlayController : IShortcutOverlay
         // Without the hotkey the user could not get the mouse back, short of closing the app.
         if (enabled && (!_shortcuts.HotkeyEnabled || !_actions.HotkeyAvailable))
         {
-            _shortcuts.StatusText = T("OverlayView.ClickThroughNeedsHotkey");
+            _shortcuts.ReportError(T("OverlayView.ClickThroughNeedsHotkey"));
             if (_shortcuts.OverlayCompactView) _shortcuts.OverlayCompactView = false;
             Refresh(bindingsChanged: true);
             return;
@@ -676,7 +1007,7 @@ internal sealed class ShortcutOverlayController : IShortcutOverlay
             string label = ReferenceEquals(slot, current) ? "● " + slot.Name : slot.Name;
             var button = new Button
             {
-                Content = label,
+                Content = label, Style = SecondaryButton,
                 Foreground = TextBrush, AllowFocusOnInteraction = false, Padding = new Thickness(10, 4, 10, 5), FontSize = 13,
                 VerticalAlignment = VerticalAlignment.Top
             };

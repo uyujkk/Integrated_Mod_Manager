@@ -206,7 +206,8 @@ public sealed class SmokeTests
         PressHotkey();
         Window overlay = Retry(() => app.FindWindow(window => window.Title.StartsWith("IMM ", StringComparison.Ordinal)))
             ?? throw new InvalidOperationException("The overlay did not open.");
-        AutomationElement clickThrough = AppSession.FindIn(overlay, cf => cf.ByAutomationId("OverlayClickThroughButton"), "click-through button");
+        // Click-through is in the overlay's menu (⋯) since the overlay redesign.
+        AutomationElement clickThrough = OverlayMenuItem(app, overlay, "OverlayClickThroughButton");
         var middle = overlay.BoundingRectangle;
         var point = new Point { X = middle.X + middle.Width / 2, Y = middle.Y + middle.Height * 3 / 5 };
         nint handle = overlay.Properties.NativeWindowHandle.Value;
@@ -229,7 +230,7 @@ public sealed class SmokeTests
         Window overlay = Retry(() => app.FindWindow(window => window.Title.StartsWith("IMM ", StringComparison.Ordinal)))
             ?? throw new InvalidOperationException("The overlay did not open.");
 
-        AppSession.Invoke(AppSession.FindIn(overlay, cf => cf.ByAutomationId("OverlayCompactButton"), "compact button"));
+        AppSession.Invoke(OverlayMenuItem(app, overlay, "OverlayCompactButton"));
 
         app.WaitForSaved(saved => saved["OverlayCompactView"]!.GetValue<bool>(), "The compact view should be saved");
         app.AssertNoErrors();
@@ -541,6 +542,17 @@ public sealed class SmokeTests
         app.WaitForSaved(saved => (string?)saved["UpdatesView"] == "recovery", "The recovery view should be saved");
         app.Capture(nameof(Updates_ViewsSwitchByKeyboardAndAreSaved));
         app.AssertNoErrors();
+    }
+
+    // Opens the overlay's menu (⋯) and finds an item in it; the menu's popup may be its own window.
+    internal static AutomationElement OverlayMenuItem(AppSession app, Window overlay, string automationId)
+    {
+        AppSession.Invoke(AppSession.FindIn(overlay, cf => cf.ByAutomationId("OverlayMoreButton"), "overlay menu button"));
+        return Retry(() => overlay.FindFirstDescendant(cf => cf.ByAutomationId(automationId))
+                ?? app.FindWindow(window => window.FindFirstDescendant(cf => cf.ByAutomationId(automationId)) is not null)
+                    ?.FindFirstDescendant(cf => cf.ByAutomationId(automationId))
+                ?? overlay.Automation.GetDesktop().FindFirstDescendant(cf => cf.ByAutomationId(automationId)))
+            ?? throw new InvalidOperationException("Not in the overlay menu: " + automationId);
     }
 
     // Ctrl+Alt+F9, set by AppSession.Configured.
