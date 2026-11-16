@@ -33,6 +33,9 @@ internal sealed class ShortcutOverlayController : IShortcutOverlay
     private readonly AppearanceService _appearance;
     private StackPanel? _moreMenu;
     private InfoBar? _statusBar;
+    private Button? _statusButton;
+    private FontIcon? _statusIcon;
+    private TextBlock? _statusDetails;
     private readonly IShortcutOverlayActions _actions;
     private readonly DispatcherQueue _dispatcher;
     private readonly Dictionary<DetectedModShortcut, Button> _bindingControls = new();
@@ -308,6 +311,10 @@ internal sealed class ShortcutOverlayController : IShortcutOverlay
             case nameof(ShortcutPageViewModel.InputEnabled):
                 Refresh();
                 break;
+            case nameof(ShortcutPageViewModel.StatusText):
+            case nameof(ShortcutPageViewModel.StatusIsError):
+                UpdateStatus();
+                break;
             case nameof(ShortcutPageViewModel.HotkeyEnabled):
             case nameof(ShortcutPageViewModel.HotkeyModifiers):
             case nameof(ShortcutPageViewModel.HotkeyKey):
@@ -322,6 +329,7 @@ internal sealed class ShortcutOverlayController : IShortcutOverlay
         _titleBar = new Grid { Padding = new Thickness(12, 0, 4, 0), ColumnSpacing = 8, RequestedTheme = Theme };
         _titleBar.ColumnDefinitions.Add(new ColumnDefinition { Width = GridLength.Auto });
         _titleBar.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(1, GridUnitType.Star) });
+        _titleBar.ColumnDefinitions.Add(new ColumnDefinition { Width = GridLength.Auto });
         _titleBar.ColumnDefinitions.Add(new ColumnDefinition { Width = GridLength.Auto });
         _titleBar.ColumnDefinitions.Add(new ColumnDefinition { Width = GridLength.Auto });
         _stateDot = new Ellipse { Width = 10, Height = 10, VerticalAlignment = VerticalAlignment.Center, Fill = new SolidColorBrush(NoTargetColor) };
@@ -348,16 +356,30 @@ internal sealed class ShortcutOverlayController : IShortcutOverlay
             Foreground = TextBrush, AllowFocusOnInteraction = false, VerticalAlignment = VerticalAlignment.Center,
             Flyout = BuildMoreFlyout()
         };
+        // The last read or send result as a small icon: hovering or focusing it shows the text, clicking it pins the text open.
+        // Failures stay in view in the footer instead (UpdateStatus).
+        _statusIcon = new FontIcon { Glyph = "\uE946", FontSize = 14 };
+        _statusDetails = new TextBlock { TextWrapping = TextWrapping.Wrap, MaxWidth = 280 };
+        _statusButton = new Button
+        {
+            Content = _statusIcon, Width = 36, Height = 32, Padding = new Thickness(0),
+            Background = new SolidColorBrush(Color.FromArgb(0, 0, 0, 0)), BorderThickness = new Thickness(0),
+            Foreground = TextBrush, AllowFocusOnInteraction = false, VerticalAlignment = VerticalAlignment.Center,
+            Flyout = new Flyout { Content = _statusDetails, Placement = FlyoutPlacementMode.Bottom }
+        };
+        AutomationProperties.SetAutomationId(_statusButton, "OverlayStatusButton");
         AutomationProperties.SetAutomationId(_moreButton, "OverlayMoreButton");
         AutomationProperties.SetName(_moreButton, T("Dashboard.MoreActions"));
         ToolTipService.SetToolTip(_moreButton, T("Dashboard.MoreActions"));
         Grid.SetColumn(_titleText, 1);
-        Grid.SetColumn(_moreButton, 2);
-        Grid.SetColumn(_closeButton, 3);
+        Grid.SetColumn(_statusButton, 2);
+        Grid.SetColumn(_moreButton, 3);
+        Grid.SetColumn(_closeButton, 4);
         _titleBar.Children.Add(_stateDot);
         FrameworkElement titleHost = WithTextShadow(_titleText);
         Grid.SetColumn(titleHost, 1);
         _titleBar.Children.Add(titleHost);
+        _titleBar.Children.Add(_statusButton);
         _titleBar.Children.Add(_moreButton);
         _titleBar.Children.Add(_closeButton);
         return _titleBar;
@@ -365,6 +387,7 @@ internal sealed class ShortcutOverlayController : IShortcutOverlay
 
     private IEnumerable<FrameworkElement> TitleBarControls()
     {
+        if (_statusButton is not null) yield return _statusButton;
         if (_moreButton is not null) yield return _moreButton;
         if (_closeButton is not null) yield return _closeButton;
     }
@@ -535,7 +558,7 @@ internal sealed class ShortcutOverlayController : IShortcutOverlay
 
         // ---- Footer: the status line and one button for both kinds of preset.
         // The status as an InfoBar, like the Shortcuts page's; a warning while no window is chosen.
-        _statusBar = new InfoBar { IsOpen = true, IsClosable = false, Severity = InfoBarSeverity.Informational };
+        _statusBar = new InfoBar { IsOpen = true, IsClosable = false, Severity = InfoBarSeverity.Error };
         AutomationProperties.SetAutomationId(_statusBar, "OverlayStatusBar");
         var statusRow = _statusBar;
         var savePreset = new DropDownButton
@@ -653,8 +676,7 @@ internal sealed class ShortcutOverlayController : IShortcutOverlay
         }
         finally { _syncing = false; }
         UpdateTitle(current);
-        _statusBar!.Message = _shortcuts.StatusText;
-        _statusBar.Severity = _shortcuts.SelectedTarget is null ? InfoBarSeverity.Warning : InfoBarSeverity.Informational;
+        UpdateStatus();
         // Status-only updates never enumerate bindings or rebuild slots.
         if (!bindingsChanged) return;
         UpdateSlotSection();
@@ -824,6 +846,26 @@ internal sealed class ShortcutOverlayController : IShortcutOverlay
         return host;
     }
 
+    // Read results and hints sit behind the title-row icon (a warning icon while no window is chosen); a failure
+    // the user should act on is shown in full above the save button until the next result replaces it.
+    private void UpdateStatus()
+    {
+        if (_statusBar is null || _statusButton is null || _statusIcon is null || _statusDetails is null) return;
+        string text = _shortcuts.StatusText;
+        bool error = _shortcuts.StatusIsError && text.Length > 0;
+        _statusBar.Message = text;
+        _statusBar.Visibility = error ? Visibility.Visible : Visibility.Collapsed;
+        bool warning = _shortcuts.SelectedTarget is null;
+        _statusIcon.Glyph = warning ? "\uE7BA" : "\uE946";
+        _statusButton.Visibility = text.Length == 0 || error ? Visibility.Collapsed : Visibility.Visible;
+        _statusDetails.Text = text;
+        ToolTipService.SetToolTip(_statusButton, text);
+        string name = T("Overlay.Status");
+        AutomationProperties.SetName(_statusButton, name);
+        AutomationProperties.SetHelpText(_statusButton, text);
+        QueueFit();
+    }
+
     private void ApplyCompactView()
     {
         Visibility visibility = _shortcuts.OverlayCompactView ? Visibility.Collapsed : Visibility.Visible;
@@ -845,7 +887,7 @@ internal sealed class ShortcutOverlayController : IShortcutOverlay
         // Without the hotkey the user could not get the mouse back, short of closing the app.
         if (enabled && (!_shortcuts.HotkeyEnabled || !_actions.HotkeyAvailable))
         {
-            _shortcuts.StatusText = T("OverlayView.ClickThroughNeedsHotkey");
+            _shortcuts.ReportError(T("OverlayView.ClickThroughNeedsHotkey"));
             if (_shortcuts.OverlayCompactView) _shortcuts.OverlayCompactView = false;
             Refresh(bindingsChanged: true);
             return;

@@ -101,7 +101,7 @@ public sealed partial class MainWindow
         catch (Exception ex)
         {
             LogApplicationIssue("Overlay slot switch", ex);
-            _shortcuts.StatusText = T("HotReload.SwitchFailed", slot.Name) + ex.Message;
+            _shortcuts.ReportError(T("HotReload.SwitchFailed", slot.Name) + ex.Message);
         }
         finally
         {

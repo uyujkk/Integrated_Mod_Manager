@@ -196,7 +196,7 @@ public sealed partial class MainWindow
     private async Task RefreshShortcutPaneSafelyAsync()
     {
         try { await RefreshShortcutModsAsync(); }
-        catch (Exception ex) { if (!_services.IsClosing) _shortcuts.StatusText = ex.Message; }
+        catch (Exception ex) { if (!_services.IsClosing) _shortcuts.ReportError(ex.Message); }
     }
 
     private async Task LoadShortcutSelectionAsync(bool force = false)
@@ -220,7 +220,7 @@ public sealed partial class MainWindow
         catch (Exception ex)
         {
             LogApplicationIssue("Read shortcut panel INI", ex);
-            if (!_services.IsClosing && revision == _shortcuts.ScanRevision) _shortcuts.StatusText = ex.Message;
+            if (!_services.IsClosing && revision == _shortcuts.ScanRevision) _shortcuts.ReportError(ex.Message);
         }
     }
 
@@ -275,7 +275,7 @@ public sealed partial class MainWindow
         catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
         {
             LogApplicationIssue("Show shortcut INI file", ex);
-            _shortcuts.StatusText = ex.Message;
+            _shortcuts.ReportError(ex.Message);
         }
     }
 
@@ -301,7 +301,7 @@ public sealed partial class MainWindow
         }
         catch (Exception ex)
         {
-            if (!_services.IsClosing) _shortcuts.StatusText = ex.Message;
+            if (!_services.IsClosing) _shortcuts.ReportError(ex.Message);
         }
         finally { _shortcuts.SendInProgress = false; }
         if (!_services.IsClosing) RefreshShortcutOverlay();
@@ -428,7 +428,7 @@ public sealed partial class MainWindow
         catch (Exception ex)
         {
             LogApplicationIssue("Overlay combination capture", ex);
-            if (!_services.IsClosing) _shortcuts.StatusText = T("ShortcutPanel.PresetNotSaved") + OverlayCaptureError(ex);
+            if (!_services.IsClosing) _shortcuts.ReportError(T("ShortcutPanel.PresetNotSaved") + OverlayCaptureError(ex));
         }
         finally
         {
@@ -453,7 +453,7 @@ public sealed partial class MainWindow
                 throw new InvalidOperationException(T("ShortcutPanel.SelectATargetWindowAndEnable"));
             _shortcuts.StatusText = await _shortcutInput.SendAsync(target, new ShortcutKeyPlan(new ushort[] { 0x90 }, Array.Empty<ushort>()), 150, ShortcutInputMode.VirtualKey, _services.Language.Current);
         }
-        catch (Exception ex) { if (!_services.IsClosing) _shortcuts.StatusText = ex.Message; }
+        catch (Exception ex) { if (!_services.IsClosing) _shortcuts.ReportError(ex.Message); }
         finally { _shortcuts.SendInProgress = false; if (!_services.IsClosing) RefreshShortcutOverlay(); }
     }
 
@@ -519,7 +519,7 @@ public sealed partial class MainWindow
         }
         catch (Win32Exception ex) when (ex.NativeErrorCode == 1223)
         {
-            _shortcuts.StatusText = T("ShortcutPanel.AdministratorApprovalWasDeclinedTheManager");
+            _shortcuts.ReportError(T("ShortcutPanel.AdministratorApprovalWasDeclinedTheManager"));
             return;
         }
         catch (Exception ex) { ReportUiActionFailure(nameof(RestartManagerElevated), ex); return; }

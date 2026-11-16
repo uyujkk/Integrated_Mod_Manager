@@ -988,6 +988,7 @@
   "Overlay.ModNotEnabled": "“{0}” is not enabled in the game, so its keys cannot be sent. Deploy it in the main window’s Mod workspace, or pick an enabled Mod above.",
   "Overlay.NotEnabledSuffix": "{0} (not enabled)",
   "Overlay.SaveCombinationPreset": "Save combination preset",
+  "Overlay.Status": "Status",
   "PersistentSlots.DefaultSlotName": "Default",
   "PersistentSlots.BackUpAndRestore": "Back Up and Restore",
   "PersistentSlots.CannotCapture": "Cannot Capture",

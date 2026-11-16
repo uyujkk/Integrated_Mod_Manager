@@ -72,6 +72,21 @@ public sealed class OverlayTests
     }
 
     [Fact]
+    public void Overlay_ReadResultIsBehindTheStatusIcon()
+    {
+        using AppSession app = StartWithSamples();
+        Window overlay = OpenOverlay(app);
+        string read = string.Format(app.Text("ShortcutPanel.ReadBindingsInGameConditionsAre"), 2);
+        AutomationElement icon = AppSession.FindIn(overlay, cf => cf.ByAutomationId("OverlayStatusButton"), "status icon");
+        WaitUntil(() => icon.HelpText == read, "the read result on the status icon");
+        Assert.Equal(app.Text("Overlay.Status"), icon.Name);
+        // Not an error: no notice takes room on the panel.
+        Assert.True(overlay.FindFirstDescendant(cf => cf.ByAutomationId("OverlayStatusBar")) is null or { IsOffscreen: true },
+            "Only failures should take room on the panel");
+        app.AssertNoErrors();
+    }
+
+    [Fact]
     public void Overlay_TargetIsChosenInTheOverlayAndTheSendSwitchShowsItsState()
     {
         using var target = TestTargetWindow.Start();

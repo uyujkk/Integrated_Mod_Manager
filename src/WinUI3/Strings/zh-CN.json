@@ -988,6 +988,7 @@
   "Overlay.ModNotEnabled": "“{0}”没有在游戏里启用，所以它的按键不能发送。在主窗口的 Mod 工作区部署它，或者在上面选一个已启用的 Mod。",
   "Overlay.NotEnabledSuffix": "{0}（未启用）",
   "Overlay.SaveCombinationPreset": "保存组合预设",
+  "Overlay.Status": "状态",
   "PersistentSlots.DefaultSlotName": "默认",
   "PersistentSlots.BackUpAndRestore": "备份并恢复",
   "PersistentSlots.CannotCapture": "无法捕获",

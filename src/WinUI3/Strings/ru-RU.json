@@ -988,6 +988,7 @@
   "Overlay.ModNotEnabled": "«{0}» не включён в игре, поэтому его клавиши нельзя отправить. Разверните его в рабочей области модов главного окна или выберите включённый мод выше.",
   "Overlay.NotEnabledSuffix": "{0} (не включён)",
   "Overlay.SaveCombinationPreset": "Сохранить пресет комбинации",
+  "Overlay.Status": "Состояние",
   "PersistentSlots.DefaultSlotName": "По умолчанию",
   "PersistentSlots.BackUpAndRestore": "Резервная копия и восстановление",
   "PersistentSlots.CannotCapture": "Захват невозможен",
