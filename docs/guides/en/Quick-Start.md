@@ -20,11 +20,11 @@ Recommended structure: `Mod Storage\Character\Specific Mod\files…`. The first 
 - **Import:** ZIP, 7Z, RAR, TAR and more, with Import or drag-and-drop onto the Mod area.
 - **Previews and information:** previews are detected or dragged in; the information table shows and edits the source link and tags, copies the location and shows the size.
 - **State slots:** every Mod has a Default slot; save a Mod's values as named slots with an optional picture, write them as Mod defaults, import a variant file, or snapshot the whole `d3dx_user.ini`. [Details](./State-Slots.md)
-- **Shortcuts and overlay:** click to send a Mod's keys; the overlay (Ctrl + Alt + K) switches Mods, saves presets (sending F10 first), refreshes and hot-switches slots in game, with compact, click-through and automatic-contrast options. [Details](./Shortcut-Panel.md)
+- **Shortcuts and overlay:** click to send a Mod's keys; the overlay (Ctrl + Alt + K) switches Mods, chooses the target window, saves presets (sending F10 first) and hot-switches slots in game; it follows the app's theme, sizes itself to its content, and keeps compact view, click-through and opacity in its ⋯ menu. [Details](./Shortcut-Panel.md)
 - **Combination presets:** save the enabled Mod set with its values; restore the set, then the values; export bundles. [Details](./Combination-Presets.md)
 - **Sharing and batch actions:** share a preset as a small file without Mod files; **Batch** above the Mod list adds several Mods to a preset, copies or exports them as a bundle, or deletes them.
 - **Other games:** Genshin Impact, Honkai: Star Rail and Zenless Zone Zero repositories start through XXMI with **Run Launcher**.
-- **Online browsing:** browse GameBanana by character, keep favorite characters and authors, download later or in batches, with automatic install. [Details](./Browse-and-Download.md)
+- **Online browsing:** browse GameBanana by character, keep favorite characters and authors, download later or in batches, with automatic install, and like a Mod on its GameBanana page inside the manager. [Details](./Browse-and-Download.md)
 - **Mod updates and safety:** tracked online installs notify you of updates, and the Updates page filters and searches them; conflicts are checked and failures roll back.
 - **App updates:** download, install and restart after confirmation, with rollback on failure.
 - **Settings:** Chinese/English, a theme that can follow Windows, high contrast, density and reduced motion; export sanitized diagnostics.

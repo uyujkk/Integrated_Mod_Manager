@@ -13,6 +13,7 @@ Captured on 2026-11-10 from a Release build of the 4.8.0 release branch (`45eff1
 | `shortcut-panel-v4.8.png` | Shortcuts page: the Mod, window and input cards, the status bar and two key-cap bindings |
 | `updates-v4.8.png` | Updates page: the status area, the three views and two sample tracked Mods (never checked) |
 | `settings-v4.8.png` | Settings page, cropped below Diagnostics |
+| `shortcut-overlay-v4.8.png` | The 4.8.2 overlay (taken separately, see below): title bar, Mod, window and send switch, state slots, two key caps and Save preset |
 
 How to take them again:
 
@@ -35,6 +36,12 @@ The data is the repository's own synthetic test data: the character `TestCharact
 - 截图取自屏幕，窗口最外 1–3 像素和圆角会露出后面的内容，所以主页用的图片四边各裁掉 4 个物理像素；设置页另外裁到距顶部 936 个物理像素，去掉提到真实游戏名的反馈卡片。
 - 截图时请保持桌面解锁、不要移动鼠标。
 - 角色、Mod、在线样例和图片都是仓库自带的模拟数据；未连接游戏或加载器，未选择目标窗口，也未发送按键。仓库卡片上的来源名称是应用自己的标签，不是来自网站的内容。
+
+## 4.8.2 overlay / 4.8.2 浮窗
+
+`shortcut-overlay-v4.8.png` was captured on 2026-11-16 from the Release build of the 4.8.2 preparation branch (`release/v4.8.2`, based on `f85e2c4`) by a local UI test that starts an isolated copy with `tests/TestData`, adds the synthetic records of `tests/UI.Tests/OverlaySamples.cs` (copy records for `TestModA` and `TestModB`, so both count as enabled, and the state slots Battle, Casual and Everyday), opens the overlay with its hotkey and captures only the overlay window. 150% scaling, dark theme, English UI; trimmed by 4 physical pixels on every side. No target window was selected and no input was sent.
+
+`shortcut-overlay-v4.8.png` 于 2026-11-16 用 4.8.2 准备分支（`release/v4.8.2`，基于 `f85e2c4`）的 Release 构建截取：本地界面测试启动带 `tests/TestData` 的独立副本，加入 `tests/UI.Tests/OverlaySamples.cs` 的模拟记录（`TestModA`、`TestModB` 的复制记录，使它们算作已启用，以及 Battle、Casual、Everyday 三个状态槽位），用快捷键打开浮窗，只截浮窗窗口。150% 缩放、深色主题、英文界面，四边各裁掉 4 个物理像素。未选择目标窗口，也未发送按键。
 
 ## 4.6 pages / 4.6 各页面
 

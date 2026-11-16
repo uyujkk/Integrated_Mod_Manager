@@ -156,9 +156,9 @@ Every Mod gets a **Default** slot with its original defaults; restoring it reads
 
 ## 6. Shortcut page and overlay
 
-The Shortcuts page lists a Mod's INI key bindings and sends them to the game window with a click. The always-on-top overlay (Ctrl + Alt + K) works over the game: switch enabled Mods, save a combination or single-Mod preset (F10 is sent first), refresh, hot-switch state slots, and follow the active character. Endfield needs the manager to run as administrator. See [Shortcut panel and overlay](./Shortcut-Panel.md).
+The Shortcuts page lists a Mod's INI key bindings and sends them to the game window with a click. The always-on-top overlay (Ctrl + Alt + K) works over the game: switch enabled Mods, choose the target window and turn sending on, save a combination or single-Mod preset (F10 is sent first), hot-switch state slots, and follow the active character. Since 4.8.2 it has its own title bar with a status dot, follows the app's theme, sizes itself to its content and remembers its size and place on each display. Endfield needs the manager to run as administrator. See [Shortcut panel and overlay](./Shortcut-Panel.md).
 
-The overlay's **Compact** view keeps only the Mod, slots and keys; **Click through** leaves it visible but ignores the mouse until you press the show/hide hotkey; **Clear**, **Balanced** and **Minimal** set its looks in one click, and **Automatic contrast** switches between dark and light text over bright or dark scenes. It can take a picture when saving a preset, frame a character as a slot's picture, and switch slots by picture. The Shortcuts page also sets the loader's auto-save interval.
+In the overlay's **⋯** menu, **Compact** keeps only the Mod, slots and keys, and **Click through** leaves it visible but ignores the mouse until you press the show/hide hotkey; **Clear**, **Balanced** and **Minimal** set its looks in one click, and **Automatic contrast** switches between dark and light text over bright or dark scenes. It can take a picture when saving a preset, frame a character as a slot's picture, and switch slots by picture. The Shortcuts page also sets the loader's auto-save interval.
 
 ## 7. Combination presets and bundles
 
@@ -168,7 +168,7 @@ Open **Presets** at the top of Repositories to save the enabled Mod set, optiona
 
 ## 8. Online browsing and downloads
 
-The Online page browses GameBanana by character, with favorite characters and authors, download-later lists, batch downloads, search and sorting, a details drawer and a full-size gallery. Downloads are extracted and installed automatically and their source is recorded; the download history is on the Updates page, and running tasks also open from **Downloads** at the foot of the navigation. See [Browse and download](./Browse-and-Download.md).
+The Online page browses GameBanana by character, with favorite characters and authors, download-later lists, batch downloads, search and sorting, a details drawer and a full-size gallery. The drawer's heart button opens the Mod's GameBanana page inside the manager, where you can sign in to like it (4.8.2); Settings → **Clear GameBanana sign-in** removes that sign-in. Downloads are extracted and installed automatically and their source is recorded; the download history is on the Updates page, and running tasks also open from **Downloads** at the foot of the navigation. See [Browse and download](./Browse-and-Download.md).
 
 The app never bypasses logins, captchas, payments, subscriptions, permission checks or author restrictions; requirement hints are best-effort and the author's page is authoritative.
 
@@ -213,7 +213,7 @@ Before installing or applying a profile, target paths and INI conflicts are chec
 
 ### 11.1 Interface and accessibility
 
-On wide windows Settings shows two columns. **Appearance and Language** has the language (Chinese / English), theme (Follow system / Light / Dark), density (comfortable / compact), reduced motion and minimize to tray. High contrast, Tab navigation, screen-reader names and display scaling are supported as well. Restoring a maximized window shrinks it to 80% of the work area, centered.
+On wide windows Settings shows two columns. **Appearance and Language** has the language (Chinese / English), theme (Follow system / Light / Dark), density (comfortable / compact), reduced motion and minimize to tray. High contrast, Tab navigation, screen-reader names and display scaling are supported as well. Restoring a maximized window shrinks it to 80% of the work area, centered. Opening or closing a card keeps every group in its column. The feedback cards list the QQ group and the Discord server; What's New and the release notes in Settings also have **Join the Discord server**.
 
 ### 11.2 Local data
 

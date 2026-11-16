@@ -1,4 +1,4 @@
-> **v4.8.1 stable release.** Browse more GameBanana categories, sort across pages, and switch pages with less delay. See the [4.8.1 notes](docs/releases/v4.8.1.md). **4.8.0:** Every page is redesigned, and five problems in 4.7.3 and earlier that could delete the wrong files or leave broken links are fixed; see the [4.8.0 notes](docs/releases/v4.8.0.md). **4.7:** preset pictures and pick by picture, overlay looks, click-through and automatic contrast, sharing a preset without Mod files, a language and game choice on first install, a Default slot for every Mod, and batch actions; 4.7.1–4.7.3 brought a .NET 8 updater, more reliable online character lists and a Russian interface. See the [4.7.0 notes](docs/releases/v4.7.0.md).
+> **v4.8.2 stable release.** A redesigned in-game overlay that follows the app's theme, liking Mods on GameBanana from the Online page, and faster page switching. See the [4.8.2 notes](docs/releases/v4.8.2.md). **4.8.1:** Browse more GameBanana categories and sort across pages; see the [4.8.1 notes](docs/releases/v4.8.1.md). **4.8.0:** Every page is redesigned, and five problems in 4.7.3 and earlier that could delete the wrong files or leave broken links are fixed; see the [4.8.0 notes](docs/releases/v4.8.0.md). **4.7:** preset pictures and pick by picture, overlay looks, click-through and automatic contrast, sharing a preset without Mod files, a language and game choice on first install, a Default slot for every Mod, and batch actions; 4.7.1–4.7.3 brought a .NET 8 updater, more reliable online character lists and a Russian interface. See the [4.7.0 notes](docs/releases/v4.7.0.md).
 
 <div align="center">
   <img src="./src/WinUI3/Assets/AppIcon.png" width="96" alt="Integrated Mod Manager icon">
@@ -29,11 +29,11 @@
 
 ## Overview
 
-**Current stable version: [v4.8.1](https://github.com/uyujkk/Integrated_Mod_Manager/releases/tag/v4.8.1).** 4.8 redesigns every page (a navigation pane with title-bar search, card-based Dashboard and Settings, a Mod workspace with a command bar and resizable columns, an Online page with a details drawer, and clearer dialogs) and fixes five data-safety problems; 4.7 added preset pictures, overlay looks, preset sharing and other games. Characters in a repository show avatars, a character can keep several Mods enabled, each Mod can keep named state slots, and the always-on-top overlay can save presets (sending F10 first), switch slots in game and refresh after Mod changes. The shortcut panel, integrated Endfield launch, browsing and downloading, library tools and combination presets remain. See the [4.8.0 release notes](./docs/releases/v4.8.0.md), the [shortcut panel guide](./docs/guides/en/Shortcut-Panel.md) and the [launch and risk guide](./docs/guides/en/Endfield-Launch.md).
+**Current stable version: [v4.8.2](https://github.com/uyujkk/Integrated_Mod_Manager/releases/tag/v4.8.2).** 4.8 redesigns every page (a navigation pane with title-bar search, card-based Dashboard and Settings, a Mod workspace with a command bar and resizable columns, an Online page with a details drawer, and clearer dialogs) and fixes five data-safety problems; 4.7 added preset pictures, overlay looks, preset sharing and other games. Characters in a repository show avatars, a character can keep several Mods enabled, each Mod can keep named state slots, and the always-on-top overlay (redesigned in 4.8.2, with its own title bar, a target window picker and a send switch) can save presets (sending F10 first), switch slots in game and refresh after Mod changes. The shortcut panel, integrated Endfield launch, browsing and downloading, library tools and combination presets remain. See the [4.8.0 release notes](./docs/releases/v4.8.0.md), the [shortcut panel guide](./docs/guides/en/Shortcut-Panel.md) and the [launch and risk guide](./docs/guides/en/Endfield-Launch.md).
 
 Integrated Mod Manager organizes different games or mod environments into independent repositories. It copies or removes complete mod folders between a local library and the target directory read by the game, while keeping preview images, source links, shortcut notes, online downloads, update records, profiles, and installation backups in one application.
 
-The application, launcher, and updater use version **4.8.1** (`4.8.1.0`). The tool is maintained by `uyujkk`. The Bandizip extraction fallback was contributed by [CaramelizedCUDA](https://github.com/CaramelizedCUDA). The earlier [4.0-beta](https://github.com/uyujkk/Integrated_Mod_Manager/releases/tag/v4.0-beta) remains archived separately.
+The application, launcher, and updater use version **4.8.2** (`4.8.2.0`). The tool is maintained by `uyujkk`. The Bandizip extraction fallback was contributed by [CaramelizedCUDA](https://github.com/CaramelizedCUDA). The earlier [4.0-beta](https://github.com/uyujkk/Integrated_Mod_Manager/releases/tag/v4.0-beta) remains archived separately.
 
 ## Interface Preview
 
@@ -64,10 +64,10 @@ Screenshots come from an isolated copy of a 4.8.0 build with the repository's sy
 ![Shortcuts page: the Mod, window and input cards, the status bar and two key-cap bindings](./docs/assets/screenshots/shortcut-panel-v4.8.png)
 
 <p align="center">
-  <img src="./docs/assets/screenshots/shortcut-overlay-v4.5.png" width="290" alt="Overlay with save buttons, state slot buttons and key bindings">
+  <img src="./docs/assets/screenshots/shortcut-overlay-v4.8.png" width="290" alt="Overlay: the title bar with the status dot, the Mod name, the status icon, the ⋯ menu and close; the Mod, window and send switch; the state slots; two key caps; the Save preset button">
 </p>
 
-**Overlay (4.5 screenshot)** — over the game, switch enabled Mods, hot-switch slots (experimental), save a combination or a named single-Mod preset (F10 is sent first), and refresh after Mod changes.
+**Overlay (4.8.2)** — over the game: drag it by its title bar (the dot shows whether keys are being sent), choose the Mod and the target window and turn sending on, click key caps to send them, hot-switch slots (experimental), and save a combination or a named single-Mod preset (F10 is sent first). It sizes itself to its content, remembers its place on each display, snaps to edges, follows the app's theme, and keeps compact view, click-through and opacity in its ⋯ menu.
 
 <details>
 <summary>Updates and Settings</summary>
@@ -90,11 +90,13 @@ Guides: [user guide](./docs/guides/en/User-Guide.md) · [shortcut panel and over
 
 ## What's New in 4.8
 
+- **4.8.2:** a redesigned in-game overlay (title bar with a status dot, target window and send switch in the overlay, key caps, a height that follows the content, a place remembered per display, snapping, a ⋯ menu, the app's theme); a heart button in a Mod's details that opens its GameBanana page inside the manager to like it, with a Settings card to clear that sign-in; Settings groups that stay put when a card opens; a Join the Discord server button in What's New and the release notes; and faster page switching (going back to Online draws its first frame in 53–73 ms instead of 141–188 ms).
+- **4.8.1:** GameBanana categories and subcategories on the Online page, sorting across pages by likes, downloads and last updated, and fixes for an Online reload loop and a black area after drag-to-maximize.
 - **A new interface:** a navigation pane with a search box in the title bar (Ctrl+K), the Dashboard and Settings as cards, a Mod workspace with a command bar, resizable columns and a details drawer, an Online page with a wider drawer and clear loading, empty and error states, an Updates page in three views, Shortcuts as one column of cards, and dialogs whose buttons name their action, with red buttons for destructive ones.
 - **Data safety:** fixes for turning a single Mod on or off when the source and target overlap, the preset picture cleanup at startup following a link, deleting a Mod while the loader folder is unavailable, copy-mode preset restores deleting a same-named folder, and a character rename leaving links and saved paths behind. All five are in 4.7.3 and earlier.
 - **Faster start:** four pages are created when first opened, so the app starts about 80–120 ms faster.
 
-[4.8.1 release notes](./docs/releases/v4.8.1.md) · [Verification scope](./docs/verification/v4.8.1.md)
+[4.8.2 release notes](./docs/releases/v4.8.2.md) · [Verification scope](./docs/verification/v4.8.2.md) · [4.8.1 release notes](./docs/releases/v4.8.1.md)
 
 ## What's New in 4.7
 

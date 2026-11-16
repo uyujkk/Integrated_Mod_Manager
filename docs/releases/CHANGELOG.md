@@ -6,7 +6,13 @@
 
 This document records version changes in Integrated Mod Manager. Unpublished versions are marked separately.
 
-## v4.8.1（正式版 / Stable）
+## v4.8.2（正式版 / Stable）
+
+游戏内浮窗重新设计：可以拖动的标题栏和状态圆点，在浮窗里选择目标窗口和开关发送，键帽式按键，高度跟随内容、可调大小、按显示器记住位置并贴边，⋯ 菜单，跟随应用主题，读取结果收进状态图标（#134）。在线页可以在管理器里打开 Mod 的 GameBanana 页面点赞，设置里可以清除这份登录（#129、#132）。设置页展开卡片时分组不再跳动，“新功能”和更新说明新增 Discord 按钮，切页更快（#135）。见 [v4.8.2](v4.8.2.md)。
+
+Redesigns the in-game overlay: a title bar you can drag with a status dot, the target window and a send switch in the overlay, key caps, a height that follows the content, resizing, a place remembered per display with edge snapping, a ⋯ menu, the app's theme, and read results behind a status icon (#134). The Online page can open a Mod's GameBanana page inside the manager to like it, and Settings can clear that sign-in (#129, #132). Settings groups no longer jump when a card opens, What's New and the release notes get a Discord button, and page switching is faster (#135). See [v4.8.2](v4.8.2.md).
+
+## v4.8.1 — 2026-11-11（正式版 / Stable）
 
 在线页支持 GameBanana 一级分类和子分类，以及跨页点赞、下载量和更新时间排序。修复在线页重复加载导致的无响应，以及 Windows 11 拖拽最大化黑屏，减少切页时的重复刷新。见 [v4.8.1](v4.8.1.md)。
 
