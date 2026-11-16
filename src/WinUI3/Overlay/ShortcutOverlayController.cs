@@ -61,7 +61,9 @@ internal sealed class ShortcutOverlayController : IShortcutOverlay
     private StackPanel? _buttonList;
     private ScrollViewer? _scroll;
     private DetectedModShortcut[] _bindings = [];
-    private ToggleButton? _compactToggle;
+    private ToggleSwitch? _compactToggle;
+    private Button? _moreButton;
+    private Flyout? _moreFlyout;
     private Button? _clickThroughButton;
     private FrameworkElement[] _detailRows = [];
     private bool _clickThrough;
@@ -234,7 +236,7 @@ internal sealed class ShortcutOverlayController : IShortcutOverlay
                 break;
             case nameof(ShortcutPageViewModel.OverlayCompactView):
                 ApplyCompactView();
-                if (_compactToggle is not null) _compactToggle.IsChecked = _shortcuts.OverlayCompactView;
+                if (_compactToggle is not null) _compactToggle.IsOn = _shortcuts.OverlayCompactView;
                 break;
             case nameof(ShortcutPageViewModel.OverlayAutoContrast):
                 UpdateContrastTimer();
@@ -266,6 +268,7 @@ internal sealed class ShortcutOverlayController : IShortcutOverlay
         _titleBar.ColumnDefinitions.Add(new ColumnDefinition { Width = GridLength.Auto });
         _titleBar.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(1, GridUnitType.Star) });
         _titleBar.ColumnDefinitions.Add(new ColumnDefinition { Width = GridLength.Auto });
+        _titleBar.ColumnDefinitions.Add(new ColumnDefinition { Width = GridLength.Auto });
         _stateDot = new Ellipse { Width = 10, Height = 10, VerticalAlignment = VerticalAlignment.Center, Fill = new SolidColorBrush(NoTargetColor) };
         AutomationProperties.SetAutomationId(_stateDot, "OverlayStateDot");
         _titleText = new TextBlock
@@ -283,19 +286,74 @@ internal sealed class ShortcutOverlayController : IShortcutOverlay
         AutomationProperties.SetAutomationId(_closeButton, "OverlayCloseButton");
         _closeButton.Click += (_, _) => Hide();
         UpdateCloseTooltip();
+        _moreButton = new Button
+        {
+            Content = new FontIcon { Glyph = "\uE712", FontSize = 14 }, Width = 36, Height = 32, Padding = new Thickness(0),
+            Background = new SolidColorBrush(Color.FromArgb(0, 0, 0, 0)), BorderThickness = new Thickness(0),
+            Foreground = TextBrush, AllowFocusOnInteraction = false, VerticalAlignment = VerticalAlignment.Center,
+            Flyout = BuildMoreFlyout()
+        };
+        AutomationProperties.SetAutomationId(_moreButton, "OverlayMoreButton");
+        AutomationProperties.SetName(_moreButton, T("Overlay.More"));
+        ToolTipService.SetToolTip(_moreButton, T("Overlay.More"));
         Grid.SetColumn(_titleText, 1);
-        Grid.SetColumn(_closeButton, 2);
+        Grid.SetColumn(_moreButton, 2);
+        Grid.SetColumn(_closeButton, 3);
         _titleBar.Children.Add(_stateDot);
         FrameworkElement titleHost = WithTextShadow(_titleText);
         Grid.SetColumn(titleHost, 1);
         _titleBar.Children.Add(titleHost);
+        _titleBar.Children.Add(_moreButton);
         _titleBar.Children.Add(_closeButton);
         return _titleBar;
     }
 
     private IEnumerable<FrameworkElement> TitleBarControls()
     {
+        if (_moreButton is not null) yield return _moreButton;
         if (_closeButton is not null) yield return _closeButton;
+    }
+
+    // The settings used now and then: compact view, click-through, background opacity, reading the files again.
+    private Flyout BuildMoreFlyout()
+    {
+        var menu = new StackPanel { Spacing = 8, Width = 280, RequestedTheme = ElementTheme.Dark };
+        _compactToggle = new ToggleSwitch
+        {
+            Header = T("OverlayView.Compact"), IsOn = _shortcuts.OverlayCompactView, OnContent = T("Overlay.On"), OffContent = T("Overlay.Off")
+        };
+        ToolTipService.SetToolTip(_compactToggle, T("OverlayView.CompactHint"));
+        AutomationProperties.SetAutomationId(_compactToggle, "OverlayCompactButton");
+        AutomationProperties.SetName(_compactToggle, T("OverlayView.Compact"));
+        _compactToggle.Toggled += (_, _) => _shortcuts.OverlayCompactView = _compactToggle.IsOn;
+        menu.Children.Add(_compactToggle);
+        _clickThroughButton = new Button
+        {
+            Content = T("OverlayView.ClickThrough"), HorizontalAlignment = HorizontalAlignment.Stretch, AllowFocusOnInteraction = false
+        };
+        ToolTipService.SetToolTip(_clickThroughButton, T("OverlayView.ClickThroughHint"));
+        AutomationProperties.SetAutomationId(_clickThroughButton, "OverlayClickThroughButton");
+        _clickThroughButton.Click += (_, _) =>
+        {
+            _moreFlyout?.Hide();
+            SetClickThrough(true);
+        };
+        menu.Children.Add(_clickThroughButton);
+        _opacitySlider = CreateOpacitySlider();
+        _opacitySlider.Header = T("ShortcutPanel.Opacity");
+        AutomationProperties.SetAutomationId(_opacitySlider, "OverlayOpacitySlider");
+        ToolTipService.SetToolTip(_opacitySlider, T("ShortcutPanel.OverlayBackgroundOpacity"));
+        menu.Children.Add(_opacitySlider);
+        var refresh = new Button { Content = T("Overlay.RefreshFromDisk"), HorizontalAlignment = HorizontalAlignment.Stretch, AllowFocusOnInteraction = false };
+        AutomationProperties.SetAutomationId(refresh, "OverlayRefreshButton");
+        refresh.Click += (_, _) =>
+        {
+            _moreFlyout?.Hide();
+            _ = _actions.RunAsync("Refresh overlay", _actions.RefreshFromDiskAsync);
+        };
+        menu.Children.Add(refresh);
+        _moreFlyout = new Flyout { Content = menu, Placement = FlyoutPlacementMode.BottomEdgeAlignedRight };
+        return _moreFlyout;
     }
 
     // Close only hides the panel; the hotkey brings it back, so the tooltip says which one.
@@ -341,7 +399,6 @@ internal sealed class ShortcutOverlayController : IShortcutOverlay
             if (!ReferenceEquals(_shortcuts.SelectedMod, chosen.Option)) _shortcuts.SelectedMod = chosen.Option;
         };
         panel.Children.Add(_modPicker);
-        panel.Children.Add(CreateViewRow());
         // The window keys go to, chosen here like on the Shortcuts page, with the list read again on demand.
         var targetRow = new Grid { ColumnSpacing = 8 };
         targetRow.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(1, GridUnitType.Star) });
@@ -388,24 +445,9 @@ internal sealed class ShortcutOverlayController : IShortcutOverlay
             _actions.SetInputEnabled(_sendSwitch.IsOn);
             Refresh();
         };
-        var sendRow = new Grid { ColumnSpacing = 8 };
-        sendRow.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(1, GridUnitType.Star) });
-        sendRow.ColumnDefinitions.Add(new ColumnDefinition { Width = GridLength.Auto });
-        var refresh = ActionButton(T("ShortcutCapture.Refresh"), () => _ = _actions.RunAsync("Refresh overlay", _actions.RefreshFromDiskAsync));
-        refresh.Foreground = TextBrush;
-        Grid.SetColumn(refresh, 1);
-        sendRow.Children.Add(_sendSwitch); sendRow.Children.Add(refresh);
+        var sendRow = new Grid();
+        sendRow.Children.Add(_sendSwitch);
         panel.Children.Add(sendRow);
-        var opacityRow = new Grid { ColumnSpacing = 8 };
-        opacityRow.ColumnDefinitions.Add(new ColumnDefinition { Width = GridLength.Auto });
-        opacityRow.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(1, GridUnitType.Star) });
-        var opacityLabel = new TextBlock { Text = T("ShortcutPanel.Opacity"), VerticalAlignment = VerticalAlignment.Center, FontSize = 12, Foreground = TextBrush };
-        _opacitySlider = CreateOpacitySlider();
-        _opacitySlider.VerticalAlignment = VerticalAlignment.Center;
-        ToolTipService.SetToolTip(_opacitySlider, T("ShortcutPanel.OverlayBackgroundOpacity"));
-        Grid.SetColumn(_opacitySlider, 1);
-        opacityRow.Children.Add(Label(opacityLabel)); opacityRow.Children.Add(_opacitySlider);
-        panel.Children.Add(opacityRow);
 
         // ---- Main area: state slots, then the keys (or what to do next when there are none). It scrolls.
         var main = new StackPanel { Spacing = 8, VerticalAlignment = VerticalAlignment.Top };
@@ -432,7 +474,7 @@ internal sealed class ShortcutOverlayController : IShortcutOverlay
             AllowFocusOnInteraction = false
         };
         AutomationProperties.SetAutomationId(savePreset, "OverlaySavePresetButton");
-        var saveMenu = new MenuFlyout { Placement = Microsoft.UI.Xaml.Controls.Primitives.FlyoutPlacementMode.TopEdgeAlignedLeft };
+        var saveMenu = new MenuFlyout { Placement = FlyoutPlacementMode.TopEdgeAlignedLeft };
         var saveCombination = new MenuFlyoutItem { Text = T("Overlay.SaveCombinationPreset") };
         ToolTipService.SetToolTip(saveCombination, T("ShortcutPanel.SaveTheEnabledModCombinationAnd"));
         saveCombination.Click += (_, _) => _ = _actions.SaveCombinationPresetAsync();
@@ -447,7 +489,7 @@ internal sealed class ShortcutOverlayController : IShortcutOverlay
         _footer = footer;
         Grid.SetRow(footer, 2);
 
-        _detailRows = [targetRow, sendRow, opacityRow, footer];
+        _detailRows = [targetRow, sendRow, footer];
         ApplyCompactView();
         root.Children.Add(panel); root.Children.Add(_scroll); root.Children.Add(footer);
         // The window's height follows these (ShortcutOverlayWindow.FitContentHeight).
@@ -715,34 +757,6 @@ internal sealed class ShortcutOverlayController : IShortcutOverlay
         visual.IsVisible = OverlayAppearancePolicy.ShowTextShadow(_shortcuts.OverlayOpacity);
         shadow.Color = UsesLightBacking ? Color.FromArgb(255, 255, 255, 255) : Color.FromArgb(255, 0, 0, 0);
         return host;
-    }
-
-    // Two ways to keep the overlay out of the way in game: fewer rows, and ignoring the mouse.
-    private Grid CreateViewRow()
-    {
-        _compactToggle = new ToggleButton
-        {
-            Content = T("OverlayView.Compact"), IsChecked = _shortcuts.OverlayCompactView, Foreground = TextBrush,
-            HorizontalAlignment = HorizontalAlignment.Stretch, AllowFocusOnInteraction = false, FontSize = 13
-        };
-        ToolTipService.SetToolTip(_compactToggle, T("OverlayView.CompactHint"));
-        AutomationProperties.SetAutomationId(_compactToggle, "OverlayCompactButton");
-        _compactToggle.Click += (_, _) => _shortcuts.OverlayCompactView = _compactToggle.IsChecked == true;
-        _clickThroughButton = new Button
-        {
-            Content = T("OverlayView.ClickThrough"), Foreground = TextBrush,
-            HorizontalAlignment = HorizontalAlignment.Stretch, AllowFocusOnInteraction = false, FontSize = 13
-        };
-        ToolTipService.SetToolTip(_clickThroughButton, T("OverlayView.ClickThroughHint"));
-        AutomationProperties.SetAutomationId(_clickThroughButton, "OverlayClickThroughButton");
-        _clickThroughButton.Click += (_, _) => SetClickThrough(true);
-        var row = new Grid { ColumnSpacing = 8 };
-        row.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(1, GridUnitType.Star) });
-        row.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(1, GridUnitType.Star) });
-        Grid.SetColumn(_clickThroughButton, 1);
-        row.Children.Add(_compactToggle);
-        row.Children.Add(_clickThroughButton);
-        return row;
     }
 
     private void ApplyCompactView()
