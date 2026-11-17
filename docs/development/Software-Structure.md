@@ -53,7 +53,7 @@ tests/
   Performance/                            性能基准 / benchmarks
   TestData/                               合成测试数据与在线样例 / synthetic fixtures and online samples
 tools/
-  DeveloperTools/                         独立发布的开发者工具 / standalone developer tools
+  DeveloperTools/                         开发者工具，4.8.2 之后随发布单独提供 / Developer Tools, a separate release asset after 4.8.2
   online-fixtures/                        生成在线样例 / generates the online samples
   ui-baseline/                            截图基线脚本 / screenshot baseline script
 scripts/                                  构建、测试、打包与测试夹具脚本 / build, test, packaging and fixture scripts
@@ -98,6 +98,7 @@ flowchart TB
 | `Launcher/WinUILauncher.cs` | 启动器：找到并启动 `WinUI3/ModFolderCopier.WinUI.exe`；找不到程序文件或 Windows 拦截启动时，用中文或英文说明怎么处理。The launcher: finds and starts the app, and explains in Chinese or English what to do when the program file is missing or Windows blocks the start. |
 | `Launcher/LocalUpdateAgent.csproj` | 把更新器发布成单个 `LocalUpdateAgent.exe`（.NET 8，不再被机器学习扫描引擎误报）。Publishes the updater as one `LocalUpdateAgent.exe` on .NET 8. |
 | `IntegratedModManager.UpdateAgent.Core` | 不含自己的源码，只把 `src/Launcher/LocalUpdateAgent.cs` 编译成程序集供测试使用。Has no sources of its own; compiles the updater source for tests. |
+| `tools/DeveloperTools` | 开发者工具：独立的 WinUI 3 程序，引用 Core，版本与主程序相同，作为单独的附件发布，解压到安装目录的 `DeveloperTools` 文件夹（`DeveloperToolsLocation`）。只读查看主程序的数据：状态记录（`StateRecordAudit`）、日志（`LogReader`）、缓存（`CacheInventory`）、Mod 按键、翻译（`LanguageFileComparer`）、诊断（`DiagnosticSummary`），逻辑都在 Core 的 `DeveloperTools` 目录并有测试。The Developer Tools: a standalone WinUI 3 app on Core with the app's version, released as a separate asset that unpacks into the install's `DeveloperTools` folder; read-only views of the app's data, with their logic in Core's `DeveloperTools` folder and tested there. |
 | `WinUI3` | 主程序：窗口、六个页面、服务层、置顶浮窗、按键发送、本地化文案。The application: window, six pages, services, overlay, key input, localized text. |
 
 ### 3.2 测试与工具 / Tests and tools
@@ -382,6 +383,7 @@ flowchart TB
 | `Repository` | 仓库扫描、仪表盘计数与路径状态、角色文件夹头像、命令面板搜索、工作区策略、通过 XXMI 启动、批量集合、性能记录。Scanning, dashboard counts and path status, avatars, command palette search, workspace policies, XXMI launch, batch collections. |
 | `Endfield` | 桥接迁移与资格判断、干员目录解析、内置干员表（嵌入资源）。Bridge integration, operator catalog, embedded operator list. |
 | `Layout` | 窗口、弹窗和页面布局策略：仪表盘、在线、设置（`SettingsLayoutPolicy`）、快捷键、更新、浮窗（`OverlayLayoutPolicy`）。Window, dialog and page layout policies, including the overlay's placement. |
+| `DeveloperTools` | 开发者工具和主程序共用的只读检查：安装位置（`DeveloperToolsLocation`）、复制记录与槽位检查（`StateRecordAudit`）、日志解析（`LogReader`）、缓存清单与清除规则（`CacheInventory`）、语言文件比较（`LanguageFileComparer`）、诊断统计（`DiagnosticSummary`）。Read-only checks shared by the Developer Tools and the app. |
 | `Infrastructure` | 路径安全（`PathSafety`）、不跟随链接的目录操作（`SafeDirectoryTree`）、错误标记（`ErrorTags`）、恢复用 JSON、日志轮换、单实例策略。Path safety, link-safe tree operations, error tags, recovery JSON, log rotation, single instance. |
 
 ## 7. 数据与状态 / Data and state

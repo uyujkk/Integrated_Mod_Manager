@@ -234,21 +234,19 @@ Mod 存储文件夹
 - 发布包包含 Windows App SDK，但需要 .NET 8 x64 运行时；普通用户不需要 .NET SDK 或 Visual Studio。
 - 7Z、RAR、ZIPX 和 CAB 优先使用发布包内或已安装的 7-Zip；找不到时自动使用已安装 Bandizip 的 `bz.exe`，并由 Windows `tar.exe` 在解压前检查路径和链接。
 
-## 从源码构建
+## 给开发者
 
-开发环境需要 Windows 10/11 x64、.NET 8 SDK、Visual Studio 2022 或 Build Tools 2022、MSBuild、Windows App SDK 和 Windows SDK。
-
-```powershell
-cmd /c scripts\build_winui.bat
-```
-
-运行完整测试、覆盖率检查、WinUI x64 构建和发布包验证：
+开发环境需要 Windows 10/11 x64、.NET 8 SDK、Visual Studio 2022 或 Build Tools 2022、MSBuild、Windows App SDK 和 Windows SDK。完整流程和 Pull Request 要求见 [CONTRIBUTING.md](../.github/CONTRIBUTING.md)。
 
 ```powershell
-powershell -NoProfile -ExecutionPolicy Bypass -File .\scripts\test-all.ps1
+.\scripts\check-code-style.ps1      # .editorconfig 规则，在 test-all 之前运行
+.\scripts\test-all.ps1             # 四组测试与覆盖率、WinUI x64 构建、打包
+.\scripts\test-ui.ps1              # 用 test-all 准备的构建运行界面测试（需要解锁的桌面）
 ```
 
-GitHub Actions 会在推送到 `main`、Pull Request 和手动触发时执行统一四组验证。测试依赖集中管理，未删除安全用例。当前结果及验证边界见[测试说明](./development/TESTING.md)与[4.5.2 验证记录](./verification/v4.5.2.md)。
+- **界面测试**用 `tests/TestData` 的合成数据启动构建好的程序；设置 `IMM_ONLINE_FIXTURES`（界面测试会自动设置）后，所有在线请求都由本地样例应答。见[测试说明](./development/TESTING.md)。
+- **发布**由 `.github/workflows/release.yml` 从版本标签构建：测试、打包、从上一版升级并回滚、界面测试，然后创建带主程序压缩包和开发者工具压缩包的草稿 Release。项目、数据和流程见[软件结构](./development/Software-Structure.md)（含结构图）。
+- **开发者工具**（`tools/DeveloperTools`）从 4.8.2 之后的版本起随每次发布单独提供（在那之前可用 `scripts\build-developer-tools.ps1` 构建）：检查复制记录、状态槽位和链接，查看日志，查看和清除缓存，读取 Mod 的按键，比较翻译，导出脱敏的诊断报告。把 `Integrated_Mod_Manager_Developer_Tools-vX.Y.Z.zip` 解压到主程序所在的文件夹，再从“设置 → 诊断与问题报告”或命令面板（Ctrl+K）打开。见[开发者工具说明](../tools/DeveloperTools/README.md)。
 
 ## 数据与安全
 

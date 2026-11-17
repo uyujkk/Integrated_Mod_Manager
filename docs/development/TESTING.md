@@ -41,6 +41,16 @@ git push origin vX.Y.Z
 
 The whole pipeline is drawn in [Software Structure §9.1](./Software-Structure.md#91-工作流--workflows). 完整流程图见软件结构 9.1 节。
 
+## Developer Tools / 开发者工具
+
+```powershell
+./scripts/build-developer-tools.ps1
+./scripts/package-developer-tools.ps1 -OutputDirectory artifacts/developer-tools
+```
+
+`tools/DeveloperTools` is built and packaged in `build-and-test.yml` and, for releases after 4.8.2, in `release.yml`, which adds `Integrated_Mod_Manager_Developer_Tools-vX.Y.Z.zip` to the draft as a separate asset. The package script checks that the tools' version matches the app's, that every file is inside a `DeveloperTools` folder, and that no app files or debug symbols are included. Its logic lives in Core's `DeveloperTools` folder and is tested in `Core.Tests/DeveloperTools`; `ApplicationUpdateClientTests` checks that the updater never picks the tools' ZIP. Run the tools on synthetic data with `--root <folder> --page <name> --language <code> --theme light|dark`.
+开发者工具在 `build-and-test.yml` 中构建打包，4.8.2 之后的版本起 `release.yml` 也会把它作为单独的附件加到草稿 Release。打包脚本检查版本与主程序一致、所有文件都在 `DeveloperTools` 文件夹里、不含主程序文件和调试符号。逻辑在 Core 的 `DeveloperTools` 目录，测试在 `Core.Tests/DeveloperTools`；`ApplicationUpdateClientTests` 检查更新器不会选中开发者工具的压缩包。
+
 ## Code style / 代码风格
 
 ```powershell
