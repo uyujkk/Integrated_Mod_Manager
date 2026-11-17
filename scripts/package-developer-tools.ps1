@@ -1,4 +1,7 @@
 [CmdletBinding()]
+# Packages the Developer Tools as a separate release asset, Integrated_Mod_Manager_Developer_Tools-v<version>.zip, with
+# everything in a DeveloperTools folder: extracted into the folder that holds IntegratedModManager.exe, the tools land
+# where the app's Settings card and command palette look for them (DeveloperToolsLocation in Core).
 param(
     [string]$OutputDirectory = "artifacts\release",
     [switch]$SkipBuild
@@ -25,6 +28,10 @@ if (!(Test-Path -LiteralPath $runtimePath -PathType Leaf) -or (Get-Item -Literal
 }
 
 $fileVersion = [Diagnostics.FileVersionInfo]::GetVersionInfo($runtimePath).FileVersion
+$appVersion = if ((Get-Content (Join-Path $root 'src\IntegratedModManager.Core\Updates\ApplicationReleasePolicy.cs') -Raw) -match 'FileVersion = "(?<v>[\d.]+)"') { $Matches.v } else { '' }
+if ($fileVersion -ne $appVersion) {
+    throw "Developer Tools file version $fileVersion does not match the app's $appVersion (tools/DeveloperTools/AssemblyInfo.cs)."
+}
 if ([string]::IsNullOrWhiteSpace($fileVersion)) {
     throw "Developer Tools does not contain a file version."
 }
@@ -48,12 +55,12 @@ try {
         }
 
         $relativePath = $file.FullName.Substring($sourceBoundary.Length)
-        $destination = Join-Path $staging $relativePath
+        $destination = Join-Path (Join-Path $staging 'DeveloperTools') $relativePath
         New-Item -ItemType Directory -Path ([IO.Path]::GetDirectoryName($destination)) -Force | Out-Null
         Copy-Item -LiteralPath $file.FullName -Destination $destination -Force
     }
 
-    Copy-Item -LiteralPath (Join-Path $root "tools\DeveloperTools\README.md") -Destination (Join-Path $staging "README.md") -Force
+    Copy-Item -LiteralPath (Join-Path $root "tools\DeveloperTools\README.md") -Destination (Join-Path $staging "DeveloperTools\README.md") -Force
 
     Remove-Item -LiteralPath $packagePath -Force -ErrorAction SilentlyContinue
     Remove-Item -LiteralPath $checksumPath -Force -ErrorAction SilentlyContinue
@@ -67,13 +74,16 @@ try {
     $archive = [IO.Compression.ZipFile]::OpenRead($packagePath)
     try {
         $entryNames = @($archive.Entries | Where-Object { ![string]::IsNullOrEmpty($_.Name) } | ForEach-Object { $_.FullName.Replace('/', '\') })
-        foreach ($requiredEntry in @('IntegratedModManager.DeveloperTools.exe', 'README.md')) {
+        foreach ($requiredEntry in @('DeveloperTools\IntegratedModManager.DeveloperTools.exe', 'DeveloperTools\README.md')) {
             if ($entryNames -notcontains $requiredEntry) {
                 throw "Developer Tools package is missing: $requiredEntry"
             }
         }
+        if ($entryNames.Where({ !$_.StartsWith('DeveloperTools\', [StringComparison]::OrdinalIgnoreCase) }).Count -gt 0) {
+            throw "Developer Tools package has files outside its DeveloperTools folder."
+        }
         foreach ($forbiddenEntry in @('IntegratedModManager.exe', 'ModFolderCopier.exe', 'LocalUpdateAgent.exe', '.managed-files.txt')) {
-            if ($entryNames -contains $forbiddenEntry) {
+            if ($entryNames.Where({ [IO.Path]::GetFileName($_) -eq $forbiddenEntry }).Count -gt 0) {
                 throw "Developer Tools package contains a main-application payload: $forbiddenEntry"
             }
         }
