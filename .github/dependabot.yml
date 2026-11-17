@@ -14,6 +14,13 @@ updates:
     ignore:
       - dependency-name: '*'
         update-types: ['version-update:semver-major']
+      # The app stays on Windows App SDK 1.7 (1.8 adds about 15 MB of AI runtimes it does not use; restored in
+      # b50f913), and the Developer Tools use the same version. Both projects are in this group, so 1.7 patches
+      # move them together; 1.8 and later, and the BuildTools that come with them, wait for a deliberate upgrade.
+      - dependency-name: 'Microsoft.WindowsAppSDK'
+        versions: ['>= 1.8']
+      - dependency-name: 'Microsoft.Windows.SDK.BuildTools'
+        versions: ['>= 10.0.26200']
 
   - package-ecosystem: github-actions
     directory: /

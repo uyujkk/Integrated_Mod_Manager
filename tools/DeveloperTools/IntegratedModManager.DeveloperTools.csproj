@@ -20,13 +20,28 @@
     <AppxMSBuildToolsPath>$(MSBuildProgramFiles32)\Microsoft Visual Studio\2022\BuildTools\MSBuild\Microsoft\VisualStudio\v17.0\AppxPackage\</AppxMSBuildToolsPath>
   </PropertyGroup>
 
+  <!-- The same Windows App SDK and toolkit as the app (src/WinUI3); .github/dependabot.yml keeps both on 1.7. -->
   <ItemGroup>
-    <PackageReference Include="Microsoft.WindowsAppSDK" Version="1.8.260921001" />
-    <PackageReference Include="Microsoft.Windows.SDK.BuildTools" Version="10.0.28000.2957" PrivateAssets="all" />
+    <PackageReference Include="Microsoft.WindowsAppSDK" Version="1.7.250401001" />
+    <PackageReference Include="Microsoft.Windows.SDK.BuildTools" Version="10.0.26100.6584" PrivateAssets="all" />
+    <PackageReference Include="CommunityToolkit.WinUI.Controls.SettingsControls" Version="8.2.251219" />
   </ItemGroup>
 
   <ItemGroup>
     <ProjectReference Include="..\..\src\IntegratedModManager.Core\IntegratedModManager.Core.csproj" />
+  </ItemGroup>
+
+  <!-- The app's design tokens and shared styles, so the tools look like the app. Plain resource dictionaries:
+       linking them shares no code with the app's build. -->
+  <ItemGroup>
+    <Page Include="..\..\src\WinUI3\Themes\Tokens.xaml" Link="Themes\Tokens.xaml" />
+    <Page Include="..\..\src\WinUI3\Styles\Controls.xaml" Link="Styles\Controls.xaml" />
+    <Page Include="..\..\src\WinUI3\Styles\Pages.xaml" Link="Styles\Pages.xaml" />
+  </ItemGroup>
+
+  <!-- UI text: one file per language, embedded like the app's. -->
+  <ItemGroup>
+    <EmbeddedResource Include="Strings\*.json" LogicalName="DeveloperTools.Strings.%(Filename).json" />
   </ItemGroup>
 
   <ItemGroup>

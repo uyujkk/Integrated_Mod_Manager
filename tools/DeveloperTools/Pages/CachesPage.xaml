@@ -1,0 +1,21 @@
+<UserControl
+    x:Class="IntegratedModManager.DeveloperTools.Pages.CachesPage"
+    xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
+    <ScrollViewer>
+        <StackPanel Spacing="12" Padding="0,0,8,0">
+            <TextBlock x:Name="TitleText" Style="{StaticResource ToolPageTitleStyle}" />
+            <TextBlock x:Name="IntroText" Style="{StaticResource MutedTextStyle}" TextWrapping="Wrap" />
+            <InfoBar x:Name="RunningInfoBar" IsClosable="False" Severity="Warning" />
+            <Border Style="{StaticResource CardBorderStyle}" Padding="16">
+                <StackPanel Spacing="8">
+                    <Grid>
+                        <TextBlock x:Name="ListTitle" Style="{StaticResource CardTitleTextStyle}" />
+                        <TextBlock x:Name="TotalText" Style="{StaticResource CaptionTextStyle}" HorizontalAlignment="Right" VerticalAlignment="Center" />
+                    </Grid>
+                    <StackPanel x:Name="CachePanel" Spacing="6" />
+                </StackPanel>
+            </Border>
+        </StackPanel>
+    </ScrollViewer>
+</UserControl>
