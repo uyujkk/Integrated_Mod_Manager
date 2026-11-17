@@ -240,6 +240,15 @@
                             <FontIcon Glyph="&#xE8A7;" />
                         </toolkit:SettingsCard.ActionIcon>
                     </toolkit:SettingsCard>
+                    <!-- The separately released Developer Tools (DeveloperTools folder beside the launcher), or their download. -->
+                    <toolkit:SettingsCard x:Name="DeveloperToolsSettingsCard" IsClickEnabled="True" Click="OnOpenDeveloperToolsClicked">
+                        <toolkit:SettingsCard.HeaderIcon>
+                            <FontIcon Glyph="&#xEC7A;" />
+                        </toolkit:SettingsCard.HeaderIcon>
+                        <toolkit:SettingsCard.ActionIcon>
+                            <FontIcon Glyph="&#xE8A7;" />
+                        </toolkit:SettingsCard.ActionIcon>
+                    </toolkit:SettingsCard>
                     <toolkit:SettingsCard x:Name="FeedbackGroupSettingsCard">
                         <toolkit:SettingsCard.HeaderIcon>
                             <FontIcon Glyph="&#xE8BD;" />

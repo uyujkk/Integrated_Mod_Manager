@@ -49,9 +49,11 @@ public sealed class GameBananaPageTests
         }
     }
 
-    // A clickable settings card has no invoke pattern; click it like a person would.
+    // A clickable settings card has no invoke pattern; click it like a person would, after scrolling it into view
+    // (where it lands depends on how the Settings columns balance, which changes when cards are added).
     private static void ClickCard(AutomationElement card)
     {
+        AppSession.ScrollIntoView(card);
         card.Focus();
         Mouse.Click(card.GetClickablePoint());
         Thread.Sleep(600);
