@@ -10,7 +10,7 @@ public sealed partial class MainWindow
     {
         // A hot switch owns the file until its read-only hold finishes. Queue a save behind it.
         while (_services.Slots.IsRestoring && !_services.IsClosing) await Task.Delay(50);
-        return !_services.IsClosing && !_applyingCombinationProfile;
+        return !_services.IsClosing && !_services.Combinations.IsApplying;
     }
 
     private async Task<bool> PrepareOverlayCaptureAsync(string userIni)
@@ -73,7 +73,7 @@ public sealed partial class MainWindow
 
     private async Task RefreshOverlayFromDiskAsync()
     {
-        if (_applyingCombinationProfile || _services.Slots.IsRestoring || _shortcuts.SendInProgress) return;
+        if (_services.Combinations.IsApplying || _services.Slots.IsRestoring || _shortcuts.SendInProgress) return;
         await RefreshShortcutDeployedModsAsync();
         await LoadShortcutSelectionAsync(force: true);
         if (_shortcuts.SelectedMod is null) _shortcuts.StatusText = T("ShortcutCapture.CurrentRemoved");

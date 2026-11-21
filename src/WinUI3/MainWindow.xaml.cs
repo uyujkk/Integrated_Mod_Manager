@@ -69,7 +69,6 @@ public sealed partial class MainWindow : Window
     private readonly Dictionary<string, List<ShortcutBinding>> _modBindings = new(StringComparer.CurrentCultureIgnoreCase);
     private readonly Dictionary<string, string> _modLinks = new(StringComparer.CurrentCultureIgnoreCase);
     private readonly GameBananaMetadataService _gameBananaMetadataService;
-    private readonly List<ModConfigurationProfile> _configurationProfiles = [];
     private readonly Dictionary<string, DownloadTaskCardView> _navTaskCards = new(StringComparer.Ordinal);
 
     private ThemePreference _themePreference = ThemePreference.System;
@@ -81,7 +80,6 @@ public sealed partial class MainWindow : Window
     private bool _hasPromptedForLocalUpdate;
     private bool _isApplyingUpdateCheckIntervalSelection;
     private bool _isApplyingModUpdateIntervalSelection;
-    private bool _isApplyingConfigurationProfileSelection;
     private bool _isApplyingRepositoryDeploymentMode;
     private bool _enableConflictDetection = true;
     private bool _reduceMotion;
@@ -93,7 +91,6 @@ public sealed partial class MainWindow : Window
     private string? _latestReleaseUrl;
     private string? _localUpdatePackagePath;
     private Version? _localUpdatePackageVersion;
-    private string? _selectedConfigurationProfileId;
     private UiMessage? _modUpdateStatus;
     private UiMessage? _updateStatus;
     private PrimarySection _currentPrimarySection = PrimarySection.Dashboard;
@@ -151,6 +148,7 @@ public sealed partial class MainWindow : Window
         InitializeUpdatesHost();
         InitializeDashboardHost();
         AttachShortcutServices();
+        AttachCombinationService();
         InitializePageHost();
         SubscribeToAppearanceEvents();
         ApplyWindowIcon();

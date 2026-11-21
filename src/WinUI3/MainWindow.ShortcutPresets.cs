@@ -11,7 +11,7 @@ public sealed partial class MainWindow
 
     private async Task SaveSingleModPresetFromOverlayAsync()
     {
-        if (_savingOverlaySinglePreset || _applyingCombinationProfile || (_shortcuts.SendInProgress && !_services.Slots.IsRestoring)) return;
+        if (_savingOverlaySinglePreset || _services.Combinations.IsApplying || (_shortcuts.SendInProgress && !_services.Slots.IsRestoring)) return;
         var overlay = _overlay.Window;
         if (overlay?.Content is not FrameworkElement root) return;
         // Freeze the repository and Mod at click time, independently of the main repository selection
@@ -28,7 +28,7 @@ public sealed partial class MainWindow
 
         _savingOverlaySinglePreset = true;
         if (!await WaitForOverlayCaptureAsync()) { _savingOverlaySinglePreset = false; return; }
-        SetCombinationBusy(true);
+        _services.Combinations.SetBusy(true);
         try
         {
             string? userIni = repository.PersistentUserIniPath is { Length: > 0 } configured
@@ -91,7 +91,7 @@ public sealed partial class MainWindow
             _savingOverlaySinglePreset = false;
             if (!_services.IsClosing)
             {
-                SetCombinationBusy(false);
+                _services.Combinations.SetBusy(false);
                 RefreshPersistentSlotControls();
                 RefreshShortcutOverlay(bindingsChanged: true);
             }

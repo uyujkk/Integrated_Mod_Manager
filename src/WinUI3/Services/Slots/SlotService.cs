@@ -22,15 +22,14 @@ internal sealed partial class SlotService(AppServices services)
     private ShortcutInputService _shortcutInput = null!;
     private Func<ShortcutOverlayController> _overlayAccess = () => null!;
     private Func<bool> _savingOverlayPreset = () => false;
-    private Func<bool> _applyingCombination = () => false;
 
     /// <summary>
     /// Called once by the window: the error log and startup trace, saving beta-shell.json, redrawing the slot card,
-    /// the workspace status line, its shortcut input and overlay, and whether an overlay save or a combination restore
-    /// is running (both still in the window).
+    /// the workspace status line, its shortcut input and overlay, and whether an overlay save is running (still in the
+    /// window). Whether a combination preset is being restored comes from CombinationService.
     /// </summary>
     public void Attach(Action<string, Exception> log, Action<string> trace, Action saveShellConfig, Action slotsChanged, Action<string> showStatus,
-        ShortcutInputService shortcutInput, Func<ShortcutOverlayController> overlay, Func<bool> savingOverlayPreset, Func<bool> applyingCombination)
+        ShortcutInputService shortcutInput, Func<ShortcutOverlayController> overlay, Func<bool> savingOverlayPreset)
     {
         _log = log;
         _trace = trace;
@@ -40,7 +39,6 @@ internal sealed partial class SlotService(AppServices services)
         _shortcutInput = shortcutInput;
         _overlayAccess = overlay;
         _savingOverlayPreset = savingOverlayPreset;
-        _applyingCombination = applyingCombination;
     }
 
     /// <summary>Every state slot, of every repository and Mod (saved in beta-shell.json).</summary>
@@ -72,7 +70,7 @@ internal sealed partial class SlotService(AppServices services)
     private ShortcutPageViewModel _shortcuts => _services.Shortcuts;
     private ShortcutOverlayController _overlay => _overlayAccess();
     private bool _savingOverlaySinglePreset => _savingOverlayPreset();
-    private bool _applyingCombinationProfile => _applyingCombination();
+    private bool _applyingCombinationProfile => _services.Combinations.IsApplying;
 
     private string T(string key, params object?[] values) => _services.Language.T(key, values);
 

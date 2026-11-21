@@ -17,7 +17,7 @@ public sealed partial class WorkspacePage
         if (repository is null) return;
         if (items.Length == 0) { await ShowMessageAsync(T("LocalTags.NoModsInTheCurrentFilter"), T("BatchMods.Title")); return; }
 
-        if (await BatchModActionsDialog.ShowAsync(_services, items, _modList.SelectedMod, [.. _host.GetCurrentRepositoryProfiles()], _host.SelectedConfigurationProfileId, _host.Root.ActualHeight)
+        if (await BatchModActionsDialog.ShowAsync(_services, items, _modList.SelectedMod, [.. _services.Combinations.CurrentRepositoryProfiles()], _services.Combinations.SelectedId, _host.Root.ActualHeight)
             is not { } choice || !ReferenceEquals(_services.Repositories.Selected, repository)) return;
         SecondLevelFolderItem[] chosen = [.. choice.Mods];
         switch (choice.Action)
@@ -33,7 +33,7 @@ public sealed partial class WorkspacePage
                 break;
             default:
                 // Files only: loader values belong to presets and are exported from there.
-                await _host.ExportModsAsBundleAsync(repository.SourcePath, T("BatchMods.BundleName", chosen.Length), repository.OnlineGameName, false,
+                await ExportModsAsBundleAsync(repository.SourcePath, T("BatchMods.BundleName", chosen.Length), repository.OnlineGameName, false,
                     chosen.Select(mod => new CombinationPresetState(Path.GetRelativePath(repository.SourcePath, mod.Path), [])).ToArray(),
                     T("BatchMods.ExportBundleConfirm", chosen.Length));
                 break;
@@ -43,7 +43,7 @@ public sealed partial class WorkspacePage
     // The preset restores this set of Mods next time; loader values for them are not captured here.
     private void AddModsToPreset(WorkspaceRepository repository, IReadOnlyList<SecondLevelFolderItem> mods, string profileId)
     {
-        if (_host.ConfigurationProfiles.FirstOrDefault(item => item.Id == profileId) is not { } profile) return;
+        if (_services.Combinations.Profiles.FirstOrDefault(item => item.Id == profileId) is not { } profile) return;
         int before = profile.ModRelativePaths.Count;
         foreach (SecondLevelFolderItem mod in mods)
         {
@@ -55,7 +55,7 @@ public sealed partial class WorkspacePage
         {
             profile.UpdatedAtUtc = DateTimeOffset.UtcNow;
             _host.SaveShellConfig();
-            _host.RefreshConfigurationProfiles();
+            RefreshConfigurationProfiles();
         }
         StatusTextBlock.Text = T("BatchMods.AddedToPreset", added, profile.Name);
     }
