@@ -484,7 +484,7 @@ public sealed partial class WorkspacePage
         RepositoryMove(CreateConfigurationProfileButton, list, 2);
         CreateConfigurationProfileButton.HorizontalAlignment = HorizontalAlignment.Stretch;
         RepositoryDecorateButton(CreateConfigurationProfileButton, "\uE710");
-        _host.InitializeCombinationBundleActions();
+        InitializeCombinationBundleActions();
         var presetCard = RepositoryCard(list); Grid.SetRow(presetCard, 1);
         _combinationWorkspace.Children.Add(presetCard);
 
@@ -1257,7 +1257,7 @@ public sealed partial class WorkspacePage
         try
         {
             _combinationPresetList.Items.Clear();
-            foreach (var profile in _host.GetCurrentRepositoryProfiles())
+            foreach (var profile in _services.Combinations.CurrentRepositoryProfiles())
             {
                 var label = new StackPanel { Spacing = 5, Margin = new Thickness(2, 8, 2, 8) };
                 var name = RepositoryColumns(GridLength.Auto, new GridLength(1, GridUnitType.Star));
@@ -1269,13 +1269,13 @@ public sealed partial class WorkspacePage
                 label.Children.Add(new TextBlock { Text = T("RepositoryWorkspace.Mods2", profile.ModRelativePaths.Count, T(profile.IncludesPersistentState ? "RepositoryWorkspace.SetAndState" : "RepositoryWorkspace.SetOnly")), FontSize = 12 });
                 _combinationPresetList.Items.Add(new ListViewItem { Content = label, Tag = profile.Id, HorizontalContentAlignment = HorizontalAlignment.Stretch });
             }
-            _combinationPresetList.SelectedItem = _combinationPresetList.Items.OfType<ListViewItem>().FirstOrDefault(item => (string?)item.Tag == _host.SelectedConfigurationProfileId);
-            var selected = _host.GetSelectedConfigurationProfile();
+            _combinationPresetList.SelectedItem = _combinationPresetList.Items.OfType<ListViewItem>().FirstOrDefault(item => (string?)item.Tag == _services.Combinations.SelectedId);
+            var selected = _services.Combinations.Selected();
             _combinationMemberTitle!.Text = selected?.Name ?? T("RepositoryWorkspace.ModsInPreset");
             _combinationMemberPanel!.Children.Clear();
             if (selected is not null)
                 _combinationMemberPanel.Children.Add(_services.PresetPreviews.CreatePresetPreviewEditor(selected.RepositoryId, selected.Id, selected.PreviewFile,
-                    file => selected.PreviewFile = file, _host.RefreshConfigurationProfiles));
+                    file => selected.PreviewFile = file, RefreshConfigurationProfiles));
             if (selected is null)
             {
                 var empty = new TextBlock { Text = T("RepositoryWorkspace.NoCombinationPresetsYetDeployYour"), TextWrapping = TextWrapping.Wrap, Margin = new Thickness(8, 20, 8, 8) };

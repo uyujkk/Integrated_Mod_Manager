@@ -19,6 +19,7 @@ public sealed partial class WorkspacePage : UserControl
         _host = host;
         InitializeComponent();
         AttachStateSlotEvents();
+        AttachCombinationEvents();
     }
 
     private RepositoryPathsViewModel Paths => _services.Paths;

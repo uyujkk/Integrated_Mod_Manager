@@ -17,6 +17,7 @@ internal sealed class AppServices
         OnlineCharacters = new(this);
         Slots = new(this);
         PresetPreviews = new(this);
+        Combinations = new(this);
     }
 
     public LanguageService Language { get; } = new();
@@ -42,6 +43,9 @@ internal sealed class AppServices
 
     /// <summary>Pictures of presets and state slots (stage J finish, step 6).</summary>
     public PresetPreviewService PresetPreviews { get; }
+
+    /// <summary>Combination presets: the saved presets, the selected one and capturing them (stage J finish, step 7).</summary>
+    public CombinationService Combinations { get; }
     public LaunchService Launch { get; } = new();
 
     /// <summary>Install transactions, conflict checks, archives and copy ownership records (stage J finish, step 4).</summary>

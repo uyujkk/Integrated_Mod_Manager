@@ -39,13 +39,7 @@ public sealed partial class MainWindow
 
     private void MigrateCharacterReferences(WorkspaceRepository repository, CharacterRenamePlan plan, ReferenceUndoLog log)
     {
-        foreach (ModConfigurationProfile profile in _configurationProfiles.Where(profile => profile.RepositoryId == repository.Id))
-        {
-            log.RewriteAll(profile.ModRelativePaths, plan.MapRelative);
-            foreach (ModConfigurationPersistentState state in profile.PersistentStates)
-                log.Rewrite(() => state.ModRelativePath, value => state.ModRelativePath = value, plan.MapRelative);
-        }
-
+        _services.Combinations.RenameCharacter(repository, plan, log);
         _services.Slots.RenameCharacter(repository, plan, log);
 
         log.Rekey(_modBindings, plan.MapFullPath);

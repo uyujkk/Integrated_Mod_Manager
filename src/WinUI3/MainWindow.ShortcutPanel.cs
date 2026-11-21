@@ -392,7 +392,7 @@ public sealed partial class MainWindow
     /// <summary>Flush loader memory before capturing; offer an explicit disk-only fallback when input is unavailable.</summary>
     private async Task QuickSaveCombinationFromOverlayAsync()
     {
-        if (_savingOverlaySinglePreset || _applyingCombinationProfile || (_shortcuts.SendInProgress && !_services.Slots.IsRestoring)) return;
+        if (_savingOverlaySinglePreset || _services.Combinations.IsApplying || (_shortcuts.SendInProgress && !_services.Slots.IsRestoring)) return;
         if (GetSelectedRepository() is not { } repository)
         {
             _shortcuts.StatusText = T("ShortcutPanel.SelectARepositoryInTheMain");
@@ -406,16 +406,16 @@ public sealed partial class MainWindow
         string name = T("ShortcutPanel.InGame", DateTime.Now);
         _shortcuts.StatusText = T("ShortcutPanel.SavingCombinationPreset");
         RefreshShortcutOverlay();
-        SetCombinationBusy(true);
+        _services.Combinations.SetBusy(true);
         try
         {
             CharacterFrame? preview = await _services.PresetPreviews.CapturePresetPreviewAsync();
             // Without a d3dx_user.ini there is no loader state to flush: save the Mod combination alone, as before.
             if (includeState && !await PrepareOverlayCaptureAsync(userIni!)) return;
-            (int Mods, int Parameters)? saved = await CaptureCombinationProfileAsync(repository, name, null, includeState, userIni ?? string.Empty,
+            (int Mods, int Parameters)? saved = await _services.Combinations.CaptureAsync(repository, name, null, includeState, userIni ?? string.Empty,
                 () => Task.FromResult(false));
             string previewNote = string.Empty;
-            if (saved is not null && _configurationProfiles.FirstOrDefault(item => item.Id == _selectedConfigurationProfileId) is { } profile)
+            if (saved is not null && _services.Combinations.Profiles.FirstOrDefault(item => item.Id == _services.Combinations.SelectedId) is { } profile)
             {
                 profile.PreviewFile = await _services.PresetPreviews.StorePresetPreviewAsync(repository.Id, profile.Id, preview);
                 if (profile.PreviewFile is not null) SaveShellConfig();
@@ -435,7 +435,7 @@ public sealed partial class MainWindow
             _savingOverlaySinglePreset = false;
             if (!_services.IsClosing)
             {
-                SetCombinationBusy(false);
+                _services.Combinations.SetBusy(false);
                 RefreshShortcutOverlay(bindingsChanged: true);
             }
         }

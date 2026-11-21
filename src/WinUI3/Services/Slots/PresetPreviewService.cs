@@ -27,15 +27,14 @@ internal sealed partial class PresetPreviewService(AppServices services)
     private Action _activateWindow = () => { };
     private Func<string, Func<Task>, Task> _runUiAction = (_, action) => action();
     private Func<ShortcutOverlayController> _overlayAccess = () => null!;
-    private Func<bool> _applyingCombination = () => false;
 
     /// <summary>
     /// Called once by the window: the error log, saving beta-shell.json, the workspace status line, bringing the window
-    /// back after a capture, running a UI action with its error report, the overlay, and whether a combination restore
-    /// is running.
+    /// back after a capture, running a UI action with its error report, and the overlay. Whether a combination preset
+    /// is being restored comes from CombinationService.
     /// </summary>
     public void Attach(Action<string, Exception> log, Action saveShellConfig, Action<string> showStatus, Action activateWindow,
-        Func<string, Func<Task>, Task> runUiAction, Func<ShortcutOverlayController> overlay, Func<bool> applyingCombination)
+        Func<string, Func<Task>, Task> runUiAction, Func<ShortcutOverlayController> overlay)
     {
         _log = log;
         _saveShellConfig = saveShellConfig;
@@ -43,7 +42,6 @@ internal sealed partial class PresetPreviewService(AppServices services)
         _activateWindow = activateWindow;
         _runUiAction = runUiAction;
         _overlayAccess = overlay;
-        _applyingCombination = applyingCombination;
     }
 
     public PresetPreviewStore Store { get; } = new(Path.Combine(AppContext.BaseDirectory, "snapshots", "preset-previews"));
@@ -59,7 +57,7 @@ internal sealed partial class PresetPreviewService(AppServices services)
 
     private ShortcutPageViewModel _shortcuts => _services.Shortcuts;
     private ShortcutOverlayController _overlay => _overlayAccess();
-    private bool _applyingCombinationProfile => _applyingCombination();
+    private bool _applyingCombinationProfile => _services.Combinations.IsApplying;
 
     private string T(string key, params object?[] values) => _services.Language.T(key, values);
 

@@ -32,7 +32,7 @@ public sealed partial class MainWindow
         _isApplyingConflictDetection = false;
         RefreshBackupManagerText();
         _ = RefreshInstallBackupListAsync();
-        RefreshConfigurationProfiles();
+        _workspaceView.RefreshConfigurationProfiles();
         RefreshDownloadTaskCenter();
         UpdatesView.IsCheckingModUpdates = _services.Tracking.IsChecking;
         UpdatesView.SetReplacing(_services.Tracking.InProgress);
@@ -169,7 +169,7 @@ public sealed partial class MainWindow
         {
             if (string.IsNullOrWhiteSpace(_services.Install.LastTransactionPath) || !Directory.Exists(_services.Install.LastTransactionPath))
             {
-                RefreshConfigurationProfiles();
+                _workspaceView.RefreshConfigurationProfiles();
                 return;
             }
 
@@ -194,7 +194,7 @@ public sealed partial class MainWindow
             finally
             {
                 _workspaceView.SetBusyState(false);
-                RefreshConfigurationProfiles();
+                _workspaceView.RefreshConfigurationProfiles();
             }
         }
         catch (Exception ex)

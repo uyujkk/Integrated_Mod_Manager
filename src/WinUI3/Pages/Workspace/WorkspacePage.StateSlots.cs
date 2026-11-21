@@ -78,9 +78,9 @@ public sealed partial class WorkspacePage
             _refreshingPersistentSlots = false;
         }
 
-        BrowsePersistentUserIniButton.IsEnabled = repository is not null && !_services.Slots.IsRestoring && !_host.IsApplyingCombinationProfile;
-        CapturePersistentSlotButton.IsEnabled = relative is not null && !_services.Slots.IsRestoring && !_host.IsApplyingCombinationProfile;
-        DeletePersistentSlotButton.IsEnabled = relative is not null && _services.Slots.SelectedId is not null && !_services.Slots.IsRestoring && !_host.IsApplyingCombinationProfile;
+        BrowsePersistentUserIniButton.IsEnabled = repository is not null && !_services.Slots.IsRestoring && !_services.Combinations.IsApplying;
+        CapturePersistentSlotButton.IsEnabled = relative is not null && !_services.Slots.IsRestoring && !_services.Combinations.IsApplying;
+        DeletePersistentSlotButton.IsEnabled = relative is not null && _services.Slots.SelectedId is not null && !_services.Slots.IsRestoring && !_services.Combinations.IsApplying;
         RestorePersistentRuntimeButton.IsEnabled = DeletePersistentSlotButton.IsEnabled && !_services.Slots.IsRestoring;
         RefreshPersistentSlotMoreMenu(repository, relative);
         RefreshPersistentSlotValuePreview();
@@ -117,7 +117,7 @@ public sealed partial class WorkspacePage
     {
         try
         {
-            if (_services.Slots.IsRestoring || _host.IsApplyingCombinationProfile) return;
+            if (_services.Slots.IsRestoring || _services.Combinations.IsApplying) return;
             string? path = await _services.Dialogs.PickFileAsync([".ini"]);
             if (path is null) return;
             if (!string.Equals(Path.GetFileName(path), "d3dx_user.ini", StringComparison.OrdinalIgnoreCase))
@@ -134,7 +134,7 @@ public sealed partial class WorkspacePage
                 repository.PersistentUserIniPath = path;
                 _host.SaveShellConfig();
             }
-            _host.RefreshConfigurationProfiles();
+            RefreshConfigurationProfiles();
         }
         catch (Exception ex)
         {
@@ -146,7 +146,7 @@ public sealed partial class WorkspacePage
     {
         try
         {
-            if (_services.Slots.IsRestoring || _host.IsApplyingCombinationProfile) return;
+            if (_services.Slots.IsRestoring || _services.Combinations.IsApplying) return;
             WorkspaceRepository? repository = _services.Repositories.Selected;
             string? modPath = _host.CurrentSecondLevelPath;
             string? relative = SlotService.TryGetCurrentModRelativePath(repository, modPath);
@@ -231,7 +231,7 @@ public sealed partial class WorkspacePage
     {
         try
         {
-            if (_services.Slots.IsRestoring || _host.IsApplyingCombinationProfile) return;
+            if (_services.Slots.IsRestoring || _services.Combinations.IsApplying) return;
             WorkspaceRepository? repository = _services.Repositories.Selected;
             string? modPath = _host.CurrentSecondLevelPath;
             string? relative = SlotService.TryGetCurrentModRelativePath(repository, modPath);
@@ -243,7 +243,7 @@ public sealed partial class WorkspacePage
             string userIni = PersistentUserIniTextBox.Text.Trim();
             string deployedName = Path.GetFileName(Path.TrimEndingDirectorySeparator(modPath));
             _services.Slots.IsRestoring = true;
-            _host.RefreshConfigurationProfiles();
+            RefreshConfigurationProfiles();
             PersistentSlotComboBox.IsEnabled = false;
             PersistentUserIniTextBox.IsEnabled = false;
             BrowsePersistentUserIniButton.IsEnabled = false;
@@ -286,7 +286,7 @@ public sealed partial class WorkspacePage
                 PersistentSlotComboBox.IsEnabled = true;
                 PersistentUserIniTextBox.IsEnabled = true;
                 RefreshPersistentSlotControls();
-                _host.RefreshConfigurationProfiles();
+                RefreshConfigurationProfiles();
                 if (resultText is not null) PersistentSlotStatusTextBlock.Text = resultText;
             }
         }
@@ -322,7 +322,7 @@ public sealed partial class WorkspacePage
     private void RefreshPersistentSlotMoreMenu(WorkspaceRepository? repository, string? relative)
     {
         PersistentSlotMoreButton.Content = T("PersistentVariants.More");
-        bool idle = !_services.Slots.IsRestoring && !_host.IsApplyingCombinationProfile;
+        bool idle = !_services.Slots.IsRestoring && !_services.Combinations.IsApplying;
         bool hasSlot = relative is not null && _services.Slots.SelectedId is not null;
         var menu = new MenuFlyout { Placement = Microsoft.UI.Xaml.Controls.Primitives.FlyoutPlacementMode.Bottom };
 

@@ -13,7 +13,7 @@ public sealed partial class MainWindow
     // In game: frame the character on the current slot's look, so its picture can be clicked to switch back to it later.
     private async Task FrameCurrentSlotPreviewAsync()
     {
-        if (_savingOverlaySinglePreset || _services.Slots.IsRestoring || _applyingCombinationProfile || _shortcuts.SendInProgress
+        if (_savingOverlaySinglePreset || _services.Slots.IsRestoring || _services.Combinations.IsApplying || _shortcuts.SendInProgress
             || _overlay.Window is not { } overlay) return;
         ModPersistentSlot? slot = _services.Slots.Items.FirstOrDefault(item => item.Id == _overlay.CurrentSlotId);
         if (slot is null)
@@ -88,7 +88,7 @@ public sealed partial class MainWindow
     // In game: the slots of the overlay's Mod as a row of pictures in the middle of the screen. Choosing one switches to it.
     private async Task ShowOverlaySlotGalleryAsync()
     {
-        if (_overlay.Window is not { } overlay || _savingOverlaySinglePreset || _applyingCombinationProfile) return;
+        if (_overlay.Window is not { } overlay || _savingOverlaySinglePreset || _services.Combinations.IsApplying) return;
         if (_services.Slots.IsRestoring || _shortcuts.SendInProgress)
         {
             _shortcuts.StatusText = T("HotReload.StillApplying");

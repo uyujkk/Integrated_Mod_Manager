@@ -141,7 +141,7 @@ public sealed partial class MainWindow
                 : OnlineCardLayoutMode.List;
             if (config?.ConfigurationProfiles is { Count: > 0 })
             {
-                _configurationProfiles.AddRange(config.ConfigurationProfiles
+                _services.Combinations.Profiles.AddRange(config.ConfigurationProfiles
                     .Where(profile => !string.IsNullOrWhiteSpace(profile.Id)
                         && !string.IsNullOrWhiteSpace(profile.RepositoryId)));
             }
@@ -161,7 +161,7 @@ public sealed partial class MainWindow
                 _services.Slots.DefaultSeeds[repositoryId] = new HashSet<string>(mods ?? [], StringComparer.OrdinalIgnoreCase);
             }
 
-            _selectedConfigurationProfileId = _configurationProfiles.Any(profile => profile.Id == config?.SelectedConfigurationProfileId)
+            _services.Combinations.SelectedId = _services.Combinations.Profiles.Any(profile => profile.Id == config?.SelectedConfigurationProfileId)
                 ? config?.SelectedConfigurationProfileId
                 : null;
             _enableConflictDetection = config?.EnableConflictDetection ?? true;
@@ -308,10 +308,10 @@ public sealed partial class MainWindow
                 WorkspaceCharacterWidth = _workspaceView._modList.CharacterPaneWidth,
                 WorkspaceDetailWidth = _workspaceView._modList.DetailPaneWidth,
                 UpdatesView = UpdatesViewModel.FormatView(_services.Updates.View),
-                SelectedConfigurationProfileId = _selectedConfigurationProfileId,
+                SelectedConfigurationProfileId = _services.Combinations.SelectedId,
                 EnableConflictDetection = _enableConflictDetection,
                 LastInstallTransactionPath = _services.Install.LastTransactionPath,
-                ConfigurationProfiles = [.. _configurationProfiles],
+                ConfigurationProfiles = [.. _services.Combinations.Profiles],
                 ModPersistentSlots = [.. _services.Slots.Items],
                 CopyDeployments = _services.Install.CopyRecordsSnapshot(),
                 DefaultSlotSeeds = _services.Slots.DefaultSeeds.ToDictionary(pair => pair.Key, pair => pair.Value.Order(StringComparer.OrdinalIgnoreCase).ToList()),

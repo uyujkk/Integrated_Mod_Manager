@@ -1,5 +1,4 @@
 using IntegratedModManager.Core.Configuration;
-using IntegratedModManager.Core.Presets;
 using IntegratedModManager.Core.Repository;
 using Microsoft.UI.Xaml;
 using Microsoft.UI.Xaml.Controls;
@@ -7,22 +6,16 @@ using Microsoft.UI.Xaml.Media;
 
 namespace ModFolderCopier.WinUI;
 
-// The window's side of the Mod workspace page (stage J7): what the page asks of the window, forwarded to it, and the
-// page controls whose handlers are window logic (state slots and combination presets).
+// The window's side of the Mod workspace page (stage J7): what the page asks of the window, forwarded to it, the page
+// button that switches the window to the preset view, and the window's half of a preset operation's busy state.
 public sealed partial class MainWindow : IWorkspaceHost
 {
     private void AttachWorkspacePageEvents()
     {
         _workspaceView.OpenCombinationPresetsButton.Click += OnOpenCombinationPresetsClicked;
-        _workspaceView.ConfigurationProfileComboBox.SelectionChanged += OnConfigurationProfileSelectionChanged;
-        _workspaceView.CreateConfigurationProfileButton.Click += OnCreateConfigurationProfileClicked;
-        _workspaceView.UpdateConfigurationProfileButton.Click += OnUpdateConfigurationProfileClicked;
-        _workspaceView.ApplyConfigurationProfileButton.Click += OnApplyConfigurationProfileClicked;
-        _workspaceView.DeleteConfigurationProfileButton.Click += OnDeleteConfigurationProfileClicked;
     }
 
     FrameworkElement IWorkspaceHost.Root => RootGrid;
-    bool IWorkspaceHost.IsApplyingCombinationProfile => _applyingCombinationProfile;
     Windows.Foundation.Rect IWorkspaceHost.Bounds => Bounds;
     object IWorkspaceHost.OnlineNavButton => OnlineNavButton;
     void IWorkspaceHost.AttachTrackedTextInput(TextBox box) => AttachTrackedTextInput(box);
@@ -47,7 +40,6 @@ public sealed partial class MainWindow : IWorkspaceHost
     string[] IWorkspaceHost.ImageExtensions => ImageExtensions;
     int IWorkspaceHost.ShortcutScanSafetyLimit => ShortcutScanSafetyLimit;
     CharacterListViewModel IWorkspaceHost.Characters => _characters;
-    List<ModConfigurationProfile> IWorkspaceHost.ConfigurationProfiles => _configurationProfiles;
     string? IWorkspaceHost.CurrentSecondLevelPath { get => _currentSecondLevelPath; set => _currentSecondLevelPath = value; }
     bool IWorkspaceHost.EnableConflictDetection => _enableConflictDetection;
     CancellationTokenSource? IWorkspaceHost.FolderRefreshCancellation { get => _folderRefreshCancellation; set => _folderRefreshCancellation = value; }
@@ -56,7 +48,6 @@ public sealed partial class MainWindow : IWorkspaceHost
     Dictionary<string, List<ShortcutBinding>> IWorkspaceHost.ModBindings => _modBindings;
     Dictionary<string, string> IWorkspaceHost.ModLinks => _modLinks;
     BatchObservableCollection<SecondLevelFolderItem> IWorkspaceHost.SecondLevelItems => _secondLevelItems;
-    string? IWorkspaceHost.SelectedConfigurationProfileId => _selectedConfigurationProfileId;
     List<TextBox> IWorkspaceHost.ShortcutActionBoxes => _shortcutActionBoxes;
     List<TextBox> IWorkspaceHost.ShortcutKeyBoxes => _shortcutKeyBoxes;
 
@@ -64,11 +55,6 @@ public sealed partial class MainWindow : IWorkspaceHost
 
 
 
-    IEnumerable<ModConfigurationProfile> IWorkspaceHost.GetCurrentRepositoryProfiles() => GetCurrentRepositoryProfiles();
-    ModConfigurationProfile? IWorkspaceHost.GetSelectedConfigurationProfile() => GetSelectedConfigurationProfile();
-    void IWorkspaceHost.RefreshConfigurationProfiles() => RefreshConfigurationProfiles();
-    Task IWorkspaceHost.ExportModsAsBundleAsync(string root, string name, string game, bool includeState, CombinationPresetState[] mods, string confirmation) => ExportModsAsBundleAsync(root, name, game, includeState, mods, confirmation);
-    void IWorkspaceHost.InitializeCombinationBundleActions() => InitializeCombinationBundleActions();
 
     string IWorkspaceHost.GetShortcutBindingDisplayAction(ShortcutBinding binding) => GetShortcutBindingDisplayAction(binding);
     string IWorkspaceHost.NormalizeLink(string link) => NormalizeLink(link);
@@ -82,4 +68,30 @@ public sealed partial class MainWindow : IWorkspaceHost
 
     // The slot card is the workspace page's (stage J finish, step 6); the window and the services ask it to redraw.
     private void RefreshPersistentSlotControls() => _workspaceView.RefreshPersistentSlotControls();
+
+    // Combination presets are a service and their card is the workspace page's (stage J finish, step 7); the window
+    // locks its navigation and path boxes while one is saved, restored or bundled.
+    private void AttachCombinationService()
+    {
+        _services.Combinations.Attach(() => SaveShellConfig());
+        _services.Combinations.BusyChanged += OnCombinationBusyChanged;
+    }
+
+    private void OnCombinationBusyChanged(object? sender, EventArgs e)
+    {
+        bool busy = _services.Combinations.IsApplying;
+        ShellNavigationView.IsHitTestVisible = !busy;
+        foreach (NavigationViewItem item in new[] { DashboardNavButton, RepositoryNavButton, OnlineNavButton, UpdatesNavButton, SettingsNavButton })
+            item.IsEnabled = !busy;
+        Paths.ArePathsEditable = !busy;
+    }
+
+    private void OnOpenCombinationPresetsClicked(object sender, RoutedEventArgs e)
+    {
+        if (!_services.Combinations.IsApplying && !_services.Slots.IsRestoring)
+        {
+            NavigateToPrimarySection(PrimarySection.Repository);
+            _workspaceView.SetRepositoryWorkspaceViewV4(RepositoryWorkspaceView.Presets);
+        }
+    }
 }

@@ -90,7 +90,7 @@ public sealed partial class MainWindow
                 RefreshRepositoryActionButtons();
                 break;
             case PrimarySection.Repository:
-                RefreshConfigurationProfiles();
+                _workspaceView.RefreshConfigurationProfiles();
                 if (_pendingRepositoryRefresh)
                 {
                     _pendingRepositoryRefresh = false;
@@ -461,7 +461,7 @@ public sealed partial class MainWindow
         UiCrashDiagnostics.RecordAction("Window closed", width: RootGrid.ActualWidth, height: RootGrid.ActualHeight, closed: true);
         _services.IsClosing = true;
         _services.Downloads.Persist();
-        _bundleOperationCancellation?.Cancel();
+        _workspaceView._bundleOperationCancellation?.Cancel();
         _workspaceView._existingModImportCancellation?.Cancel();
         _services.IsClosing = true;
         _onlineView?.FinishClosing();
@@ -480,7 +480,7 @@ public sealed partial class MainWindow
     {
         try
         {
-            if (_applyingCombinationProfile || _services.Slots.IsRestoring) return;
+            if (_services.Combinations.IsApplying || _services.Slots.IsRestoring) return;
             bool controlDown = InputKeyboardSource.GetKeyStateForCurrentThread(VirtualKey.Control).HasFlag(CoreVirtualKeyStates.Down);
             bool altDown = InputKeyboardSource.GetKeyStateForCurrentThread(VirtualKey.Menu).HasFlag(CoreVirtualKeyStates.Down);
 

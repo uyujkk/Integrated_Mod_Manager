@@ -43,8 +43,8 @@ J4 完成后：路径收进默认折叠的“仓库路径”`SettingsExpander`�
 | `SecondLevelListView` | `x:Name` | `MainWindow.xaml:738` | Repository_ViewButtonsSwitchAndAreSaved（只在列表视图显示） |
 | `BatchModsButton` | 代码 | `MainWindow.LocalTags.cs:55` | Repository_BatchDialogOpensWithTheListedMods |
 | `RepositoryViewCovers`、`RepositoryViewPresets`、`RepositoryViewList` | 代码，`"RepositoryView" + 视图名` | `MainWindow.RepositoryWorkspace.cs:197` | Repository_ViewButtonsSwitchAndAreSaved |
-| `PresetShareImportButton` | 代码 | `MainWindow.CombinationBundles.cs:32` | Presets_ShareButtonsAreThere、Repository_ViewButtonsSwitchAndAreSaved |
-| `PresetShareExportButton` | 代码 | `MainWindow.CombinationBundles.cs:31` | Presets_ShareButtonsAreThere（无预设时应禁用） |
+| `PresetShareImportButton` | 代码 | `Pages/Workspace/WorkspacePage.Combinations.cs:373` | Presets_ShareButtonsAreThere、Repository_ViewButtonsSwitchAndAreSaved |
+| `PresetShareExportButton` | 代码 | `Pages/Workspace/WorkspacePage.Combinations.cs:372` | Presets_ShareButtonsAreThere（无预设时应禁用） |
 
 J7-b：工具卡片换 `CommandBar` 时，`RefreshButton` 变成 `AppBarButton`，保留 `x:Name` 即可；视图按钮换 Toolkit `Segmented` 时，每个 `SegmentedItem` 设同样的 AutomationId，`SegmentedItem` 支持 `SelectionItem`，`Invoke` 可用。
 
