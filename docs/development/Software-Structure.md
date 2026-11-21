@@ -263,6 +263,7 @@ flowchart LR
 | `AppServices` | 窗口创建一次，所有页面共用：下面的服务和共享的 ViewModel（设置、更新、仪表盘、路径、快捷键）。Created once by the window and shared by every page. |
 | `LanguageService`、`AppearanceService` | 界面语言与 `T()`/`M()` 文案查找；主题和密度，变化时通知页面。UI language and text lookup; theme and density, announced to pages. |
 | `ShellConfigService` | `beta-shell.json` 和 `config.ini` 的位置、读写与备份。Where the two settings files live and how they are read, written and backed up. |
+| `ConfigurationService`、`ShellSettings` | 加载和保存两个设置文件：仓库、外壳自己的设置（`ShellSettings`：当前页面、更新检查与最近一次发布、备份上限、动画、主题、托盘、标题栏搜索、导航、密度、冲突检测、窗口位置、新功能、入门提示）和各服务保存的状态；`config.ini` 的路径、语言、快捷键说明、Mod 链接和追踪来源。Loading and saving both settings files: repositories, the shell's own settings (`ShellSettings`) and every service's saved state; config.ini's paths, language, shortcut notes, Mod links and tracked origins. |
 | `RepositoryService` | 已配置的仓库和当前仓库。The configured repositories and the current one. |
 | `DialogService` | 显示所有对话框：设置 `XamlRoot`、主题和默认样式，同一时间只开一个。Shows every dialog: XamlRoot, theme, default style, one at a time. |
 | `StatusService` | 全局通知，由窗口显示在 `InfoBar`。App-wide notifications shown in the InfoBar. |
@@ -277,6 +278,9 @@ flowchart LR
 | `OnlineState`、`OnlineSourceService`、`OnlineCategoryService`、`CharacterCatalogService`、`ImageService` | 在线页的状态、仓库的在线来源、游戏分类（缓存一天）、角色目录、在线图片缓存。Online page state, a repository's online source, categories (kept a day), character catalogs, the image cache. |
 | `GameBananaWebSession` | 点赞用的 GameBanana 网页的登录：保存位置、关闭网页、删除登录。The sign-in of the GameBanana page used for likes: where it lives, closing the page, deleting it. |
 | `EndfieldBridgeService` | 终末地仓库的内置启动：是否适用、XXMI 位置、启动设置。The integrated Endfield launch. |
+| `RepositoryLauncherService` | 运行当前仓库：终末地内置启动及其设置对话框、用游戏的导入器启动 XXMI、或仓库自己的启动器；仪表盘的启动卡片。Running the current repository: the integrated Endfield launch and its settings, XXMI with the game's importer, or the repository's own launcher; the dashboard's launch card. |
+| `DiagnosticsService`、`AppLog` | 设置页的诊断报告（去掉路径和密钥的摘要与日志压缩包）；`startup.log` 和 `app-errors.log`。Diagnostic reports from Settings (a sanitized summary and the logs in a zip); startup.log and app-errors.log. |
+| `BuiltInRepositories` | 仪表盘“新建仓库”提供的内置游戏仓库。The built-in game repositories the dashboard offers. |
 | `IShortcutOverlay` | 窗口控制浮窗的接口（打开、隐藏、切换、刷新）。How the window drives the overlay. |
 
 ### 5.3 MainWindow 的 partial 文件 / MainWindow partial files
@@ -286,13 +290,12 @@ flowchart LR
 
 | 分组 / Group | `MainWindow.<名称>.cs` |
 | --- | --- |
-| 外壳 / Shell | `Shell`, `TitleBarSearch`, `CommandPalette`, `Localization`, `Configuration`, `Dialogs`, `AppearanceEvents`, `Tray`, `SingleInstance`, `UiActionGuard`, `UiDiagnostics`, `BuiltInData`, `WhatsNew`, `FirstRun` |
+| 外壳 / Shell | `Shell`, `TitleBarSearch`, `CommandPalette`, `Localization`, `Configuration`（窗口位置；设置文件由 `ConfigurationService` 读写 / the window's place; the files are ConfigurationService's）, `Dialogs`, `AppearanceEvents`, `Tray`, `SingleInstance`, `UiActionGuard`, `UiDiagnostics`, `WhatsNew`, `FirstRun` |
 | 页面宿主 / Page hosts | `DashboardHost`, `WorkspaceHost`, `OnlineHost`, `UpdatesHost`, `ShortcutsHost`, `SettingsHost` |
 | 仓库与重命名 / Repositories and renames | `Repositories`, `RepositoryPerformance`, `CharacterRename`（角色改名时迁移窗口仍持有的引用 / migrates the references the window still holds when a character is renamed） |
 | 预设与状态 / Presets and state | `PresetPreviews`（浮窗的槽位图片墙和框选 / the overlay's slot gallery and framing） |
 | 更新与下载 / Updates and downloads | `Updates`（应用更新和检查间隔 / app updates and check intervals）, `DownloadTasks`（导航里的任务列表 / the task list in the navigation） |
-| 快捷键与浮窗 / Shortcuts and overlay | `ShortcutPanel`, `ShortcutPresets`, `ShortcutCapture`, `ShortcutBindingRules`, `CharacterFollow`, `ProductivityFeatures` |
-| 终末地与 XXMI / Endfield and XXMI | `EndfieldBridge` |
+| 快捷键与浮窗 / Shortcuts and overlay | `ShortcutPanel`, `ShortcutPresets`, `ShortcutCapture`, `ShortcutBindingRules`, `CharacterFollow`, `ProductivityFeatures`（系统辅助功能、收藏 / system accessibility settings, favorites） |
 
 ### 5.4 浮窗 / Overlay
 
@@ -437,8 +440,8 @@ flowchart LR
 
 | 位置 / Location | 内容 / Contents | 写入方 / Written by |
 | --- | --- | --- |
-| `WinUI3/config.ini` | 主题、语言、快捷键说明、Mod 链接、在线安装来源（值为 Base64）。Theme, language, shortcut notes, Mod links, install origins (Base64 values). | `ShellConfigService` |
-| `WinUI3/beta-shell.json` | 仓库与路径（`Repositories`）、当前页面与界面状态、在线偏好、组合预设（`ConfigurationProfiles`）、状态槽位（`ModPersistentSlots`）、复制记录（`CopyDeployments`）、浮窗设置与位置（`OverlayPlacements`）、已看过的“新功能”。Repositories, UI state, online preferences, presets, state slots, copy records, overlay settings and places, the What's New marker. | `ShellConfigService` |
+| `WinUI3/config.ini` | 主题、语言、快捷键说明、Mod 链接、在线安装来源（值为 Base64）。Theme, language, shortcut notes, Mod links, install origins (Base64 values). | `ConfigurationService`、`ShellConfigService` |
+| `WinUI3/beta-shell.json` | 仓库与路径（`Repositories`）、当前页面与界面状态、在线偏好、组合预设（`ConfigurationProfiles`）、状态槽位（`ModPersistentSlots`）、复制记录（`CopyDeployments`）、浮窗设置与位置（`OverlayPlacements`）、已看过的“新功能”。Repositories, UI state, online preferences, presets, state slots, copy records, overlay settings and places, the What's New marker. | `ConfigurationService`、`ShellConfigService` |
 | `WinUI3/cache/app-index.db` | SQLite：在线分页、角色目录、详情、指标、收藏、仓库索引。Online pages, characters, details, metrics, favorites, repository index. | `AppDataStore` |
 | `WinUI3/cache/online-images` | 在线图片缓存，可重新生成。Re-creatable image cache. | `ImageService` |
 | `WinUI3/cache/gamebanana-webview2` | 点赞用的 GameBanana 网页的 WebView2 配置文件（含登录）。The WebView2 profile of the GameBanana page, including its sign-in. | WebView2；`GameBananaWebSession` 删除 / deletes |
