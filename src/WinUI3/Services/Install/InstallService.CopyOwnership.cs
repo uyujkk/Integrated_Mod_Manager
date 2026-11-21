@@ -57,25 +57,12 @@ internal sealed partial class InstallService
         _saveShellConfig();
     }
 
-    // The repository Mod whose deployed folder this is, when exactly one has that name.
-    private static string? SourceForDeployedFolder(WorkspaceRepository repository, string deployedPath)
-    {
-        string name = Path.GetFileName(Path.TrimEndingDirectorySeparator(deployedPath));
-        if (!Directory.Exists(repository.SourcePath)) return null;
-        var options = new EnumerationOptions { AttributesToSkip = FileAttributes.ReparsePoint };
-        string[] matches = Directory.EnumerateDirectories(repository.SourcePath, "*", options)
-            .SelectMany(character => Directory.EnumerateDirectories(character, "*", options))
-            .Where(mod => string.Equals(Path.GetFileName(mod), name, StringComparison.OrdinalIgnoreCase))
-            .Take(2).ToArray();
-        return matches.Length == 1 ? matches[0] : null;
-    }
-
     /// <summary>The user took over external folders: from now on they are the named Mods' deployments.</summary>
     public void AdoptCopies(WorkspaceRepository repository, IEnumerable<string> deployedPaths)
     {
         CopyDeploymentLedger ledger = CopyLedger(repository);
         foreach (string deployed in deployedPaths)
-            if (SourceForDeployedFolder(repository, deployed) is string source) ledger.Adopt(source, deployed);
+            if (CopyDeploymentLedger.SourceForDeployedFolder(repository.SourcePath, deployed) is string source) ledger.Adopt(source, deployed);
         _saveShellConfig();
     }
 }

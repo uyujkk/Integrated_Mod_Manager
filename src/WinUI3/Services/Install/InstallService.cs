@@ -261,39 +261,22 @@ internal sealed partial class InstallService(AppServices services)
                 return;
             }
 
-            string root = Path.GetFullPath(services.Deployment.InstallBackupPath).TrimEnd(Path.DirectorySeparatorChar) + Path.DirectorySeparatorChar;
-            List<(DirectoryInfo Directory, long Size)> directories = new DirectoryInfo(services.Deployment.InstallBackupPath).EnumerateDirectories()
-                .Select(directory => (directory, GetDirectorySize(directory.FullName)))
-                .OrderByDescending(item => item.directory.CreationTimeUtc)
+            List<InstallBackupFolder> backups = new DirectoryInfo(services.Deployment.InstallBackupPath).EnumerateDirectories()
+                .Select(directory => new InstallBackupFolder(directory.FullName, directory.CreationTimeUtc, GetDirectorySize(directory.FullName)))
                 .ToList();
-            long limitBytes = (long)(_backupLimitGb() * 1024 * 1024 * 1024);
-            long totalBytes = directories.Sum(item => item.Size);
-            foreach ((DirectoryInfo directory, long size) in directories.OrderBy(item => item.Directory.CreationTimeUtc))
+            InstallBackupPruning.Prune(backups, InstallBackupPruning.LimitBytes(_backupLimitGb()), services.Deployment.InstallBackupPath, preservePath, path =>
             {
-                if (totalBytes <= limitBytes)
-                {
-                    break;
-                }
-                if (!string.IsNullOrWhiteSpace(preservePath) && string.Equals(directory.FullName, preservePath, StringComparison.OrdinalIgnoreCase))
-                {
-                    continue;
-                }
-                string resolved = Path.GetFullPath(directory.FullName);
-                if (!resolved.StartsWith(root, StringComparison.OrdinalIgnoreCase))
-                {
-                    continue;
-                }
-
                 try
                 {
-                    DeleteDirectoryTreeSafely(resolved);
-                    totalBytes -= size;
+                    DeleteDirectoryTreeSafely(path);
+                    return true;
                 }
                 catch (Exception ex)
                 {
                     _log("Backup pruning", ex);
+                    return false;
                 }
-            }
+            });
         }
         catch (Exception ex)
         {

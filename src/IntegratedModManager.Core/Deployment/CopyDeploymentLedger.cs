@@ -106,6 +106,23 @@ public sealed class CopyDeploymentLedger
     }
 
     /// <summary>
+    /// The repository Mod (character\Mod) whose deployed folder <paramref name="deployedPath"/> is, when exactly one has
+    /// its name; null when none or several do. Linked character or Mod folders are not followed. Used when the user
+    /// takes over external folders.
+    /// </summary>
+    public static string? SourceForDeployedFolder(string repositorySourcePath, string deployedPath)
+    {
+        string name = Path.GetFileName(Path.TrimEndingDirectorySeparator(deployedPath));
+        if (!Directory.Exists(repositorySourcePath)) return null;
+        var options = new EnumerationOptions { AttributesToSkip = FileAttributes.ReparsePoint };
+        string[] matches = Directory.EnumerateDirectories(repositorySourcePath, "*", options)
+            .SelectMany(character => Directory.EnumerateDirectories(character, "*", options))
+            .Where(mod => string.Equals(Path.GetFileName(mod), name, StringComparison.OrdinalIgnoreCase))
+            .Take(2).ToArray();
+        return matches.Length == 1 ? matches[0] : null;
+    }
+
+    /// <summary>
     /// The same files, by relative path, with the same sizes. Links inside either folder are not followed, and a
     /// folder that cannot be read is not the same.
     /// </summary>
