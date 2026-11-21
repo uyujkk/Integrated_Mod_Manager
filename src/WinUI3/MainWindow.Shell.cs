@@ -460,7 +460,7 @@ public sealed partial class MainWindow
             }
             _services.Images.TrimCache();
             DetectLocalUpdatePackage();
-            await RefreshInstallBackupListAsync();
+            await _services.Install.RefreshBackupListAsync();
 
             if (_services.Downloads.RestoredInterrupted > 0)
                 ShowAppNotification(T("Shell.InterruptedTasksRestored", _services.Downloads.RestoredInterrupted));

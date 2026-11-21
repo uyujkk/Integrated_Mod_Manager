@@ -3,7 +3,6 @@ using IntegratedModManager.Core.Configuration;
 using IntegratedModManager.Core.Layout;
 using IntegratedModManager.Core.Online;
 using IntegratedModManager.Core.Repository;
-using IntegratedModManager.Core.Shortcuts;
 using IntegratedModManager.Core.Updates;
 
 namespace ModFolderCopier.WinUI;

@@ -20,6 +20,8 @@ internal sealed class AppServices
         Combinations = new(this);
         Workspace = new(this);
         Configuration = new(this);
+        Launcher = new(this);
+        Diagnostics = new(this);
     }
 
     public LanguageService Language { get; } = new();
@@ -57,6 +59,12 @@ internal sealed class AppServices
 
     /// <summary>Loading and saving beta-shell.json and config.ini (stage J finish, step 8a).</summary>
     public ConfigurationService Configuration { get; }
+
+    /// <summary>Running the selected repository's launch and its settings (stage J finish, step 8a).</summary>
+    public RepositoryLauncherService Launcher { get; }
+
+    /// <summary>Diagnostic reports from Settings (stage J finish, step 8a).</summary>
+    public DiagnosticsService Diagnostics { get; }
     public LaunchService Launch { get; } = new();
 
     /// <summary>Install transactions, conflict checks, archives and copy ownership records (stage J finish, step 4).</summary>

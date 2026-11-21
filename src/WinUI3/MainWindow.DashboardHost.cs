@@ -13,7 +13,7 @@ public sealed partial class MainWindow
         _services.EndfieldBridge.LogIssue = LogApplicationIssue;
         _services.EndfieldBridge.BusyChanged += (_, _) =>
         {
-            if (!_services.IsClosing) RefreshEndfieldBridgeControls();
+            if (!_services.IsClosing) _services.Launcher.RefreshBridgeControls();
         };
         Paths.PropertyChanged += (_, args) =>
         {
@@ -57,10 +57,10 @@ public sealed partial class MainWindow
             case DashboardAction.OpenSource: _services.Workspace.OpenSource(); break;
             case DashboardAction.OpenTarget: _services.Workspace.OpenTarget(); break;
             case DashboardAction.OpenLauncher: _services.Workspace.OpenLauncher(); break;
-            case DashboardAction.BridgeOptions: OnBridgeOptionsClicked(this, args); break;
+            case DashboardAction.BridgeOptions: _services.Launcher.OnBridgeOptionsClicked(); break;
             case DashboardAction.BrowseOnline: OnOnlineNavClicked(this, args); break;
             case DashboardAction.CheckModUpdates: CheckModUpdatesFromDashboard(); break;
-            case DashboardAction.RunLauncher: _ = RunUiActionAsync("OnRunLauncherClicked", RunRepositoryLauncherAsync); break;
+            case DashboardAction.RunLauncher: _ = RunUiActionAsync("OnRunLauncherClicked", _services.Launcher.RunAsync); break;
             case DashboardAction.GettingStartedTipsClosed: OnGettingStartedTipsClosed(); break;
         }
     }

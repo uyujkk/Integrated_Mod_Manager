@@ -42,7 +42,7 @@ public sealed partial class MainWindow
         Paths.Source = repository.SourcePath;
         Paths.Target = repository.TargetPath;
         Paths.Launcher = repository.LauncherPath;
-        RefreshEndfieldBridgeControls();
+        _services.Launcher.RefreshBridgeControls();
         RefreshPersistentSlotControls();
         _isApplyingRepositoryDeploymentMode = true;
         try
@@ -128,7 +128,7 @@ public sealed partial class MainWindow
                 return;
             }
 
-            WorkspaceRepository repository = CreateRepositoryFromEditorResult(result);
+            WorkspaceRepository repository = RepositoryService.Create(result);
             _services.Repositories.Items.Add(repository);
             _services.Repositories.SelectedId = repository.Id;
             ResetOnlineRepositoryContext();
@@ -143,26 +143,6 @@ public sealed partial class MainWindow
         {
             ReportUiActionFailure("OnRepositoryPresetClicked", ex);
         }
-    }
-
-    private static WorkspaceRepository CreateRepositoryFromEditorResult(RepositoryEditorResult result)
-    {
-        return new WorkspaceRepository
-        {
-            Id = Guid.NewGuid().ToString("N"),
-            Name = result.Name.Trim(),
-            SourcePath = result.SourcePath.Trim(),
-            TargetPath = result.TargetPath.Trim(),
-            UseDirectoryLinks = result.UseDirectoryLinks,
-            AllowMultipleModsPerCharacter = result.AllowMultipleModsPerCharacter,
-            LauncherPath = result.LauncherPath.Trim(),
-            XxmiImporter = result.XxmiImporter,
-            OnlineSourceSite = result.OnlineSourceSite.Trim(),
-            OnlineGameName = result.OnlineGameName.Trim(),
-            OnlineCategoryId = result.OnlineCategoryId.Trim(),
-            WikiUrl = result.WikiUrl.Trim(),
-            Notes = result.Notes.Trim()
-        };
     }
 
     private void OpenRepositoryWiki(WorkspaceRepository repository)
@@ -281,7 +261,7 @@ public sealed partial class MainWindow
                 return;
             }
 
-            WorkspaceRepository repository = CreateRepositoryFromEditorResult(result);
+            WorkspaceRepository repository = RepositoryService.Create(result);
 
             _services.Repositories.Items.Add(repository);
             _services.Repositories.SelectedId = repository.Id;
@@ -335,18 +315,7 @@ public sealed partial class MainWindow
             return;
         }
 
-        repository.Name = result.Name.Trim();
-        repository.SourcePath = result.SourcePath.Trim();
-        repository.TargetPath = result.TargetPath.Trim();
-        repository.UseDirectoryLinks = result.UseDirectoryLinks;
-        repository.AllowMultipleModsPerCharacter = result.AllowMultipleModsPerCharacter;
-        repository.LauncherPath = result.LauncherPath.Trim();
-        repository.XxmiImporter = result.XxmiImporter;
-        repository.OnlineSourceSite = result.OnlineSourceSite.Trim();
-        repository.OnlineGameName = result.OnlineGameName.Trim();
-        repository.OnlineCategoryId = result.OnlineCategoryId.Trim();
-        repository.WikiUrl = result.WikiUrl.Trim();
-        repository.Notes = result.Notes.Trim();
+        RepositoryService.Apply(repository, result);
         ResetOnlineRepositoryContext();
 
         ApplySelectedRepositoryToInputs();
@@ -375,11 +344,7 @@ public sealed partial class MainWindow
                 return;
             }
 
-            repository.OnlineSourceSite = result.OnlineSourceSite.Trim();
-            repository.OnlineGameName = result.OnlineGameName.Trim();
-            repository.OnlineCategoryId = result.OnlineCategoryId.Trim();
-            repository.WikiUrl = result.WikiUrl.Trim();
-            repository.Notes = result.Notes.Trim();
+            RepositoryService.Apply(repository, result);
             ResetOnlineRepositoryContext();
 
             SaveShellConfig();
@@ -510,16 +475,8 @@ public sealed partial class MainWindow
                 return;
             }
 
-            bool wasSelected = repository.Id == _services.Repositories.SelectedId;
-            int currentIndex = _services.Repositories.Items.FindIndex(item => item.Id == repository.Id);
-            _services.Repositories.Items.RemoveAll(item => item.Id == repository.Id);
-
-            // Deleting another repository from its card keeps the current one selected.
-            if (wasSelected)
+            if (_services.Repositories.Remove(repository))
             {
-                _services.Repositories.SelectedId = _services.Repositories.Items.Count > 0
-                    ? _services.Repositories.Items[Math.Clamp(currentIndex, 0, _services.Repositories.Items.Count - 1)].Id
-                    : null;
                 ApplySelectedRepositoryToInputs();
             }
 

@@ -86,7 +86,7 @@ public sealed partial class WorkspacePage
         }
     }
 
-    private async void OnRunLauncherClicked(object sender, RoutedEventArgs e) => await _host.RunUiActionAsync("OnRunLauncherClicked", _host.RunRepositoryLauncherAsync);
+    private async void OnRunLauncherClicked(object sender, RoutedEventArgs e) => await _host.RunUiActionAsync("OnRunLauncherClicked", _services.Launcher.RunAsync);
 
     private async void OnRefreshClicked(object sender, RoutedEventArgs e) => await _host.RunUiActionAsync("OnRefreshClicked", RefreshListsAsync);
 

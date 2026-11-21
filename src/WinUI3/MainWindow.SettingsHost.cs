@@ -42,7 +42,7 @@ public sealed partial class MainWindow
         RefreshSettingsOnlineConfigSummary();
         RefreshUpdateDetailsView();
         RefreshBackupManagerText();
-        RefreshEndfieldBridgeControls();
+        _services.Launcher.RefreshBridgeControls();
     }
 
     private void RefreshAppearanceSettings()
@@ -188,8 +188,8 @@ public sealed partial class MainWindow
             case SettingsAction.InstallUpdate: OnInstallUpdateClicked(this, args); break;
             case SettingsAction.EditOnlineRepository: OnEditOnlineRepositoryClicked(this, args); break;
             case SettingsAction.EditCharacterMappings: OnEditCharacterMappingsClicked(this, args); break;
-            case SettingsAction.ExportDiagnostics: OnExportDiagnosticsClicked(this, args); break;
-            case SettingsAction.SubmitDiagnostics: OnSubmitDiagnosticsClicked(this, args); break;
+            case SettingsAction.ExportDiagnostics: _services.Diagnostics.Export(); break;
+            case SettingsAction.SubmitDiagnostics: _services.Diagnostics.Submit(); break;
             case SettingsAction.CopyFeedbackGroup: CopyFeedbackGroupNumber(); break;
             case SettingsAction.OpenDiscord: OpenFeedbackDiscord(); break;
             case SettingsAction.OpenLink: OpenProjectResource(request.Argument!); break;

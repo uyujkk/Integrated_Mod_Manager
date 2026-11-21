@@ -64,7 +64,6 @@ internal interface IWorkspaceHost
     Task RefreshShortcutDeployedModsAsync(string? preferredPath = null);
 
     // Running the repository's launcher, the dashboard's avatars and the Online page.
-    Task RunRepositoryLauncherAsync();
 
     // Workspace timing diagnostics.
     RepositoryPerformanceRecorder.Scope? MeasureRepositoryUi(RepositoryPerformanceOperation operation, int count);

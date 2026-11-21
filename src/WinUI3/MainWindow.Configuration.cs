@@ -1,8 +1,4 @@
-using System.Text.Json;
-using IntegratedModManager.Core.Configuration;
 using IntegratedModManager.Core.Layout;
-using IntegratedModManager.Core.Repository;
-using IntegratedModManager.Core.Updates;
 using Microsoft.UI.Windowing;
 using Windows.Graphics;
 

@@ -31,7 +31,7 @@ public sealed partial class MainWindow
         UpdatesView.ConflictDetection = _shell.EnableConflictDetection;
         _isApplyingConflictDetection = false;
         RefreshBackupManagerText();
-        _ = RefreshInstallBackupListAsync();
+        _ = _services.Install.RefreshBackupListAsync();
         RefreshConfigurationProfiles();
         RefreshDownloadTaskCenter();
         UpdatesView.IsCheckingModUpdates = _services.Tracking.IsChecking;
@@ -126,7 +126,7 @@ public sealed partial class MainWindow
                     _shell.InstallBackupLimitGb = UpdatesView.BackupLimitGb;
                     SaveShellConfig();
                     await Task.Run(() => _services.Install.PruneInstallTransactionsByStorageLimit(null));
-                    await RefreshInstallBackupListAsync();
+                    await _services.Install.RefreshBackupListAsync();
                     break;
             }
         }
@@ -158,7 +158,7 @@ public sealed partial class MainWindow
             case UpdatesAction.RollbackLastInstall: OnRollbackLastInstallClicked(this, args); break;
             case UpdatesAction.OpenCombinationPresets: OnOpenCombinationPresetsClicked(this, args); break;
             case UpdatesAction.RefreshBackups: OnRefreshBackupsClicked(this, args); break;
-            case UpdatesAction.RestoreBackup when request.Item is string path: await RestoreInstallBackupAsync(path); break;
+            case UpdatesAction.RestoreBackup when request.Item is string path: await _services.Install.RestoreBackupAsync(path); break;
         }
     }
 

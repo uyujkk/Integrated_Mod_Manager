@@ -79,8 +79,11 @@ public sealed partial class MainWindow : Window
             diagnostics: LogApplicationIssue);
         InitializeComponent();
         // Stage J7: the Mod workspace page; it reaches the window only through IWorkspaceHost.
-        _services.Workspace.Attach(LogApplicationIssue, SaveConfig, LoadFolderItemsUsingIndex, ApplyDashboardCharacterAvatar);
+        _services.Workspace.Attach(LogApplicationIssue, SaveConfig, _appDataStore, ApplyDashboardCharacterAvatar);
+        _services.Diagnostics.Attach(ReportUiActionFailure, () => _appDataStore.GetHealthSummary(), GetInstallRootPath);
+        _services.Install.AttachBackups(busy => _workspaceView?.SetBusyState(busy), ReportUiActionFailure);
         _services.Workspace.AttachRefresh(RefreshListsAsync);
+        _services.Launcher.Attach(LogApplicationIssue, SaveSelectedRepositoryFromInputs, RunUiActionAsync, ReportUiActionFailure, RefreshDashboard);
         _services.Configuration.Attach(LogApplicationIssue, () => _onlineView?.CaptureOnlineBrowseSession(), ApplySelectedRepositoryToInputs,
             SaveSelectedRepositoryFromInputs, _modBindings, _modLinks, WhatsNewFeatureSet);
         _services.Images.Attach(_httpClient, LogApplicationIssue);

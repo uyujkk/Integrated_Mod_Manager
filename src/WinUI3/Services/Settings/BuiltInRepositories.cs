@@ -1,5 +1,4 @@
 using IntegratedModManager.Core.Online;
-using IntegratedModManager.Core.Endfield;
 
 namespace ModFolderCopier.WinUI;
 

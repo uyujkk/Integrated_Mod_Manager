@@ -57,7 +57,6 @@ public sealed partial class MainWindow : IWorkspaceHost
     Task<int> IWorkspaceHost.TryImportShortcutBindingsFromModFilesAsync(string modFolder) => TryImportShortcutBindingsFromModFilesAsync(modFolder);
     Task IWorkspaceHost.RefreshShortcutDeployedModsAsync(string? preferredPath) => RefreshShortcutDeployedModsAsync(preferredPath);
 
-    Task IWorkspaceHost.RunRepositoryLauncherAsync() => RunRepositoryLauncherAsync();
 
     RepositoryPerformanceRecorder.Scope? IWorkspaceHost.MeasureRepositoryUi(RepositoryPerformanceOperation operation, int count) => MeasureRepositoryUi(operation, count);
 

@@ -1,5 +1,4 @@
-﻿using IntegratedModManager.Core.Configuration;
-
+﻿
 namespace ModFolderCopier.WinUI;
 
 // The first start after installing: the app supports several games, so it asks instead of assuming one,
