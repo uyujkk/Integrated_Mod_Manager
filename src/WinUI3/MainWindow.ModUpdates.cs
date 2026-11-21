@@ -56,13 +56,13 @@ public sealed partial class MainWindow
             Directory.CreateDirectory(work);
             using IDisposable execution = await _services.Downloads.Scheduler.AcquireAsync(task.Cancellation.Token);
             string archive = _onlineView.EnsureDownloadArchiveExtension(await _onlineView.DownloadOnlineModArchiveAsync(effective, work, task, task.Cancellation.Token));
-            if (!IsSupportedArchiveFile(archive)) throw new InvalidDataException(T("ModUpdates.TheDownloadedFileIsNotA"));
+            if (!_services.Install.IsSupportedArchiveFile(archive)) throw new InvalidDataException(T("ModUpdates.TheDownloadedFileIsNotA"));
             string payload = Path.Combine(work, "payload");
             Directory.CreateDirectory(payload);
             UpdateDownloadTask(task, DownloadTaskState.Extracting, 92, M("ModUpdates.Extracting"), forceRefresh: true);
             await Task.Run(() =>
             {
-                ExtractArchiveToDirectory(archive, payload);
+                _services.Install.ExtractArchiveToDirectory(archive, payload);
                 ArchiveImportLayout.HoistSingleTopFolder(payload);
             });
             task.Cancellation.Token.ThrowIfCancellationRequested();

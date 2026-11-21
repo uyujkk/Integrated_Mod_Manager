@@ -2,9 +2,18 @@ using IntegratedModManager.Core.Archives;
 
 namespace ModFolderCopier.WinUI;
 
-public sealed partial class MainWindow
+// Archives: which formats are supported, extracting with the built-in, 7-Zip or Bandizip extractors, and importing an
+// archive as one new Mod folder (moved unchanged from the window, stage J finish, step 4).
+internal sealed partial class InstallService
 {
-    private static bool IsSupportedArchiveFile(string path)
+    private const int ArchiveToolTimeoutMinutes = 10;
+
+    public IReadOnlyList<string> SupportedArchiveExtensions => ArchiveExtractor.SupportedExtensions;
+
+    private static readonly ArchiveExtractor ArchiveExtraction = new(
+        FindSevenZipExecutable, FindBandizipExecutable, TimeSpan.FromMinutes(ArchiveToolTimeoutMinutes));
+
+    public bool IsSupportedArchiveFile(string path)
     {
         return GetSupportedArchiveExtension(path) is not null;
     }
@@ -19,7 +28,7 @@ public sealed partial class MainWindow
     /// folder: archives without a top-level folder get one, archives with a single
     /// top-level folder are not nested again, and an existing folder is never merged.
     /// </summary>
-    private string ImportArchiveContents(string archivePath, string firstLevelDirectory)
+    public string ImportArchiveContents(string archivePath, string firstLevelDirectory)
     {
         string tempDirectory = Path.Combine(Path.GetTempPath(), "ModFolderCopier_Import_" + Guid.NewGuid().ToString("N"));
         Directory.CreateDirectory(tempDirectory);
@@ -47,7 +56,7 @@ public sealed partial class MainWindow
         }
     }
 
-    private void ExtractArchiveToDirectory(string archivePath, string destinationDirectory)
+    public void ExtractArchiveToDirectory(string archivePath, string destinationDirectory)
     {
         try
         {
@@ -59,7 +68,7 @@ public sealed partial class MainWindow
                     ArchiveExtractionStage.Extracting => T("Archives.ExtractingFiles"),
                     _ => T("Archives.ExtractionComplete")
                 };
-                DispatcherQueue.TryEnqueue(() => _workspaceView.UpdateProgress(progress.Percent, message));
+                _extractionProgress(progress.Percent, message);
             });
         }
         catch (Exception ex) when (LocalizeArchiveError(ex) is Exception localized)

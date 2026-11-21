@@ -242,4 +242,35 @@ public sealed class CopyOwnershipTests : IDisposable
         Assert.Contains(preview.Mods, mod => mod.Action == CombinationModAction.Remove && mod.Path.Equals(foreign, StringComparison.OrdinalIgnoreCase));
         Assert.Equal(CopyDeploymentOrigin.Adopted, Assert.Single(_records).Origin);
     }
+
+    // Taking over an external folder needs the one repository Mod with its name (stage J finish, step 4: moved to Core).
+    [Fact]
+    public void SourceForDeployedFolder_FindsTheOneModWithThatName()
+    {
+        string a = Mod(@"TestCharacter\TestModA");
+        Mod(@"TestCharacter\TestModB");
+
+        Assert.Equal(a, CopyDeploymentLedger.SourceForDeployedFolder(Repository, Path.Combine(Loader, "testmoda") + Path.DirectorySeparatorChar));
+        Assert.Null(CopyDeploymentLedger.SourceForDeployedFolder(Repository, Path.Combine(Loader, "Unknown")));
+    }
+
+    [Fact]
+    public void SourceForDeployedFolder_IsUnknownWhenTwoCharactersHaveTheName()
+    {
+        Mod(@"TestCharacter\Shared");
+        Mod(@"OtherCharacter\Shared");
+
+        Assert.Null(CopyDeploymentLedger.SourceForDeployedFolder(Repository, Path.Combine(Loader, "Shared")));
+        Assert.Null(CopyDeploymentLedger.SourceForDeployedFolder(Path.Combine(_root, "Missing"), Path.Combine(Loader, "Shared")));
+    }
+
+    [Fact]
+    public void SourceForDeployedFolder_DoesNotFollowLinkedCharacters()
+    {
+        string outside = Path.Combine(_root, "Outside");
+        Directory.CreateDirectory(Path.Combine(outside, "Linked"));
+        DirectoryLinkDeployment.CreateJunction(Path.Combine(Repository, "LinkedCharacter"), outside);
+
+        Assert.Null(CopyDeploymentLedger.SourceForDeployedFolder(Repository, Path.Combine(Loader, "Linked")));
+    }
 }

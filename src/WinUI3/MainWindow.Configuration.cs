@@ -165,7 +165,7 @@ public sealed partial class MainWindow
                 ? config?.SelectedConfigurationProfileId
                 : null;
             _enableConflictDetection = config?.EnableConflictDetection ?? true;
-            _lastInstallTransactionPath = !string.IsNullOrWhiteSpace(config?.LastInstallTransactionPath)
+            _services.Install.LastTransactionPath = !string.IsNullOrWhiteSpace(config?.LastInstallTransactionPath)
                 && Directory.Exists(config.LastInstallTransactionPath)
                     ? config.LastInstallTransactionPath
                     : null;
@@ -175,11 +175,7 @@ public sealed partial class MainWindow
             _savedWindowHeight = config?.WindowHeight;
             _savedWindowMaximized = config?.WindowMaximized ?? false;
             _whatsNewSeenVersion = WhatsNewPolicy.SeenAfterLoad(config?.WhatsNewSeenVersion, WhatsNewFeatureSet, _firstInstall);
-            lock (_copyDeployments)
-            {
-                _copyDeployments.Clear();
-                _copyDeployments.AddRange(config?.CopyDeployments ?? []);
-            }
+            _services.Install.LoadCopyRecords(config?.CopyDeployments ?? []);
             _gettingStartedTips = GettingStartedTips.Load(_firstInstall, config?.GettingStartedTipsPending ?? false);
         }
         catch
@@ -314,10 +310,10 @@ public sealed partial class MainWindow
                 UpdatesView = UpdatesViewModel.FormatView(_services.Updates.View),
                 SelectedConfigurationProfileId = _selectedConfigurationProfileId,
                 EnableConflictDetection = _enableConflictDetection,
-                LastInstallTransactionPath = _lastInstallTransactionPath,
+                LastInstallTransactionPath = _services.Install.LastTransactionPath,
                 ConfigurationProfiles = [.. _configurationProfiles],
                 ModPersistentSlots = [.. _modPersistentSlots],
-                CopyDeployments = CopyRecordsSnapshot(),
+                CopyDeployments = _services.Install.CopyRecordsSnapshot(),
                 DefaultSlotSeeds = _defaultSlotSeeds.ToDictionary(pair => pair.Key, pair => pair.Value.Order(StringComparer.OrdinalIgnoreCase).ToList()),
                 DefaultSlotsBackfilled = [.. _defaultSlotsBackfilled.Order(StringComparer.Ordinal)],
                 WindowX = _savedWindowX,

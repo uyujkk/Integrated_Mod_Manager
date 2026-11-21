@@ -124,7 +124,7 @@ public sealed partial class WorkspacePage
                 return;
             }
 
-            string? archive = await _services.Dialogs.PickFileAsync(_host.SupportedArchiveExtensions
+            string? archive = await _services.Dialogs.PickFileAsync(_services.Install.SupportedArchiveExtensions
                 .Select(value => Path.GetExtension(value)!)
                 .Where(extension => !string.IsNullOrWhiteSpace(extension))
                 .Distinct(StringComparer.OrdinalIgnoreCase).ToArray());
@@ -295,7 +295,7 @@ public sealed partial class WorkspacePage
             CharacterRenamePlan plan = await Task.Run(() => CharacterRename.Prepare(item.Path, trimmed, loader));
             if (!plan.CanRename)
             {
-                await ShowMessageAsync(_host.CharacterRenameBlockText(plan, repository), T("LocalLibrary.RenameFailed"));
+                await ShowMessageAsync(_services.Install.CharacterRenameBlockText(plan, repository), T("LocalLibrary.RenameFailed"));
                 return;
             }
 
@@ -430,7 +430,7 @@ public sealed partial class WorkspacePage
 
         _host.TrackedModOrigins.Remove(item.Path);
         _host.ModLinks.Remove(item.Path);
-        _host.DeleteDirectoryTreeSafely(item.Path);
+        _services.Install.DeleteDirectoryTreeSafely(item.Path);
     }
 
     private async void OnDeleteSecondLevelClicked(object sender, RoutedEventArgs e)
@@ -630,7 +630,7 @@ public sealed partial class WorkspacePage
             IReadOnlyList<IStorageItem> droppedItems = await e.DataView.GetStorageItemsAsync();
             StorageFile? archiveFile = droppedItems
                 .OfType<StorageFile>()
-                .FirstOrDefault(file => _host.IsSupportedArchiveFile(file.Path));
+                .FirstOrDefault(file => _services.Install.IsSupportedArchiveFile(file.Path));
 
             if (archiveFile is null)
             {
@@ -855,7 +855,7 @@ public sealed partial class WorkspacePage
             return;
         }
 
-        if (!await _host.OfferBrokenLinkCleanupAsync(targetDir))
+        if (!await _services.Install.OfferBrokenLinkCleanupAsync(targetDir))
         {
             return;
         }
@@ -864,8 +864,8 @@ public sealed partial class WorkspacePage
         // Issue #107: a copied folder with this Mod's name that the manager did not make is the user's; say so first.
         if (targetExists && !DirectoryLinkDeployment.IsDirectoryLink(targetPath))
         {
-            bool owned = await Task.Run(() => _host.OwnsCopy(repository)(item.Path, targetPath));
-            _host.SaveCopyRecordsIfChanged();
+            bool owned = await Task.Run(() => _services.Install.OwnsCopy(repository)(item.Path, targetPath));
+            _services.Install.SaveCopyRecordsIfChanged();
             if (!owned && !await ShowDangerConfirmAsync(T("LocalLibrary.RemoveExternalFolder", targetPath), T("LocalLibrary.ExternalFolder"), T("Dialogs.Remove")))
                 return;
         }
@@ -881,11 +881,11 @@ public sealed partial class WorkspacePage
             if (!targetExists && _host.EnableConflictDetection)
             {
                 string[] ignoredTargets = [targetPath, .. siblingLinksToReplace];
-                List<string> conflicts = await Task.Run(() => _host.DetectModFileConflicts(item.Path, targetDir, ignoredTargets));
+                List<string> conflicts = await Task.Run(() => _services.Install.DetectModFileConflicts(item.Path, targetDir, ignoredTargets));
                 (string? Candidate, ModIniConflictSummary Summary)[] iniConflicts = (await Task.Run(() =>
-                        _host.DetectModIniConflictsSafely(item.Path, targetDir, ignoredTargets)))
+                        _services.Install.DetectModIniConflictsSafely(item.Path, targetDir, ignoredTargets)))
                     .Select(summary => ((string?)null, summary)).ToArray();
-                if ((conflicts.Count > 0 || iniConflicts.Length > 0) && !await _host.ConfirmInstallConflictsAsync(conflicts, iniConflicts))
+                if ((conflicts.Count > 0 || iniConflicts.Length > 0) && !await _services.Install.ConfirmInstallConflictsAsync(conflicts, iniConflicts))
                 {
                     return;
                 }
@@ -904,7 +904,7 @@ public sealed partial class WorkspacePage
         SetBusyState(true);
         try
         {
-            transactionPath = await _host.CreateInstallTransactionAsync(
+            transactionPath = await _services.Install.CreateInstallTransactionAsync(
                 targetExists
                     ? T("LocalLibrary.RemoveMod", item.Name)
                     : siblingLinksToReplace.Count > 0
@@ -916,8 +916,8 @@ public sealed partial class WorkspacePage
             if (targetExists)
             {
                 UpdateProgress(15, T("LocalLibrary.RemovingFolder"));
-                await Task.Run(() => _host.DeleteDirectoryTreeSafely(targetPath));
-                _host.CopyLedger(repository).Forget(targetPath);
+                await Task.Run(() => _services.Install.DeleteDirectoryTreeSafely(targetPath));
+                _services.Install.CopyLedger(repository).Forget(targetPath);
                 _host.SaveShellConfig();
                 UpdateProgress(100, T("LocalLibrary.RemovalComplete"));
                 StatusTextBlock.Text = item.Name + T("LocalLibrary.WasRemovedFromTheTargetFolder");
@@ -953,7 +953,7 @@ public sealed partial class WorkspacePage
                     : T("LocalLibrary.CopiedToTarget", item.Name));
             }
 
-            _host.CommitInstallTransaction(transactionPath);
+            _services.Install.CommitInstallTransaction(transactionPath);
             await _host.RefreshShortcutDeployedModsAsync(targetExists ? null : item.Path);
         }
         catch (Exception ex)
@@ -962,7 +962,7 @@ public sealed partial class WorkspacePage
             {
                 try
                 {
-                    await _host.RollbackInstallTransactionAsync(transactionPath, clearLastTransaction: true);
+                    await _services.Install.RollbackInstallTransactionAsync(transactionPath, clearLastTransaction: true);
                 }
                 catch (Exception rollbackError)
                 {
@@ -987,7 +987,7 @@ public sealed partial class WorkspacePage
         SetBusyState(true);
         try
         {
-            string importedPath = await Task.Run(() => _host.ImportArchiveContents(archivePath, item.Path));
+            string importedPath = await Task.Run(() => _services.Install.ImportArchiveContents(archivePath, item.Path));
 
             string importedName = Path.GetFileName(importedPath);
             StatusTextBlock.Text = T("LocalLibrary.InstalledAs", Path.GetFileName(archivePath), item.Name, importedName, importedPath);
@@ -1057,7 +1057,7 @@ public sealed partial class WorkspacePage
     {
         await Task.Run(() =>
         {
-            (List<string> directories, List<string> files) = _host.InspectDirectoryTreeSafely(sourcePath);
+            (List<string> directories, List<string> files) = _services.Install.InspectDirectoryTreeSafely(sourcePath);
             int totalSteps = directories.Count + files.Count + 1;
             int currentStep = 0;
 
@@ -1068,7 +1068,7 @@ public sealed partial class WorkspacePage
             foreach (string directory in directories)
             {
                 string relativePath = Path.GetRelativePath(sourcePath, directory);
-                Directory.CreateDirectory(_host.GetSafePathInsideDirectory(targetPath, relativePath));
+                Directory.CreateDirectory(_services.Install.GetSafePathInsideDirectory(targetPath, relativePath));
                 currentStep++;
                 progress.Report(new ProgressInfo(currentStep * 100 / totalSteps, T("LocalLibrary.CreatingSubfolders")));
             }
@@ -1076,7 +1076,7 @@ public sealed partial class WorkspacePage
             foreach (string file in files)
             {
                 string relativePath = Path.GetRelativePath(sourcePath, file);
-                string destinationFile = _host.GetSafePathInsideDirectory(targetPath, relativePath);
+                string destinationFile = _services.Install.GetSafePathInsideDirectory(targetPath, relativePath);
                 string? destinationDir = Path.GetDirectoryName(destinationFile);
                 if (!string.IsNullOrEmpty(destinationDir))
                 {
@@ -1102,7 +1102,7 @@ public sealed partial class WorkspacePage
         {
             await CopyDirectoryWithProgressAsync(sourcePath, targetPath, progress);
             // Issue #107: the manager's own copy, recorded in its settings.
-            _host.CopyLedger(repository).Record(sourcePath, targetPath);
+            _services.Install.CopyLedger(repository).Record(sourcePath, targetPath);
             _host.SaveShellConfig();
             return;
         }

@@ -76,7 +76,7 @@ public sealed partial class MainWindow
             : T("ConfigurationProfiles.Summary", selected.Name, selected.ModRelativePaths.Count, selected.PersistentStates.Sum(state => state.Values.Count))
                 + (selected.IncludesPersistentState ? T("ConfigurationProfiles.SummaryWithState") : T("ConfigurationProfiles.SummarySetOnly"));
 
-        bool canUndo = !string.IsNullOrWhiteSpace(_lastInstallTransactionPath) && Directory.Exists(_lastInstallTransactionPath);
+        bool canUndo = _services.Install.CanUndoLastTransaction;
         UpdatesView.SetRollback(canUndo, canUndo
             ? T("ConfigurationProfiles.UndoCoversModDeploymentCombinationParameters")
             : T("ConfigurationProfiles.ThereIsNoModOperationTo"));
@@ -88,7 +88,7 @@ public sealed partial class MainWindow
     {
         WorkspaceRepository? repository = GetSelectedRepository();
         if (repository is null) throw new InvalidOperationException("Select a repository first.");
-        return [.. ModCombinationDeploymentPolicy.Capture(repository.SourcePath, repository.TargetPath, OwnsCopy(repository))];
+        return [.. ModCombinationDeploymentPolicy.Capture(repository.SourcePath, repository.TargetPath, _services.Install.OwnsCopy(repository))];
     }
 
     private async void OnCreateConfigurationProfileClicked(object sender, RoutedEventArgs e)

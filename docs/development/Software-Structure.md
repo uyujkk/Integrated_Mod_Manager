@@ -267,6 +267,7 @@ flowchart LR
 | `DialogService` | 显示所有对话框：设置 `XamlRoot`、主题和默认样式，同一时间只开一个。Shows every dialog: XamlRoot, theme, default style, one at a time. |
 | `StatusService` | 全局通知，由窗口显示在 `InfoBar`。App-wide notifications shown in the InfoBar. |
 | `DeploymentService`、`DownloadService`、`LaunchService` | 部署备份位置；下载任务及其日志；启动加载器或启动器。Deployment backups; download tasks and their journal; starting the loader or launcher. |
+| `InstallService` | 安装流程：安装事务（备份、提交、撤销、按存储上限清理）、安装前的文件和 INI 冲突检查、断开链接清理、压缩包（格式、解压、导入为一个 Mod 文件夹）、复制归属记录（#107）。规则在 Core（`ModInstallTransactions`、`ModFileConflictDetector`、`ModIniConflictDetector`、`ArchiveImportLayout`、`CopyDeploymentLedger`、`InstallBackupPruning`）。The install pipeline: install transactions (backup, commit, undo, pruning by the storage limit), file and INI conflict checks before an install, broken link cleanup, archives (formats, extraction, import as one Mod folder) and the copy ownership records (#107); the rules are in Core. |
 | `OnlineState`、`OnlineSourceService`、`OnlineCategoryService`、`CharacterCatalogService`、`ImageService` | 在线页的状态、仓库的在线来源、游戏分类（缓存一天）、角色目录、在线图片缓存。Online page state, a repository's online source, categories (kept a day), character catalogs, the image cache. |
 | `GameBananaWebSession` | 点赞用的 GameBanana 网页的登录：保存位置、关闭网页、删除登录。The sign-in of the GameBanana page used for likes: where it lives, closing the page, deleting it. |
 | `EndfieldBridgeService` | 终末地仓库的内置启动：是否适用、XXMI 位置、启动设置。The integrated Endfield launch. |
@@ -281,7 +282,7 @@ flowchart LR
 | --- | --- |
 | 外壳 / Shell | `Shell`, `TitleBarSearch`, `CommandPalette`, `Localization`, `Configuration`, `Dialogs`, `AppearanceEvents`, `Tray`, `SingleInstance`, `UiActionGuard`, `UiDiagnostics`, `BuiltInData`, `WhatsNew`, `FirstRun` |
 | 页面宿主 / Page hosts | `DashboardHost`, `WorkspaceHost`, `OnlineHost`, `UpdatesHost`, `ShortcutsHost`, `SettingsHost` |
-| 仓库与安装 / Repositories and installs | `Repositories`, `RepositoryPerformance`, `Archives`, `InstallTransactions`, `IniConflicts`, `CopyOwnership`, `CharacterRename` |
+| 仓库与重命名 / Repositories and renames | `Repositories`, `RepositoryPerformance`, `CharacterRename`（角色改名时迁移窗口仍持有的引用 / migrates the references the window still holds when a character is renamed） |
 | 预设与状态 / Presets and state | `ConfigurationProfiles`, `CombinationPresets`, `CombinationBundles`, `PresetShare`, `PresetPreviews`, `PersistentSlots`, `PersistentVariants`, `DefaultSlots`, `SlotCapture`, `HotReload` |
 | 更新与下载 / Updates and downloads | `Updates`, `ModUpdates`, `DownloadTasks` |
 | 快捷键与浮窗 / Shortcuts and overlay | `ShortcutPanel`, `ShortcutPresets`, `ShortcutCapture`, `ShortcutBindingRules`, `CharacterFollow`, `ProductivityFeatures` |

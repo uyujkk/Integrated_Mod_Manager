@@ -1,5 +1,4 @@
 using IntegratedModManager.Core.Configuration;
-using IntegratedModManager.Core.Deployment;
 using IntegratedModManager.Core.Presets;
 using IntegratedModManager.Core.Repository;
 using Microsoft.UI.Xaml;
@@ -52,7 +51,6 @@ public sealed partial class MainWindow : IWorkspaceHost
 
     string[] IWorkspaceHost.ImageExtensions => ImageExtensions;
     int IWorkspaceHost.ShortcutScanSafetyLimit => ShortcutScanSafetyLimit;
-    IReadOnlyList<string> IWorkspaceHost.SupportedArchiveExtensions => SupportedArchiveExtensions;
     CharacterListViewModel IWorkspaceHost.Characters => _characters;
     List<ModConfigurationProfile> IWorkspaceHost.ConfigurationProfiles => _configurationProfiles;
     string? IWorkspaceHost.CurrentSecondLevelPath { get => _currentSecondLevelPath; set => _currentSecondLevelPath = value; }
@@ -69,29 +67,7 @@ public sealed partial class MainWindow : IWorkspaceHost
     List<TextBox> IWorkspaceHost.ShortcutKeyBoxes => _shortcutKeyBoxes;
     Dictionary<string, TrackedModOrigin> IWorkspaceHost.TrackedModOrigins => _trackedModOrigins;
 
-    void IWorkspaceHost.CommitInstallTransaction(string transactionPath) => CommitInstallTransaction(transactionPath);
-    Task<bool> IWorkspaceHost.ConfirmInstallConflictsAsync(IReadOnlyList<string> fileConflicts, IReadOnlyList<(string? Candidate, ModIniConflictSummary Summary)> iniConflicts) => ConfirmInstallConflictsAsync(fileConflicts, iniConflicts);
-    void IWorkspaceHost.CopyDirectoryTree(string sourcePath, string targetPath) => CopyDirectoryTree(sourcePath, targetPath);
-    Task<string> IWorkspaceHost.CreateInstallTransactionAsync(string description, WorkspaceRepository repository, IEnumerable<string> affectedTargets) => CreateInstallTransactionAsync(description, repository, affectedTargets);
-    void IWorkspaceHost.DeleteDirectoryTreeSafely(string path) => DeleteDirectoryTreeSafely(path);
-    List<string> IWorkspaceHost.DetectModFileConflicts(string sourcePath, string targetRoot, string targetPathToIgnore) => DetectModFileConflicts(sourcePath, targetRoot, targetPathToIgnore);
-    List<string> IWorkspaceHost.DetectModFileConflicts(string sourcePath, string targetRoot, IEnumerable<string> targetPathsToIgnore) => DetectModFileConflicts(sourcePath, targetRoot, targetPathsToIgnore);
-    string IWorkspaceHost.GetSafePathInsideDirectory(string rootPath, string relativePath) => GetSafePathInsideDirectory(rootPath, relativePath);
-    (List<string> Directories, List<string> Files) IWorkspaceHost.InspectDirectoryTreeSafely(string rootPath) => InspectDirectoryTreeSafely(rootPath);
-    Task<bool> IWorkspaceHost.OfferBrokenLinkCleanupAsync(string loaderRoot) => OfferBrokenLinkCleanupAsync(loaderRoot);
-    Task IWorkspaceHost.RollbackInstallTransactionAsync(string transactionPath, bool clearLastTransaction) => RollbackInstallTransactionAsync(transactionPath, clearLastTransaction);
-
-    IReadOnlyList<ModIniConflictSummary> IWorkspaceHost.DetectModIniConflictsSafely(string candidateDirectory, string targetRoot, IEnumerable<string> ignoredTargets) => DetectModIniConflictsSafely(candidateDirectory, targetRoot, ignoredTargets);
-
-    string IWorkspaceHost.ImportArchiveContents(string archivePath, string firstLevelDirectory) => ImportArchiveContents(archivePath, firstLevelDirectory);
-    bool IWorkspaceHost.IsSupportedArchiveFile(string path) => IsSupportedArchiveFile(path);
-
-    CopyDeploymentLedger IWorkspaceHost.CopyLedger(WorkspaceRepository repository) => CopyLedger(repository);
-    Func<string, string, bool> IWorkspaceHost.OwnsCopy(WorkspaceRepository repository) => OwnsCopy(repository);
-    void IWorkspaceHost.SaveCopyRecordsIfChanged() => SaveCopyRecordsIfChanged();
-
     ICharacterRenameReferences IWorkspaceHost.CreateCharacterRenameReferences(WorkspaceRepository repository) => new CharacterRenameReferences(this, repository);
-    string IWorkspaceHost.CharacterRenameBlockText(CharacterRenamePlan plan, WorkspaceRepository repository) => CharacterRenameBlockText(plan, repository);
 
     void IWorkspaceHost.RefreshPersistentSlotControls() => RefreshPersistentSlotControls();
     Task IWorkspaceHost.SeedDefaultSlotsAsync(WorkspaceRepository repository, IReadOnlyList<FirstLevelFolderItem> characters) => SeedDefaultSlotsAsync(repository, characters);

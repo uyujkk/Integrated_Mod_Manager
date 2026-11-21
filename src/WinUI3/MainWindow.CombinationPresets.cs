@@ -78,7 +78,7 @@ public sealed partial class MainWindow
             .ToArray();
         if (copies.Any(state => state.Values.Count > 0) && !repository.UseDirectoryLinks)
             await Task.Run(() => ModPersistentPresetEngine.PlanCombinationRuntimeRestore(copies, userIni));
-        var stillEnabled = await Task.Run(() => ModCombinationDeploymentPolicy.Capture(repository.SourcePath, repository.TargetPath, OwnsCopy(repository)));
+        var stillEnabled = await Task.Run(() => ModCombinationDeploymentPolicy.Capture(repository.SourcePath, repository.TargetPath, _services.Install.OwnsCopy(repository)));
         if (!stillEnabled.ToHashSet(StringComparer.OrdinalIgnoreCase).SetEquals(paths))
             throw new IOException(T("CombinationPresets.DeploymentChangedDuringCaptureTheCombination"));
 
@@ -109,7 +109,7 @@ public sealed partial class MainWindow
         ModPersistentRuntimeRestorePlan? runtimePlan = null;
         bool started = false, committed = false, adopted = false;
         // The copy records go back with the folders when the restore is rolled back.
-        List<CopyDeploymentRecord> copyRecords = CopyRecordsSnapshot();
+        List<CopyDeploymentRecord> copyRecords = _services.Install.CopyRecordsSnapshot();
         SetCombinationBusy(true);
         try
         {
@@ -117,9 +117,9 @@ public sealed partial class MainWindow
             var request = new CombinationRestoreRequest(repository.SourcePath, repository.TargetPath,
                 profile.ModRelativePaths.ToArray(), repository.UseDirectoryLinks, profile.IncludesPersistentState,
                 profile.PersistentStates.Select(state => new CombinationPresetState(state.ModRelativePath, state.Values.ToArray())).ToArray(), userIni,
-                OwnsCopy(repository));
+                _services.Install.OwnsCopy(repository));
             CombinationRestorePreview preview = await Task.Run(() => CombinationRestorePreviewService.Prepare(request));
-            SaveCopyRecordsIfChanged();
+            _services.Install.SaveCopyRecordsIfChanged();
             foreach (var issue in preview.Issues.Where(issue => issue.Error is not null))
                 LogApplicationIssue("Combination preview: " + issue.Code, issue.Error!);
             CombinationRestoreChoice choice = await CombinationRestoreDialog.ConfirmAsync(_services, profile.Name, preview,
@@ -127,7 +127,7 @@ public sealed partial class MainWindow
             if (choice == CombinationRestoreChoice.TakeOver)
             {
                 // The user recognises the external folders as old copies: record them and show the preview again.
-                AdoptCopies(repository, preview.Deployment!.Unowned);
+                _services.Install.AdoptCopies(repository, preview.Deployment!.Unowned);
                 adopted = true;
                 return;
             }
@@ -141,14 +141,14 @@ public sealed partial class MainWindow
             {
                 string[] deploymentTargets = deployment.RemoveTargets
                     .Concat(deployment.InstallSources.Select(item => ModDeploymentLayout.DeployedPath(repository.TargetPath, item))).ToArray();
-                List<string> conflicts = await Task.Run(() => deployment.InstallSources.SelectMany(source => DetectModFileConflicts(
+                List<string> conflicts = await Task.Run(() => deployment.InstallSources.SelectMany(source => _services.Install.DetectModFileConflicts(
                     source, repository.TargetPath, deploymentTargets))
                     .Distinct(StringComparer.OrdinalIgnoreCase).Take(100).ToList());
                 List<(string? Candidate, ModIniConflictSummary Summary)> iniConflicts = await Task.Run(() => deployment.InstallSources
-                    .SelectMany(source => DetectModIniConflictsSafely(source, repository.TargetPath, deploymentTargets)
+                    .SelectMany(source => _services.Install.DetectModIniConflictsSafely(source, repository.TargetPath, deploymentTargets)
                         .Select(summary => ((string?)Path.GetFileName(source), summary)))
                     .ToList());
-                if ((conflicts.Count > 0 || iniConflicts.Count > 0) && !await ConfirmInstallConflictsAsync(conflicts, iniConflicts)) return;
+                if ((conflicts.Count > 0 || iniConflicts.Count > 0) && !await _services.Install.ConfirmInstallConflictsAsync(conflicts, iniConflicts)) return;
             }
             // No confirmation dialog is a lock. Revalidate AFTER all confirmations.
             CombinationRestorePreview fresh = await Task.Run(() => CombinationRestorePreviewService.Prepare(request));
@@ -159,12 +159,12 @@ public sealed partial class MainWindow
             string[] affected = deployment.RemoveTargets.Concat(deployment.InstallSources.Select(source =>
                 ModDeploymentLayout.DeployedPath(repository.TargetPath, source))).Distinct(StringComparer.OrdinalIgnoreCase).ToArray();
             if (affected.Length > 0)
-                transaction = await CreateInstallTransactionAsync(T("CombinationPresets.RestoreCombination", profile.Name), repository, affected);
+                transaction = await _services.Install.CreateInstallTransactionAsync(T("CombinationPresets.RestoreCombination", profile.Name), repository, affected);
             started = true;
-            CopyDeploymentLedger ledger = CopyLedger(repository);
+            CopyDeploymentLedger ledger = _services.Install.CopyLedger(repository);
             foreach (string target in deployment.RemoveTargets)
             {
-                await Task.Run(() => DeleteDirectoryTreeSafely(target));
+                await Task.Run(() => _services.Install.DeleteDirectoryTreeSafely(target));
                 ledger.Forget(target);
             }
             foreach (string source in deployment.InstallSources)
@@ -173,7 +173,7 @@ public sealed partial class MainWindow
                     new Progress<ProgressInfo>(info => _workspaceView.UpdateProgress(info.Percent, T("CombinationPresets.RestoringCombination") + Path.GetFileName(source))));
             }
             SaveShellConfig();
-            var actual = await Task.Run(() => ModCombinationDeploymentPolicy.Capture(repository.SourcePath, repository.TargetPath, OwnsCopy(repository)));
+            var actual = await Task.Run(() => ModCombinationDeploymentPolicy.Capture(repository.SourcePath, repository.TargetPath, _services.Install.OwnsCopy(repository)));
             if (!actual.ToHashSet(StringComparer.OrdinalIgnoreCase).SetEquals(deployment.DesiredSources.Select(source => Path.GetRelativePath(request.SourceRoot, source))))
                 throw new IOException(T("CombinationPresets.DeploymentDoesNotMatchThePreset"));
             if (runtimePlan is not null)
@@ -185,7 +185,7 @@ public sealed partial class MainWindow
                     }).ToArray(), userIni));
                 stateBackup = await Task.Run(() => ModPersistentPresetEngine.ApplyRuntimeRestore(runtimePlan));
             }
-            if (transaction is not null) CommitInstallTransaction(transaction);
+            if (transaction is not null) _services.Install.CommitInstallTransaction(transaction);
             committed = true;
             await RefreshShortcutDeployedModsAsync();
             _workspaceView.UpdateProgress(100, T("CombinationPresets.CombinationAndLoaderParametersVerified"));
@@ -206,10 +206,10 @@ public sealed partial class MainWindow
                 }
                 if (transaction is not null)
                 {
-                    try { await RollbackInstallTransactionAsync(transaction, clearLastTransaction: true); }
+                    try { await _services.Install.RollbackInstallTransactionAsync(transaction, clearLastTransaction: true); }
                     catch (Exception rollback) { errors.Add(T("CombinationPresets.DeploymentRollbackFailedInspectBackup") + rollback.Message); }
                 }
-                RestoreCopyRecords(copyRecords);
+                _services.Install.RestoreCopyRecords(copyRecords);
             }
             await ShowMessageAsync(string.Join("\n", errors) + T("CombinationPresets.KeepTheLoaderClosedAndInspect"), T("CombinationPresets.CombinationRestoreIncomplete"));
         }
