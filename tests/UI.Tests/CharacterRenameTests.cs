@@ -63,6 +63,62 @@ public sealed class CharacterRenameTests
         app.AssertNoErrors();
     }
 
+    // Written before stage J finish step 6 moves the slot code (and with it part of the rename) out of the window: a
+    // rename also moves the character's state slots, Default slot seeds, shortcut bindings, links and tracked Mods.
+    [Fact]
+    public void Rename_MovesSlotsSeedsBindingsLinksAndTrackedMods()
+    {
+        using AppSession app = AppSession.Configured((shell, _) =>
+        {
+            shell["CurrentPrimarySection"] = "repository";
+            shell["ModPersistentSlots"] = new JsonArray(new JsonObject
+            {
+                ["Id"] = "pinned-slot", ["RepositoryId"] = "ui-repository", ["ModRelativePath"] = @"TestCharacter\TestModA", ["Name"] = "Pinned",
+                ["Values"] = new JsonArray(new JsonObject
+                {
+                    ["RelativeIniPath"] = "mod.ini", ["Variable"] = "$hair", ["RuntimeKey"] = @"$\Mods\TestModA\mod.ini\hair", ["Value"] = "2"
+                })
+            });
+            shell["DefaultSlotSeeds"] = new JsonObject { ["ui-repository"] = new JsonArray(@"TestCharacter\TestModA") };
+        });
+        string oldSource = Path.Combine(app.TestData, "ModRepository", "TestCharacter", "TestModA");
+        string newSource = Path.Combine(app.TestData, "ModRepository", "RenamedCharacter", "TestModA");
+        // config.ini keeps bindings, links and tracked Mods by the Mod's full path (fields Base64, separated by tabs).
+        static string Fields(params string[] values) => string.Join('\t', values.Select(value => Convert.ToBase64String(System.Text.Encoding.UTF8.GetBytes(value))));
+        File.AppendAllLines(Path.Combine(app.AppFolder, "config.ini"),
+        [
+            "binding=" + Fields(oldSource, "Ctrl+H", "Pinned hair"),
+            "mod_link=" + Fields(oldSource, "https://example.invalid/mods/pinned"),
+            "mod_origin=" + Fields(oldSource, "GameBanana", "990100", "Pinned Mod", "https://gamebanana.com/mods/990100", "", "", "770000", "sample.zip")
+        ]);
+        app.Start();
+
+        AppSession.Invoke(app.FindByName("TestCharacter"));
+        AppSession.Invoke(app.Find("CharacterMoreButton"));
+        AppSession.Invoke(app.FindByName(app.Text("LocalLibrary.Rename"), TimeSpan.FromSeconds(10)));
+        app.Find("PromptTextBox", TimeSpan.FromSeconds(10)).Patterns.Value.Pattern.SetValue("RenamedCharacter");
+        AppSession.Invoke(app.FindByName(app.Text("Dialogs.Rename")));
+        Wait(() => Directory.Exists(newSource) && (string?)app.TryShellConfig()?["ModPersistentSlots"]?.AsArray()
+            .FirstOrDefault(slot => (string?)slot!["Id"] == "pinned-slot")?["ModRelativePath"] == @"RenamedCharacter\TestModA");
+
+        JsonNode saved = app.ReadSaved();
+        Assert.All(saved["ModPersistentSlots"]!.AsArray().Where(slot => (string?)slot!["ModRelativePath"] is { } path && path.EndsWith(@"\TestModA", StringComparison.Ordinal)),
+            slot => Assert.Equal(@"RenamedCharacter\TestModA", (string?)slot!["ModRelativePath"]));
+        Assert.DoesNotContain(saved["ModPersistentSlots"]!.AsArray(), slot => ((string?)slot!["ModRelativePath"])?.StartsWith(@"TestCharacter\", StringComparison.Ordinal) == true);
+        Assert.Contains(@"RenamedCharacter\TestModA", saved["DefaultSlotSeeds"]!["ui-repository"]!.AsArray().Select(path => (string?)path));
+        Assert.DoesNotContain(@"TestCharacter\TestModA", saved["DefaultSlotSeeds"]!["ui-repository"]!.AsArray().Select(path => (string?)path));
+
+        string[] config = File.ReadAllLines(Path.Combine(app.AppFolder, "config.ini"));
+        string[] Decoded(string key) => [.. config.Where(line => line.StartsWith(key, StringComparison.Ordinal))
+            .Select(line => string.Join("|", line[key.Length..].Split('\t').Select(field => System.Text.Encoding.UTF8.GetString(Convert.FromBase64String(field)))))];
+        Assert.Equal([newSource + "|Ctrl+H|Pinned hair"], Decoded("binding="));
+        Assert.Equal([newSource + "|https://example.invalid/mods/pinned"], Decoded("mod_link="));
+        string origin = Assert.Single(Decoded("mod_origin="));
+        Assert.StartsWith(newSource + "|GameBanana|990100|Pinned Mod|", origin);
+        Assert.DoesNotContain(config, line => line.Contains(Convert.ToBase64String(System.Text.Encoding.UTF8.GetBytes(oldSource)), StringComparison.Ordinal));
+        app.AssertNoErrors();
+    }
+
     private static string? CopySource(AppSession app) => (string?)app.ReadSaved()["CopyDeployments"]![0]!["SourceRelativePath"];
 
     private static string Target(string link) => (new DirectoryInfo(link).LinkTarget ?? string.Empty).Replace(@"\??\", string.Empty);

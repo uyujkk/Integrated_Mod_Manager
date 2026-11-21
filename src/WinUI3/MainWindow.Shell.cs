@@ -480,7 +480,7 @@ public sealed partial class MainWindow
     {
         try
         {
-            if (_applyingCombinationProfile || _restoringPersistentRuntime) return;
+            if (_applyingCombinationProfile || _services.Slots.IsRestoring) return;
             bool controlDown = InputKeyboardSource.GetKeyStateForCurrentThread(VirtualKey.Control).HasFlag(CoreVirtualKeyStates.Down);
             bool altDown = InputKeyboardSource.GetKeyStateForCurrentThread(VirtualKey.Menu).HasFlag(CoreVirtualKeyStates.Down);
 

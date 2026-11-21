@@ -11,14 +11,14 @@ public sealed partial class MainWindow
 
     private async Task SaveSingleModPresetFromOverlayAsync()
     {
-        if (_savingOverlaySinglePreset || _applyingCombinationProfile || (_shortcuts.SendInProgress && !_restoringPersistentRuntime)) return;
+        if (_savingOverlaySinglePreset || _applyingCombinationProfile || (_shortcuts.SendInProgress && !_services.Slots.IsRestoring)) return;
         var overlay = _overlay.Window;
         if (overlay?.Content is not FrameworkElement root) return;
         // Freeze the repository and Mod at click time, independently of the main repository selection
         // and automatic character following. The dialog identifies exactly this Mod.
         WorkspaceRepository? repository = GetSelectedRepository();
         string? modPath = _overlay.ModOnOverlay?.Path;
-        string? relative = TryGetCurrentModRelativePath(repository, modPath);
+        string? relative = SlotService.TryGetCurrentModRelativePath(repository, modPath);
         if (repository is null || modPath is null || relative is null)
         {
             _shortcuts.StatusText = T("ShortcutPanel.SelectAMod");
@@ -32,7 +32,7 @@ public sealed partial class MainWindow
         try
         {
             string? userIni = repository.PersistentUserIniPath is { Length: > 0 } configured
-                ? configured : TryGetDefaultPersistentIniPath(repository);
+                ? configured : SlotService.TryGetDefaultPersistentIniPath(repository);
             if (userIni is null || !File.Exists(userIni))
                 throw new InvalidDataException(T("HotReload.SetTheUserIniFirst"));
             if (string.IsNullOrWhiteSpace(repository.TargetPath)
@@ -40,7 +40,7 @@ public sealed partial class MainWindow
                 throw new InvalidDataException(T("PersistentSlots.DeployThisModUnderItsMatching"));
 
             (ContentDialog dialog, TextBox nameBox) = SingleModPresetDialog.Create(_services, root.XamlRoot, relative,
-                candidate => _modPersistentSlots.Any(slot => slot.RepositoryId == repository.Id
+                candidate => _services.Slots.Items.Any(slot => slot.RepositoryId == repository.Id
                     && string.Equals(slot.ModRelativePath, relative, StringComparison.OrdinalIgnoreCase)
                     && string.Equals(slot.Name, candidate, StringComparison.OrdinalIgnoreCase)));
             overlay.SetKeyboardInputEnabled(true);
@@ -53,7 +53,7 @@ public sealed partial class MainWindow
             }
             if (result != ContentDialogResult.Primary || _services.IsClosing) return;
 
-            CharacterFrame? preview = await CapturePresetPreviewAsync();
+            CharacterFrame? preview = await _services.PresetPreviews.CapturePresetPreviewAsync();
             if (!await PrepareOverlayCaptureAsync(userIni)) return;
             string name = nameBox.Text.Trim();
             _shortcuts.StatusText = T("ShortcutPanel.SavingSinglePreset");
@@ -65,20 +65,20 @@ public sealed partial class MainWindow
             var captured = states.Single().Values;
             if (captured.Count == 0)
                 throw new InvalidDataException(T("PersistentSlots.NoNumericPersistentValuesMatchedThis"));
-            var (values, menuStateLeft) = FilterSlotValues(captured);
+            var (values, menuStateLeft) = _services.Slots.FilterSlotValues(captured);
             if (_services.IsClosing) return;
             var slot = new ModPersistentSlot
             {
                 RepositoryId = repository.Id, ModRelativePath = relative, Name = name,
                 Values = [.. values], ActivatedAtUtc = DateTimeOffset.UtcNow
             };
-            await EnsureDefaultSlotAsync(repository, modPath, relative);
-            slot.PreviewFile = await StorePresetPreviewAsync(repository.Id, slot.Id, CropToDefaultRegion(preview));
-            _modPersistentSlots.Add(slot);
+            await _services.Slots.EnsureDefaultSlotAsync(repository, modPath, relative);
+            slot.PreviewFile = await _services.PresetPreviews.StorePresetPreviewAsync(repository.Id, slot.Id, _services.PresetPreviews.CropToDefaultRegion(preview));
+            _services.Slots.Items.Add(slot);
             try { SaveShellConfig(throwOnError: true); }
-            catch { _modPersistentSlots.Remove(slot); DeletePresetPreview(slot.PreviewFile); throw; }
-            _selectedModPersistentSlotId = slot.Id;
-            _shortcuts.StatusText = T("ShortcutPanel.SinglePresetSaved", name, values.Count) + PresetPreviewNote(slot.PreviewFile)
+            catch { _services.Slots.Items.Remove(slot); _services.PresetPreviews.DeletePresetPreview(slot.PreviewFile); throw; }
+            _services.Slots.SelectedId = slot.Id;
+            _shortcuts.StatusText = T("ShortcutPanel.SinglePresetSaved", name, values.Count) + _services.PresetPreviews.PresetPreviewNote(slot.PreviewFile)
                 + (menuStateLeft > 0 ? T("SlotCapture.MenuStateLeftOut", menuStateLeft) : string.Empty);
         }
         catch (Exception ex)

@@ -41,7 +41,7 @@ public sealed partial class MainWindow
     private void RefreshCombinationBundleActions()
     {
         if (_exportCombinationBundleButton is null) return;
-        bool available = !_applyingCombinationProfile && !_restoringPersistentRuntime
+        bool available = !_applyingCombinationProfile && !_services.Slots.IsRestoring
             && GetSelectedRepository() is { SourcePath.Length: > 0 } repository && Directory.Exists(repository.SourcePath);
         SetLabel(_exportCombinationBundleButton, "\uE896", T("CombinationBundles.ExportBundle"));
         SetLabel(_importCombinationBundleButton!, "\uE898", T("CombinationBundles.InstallBundle"));
@@ -72,7 +72,7 @@ public sealed partial class MainWindow
 
     private async Task ExportCombinationBundleAsync()
     {
-        if (_applyingCombinationProfile || _restoringPersistentRuntime || GetSelectedRepository() is not { } repository
+        if (_applyingCombinationProfile || _services.Slots.IsRestoring || GetSelectedRepository() is not { } repository
             || GetSelectedConfigurationProfile() is not { } profile) return;
         string root = repository.SourcePath, name = profile.Name, game = repository.OnlineGameName;
         bool includeState = profile.IncludesPersistentState;
@@ -123,7 +123,7 @@ public sealed partial class MainWindow
 
     private async Task ImportCombinationBundleAsync()
     {
-        if (_applyingCombinationProfile || _restoringPersistentRuntime || GetSelectedRepository() is not { } repository) return;
+        if (_applyingCombinationProfile || _services.Slots.IsRestoring || GetSelectedRepository() is not { } repository) return;
         string root = repository.SourcePath, repositoryId = repository.Id;
         using var cancellation = new CancellationTokenSource();
         _bundleOperationCancellation = cancellation;

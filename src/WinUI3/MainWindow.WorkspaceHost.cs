@@ -13,14 +13,8 @@ public sealed partial class MainWindow : IWorkspaceHost
 {
     private void AttachWorkspacePageEvents()
     {
-        _workspaceView.BrowsePersistentUserIniButton.Click += OnBrowsePersistentUserIniClicked;
-        _workspaceView.PersistentSlotComboBox.SelectionChanged += OnPersistentSlotSelectionChanged;
-        _workspaceView.CapturePersistentSlotButton.Click += OnCapturePersistentSlotClicked;
-        _workspaceView.DeletePersistentSlotButton.Click += OnDeletePersistentSlotClicked;
-        _workspaceView.RestorePersistentRuntimeButton.Click += OnRestorePersistentRuntimeClicked;
         _workspaceView.OpenCombinationPresetsButton.Click += OnOpenCombinationPresetsClicked;
         _workspaceView.ConfigurationProfileComboBox.SelectionChanged += OnConfigurationProfileSelectionChanged;
-        _workspaceView.BrowseCombinationUserIniButton.Click += OnBrowsePersistentUserIniClicked;
         _workspaceView.CreateConfigurationProfileButton.Click += OnCreateConfigurationProfileClicked;
         _workspaceView.UpdateConfigurationProfileButton.Click += OnUpdateConfigurationProfileClicked;
         _workspaceView.ApplyConfigurationProfileButton.Click += OnApplyConfigurationProfileClicked;
@@ -28,6 +22,7 @@ public sealed partial class MainWindow : IWorkspaceHost
     }
 
     FrameworkElement IWorkspaceHost.Root => RootGrid;
+    bool IWorkspaceHost.IsApplyingCombinationProfile => _applyingCombinationProfile;
     Windows.Foundation.Rect IWorkspaceHost.Bounds => Bounds;
     object IWorkspaceHost.OnlineNavButton => OnlineNavButton;
     void IWorkspaceHost.AttachTrackedTextInput(TextBox box) => AttachTrackedTextInput(box);
@@ -67,11 +62,7 @@ public sealed partial class MainWindow : IWorkspaceHost
 
     ICharacterRenameReferences IWorkspaceHost.CreateCharacterRenameReferences(WorkspaceRepository repository) => new CharacterRenameReferences(this, repository);
 
-    void IWorkspaceHost.RefreshPersistentSlotControls() => RefreshPersistentSlotControls();
-    Task IWorkspaceHost.SeedDefaultSlotsAsync(WorkspaceRepository repository, IReadOnlyList<FirstLevelFolderItem> characters) => SeedDefaultSlotsAsync(repository, characters);
 
-    FrameworkElement IWorkspaceHost.CreatePresetPreviewEditor(string repositoryId, string presetId, string? previewFile, Action<string?> assign, Action refresh) => CreatePresetPreviewEditor(repositoryId, presetId, previewFile, assign, refresh);
-    Image? IWorkspaceHost.CreatePresetPreviewImage(string? previewFile, double width, double height) => CreatePresetPreviewImage(previewFile, width, height);
 
     IEnumerable<ModConfigurationProfile> IWorkspaceHost.GetCurrentRepositoryProfiles() => GetCurrentRepositoryProfiles();
     ModConfigurationProfile? IWorkspaceHost.GetSelectedConfigurationProfile() => GetSelectedConfigurationProfile();
@@ -88,4 +79,7 @@ public sealed partial class MainWindow : IWorkspaceHost
     void IWorkspaceHost.ApplyDashboardCharacterAvatar(FirstLevelFolderItem item) => ApplyDashboardCharacterAvatar(item);
 
     RepositoryPerformanceRecorder.Scope? IWorkspaceHost.MeasureRepositoryUi(RepositoryPerformanceOperation operation, int count) => MeasureRepositoryUi(operation, count);
+
+    // The slot card is the workspace page's (stage J finish, step 6); the window and the services ask it to redraw.
+    private void RefreshPersistentSlotControls() => _workspaceView.RefreshPersistentSlotControls();
 }

@@ -34,7 +34,7 @@ public sealed partial class MainWindow
 
     private async Task ImportPresetShareAsync()
     {
-        if (_applyingCombinationProfile || _restoringPersistentRuntime || GetSelectedRepository() is not { } repository) return;
+        if (_applyingCombinationProfile || _services.Slots.IsRestoring || GetSelectedRepository() is not { } repository) return;
         if (await PickFileAsync([".json"]) is not { } path) return;
         PresetShareFile file;
         try
@@ -72,9 +72,9 @@ public sealed partial class MainWindow
         foreach (PresetShareMod mod in preview.Matched.Where(mod => mod.Values.Count > 0))
         {
             string relative = mod.RelativePath.Replace('/', Path.DirectorySeparatorChar);
-            if (_modPersistentSlots.Any(slot => slot.RepositoryId == repository.Id && slot.Name.Equals(name, StringComparison.OrdinalIgnoreCase)
+            if (_services.Slots.Items.Any(slot => slot.RepositoryId == repository.Id && slot.Name.Equals(name, StringComparison.OrdinalIgnoreCase)
                 && slot.ModRelativePath.Equals(relative, StringComparison.OrdinalIgnoreCase))) continue;
-            _modPersistentSlots.Add(new ModPersistentSlot { RepositoryId = repository.Id, ModRelativePath = relative, Name = name, Values = [.. mod.Values] });
+            _services.Slots.Items.Add(new ModPersistentSlot { RepositoryId = repository.Id, ModRelativePath = relative, Name = name, Values = [.. mod.Values] });
             slots++;
         }
         SaveShellConfig();

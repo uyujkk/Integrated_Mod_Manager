@@ -1,5 +1,6 @@
 using IntegratedModManager.Core.Configuration;
 using IntegratedModManager.Core.Online;
+using IntegratedModManager.Core.Repository;
 
 namespace ModFolderCopier.WinUI;
 
@@ -32,6 +33,14 @@ internal sealed partial class ModTrackingService(RepositoryService repositories)
             Remove(path);
         }
         return stalePaths.Count > 0;
+    }
+
+    /// <summary>A character was renamed (#108): its tracked Mods are found under the new folder.</summary>
+    public void RenameCharacter(CharacterRenamePlan plan, ReferenceUndoLog log)
+    {
+        log.Rekey(Origins, plan.MapFullPath);
+        foreach (TrackedModOrigin origin in Origins.Values)
+            log.Rewrite(() => origin.Path, value => origin.Path = value, plan.MapFullPath);
     }
 
     /// <summary>Stops tracking the Mod in this folder.</summary>

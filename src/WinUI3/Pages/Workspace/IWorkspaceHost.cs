@@ -16,6 +16,8 @@ internal interface IWorkspaceHost
 {
     // The shell: the root element, window size, navigation, theme brushes, motion and tracked text boxes.
     FrameworkElement Root { get; }
+    // A combination preset is being restored (the slot card waits for it; the combination code is still the window's).
+    bool IsApplyingCombinationProfile { get; }
     Windows.Foundation.Rect Bounds { get; }
     object OnlineNavButton { get; }
     void AttachTrackedTextInput(TextBox box);
@@ -62,14 +64,6 @@ internal interface IWorkspaceHost
     // Character rename migration (#108): the references the window still owns (the install pipeline is in
     // AppServices.Install since stage J finish, step 4).
     ICharacterRenameReferences CreateCharacterRenameReferences(WorkspaceRepository repository);
-
-    // State slots and default slots.
-    void RefreshPersistentSlotControls();
-    Task SeedDefaultSlotsAsync(WorkspaceRepository repository, IReadOnlyList<FirstLevelFolderItem> characters);
-
-    // Preset previews.
-    FrameworkElement CreatePresetPreviewEditor(string repositoryId, string presetId, string? previewFile, Action<string?> assign, Action refresh);
-    Image? CreatePresetPreviewImage(string? previewFile, double width, double height);
 
     // Combination presets and bundles.
     IEnumerable<ModConfigurationProfile> GetCurrentRepositoryProfiles();

@@ -9,13 +9,13 @@ public sealed partial class MainWindow
     private async Task<bool> WaitForOverlayCaptureAsync()
     {
         // A hot switch owns the file until its read-only hold finishes. Queue a save behind it.
-        while (_restoringPersistentRuntime && !_services.IsClosing) await Task.Delay(50);
+        while (_services.Slots.IsRestoring && !_services.IsClosing) await Task.Delay(50);
         return !_services.IsClosing && !_applyingCombinationProfile;
     }
 
     private async Task<bool> PrepareOverlayCaptureAsync(string userIni)
     {
-        bool canSend = CanHotReloadLoader;
+        bool canSend = _services.Slots.CanHotReloadLoader;
         if (_shortcuts.SelectedTarget is ShortcutTarget target)
         {
             var own = ShortcutProcessSecurity.Read((uint)Environment.ProcessId);
@@ -31,7 +31,7 @@ public sealed partial class MainWindow
         {
             var chosen = _shortcuts.SelectedTarget!;
             await LoaderStateCapture.FlushAsync(userIni,
-                _ => _shortcutInput.SendAsync(chosen, new ShortcutKeyPlan([LoaderReloadKey], []), 120, _shortcuts.InputMode, _services.Language.Current));
+                _ => _shortcutInput.SendAsync(chosen, new ShortcutKeyPlan([SlotService.LoaderReloadKey], []), 120, _shortcuts.InputMode, _services.Language.Current));
             return !_services.IsClosing;
         }
         catch (TimeoutException)
@@ -73,7 +73,7 @@ public sealed partial class MainWindow
 
     private async Task RefreshOverlayFromDiskAsync()
     {
-        if (_applyingCombinationProfile || _restoringPersistentRuntime || _shortcuts.SendInProgress) return;
+        if (_applyingCombinationProfile || _services.Slots.IsRestoring || _shortcuts.SendInProgress) return;
         await RefreshShortcutDeployedModsAsync();
         await LoadShortcutSelectionAsync(force: true);
         if (_shortcuts.SelectedMod is null) _shortcuts.StatusText = T("ShortcutCapture.CurrentRemoved");
