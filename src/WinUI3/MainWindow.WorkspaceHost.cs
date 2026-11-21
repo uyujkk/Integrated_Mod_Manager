@@ -39,7 +39,7 @@ public sealed partial class MainWindow : IWorkspaceHost
     string[] IWorkspaceHost.ImageExtensions => ImageExtensions;
     int IWorkspaceHost.ShortcutScanSafetyLimit => ShortcutScanSafetyLimit;
     string? IWorkspaceHost.CurrentSecondLevelPath { get => _currentSecondLevelPath; set => _currentSecondLevelPath = value; }
-    bool IWorkspaceHost.EnableConflictDetection => _enableConflictDetection;
+    bool IWorkspaceHost.EnableConflictDetection => _shell.EnableConflictDetection;
     bool IWorkspaceHost.IsApplyingRepositoryDeploymentMode => _isApplyingRepositoryDeploymentMode;
     Dictionary<string, List<ShortcutBinding>> IWorkspaceHost.ModBindings => _modBindings;
     Dictionary<string, string> IWorkspaceHost.ModLinks => _modLinks;

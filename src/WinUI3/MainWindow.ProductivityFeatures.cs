@@ -18,21 +18,13 @@ namespace ModFolderCopier.WinUI;
 
 public sealed partial class MainWindow
 {
-    private const double DefaultInstallBackupLimitGb = 5;
     private static readonly object ApplicationErrorLogSync = new();
     private readonly AppDataStore _appDataStore;
     private readonly HashSet<string> _favoriteCharacterKeys = new(StringComparer.OrdinalIgnoreCase);
     private bool _systemHighContrast;
     private bool _systemAnimationsEnabled = true;
-    private bool _checkAppUpdatesOnStartup = false;
-    // As read from the config; a build without self-update writes these back unchanged.
-    private bool? _loadedCheckAppUpdatesOnStartup;
-    private string? _loadedUpdateCheckInterval;
     private bool _isApplyingStartupUpdateSetting;
     private bool _isApplyingBackupLimitSetting;
-    private double _installBackupLimitGb = DefaultInstallBackupLimitGb;
-    private string? _latestReleasePackageUrl;
-    private string? _latestReleaseSha256Url;
 
     private const uint SpiGetHighContrast = 0x0042;
     private const uint SpiGetClientAreaAnimation = 0x1042;
@@ -100,7 +92,7 @@ public sealed partial class MainWindow
         }
     }
 
-    private bool ShouldReduceAnimations => _reduceMotion
+    private bool ShouldReduceAnimations => _shell.ReduceMotion
         || _systemHighContrast
         || !_systemAnimationsEnabled;
 
@@ -160,7 +152,7 @@ public sealed partial class MainWindow
 
     private void NavigateToPrimarySection(PrimarySection section)
     {
-        _currentPrimarySection = section;
+        _shell.CurrentSection = section;
         ApplyShellState(refreshRepository: section == PrimarySection.Repository);
         SaveShellConfig();
     }
@@ -206,14 +198,14 @@ public sealed partial class MainWindow
 
     private void ApplyLatestReleaseInfo(LatestReleaseInfo release)
     {
-        _lastUpdateCheckUtc = DateTimeOffset.UtcNow;
-        _latestReleaseTag = release.Tag;
-        _latestReleaseTitle = string.IsNullOrWhiteSpace(release.Title) ? release.Tag : release.Title;
-        _latestReleaseBody = release.Body;
-        _latestReleasePublishedAt = release.PublishedAt;
-        _latestReleaseUrl = release.PageUrl;
-        _latestReleasePackageUrl = release.PackageUrl;
-        _latestReleaseSha256Url = release.Sha256Url;
+        _shell.LastUpdateCheckUtc = DateTimeOffset.UtcNow;
+        _shell.LatestReleaseTag = release.Tag;
+        _shell.LatestReleaseTitle = string.IsNullOrWhiteSpace(release.Title) ? release.Tag : release.Title;
+        _shell.LatestReleaseBody = release.Body;
+        _shell.LatestReleasePublishedAt = release.PublishedAt;
+        _shell.LatestReleaseUrl = release.PageUrl;
+        _shell.LatestReleasePackageUrl = release.PackageUrl;
+        _shell.LatestReleaseSha256Url = release.Sha256Url;
         _appDataStore.WriteCache("app-release", "latest", release);
         SaveShellConfig();
         RefreshUpdateDetailsView();
@@ -243,7 +235,7 @@ public sealed partial class MainWindow
         string temporaryPath = finalPath + ".download";
         try
         {
-            _currentPrimarySection = PrimarySection.Settings;
+            _shell.CurrentSection = PrimarySection.Settings;
             ApplyShellState(refreshRepository: false);
             SettingsView.BeginDownload(T("ProductivityFeatures.PreparingUpdateDownload"));
 
@@ -300,7 +292,7 @@ public sealed partial class MainWindow
     private void RefreshBackupManagerText()
     {
         _isApplyingBackupLimitSetting = true;
-        UpdatesView.BackupLimitGb = _installBackupLimitGb;
+        UpdatesView.BackupLimitGb = _shell.InstallBackupLimitGb;
         _isApplyingBackupLimitSetting = false;
     }
 
@@ -322,7 +314,7 @@ public sealed partial class MainWindow
         List<InstallBackupDisplayItem> backups = await Task.Run(ReadInstallBackups);
         long totalBytes = backups.Sum(item => item.SizeBytes);
         UpdatesView.SetBackups(
-            T("ProductivityFeatures.BackupsGB", backups.Count, FormatStorageSize(totalBytes), _installBackupLimitGb),
+            T("ProductivityFeatures.BackupsGB", backups.Count, FormatStorageSize(totalBytes), _shell.InstallBackupLimitGb),
             [.. backups.Take(30).Select(backup => new InstallBackupRow(backup.Path, backup.Description,
                 T("ProductivityFeatures.Text", backup.CreatedAt.ToLocalTime(), backup.ModNames, FormatStorageSize(backup.SizeBytes))))]);
     }
@@ -472,11 +464,11 @@ public sealed partial class MainWindow
             AppVersion,
             Language = _services.Language.Current,
             Theme = _services.Appearance.IsDark ? "Dark" : "Light",
-            _checkAppUpdatesOnStartup,
-            UpdateInterval = _updateCheckInterval.ToString(),
-            _installBackupLimitGb,
-            ReduceMotion = _reduceMotion,
-            Density = _interfaceDensity.ToString(),
+            _shell.CheckAppUpdatesOnStartup,
+            UpdateInterval = _shell.UpdateCheckInterval.ToString(),
+            _shell.InstallBackupLimitGb,
+            ReduceMotion = _shell.ReduceMotion,
+            Density = _shell.InterfaceDensity.ToString(),
             Repositories = _services.Repositories.Items.Select((repository, index) => new
             {
                 Number = index + 1,

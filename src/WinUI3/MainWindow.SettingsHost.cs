@@ -57,10 +57,10 @@ public sealed partial class MainWindow
     {
         if (!AppSelfUpdateEnabled)
         {
-            _checkAppUpdatesOnStartup = false;
+            _shell.CheckAppUpdatesOnStartup = false;
         }
         _isApplyingStartupUpdateSetting = true;
-        SettingsView.CheckOnStartup = _checkAppUpdatesOnStartup;
+        SettingsView.CheckOnStartup = _shell.CheckAppUpdatesOnStartup;
         _isApplyingStartupUpdateSetting = false;
     }
 
@@ -68,28 +68,28 @@ public sealed partial class MainWindow
     private void RefreshAppUpdateInstallState()
         => SettingsView.SetInstallState(
             _localUpdatePackageVersion?.ToString(),
-            hasReleasePage: !string.IsNullOrWhiteSpace(_latestReleaseUrl),
-            canDownloadRelease: !string.IsNullOrWhiteSpace(_latestReleasePackageUrl) && IsReleaseNewer(_latestReleaseTag ?? string.Empty));
+            hasReleasePage: !string.IsNullOrWhiteSpace(_shell.LatestReleaseUrl),
+            canDownloadRelease: !string.IsNullOrWhiteSpace(_shell.LatestReleasePackageUrl) && IsReleaseNewer(_shell.LatestReleaseTag ?? string.Empty));
 
     // Copies the loaded choices into the view model, then applies whatever the user changes there.
     private void InitializeAppearanceSettings()
     {
         AppearanceSettingsViewModel appearance = SettingsView.Appearance;
-        _themePreference = ThemePreferences.Parse(_storedThemePreference, _legacyDarkTheme);
+        _shell.ThemePreference = ThemePreferences.Parse(_shell.StoredThemePreference, _shell.LegacyDarkTheme);
         appearance.SetLanguageOptions(UiText.Languages.Select(UiText.LanguageName).ToArray());
         appearance.LanguageIndex = Math.Max(0, IndexOfLanguage(_services.Language.Current));
-        appearance.Theme = _themePreference;
-        appearance.DensityIndex = _interfaceDensity == InterfaceDensity.Compact ? 1 : 0;
-        appearance.ReduceMotion = _reduceMotion;
+        appearance.Theme = _shell.ThemePreference;
+        appearance.DensityIndex = _shell.InterfaceDensity == InterfaceDensity.Compact ? 1 : 0;
+        appearance.ReduceMotion = _shell.ReduceMotion;
         appearance.PropertyChanged += OnAppearanceSettingChanged;
         _uiSettings.ColorValuesChanged += (_, _) => DispatcherQueue.TryEnqueue(() =>
         {
-            if (_themePreference == ThemePreference.System)
+            if (_shell.ThemePreference == ThemePreference.System)
             {
-                ApplyTheme(ThemePreferences.IsDark(_themePreference, IsSystemThemeDark()));
+                ApplyTheme(ThemePreferences.IsDark(_shell.ThemePreference, IsSystemThemeDark()));
             }
         });
-        ApplyTheme(ThemePreferences.IsDark(_themePreference, IsSystemThemeDark()));
+        ApplyTheme(ThemePreferences.IsDark(_shell.ThemePreference, IsSystemThemeDark()));
     }
 
     private bool IsSystemThemeDark()
@@ -117,27 +117,27 @@ public sealed partial class MainWindow
                 }
                 break;
             case nameof(AppearanceSettingsViewModel.Theme):
-                _themePreference = appearance.Theme;
-                ApplyTheme(ThemePreferences.IsDark(_themePreference, IsSystemThemeDark()));
+                _shell.ThemePreference = appearance.Theme;
+                ApplyTheme(ThemePreferences.IsDark(_shell.ThemePreference, IsSystemThemeDark()));
                 SaveConfig();
                 SaveShellConfig();
                 break;
             case nameof(AppearanceSettingsViewModel.DensityIndex):
                 InterfaceDensity density = appearance.DensityIndex == 1 ? InterfaceDensity.Compact : InterfaceDensity.Comfortable;
-                if (density != _interfaceDensity)
+                if (density != _shell.InterfaceDensity)
                 {
-                    _interfaceDensity = density;
+                    _shell.InterfaceDensity = density;
                     ApplyInterfaceDensity();
                     SaveShellConfig();
                 }
                 break;
             case nameof(AppearanceSettingsViewModel.ReduceMotion):
-                if (appearance.ReduceMotion != _reduceMotion)
+                if (appearance.ReduceMotion != _shell.ReduceMotion)
                 {
-                    _reduceMotion = appearance.ReduceMotion;
+                    _shell.ReduceMotion = appearance.ReduceMotion;
                     SaveShellConfig();
                     ShowAppNotification(
-            _reduceMotion ? T("Settings.MotionReduced") : T("Settings.MotionRestored"),
+            _shell.ReduceMotion ? T("Settings.MotionReduced") : T("Settings.MotionRestored"),
             InfoBarSeverity.Informational);
                 }
                 break;
@@ -151,27 +151,27 @@ public sealed partial class MainWindow
         {
             case nameof(SettingsViewModel.CheckOnStartup):
                 if (_isApplyingStartupUpdateSetting) return;
-                _checkAppUpdatesOnStartup = ApplicationReleasePolicy.CanCheckApplicationUpdates(SettingsView.CheckOnStartup);
+                _shell.CheckAppUpdatesOnStartup = ApplicationReleasePolicy.CanCheckApplicationUpdates(SettingsView.CheckOnStartup);
                 SaveShellConfig();
                 break;
             case nameof(SettingsViewModel.UpdateIntervalIndex):
                 if (!AppSelfUpdateEnabled || _isApplyingUpdateCheckIntervalSelection) return;
                 try
                 {
-                    _updateCheckInterval = (UpdateCheckInterval)SettingsView.UpdateIntervalIndex;
+                    _shell.UpdateCheckInterval = (UpdateCheckInterval)SettingsView.UpdateIntervalIndex;
                     SaveShellConfig();
                 }
                 catch (Exception ex) { ReportUiActionFailure("OnUpdateCheckIntervalSelectionChanged", ex); }
                 break;
             case nameof(SettingsViewModel.MinimizeToTray):
                 if (_isApplyingTraySetting) return;
-                _minimizeToTray = SettingsView.MinimizeToTray;
-                SetTrayIconVisibility(_minimizeToTray);
+                _shell.MinimizeToTray = SettingsView.MinimizeToTray;
+                SetTrayIconVisibility(_shell.MinimizeToTray);
                 SaveShellConfig();
                 break;
             case nameof(SettingsViewModel.ShowTitleBarSearch):
                 if (_isApplyingTitleBarSearchSetting) return;
-                _showTitleBarSearch = SettingsView.ShowTitleBarSearch;
+                _shell.ShowTitleBarSearch = SettingsView.ShowTitleBarSearch;
                 ApplyTitleBarSearchVisibility();
                 SaveShellConfig();
                 break;

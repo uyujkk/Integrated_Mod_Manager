@@ -69,7 +69,7 @@ public sealed partial class MainWindow
         RefreshTrayStatus();
         if (openManager)
         {
-            _currentPrimarySection = PrimarySection.Repository;
+            _shell.CurrentSection = PrimarySection.Repository;
         }
 
         ApplyShellState(refreshRepository: openManager);
@@ -93,7 +93,7 @@ public sealed partial class MainWindow
     {
         try
         {
-            RepositoryPresetInfo? preset = BuiltInRepositoryPresets.FirstOrDefault(item =>
+            RepositoryPresetInfo? preset = BuiltInRepositories.Presets.FirstOrDefault(item =>
                 string.Equals(item.Id, presetId, StringComparison.OrdinalIgnoreCase));
             if (preset is null)
             {
@@ -212,7 +212,7 @@ public sealed partial class MainWindow
             _services.Online.Page.KnownCharacters.Clear();
             _onlineView?.ForgetLoadedList();
             _services.Online.Page.Mods.Clear();
-            _currentPrimarySection = PrimarySection.Repository;
+            _shell.CurrentSection = PrimarySection.Repository;
             ApplySelectedRepositoryToInputs();
             SaveConfig();
             ApplyShellState(refreshRepository: false);
@@ -285,7 +285,7 @@ public sealed partial class MainWindow
 
             _services.Repositories.Items.Add(repository);
             _services.Repositories.SelectedId = repository.Id;
-            _currentPrimarySection = PrimarySection.Repository;
+            _shell.CurrentSection = PrimarySection.Repository;
             _services.Online.Page.ResetPaging();
             _services.Online.Page.CharacterFilter = string.Empty;
             _services.Online.Page.KnownCharacters.Clear();
@@ -524,7 +524,7 @@ public sealed partial class MainWindow
             }
 
             SaveShellConfig();
-            ApplyShellState(refreshRepository: _currentPrimarySection == PrimarySection.Repository);
+            ApplyShellState(refreshRepository: _shell.CurrentSection == PrimarySection.Repository);
             _services.Workspace.Status = T("Repositories.DeletedRepository", repository.Name);
         }
         catch (Exception ex)

@@ -28,7 +28,7 @@ public sealed partial class MainWindow
     {
         try
         {
-            _currentPrimarySection = PrimarySection.Shortcuts;
+            _shell.CurrentSection = PrimarySection.Shortcuts;
             ApplyShellState(refreshRepository: false);
         }
         catch (Exception ex) { ReportUiActionFailure(nameof(OnShortcutsNavClicked), ex); }
@@ -246,7 +246,7 @@ public sealed partial class MainWindow
     {
         if (repository is null) return [];
         if (_services.OnlineSource.IsEndfield(repository)) return [.. GameWindowDetection.KnownGames[0]];
-        RepositoryPresetInfo? preset = BuiltInRepositoryPresets.FirstOrDefault(candidate => IsRepositoryForPreset(repository, candidate));
+        RepositoryPresetInfo? preset = BuiltInRepositories.Presets.FirstOrDefault(candidate => IsRepositoryForPreset(repository, candidate));
         return preset?.Id switch
         {
             "genshin" => [.. GameWindowDetection.KnownGames[1]],

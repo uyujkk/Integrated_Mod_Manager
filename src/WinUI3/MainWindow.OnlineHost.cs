@@ -21,11 +21,11 @@ public sealed partial class MainWindow : IOnlineHost
             message => LogApplicationIssue("Online", new InvalidOperationException(message)));
     }
 
-    bool IOnlineHost.IsOnlinePageShown => _currentPrimarySection == PrimarySection.Online;
+    bool IOnlineHost.IsOnlinePageShown => _shell.CurrentSection == PrimarySection.Online;
     FrameworkElement IOnlineHost.Root => RootGrid;
     Windows.Foundation.Rect IOnlineHost.Bounds => Bounds;
-    string IOnlineHost.Density => _interfaceDensity.ToString();
-    bool IOnlineHost.ReduceMotion => _reduceMotion;
+    string IOnlineHost.Density => _shell.InterfaceDensity.ToString();
+    bool IOnlineHost.ReduceMotion => _shell.ReduceMotion;
     void IOnlineHost.AnimateImageReveal(UIElement image) => WorkspacePage.AnimateImageReveal(_services, image);
     Task IOnlineHost.ShowImageViewerAsync(ImageSource? source, string title, IReadOnlyList<string>? imageUrls, int selectedIndex)
         => ShowImageViewerAsync(source, title, imageUrls, selectedIndex);

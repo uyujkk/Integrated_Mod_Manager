@@ -229,7 +229,7 @@ public sealed partial class MainWindow
     private async Task OpenCharacterFromDashboardAsync(string path)
     {
         SaveSelectedRepositoryFromInputs();
-        _currentPrimarySection = PrimarySection.Repository;
+        _shell.CurrentSection = PrimarySection.Repository;
         ApplyShellState(refreshRepository: false);
         WorkspacePage workspace = EnsureWorkspacePage();
         workspace.FirstLevelSearchTextBox.Text = string.Empty;
@@ -286,7 +286,7 @@ public sealed partial class MainWindow
     private void RefreshNewRepositoryMenu()
     {
         var choices = new List<NewRepositoryChoice> { new(null, T("Dashboard.BlankRepository"), "", null) };
-        foreach (RepositoryPresetInfo preset in BuiltInRepositoryPresets)
+        foreach (RepositoryPresetInfo preset in BuiltInRepositories.Presets)
         {
             string name = IsChineseUi ? preset.DisplayNameZh : preset.DisplayNameEn;
             WorkspaceRepository? existing = FindRepositoryForPreset(preset);
@@ -326,7 +326,7 @@ public sealed partial class MainWindow
     private void OnDashboardNavClicked(object sender, RoutedEventArgs e)
     {
         SaveSelectedRepositoryFromInputs();
-        _currentPrimarySection = PrimarySection.Dashboard;
+        _shell.CurrentSection = PrimarySection.Dashboard;
         ApplyShellState(refreshRepository: false);
     }
 

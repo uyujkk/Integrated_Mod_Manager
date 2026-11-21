@@ -11,12 +11,11 @@ public sealed partial class MainWindow
 {
     private const string WhatsNewFeatureSet = "4.8.2";
     private const string WhatsNewReleaseNotes = "v4.8.2.md";
-    private string? _whatsNewSeenVersion;
 
     private async Task ShowWhatsNewOnceAsync()
     {
         // A first install counts the current set as seen (WhatsNewPolicy), so it goes straight to the tips.
-        if (!WhatsNewPolicy.ShouldShow(_whatsNewSeenVersion, WhatsNewFeatureSet))
+        if (!WhatsNewPolicy.ShouldShow(_shell.WhatsNewSeenVersion, WhatsNewFeatureSet))
         {
             return;
         }
@@ -34,7 +33,7 @@ public sealed partial class MainWindow
         }
 
         var dialog = WhatsNewDialog.Create(_services, WhatsNewFeatureSet, RootGrid.ActualHeight);
-        _whatsNewSeenVersion = WhatsNewFeatureSet;
+        _shell.WhatsNewSeenVersion = WhatsNewFeatureSet;
         SaveShellConfig();
         switch (await _services.Dialogs.ShowAsync(dialog))
         {

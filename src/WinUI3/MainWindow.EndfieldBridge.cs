@@ -130,7 +130,7 @@ public sealed partial class MainWindow
     private async Task<bool> TryStartThroughXxmiAsync(WorkspaceRepository? repository)
     {
         if (repository is null || EndfieldBridgeService.CanUse(repository)) return false;
-        RepositoryPresetInfo? preset = BuiltInRepositoryPresets.FirstOrDefault(candidate => IsRepositoryForPreset(repository, candidate));
+        RepositoryPresetInfo? preset = BuiltInRepositories.Presets.FirstOrDefault(candidate => IsRepositoryForPreset(repository, candidate));
         if (XxmiLaunchPolicy.ImporterFor(preset?.Id, repository.XxmiImporter) is not { } importer) return false;
         string loader = EndfieldBridgeService.ResolveLoader(Paths.Launcher);
         if (!XxmiLaunchPolicy.IsXxmiLauncher(loader) || !File.Exists(loader)) return false;
