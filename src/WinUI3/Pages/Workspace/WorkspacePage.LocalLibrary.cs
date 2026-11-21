@@ -660,7 +660,7 @@ public sealed partial class WorkspacePage
         _host.Characters.Visible.Clear();
         _host.SecondLevelItems.Clear();
         _host.CurrentSecondLevelPath = null;
-        _host.RefreshPersistentSlotControls();
+        RefreshPersistentSlotControls();
         FirstCountTextBlock.Text = "0";
         SecondCountTextBlock.Text = "0";
         ShowModSummary(null);
@@ -803,7 +803,7 @@ public sealed partial class WorkspacePage
         ShowSecondLevelDetails(item, preserveStatus);
         LoadBindingsForCurrentMod(item);
         LoadLinkForCurrentMod(item);
-        _host.RefreshPersistentSlotControls();
+        RefreshPersistentSlotControls();
         SyncRepositorySelectionV4(item);
     }
 

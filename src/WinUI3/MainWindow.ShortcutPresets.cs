@@ -77,7 +77,7 @@ public sealed partial class MainWindow
             _services.Slots.Items.Add(slot);
             try { SaveShellConfig(throwOnError: true); }
             catch { _services.Slots.Items.Remove(slot); _services.PresetPreviews.DeletePresetPreview(slot.PreviewFile); throw; }
-            _selectedModPersistentSlotId = slot.Id;
+            _services.Slots.SelectedId = slot.Id;
             _shortcuts.StatusText = T("ShortcutPanel.SinglePresetSaved", name, values.Count) + _services.PresetPreviews.PresetPreviewNote(slot.PreviewFile)
                 + (menuStateLeft > 0 ? T("SlotCapture.MenuStateLeftOut", menuStateLeft) : string.Empty);
         }

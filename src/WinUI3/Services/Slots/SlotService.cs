@@ -52,6 +52,9 @@ internal sealed partial class SlotService(AppServices services)
     /// <summary>Repositories whose Mods have all been offered a Default slot, including Mods seen before Default slots existed.</summary>
     public HashSet<string> DefaultsBackfilled { get; } = new(StringComparer.Ordinal);
 
+    /// <summary>The slot chosen on the workspace's slot card (the overlay selects a slot it just saved).</summary>
+    public string? SelectedId { get; set; }
+
     /// <summary>A slot is being written to the loader (from the workspace or the overlay).</summary>
     public bool IsRestoring { get; set; }
 

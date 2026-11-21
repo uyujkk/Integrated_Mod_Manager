@@ -55,12 +55,7 @@ public sealed partial class MainWindow
         log.Rekey(repository.CharacterAvatarBindings, plan.MapName);
         log.Rekey(repository.CharacterSelectionOverrides, plan.MapName);
         _services.Install.RenameCharacter(repository, plan, log);
-        if (_workspaceView._localLibraries.TryGetValue(WorkspaceIdentity.Library(repository.Id, repository.SourcePath), out LocalLibraryState? tags))
-        {
-            log.Rekey(tags.ModTags, plan.MapRelative);
-            foreach (LocalModFilter filter in tags.Filters)
-                log.Rewrite(() => filter.Character, value => filter.Character = value, plan.MapRelative);
-        }
+        _workspaceView.RenameCharacterTags(repository, plan, log);
     }
 
     // The character-follow references of the repository: keyed by character name, with each character's preferred Mod.
