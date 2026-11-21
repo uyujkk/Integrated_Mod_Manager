@@ -61,7 +61,7 @@ internal sealed partial class OnlineDownloadService
 
     internal async Task RetryOnlineDownloadAsync(DownloadTaskItem task)
     {
-        if (task.RetryRequest is not { } request || task.RetryInProgress || _onlineDownloadActions.IsPreparing) return;
+        if (task.RetryRequest is not { } request || task.RetryInProgress || DownloadActions.IsPreparing) return;
         task.RetryInProgress = true;
         _host.RefreshDownloadTaskCard(task);
         try

@@ -15,9 +15,10 @@ internal sealed partial class OnlineDownloadService
             OnlineInstallationDetectionPolicy.Matches(mod.ItemId, mod.ProfileUrl, origin.ItemId, origin.ProfileUrl)
             && Directory.Exists(origin.Path) && IsPathInsideDirectory(origin.Path, context.RepositoryPath)).Select(origin => origin.DownloadFileId));
 
-    internal readonly OnlineDownloadActionAdapter _onlineDownloadActions = new();
+    /// <summary>Which downloads are being prepared or running, so the same Mod is not started twice.</summary>
+    internal OnlineDownloadActionAdapter DownloadActions { get; } = new();
 
-    internal int _onlineInstallBusyCount;
+    private int _onlineInstallBusyCount;
 
     internal static string GetOnlineDownloadIdentity(OnlineModCard mod)
         => mod.ItemId > 0 ? $"GameBanana:{mod.ItemId}" : mod.ProfileUrl;
@@ -44,7 +45,8 @@ internal sealed partial class OnlineDownloadService
     /// <summary>A folder the user may choose to have created (issue #6); created only after confirmation.</summary>
     internal sealed record NewCharacterFolderChoice(string Path);
 
-    internal string? _foregroundDownloadTaskId;
+    /// <summary>The download whose progress the Online page's progress bar shows.</summary>
+    internal string? ForegroundDownloadTaskId { get; set; }
 
     internal string GetOnlineCharacterDisplayName(OnlineCharacterOption character)
     {

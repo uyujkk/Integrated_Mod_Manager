@@ -639,7 +639,7 @@ public sealed partial class OnlinePage
             bool useEndfieldMetadata = _services.OnlineSource.IsEndfield(downloadRepository);
             IReadOnlyCollection<string> characterAliases = _services.OnlineDownloads.GetCharacterFolderAliases(sourceMod);
             string detailContext = GetOnlineDetailContextKey();
-            using OnlineDownloadActionAdapter.Lease? action = _services.OnlineDownloads._onlineDownloadActions.TryBegin(
+            using OnlineDownloadActionAdapter.Lease? action = _services.OnlineDownloads.DownloadActions.TryBegin(
                 downloadContext, OnlineDownloadService.GetOnlineDownloadIdentity(sourceMod));
             if (action is null) return;
             try

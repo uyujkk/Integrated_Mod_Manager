@@ -60,7 +60,6 @@ public sealed partial class MainWindow : IWorkspaceHost
     bool IWorkspaceHost.IsApplyingRepositoryDeploymentMode => _isApplyingRepositoryDeploymentMode;
     Dictionary<string, List<ShortcutBinding>> IWorkspaceHost.ModBindings => _modBindings;
     Dictionary<string, string> IWorkspaceHost.ModLinks => _modLinks;
-    OnlinePage IWorkspaceHost.OnlineView => _onlineView;
     BatchObservableCollection<SecondLevelFolderItem> IWorkspaceHost.SecondLevelItems => _secondLevelItems;
     string? IWorkspaceHost.SelectedConfigurationProfileId => _selectedConfigurationProfileId;
     List<TextBox> IWorkspaceHost.ShortcutActionBoxes => _shortcutActionBoxes;

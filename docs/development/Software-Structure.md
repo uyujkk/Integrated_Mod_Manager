@@ -215,7 +215,7 @@ flowchart LR
 | --- | --- | --- |
 | 仪表盘 / Dashboard | `Pages/DashboardPage.xaml(.cs)` | 第一次显示 / first shown |
 | Mod 工作区 / Workspace | `Pages/WorkspacePage.xaml(.cs)`、`Pages/Workspace/*` | 随窗口 / with the window |
-| 在线 / Online | `Pages/OnlinePage.xaml(.cs)`、`Pages/Online/*` | 随窗口 / with the window |
+| 在线 / Online | `Pages/OnlinePage.xaml(.cs)`、`Pages/Online/*` | 第一次显示 / first shown（下载不需要它 / downloads run without it） |
 | 更新 / Updates | `Pages/UpdatesPage.xaml(.cs)` | 第一次显示 / first shown |
 | 快捷键 / Shortcuts | `Pages/ShortcutsPage.xaml(.cs)` | 第一次显示 / first shown |
 | 设置 / Settings | `Pages/SettingsPage.xaml(.cs)` | 第一次显示 / first shown |
@@ -268,6 +268,7 @@ flowchart LR
 | `StatusService` | 全局通知，由窗口显示在 `InfoBar`。App-wide notifications shown in the InfoBar. |
 | `DeploymentService`、`DownloadService`、`LaunchService` | 部署备份位置；下载任务（新建、进度、清除）及其记录；启动加载器或启动器。Deployment backups; download tasks (creating, progress, clearing) and their record; starting the loader or launcher. |
 | `OnlineDownloadService` | 在线 Mod 的下载和安装：刷新文件、选择位置、重复检查、下载、解压、安装记录、重试；没有在线页也能运行，在线页存在时显示进度（`IOnlineDownloadView`）。Downloading and installing online Mods, with or without the Online page; the page shows progress while it exists. |
+| `OnlineCharacterOptionsService` | 当前仓库的角色列表（内置终末地角色、Wiki 目录、列表里出现的角色）；没有在线页时也随目录加载更新，收藏、工作区头像和分类映射用它。The current repository's character list, kept up to date without the Online page. |
 | `ModTrackingService` | 追踪的在线 Mod、更新检查结果、检查更新和替换为新版本。Tracked online Mods, update checks and replacing a Mod with its newer version. |
 | `InstallService` | 安装流程：安装事务（备份、提交、撤销、按存储上限清理）、安装前的文件和 INI 冲突检查、断开链接清理、压缩包（格式、解压、导入为一个 Mod 文件夹）、复制归属记录（#107）。规则在 Core（`ModInstallTransactions`、`ModFileConflictDetector`、`ModIniConflictDetector`、`ArchiveImportLayout`、`CopyDeploymentLedger`、`InstallBackupPruning`）。The install pipeline: install transactions (backup, commit, undo, pruning by the storage limit), file and INI conflict checks before an install, broken link cleanup, archives (formats, extraction, import as one Mod folder) and the copy ownership records (#107); the rules are in Core. |
 | `OnlineState`、`OnlineSourceService`、`OnlineCategoryService`、`CharacterCatalogService`、`ImageService` | 在线页的状态、仓库的在线来源、游戏分类（缓存一天）、角色目录、在线图片缓存。Online page state, a repository's online source, categories (kept a day), character catalogs, the image cache. |

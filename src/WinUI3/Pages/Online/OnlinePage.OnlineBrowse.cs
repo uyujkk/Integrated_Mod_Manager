@@ -87,7 +87,7 @@ public sealed partial class OnlinePage
 
     private OnlineCardStatus GetOnlineCardStatus(OnlineModCard mod, TrackedModOrigin? installed, string defaultStatus)
     {
-        bool active = _services.OnlineDownloads._onlineDownloadActions.IsActive(OnlineDownloadService.CaptureOnlineDownloadContext(_services.Repositories.Selected),
+        bool active = _services.OnlineDownloads.DownloadActions.IsActive(OnlineDownloadService.CaptureOnlineDownloadContext(_services.Repositories.Selected),
             OnlineDownloadService.GetOnlineDownloadIdentity(mod));
         DownloadTaskItem? task = _services.Downloads.Tasks.FirstOrDefault(item =>
             item.Session is not null && item.SourceIdentity == OnlineDownloadService.GetOnlineDownloadIdentity(mod)

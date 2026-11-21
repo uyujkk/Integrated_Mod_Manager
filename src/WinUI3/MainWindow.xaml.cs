@@ -113,7 +113,8 @@ public sealed partial class MainWindow : Window
     private Microsoft.UI.Windowing.OverlappedPresenterState? _lastPresenterState;
     private int? _savedWindowHeight;
     private InterfaceDensity _interfaceDensity = InterfaceDensity.Comfortable;
-    private readonly OnlinePage _onlineView;
+    // Made the first time the Online page is shown (stage J finish, step 5b); null until then.
+    private OnlinePage? _onlineView;
     private readonly WorkspacePage _workspaceView;
 
     public MainWindow()
@@ -126,8 +127,6 @@ public sealed partial class MainWindow : Window
             new OnlineMetadataCacheAdapter(_appDataStore, OnlinePage._onlineDetailsCachePath, LogApplicationIssue),
             diagnostics: LogApplicationIssue);
         InitializeComponent();
-        // Stage J6: the Online page; it reaches the window only through IOnlineHost.
-        _onlineView = new OnlinePage(_services, this);
         // Stage J7: the Mod workspace page; it reaches the window only through IWorkspaceHost.
         _workspaceView = new WorkspacePage(_services, this);
         AttachWorkspacePageEvents();
@@ -163,8 +162,6 @@ public sealed partial class MainWindow : Window
         InitializeCommandPaletteShortcut();
         _workspaceView.FirstLevelListView.ItemsSource = _characters.Visible;
         _workspaceView.SecondLevelListView.ItemsSource = _secondLevelItems;
-        _onlineView.OnlineVirtualizedListView.ItemsSource = _services.Online.Page.VisibleMods;
-        _onlineView.OnlineVirtualizedGridView.ItemsSource = _services.Online.Page.VisibleMods;
         TraceStartupStage("List sources attached");
         RegisterTrackedTextInputs();
         _workspaceView.BuildShortcutRows();
@@ -193,8 +190,8 @@ public sealed partial class MainWindow : Window
         InitializeAppearanceSettings();
         ApplyLanguage();
         TraceStartupStage("Theme and language applied");
-        _onlineView.InitializeOnlineControls();
-        _onlineView.InitializeBrowseSessionTracking();
+        // The Online page set up its controls and character list here; without the page the list is still kept.
+        EnsureOnlineCharacterOptions(_services.Repositories.Selected);
         DetectLocalUpdatePackage();
         TraceStartupStage("Online controls and local update detection initialized");
         RefreshSettingsPane();

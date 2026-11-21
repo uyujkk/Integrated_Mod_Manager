@@ -194,9 +194,8 @@ public sealed partial class MainWindow
         }
 
         _appDataStore.SetFavorite(_services.Online.CharacterCatalogKey, characterKey, isFavorite);
-        _onlineView._onlineCharacterStripSignature = null;
-        _onlineView.RefreshOnlineCharacterAvatarStrip();
-        _onlineView.PopulateOnlineCharacterOptions();
+        if (_onlineView is null) EnsureOnlineCharacterOptions(_services.Repositories.Selected);
+        else _onlineView.RefreshFavoriteCharacters();
         ShowAppNotification(
                 isFavorite ? T("ProductivityFeatures.CharacterFavorited") : T("ProductivityFeatures.CharacterUnfavorited"),
                 InfoBarSeverity.Informational);

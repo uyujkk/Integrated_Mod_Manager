@@ -96,7 +96,7 @@ internal sealed partial class OnlineDownloadService
         OnlineDownloadContext context = capturedContext ?? CaptureOnlineDownloadContext(initialRepository);
         bool useEndfieldMetadata = capturedEndfieldMetadata ?? _services.OnlineSource.IsEndfield(initialRepository);
         IReadOnlyCollection<string> characterAliases = capturedCharacterAliases ?? GetCharacterFolderAliases(mod);
-        using OnlineDownloadActionAdapter.Lease? action = _onlineDownloadActions.TryBegin(context, GetOnlineDownloadIdentity(mod));
+        using OnlineDownloadActionAdapter.Lease? action = DownloadActions.TryBegin(context, GetOnlineDownloadIdentity(mod));
         if (action is null) return;
         try
         {
@@ -178,7 +178,7 @@ internal sealed partial class OnlineDownloadService
             _services.Downloads.Persist(required: true);
             RefreshOnlineDetailActionState();
             using IDisposable execution = await _services.Downloads.Scheduler.AcquireAsync(downloadTask.Cancellation.Token);
-            _foregroundDownloadTaskId = downloadTask.Id;
+            ForegroundDownloadTaskId = downloadTask.Id;
             SetOnlineInstallBusy(true);
             installBusy = true;
             // The picker is finished; a different visible Mod can now start its own task.
@@ -283,14 +283,14 @@ internal sealed partial class OnlineDownloadService
         }
         finally
         {
-            if (!_services.IsClosing && string.Equals(_foregroundDownloadTaskId, downloadTask.Id, StringComparison.Ordinal))
+            if (!_services.IsClosing && string.Equals(ForegroundDownloadTaskId, downloadTask.Id, StringComparison.Ordinal))
             {
-                _foregroundDownloadTaskId = null;
+                ForegroundDownloadTaskId = null;
                 SetOnlineDownloadProgress(false, 0, string.Empty);
             }
             if (!_services.IsClosing && !_services.Downloads.Tasks.Any(task => DownloadProgressPolicy.IsActive(task.State)))
             {
-                _foregroundDownloadTaskId = null;
+                ForegroundDownloadTaskId = null;
                 SetOnlineDownloadProgress(false, 0, string.Empty);
             }
             if (installBusy && !_services.IsClosing) SetOnlineInstallBusy(false);
@@ -318,7 +318,7 @@ internal sealed partial class OnlineDownloadService
                     string currentSize = FormatFileSize(progress.BytesRead);
                     string totalSize = progress.TotalBytes > 0 ? FormatFileSize(progress.TotalBytes) : "?";
                     UiMessage downloadStatus = M("OnlineDownload.Progress", currentSize, totalSize);
-                    if (string.Equals(_foregroundDownloadTaskId, downloadTask.Id, StringComparison.Ordinal))
+                    if (string.Equals(ForegroundDownloadTaskId, downloadTask.Id, StringComparison.Ordinal))
                         SetOnlineDownloadProgress(true, progress.Percent, T(downloadStatus),
                             isIndeterminate: progress.TotalBytes <= 0);
                     _services.Downloads.UpdateTask(downloadTask, DownloadTaskState.Downloading,
