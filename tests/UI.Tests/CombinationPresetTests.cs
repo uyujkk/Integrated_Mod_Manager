@@ -102,63 +102,6 @@ public sealed class CombinationPresetTests
         .Where(line => line.StartsWith(key, StringComparison.Ordinal))
         .Select(line => string.Join("|", line[key.Length..].Split('\t').Select(field => System.Text.Encoding.UTF8.GetString(Convert.FromBase64String(field))))).Order()];
 
-    // The system's file dialog (IFileOpenDialog) the app opens for a folder or a file: the path goes into its name box.
-    // The app shows it modally inside the click's handler. An automation Invoke would stay in progress until the dialog
-    // closes and block every automation call to the app, so the button gets a real mouse click.
-    private static void OpenFileDialogAndChoose(AppSession app, AutomationElement button, string path)
-    {
-        uint process = (uint)app.MainWindow.Properties.ProcessId.Value;
-        app.MainWindow.SetForeground();
-        AppSession.ScrollIntoView(button);
-        button.Click();
-        AutomationElement? dialog = null;
-        WaitUntil(() => (dialog = FileDialog(app, process)) is not null, "the file dialog");
-        Thread.Sleep(800);
-        AutomationElement Box() => AppSession.FindIn(dialog!, cf => cf.ByAutomationId("1152").And(cf.ByControlType(ControlType.Edit))
-            .Or(cf.ByAutomationId("1148").And(cf.ByControlType(ControlType.Edit))), "the file name box");
-        // Open is a split button in the file dialog and a plain button in the folder dialog.
-        AutomationElement Open() => AppSession.FindIn(dialog!, cf => cf.ByAutomationId("1")
-            .And(cf.ByControlType(ControlType.Button).Or(cf.ByControlType(ControlType.SplitButton))), "the open button");
-        Box().Patterns.Value.Pattern.SetValue(path);
-        Thread.Sleep(300);
-        Open().Click();
-        // A folder path typed into the folder dialog first opens that folder; choosing again (with the box empty) picks it.
-        Thread.Sleep(1500);
-        if (FileDialog(app, process) is not null)
-        {
-            Box().Patterns.Value.Pattern.SetValue(string.Empty);
-            Thread.Sleep(300);
-            Open().Click();
-        }
-        WaitUntil(() => FileDialog(app, process) is null, "the file dialog closed");
-    }
-
-    // The dialog is a top-level window of the app. While it is open the app's own window does not answer UI Automation
-    // (its UI thread is inside the click), so it is found by its window class instead.
-    private static AutomationElement? FileDialog(AppSession app, uint process)
-    {
-        nint found = 0;
-        EnumWindows((window, _) =>
-        {
-            var name = new System.Text.StringBuilder(64);
-            if (IsWindowVisible(window) && GetWindowThreadProcessId(window, out uint owner) != 0 && owner == process
-                && GetClassName(window, name, name.Capacity) > 0 && name.ToString() == "#32770")
-            {
-                found = window;
-                return false;
-            }
-            return true;
-        }, 0);
-        return found == 0 ? null : app.Automation.FromHandle(found);
-    }
-
-    private delegate bool EnumWindowsProc(nint window, nint parameter);
-    [System.Runtime.InteropServices.DllImport("user32.dll")] private static extern bool EnumWindows(EnumWindowsProc callback, nint parameter);
-    [System.Runtime.InteropServices.DllImport("user32.dll")] private static extern uint GetWindowThreadProcessId(nint window, out uint process);
-    [System.Runtime.InteropServices.DllImport("user32.dll")] private static extern bool IsWindowVisible(nint window);
-    [System.Runtime.InteropServices.DllImport("user32.dll", CharSet = System.Runtime.InteropServices.CharSet.Unicode)]
-    private static extern int GetClassName(nint window, System.Text.StringBuilder name, int capacity);
-
     private static string ExportFolder()
     {
         string folder = Path.Combine(Path.GetTempPath(), "imm-ui-export-" + Guid.NewGuid().ToString("N")[..12]);
@@ -263,12 +206,12 @@ public sealed class CombinationPresetTests
                 shell["SelectedConfigurationProfileId"] = "both";
             });
             AppSession.Invoke(app.FindByName(app.Text("CombinationBundles.ExportBundle")));
-            OpenFileDialogAndChoose(app, app.Find("PrimaryButton", TimeSpan.FromSeconds(10)), folder);
+            FileDialogs.Choose(app, app.Find("PrimaryButton", TimeSpan.FromSeconds(10)), folder);
             app.FindByName(app.Text("CombinationBundles.ExportComplete"), TimeSpan.FromSeconds(30));
             AppSession.Invoke(app.Find("CloseButton"));
             string bundle = Assert.Single(Directory.GetFiles(folder, "*.imm-preset.zip"));
 
-            OpenFileDialogAndChoose(app, app.FindByName(app.Text("CombinationBundles.InstallBundle")), bundle);
+            FileDialogs.Choose(app, app.FindByName(app.Text("CombinationBundles.InstallBundle")), bundle);
             AppSession.Invoke(app.FindByName(app.Text("CombinationBundles.InstallAndSavePreset"), TimeSpan.FromSeconds(30)));
 
             // The same name is taken: the installed preset gets the next free one, with the bundle's Mods and values.
@@ -296,11 +239,11 @@ public sealed class CombinationPresetTests
                     ("TestModA", [StateValue("TestModA", "hair", "2")]), ("TestModB", [StateValue("TestModB", "style", "3")])));
                 shell["SelectedConfigurationProfileId"] = "look";
             });
-            OpenFileDialogAndChoose(app, app.Find("PresetShareExportButton"), folder);
+            FileDialogs.Choose(app, app.Find("PresetShareExportButton"), folder);
             string shared = Path.Combine(folder, "Look.imm-share.json");
             WaitUntil(() => File.Exists(shared), "the shared preset written");
 
-            OpenFileDialogAndChoose(app, app.Find("PresetShareImportButton"), shared);
+            FileDialogs.Choose(app, app.Find("PresetShareImportButton"), shared);
             AppSession.Invoke(app.FindByName(app.Text("PresetShare.ImportMatched"), TimeSpan.FromSeconds(15)));
 
             WaitUntil(() => ProfileNamed(app, "Look (2)") is not null, "the shared preset imported");
