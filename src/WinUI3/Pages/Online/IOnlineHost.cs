@@ -46,10 +46,6 @@ internal interface IOnlineHost
     ShortcutBinding CreateAutomaticShortcutBinding(DetectedModShortcut shortcut);
 
     // Tracked Mods, download tasks and the Updates page.
-    Dictionary<string, TrackedModOrigin> TrackedModOrigins { get; }
-    List<TrackedModUpdateResult> TrackedModUpdateResults { get; }
-    DownloadTaskItem CreateDownloadTask(OnlineModCard mod, string destinationPath);
-    void UpdateDownloadTask(DownloadTaskItem task, DownloadTaskState state, double progress, UiMessage status, bool forceRefresh = false);
     void RefreshDownloadTaskCard(DownloadTaskItem task);
     void RefreshUpdatesPane();
     void SetModUpdateStatus(UiMessage status);

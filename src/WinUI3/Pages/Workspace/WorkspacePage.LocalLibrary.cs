@@ -428,7 +428,7 @@ public sealed partial class WorkspacePage
             }
         }
 
-        _host.TrackedModOrigins.Remove(item.Path);
+        _services.Tracking.Origins.Remove(item.Path);
         _host.ModLinks.Remove(item.Path);
         _services.Install.DeleteDirectoryTreeSafely(item.Path);
     }

@@ -59,7 +59,7 @@ public sealed partial class OnlinePage
         // One UI-thread, non-awaiting commit. Keep other installations' records; a source ID
         // identifies the website entry, not a unique local installation.
         _host.ModLinks[extractFolder] = metadata.Origin.ProfileUrl;
-        _host.TrackedModOrigins[extractFolder] = metadata.Origin;
+        _services.Tracking.Origins[extractFolder] = metadata.Origin;
         if (metadata.Bindings.Count > 0)
             _host.ModBindings[extractFolder] = metadata.Bindings;
         if (!_host.SaveConfig())

@@ -155,7 +155,7 @@ public sealed partial class MainWindow
             return;
         }
 
-        if (_trackedModOrigins.Count == 0)
+        if (_services.Tracking.Origins.Count == 0)
         {
             SetModUpdateStatus(M("Updates.NoTrackedOnlineMods"));
             RefreshUpdatesPane();
@@ -168,7 +168,7 @@ public sealed partial class MainWindow
             return;
         }
 
-        bool deduplicatedTrackedMods = _onlineView.DeduplicateTrackedModOrigins();
+        bool deduplicatedTrackedMods = _services.Tracking.Deduplicate();
         if (deduplicatedTrackedMods)
         {
             SaveConfig();
@@ -179,14 +179,14 @@ public sealed partial class MainWindow
         {
             _isCheckingModUpdates = true;
             UpdatesView.CheckError = null;
-            SetModUpdateStatus(M("Updates.CheckingTrackedMods", _trackedModOrigins.Count));
+            SetModUpdateStatus(M("Updates.CheckingTrackedMods", _services.Tracking.Origins.Count));
             RefreshUpdatesPane();
 
-            _trackedModUpdateResults.Clear();
-            foreach (TrackedModOrigin origin in _trackedModOrigins.Values.OrderBy(item => item.Title, StringComparer.CurrentCultureIgnoreCase).ToArray())
+            _services.Tracking.Results.Clear();
+            foreach (TrackedModOrigin origin in _services.Tracking.Origins.Values.OrderBy(item => item.Title, StringComparer.CurrentCultureIgnoreCase).ToArray())
             {
                 TrackedModUpdateResult result = await FetchTrackedModUpdateResultAsync(origin);
-                _trackedModUpdateResults.Add(result);
+                _services.Tracking.Results.Add(result);
 
                 if (!string.IsNullOrWhiteSpace(result.PreviewUrl))
                 {
@@ -210,8 +210,8 @@ public sealed partial class MainWindow
             SaveConfig();
             SaveShellConfig();
 
-            int updateCount = _trackedModUpdateResults.Count(item => item.HasUpdate);
-            int failedCount = _trackedModUpdateResults.Count(item => item.CheckFailed);
+            int updateCount = _services.Tracking.Results.Count(item => item.HasUpdate);
+            int failedCount = _services.Tracking.Results.Count(item => item.CheckFailed);
             SetModUpdateStatus(
                 failedCount > 0 ? M("Updates.CheckCompleteWithFailures", updateCount, failedCount)
                 : updateCount > 0 ? M("Updates.CheckCompleteWithUpdates", updateCount)
@@ -229,9 +229,9 @@ public sealed partial class MainWindow
             {
                 await ShowMessageAsync(
                     updateCount > 0
-                        ? T("Updates.CheckedModsAndFoundUpdates", _trackedModUpdateResults.Count, updateCount)
+                        ? T("Updates.CheckedModsAndFoundUpdates", _services.Tracking.Results.Count, updateCount)
                         : failedCount > 0 ? T("Updates.ModChecksFailedPleaseRetry", failedCount)
-                        : T("Updates.CheckedModsAndFoundNoNew", _trackedModUpdateResults.Count),
+                        : T("Updates.CheckedModsAndFoundNoNew", _services.Tracking.Results.Count),
                     T("Updates.UpdateCheckComplete"));
             }
         }

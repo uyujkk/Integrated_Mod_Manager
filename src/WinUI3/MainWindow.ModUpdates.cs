@@ -14,7 +14,7 @@ public sealed partial class MainWindow
     private async Task NotifyModUpdatesAvailableAsync()
     {
         if (_showingModUpdateNotification || _services.IsClosing) return;
-        var updates = _trackedModUpdateResults.Where(item => item.HasUpdate).ToArray();
+        var updates = _services.Tracking.Results.Where(item => item.HasUpdate).ToArray();
         if (updates.Length == 0) return;
         _showingModUpdateNotification = true;
         try
@@ -37,7 +37,7 @@ public sealed partial class MainWindow
         try
         {
             WorkspaceRepository? repository = GetSelectedRepository();
-            if (repository is null || !_trackedModOrigins.TryGetValue(result.Path, out TrackedModOrigin? origin)
+            if (repository is null || !_services.Tracking.Origins.TryGetValue(result.Path, out TrackedModOrigin? origin)
                 || origin.ItemId != result.ItemId) throw new IOException(T("ModUpdates.TheTrackedModChangedCheckFor"));
             string repositoryId = repository.Id;
             string repositoryPath = repository.SourcePath;
@@ -68,7 +68,7 @@ public sealed partial class MainWindow
             task.Cancellation.Token.ThrowIfCancellationRequested();
             // Never redirect a captured update to whichever repository is now visible.
             if (!_services.Repositories.Items.Any(item => item.Id == repositoryId && string.Equals(item.SourcePath, repositoryPath, StringComparison.OrdinalIgnoreCase))
-                || !_trackedModOrigins.TryGetValue(result.Path, out var current) || !ReferenceEquals(current, origin))
+                || !_services.Tracking.Origins.TryGetValue(result.Path, out var current) || !ReferenceEquals(current, origin))
                 throw new IOException(T("ModUpdates.TheOriginalRepositoryOrTrackingRecord"));
             string backupRoot = Path.Combine(Path.GetDirectoryName(Path.TrimEndingDirectorySeparator(Path.GetFullPath(repositoryPath)))!, ".imm-mod-update-backups");
             task.ReplacementCommitting = true;

@@ -65,7 +65,6 @@ public sealed partial class MainWindow : IWorkspaceHost
     string? IWorkspaceHost.SelectedConfigurationProfileId => _selectedConfigurationProfileId;
     List<TextBox> IWorkspaceHost.ShortcutActionBoxes => _shortcutActionBoxes;
     List<TextBox> IWorkspaceHost.ShortcutKeyBoxes => _shortcutKeyBoxes;
-    Dictionary<string, TrackedModOrigin> IWorkspaceHost.TrackedModOrigins => _trackedModOrigins;
 
     ICharacterRenameReferences IWorkspaceHost.CreateCharacterRenameReferences(WorkspaceRepository repository) => new CharacterRenameReferences(this, repository);
 

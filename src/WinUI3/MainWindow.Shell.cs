@@ -409,8 +409,8 @@ public sealed partial class MainWindow
             DetectLocalUpdatePackage();
             await RefreshInstallBackupListAsync();
 
-            if (_onlineView._restoredInterruptedDownloads > 0)
-                ShowAppNotification(T("Shell.InterruptedTasksRestored", _onlineView._restoredInterruptedDownloads));
+            if (_services.Downloads.RestoredInterrupted > 0)
+                ShowAppNotification(T("Shell.InterruptedTasksRestored", _services.Downloads.RestoredInterrupted));
             await _workspaceView.NotifyInterruptedImportsAsync();
             await ChooseFirstInstallGameAsync();
             // Waits for any startup dialog (including the update prompt below) before showing; the
@@ -445,7 +445,7 @@ public sealed partial class MainWindow
         UiCrashDiagnostics.RecordAction("Window closed", width: RootGrid.ActualWidth, height: RootGrid.ActualHeight, closed: true);
         _services.IsClosing = true;
         ++_onlineView._onlineDetailAnimationVersion;
-        _onlineView.PersistDownloadTasks();
+        _services.Downloads.Persist();
         _bundleOperationCancellation?.Cancel();
         _workspaceView._existingModImportCancellation?.Cancel();
         _services.IsClosing = true;

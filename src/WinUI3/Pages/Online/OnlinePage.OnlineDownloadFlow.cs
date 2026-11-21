@@ -165,7 +165,7 @@ public sealed partial class OnlinePage
             return;
         }
 
-        DownloadTaskItem downloadTask = _host.CreateDownloadTask(effectiveMod, selectedFolder);
+        DownloadTaskItem downloadTask = _services.Downloads.CreateTask(effectiveMod, selectedFolder);
         downloadTask.RetryRequest = new OnlineDownloadRetryRequest(effectiveMod, effectiveFile, context,
             useEndfieldMetadata, characterAliases.ToArray(), selectedFolder);
         action.MarkTaskStarted();
@@ -174,7 +174,7 @@ public sealed partial class OnlinePage
         bool installBusy = false;
         try
         {
-            PersistDownloadTasks(required: true);
+            _services.Downloads.Persist(required: true);
             RefreshOnlineDetailActionState();
             using IDisposable execution = await _services.Downloads.Scheduler.AcquireAsync(downloadTask.Cancellation.Token);
             _foregroundDownloadTaskId = downloadTask.Id;
@@ -182,7 +182,7 @@ public sealed partial class OnlinePage
             installBusy = true;
             // The picker is finished; a different visible Mod can now start its own task.
             RefreshOnlineDetailActionState();
-            _host.UpdateDownloadTask(downloadTask, DownloadTaskState.Preparing, 0, M("OnlineDownload.ReadingInformation"), forceRefresh: true);
+            _services.Downloads.UpdateTask(downloadTask, DownloadTaskState.Preparing, 0, M("OnlineDownload.ReadingInformation"), forceRefresh: true);
             downloadTask.Cancellation.Token.ThrowIfCancellationRequested();
             OnlineModDetails details = await GetOnlineModDetailsAsync(effectiveMod, downloadTask.Cancellation.Token);
 
@@ -209,7 +209,7 @@ public sealed partial class OnlinePage
             session.RegisterExtraction(extractFolder);
 
             downloadTask.DestinationPath = extractFolder;
-            _host.UpdateDownloadTask(downloadTask, DownloadTaskState.Extracting, 92, M("OnlineDownload.Extracting"), forceRefresh: true);
+            _services.Downloads.UpdateTask(downloadTask, DownloadTaskState.Extracting, 92, M("OnlineDownload.Extracting"), forceRefresh: true);
             downloadTask.Cancellation.Token.ThrowIfCancellationRequested();
             await Task.Run(() =>
             {
@@ -223,7 +223,7 @@ public sealed partial class OnlinePage
                 token => PrepareOnlineInstallMetadataAsync(extractFolder, effectiveMod, details, token),
                 metadata => CommitOnlineInstallMetadata(extractFolder, metadata),
                 downloadTask.Cancellation.Token);
-            _host.UpdateDownloadTask(downloadTask, DownloadTaskState.Completed, 100,
+            _services.Downloads.UpdateTask(downloadTask, DownloadTaskState.Completed, 100,
                 M(prepared.PersistenceWarning is null ? "OnlineDownload.CompletedAt" : "OnlineDownload.InstalledConfigNotSaved", extractFolder),
                 forceRefresh: true);
 
@@ -258,13 +258,13 @@ public sealed partial class OnlinePage
         catch (OperationCanceledException)
         {
             CleanupOnlineDownload(session, canceled: true);
-            _host.UpdateDownloadTask(downloadTask, DownloadTaskState.Canceled, downloadTask.Progress, M("OnlineDownload.TaskCanceled"), forceRefresh: true);
+            _services.Downloads.UpdateTask(downloadTask, DownloadTaskState.Canceled, downloadTask.Progress, M("OnlineDownload.TaskCanceled"), forceRefresh: true);
             SetOnlineStatus(M("OnlineDownload.Canceled"));
         }
         catch (Exception ex)
         {
             CleanupOnlineDownload(session, canceled: false);
-            _host.UpdateDownloadTask(downloadTask, DownloadTaskState.Failed, downloadTask.Progress, M("OnlineDownload.TaskFailed", ex.Message), forceRefresh: true);
+            _services.Downloads.UpdateTask(downloadTask, DownloadTaskState.Failed, downloadTask.Progress, M("OnlineDownload.TaskFailed", ex.Message), forceRefresh: true);
             SetOnlineStatus(M("OnlineDownload.DownloadOrExtractFailed"));
             string message = ex.Message;
             if (ex is InvalidDataException or IOException)
@@ -276,7 +276,7 @@ public sealed partial class OnlinePage
             }
 
             string failedArchiveName = Path.GetFileName(downloadTask.ArchivePath);
-            _host.UpdateDownloadTask(downloadTask, DownloadTaskState.Failed, downloadTask.Progress,
+            _services.Downloads.UpdateTask(downloadTask, DownloadTaskState.Failed, downloadTask.Progress,
                 M("OnlineDownload.FailedWithReason", failedArchiveName, message), forceRefresh: true);
             ShowAppNotification(T("OnlineDownload.Failed", effectiveMod.Title), InfoBarSeverity.Error);
         }
@@ -320,7 +320,7 @@ public sealed partial class OnlinePage
                     if (string.Equals(_foregroundDownloadTaskId, downloadTask.Id, StringComparison.Ordinal))
                         SetOnlineDownloadProgress(true, progress.Percent, T(downloadStatus),
                             isIndeterminate: progress.TotalBytes <= 0);
-                    _host.UpdateDownloadTask(downloadTask, DownloadTaskState.Downloading,
+                    _services.Downloads.UpdateTask(downloadTask, DownloadTaskState.Downloading,
                         Math.Min(90, progress.Percent * 0.9), downloadStatus, forceRefresh: true);
                 }),
                 cancellationToken);
@@ -400,7 +400,7 @@ public sealed partial class OnlinePage
         WorkspaceRepository? repository = _services.Repositories.Selected;
         string repositoryPath = repository?.SourcePath ?? string.Empty;
 
-        foreach (TrackedModOrigin origin in _host.TrackedModOrigins.Values)
+        foreach (TrackedModOrigin origin in _services.Tracking.Origins.Values)
         {
             try
             {
@@ -433,39 +433,6 @@ public sealed partial class OnlinePage
         }
 
         return null;
-    }
-
-    internal bool DeduplicateTrackedModOrigins()
-    {
-        IReadOnlyList<string> stalePaths = OnlineTrackingScopePolicy.FindStaleDuplicatePaths(
-            _host.TrackedModOrigins.Values.Select(origin => new OnlineTrackedInstallation(
-                origin.Path, GetTrackedModIdentity(origin.ItemId, origin.ProfileUrl),
-                Directory.Exists(origin.Path), origin.LastKnownUpdatedAt)),
-            _services.Repositories.Items.Select(repository => repository.SourcePath));
-        foreach (string path in stalePaths)
-        {
-            _host.TrackedModOrigins.Remove(path);
-            _host.TrackedModUpdateResults.RemoveAll(result => string.Equals(result.Path, path, StringComparison.CurrentCultureIgnoreCase));
-        }
-        return stalePaths.Count > 0;
-    }
-
-    internal async Task RemoveTrackedModRecordAsync(TrackedModUpdateResult result)
-    {
-        bool confirmed = await ShowDangerConfirmAsync(
-            T("OnlineDownloadFlow.RemoveTheUpdateTrackingRecordFor", result.Title),
-            T("OnlineDownloadFlow.RemoveTracking"), T("Dialogs.Remove"));
-        if (!confirmed)
-        {
-            return;
-        }
-
-        _host.TrackedModOrigins.Remove(result.Path);
-        _host.TrackedModUpdateResults.RemoveAll(item => string.Equals(item.Path, result.Path, StringComparison.CurrentCultureIgnoreCase));
-        _host.SaveConfig();
-        _host.SaveShellConfig();
-        _host.SetModUpdateStatus(M("Updates.TrackingRemoved", result.Title));
-        _host.RefreshUpdatesPane();
     }
 
     private async Task<string?> SaveOnlinePreviewImageAsync(

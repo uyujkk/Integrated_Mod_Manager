@@ -47,11 +47,6 @@ public sealed partial class MainWindow : IOnlineHost
     Dictionary<string, string> IOnlineHost.ModLinks => _modLinks;
     ShortcutBinding IOnlineHost.CreateAutomaticShortcutBinding(DetectedModShortcut shortcut) => CreateAutomaticShortcutBinding(shortcut);
 
-    Dictionary<string, TrackedModOrigin> IOnlineHost.TrackedModOrigins => _trackedModOrigins;
-    List<TrackedModUpdateResult> IOnlineHost.TrackedModUpdateResults => _trackedModUpdateResults;
-    DownloadTaskItem IOnlineHost.CreateDownloadTask(OnlineModCard mod, string destinationPath) => CreateDownloadTask(mod, destinationPath);
-    void IOnlineHost.UpdateDownloadTask(DownloadTaskItem task, DownloadTaskState state, double progress, UiMessage status, bool forceRefresh)
-        => UpdateDownloadTask(task, state, progress, status, forceRefresh);
     void IOnlineHost.RefreshDownloadTaskCard(DownloadTaskItem task) => RefreshDownloadTaskCard(task);
     void IOnlineHost.RefreshUpdatesPane() => RefreshUpdatesPane();
     void IOnlineHost.SetModUpdateStatus(UiMessage status) => SetModUpdateStatus(status);

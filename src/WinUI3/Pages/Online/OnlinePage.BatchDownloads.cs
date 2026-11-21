@@ -9,7 +9,7 @@ public sealed partial class OnlinePage
     private sealed record PreparedSavedDownload(OnlineModCard Mod, IReadOnlyCollection<string> Aliases, string? Error);
 
     private OnlineDuplicateKind GetOnlineDuplicateKind(OnlineModCard mod, OnlineDownloadCandidate? file, OnlineDownloadContext context)
-        => OnlineDuplicatePolicy.Classify(file?.FileId, _host.TrackedModOrigins.Values.Where(origin =>
+        => OnlineDuplicatePolicy.Classify(file?.FileId, _services.Tracking.Origins.Values.Where(origin =>
             OnlineInstallationDetectionPolicy.Matches(mod.ItemId, mod.ProfileUrl, origin.ItemId, origin.ProfileUrl)
             && Directory.Exists(origin.Path) && IsPathInsideDirectory(origin.Path, context.RepositoryPath)).Select(origin => origin.DownloadFileId));
 

@@ -68,9 +68,7 @@ public sealed partial class MainWindow : Window
     private readonly List<TextBox> _shortcutActionBoxes = [];
     private readonly Dictionary<string, List<ShortcutBinding>> _modBindings = new(StringComparer.CurrentCultureIgnoreCase);
     private readonly Dictionary<string, string> _modLinks = new(StringComparer.CurrentCultureIgnoreCase);
-    private readonly Dictionary<string, TrackedModOrigin> _trackedModOrigins = new(StringComparer.CurrentCultureIgnoreCase);
     private readonly GameBananaMetadataService _gameBananaMetadataService;
-    private readonly List<TrackedModUpdateResult> _trackedModUpdateResults = [];
     private readonly List<ModConfigurationProfile> _configurationProfiles = [];
     private readonly List<ModPersistentSlot> _modPersistentSlots = [];
     private readonly Dictionary<string, DownloadTaskCardView> _navTaskCards = new(StringComparer.Ordinal);
@@ -140,6 +138,8 @@ public sealed partial class MainWindow : Window
         _services.CharacterCatalog.Attach(_httpClient, _appDataStore, LogApplicationIssue,
             repository => BuiltInRepositoryPresets.FirstOrDefault(preset => IsRepositoryForPreset(repository, preset))?.WikiUrl);
         _services.Dialogs.Attach(() => RootGrid.XamlRoot, () => RootGrid.ActualTheme);
+        _services.Downloads.Attach(_services, DispatcherQueue, LogApplicationIssue);
+        _services.Downloads.TaskRefreshRequested += OnDownloadTaskRefreshRequested;
         _services.Install.Attach(LogApplicationIssue, () => SaveShellConfig(), () => _installBackupLimitGb,
             (percent, message) => DispatcherQueue.TryEnqueue(() => _workspaceView.UpdateProgress(percent, message)),
             text => _workspaceView.StatusTextBlock.Text = text);
@@ -186,7 +186,7 @@ public sealed partial class MainWindow : Window
             throw;
         }
         TraceStartupStage("Configuration loaded");
-        _onlineView.LoadDownloadTasks();
+        _services.Downloads.Load();
         InitializeAppearanceSettings();
         ApplyLanguage();
         TraceStartupStage("Theme and language applied");

@@ -62,7 +62,7 @@ public sealed partial class OnlinePage
 
     private async Task<bool> ConfirmOnlineDuplicateAsync(OnlineModCard mod, OnlineDownloadCandidate? file, OnlineDownloadContext context)
     {
-        TrackedModOrigin[] installed = _host.TrackedModOrigins.Values.Where(origin =>
+        TrackedModOrigin[] installed = _services.Tracking.Origins.Values.Where(origin =>
             OnlineInstallationDetectionPolicy.Matches(mod.ItemId, mod.ProfileUrl, origin.ItemId, origin.ProfileUrl)
             && Directory.Exists(origin.Path) && !string.IsNullOrWhiteSpace(context.RepositoryPath)
             && IsPathInsideDirectory(origin.Path, context.RepositoryPath)).ToArray();

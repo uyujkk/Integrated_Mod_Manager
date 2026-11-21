@@ -49,8 +49,8 @@ public sealed partial class MainWindow
         string lastCheckedText = _lastModUpdateCheckUtc.HasValue
             ? _lastModUpdateCheckUtc.Value.ToLocalTime().ToString("yyyy-MM-dd HH:mm")
             : T("Updates.NotCheckedYet");
-        int trackedCount = _trackedModOrigins.Count;
-        int updateCount = _trackedModUpdateResults.Count(item => item.HasUpdate);
+        int trackedCount = _services.Tracking.Origins.Count;
+        int updateCount = _services.Tracking.Results.Count(item => item.HasUpdate);
         UpdatesView.TrackedSummary = T("Updates.TrackedModsLastCheckedUpdatesAvailable", trackedCount, lastCheckedText, updateCount);
 
         PopulateModUpdateIntervalOptions();
@@ -75,12 +75,12 @@ public sealed partial class MainWindow
     // The check results, or the bare origins before any check.
     private List<TrackedModRow> BuildTrackedModRows()
     {
-        if (_trackedModUpdateResults.Count > 0)
+        if (_services.Tracking.Results.Count > 0)
         {
-            return [.. _trackedModUpdateResults.Select(result => Row(result,
+            return [.. _services.Tracking.Results.Select(result => Row(result,
                 UpdatesListPolicy.Status(true, result.CheckFailed, result.HasUpdate)))];
         }
-        return [.. _trackedModOrigins.Values.Select(origin => Row(new TrackedModUpdateResult
+        return [.. _services.Tracking.Origins.Values.Select(origin => Row(new TrackedModUpdateResult
         {
             Path = origin.Path,
             Title = origin.Title,
@@ -151,7 +151,7 @@ public sealed partial class MainWindow
                 break;
             case UpdatesAction.OpenOldBackup: OpenDirectory(request.Item as string, T("Updates.OldBackup")); break;
             case UpdatesAction.RemoveTracking when request.Item is TrackedModUpdateResult result:
-                await RunUiActionAsync("_onlineView.RemoveTrackedModRecordAsync", () => _onlineView.RemoveTrackedModRecordAsync(result));
+                await RunUiActionAsync("_onlineView.RemoveTrackedModRecordAsync", () => RemoveTrackedModRecordAsync(result));
                 break;
             case UpdatesAction.BrowseOnline: OnOnlineNavClicked(this, args); break;
             case UpdatesAction.ClearFinishedDownloads: OnClearDownloadTasksClicked(this, args); break;
@@ -201,5 +201,23 @@ public sealed partial class MainWindow
         {
             ReportUiActionFailure("OnRollbackLastInstallClicked", ex);
         }
+    }
+
+    // Moved from the Online page (stage J finish, step 5): an Updates page action.
+    private async Task RemoveTrackedModRecordAsync(TrackedModUpdateResult result)
+    {
+        bool confirmed = await ShowDangerConfirmAsync(
+            T("OnlineDownloadFlow.RemoveTheUpdateTrackingRecordFor", result.Title),
+            T("OnlineDownloadFlow.RemoveTracking"), T("Dialogs.Remove"));
+        if (!confirmed)
+        {
+            return;
+        }
+
+        _services.Tracking.Remove(result.Path);
+        SaveConfig();
+        SaveShellConfig();
+        SetModUpdateStatus(M("Updates.TrackingRemoved", result.Title));
+        RefreshUpdatesPane();
     }
 }
