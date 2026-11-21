@@ -110,7 +110,7 @@ public sealed partial class MainWindow
             var progress = BundleProgress(cancellation.Token, T("CombinationBundles.ExportingBundle"));
             await Task.Run(() => CombinationBundleService.Export(root, output, name, game, includeState, mods,
                 cancellation.Token, progress: progress));
-            await _onlineView.ReportOnlineActionErrorAsync(T("CombinationBundles.BundleCreatedModsSavedValues", mods.Length, mods.Sum(mod => mod.Values.Count), output), T("CombinationBundles.ExportComplete"));
+            await _services.OnlineDownloads.ReportOnlineActionErrorAsync(T("CombinationBundles.BundleCreatedModsSavedValues", mods.Length, mods.Sum(mod => mod.Values.Count), output), T("CombinationBundles.ExportComplete"));
         }
         catch (OperationCanceledException) { if (!_services.IsClosing) ShowAppNotification(T("CombinationBundles.ExportCanceled")); }
         catch (Exception ex) { await ReportBundleErrorAsync(ex, false); }
@@ -192,7 +192,7 @@ public sealed partial class MainWindow
             {
                 SetCombinationBusy(false);
                 if (import?.CleanupWarnings.Count > 0)
-                    await _onlineView.ReportOnlineActionErrorAsync(string.Join("\n", import.CleanupWarnings), T("CombinationBundles.SomeFilesNeedInspection"));
+                    await _services.OnlineDownloads.ReportOnlineActionErrorAsync(string.Join("\n", import.CleanupWarnings), T("CombinationBundles.SomeFilesNeedInspection"));
             }
         }
         // Restore is a separate approved transaction: deploy the set, then patch selected d3dx_user.ini keys.
@@ -210,7 +210,7 @@ public sealed partial class MainWindow
     private async Task ReportBundleErrorAsync(Exception ex, bool committed)
     {
         LogApplicationIssue("Combination bundle", ex);
-        await _onlineView.ReportOnlineActionErrorAsync((committed ? T("CombinationBundles.InstalledButRefreshFailed") : T("CombinationBundles.OperationNotFinished")) + "\n" + ex.Message,
+        await _services.OnlineDownloads.ReportOnlineActionErrorAsync((committed ? T("CombinationBundles.InstalledButRefreshFailed") : T("CombinationBundles.OperationNotFinished")) + "\n" + ex.Message,
             T("CombinationBundles.CombinationBundle"), ex);
     }
 }

@@ -13,6 +13,7 @@ internal sealed class AppServices
         CharacterCatalog = new(OnlineSource);
         Install = new(this);
         Tracking = new(Repositories);
+        OnlineDownloads = new(this);
     }
 
     public LanguageService Language { get; } = new();
@@ -26,6 +27,9 @@ internal sealed class AppServices
 
     /// <summary>Mods installed from the Online page and tracked for updates (stage J finish, step 5).</summary>
     public ModTrackingService Tracking { get; }
+
+    /// <summary>Downloading and installing Mods from the online source, with or without the Online page (stage J finish, step 5a).</summary>
+    public OnlineDownloadService OnlineDownloads { get; }
     public LaunchService Launch { get; } = new();
 
     /// <summary>Install transactions, conflict checks, archives and copy ownership records (stage J finish, step 4).</summary>

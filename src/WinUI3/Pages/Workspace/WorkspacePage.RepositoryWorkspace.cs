@@ -913,7 +913,7 @@ public sealed partial class WorkspacePage
                 }
             }));
             mod.SizeBytes = bytes;
-            mod.SizeText = OnlinePage.FormatFileSize(bytes);
+            mod.SizeText = OnlineDownloadService.FormatFileSize(bytes);
             return bytes;
         }
         catch (Exception ex)
@@ -1209,7 +1209,7 @@ public sealed partial class WorkspacePage
         _repositoryInfoSize.Text = "…";
         long? bytes = mod.SizeBytes ?? await EnsureModSizeAsync(mod);
         if (bytes is long size && revision == _repositorySizeRevision && !_services.IsClosing)
-            _repositoryInfoSize.Text = T("RepositoryWorkspace.SizeAndFiles", OnlinePage.FormatFileSize(size), mod.Files.Count);
+            _repositoryInfoSize.Text = T("RepositoryWorkspace.SizeAndFiles", OnlineDownloadService.FormatFileSize(size), mod.Files.Count);
     }
 
     private void CopySelectedModPath()

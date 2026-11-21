@@ -1,5 +1,4 @@
 using System.Numerics;
-using System.Text.RegularExpressions;
 using IntegratedModManager.Core.Configuration;
 using IntegratedModManager.Core.Online;
 using Microsoft.UI.Xaml;
@@ -43,14 +42,14 @@ public sealed partial class OnlinePage
         string contextKey = GetOnlineDetailContextKey();
         await _onlineDetailState.RunLatestAsync(
             OpenOnlineDetailPaneAsync,
-            token => GetOnlineModDetailsAsync(mod, token),
+            token => _services.OnlineDownloads.GetOnlineModDetailsAsync(mod, token),
             (details, token) => TryTranslateOnlineModDetailsAsync(details).WaitAsync(token),
             (details, displayDetails) =>
             {
                 PopulateOnlineDetailPane(mod, details, displayDetails);
                 AnimateOnlineDetailContentRefresh();
             },
-            ex => ReportOnlineActionErrorAsync(
+            ex => _services.OnlineDownloads.ReportOnlineActionErrorAsync(
                 T("OnlineDetails.FailedToOpenModDetails") + ex.Message,
                 T("OnlineDetails.DetailsLoadFailed"), ex),
             () => !_services.IsClosing && ReferenceEquals(_activeOnlineDetailMod, mod)
@@ -60,371 +59,6 @@ public sealed partial class OnlinePage
                 if (loading) PrepareOnlineDetailLoadingState(mod);
                 else RefreshOnlineDetailActionState();
             });
-    }
-
-    private async Task<OnlineModDetails> GetOnlineModDetailsAsync(OnlineModCard mod, CancellationToken cancellationToken = default)
-    {
-        GameBananaDetails raw = await _host.Metadata.GetDetailsAsync(mod.ItemId, cancellationToken);
-        cancellationToken.ThrowIfCancellationRequested();
-        string text = string.Join(Environment.NewLine,
-            new[] { raw.Summary, raw.Description }.Where(value => !string.IsNullOrWhiteSpace(value)));
-        return new OnlineModDetails
-        {
-            Summary = raw.Summary,
-            Description = raw.Description,
-            ImageUrls = raw.ImageUrls.ToList(),
-            AccessRequirementSummary = ExtractAccessRequirementSummary(text),
-            ShortcutBindings = ExtractShortcutBindingsFromText(text)
-        };
-    }
-
-    private async Task<List<ShortcutBinding>> BuildLocalizedShortcutBindingsAsync(List<ShortcutBinding> bindings)
-    {
-        if (bindings.Count == 0)
-        {
-            return [];
-        }
-
-        if (!IsChineseUi)
-        {
-            return bindings
-                .Take(_host.ShortcutScanSafetyLimit)
-                .Select(binding => new ShortcutBinding(binding.Shortcut, binding.Action))
-                .ToList();
-        }
-
-        var localized = new List<ShortcutBinding>();
-        foreach (ShortcutBinding binding in bindings.Take(_host.ShortcutScanSafetyLimit))
-        {
-            string action = binding.Action;
-            if (!string.IsNullOrWhiteSpace(action))
-            {
-                try
-                {
-                    string translatedAction = await TranslateTextForDisplayAsync(action, "zh-CN");
-                    if (!string.IsNullOrWhiteSpace(translatedAction))
-                    {
-                        action = translatedAction;
-                    }
-                }
-                catch (Exception ex)
-                {
-                    _host.LogApplicationIssue("Translate shortcut action", ex);
-                }
-            }
-
-            localized.Add(new ShortcutBinding(binding.Shortcut, action));
-        }
-
-        return localized;
-    }
-
-    private static string ExtractAccessRequirementSummary(string text)
-    {
-        if (string.IsNullOrWhiteSpace(text))
-        {
-            return string.Empty;
-        }
-
-        string[] keywords =
-        [
-            "patreon",
-            "subscribe",
-            "subscription",
-            "paid",
-            "payment",
-            "paywall",
-            "donat",
-            "unlock",
-            "exclusive",
-            "early access",
-            "free after",
-            "public release",
-            "supporter",
-            "supporters",
-            "boosty",
-            "gumroad",
-            "ko-fi",
-            "kofi",
-            "discord",
-            "like goal",
-            "unlock at",
-            "available after"
-        ];
-
-        var matches = new List<string>();
-        foreach (string rawLine in text.Split(["\r\n", "\n"], StringSplitOptions.RemoveEmptyEntries))
-        {
-            string line = Regex.Replace(rawLine, @"\s+", " ").Trim(' ', '-', '•', '*', ':', '：');
-            if (line.Length < 6)
-            {
-                continue;
-            }
-
-            if (keywords.Any(keyword => line.Contains(keyword, StringComparison.OrdinalIgnoreCase))
-                && !matches.Contains(line, StringComparer.OrdinalIgnoreCase))
-            {
-                matches.Add(line);
-                if (matches.Count >= 3)
-                {
-                    break;
-                }
-            }
-        }
-
-        return string.Join(Environment.NewLine, matches);
-    }
-
-    private List<ShortcutBinding> ExtractShortcutBindingsFromText(string text)
-    {
-        var bindings = new List<ShortcutBinding>();
-        if (string.IsNullOrWhiteSpace(text))
-        {
-            return bindings;
-        }
-
-        var seen = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
-        foreach (string rawLine in text.Split(["\r\n", "\n"], StringSplitOptions.RemoveEmptyEntries))
-        {
-            string line = Regex.Replace(rawLine, @"\s+", " ").Trim();
-            if (line.Length < 4)
-            {
-                continue;
-            }
-
-            if (TryParseShortcutBindingLine(line, out ShortcutBinding? binding) && binding is not null)
-            {
-                string identity = NormalizeShortcut(binding.Shortcut) + "|" + binding.Action.Trim();
-                if (seen.Add(identity))
-                {
-                    bindings.Add(binding);
-                    if (bindings.Count >= _host.ShortcutScanSafetyLimit)
-                    {
-                        break;
-                    }
-                }
-            }
-        }
-
-        return bindings;
-    }
-
-    private static bool TryParseShortcutBindingLine(string line, out ShortcutBinding? binding)
-    {
-        binding = null;
-        string normalizedLine = line.Trim().TrimStart('-', '•', '*', '>', ' ');
-        if (string.IsNullOrWhiteSpace(normalizedLine))
-        {
-            return false;
-        }
-
-        Match sentenceMatch = Regex.Match(
-            normalizedLine,
-            @"(?i)\b(?:press|use|hit|key|shortcut|hotkey)\s+(?<shortcut>.+?)\s+(?:to|for)\s+(?<action>.+)$");
-        if (sentenceMatch.Success)
-        {
-            string shortcutCandidate = NormalizeShortcutDisplay(sentenceMatch.Groups["shortcut"].Value);
-            string actionCandidate = sentenceMatch.Groups["action"].Value.Trim();
-            if (LooksLikeShortcutCandidate(shortcutCandidate) && actionCandidate.Length >= 2)
-            {
-                binding = new ShortcutBinding(shortcutCandidate, actionCandidate);
-                return true;
-            }
-        }
-
-        foreach (string separator in new[] { " => ", " -> ", " → ", "：", ":", " - ", " – ", " — ", " = " })
-        {
-            int index = normalizedLine.IndexOf(separator, StringComparison.Ordinal);
-            if (index < 0)
-            {
-                continue;
-            }
-
-            string left = normalizedLine[..index].Trim(' ', '-', '•', '*', ':', '：');
-            string right = normalizedLine[(index + separator.Length)..].Trim(' ', '-', '•', '*', ':', '：', '>', '=');
-            if (string.IsNullOrWhiteSpace(left) || string.IsNullOrWhiteSpace(right))
-            {
-                continue;
-            }
-
-            bool leftLooksLikeShortcut = LooksLikeShortcutCandidate(left);
-            bool rightLooksLikeShortcut = LooksLikeShortcutCandidate(right);
-            if (leftLooksLikeShortcut == rightLooksLikeShortcut)
-            {
-                continue;
-            }
-
-            string shortcut = NormalizeShortcutDisplay(leftLooksLikeShortcut ? left : right);
-            string action = (leftLooksLikeShortcut ? right : left).Trim();
-            if (!string.IsNullOrWhiteSpace(shortcut) && action.Length >= 2)
-            {
-                binding = new ShortcutBinding(shortcut, action);
-                return true;
-            }
-        }
-
-        return false;
-    }
-
-    private static bool LooksLikeShortcutCandidate(string value)
-    {
-        if (string.IsNullOrWhiteSpace(value))
-        {
-            return false;
-        }
-
-        string candidate = value.Trim().Trim('[', ']', '(', ')');
-        if (candidate.Length is 0 or > 40)
-        {
-            return false;
-        }
-
-        if (Regex.IsMatch(candidate, @"(?i)\b(author|description|download|preview|updated|version|image|requirement)\b"))
-        {
-            return false;
-        }
-
-        string[] parts = candidate.Split('+', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries);
-        if (parts.Length == 0)
-        {
-            return false;
-        }
-
-        bool hasKey = false;
-        foreach (string part in parts)
-        {
-            string token = NormalizeShortcutToken(part);
-            if (string.IsNullOrWhiteSpace(token))
-            {
-                return false;
-            }
-
-            if (token is "Ctrl" or "Shift" or "Alt" or "Win")
-            {
-                continue;
-            }
-
-            hasKey = Regex.IsMatch(
-                token,
-                @"^(?:F(?:[1-9]|1[0-9]|2[0-4])|Num[0-9]|[A-Z0-9]|Esc|Enter|Tab|Space|Left|Right|Up|Down|Home|End|PageUp|PageDown|Insert|Delete|[`~!@#$%^&*()_\-+=\[\]{}\\|;:'"",.<>/?])$");
-            if (!hasKey)
-            {
-                return false;
-            }
-        }
-
-        return hasKey;
-    }
-
-    private static string NormalizeShortcutDisplay(string value)
-    {
-        string[] parts = value.Split('+', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries);
-        if (parts.Length == 0)
-        {
-            return string.Empty;
-        }
-
-        var normalized = new List<string>();
-        foreach (string part in parts)
-        {
-            string token = NormalizeShortcutToken(part);
-            if (!string.IsNullOrWhiteSpace(token))
-            {
-                normalized.Add(token);
-            }
-        }
-
-        return normalized.Count == 0 ? string.Empty : string.Join("+", normalized);
-    }
-
-    private static string NormalizeShortcutToken(string value)
-    {
-        string token = value.Trim();
-        if (string.IsNullOrWhiteSpace(token))
-        {
-            return string.Empty;
-        }
-
-        token = token
-            .Replace("Arrow", string.Empty, StringComparison.OrdinalIgnoreCase)
-            .Replace("Key", string.Empty, StringComparison.OrdinalIgnoreCase)
-            .Trim();
-        // A description part that was only "Key" or "Arrow" is not a key. Without this the
-        // fallback read token[0] and the whole details pane failed to load.
-        if (token.Length == 0)
-        {
-            return string.Empty;
-        }
-
-        return token.ToLowerInvariant() switch
-        {
-            "control" => "Ctrl",
-            "ctrl" => "Ctrl",
-            "shift" => "Shift",
-            "alt" => "Alt",
-            "menu" => "Alt",
-            "win" => "Win",
-            "windows" => "Win",
-            "escape" => "Esc",
-            "esc" => "Esc",
-            "return" => "Enter",
-            "enter" => "Enter",
-            "space" => "Space",
-            "spacebar" => "Space",
-            "pageup" => "PageUp",
-            "page up" => "PageUp",
-            "pagedown" => "PageDown",
-            "page down" => "PageDown",
-            "insert" => "Insert",
-            "delete" => "Delete",
-            "left" => "Left",
-            "right" => "Right",
-            "up" => "Up",
-            "down" => "Down",
-            "home" => "Home",
-            "end" => "End",
-            "tab" => "Tab",
-            "slash" => "/",
-            "forward slash" => "/",
-            "backslash" => "\\",
-            "pipe" => "\\",
-            "semicolon" => ";",
-            "comma" => ",",
-            "period" => ".",
-            "dot" => ".",
-            "minus" => "-",
-            "hyphen" => "-",
-            "equal" => "=",
-            "equals" => "=",
-            "quote" => "'",
-            "apostrophe" => "'",
-            "backtick" => "`",
-            "grave" => "`",
-            "left bracket" => "[",
-            "right bracket" => "]",
-            _ => NormalizeShortcutTokenFallback(token)
-        };
-    }
-
-    private static string NormalizeShortcutTokenFallback(string token)
-    {
-        if (token.Length == 1)
-        {
-            return char.IsLetter(token[0]) ? token.ToUpperInvariant() : token;
-        }
-
-        if (Regex.IsMatch(token, @"^(?i)f(?:[1-9]|1[0-9]|2[0-4])$"))
-        {
-            return token.ToUpperInvariant();
-        }
-
-        Match numpadMatch = Regex.Match(token, @"^(?i)(?:num|numpad)\s*([0-9])$");
-        if (numpadMatch.Success)
-        {
-            return "Num" + numpadMatch.Groups[1].Value;
-        }
-
-        return char.ToUpperInvariant(token[0]) + token[1..].ToLowerInvariant();
     }
 
     private void PrepareOnlineDetailLoadingState(OnlineModCard mod)
@@ -549,14 +183,14 @@ public sealed partial class OnlinePage
         {
             string translatedSummary = string.IsNullOrWhiteSpace(details.Summary)
                 ? details.Summary
-                : await TranslateTextForDisplayAsync(details.Summary, "zh-CN");
+                : await _services.OnlineDownloads.TranslateTextForDisplayAsync(details.Summary, "zh-CN");
             string translatedDescription = string.IsNullOrWhiteSpace(details.Description)
                 ? details.Description
-                : await TranslateTextForDisplayAsync(details.Description, "zh-CN");
+                : await _services.OnlineDownloads.TranslateTextForDisplayAsync(details.Description, "zh-CN");
             string translatedRequirement = string.IsNullOrWhiteSpace(details.AccessRequirementSummary)
                 ? details.AccessRequirementSummary
-                : await TranslateTextForDisplayAsync(details.AccessRequirementSummary, "zh-CN");
-            List<ShortcutBinding> translatedBindings = await BuildLocalizedShortcutBindingsAsync(details.ShortcutBindings);
+                : await _services.OnlineDownloads.TranslateTextForDisplayAsync(details.AccessRequirementSummary, "zh-CN");
+            List<ShortcutBinding> translatedBindings = await _services.OnlineDownloads.BuildLocalizedShortcutBindingsAsync(details.ShortcutBindings);
 
             return new OnlineModDetails
             {
@@ -585,7 +219,7 @@ public sealed partial class OnlinePage
     private void PopulateOnlineDetailPane(OnlineModCard mod, OnlineModDetails rawDetails, OnlineModDetails displayDetails)
     {
         TraceOnlineUiState("Details publishing", mod.ItemId);
-        TrackedModOrigin? installedOrigin = FindInstalledOnlineMod(mod);
+        TrackedModOrigin? installedOrigin = _services.OnlineDownloads.FindInstalledOnlineMod(mod);
         OnlineDetailPaneTitleTextBlock.Text = mod.Title;
         string characterSource = mod.IsCharacterNameInferred ? T("Common.Detected") : string.Empty;
         OnlineDetailPaneMetaTextBlock.Text = $"{T("OnlineDetails.Character")}: {mod.CharacterName}{characterSource}    {T("OnlineDetails.Author")}: {mod.Author}";
@@ -658,7 +292,7 @@ public sealed partial class OnlinePage
 
     internal void UpdateOnlineDetailDownloadControls(OnlineModCard mod)
     {
-        bool isInstalled = FindInstalledOnlineMod(mod) is not null;
+        bool isInstalled = _services.OnlineDownloads.FindInstalledOnlineMod(mod) is not null;
         OnlineDownloadCandidate? defaultFile = OnlineDownloadSelectionPolicy.SelectDefault(mod.DownloadFiles);
         int availableFileCount = mod.DownloadFiles.Count(file => !string.IsNullOrWhiteSpace(file.DownloadUrl));
 
@@ -684,7 +318,7 @@ public sealed partial class OnlinePage
 
         if (defaultFile is not null)
         {
-            string size = defaultFile.FileSizeBytes > 0 ? $" · {FormatFileSize(defaultFile.FileSizeBytes)}" : string.Empty;
+            string size = defaultFile.FileSizeBytes > 0 ? $" · {OnlineDownloadService.FormatFileSize(defaultFile.FileSizeBytes)}" : string.Empty;
             string date = defaultFile.AddedAt > DateTimeOffset.MinValue
                 ? $" · {defaultFile.AddedAt:yyyy-MM-dd}"
                 : string.Empty;
@@ -825,9 +459,6 @@ public sealed partial class OnlinePage
             _host.ReportUiActionFailure("ShowOnlineDetailHeroImage", ex);
         }
     }
-
-    private Task<string> TranslateTextForDisplayAsync(string text, string targetLanguage)
-        => TextTranslationClient.TranslateLongTextAsync(_host.Http, text, targetLanguage);
 
     private Task<string> TranslateChunkAsync(string text, string targetLanguage)
         => TextTranslationClient.TranslateAsync(_host.Http, text, targetLanguage);
@@ -985,7 +616,7 @@ public sealed partial class OnlinePage
                 return;
             }
 
-            await DownloadAndExtractOnlineModAsync(_activeOnlineDetailMod);
+            await _services.OnlineDownloads.DownloadAndExtractOnlineModAsync(_activeOnlineDetailMod);
         }
         catch (Exception ex)
         {
@@ -1004,17 +635,17 @@ public sealed partial class OnlinePage
 
             OnlineModCard sourceMod = _activeOnlineDetailMod;
             WorkspaceRepository? downloadRepository = _services.Repositories.Selected;
-            OnlineDownloadContext downloadContext = CaptureOnlineDownloadContext(downloadRepository);
+            OnlineDownloadContext downloadContext = OnlineDownloadService.CaptureOnlineDownloadContext(downloadRepository);
             bool useEndfieldMetadata = _services.OnlineSource.IsEndfield(downloadRepository);
-            IReadOnlyCollection<string> characterAliases = GetCharacterFolderAliases(sourceMod);
+            IReadOnlyCollection<string> characterAliases = _services.OnlineDownloads.GetCharacterFolderAliases(sourceMod);
             string detailContext = GetOnlineDetailContextKey();
-            using OnlineDownloadActionAdapter.Lease? action = _onlineDownloadActions.TryBegin(
-                downloadContext, GetOnlineDownloadIdentity(sourceMod));
+            using OnlineDownloadActionAdapter.Lease? action = _services.OnlineDownloads._onlineDownloadActions.TryBegin(
+                downloadContext, OnlineDownloadService.GetOnlineDownloadIdentity(sourceMod));
             if (action is null) return;
             try
             {
                 RefreshOnlineDetailActionState();
-                OnlineModCard effectiveMod = await RefreshOnlineModDownloadInfoAsync(sourceMod, useEndfieldMetadata, action.Token);
+                OnlineModCard effectiveMod = await _services.OnlineDownloads.RefreshOnlineModDownloadInfoAsync(sourceMod, useEndfieldMetadata, action.Token);
                 action.Token.ThrowIfCancellationRequested();
                 if (!ReferenceEquals(_activeOnlineDetailMod, sourceMod)
                     || !string.Equals(detailContext, GetOnlineDetailContextKey(), StringComparison.Ordinal)) return;
@@ -1035,14 +666,14 @@ public sealed partial class OnlinePage
                 action.Token.ThrowIfCancellationRequested();
                 if (selectedFile is null || !ReferenceEquals(_activeOnlineDetailMod, effectiveMod)
                     || !string.Equals(detailContext, GetOnlineDetailContextKey(), StringComparison.Ordinal)) return;
-                await DownloadAndExtractOnlineModCoreAsync(effectiveMod, selectedFile, false,
+                await _services.OnlineDownloads.DownloadAndExtractOnlineModCoreAsync(effectiveMod, selectedFile, false,
                     downloadContext, useEndfieldMetadata, characterAliases, action);
             }
             catch (OperationCanceledException) when (action.Token.IsCancellationRequested) { }
             catch (Exception ex)
             {
                 _host.LogApplicationIssue("Select online download file", ex);
-                await ReportOnlineActionErrorAsync(T("OnlineDetails.FailedToSelectDownloadFile") + ex.Message,
+                await _services.OnlineDownloads.ReportOnlineActionErrorAsync(T("OnlineDetails.FailedToSelectDownloadFile") + ex.Message,
                     T("Common.OnlineDownloadFailed"), ex);
             }
             finally

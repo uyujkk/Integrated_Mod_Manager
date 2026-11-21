@@ -26,6 +26,8 @@ public sealed partial class OnlinePage : UserControl
         InitializeOnlineCategoryBars();
         // A catalog loaded for the page's repository replaces its character list (stage J finish, step 3).
         services.CharacterCatalog.Loaded += (_, loaded) => ApplyOnlineCharacterCatalog(loaded.Key, loaded.Characters);
+        // The download flow shows its progress here (stage J finish, step 5a).
+        services.OnlineDownloads.View = this;
     }
 
     private bool IsChineseUi => _services.Language.IsChinese;

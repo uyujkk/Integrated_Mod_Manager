@@ -8,7 +8,7 @@ namespace ModFolderCopier.WinUI;
 /// finish, step 5: moved from the window and the Online page unchanged). The records are saved in config.ini by the
 /// window's configuration code; installs add them, the Updates page checks and removes them.
 /// </summary>
-internal sealed class ModTrackingService(RepositoryService repositories)
+internal sealed partial class ModTrackingService(RepositoryService repositories)
 {
     /// <summary>The tracked Mods, by installed folder.</summary>
     public Dictionary<string, TrackedModOrigin> Origins { get; } = new(StringComparer.CurrentCultureIgnoreCase);

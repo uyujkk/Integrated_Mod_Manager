@@ -1,8 +1,6 @@
 using System.Diagnostics;
 using System.Globalization;
 using System.Text.RegularExpressions;
-using IntegratedModManager.Core.Configuration;
-using IntegratedModManager.Core.Online;
 using IntegratedModManager.Core.Updates;
 using Microsoft.UI.Xaml;
 using Microsoft.UI.Xaml.Controls;
@@ -53,7 +51,7 @@ public sealed partial class MainWindow
 
         if (ShouldAutoCheckForModUpdates())
         {
-            await CheckTrackedModUpdatesAsync(showDialogs: false);
+            await _services.Tracking.CheckTrackedModUpdatesAsync(showDialogs: false);
         }
     }
 
@@ -76,7 +74,7 @@ public sealed partial class MainWindow
             return false;
         }
 
-        return !_lastModUpdateCheckUtc.HasValue || DateTimeOffset.UtcNow - _lastModUpdateCheckUtc.Value >= interval.Value;
+        return !_services.Tracking.LastCheckUtc.HasValue || DateTimeOffset.UtcNow - _services.Tracking.LastCheckUtc.Value >= interval.Value;
     }
 
     private void SetUpdateStatus(UiMessage status)
@@ -148,163 +146,11 @@ public sealed partial class MainWindow
         }
     }
 
-    private async Task CheckTrackedModUpdatesAsync(bool showDialogs)
-    {
-        if (_isCheckingModUpdates)
-        {
-            return;
-        }
-
-        if (_services.Tracking.Origins.Count == 0)
-        {
-            SetModUpdateStatus(M("Updates.NoTrackedOnlineMods"));
-            RefreshUpdatesPane();
-            if (showDialogs)
-            {
-                await ShowMessageAsync(
-                    T("Updates.DownloadAndExtractAtLeastOne"),
-                    T("Updates.NoTrackedMods"));
-            }
-            return;
-        }
-
-        bool deduplicatedTrackedMods = _services.Tracking.Deduplicate();
-        if (deduplicatedTrackedMods)
-        {
-            SaveConfig();
-            SaveShellConfig();
-        }
-
-        try
-        {
-            _isCheckingModUpdates = true;
-            UpdatesView.CheckError = null;
-            SetModUpdateStatus(M("Updates.CheckingTrackedMods", _services.Tracking.Origins.Count));
-            RefreshUpdatesPane();
-
-            _services.Tracking.Results.Clear();
-            foreach (TrackedModOrigin origin in _services.Tracking.Origins.Values.OrderBy(item => item.Title, StringComparer.CurrentCultureIgnoreCase).ToArray())
-            {
-                TrackedModUpdateResult result = await FetchTrackedModUpdateResultAsync(origin);
-                _services.Tracking.Results.Add(result);
-
-                if (!string.IsNullOrWhiteSpace(result.PreviewUrl))
-                {
-                    origin.PreviewUrl = result.PreviewUrl;
-                }
-
-                if (!string.IsNullOrWhiteSpace(result.Title))
-                {
-                    origin.Title = result.Title;
-                }
-
-                if (!string.IsNullOrWhiteSpace(result.ProfileUrl))
-                {
-                    origin.ProfileUrl = result.ProfileUrl;
-                    _modLinks[origin.Path] = result.ProfileUrl;
-                }
-            }
-
-            _lastModUpdateCheckUtc = DateTimeOffset.UtcNow;
-            UpdatesView.HasChecked = true;
-            SaveConfig();
-            SaveShellConfig();
-
-            int updateCount = _services.Tracking.Results.Count(item => item.HasUpdate);
-            int failedCount = _services.Tracking.Results.Count(item => item.CheckFailed);
-            SetModUpdateStatus(
-                failedCount > 0 ? M("Updates.CheckCompleteWithFailures", updateCount, failedCount)
-                : updateCount > 0 ? M("Updates.CheckCompleteWithUpdates", updateCount)
-                : M("Updates.CheckCompleteAllCurrent"));
-
-            // The check is over; do not keep showing "Checking..." behind the result dialog.
-            _isCheckingModUpdates = false;
-            RefreshUpdatesPane();
-
-            if (updateCount > 0)
-            {
-                await NotifyModUpdatesAvailableAsync();
-            }
-            else if (showDialogs)
-            {
-                await ShowMessageAsync(
-                    updateCount > 0
-                        ? T("Updates.CheckedModsAndFoundUpdates", _services.Tracking.Results.Count, updateCount)
-                        : failedCount > 0 ? T("Updates.ModChecksFailedPleaseRetry", failedCount)
-                        : T("Updates.CheckedModsAndFoundNoNew", _services.Tracking.Results.Count),
-                    T("Updates.UpdateCheckComplete"));
-            }
-        }
-        catch (Exception ex)
-        {
-            SetModUpdateStatus(M("Updates.TrackedCheckFailed"));
-            UpdatesView.CheckError = T("Updates.FailedToCheckTrackedModUpdates") + ex.Message;
-            RefreshUpdatesPane();
-            if (showDialogs)
-            {
-                await ShowMessageAsync(
-                    T("Updates.FailedToCheckTrackedModUpdates") + ex.Message,
-                    T("Updates.UpdateCheckFailed"));
-            }
-        }
-        finally
-        {
-            _isCheckingModUpdates = false;
-            RefreshUpdatesPane();
-        }
-    }
-
-    private async Task<TrackedModUpdateResult> FetchTrackedModUpdateResultAsync(TrackedModOrigin origin)
-    {
-        OnlineModCard? latest = null;
-        try
-        {
-            latest = await _onlineView.FetchGameBananaModCardAsyncV2(origin.ItemId);
-        }
-        catch (Exception ex)
-        {
-            LogApplicationIssue("Check tracked Mod update", ex);
-        }
-
-        if (latest is null)
-            return new TrackedModUpdateResult
-            {
-                Path = origin.Path, ItemId = origin.ItemId, Title = origin.Title,
-                ProfileUrl = origin.ProfileUrl, PreviewUrl = origin.PreviewUrl,
-                LastKnownUpdatedAt = origin.LastKnownUpdatedAt, CheckFailed = true,
-                Status = M("Updates.CheckFailedLatestUnavailable")
-            };
-
-        DateTimeOffset? latestUpdatedAt = latest?.UpdatedAt;
-        DateTimeOffset? recordedUpdatedAt = origin.LastKnownUpdatedAt;
-        bool hasUpdate = latestUpdatedAt.HasValue
-            && recordedUpdatedAt.HasValue
-            && latestUpdatedAt.Value > recordedUpdatedAt.Value.AddMinutes(1);
-
-        if (!recordedUpdatedAt.HasValue && latestUpdatedAt.HasValue)
-        {
-            origin.LastKnownUpdatedAt = latestUpdatedAt;
-        }
-
-        return new TrackedModUpdateResult
-        {
-            Path = origin.Path,
-            ItemId = origin.ItemId,
-            Title = string.IsNullOrWhiteSpace(latest?.Title) ? origin.Title : latest.Title,
-            ProfileUrl = string.IsNullOrWhiteSpace(latest?.ProfileUrl) ? origin.ProfileUrl : latest.ProfileUrl,
-            PreviewUrl = string.IsNullOrWhiteSpace(latest?.PreviewUrl) ? origin.PreviewUrl : latest.PreviewUrl,
-            LastKnownUpdatedAt = recordedUpdatedAt ?? origin.LastKnownUpdatedAt,
-            LatestUpdatedAt = latestUpdatedAt ?? recordedUpdatedAt ?? origin.LastKnownUpdatedAt,
-            HasUpdate = hasUpdate,
-            Status = M(hasUpdate ? "Updates.NewerVersionFound" : "Updates.NoUpdateDetected")
-        };
-    }
-
     private async void OnCheckModUpdatesClicked(object sender, RoutedEventArgs e)
     {
         try
         {
-            await CheckTrackedModUpdatesAsync(showDialogs: true);
+            await _services.Tracking.CheckTrackedModUpdatesAsync(showDialogs: true);
         }
         catch (Exception ex)
         {

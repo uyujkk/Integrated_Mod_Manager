@@ -84,7 +84,7 @@ public sealed partial class OnlinePage
     private bool IsSavedOnlineMod(OnlineModCard mod) => _services.Online.Preferences.SavedMods.Any(item =>
         item.RepositoryId == _services.Repositories.Selected?.Id
         && string.Equals(item.RepositoryPath.TrimEnd('\\', '/'), _services.Repositories.Selected?.SourcePath.TrimEnd('\\', '/'), StringComparison.OrdinalIgnoreCase)
-        && GetOnlineDownloadIdentity(item.Mod) == GetOnlineDownloadIdentity(mod));
+        && OnlineDownloadService.GetOnlineDownloadIdentity(item.Mod) == OnlineDownloadService.GetOnlineDownloadIdentity(mod));
 
     private void ToggleSavedOnlineMod(OnlineModCard mod)
     {
@@ -93,7 +93,7 @@ public sealed partial class OnlinePage
         bool remove = IsSavedOnlineMod(mod);
         _services.Online.Preferences.SavedMods.RemoveAll(item => item.RepositoryId == repository.Id
             && string.Equals(item.RepositoryPath.TrimEnd('\\', '/'), repository.SourcePath.TrimEnd('\\', '/'), StringComparison.OrdinalIgnoreCase)
-            && GetOnlineDownloadIdentity(item.Mod) == GetOnlineDownloadIdentity(mod));
+            && OnlineDownloadService.GetOnlineDownloadIdentity(item.Mod) == OnlineDownloadService.GetOnlineDownloadIdentity(mod));
         if (!remove) _services.Online.Preferences.SavedMods.Insert(0, new OnlineSavedMod(repository.Id, repository.SourcePath, mod));
         _services.Online.Preferences.SavedMods = _services.Online.Preferences.SavedMods.Take(100).ToList();
         _host.SaveShellConfig();
@@ -138,7 +138,7 @@ public sealed partial class OnlinePage
         catch (Exception ex)
         {
             _host.LogApplicationIssue("Author and saved workspace", ex);
-            await ReportOnlineActionErrorAsync(ex.Message, T("OnlineLibrary.CannotCompleteAction"), ex);
+            await _services.OnlineDownloads.ReportOnlineActionErrorAsync(ex.Message, T("OnlineLibrary.CannotCompleteAction"), ex);
         }
     }
 }

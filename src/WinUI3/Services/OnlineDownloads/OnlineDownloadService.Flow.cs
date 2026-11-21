@@ -1,19 +1,20 @@
-using System.Text;
 using IntegratedModManager.Core.Archives;
 using IntegratedModManager.Core.Configuration;
 using IntegratedModManager.Core.Deployment;
 using IntegratedModManager.Core.Infrastructure;
 using IntegratedModManager.Core.Online;
 using Microsoft.UI.Xaml.Controls;
+using System.Text;
 using Windows.Graphics.Imaging;
 using Windows.Storage.Streams;
 using Windows.System;
 
 namespace ModFolderCopier.WinUI;
 
-public sealed partial class OnlinePage
+// Downloading and extracting an online Mod: the download-and-extract flow, previews, folders (moved from OnlinePage).
+internal sealed partial class OnlineDownloadService
 {
-    private async Task<OnlineModCard> RefreshOnlineModDownloadInfoAsync(OnlineModCard mod, bool? useEndfieldMetadata = null,
+    internal async Task<OnlineModCard> RefreshOnlineModDownloadInfoAsync(OnlineModCard mod, bool? useEndfieldMetadata = null,
         CancellationToken cancellationToken = default, bool requireDownloadInfo = false)
     {
         try
@@ -82,7 +83,7 @@ public sealed partial class OnlinePage
         };
     }
 
-    private async Task DownloadAndExtractOnlineModAsync(
+    internal async Task DownloadAndExtractOnlineModAsync(
         OnlineModCard mod,
         OnlineDownloadCandidate? selectedFile = null,
         bool refreshDownloadInfo = true,
@@ -118,7 +119,7 @@ public sealed partial class OnlinePage
         }
     }
 
-    private async Task DownloadAndExtractOnlineModCoreAsync(
+    internal async Task DownloadAndExtractOnlineModCoreAsync(
         OnlineModCard mod, OnlineDownloadCandidate? selectedFile, bool refreshDownloadInfo,
         OnlineDownloadContext context, bool useEndfieldMetadata,
         IReadOnlyCollection<string> characterAliases, OnlineDownloadActionAdapter.Lease action,
@@ -363,7 +364,7 @@ public sealed partial class OnlinePage
         return $"{size:0.##} {units[unitIndex]}";
     }
 
-    private static string CreateUniqueExtractionFolder(string parentFolder, string title, int itemId)
+    internal static string CreateUniqueExtractionFolder(string parentFolder, string title, int itemId)
     {
         string baseName = SanitizeFileName(title);
         if (string.IsNullOrWhiteSpace(baseName))
@@ -390,12 +391,12 @@ public sealed partial class OnlinePage
         }
     }
 
-    private static string GetTrackedModIdentity(int itemId, string? profileUrl)
+    internal static string GetTrackedModIdentity(int itemId, string? profileUrl)
     {
         return OnlineInstallationDetectionPolicy.BuildIdentity(itemId, profileUrl);
     }
 
-    private TrackedModOrigin? FindInstalledOnlineMod(OnlineModCard mod)
+    internal TrackedModOrigin? FindInstalledOnlineMod(OnlineModCard mod)
     {
         WorkspaceRepository? repository = _services.Repositories.Selected;
         string repositoryPath = repository?.SourcePath ?? string.Empty;
@@ -435,7 +436,7 @@ public sealed partial class OnlinePage
         return null;
     }
 
-    private async Task<string?> SaveOnlinePreviewImageAsync(
+    internal async Task<string?> SaveOnlinePreviewImageAsync(
         string modFolder,
         OnlineModCard mod,
         OnlineModDetails? details,
@@ -547,7 +548,7 @@ public sealed partial class OnlinePage
         }
     }
 
-    private async Task<byte[]?> GetOnlinePreviewCandidateBytesAsync(
+    internal async Task<byte[]?> GetOnlinePreviewCandidateBytesAsync(
         string imageUrl,
         Uri imageUri,
         CancellationToken cancellationToken)
@@ -565,7 +566,7 @@ public sealed partial class OnlinePage
         return await _services.Images.DownloadImageBytesWithRetryAsync(imageUri, cancellationToken);
     }
 
-    private static async Task<(int Width, int Height)> TryReadOnlineImageDimensionsAsync(byte[] imageBytes)
+    internal static async Task<(int Width, int Height)> TryReadOnlineImageDimensionsAsync(byte[] imageBytes)
     {
         try
         {
@@ -593,7 +594,7 @@ public sealed partial class OnlinePage
         }
     }
 
-    private string GetOnlinePreviewImageExtension(Uri imageUri, byte[] imageBytes)
+    internal string GetOnlinePreviewImageExtension(Uri imageUri, byte[] imageBytes)
     {
         string extension = Path.GetExtension(imageUri.AbsolutePath).ToLowerInvariant();
         if (_host.ImageExtensions.Contains(extension, StringComparer.OrdinalIgnoreCase))
@@ -644,7 +645,7 @@ public sealed partial class OnlinePage
         return PathSafety.IsSameOrInside(candidatePath, parentPath);
     }
 
-    private static string SanitizeFileName(string value)
+    internal static string SanitizeFileName(string value)
     {
         char[] invalidChars = Path.GetInvalidFileNameChars();
         StringBuilder builder = new(value.Length);
@@ -656,7 +657,7 @@ public sealed partial class OnlinePage
         return builder.ToString().Trim().Trim('.');
     }
 
-    private async Task<string?> PickDownloadFolderAsync(OnlineModCard mod, OnlineDownloadContext context,
+    internal async Task<string?> PickDownloadFolderAsync(OnlineModCard mod, OnlineDownloadContext context,
         IReadOnlyCollection<string> characterAliases)
     {
         var repository = new WorkspaceRepository { Id = context.RepositoryId, SourcePath = context.RepositoryPath };

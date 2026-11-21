@@ -87,10 +87,10 @@ public sealed partial class OnlinePage
 
     private OnlineCardStatus GetOnlineCardStatus(OnlineModCard mod, TrackedModOrigin? installed, string defaultStatus)
     {
-        bool active = _onlineDownloadActions.IsActive(CaptureOnlineDownloadContext(_services.Repositories.Selected),
-            GetOnlineDownloadIdentity(mod));
+        bool active = _services.OnlineDownloads._onlineDownloadActions.IsActive(OnlineDownloadService.CaptureOnlineDownloadContext(_services.Repositories.Selected),
+            OnlineDownloadService.GetOnlineDownloadIdentity(mod));
         DownloadTaskItem? task = _services.Downloads.Tasks.FirstOrDefault(item =>
-            item.Session is not null && item.SourceIdentity == GetOnlineDownloadIdentity(mod)
+            item.Session is not null && item.SourceIdentity == OnlineDownloadService.GetOnlineDownloadIdentity(mod)
             && string.Equals(item.Session.Context.RepositoryId, _services.Repositories.Selected?.Id, StringComparison.OrdinalIgnoreCase)
             && string.Equals(item.Session.Context.RepositoryPath, _services.Repositories.Selected?.SourcePath, StringComparison.OrdinalIgnoreCase));
         // A retry can be preparing while its previous terminal task is still in history.
@@ -133,7 +133,7 @@ public sealed partial class OnlinePage
         TrackedModOrigin? installed = null;
         void Refresh(bool refreshInstalled)
         {
-            if (refreshInstalled) installed = FindInstalledOnlineMod(model.Mod);
+            if (refreshInstalled) installed = _services.OnlineDownloads.FindInstalledOnlineMod(model.Mod);
             ApplyOnlineInstalledIndicator(view.Installed, installed);
             OnlineCardStatus state = GetOnlineCardStatus(model.Mod, installed, defaultStatus);
             model.CanDownload = state.CanDownload;

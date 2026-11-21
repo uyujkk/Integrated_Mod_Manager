@@ -450,7 +450,7 @@ public sealed partial class MainWindow
         _workspaceView._existingModImportCancellation?.Cancel();
         _services.IsClosing = true;
         _onlineView.InvalidateOnlineDetailRequest();
-        _onlineView._onlineDownloadActions.CancelPreparation();
+        _services.OnlineDownloads._onlineDownloadActions.CancelPreparation();
         foreach (DownloadTaskItem task in _services.Downloads.Tasks.Where(task => DownloadProgressPolicy.IsActive(task.State)))
             if (task.Session?.CanCancel != false) task.Cancellation.Cancel();
         ++_folderRefreshGeneration;

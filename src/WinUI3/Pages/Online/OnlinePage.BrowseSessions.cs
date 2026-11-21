@@ -76,7 +76,7 @@ public sealed partial class OnlinePage
                 try { y = container.TransformToVisual(viewer).TransformPoint(new Windows.Foundation.Point()).Y; }
                 catch (ArgumentException) { continue; }
                 if (y + container.ActualHeight <= 0 || y >= viewer.ViewportHeight) continue;
-                state.Anchor = GetOnlineDownloadIdentity(mod);
+                state.Anchor = OnlineDownloadService.GetOnlineDownloadIdentity(mod);
                 state.AnchorOffset = y;
                 break;
             }
@@ -135,7 +135,7 @@ public sealed partial class OnlinePage
         int revision = ++_browseRestoreRevision;
         string? key = _activeBrowseSessionKey;
         var list = OnlineResultsList();
-        var anchor = _services.Online.Page.VisibleMods.FirstOrDefault(mod => GetOnlineDownloadIdentity(mod) == state.Anchor);
+        var anchor = _services.Online.Page.VisibleMods.FirstOrDefault(mod => OnlineDownloadService.GetOnlineDownloadIdentity(mod) == state.Anchor);
         int attempts = 0;
         bool scrolledToAnchor = false;
         EventHandler<object>? handler = null;

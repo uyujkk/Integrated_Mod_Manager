@@ -48,7 +48,7 @@ public sealed partial class MainWindow
             }
 
             if (task.State is DownloadTaskState.Failed or DownloadTaskState.Canceled && task.RetryRequest is not null)
-                await _onlineView.RetryOnlineDownloadAsync(task);
+                await _services.OnlineDownloads.RetryOnlineDownloadAsync(task);
             else OpenDirectory(task.DestinationPath, T("DownloadTasks.DownloadFolder"));
         }
         catch (Exception ex)
@@ -109,7 +109,7 @@ public sealed partial class MainWindow
     }
 
     private void RefreshDownloadTaskCardView(DownloadTaskItem task, DownloadTaskCardView view)
-        => DownloadTaskViews.Refresh(task, view, _services.Language, _onlineView._onlineDownloadActions.IsPreparing);
+        => DownloadTaskViews.Refresh(task, view, _services.Language, _services.OnlineDownloads._onlineDownloadActions.IsPreparing);
 
     // Navigation summary: always present so the history stays one click away; the badge and
     // bar follow the running downloads.

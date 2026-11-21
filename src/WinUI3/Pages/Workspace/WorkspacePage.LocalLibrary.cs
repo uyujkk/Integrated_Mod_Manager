@@ -1109,7 +1109,7 @@ public sealed partial class WorkspacePage
 
         progress.Report(new ProgressInfo(15, T("LocalLibrary.ValidatingRepositoryPath")));
         string fullSourcePath = Path.GetFullPath(sourcePath);
-        if (!OnlinePage.IsPathInsideDirectory(fullSourcePath, repository.SourcePath))
+        if (!OnlineDownloadService.IsPathInsideDirectory(fullSourcePath, repository.SourcePath))
         {
             throw new InvalidOperationException(T("LocalLibrary.RefusedToLinkADirectoryOutside"));
         }

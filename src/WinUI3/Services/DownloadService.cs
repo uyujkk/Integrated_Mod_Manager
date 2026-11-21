@@ -147,7 +147,7 @@ internal sealed class DownloadService(string baseDirectory)
         var task = new DownloadTaskItem
         {
             Title = mod.Title,
-            SourceIdentity = OnlinePage.GetOnlineDownloadIdentity(mod),
+            SourceIdentity = OnlineDownloadService.GetOnlineDownloadIdentity(mod),
             DestinationPath = destinationPath,
             State = DownloadTaskState.Queued,
             Status = M("DownloadTasks.WaitingToStart"),

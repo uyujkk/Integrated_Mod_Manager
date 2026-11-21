@@ -118,7 +118,7 @@ public sealed partial class MainWindow
             _presetPreviewDefaultRegion = config?.PresetPreviewDefaultRegion is { IsValid: true } region ? region : null;
             _shortcuts.OverlayTextColor = ShortcutOverlayController.FormatTextColor(ShortcutOverlayController.ParseTextColor(config?.ShortcutOverlayTextColor));
             _shortcuts.OverlayAutoContrast = config?.OverlayAutoContrast ?? false;
-            _lastModUpdateCheckUtc = TryParseDateTimeOffset(config?.LastModUpdateCheckUtc);
+            _services.Tracking.LastCheckUtc = TryParseDateTimeOffset(config?.LastModUpdateCheckUtc);
             _latestReleaseTag = config?.LatestReleaseTag;
             _latestReleaseTitle = config?.LatestReleaseTitle;
             _latestReleaseBody = config?.LatestReleaseBody;
@@ -187,7 +187,7 @@ public sealed partial class MainWindow
             _updateCheckInterval = UpdateCheckInterval.Manual;
             _lastUpdateCheckUtc = null;
             _modUpdateCheckInterval = UpdateCheckInterval.Manual;
-            _lastModUpdateCheckUtc = null;
+            _services.Tracking.LastCheckUtc = null;
             _latestReleaseTag = null;
             _latestReleaseTitle = null;
             _latestReleaseBody = null;
@@ -287,7 +287,7 @@ public sealed partial class MainWindow
                 PresetPreviewFrameLocked = _presetPreviewFrameLocked,
                 PresetPreviewDefaultRegion = _presetPreviewDefaultRegion,
                 ShortcutOverlayTextColor = _shortcuts.OverlayTextColor,
-                LastModUpdateCheckUtc = _lastModUpdateCheckUtc?.ToString("O"),
+                LastModUpdateCheckUtc = _services.Tracking.LastCheckUtc?.ToString("O"),
                 LatestReleaseTag = _latestReleaseTag,
                 LatestReleaseTitle = _latestReleaseTitle,
                 LatestReleaseBody = _latestReleaseBody,

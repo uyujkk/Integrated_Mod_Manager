@@ -1,13 +1,10 @@
 using IntegratedModManager.Core.Online;
 
-
 namespace ModFolderCopier.WinUI;
 
 public sealed partial class OnlinePage
 {
     private readonly OnlinePageStateAdapter _onlineDetailState = new();
-    internal readonly OnlineDownloadActionAdapter _onlineDownloadActions = new();
-    private int _onlineInstallBusyCount;
 
     private string GetOnlineDetailContextKey()
     {
@@ -19,12 +16,9 @@ public sealed partial class OnlinePage
         });
     }
 
-    internal static string GetOnlineDownloadIdentity(OnlineModCard mod)
-        => mod.ItemId > 0 ? $"GameBanana:{mod.ItemId}" : mod.ProfileUrl;
-
     private bool IsOnlineDownloadActionBlocked(OnlineModCard mod)
-        => _onlineDownloadActions.IsPreparing || _onlineDownloadActions.IsActive(
-            CaptureOnlineDownloadContext(_services.Repositories.Selected), GetOnlineDownloadIdentity(mod));
+        => _services.OnlineDownloads._onlineDownloadActions.IsPreparing || _services.OnlineDownloads._onlineDownloadActions.IsActive(
+            OnlineDownloadService.CaptureOnlineDownloadContext(_services.Repositories.Selected), OnlineDownloadService.GetOnlineDownloadIdentity(mod));
 
     private void RefreshOnlineDetailActionState()
     {
@@ -45,16 +39,10 @@ public sealed partial class OnlinePage
         _onlineHeroImageRequestVersion++;
     }
 
-    private void SetOnlineInstallBusy(bool busy)
-    {
-        _onlineInstallBusyCount = Math.Max(0, _onlineInstallBusyCount + (busy ? 1 : -1));
-        _host.SetBusyState(_onlineInstallBusyCount > 0);
-    }
-
     private async Task RunOnlineCardDownloadAsync(OnlineModCard mod, Microsoft.UI.Xaml.Controls.Button button)
     {
         button.IsEnabled = false;
-        try { await DownloadAndExtractOnlineModAsync(mod); }
+        try { await _services.OnlineDownloads.DownloadAndExtractOnlineModAsync(mod); }
         finally
         {
             if (!_services.IsClosing)
@@ -62,10 +50,4 @@ public sealed partial class OnlinePage
         }
     }
 
-    internal async Task ReportOnlineActionErrorAsync(string message, string title, Exception? error = null)
-    {
-        if (_services.IsClosing) return;
-        try { await _services.Dialogs.ErrorAsync(title, message, error); }
-        catch (Exception ex) { _host.LogApplicationIssue("Report online action error", ex); }
-    }
 }

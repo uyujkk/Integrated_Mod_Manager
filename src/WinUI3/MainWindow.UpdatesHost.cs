@@ -15,7 +15,7 @@ public sealed partial class MainWindow
     {
         UpdatesView.ActionRequested += OnUpdatesActionRequested;
         UpdatesView.PropertyChanged += OnUpdatesViewChanged;
-        _services.Downloads.IsRetryBlocked = () => _onlineView._onlineDownloadActions.IsPreparing;
+        _services.Downloads.IsRetryBlocked = () => _services.OnlineDownloads._onlineDownloadActions.IsPreparing;
         // The navigation shows the running downloads; the Updates page lists the finished ones itself.
         _services.Downloads.Changed += (_, _) =>
         {
@@ -34,8 +34,8 @@ public sealed partial class MainWindow
         _ = RefreshInstallBackupListAsync();
         RefreshConfigurationProfiles();
         RefreshDownloadTaskCenter();
-        UpdatesView.IsCheckingModUpdates = _isCheckingModUpdates;
-        UpdatesView.SetReplacing(_modUpdatesInProgress);
+        UpdatesView.IsCheckingModUpdates = _services.Tracking.IsChecking;
+        UpdatesView.SetReplacing(_services.Tracking.InProgress);
 
         if (_modUpdateStatus is null)
         {
@@ -46,8 +46,8 @@ public sealed partial class MainWindow
             UpdatesView.ModUpdateStatus = T(_modUpdateStatus);
         }
 
-        string lastCheckedText = _lastModUpdateCheckUtc.HasValue
-            ? _lastModUpdateCheckUtc.Value.ToLocalTime().ToString("yyyy-MM-dd HH:mm")
+        string lastCheckedText = _services.Tracking.LastCheckUtc.HasValue
+            ? _services.Tracking.LastCheckUtc.Value.ToLocalTime().ToString("yyyy-MM-dd HH:mm")
             : T("Updates.NotCheckedYet");
         int trackedCount = _services.Tracking.Origins.Count;
         int updateCount = _services.Tracking.Results.Count(item => item.HasUpdate);
@@ -144,7 +144,7 @@ public sealed partial class MainWindow
         {
             case UpdatesAction.CheckModUpdates: OnCheckModUpdatesClicked(this, args); break;
             case UpdatesAction.DownloadAndReplace when request.Item is TrackedModUpdateResult result:
-                await RunUiActionAsync("Download and replace Mod", () => DownloadAndReplaceTrackedModAsync(result));
+                await RunUiActionAsync("Download and replace Mod", () => _services.Tracking.DownloadAndReplaceTrackedModAsync(result));
                 break;
             case UpdatesAction.OpenModPage:
                 await RunUiActionAsync("OpenExternalUrlAsync", () => OpenExternalUrlAsync(request.Item as string ?? string.Empty, T("Common.OpenPageFailed")));
