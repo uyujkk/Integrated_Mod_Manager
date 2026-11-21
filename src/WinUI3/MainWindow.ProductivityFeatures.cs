@@ -386,7 +386,7 @@ public sealed partial class MainWindow
             try
             {
                 await _services.Install.RollbackInstallTransactionAsync(backupPath, clearLastTransaction: true);
-                await _workspaceView.RefreshListsAsync();
+                await RefreshListsAsync();
                 await RefreshInstallBackupListAsync();
                 ShowAppNotification(T("ProductivityFeatures.BackupRestored"));
             }

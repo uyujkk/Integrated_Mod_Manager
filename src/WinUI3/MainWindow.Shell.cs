@@ -94,7 +94,7 @@ public sealed partial class MainWindow
                 if (_pendingRepositoryRefresh)
                 {
                     _pendingRepositoryRefresh = false;
-                    _ = _workspaceView.RefreshListsAsync();
+                    _ = RefreshListsAsync();
                 }
                 break;
             case PrimarySection.Online:
@@ -468,8 +468,7 @@ public sealed partial class MainWindow
         _services.OnlineDownloads.DownloadActions.CancelPreparation();
         foreach (DownloadTaskItem task in _services.Downloads.Tasks.Where(task => DownloadProgressPolicy.IsActive(task.State)))
             if (task.Session?.CanCancel != false) task.Cancellation.Cancel();
-        ++_folderRefreshGeneration;
-        _folderRefreshCancellation?.Cancel();
+        _services.Workspace.CancelScan();
         RootGrid.ActualThemeChanged -= OnRootActualThemeChanged;
         SaveWindowPlacement();
         SaveShellConfig();
@@ -533,7 +532,7 @@ public sealed partial class MainWindow
                 }
                 else
                 {
-                    await _workspaceView.RefreshListsAsync();
+                    await RefreshListsAsync();
                 }
                 e.Handled = true;
                 return;

@@ -147,10 +147,10 @@ public sealed partial class MainWindow
             new(CommandPaletteKind.Command, T("CommandPalette.RefreshRepository"), command, "cmd:refresh"),
             new(CommandPaletteKind.Command, T("CommandPalette.OpenDeveloperTools"), command, "cmd:devtools")
         };
-        foreach (FirstLevelFolderItem character in _characters.All)
+        foreach (FirstLevelFolderItem character in _services.Workspace.Characters.All)
             entries.Add(new(CommandPaletteKind.Character, character.Name,
                 T("CommandPalette.CharacterMods", character.Children.Count), "char:" + character.Path));
-        foreach (FirstLevelFolderItem character in _characters.All)
+        foreach (FirstLevelFolderItem character in _services.Workspace.Characters.All)
             foreach (SecondLevelFolderItem mod in character.Children)
                 entries.Add(new(CommandPaletteKind.Mod, mod.Name,
                     string.IsNullOrWhiteSpace(mod.State) ? character.Name : character.Name + " · " + mod.State, "mod:" + mod.Path));
@@ -275,7 +275,7 @@ public sealed partial class MainWindow
                     break;
                 case "cmd" when value == "refresh":
                     NavigateToPrimarySection(PrimarySection.Repository);
-                    await _workspaceView.RefreshListsAsync();
+                    await RefreshListsAsync();
                     break;
                 case "cmd" when value == "devtools":
                     OpenDeveloperTools();
@@ -306,7 +306,7 @@ public sealed partial class MainWindow
         }
         if (_workspaceView._repositoryWorkspaceBusy)
         {
-            _workspaceView.StatusTextBlock.Text = T("CommandPalette.Busy");
+            _services.Workspace.Status = T("CommandPalette.Busy");
             return;
         }
         // TextChanged is raised later, so apply each cleared filter right away as well.
@@ -320,7 +320,7 @@ public sealed partial class MainWindow
             _workspaceView._repositoryModSearch.Text = string.Empty;
             _workspaceView.RefreshRepositoryModView();
         }
-        if (_workspaceView._modList.View == RepositoryWorkspaceView.Presets) _workspaceView.SetRepositoryWorkspaceViewV4(RepositoryWorkspaceView.List);
+        if (_services.Workspace.ModList.View == RepositoryWorkspaceView.Presets) _workspaceView.SetRepositoryWorkspaceViewV4(RepositoryWorkspaceView.List);
         if (modPath is not null) _workspaceView.SelectSecondLevelByPath(modPath);
         else _workspaceView.SelectFirstLevelByPath(characterPath);
     }

@@ -20,6 +20,9 @@ public sealed partial class WorkspacePage : UserControl
         InitializeComponent();
         AttachStateSlotEvents();
         AttachCombinationEvents();
+        _services.Workspace.StatusChanged += (_, _) => StatusTextBlock.Text = _services.Workspace.Status;
+        _services.Workspace.ScanningChanged += (_, _) => UpdateWorkspaceProgress();
+        StatusTextBlock.Text = _services.Workspace.Status;
     }
 
     private RepositoryPathsViewModel Paths => _services.Paths;

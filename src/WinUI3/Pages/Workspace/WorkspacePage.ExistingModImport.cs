@@ -50,7 +50,7 @@ public sealed partial class WorkspacePage
             await ShowMessageAsync(T("ExistingModImport.CreateACharacterFolderInThis"), T("ExistingModImport.ChooseATargetCharacter"));
             return;
         }
-        if (await ExistingModImportDialogs.ChooseAsync(_services, characters, _host.Characters.Selected?.Path, () => _services.Dialogs.PickFolderAsync()) is not { } chosen) return;
+        if (await ExistingModImportDialogs.ChooseAsync(_services, characters, _services.Workspace.Characters.Selected?.Path, () => _services.Dialogs.PickFolderAsync()) is not { } chosen) return;
         (string source, string destination) = chosen;
         _existingModImportBusy = true;
         using var cancellation = new CancellationTokenSource();

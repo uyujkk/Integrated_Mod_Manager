@@ -31,18 +31,25 @@ public sealed partial class MainWindow
             case DashboardAction.NewRepository: OnAddRepositoryDetailsClicked(this, args); break;
             case DashboardAction.EditRepository: OnEditRepositoryDetailsClicked(this, args); break;
             case DashboardAction.OpenRepository: OpenCurrentRepository(); break;
-            case DashboardAction.PickSource: _workspaceView.OnPickSourceClicked(this, args); break;
-            case DashboardAction.PickTarget: _workspaceView.OnPickTargetClicked(this, args); break;
-            case DashboardAction.PickLauncher: _workspaceView.OnPickLauncherClicked(this, args); break;
-            case DashboardAction.OpenSource: _workspaceView.OnOpenSourceClicked(this, args); break;
-            case DashboardAction.OpenTarget: _workspaceView.OnOpenTargetClicked(this, args); break;
-            case DashboardAction.OpenLauncher: _workspaceView.OnOpenLauncherClicked(this, args); break;
+            case DashboardAction.PickSource: _ = RunPathActionAsync("OnPickSourceClicked", _services.Workspace.PickSourceAsync); break;
+            case DashboardAction.PickTarget: _ = RunPathActionAsync("OnPickTargetClicked", _services.Workspace.PickTargetAsync); break;
+            case DashboardAction.PickLauncher: _ = RunPathActionAsync("OnPickLauncherClicked", _services.Workspace.PickLauncherAsync); break;
+            case DashboardAction.OpenSource: _services.Workspace.OpenSource(); break;
+            case DashboardAction.OpenTarget: _services.Workspace.OpenTarget(); break;
+            case DashboardAction.OpenLauncher: _services.Workspace.OpenLauncher(); break;
             case DashboardAction.BridgeOptions: OnBridgeOptionsClicked(this, args); break;
             case DashboardAction.BrowseOnline: OnOnlineNavClicked(this, args); break;
             case DashboardAction.CheckModUpdates: CheckModUpdatesFromDashboard(); break;
-            case DashboardAction.RunLauncher: _workspaceView.OnRunLauncherClicked(this, args); break;
+            case DashboardAction.RunLauncher: _ = RunUiActionAsync("OnRunLauncherClicked", RunRepositoryLauncherAsync); break;
             case DashboardAction.GettingStartedTipsClosed: OnGettingStartedTipsClosed(); break;
         }
+    }
+
+    // The path pickers report a failure the way the workspace page's handlers did.
+    private async Task RunPathActionAsync(string operation, Func<Task> action)
+    {
+        try { await action(); }
+        catch (Exception ex) { ReportUiActionFailure(operation, ex); }
     }
 
     // Folder counts per repository id from the last background scan. Cards show these
@@ -183,7 +190,7 @@ public sealed partial class MainWindow
     }
 
     private FirstLevelFolderItem? FindLoadedCharacter(string path)
-        => _characters.Find(path);
+        => _services.Workspace.Characters.Find(path);
 
     // Avatars load after the workspace lists; a chip already on the dashboard picks its image up here.
     private void ApplyDashboardCharacterAvatar(FirstLevelFolderItem item)
@@ -205,7 +212,7 @@ public sealed partial class MainWindow
         _currentPrimarySection = PrimarySection.Repository;
         ApplyShellState(refreshRepository: false);
         _workspaceView.FirstLevelSearchTextBox.Text = string.Empty;
-        await _workspaceView.RefreshListsAsync();
+        await RefreshListsAsync();
         _workspaceView.SelectFirstLevelByPath(path);
     }
 

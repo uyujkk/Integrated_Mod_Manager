@@ -21,7 +21,6 @@ public sealed partial class MainWindow : IWorkspaceHost
     void IWorkspaceHost.AttachTrackedTextInput(TextBox box) => AttachTrackedTextInput(box);
     void IWorkspaceHost.OnOnlineNavClicked(object sender, RoutedEventArgs e) => OnOnlineNavClicked(sender, e);
 
-    (List<FirstLevelFolderItem> Items, int SecondCount) IWorkspaceHost.LoadFolderItemsUsingIndex(string repositoryId, string sourceDir, string targetDir, CancellationToken cancellationToken, out int warningCount) => LoadFolderItemsUsingIndex(repositoryId, sourceDir, targetDir, cancellationToken, out warningCount);
     void IWorkspaceHost.LogApplicationIssue(string operation, Exception exception) => LogApplicationIssue(operation, exception);
     void IWorkspaceHost.ReportUiActionFailure(string operation, Exception exception) => ReportUiActionFailure(operation, exception);
     Task IWorkspaceHost.RunUiActionAsync(string operation, Func<Task> action) => RunUiActionAsync(operation, action);
@@ -39,11 +38,8 @@ public sealed partial class MainWindow : IWorkspaceHost
 
     string[] IWorkspaceHost.ImageExtensions => ImageExtensions;
     int IWorkspaceHost.ShortcutScanSafetyLimit => ShortcutScanSafetyLimit;
-    CharacterListViewModel IWorkspaceHost.Characters => _characters;
     string? IWorkspaceHost.CurrentSecondLevelPath { get => _currentSecondLevelPath; set => _currentSecondLevelPath = value; }
     bool IWorkspaceHost.EnableConflictDetection => _enableConflictDetection;
-    CancellationTokenSource? IWorkspaceHost.FolderRefreshCancellation { get => _folderRefreshCancellation; set => _folderRefreshCancellation = value; }
-    int IWorkspaceHost.FolderRefreshGeneration { get => _folderRefreshGeneration; set => _folderRefreshGeneration = value; }
     bool IWorkspaceHost.IsApplyingRepositoryDeploymentMode => _isApplyingRepositoryDeploymentMode;
     Dictionary<string, List<ShortcutBinding>> IWorkspaceHost.ModBindings => _modBindings;
     Dictionary<string, string> IWorkspaceHost.ModLinks => _modLinks;
@@ -62,12 +58,14 @@ public sealed partial class MainWindow : IWorkspaceHost
     Task IWorkspaceHost.RefreshShortcutDeployedModsAsync(string? preferredPath) => RefreshShortcutDeployedModsAsync(preferredPath);
 
     Task IWorkspaceHost.RunRepositoryLauncherAsync() => RunRepositoryLauncherAsync();
-    void IWorkspaceHost.ApplyDashboardCharacterAvatar(FirstLevelFolderItem item) => ApplyDashboardCharacterAvatar(item);
 
     RepositoryPerformanceRecorder.Scope? IWorkspaceHost.MeasureRepositoryUi(RepositoryPerformanceOperation operation, int count) => MeasureRepositoryUi(operation, count);
 
     // The slot card is the workspace page's (stage J finish, step 6); the window and the services ask it to redraw.
     private void RefreshPersistentSlotControls() => _workspaceView.RefreshPersistentSlotControls();
+
+    // Rescans the repository; the workspace page clears and redraws its lists around the scan.
+    private Task RefreshListsAsync() => _workspaceView.RefreshListsAsync();
 
     // Combination presets are a service and their card is the workspace page's (stage J finish, step 7); the window
     // locks its navigation and path boxes while one is saved, restored or bundled.

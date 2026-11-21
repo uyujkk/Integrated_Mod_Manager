@@ -573,7 +573,7 @@ public sealed partial class WorkspacePage
         string path = Path.Combine(folder, (safeName.Length == 0 ? "preset" : safeName) + PresetShareService.FileExtension);
         for (int suffix = 2; File.Exists(path); suffix++) path = Path.Combine(folder, $"{safeName} ({suffix}){PresetShareService.FileExtension}");
         await File.WriteAllTextAsync(path, json, new System.Text.UTF8Encoding(false));
-        StatusTextBlock.Text = T("PresetShare.Exported", profile.Name, path);
+        _services.Workspace.Status = T("PresetShare.Exported", profile.Name, path);
     }
 
     private async Task ImportPresetShareAsync()
@@ -624,6 +624,6 @@ public sealed partial class WorkspacePage
         _host.SaveShellConfig();
         RefreshConfigurationProfiles();
         RefreshPersistentSlotControls();
-        StatusTextBlock.Text = T("PresetShare.Imported", name, preview.Matched.Count, slots);
+        _services.Workspace.Status = T("PresetShare.Imported", name, preview.Matched.Count, slots);
     }
 }

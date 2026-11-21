@@ -184,7 +184,7 @@ public sealed partial class MainWindow
             try
             {
                 await _services.Install.RollbackInstallTransactionAsync(_services.Install.LastTransactionPath, clearLastTransaction: true);
-                await _workspaceView.RefreshListsAsync();
+                await RefreshListsAsync();
                 ShowAppNotification(T("InstallTransactions.Restored"));
             }
             catch (Exception ex)

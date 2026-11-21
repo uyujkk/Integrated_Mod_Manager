@@ -48,17 +48,11 @@ public sealed partial class WorkspacePage
         }
     }
 
-    internal async void OnPickSourceClicked(object sender, RoutedEventArgs e)
+    private async void OnPickSourceClicked(object sender, RoutedEventArgs e)
     {
         try
         {
-            string? picked = await _services.Dialogs.PickFolderAsync();
-            if (!string.IsNullOrEmpty(picked))
-            {
-                Paths.Source = picked;
-                _host.SaveConfig();
-                await RefreshListsAsync();
-            }
+            await _services.Workspace.PickSourceAsync();
         }
         catch (Exception ex)
         {
@@ -66,17 +60,11 @@ public sealed partial class WorkspacePage
         }
     }
 
-    internal async void OnPickTargetClicked(object sender, RoutedEventArgs e)
+    private async void OnPickTargetClicked(object sender, RoutedEventArgs e)
     {
         try
         {
-            string? picked = await _services.Dialogs.PickFolderAsync();
-            if (!string.IsNullOrEmpty(picked))
-            {
-                Paths.Target = picked;
-                _host.SaveConfig();
-                await RefreshListsAsync();
-            }
+            await _services.Workspace.PickTargetAsync();
         }
         catch (Exception ex)
         {
@@ -84,16 +72,11 @@ public sealed partial class WorkspacePage
         }
     }
 
-    internal async void OnPickLauncherClicked(object sender, RoutedEventArgs e)
+    private async void OnPickLauncherClicked(object sender, RoutedEventArgs e)
     {
         try
         {
-            string? picked = await _services.Dialogs.PickFileAsync([".exe", ".bat", ".cmd"]);
-            if (!string.IsNullOrEmpty(picked))
-            {
-                Paths.Launcher = picked;
-                _host.SaveConfig();
-            }
+            await _services.Workspace.PickLauncherAsync();
         }
         catch (Exception ex)
         {
@@ -101,13 +84,7 @@ public sealed partial class WorkspacePage
         }
     }
 
-    internal void OnOpenSourceClicked(object sender, RoutedEventArgs e) => _services.Dialogs.OpenDirectory(Paths.Source, T("LocalLibrary.SourceFolder"));
-
-    internal void OnOpenTargetClicked(object sender, RoutedEventArgs e) => _services.Dialogs.OpenDirectory(Paths.Target, T("LocalLibrary.TargetFolder"));
-
-    internal void OnOpenLauncherClicked(object sender, RoutedEventArgs e) => _services.Dialogs.OpenFileLocation(Paths.Launcher, T("LocalLibrary.Launcher"));
-
-    internal async void OnRunLauncherClicked(object sender, RoutedEventArgs e) => await _host.RunUiActionAsync("OnRunLauncherClicked", _host.RunRepositoryLauncherAsync);
+    private async void OnRunLauncherClicked(object sender, RoutedEventArgs e) => await _host.RunUiActionAsync("OnRunLauncherClicked", _host.RunRepositoryLauncherAsync);
 
     private async void OnRefreshClicked(object sender, RoutedEventArgs e) => await _host.RunUiActionAsync("OnRefreshClicked", RefreshListsAsync);
 
@@ -115,7 +92,7 @@ public sealed partial class WorkspacePage
     {
         try
         {
-            FirstLevelFolderItem? item = _host.Characters.Selected;
+            FirstLevelFolderItem? item = _services.Workspace.Characters.Selected;
             if (item is null)
             {
                 await ShowMessageAsync(
@@ -165,8 +142,8 @@ public sealed partial class WorkspacePage
 
     private void OnFirstLevelSelectionChanged(object sender, SelectionChangedEventArgs e)
     {
-        _host.Characters.Selected = FirstLevelListView.SelectedItem as FirstLevelFolderItem;
-        PopulateSecondLevelList(_host.Characters.Selected);
+        _services.Workspace.Characters.Selected = FirstLevelListView.SelectedItem as FirstLevelFolderItem;
+        PopulateSecondLevelList(_services.Workspace.Characters.Selected);
         UpdateCharacterHeaderActions();
     }
 
@@ -247,7 +224,7 @@ public sealed partial class WorkspacePage
                 Directory.CreateDirectory(targetPath);
                 await RefreshListsAsync();
                 SelectFirstLevelByPath(targetPath);
-                StatusTextBlock.Text = T("LocalLibrary.CreatedFirstLevelFolder", name.Trim());
+                _services.Workspace.Status = T("LocalLibrary.CreatedFirstLevelFolder", name.Trim());
             }
             catch (Exception ex)
             {
@@ -266,7 +243,7 @@ public sealed partial class WorkspacePage
     {
         try
         {
-            FirstLevelFolderItem? item = _host.Characters.Selected;
+            FirstLevelFolderItem? item = _services.Workspace.Characters.Selected;
             if (item is null)
             {
                 await ShowMessageAsync(
@@ -305,7 +282,7 @@ public sealed partial class WorkspacePage
                 CharacterRename.Execute(plan, _host.CreateCharacterRenameReferences(repository));
                 await RefreshListsAsync();
                 SelectFirstLevelByPath(plan.NewPath);
-                StatusTextBlock.Text = T("LocalLibrary.RenamedFirstLevelFolderTo", trimmed);
+                _services.Workspace.Status = T("LocalLibrary.RenamedFirstLevelFolderTo", trimmed);
             }
             catch (CharacterRenameException ex)
             {
@@ -342,14 +319,14 @@ public sealed partial class WorkspacePage
                     // The row's shortcut count and the tab header read the bindings just imported.
                     ApplyModRowState(item);
                     UpdateRepositorySelectedMetadataV4();
-                    StatusTextBlock.Text = T("LocalLibrary.ShortcutsWereDetectedFromTheMod");
+                    _services.Workspace.Status = T("LocalLibrary.ShortcutsWereDetectedFromTheMod");
                 }
             }
             catch (Exception ex)
             {
                 _host.LogApplicationIssue("Mod selection", ex);
                 ClearPreview();
-                StatusTextBlock.Text = T("LocalLibrary.CouldNotReadTheSelectedMod", ex.Message);
+                _services.Workspace.Status = T("LocalLibrary.CouldNotReadTheSelectedMod", ex.Message);
             }
         }
         catch (Exception ex)
@@ -477,12 +454,12 @@ public sealed partial class WorkspacePage
 
             try
             {
-                string selectedFirstLevelPath = (_host.Characters.Selected)?.Path ?? string.Empty;
+                string selectedFirstLevelPath = (_services.Workspace.Characters.Selected)?.Path ?? string.Empty;
                 RemoveModAndItsLinks(item, deployedLinks);
                 _host.SaveConfig();
                 await RefreshListsAsync();
                 SelectFirstLevelByPath(selectedFirstLevelPath);
-                StatusTextBlock.Text = T("LocalLibrary.DeletedSecondLevelMod", item.Name);
+                _services.Workspace.Status = T("LocalLibrary.DeletedSecondLevelMod", item.Name);
             }
             catch (Exception ex)
             {
@@ -586,7 +563,7 @@ public sealed partial class WorkspacePage
             SetDropTargetHighlight(border, false);
         }
 
-        if (_host.Characters.Selected is null)
+        if (_services.Workspace.Characters.Selected is null)
         {
             return;
         }
@@ -610,7 +587,7 @@ public sealed partial class WorkspacePage
                 SetDropTargetHighlight(border, false);
             }
 
-            FirstLevelFolderItem? item = _host.Characters.Selected;
+            FirstLevelFolderItem? item = _services.Workspace.Characters.Selected;
             if (item is null)
             {
                 await ShowMessageAsync(
@@ -648,100 +625,48 @@ public sealed partial class WorkspacePage
         }
     }
 
+    // The scan is WorkspaceService's (stage J finish, step 7b); the page clears its lists and details first, redraws the
+    // characters once they are in, and selects the previous character and Mod again.
     internal async Task RefreshListsAsync()
     {
-        using var timing = _host.MeasureRepositoryUi(RepositoryPerformanceOperation.Refresh, _host.Characters.All.Sum(first => first.Children.Count));
-        _host.FolderRefreshCancellation?.Cancel();
-        int generation = ++_host.FolderRefreshGeneration;
+        using var timing = _host.MeasureRepositoryUi(RepositoryPerformanceOperation.Refresh, _services.Workspace.Characters.All.Sum(first => first.Children.Count));
         string? previousMod = _host.CurrentSecondLevelPath;
-        string? previousCategory = (_host.Characters.Selected)?.Path;
-        _host.Characters.All.Clear();
-        _modList.SelectedMod = null;
-        _host.Characters.Visible.Clear();
-        _host.SecondLevelItems.Clear();
-        _host.CurrentSecondLevelPath = null;
-        RefreshPersistentSlotControls();
-        FirstCountTextBlock.Text = "0";
-        SecondCountTextBlock.Text = "0";
-        ShowModSummary(null);
-        LoadDefaultShortcutTemplate();
-        LoadLinkForCurrentMod(null);
-        ClearPreview();
-        UpdateProgress(0, T("Common.NoActiveCopyTask"));
-
-        string sourceDir = Paths.Source.Trim();
-        string targetDir = Paths.Target.Trim();
-        if (string.IsNullOrWhiteSpace(sourceDir) || !Directory.Exists(sourceDir))
+        string? previousCategory = (_services.Workspace.Characters.Selected)?.Path;
+        WorkspaceScanResult? result = await _services.Workspace.ScanAsync(
+            cleared: () =>
+            {
+                _modList.SelectedMod = null;
+                _host.SecondLevelItems.Clear();
+                _host.CurrentSecondLevelPath = null;
+                RefreshPersistentSlotControls();
+                FirstCountTextBlock.Text = "0";
+                SecondCountTextBlock.Text = "0";
+                ShowModSummary(null);
+                LoadDefaultShortcutTemplate();
+                LoadLinkForCurrentMod(null);
+                ClearPreview();
+                UpdateProgress(0, T("Common.NoActiveCopyTask"));
+            },
+            loaded: () =>
+            {
+                HideWorkspaceScanError();
+                timing?.SetCounts(_services.Workspace.Characters.All.Sum(first => first.Children.Count));
+                ApplyFirstLevelFilter();
+            });
+        if (result is null) return;
+        if (result.Failed)
         {
-            StatusTextBlock.Text = T("LocalLibrary.ChooseAValidModStorageFolder");
+            ShowWorkspaceScanError(T("LocalLibrary.RepositoryScanFailedTheExistingIndex"));
             return;
         }
 
-        if (!string.IsNullOrWhiteSpace(targetDir) && !Directory.Exists(targetDir))
+        FirstCountTextBlock.Text = result.CharacterCount.ToString();
+        SecondCountTextBlock.Text = result.ModCount.ToString();
+        if (_services.Workspace.Characters.Visible.Count > 0)
         {
-            StatusTextBlock.Text = T("LocalLibrary.TheTargetFolderDoesNotExist");
-            return;
-        }
-
-        _host.SaveConfig();
-        string repositoryId = _services.Repositories.Selected?.Id ?? sourceDir;
-        using var cancellation = new CancellationTokenSource();
-        _host.FolderRefreshCancellation = cancellation;
-        _workspaceScanning = true;
-        UpdateWorkspaceProgress();
-        try
-        {
-            var loaded = await Task.Run(() =>
-            {
-                var items = _host.LoadFolderItemsUsingIndex(repositoryId, sourceDir, targetDir,
-                    cancellation.Token, out int warnings);
-                return (items.Items, items.SecondCount, Warnings: warnings);
-            }, cancellation.Token);
-
-            if (cancellation.IsCancellationRequested || generation != _host.FolderRefreshGeneration
-                || !string.Equals(sourceDir, Paths.Source.Trim(), StringComparison.OrdinalIgnoreCase)
-                || !string.Equals(targetDir, Paths.Target.Trim(), StringComparison.OrdinalIgnoreCase)) return;
-            _host.Characters.Load(loaded.Items);
-            HideWorkspaceScanError();
-            timing?.SetCounts(loaded.SecondCount);
-            ApplyFirstLevelFilter();
-            _ = RefreshCharacterFolderAvatarsAsync();
-            if (_services.Repositories.Selected is { SourcePath: { Length: > 0 } scannedSource } scanned
-                && string.Equals(Path.GetFullPath(scannedSource).TrimEnd('\\'), Path.GetFullPath(sourceDir).TrimEnd('\\'), StringComparison.OrdinalIgnoreCase))
-                _ = _services.Slots.SeedDefaultSlotsAsync(scanned, loaded.Items);
-            FirstCountTextBlock.Text = _host.Characters.All.Count.ToString();
-            SecondCountTextBlock.Text = loaded.SecondCount.ToString();
-            StatusTextBlock.Text = loaded.Warnings == 0
-                ? T("LocalLibrary.LoadedFirstLevelFoldersAndSecond", _host.Characters.All.Count, loaded.SecondCount)
-                : T("LocalLibrary.LoadedCategoriesAndModsScanCache", _host.Characters.All.Count, loaded.SecondCount, loaded.Warnings);
-            if (_host.Characters.Visible.Count > 0)
-            {
-                SelectFirstLevelByPath(previousCategory);
-                if (!string.IsNullOrEmpty(previousMod)) SelectSecondLevelByPath(previousMod);
-                if (_host.Characters.Selected is null) FirstLevelListView.SelectedIndex = 0;
-            }
-        }
-        catch (OperationCanceledException) when (cancellation.IsCancellationRequested)
-        {
-            // A newer refresh/repository owns the display. Do not overwrite it.
-        }
-        catch (Exception ex)
-        {
-            _host.LogApplicationIssue("Refresh repository folders", ex);
-            if (generation == _host.FolderRefreshGeneration && !cancellation.IsCancellationRequested)
-            {
-                StatusTextBlock.Text = T("LocalLibrary.RepositoryScanFailedTheExistingIndex");
-                ShowWorkspaceScanError(T("LocalLibrary.RepositoryScanFailedTheExistingIndex"));
-            }
-        }
-        finally
-        {
-            if (ReferenceEquals(_host.FolderRefreshCancellation, cancellation)) _host.FolderRefreshCancellation = null;
-            if (generation == _host.FolderRefreshGeneration)
-            {
-                _workspaceScanning = false;
-                UpdateWorkspaceProgress();
-            }
+            SelectFirstLevelByPath(previousCategory);
+            if (!string.IsNullOrEmpty(previousMod)) SelectSecondLevelByPath(previousMod);
+            if (_services.Workspace.Characters.Selected is null) FirstLevelListView.SelectedIndex = 0;
         }
     }
 
@@ -768,7 +693,7 @@ public sealed partial class WorkspacePage
 
         if (!preserveStatus)
         {
-            StatusTextBlock.Text = T("LocalLibrary.CurrentFirstLevelFolder") + firstItem.Path;
+            _services.Workspace.Status = T("LocalLibrary.CurrentFirstLevelFolder") + firstItem.Path;
         }
 
         if (_host.SecondLevelItems.Count > 0)
@@ -793,7 +718,7 @@ public sealed partial class WorkspacePage
 
         if (!preserveStatus)
         {
-            StatusTextBlock.Text = T("LocalLibrary.Viewing") + item.Path;
+            _services.Workspace.Status = T("LocalLibrary.Viewing") + item.Path;
         }
     }
 
@@ -920,7 +845,7 @@ public sealed partial class WorkspacePage
                 _services.Install.CopyLedger(repository).Forget(targetPath);
                 _host.SaveShellConfig();
                 UpdateProgress(100, T("LocalLibrary.RemovalComplete"));
-                StatusTextBlock.Text = item.Name + T("LocalLibrary.WasRemovedFromTheTargetFolder");
+                _services.Workspace.Status = item.Name + T("LocalLibrary.WasRemovedFromTheTargetFolder");
                 ShowAppNotification(T("LocalLibrary.RemovedFromTarget", item.Name));
             }
             else
@@ -940,7 +865,7 @@ public sealed partial class WorkspacePage
                 var progress = new Progress<ProgressInfo>(info => UpdateProgress(info.Percent, info.Message));
                 await DeployModAsync(item.Path, targetPath, repository, progress);
                 string replacedNames = string.Join(T("Common.ListSeparator"), siblingLinksToReplace.Select(Path.GetFileName));
-                StatusTextBlock.Text = repository.UseDirectoryLinks
+                _services.Workspace.Status = repository.UseDirectoryLinks
                     ? siblingLinksToReplace.Count > 0
                         ? T("LocalLibrary.DisconnectedAndLinked", replacedNames, item.Name)
                         : item.Name + T("LocalLibrary.WasLinkedIntoTheTargetFolder")
@@ -990,7 +915,7 @@ public sealed partial class WorkspacePage
             string importedPath = await Task.Run(() => _services.Install.ImportArchiveContents(archivePath, item.Path));
 
             string importedName = Path.GetFileName(importedPath);
-            StatusTextBlock.Text = T("LocalLibrary.InstalledAs", Path.GetFileName(archivePath), item.Name, importedName, importedPath);
+            _services.Workspace.Status = T("LocalLibrary.InstalledAs", Path.GetFileName(archivePath), item.Name, importedName, importedPath);
             ShowAppNotification(T("LocalLibrary.ArchiveInstalled", item.Name, importedName));
             await RefreshListsAsync();
             SelectFirstLevelByPath(item.Path);
@@ -1036,7 +961,7 @@ public sealed partial class WorkspacePage
                 File.Copy(imagePath, targetPath, true);
             });
 
-            StatusTextBlock.Text = item.Name + T("LocalLibrary.SPreviewImageWasUpdated");
+            _services.Workspace.Status = item.Name + T("LocalLibrary.SPreviewImageWasUpdated");
             ShowAppNotification(T("LocalLibrary.PreviewUpdated", item.Name));
             await RefreshListsAsync();
             SelectSecondLevelByPath(item.Path);
@@ -1124,7 +1049,6 @@ public sealed partial class WorkspacePage
         ProgressTextBlock.Text = message;
     }
 
-    private bool _workspaceScanning;
     private bool _workspaceBusy;
 
     private Microsoft.UI.Dispatching.DispatcherQueueTimer? _workspaceProgressDelay;
@@ -1133,7 +1057,7 @@ public sealed partial class WorkspacePage
     // It overlays the edge instead of taking a row, and waits 300 ms so quick scans do not flash it.
     private void UpdateWorkspaceProgress()
     {
-        if (!_workspaceScanning && !_workspaceBusy)
+        if (!_services.Workspace.IsScanning && !_workspaceBusy)
         {
             _workspaceProgressDelay?.Stop();
             WorkspaceProgressBar.Visibility = Visibility.Collapsed;
@@ -1151,7 +1075,7 @@ public sealed partial class WorkspacePage
         timer.IsRepeating = false;
         timer.Tick += (_, _) =>
         {
-            if (_workspaceScanning || _workspaceBusy) WorkspaceProgressBar.Visibility = Visibility.Visible;
+            if (_services.Workspace.IsScanning || _workspaceBusy) WorkspaceProgressBar.Visibility = Visibility.Visible;
         };
         return timer;
     }
@@ -1195,9 +1119,9 @@ public sealed partial class WorkspacePage
             return;
         }
 
-        for (int firstIndex = 0; firstIndex < _host.Characters.Visible.Count; firstIndex++)
+        for (int firstIndex = 0; firstIndex < _services.Workspace.Characters.Visible.Count; firstIndex++)
         {
-            FirstLevelFolderItem first = _host.Characters.Visible[firstIndex];
+            FirstLevelFolderItem first = _services.Workspace.Characters.Visible[firstIndex];
             if (first.Children.Any(child => string.Equals(child.Path, path, StringComparison.CurrentCultureIgnoreCase)))
             {
                 FirstLevelListView.SelectedIndex = firstIndex;
@@ -1344,10 +1268,10 @@ public sealed partial class WorkspacePage
 
     internal void ApplyFirstLevelFilter()
     {
-        string? selectedPath = _host.Characters.Selected?.Path;
-        _host.Characters.ApplyFilter(FirstLevelSearchTextBox.Text);
+        string? selectedPath = _services.Workspace.Characters.Selected?.Path;
+        _services.Workspace.Characters.ApplyFilter(FirstLevelSearchTextBox.Text);
         SelectFirstLevelByPath(selectedPath);
-        if (_host.Characters.Selected is null && _host.Characters.Visible.Count > 0)
+        if (_services.Workspace.Characters.Selected is null && _services.Workspace.Characters.Visible.Count > 0)
         {
             FirstLevelListView.SelectedIndex = 0;
         }
@@ -1355,7 +1279,7 @@ public sealed partial class WorkspacePage
 
     internal void SelectFirstLevelByPath(string? path)
     {
-        if (_host.Characters.FindVisible(path) is { } item)
+        if (_services.Workspace.Characters.FindVisible(path) is { } item)
         {
             FirstLevelListView.SelectedItem = item;
         }

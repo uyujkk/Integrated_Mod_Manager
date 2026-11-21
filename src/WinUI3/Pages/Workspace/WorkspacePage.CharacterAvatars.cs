@@ -7,126 +7,10 @@ using Microsoft.UI.Xaml.Media.Imaging;
 
 namespace ModFolderCopier.WinUI;
 
-// Avatars for repository character folders: the folder's own image, the character the
-// folder is bound to, or the catalog character with the same name (CharacterFolderAvatars).
-// The catalog is the online character catalog (official list and GameBanana categories), with
-// the built-in Endfield list filling gaps. Without a fresh catalog the repository page loads one
-// in the background once per session, so newly released characters get their avatars.
+// The avatar actions of a character folder (choose an image, bind to a character, restore, remove). Loading the avatars
+// is WorkspaceService's (stage J finish, step 7b), so the dashboard has them without the workspace page.
 public sealed partial class WorkspacePage
 {
-    private const int CharacterAvatarDecodeWidth = 64;
-    private CancellationTokenSource _characterAvatarCancellation = new();
-    private readonly HashSet<string> _avatarCatalogRefreshRequested = new(StringComparer.Ordinal);
-
-    private async Task RefreshCharacterFolderAvatarsAsync()
-    {
-        _characterAvatarCancellation.Cancel();
-        _characterAvatarCancellation.Dispose();
-        _characterAvatarCancellation = new CancellationTokenSource();
-        CancellationToken cancellationToken = _characterAvatarCancellation.Token;
-
-        WorkspaceRepository? repository = _services.Repositories.Selected;
-        FirstLevelFolderItem[] items = [.. _host.Characters.All];
-        if (repository is null || items.Length == 0)
-        {
-            return;
-        }
-
-        try
-        {
-            (IReadOnlyList<OnlineCharacterOption> catalog, bool fresh) = await GetCharacterAvatarCatalogAsync(repository);
-            var bindings = new Dictionary<string, string>(repository.CharacterAvatarBindings ?? [], StringComparer.OrdinalIgnoreCase);
-            CharacterAvatar[] avatars = await Task.Run(
-                () => items.Select(item => CharacterFolderAvatars.Resolve(item.Path, catalog, bindings)).ToArray(),
-                cancellationToken);
-            for (int index = 0; index < items.Length && !cancellationToken.IsCancellationRequested; index++)
-            {
-                await ApplyCharacterAvatarAsync(items[index], avatars[index], cancellationToken);
-            }
-
-            if (!fresh && !cancellationToken.IsCancellationRequested && _avatarCatalogRefreshRequested.Add(repository.Id))
-            {
-                await _services.CharacterCatalog.EnsureAsync(repository, forceReload: false);
-                if (!cancellationToken.IsCancellationRequested && ReferenceEquals(_services.Repositories.Selected, repository))
-                {
-                    await RefreshCharacterFolderAvatarsAsync();
-                }
-            }
-        }
-        catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
-        {
-        }
-        catch (Exception exception)
-        {
-            _host.LogApplicationIssue("Character folder avatars", exception);
-        }
-    }
-
-    private async Task RefreshCharacterFolderAvatarAsync(FirstLevelFolderItem item)
-    {
-        WorkspaceRepository? repository = _services.Repositories.Selected;
-        if (repository is null)
-        {
-            return;
-        }
-
-        (IReadOnlyList<OnlineCharacterOption> catalog, _) = await GetCharacterAvatarCatalogAsync(repository);
-        var bindings = new Dictionary<string, string>(repository.CharacterAvatarBindings ?? [], StringComparer.OrdinalIgnoreCase);
-        item.AvatarImageSource = null;
-        await ApplyCharacterAvatarAsync(item, CharacterFolderAvatars.Resolve(item.Path, catalog, bindings), _characterAvatarCancellation.Token);
-    }
-
-    private async Task ApplyCharacterAvatarAsync(FirstLevelFolderItem item, CharacterAvatar avatar, CancellationToken cancellationToken)
-    {
-        try
-        {
-            BitmapImage? bitmap = avatar switch
-            {
-                { FilePath: { } path } => await ImageService.LoadLocalBitmapAsync(path, CharacterAvatarDecodeWidth),
-                { ImageUrl: { } url } => await _services.Images.LoadOnlineBitmapAsync(url, cancellationToken, CharacterAvatarDecodeWidth),
-                _ => null
-            };
-            if (!cancellationToken.IsCancellationRequested)
-            {
-                item.AvatarImageSource = bitmap;
-                _host.ApplyDashboardCharacterAvatar(item);
-            }
-        }
-        catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
-        {
-        }
-        catch (Exception exception)
-        {
-            // An unreadable image leaves the initial placeholder.
-            _host.LogApplicationIssue("Character folder avatar " + item.Name, exception);
-        }
-    }
-
-    // The catalog for avatar matching and whether it is fresh (see CharacterCatalogService.FreshFor).
-    private async Task<(IReadOnlyList<OnlineCharacterOption> Characters, bool Fresh)> GetCharacterAvatarCatalogAsync(WorkspaceRepository repository)
-    {
-        string catalogKey = _services.CharacterCatalog.CatalogKey(repository);
-        OnlineCharacterCatalogCacheSnapshot? cached = await _services.CharacterCatalog.TryReadCacheAsync(catalogKey);
-        IReadOnlyList<OnlineCharacterOption> online =
-            string.Equals(_services.Online.CharacterCatalogKey, catalogKey, StringComparison.Ordinal) && _services.Online.Page.CharacterOptions.Count > 0
-                ? [.. _services.Online.Page.CharacterOptions]
-                : cached?.Characters ?? [];
-        if (!_services.OnlineSource.IsEndfield(repository))
-        {
-            return (online, cached?.IsFresh == true);
-        }
-
-        OnlineCharacterOption[] builtIn = EndfieldCharacterCatalog.BuiltIn.Select((character, index) => new OnlineCharacterOption
-        {
-            Key = character.EnglishName,
-            DisplayNameZh = character.ChineseName,
-            DisplayNameEn = character.EnglishName,
-            AvatarUrl = character.AvatarUrl,
-            Aliases = [.. character.AllNames],
-            WikiOrder = index
-        }).ToArray();
-        return (OnlineCharacterCatalogMatcher.WithFallback(online, builtIn), cached?.IsFresh == true);
-    }
 
     private void AddCharacterAvatarMenuItems(MenuFlyout menu, FirstLevelFolderItem item)
     {
@@ -145,9 +29,9 @@ public sealed partial class WorkspacePage
     // The avatar button in the character list header: the same actions for the selected character.
     private void OnCharacterAvatarButtonClicked(object sender, RoutedEventArgs e)
     {
-        if (_host.Characters.Selected is not { } item)
+        if (_services.Workspace.Characters.Selected is not { } item)
         {
-            StatusTextBlock.Text = T("CharacterAvatars.SelectACharacterFirst");
+            _services.Workspace.Status = T("CharacterAvatars.SelectACharacterFirst");
             return;
         }
 
@@ -194,7 +78,7 @@ public sealed partial class WorkspacePage
         {
             if (await action())
             {
-                await RefreshCharacterFolderAvatarAsync(item);
+                await _services.Workspace.RefreshCharacterFolderAvatarAsync(item);
             }
         }
         catch (Exception exception)
@@ -213,7 +97,7 @@ public sealed partial class WorkspacePage
             return false;
         }
 
-        (IReadOnlyList<OnlineCharacterOption> catalog, _) = await GetCharacterAvatarCatalogAsync(repository);
+        (IReadOnlyList<OnlineCharacterOption> catalog, _) = await _services.Workspace.GetCharacterAvatarCatalogAsync(repository);
         if (catalog.Count == 0)
         {
             await ShowMessageAsync(T("CharacterAvatars.NoCharacterListYet"), T("CharacterAvatars.BindToCharacter"));

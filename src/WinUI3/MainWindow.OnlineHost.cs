@@ -37,7 +37,7 @@ public sealed partial class MainWindow : IOnlineHost
     void IOnlineHost.SaveShellConfig(bool throwOnError) => SaveShellConfig(throwOnError);
     bool IOnlineHost.SaveConfig() => SaveConfig();
 
-    Task IOnlineHost.RefreshListsAsync() => _workspaceView.RefreshListsAsync();
+    Task IOnlineHost.RefreshListsAsync() => RefreshListsAsync();
     void IOnlineHost.SelectSecondLevelByPath(string? path) => _workspaceView.SelectSecondLevelByPath(path);
     void IOnlineHost.SetBusyState(bool busy) => _workspaceView.SetBusyState(busy);
     bool IOnlineHost.IsFavoriteCharacter(string characterKey) => IsFavoriteCharacter(characterKey);

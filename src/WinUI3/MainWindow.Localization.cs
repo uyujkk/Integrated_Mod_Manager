@@ -102,7 +102,7 @@ public sealed partial class MainWindow
         ApplyTextOverrides();
         ApplyActionButtonPresentation();
 
-        if (_characters.Selected is { } firstItem)
+        if (_services.Workspace.Characters.Selected is { } firstItem)
         {
             string? selectedPath = _currentSecondLevelPath;
             _workspaceView.PopulateSecondLevelList(firstItem, preserveStatus: true);
@@ -166,13 +166,13 @@ public sealed partial class MainWindow
 
     private void SetDefaultStatus()
     {
-        _workspaceView.StatusTextBlock.Text = T("Localization.ChooseAModStorageFolderAnd", AppVersion);
+        _services.Workspace.Status = T("Localization.ChooseAModStorageFolderAnd", AppVersion);
     }
 
     private void RefreshLocalizedStates()
     {
         string targetDir = Paths.Target.Trim();
-        foreach (FirstLevelFolderItem first in _characters.Visible)
+        foreach (FirstLevelFolderItem first in _services.Workspace.Characters.Visible)
         {
             foreach (SecondLevelFolderItem second in first.Children)
             {

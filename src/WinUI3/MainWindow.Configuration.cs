@@ -82,20 +82,20 @@ public sealed partial class MainWindow
             _services.Online.Preferences.DownloadFolders ??= new(StringComparer.OrdinalIgnoreCase);
             _services.Online.Preferences.BrowseSessions ??= [];
             _services.Online.Preferences.RecentAuthors ??= [];
-            _workspaceView._localLibraries = config?.LocalLibraries ?? new(StringComparer.OrdinalIgnoreCase);
-            foreach (var library in _workspaceView._localLibraries.Values) library.Normalize();
+            _services.Workspace.LocalLibraries = config?.LocalLibraries ?? new(StringComparer.OrdinalIgnoreCase);
+            foreach (var library in _services.Workspace.LocalLibraries.Values) library.Normalize();
             _services.Downloads.Scheduler.Limit = _services.Online.Preferences.ConcurrentDownloads;
             _loadedUpdateCheckInterval = config?.UpdateCheckInterval;
             _updateCheckInterval = AppSelfUpdateEnabled ? ParseUpdateCheckInterval(_loadedUpdateCheckInterval) : UpdateCheckInterval.Manual;
             _navigationCollapsed = config?.NavigationCollapsed ?? false;
-            _workspaceView._modList.View = config?.RepositoryWorkspaceView switch
+            _services.Workspace.ModList.View = config?.RepositoryWorkspaceView switch
             {
                 "covers" => RepositoryWorkspaceView.Covers,
                 "presets" => RepositoryWorkspaceView.Presets,
                 _ => RepositoryWorkspaceView.List
             };
-            _workspaceView._modList.CharacterPaneWidth = config?.WorkspaceCharacterWidth;
-            _workspaceView._modList.DetailPaneWidth = config?.WorkspaceDetailWidth;
+            _services.Workspace.ModList.CharacterPaneWidth = config?.WorkspaceCharacterWidth;
+            _services.Workspace.ModList.DetailPaneWidth = config?.WorkspaceDetailWidth;
             _lastUpdateCheckUtc = TryParseDateTimeOffset(config?.LastUpdateCheckUtc);
             // Restoring the view is not a change to save.
             _restoringUpdatesView = true;
@@ -263,7 +263,7 @@ public sealed partial class MainWindow
             {
                 CurrentPrimarySection = _currentPrimarySection.ToString().ToLowerInvariant(),
                 OnlinePreferences = _services.Online.Preferences,
-                LocalLibraries = _workspaceView._localLibraries,
+                LocalLibraries = _services.Workspace.LocalLibraries,
                 SelectedRepositoryId = _services.Repositories.SelectedId,
                 UpdateCheckInterval = ApplicationReleasePolicy.UpdateSettingToSave(_updateCheckInterval.ToString(), _loadedUpdateCheckInterval),
                 LastUpdateCheckUtc = _lastUpdateCheckUtc?.ToString("O"),
@@ -304,9 +304,9 @@ public sealed partial class MainWindow
                 NavigationCollapsed = _navigationCollapsed,
                 InterfaceDensity = _interfaceDensity == InterfaceDensity.Compact ? "compact" : "comfortable",
                 OnlineCardLayout = _services.Online.Page.CardLayoutMode == OnlineCardLayoutMode.Grid ? "grid" : "list",
-                RepositoryWorkspaceView = _workspaceView._modList.View.ToString().ToLowerInvariant(),
-                WorkspaceCharacterWidth = _workspaceView._modList.CharacterPaneWidth,
-                WorkspaceDetailWidth = _workspaceView._modList.DetailPaneWidth,
+                RepositoryWorkspaceView = _services.Workspace.ModList.View.ToString().ToLowerInvariant(),
+                WorkspaceCharacterWidth = _services.Workspace.ModList.CharacterPaneWidth,
+                WorkspaceDetailWidth = _services.Workspace.ModList.DetailPaneWidth,
                 UpdatesView = UpdatesViewModel.FormatView(_services.Updates.View),
                 SelectedConfigurationProfileId = _services.Combinations.SelectedId,
                 EnableConflictDetection = _enableConflictDetection,
@@ -335,7 +335,7 @@ public sealed partial class MainWindow
         {
             if (throwOnError) throw;
             LogApplicationIssue("Save repository configuration", ex);
-            _workspaceView.StatusTextBlock.Text = T("Configuration.FailedToSaveRepositoryConfig");
+            _services.Workspace.Status = T("Configuration.FailedToSaveRepositoryConfig");
         }
     }
 
@@ -438,7 +438,7 @@ public sealed partial class MainWindow
         catch (Exception ex)
         {
             LogApplicationIssue("Load configuration", ex);
-            _workspaceView.StatusTextBlock.Text = T("Configuration.FailedToLoadConfigOlderConfig");
+            _services.Workspace.Status = T("Configuration.FailedToLoadConfigOlderConfig");
         }
 
         if (_services.Tracking.Deduplicate())
@@ -462,7 +462,7 @@ public sealed partial class MainWindow
         catch (Exception ex)
         {
             LogApplicationIssue("Save configuration", ex);
-            _workspaceView.StatusTextBlock.Text = T("Configuration.FailedToSaveConfigButThe");
+            _services.Workspace.Status = T("Configuration.FailedToSaveConfigButThe");
             return false;
         }
     }
@@ -490,7 +490,7 @@ public sealed partial class MainWindow
         string text = _services.ShellConfig.Read(filePath, validator, out bool restoredFromBackup);
         if (restoredFromBackup)
         {
-            _workspaceView.StatusTextBlock.Text = T("Configuration.WasDamagedAndTheLatestBackup", Path.GetFileName(filePath));
+            _services.Workspace.Status = T("Configuration.WasDamagedAndTheLatestBackup", Path.GetFileName(filePath));
         }
 
         return text;

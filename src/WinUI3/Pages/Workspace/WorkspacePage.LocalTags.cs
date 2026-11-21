@@ -7,7 +7,8 @@ namespace ModFolderCopier.WinUI;
 
 public sealed partial class WorkspacePage
 {
-    internal Dictionary<string, LocalLibraryState> _localLibraries = new(StringComparer.OrdinalIgnoreCase);
+    // The tags are WorkspaceService's (stage J finish, step 7b): the window loads and saves them.
+    private Dictionary<string, LocalLibraryState> _localLibraries => _services.Workspace.LocalLibraries;
     private string _localTagFilter = "";
     private string? _localLibraryKey;
     private Button? _localFiltersButton;
@@ -146,7 +147,7 @@ public sealed partial class WorkspacePage
     {
         var repo = _services.Repositories.Selected;
         var library = SelectedLocalLibrary();
-        if (repo is null || library is null || _host.Characters.Selected is not { } role) return;
+        if (repo is null || library is null || _services.Workspace.Characters.Selected is not { } role) return;
         var snapshot = new LocalModFilter { Character = WorkspaceIdentity.Relative(repo.SourcePath, role.Path), Search = _repositoryModSearch!.Text, Tag = _localTagFilter };
         string? name = await PromptForTextAsync(T("LocalTags.NameThisFilterUpTo64"), T("LocalTags.SaveFilter"), "", T("Common.Save"));
         if (string.IsNullOrWhiteSpace(name)) return;

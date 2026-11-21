@@ -62,7 +62,6 @@ public sealed partial class MainWindow : Window
     internal static readonly string[] ImageExtensions = [".png", ".jpg", ".jpeg", ".bmp", ".gif", ".webp"];
 
     private readonly HttpClient _httpClient = CreateHttpClient();
-    private readonly CharacterListViewModel _characters = new();
     private readonly BatchObservableCollection<SecondLevelFolderItem> _secondLevelItems = [];
     private readonly List<TextBox> _shortcutKeyBoxes = [];
     private readonly List<TextBox> _shortcutActionBoxes = [];
@@ -124,6 +123,8 @@ public sealed partial class MainWindow : Window
             diagnostics: LogApplicationIssue);
         InitializeComponent();
         // Stage J7: the Mod workspace page; it reaches the window only through IWorkspaceHost.
+        _services.Workspace.Attach(LogApplicationIssue, SaveConfig, LoadFolderItemsUsingIndex, ApplyDashboardCharacterAvatar);
+        _services.Workspace.AttachRefresh(RefreshListsAsync);
         _workspaceView = new WorkspacePage(_services, this);
         AttachWorkspacePageEvents();
         _services.Images.Attach(_httpClient, LogApplicationIssue);
@@ -137,10 +138,10 @@ public sealed partial class MainWindow : Window
         _services.Tracking.Attach(_services, LogApplicationIssue, LogApplicationIssueWithStack, SaveConfig,
             throwOnError => SaveShellConfig(throwOnError), SetModUpdateStatus, RefreshUpdatesPane,
             () => { _currentPrimarySection = PrimarySection.Updates; ApplyShellState(refreshRepository: false); },
-            () => _workspaceView.RefreshListsAsync(), _modLinks);
+            RefreshListsAsync, _modLinks);
         _services.Install.Attach(LogApplicationIssue, () => SaveShellConfig(), () => _installBackupLimitGb,
             (percent, message) => DispatcherQueue.TryEnqueue(() => _workspaceView.UpdateProgress(percent, message)),
-            text => _workspaceView.StatusTextBlock.Text = text);
+            text => _services.Workspace.Status = text);
         _services.Appearance.ReduceAnimations = () => ShouldReduceAnimations;
         _services.Dialogs.AttachWindow(() => WinRT.Interop.WindowNative.GetWindowHandle(this));
         _services.Status.NotificationRequested += OnNotificationRequested;
@@ -157,7 +158,7 @@ public sealed partial class MainWindow : Window
         TraceStartupStage("Persistent data store initialized");
         InitializeAppTitleBar();
         InitializeCommandPaletteShortcut();
-        _workspaceView.FirstLevelListView.ItemsSource = _characters.Visible;
+        _workspaceView.FirstLevelListView.ItemsSource = _services.Workspace.Characters.Visible;
         _workspaceView.SecondLevelListView.ItemsSource = _secondLevelItems;
         TraceStartupStage("List sources attached");
         RegisterTrackedTextInputs();
@@ -202,7 +203,7 @@ public sealed partial class MainWindow : Window
 
         if (Directory.Exists(Paths.Source))
         {
-            _ = _workspaceView.RefreshListsAsync();
+            _ = RefreshListsAsync();
         }
         else
         {
@@ -212,6 +213,4 @@ public sealed partial class MainWindow : Window
         TraceStartupStage("MainWindow constructor completed");
     }
 
-    private int _folderRefreshGeneration;
-    private CancellationTokenSource? _folderRefreshCancellation;
 }

@@ -21,7 +21,6 @@ internal interface IWorkspaceHost
     void OnOnlineNavClicked(object sender, RoutedEventArgs e);
 
     // Errors, the error log and listing a repository through the local index.
-    (List<FirstLevelFolderItem> Items, int SecondCount) LoadFolderItemsUsingIndex(string repositoryId, string sourceDir, string targetDir, CancellationToken cancellationToken, out int warningCount);
     void LogApplicationIssue(string operation, Exception exception);
     void ReportUiActionFailure(string operation, Exception exception);
     Task RunUiActionAsync(string operation, Func<Task> action);
@@ -44,11 +43,8 @@ internal interface IWorkspaceHost
     // State the workspace shares with the dashboard, the Shortcuts page and the overlay.
     string[] ImageExtensions { get; }
     int ShortcutScanSafetyLimit { get; }
-    CharacterListViewModel Characters { get; }
     string? CurrentSecondLevelPath { get; set; }
     bool EnableConflictDetection { get; }
-    CancellationTokenSource? FolderRefreshCancellation { get; set; }
-    int FolderRefreshGeneration { get; set; }
     bool IsApplyingRepositoryDeploymentMode { get; }
     Dictionary<string, List<ShortcutBinding>> ModBindings { get; }
     Dictionary<string, string> ModLinks { get; }
@@ -68,7 +64,6 @@ internal interface IWorkspaceHost
 
     // Running the repository's launcher, the dashboard's avatars and the Online page.
     Task RunRepositoryLauncherAsync();
-    void ApplyDashboardCharacterAvatar(FirstLevelFolderItem item);
 
     // Workspace timing diagnostics.
     RepositoryPerformanceRecorder.Scope? MeasureRepositoryUi(RepositoryPerformanceOperation operation, int count);

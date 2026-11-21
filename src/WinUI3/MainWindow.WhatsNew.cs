@@ -63,7 +63,7 @@ public sealed partial class MainWindow
         catch (Exception exception)
         {
             LogApplicationIssue("Open release notes", exception);
-            _workspaceView.StatusTextBlock.Text = target;
+            _services.Workspace.Status = target;
         }
     }
 }
