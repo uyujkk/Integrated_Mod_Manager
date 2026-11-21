@@ -31,15 +31,27 @@ public sealed class WorkspaceStartupTests
     // The command palette lists the scanned characters and Mods.
     private static bool PaletteFinds(AppSession app, string text)
     {
-        Keyboard.TypeSimultaneously(VirtualKeyShort.CONTROL, VirtualKeyShort.KEY_K);
-        AutomationElement search = app.FindByName(app.Text("CommandPalette.Placeholder"), TimeSpan.FromSeconds(5));
+        // Ctrl+K toggles the palette: a second press can land while the last one is still closing, so try once more.
+        string placeholder = app.Text("CommandPalette.Placeholder");
+        AutomationElement? search = null;
+        for (int attempt = 0; attempt < 2 && search is null; attempt++)
+        {
+            Keyboard.TypeSimultaneously(VirtualKeyShort.CONTROL, VirtualKeyShort.KEY_K);
+            var watch = Stopwatch.StartNew();
+            while (search is null && watch.ElapsedMilliseconds < 3000)
+            {
+                search = app.MainWindow.FindFirstDescendant(cf => cf.ByName(placeholder));
+                if (search is null) Thread.Sleep(100);
+            }
+        }
+        Assert.NotNull(search);
         search.AsTextBox().Text = text;
         Thread.Sleep(600);
         bool found = app.MainWindow.FindAllDescendants(cf => cf.ByControlType(ControlType.ListItem))
             .Any(item => item.Name.Contains(text, StringComparison.Ordinal)
                 || item.FindFirstDescendant(cf => cf.ByName(text)) is not null);
         Keyboard.Type(VirtualKeyShort.ESCAPE);
-        Thread.Sleep(300);
+        WaitUntil(() => app.MainWindow.FindFirstDescendant(cf => cf.ByName(placeholder)) is null, "the palette closed", 5);
         return found;
     }
 
