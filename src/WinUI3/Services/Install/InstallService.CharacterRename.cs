@@ -16,4 +16,8 @@ internal sealed partial class InstallService
         CharacterRenameBlock.LinksUnreadable => T("LocalLibrary.RenameLinksUnreadable", string.Join(Environment.NewLine, plan.UnreadableLinks)),
         _ => string.Empty
     };
+
+    /// <summary>The copy records of the renamed character name its new source path and, inside its folder, its new place.</summary>
+    public void RenameCharacter(WorkspaceRepository repository, CharacterRenamePlan plan, ReferenceUndoLog log)
+        => IntegratedModManager.Core.Deployment.CopyDeploymentLedger.RenameCharacter(CopyDeployments, repository.Id, plan, log);
 }

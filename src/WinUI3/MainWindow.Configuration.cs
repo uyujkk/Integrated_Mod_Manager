@@ -35,7 +35,7 @@ public sealed partial class MainWindow
 
         if (!File.Exists(_services.ShellConfig.ShellConfigPath))
         {
-            fallbackRepository = TryCreatePersistentDemoRepository() ?? fallbackRepository;
+            fallbackRepository = SlotService.TryCreatePersistentDemoRepository() ?? fallbackRepository;
             _services.Repositories.Items.Add(fallbackRepository);
             _services.Repositories.SelectedId = fallbackRepository.Id;
             _gettingStartedTips = GettingStartedTips.Load(_firstInstall, savedPending: false);
@@ -51,7 +51,7 @@ public sealed partial class MainWindow
             BetaShellConfig? config = JsonSerializer.Deserialize<BetaShellConfig>(shellJson);
             _services.ShellConfig.ExtensionData = config?.ExtensionData;
             if (config is not null) RepositoryGameMigration.Apply(config, DefaultOnlineGameName, DefaultOnlineCategoryId);
-            if (config is not null) RemoveOrphanPresetPreviews(config);
+            if (config is not null) _services.PresetPreviews.RemoveOrphanPresetPreviews(config);
             if (config?.Repositories is { Count: > 0 })
             {
                 _services.Repositories.Items.AddRange(config.Repositories.Where(repository => !string.IsNullOrWhiteSpace(repository.Id)));
@@ -113,9 +113,9 @@ public sealed partial class MainWindow
             _shortcuts.OverlayPlacements = config?.OverlayPlacements ?? [];
             _shortcuts.OverlayCompactFontSize = OverlayLayoutPolicy.CompactFontSize(config?.OverlayCompactFontSize);
             _shortcuts.KeepMenuStateVariables = config?.KeepMenuStateVariables ?? false;
-            _loaderAutoSaveOriginals = new Dictionary<string, int>(config?.LoaderAutoSaveOriginals ?? [], StringComparer.OrdinalIgnoreCase);
-            _presetPreviewFrameLocked = config?.PresetPreviewFrameLocked ?? false;
-            _presetPreviewDefaultRegion = config?.PresetPreviewDefaultRegion is { IsValid: true } region ? region : null;
+            _services.Slots.LoaderAutoSaveOriginals = new Dictionary<string, int>(config?.LoaderAutoSaveOriginals ?? [], StringComparer.OrdinalIgnoreCase);
+            _services.PresetPreviews.FrameLocked = config?.PresetPreviewFrameLocked ?? false;
+            _services.PresetPreviews.DefaultRegion = config?.PresetPreviewDefaultRegion is { IsValid: true } region ? region : null;
             _shortcuts.OverlayTextColor = ShortcutOverlayController.FormatTextColor(ShortcutOverlayController.ParseTextColor(config?.ShortcutOverlayTextColor));
             _shortcuts.OverlayAutoContrast = config?.OverlayAutoContrast ?? false;
             _services.Tracking.LastCheckUtc = TryParseDateTimeOffset(config?.LastModUpdateCheckUtc);
@@ -147,18 +147,18 @@ public sealed partial class MainWindow
             }
             if (config?.ModPersistentSlots is { Count: > 0 })
             {
-                _modPersistentSlots.AddRange(config.ModPersistentSlots.Where(slot =>
+                _services.Slots.Items.AddRange(config.ModPersistentSlots.Where(slot =>
                     !string.IsNullOrWhiteSpace(slot.Id)
                     && !string.IsNullOrWhiteSpace(slot.RepositoryId)
                     && !string.IsNullOrWhiteSpace(slot.ModRelativePath)
                     && slot.Values is { Count: > 0 }));
             }
-            _defaultSlotSeeds.Clear();
-            _defaultSlotsBackfilled.Clear();
-            _defaultSlotsBackfilled.UnionWith(config?.DefaultSlotsBackfilled ?? []);
+            _services.Slots.DefaultSeeds.Clear();
+            _services.Slots.DefaultsBackfilled.Clear();
+            _services.Slots.DefaultsBackfilled.UnionWith(config?.DefaultSlotsBackfilled ?? []);
             foreach ((string repositoryId, List<string> mods) in config?.DefaultSlotSeeds ?? [])
             {
-                _defaultSlotSeeds[repositoryId] = new HashSet<string>(mods ?? [], StringComparer.OrdinalIgnoreCase);
+                _services.Slots.DefaultSeeds[repositoryId] = new HashSet<string>(mods ?? [], StringComparer.OrdinalIgnoreCase);
             }
 
             _selectedConfigurationProfileId = _configurationProfiles.Any(profile => profile.Id == config?.SelectedConfigurationProfileId)
@@ -283,9 +283,9 @@ public sealed partial class MainWindow
                 OverlayCompactFontSize = _shortcuts.OverlayCompactFontSize,
                 OverlayAutoContrast = _shortcuts.OverlayAutoContrast,
                 KeepMenuStateVariables = _shortcuts.KeepMenuStateVariables,
-                LoaderAutoSaveOriginals = _loaderAutoSaveOriginals.Count == 0 ? null : new Dictionary<string, int>(_loaderAutoSaveOriginals),
-                PresetPreviewFrameLocked = _presetPreviewFrameLocked,
-                PresetPreviewDefaultRegion = _presetPreviewDefaultRegion,
+                LoaderAutoSaveOriginals = _services.Slots.LoaderAutoSaveOriginals.Count == 0 ? null : new Dictionary<string, int>(_services.Slots.LoaderAutoSaveOriginals),
+                PresetPreviewFrameLocked = _services.PresetPreviews.FrameLocked,
+                PresetPreviewDefaultRegion = _services.PresetPreviews.DefaultRegion,
                 ShortcutOverlayTextColor = _shortcuts.OverlayTextColor,
                 LastModUpdateCheckUtc = _services.Tracking.LastCheckUtc?.ToString("O"),
                 LatestReleaseTag = _latestReleaseTag,
@@ -312,10 +312,10 @@ public sealed partial class MainWindow
                 EnableConflictDetection = _enableConflictDetection,
                 LastInstallTransactionPath = _services.Install.LastTransactionPath,
                 ConfigurationProfiles = [.. _configurationProfiles],
-                ModPersistentSlots = [.. _modPersistentSlots],
+                ModPersistentSlots = [.. _services.Slots.Items],
                 CopyDeployments = _services.Install.CopyRecordsSnapshot(),
-                DefaultSlotSeeds = _defaultSlotSeeds.ToDictionary(pair => pair.Key, pair => pair.Value.Order(StringComparer.OrdinalIgnoreCase).ToList()),
-                DefaultSlotsBackfilled = [.. _defaultSlotsBackfilled.Order(StringComparer.Ordinal)],
+                DefaultSlotSeeds = _services.Slots.DefaultSeeds.ToDictionary(pair => pair.Key, pair => pair.Value.Order(StringComparer.OrdinalIgnoreCase).ToList()),
+                DefaultSlotsBackfilled = [.. _services.Slots.DefaultsBackfilled.Order(StringComparer.Ordinal)],
                 WindowX = _savedWindowX,
                 WindowY = _savedWindowY,
                 WindowWidth = _savedWindowWidth,

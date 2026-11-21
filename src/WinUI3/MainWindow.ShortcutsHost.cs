@@ -14,6 +14,12 @@ public sealed partial class MainWindow : IShortcutOverlayActions
         _overlay = new ShortcutOverlayController(_shortcuts, _services.Language, _services.Appearance, this, DispatcherQueue);
         _services.Overlay = _overlay;
         _shortcuts.ActionRequested += OnShortcutPageRequested;
+        // Stage J finish, step 6: slots and pictures are services; the window still draws the slot card and runs the overlay.
+        _services.Slots.Attach(LogApplicationIssue, TraceStartupStage, () => SaveShellConfig(), RefreshPersistentSlotControls,
+            text => _workspaceView.StatusTextBlock.Text = text, _shortcutInput, () => _overlay, () => _savingOverlaySinglePreset,
+            () => _applyingCombinationProfile);
+        _services.PresetPreviews.Attach(LogApplicationIssue, () => SaveShellConfig(), text => _workspaceView.StatusTextBlock.Text = text,
+            Activate, RunUiActionAsync, () => _overlay, () => _applyingCombinationProfile);
     }
 
     // After the settings are loaded, so loading them is not taken for the user's changes.
@@ -48,19 +54,19 @@ public sealed partial class MainWindow : IShortcutOverlayActions
 
     Task IShortcutOverlayActions.RefreshFromDiskAsync() => RefreshOverlayFromDiskAsync();
 
-    ModPersistentSlot[] IShortcutOverlayActions.OverlaySlots(out string? modPath) => OverlaySlots(out modPath);
+    ModPersistentSlot[] IShortcutOverlayActions.OverlaySlots(out string? modPath) => _services.Slots.OverlaySlots(out modPath);
 
-    ModPersistentSlot? IShortcutOverlayActions.CurrentSlot(ModPersistentSlot[] slots) => CurrentPersistentSlot(slots);
+    ModPersistentSlot? IShortcutOverlayActions.CurrentSlot(ModPersistentSlot[] slots) => SlotService.CurrentPersistentSlot(slots);
 
-    string? IShortcutOverlayActions.ModRelativePath(string? modPath) => TryGetCurrentModRelativePath(GetSelectedRepository(), modPath);
+    string? IShortcutOverlayActions.ModRelativePath(string? modPath) => SlotService.TryGetCurrentModRelativePath(GetSelectedRepository(), modPath);
 
-    Task IShortcutOverlayActions.SwitchSlotAsync(string slotId, string modPath) => SwitchSlotFromOverlayAsync(slotId, modPath);
+    Task IShortcutOverlayActions.SwitchSlotAsync(string slotId, string modPath) => _services.Slots.SwitchSlotFromOverlayAsync(slotId, modPath);
 
     Task IShortcutOverlayActions.ShowSlotGalleryAsync() => ShowOverlaySlotGalleryAsync();
 
     Task IShortcutOverlayActions.FrameCurrentSlotPictureAsync() => FrameCurrentSlotPreviewAsync();
 
-    Image? IShortcutOverlayActions.CreatePresetPreviewImage(string? previewFile, double width, double height) => CreatePresetPreviewImage(previewFile, width, height);
+    Image? IShortcutOverlayActions.CreatePresetPreviewImage(string? previewFile, double width, double height) => _services.PresetPreviews.CreatePresetPreviewImage(previewFile, width, height);
 
     Task IShortcutOverlayActions.RunAsync(string operation, Func<Task> action) => RunUiActionAsync(operation, action);
 

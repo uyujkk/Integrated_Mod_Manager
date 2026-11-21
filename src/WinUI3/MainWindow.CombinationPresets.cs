@@ -12,7 +12,7 @@ public sealed partial class MainWindow
 
     private void OnOpenCombinationPresetsClicked(object sender, RoutedEventArgs e)
     {
-        if (!_applyingCombinationProfile && !_restoringPersistentRuntime)
+        if (!_applyingCombinationProfile && !_services.Slots.IsRestoring)
         {
             NavigateToPrimarySection(PrimarySection.Repository);
             _workspaceView.SetRepositoryWorkspaceViewV4(RepositoryWorkspaceView.Presets);
@@ -100,7 +100,7 @@ public sealed partial class MainWindow
 
     private async Task RestoreCombinationProfileAsync()
     {
-        if (_applyingCombinationProfile || _restoringPersistentRuntime) return;
+        if (_applyingCombinationProfile || _services.Slots.IsRestoring) return;
         ModConfigurationProfile? profile = GetSelectedConfigurationProfile();
         WorkspaceRepository? repository = GetSelectedRepository();
         if (profile is null || repository is null) return;
@@ -123,7 +123,7 @@ public sealed partial class MainWindow
             foreach (var issue in preview.Issues.Where(issue => issue.Error is not null))
                 LogApplicationIssue("Combination preview: " + issue.Code, issue.Error!);
             CombinationRestoreChoice choice = await CombinationRestoreDialog.ConfirmAsync(_services, profile.Name, preview,
-                CreatePresetPreviewImage(profile.PreviewFile, 240, 135), RootGrid.ActualWidth, RootGrid.ActualHeight);
+                _services.PresetPreviews.CreatePresetPreviewImage(profile.PreviewFile, 240, 135), RootGrid.ActualWidth, RootGrid.ActualHeight);
             if (choice == CombinationRestoreChoice.TakeOver)
             {
                 // The user recognises the external folders as old copies: record them and show the preview again.

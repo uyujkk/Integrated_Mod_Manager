@@ -68,10 +68,7 @@ public sealed partial class MainWindow : IWorkspaceHost
     ICharacterRenameReferences IWorkspaceHost.CreateCharacterRenameReferences(WorkspaceRepository repository) => new CharacterRenameReferences(this, repository);
 
     void IWorkspaceHost.RefreshPersistentSlotControls() => RefreshPersistentSlotControls();
-    Task IWorkspaceHost.SeedDefaultSlotsAsync(WorkspaceRepository repository, IReadOnlyList<FirstLevelFolderItem> characters) => SeedDefaultSlotsAsync(repository, characters);
 
-    FrameworkElement IWorkspaceHost.CreatePresetPreviewEditor(string repositoryId, string presetId, string? previewFile, Action<string?> assign, Action refresh) => CreatePresetPreviewEditor(repositoryId, presetId, previewFile, assign, refresh);
-    Image? IWorkspaceHost.CreatePresetPreviewImage(string? previewFile, double width, double height) => CreatePresetPreviewImage(previewFile, width, height);
 
     IEnumerable<ModConfigurationProfile> IWorkspaceHost.GetCurrentRepositoryProfiles() => GetCurrentRepositoryProfiles();
     ModConfigurationProfile? IWorkspaceHost.GetSelectedConfigurationProfile() => GetSelectedConfigurationProfile();

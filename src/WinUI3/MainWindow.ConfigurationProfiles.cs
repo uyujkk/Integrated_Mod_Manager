@@ -60,7 +60,7 @@ public sealed partial class MainWindow
         }
 
         ModConfigurationProfile? selected = GetSelectedConfigurationProfile();
-        bool hasRepository = GetSelectedRepository() is not null && !_applyingCombinationProfile && !_restoringPersistentRuntime;
+        bool hasRepository = GetSelectedRepository() is not null && !_applyingCombinationProfile && !_services.Slots.IsRestoring;
         _workspaceView.CreateConfigurationProfileButton.IsEnabled = hasRepository;
         _workspaceView.UpdateConfigurationProfileButton.IsEnabled = selected is not null && hasRepository;
         _workspaceView.ApplyConfigurationProfileButton.IsEnabled = selected is not null && hasRepository;
@@ -70,7 +70,7 @@ public sealed partial class MainWindow
         _workspaceView.BrowseCombinationUserIniButton.IsEnabled = hasRepository;
         _workspaceView.CombinationUserIniTextBox.IsEnabled = hasRepository;
         _workspaceView.CombinationUserIniTextBox.Text = GetSelectedRepository()?.PersistentUserIniPath is { Length: > 0 } userIni
-            ? userIni : TryGetDefaultPersistentIniPath(GetSelectedRepository()) ?? string.Empty;
+            ? userIni : SlotService.TryGetDefaultPersistentIniPath(GetSelectedRepository()) ?? string.Empty;
         _workspaceView.ConfigurationProfileSummaryTextBlock.Text = selected is null
             ? T("ConfigurationProfiles.ProfilesOnlyManageModsRecognizedIn")
             : T("ConfigurationProfiles.Summary", selected.Name, selected.ModRelativePaths.Count, selected.PersistentStates.Sum(state => state.Values.Count))
@@ -95,7 +95,7 @@ public sealed partial class MainWindow
     {
         try
         {
-            if (_applyingCombinationProfile || _restoringPersistentRuntime) return;
+            if (_applyingCombinationProfile || _services.Slots.IsRestoring) return;
             WorkspaceRepository? repository = GetSelectedRepository();
             if (repository is null)
             {
@@ -126,7 +126,7 @@ public sealed partial class MainWindow
         try
         {
             ModConfigurationProfile? profile = GetSelectedConfigurationProfile();
-            if (profile is null || _applyingCombinationProfile || _restoringPersistentRuntime)
+            if (profile is null || _applyingCombinationProfile || _services.Slots.IsRestoring)
             {
                 return;
             }
@@ -163,7 +163,7 @@ public sealed partial class MainWindow
             _configurationProfiles.Remove(profile);
             _selectedConfigurationProfileId = null;
             SaveShellConfig();
-            DeletePresetPreview(profile.PreviewFile);
+            _services.PresetPreviews.DeletePresetPreview(profile.PreviewFile);
             RefreshConfigurationProfiles();
         }
         catch (Exception ex)

@@ -70,7 +70,6 @@ public sealed partial class MainWindow : Window
     private readonly Dictionary<string, string> _modLinks = new(StringComparer.CurrentCultureIgnoreCase);
     private readonly GameBananaMetadataService _gameBananaMetadataService;
     private readonly List<ModConfigurationProfile> _configurationProfiles = [];
-    private readonly List<ModPersistentSlot> _modPersistentSlots = [];
     private readonly Dictionary<string, DownloadTaskCardView> _navTaskCards = new(StringComparer.Ordinal);
 
     private ThemePreference _themePreference = ThemePreference.System;

@@ -9,27 +9,6 @@ public sealed partial class MainWindow
 {
     private string? _selectedModPersistentSlotId;
     private bool _refreshingPersistentSlots;
-    private bool _restoringPersistentRuntime;
-
-    // The portable prototype ships synthetic fixtures, never real user configuration.
-    // Resolve paths at first run so moving/extracting the package remains safe.
-    private static WorkspaceRepository? TryCreatePersistentDemoRepository()
-    {
-        string demoRoot = Path.GetFullPath(Path.Combine(AppContext.BaseDirectory, "..", "TestData"));
-        string source = Path.Combine(demoRoot, "ModRepository");
-        string target = Path.Combine(demoRoot, "Loader", "Mods");
-        string userIni = Path.Combine(demoRoot, "Loader", "d3dx_user.ini");
-        if (!Directory.Exists(source) || !Directory.Exists(target) || !File.Exists(userIni)) return null;
-        return new WorkspaceRepository
-        {
-            Id = "state-slots-offline-demo",
-            Name = "状态槽位离线测试 / Offline Demo",
-            SourcePath = source,
-            TargetPath = target,
-            PersistentUserIniPath = userIni,
-            UseDirectoryLinks = false
-        };
-    }
 
     private void RefreshPersistentSlotControls()
     {
@@ -37,7 +16,7 @@ public sealed partial class MainWindow
 
         WorkspaceRepository? repository = GetSelectedRepository();
         string? modPath = _currentSecondLevelPath;
-        string? relative = TryGetCurrentModRelativePath(repository, modPath);
+        string? relative = SlotService.TryGetCurrentModRelativePath(repository, modPath);
         _workspaceView.PersistentSlotTitleTextBlock.Text = T("PersistentSlots.ModStateSlots");
         _workspaceView.PersistentSlotHintTextBlock.Text = T("PersistentSlots.SaveAfterF10ToRestoreClose");
         _workspaceView.BrowsePersistentUserIniButton.Content = T("Common.Browse");
@@ -47,11 +26,11 @@ public sealed partial class MainWindow
         _workspaceView.OpenCombinationPresetsButton.Content = T("Common.OpenCombinationWorkspace");
         _workspaceView.PersistentUserIniTextBox.Text = repository?.PersistentUserIniPath is { Length: > 0 } configured
             ? configured
-            : TryGetDefaultPersistentIniPath(repository) ?? string.Empty;
+            : SlotService.TryGetDefaultPersistentIniPath(repository) ?? string.Empty;
 
         List<ModPersistentSlot> slots = repository is null || relative is null
             ? []
-            : _modPersistentSlots.Where(slot =>
+            : _services.Slots.Items.Where(slot =>
                 string.Equals(slot.RepositoryId, repository.Id, StringComparison.Ordinal)
                 && string.Equals(slot.ModRelativePath, relative, StringComparison.OrdinalIgnoreCase))
                 .OrderByDescending(slot => slot.SavedAtUtc).ToList();
@@ -62,12 +41,12 @@ public sealed partial class MainWindow
         try
         {
             _workspaceView.PersistentSlotComboBox.Items.Clear();
-            ModPersistentSlot? current = CurrentPersistentSlot(slots);
+            ModPersistentSlot? current = SlotService.CurrentPersistentSlot(slots);
             foreach (ModPersistentSlot slot in slots)
             {
                 _workspaceView.PersistentSlotComboBox.Items.Add(new ComboBoxItem
                 {
-                    Content = PresetPreviewLabel(ReferenceEquals(slot, current)
+                    Content = _services.PresetPreviews.PresetPreviewLabel(ReferenceEquals(slot, current)
                         ? T("PersistentVariants.SlotLabelCurrent", slot.Name, slot.Values.Count)
                         : $"{slot.Name} · {slot.Values.Count}", slot.PreviewFile),
                     Tag = slot.Id
@@ -84,10 +63,10 @@ public sealed partial class MainWindow
             _refreshingPersistentSlots = false;
         }
 
-        _workspaceView.BrowsePersistentUserIniButton.IsEnabled = repository is not null && !_restoringPersistentRuntime && !_applyingCombinationProfile;
-        _workspaceView.CapturePersistentSlotButton.IsEnabled = relative is not null && !_restoringPersistentRuntime && !_applyingCombinationProfile;
-        _workspaceView.DeletePersistentSlotButton.IsEnabled = relative is not null && _selectedModPersistentSlotId is not null && !_restoringPersistentRuntime && !_applyingCombinationProfile;
-        _workspaceView.RestorePersistentRuntimeButton.IsEnabled = _workspaceView.DeletePersistentSlotButton.IsEnabled && !_restoringPersistentRuntime;
+        _workspaceView.BrowsePersistentUserIniButton.IsEnabled = repository is not null && !_services.Slots.IsRestoring && !_applyingCombinationProfile;
+        _workspaceView.CapturePersistentSlotButton.IsEnabled = relative is not null && !_services.Slots.IsRestoring && !_applyingCombinationProfile;
+        _workspaceView.DeletePersistentSlotButton.IsEnabled = relative is not null && _selectedModPersistentSlotId is not null && !_services.Slots.IsRestoring && !_applyingCombinationProfile;
+        _workspaceView.RestorePersistentRuntimeButton.IsEnabled = _workspaceView.DeletePersistentSlotButton.IsEnabled && !_services.Slots.IsRestoring;
         RefreshPersistentSlotMoreMenu(repository, relative);
         RefreshPersistentSlotValuePreview();
         RefreshShortcutOverlay(bindingsChanged: true);
@@ -96,51 +75,14 @@ public sealed partial class MainWindow
             : T("PersistentSlots.CurrentModSlotS", Path.GetFileName(modPath), slots.Count);
     }
 
-    private static string? TryGetCurrentModRelativePath(WorkspaceRepository? repository, string? modPath)
-    {
-        if (repository is null || string.IsNullOrWhiteSpace(modPath)
-            || string.IsNullOrWhiteSpace(repository.SourcePath)
-            || !Directory.Exists(modPath) || !Directory.Exists(repository.SourcePath)) return null;
-
-        try
-        {
-            string full = Path.GetFullPath(modPath);
-            string sourceRoot = Path.GetFullPath(repository.SourcePath);
-            if (!OnlineDownloadService.IsPathInsideDirectory(full, sourceRoot)) return null;
-            string relative = Path.GetRelativePath(sourceRoot, full);
-            return relative is "." or ".." || relative.StartsWith(".." + Path.DirectorySeparatorChar, StringComparison.Ordinal)
-                ? null : relative;
-        }
-        catch (Exception ex) when (ex is ArgumentException or NotSupportedException or PathTooLongException)
-        {
-            return null;
-        }
-    }
-
-    private static string? TryGetDefaultPersistentIniPath(WorkspaceRepository? repository)
-    {
-        if (string.IsNullOrWhiteSpace(repository?.TargetPath)) return null;
-        try
-        {
-            string? parent = Path.GetDirectoryName(Path.GetFullPath(repository.TargetPath));
-            if (parent is null) return null;
-            string candidate = Path.Combine(parent, "d3dx_user.ini");
-            return File.Exists(candidate) ? candidate : null;
-        }
-        catch (Exception ex) when (ex is ArgumentException or NotSupportedException or PathTooLongException)
-        {
-            return null;
-        }
-    }
-
-    private ModPersistentSlot? GetSelectedPersistentSlot() => _modPersistentSlots.FirstOrDefault(slot =>
+    private ModPersistentSlot? GetSelectedPersistentSlot() => _services.Slots.Items.FirstOrDefault(slot =>
         string.Equals(slot.Id, _selectedModPersistentSlotId, StringComparison.Ordinal));
 
     private void RefreshPersistentSlotValuePreview()
     {
         if (_workspaceView.PersistentSlotValuesTextBlock is null) return;
         ModPersistentSlot? slot = GetSelectedPersistentSlot();
-        _workspaceView.PersistentSlotPreviewHost.Content = slot is null ? null : CreatePresetPreviewEditor(slot.RepositoryId, slot.Id, slot.PreviewFile,
+        _workspaceView.PersistentSlotPreviewHost.Content = slot is null ? null : _services.PresetPreviews.CreatePresetPreviewEditor(slot.RepositoryId, slot.Id, slot.PreviewFile,
             file => slot.PreviewFile = file, RefreshPersistentSlotControls);
         _workspaceView.PersistentSlotValuesTextBlock.Text = slot is null
             ? T("PersistentSlots.SavedINIPathsVariablesAndValues")
@@ -152,7 +94,7 @@ public sealed partial class MainWindow
         if (_refreshingPersistentSlots) return;
         _selectedModPersistentSlotId = (_workspaceView.PersistentSlotComboBox.SelectedItem as ComboBoxItem)?.Tag as string;
         _workspaceView.DeletePersistentSlotButton.IsEnabled = _selectedModPersistentSlotId is not null;
-        _workspaceView.RestorePersistentRuntimeButton.IsEnabled = _workspaceView.DeletePersistentSlotButton.IsEnabled && !_restoringPersistentRuntime;
+        _workspaceView.RestorePersistentRuntimeButton.IsEnabled = _workspaceView.DeletePersistentSlotButton.IsEnabled && !_services.Slots.IsRestoring;
         RefreshPersistentSlotValuePreview();
     }
 
@@ -160,7 +102,7 @@ public sealed partial class MainWindow
     {
         try
         {
-            if (_restoringPersistentRuntime || _applyingCombinationProfile) return;
+            if (_services.Slots.IsRestoring || _applyingCombinationProfile) return;
             string? path = await PickFileAsync([".ini"]);
             if (path is null) return;
             if (!string.Equals(Path.GetFileName(path), "d3dx_user.ini", StringComparison.OrdinalIgnoreCase))
@@ -189,10 +131,10 @@ public sealed partial class MainWindow
     {
         try
         {
-            if (_restoringPersistentRuntime || _applyingCombinationProfile) return;
+            if (_services.Slots.IsRestoring || _applyingCombinationProfile) return;
             WorkspaceRepository? repository = GetSelectedRepository();
             string? modPath = _currentSecondLevelPath;
-            string? relative = TryGetCurrentModRelativePath(repository, modPath);
+            string? relative = SlotService.TryGetCurrentModRelativePath(repository, modPath);
             if (repository is null || modPath is null || relative is null) return;
 
             string userIni = _workspaceView.PersistentUserIniTextBox.Text.Trim();
@@ -248,7 +190,7 @@ public sealed partial class MainWindow
             name = name?.Trim();
             if (string.IsNullOrWhiteSpace(name)) return;
 
-            await EnsureDefaultSlotAsync(repository, modPath, relative);
+            await _services.Slots.EnsureDefaultSlotAsync(repository, modPath, relative);
             var slot = new ModPersistentSlot
             {
                 RepositoryId = repository.Id,
@@ -257,7 +199,7 @@ public sealed partial class MainWindow
                 Values = [.. values],
                 ActivatedAtUtc = DateTimeOffset.UtcNow
             };
-            _modPersistentSlots.Add(slot);
+            _services.Slots.Items.Add(slot);
             _selectedModPersistentSlotId = slot.Id;
             repository.PersistentUserIniPath = userIni;
             SaveShellConfig();
@@ -274,10 +216,10 @@ public sealed partial class MainWindow
     {
         try
         {
-            if (_restoringPersistentRuntime || _applyingCombinationProfile) return;
+            if (_services.Slots.IsRestoring || _applyingCombinationProfile) return;
             WorkspaceRepository? repository = GetSelectedRepository();
             string? modPath = _currentSecondLevelPath;
-            string? relative = TryGetCurrentModRelativePath(repository, modPath);
+            string? relative = SlotService.TryGetCurrentModRelativePath(repository, modPath);
             ModPersistentSlot? slot = GetSelectedPersistentSlot();
             if (repository is null || modPath is null || relative is null || slot is null
                 || slot.RepositoryId != repository.Id
@@ -285,7 +227,7 @@ public sealed partial class MainWindow
 
             string userIni = _workspaceView.PersistentUserIniTextBox.Text.Trim();
             string deployedName = Path.GetFileName(Path.TrimEndingDirectorySeparator(modPath));
-            _restoringPersistentRuntime = true;
+            _services.Slots.IsRestoring = true;
             RefreshConfigurationProfiles();
             _workspaceView.PersistentSlotComboBox.IsEnabled = false;
             _workspaceView.PersistentUserIniTextBox.IsEnabled = false;
@@ -299,14 +241,14 @@ public sealed partial class MainWindow
                 if (string.IsNullOrWhiteSpace(repository.TargetPath)
                     || !Directory.Exists(Path.Combine(repository.TargetPath, deployedName)))
                     throw new InvalidDataException(T("PersistentSlots.DeployThisModUnderItsMatching"));
-                IReadOnlyList<ModPersistentValue> values = await Task.Run(() => ValuesToRestore(slot, modPath));
+                IReadOnlyList<ModPersistentValue> values = await Task.Run(() => _services.Slots.ValuesToRestore(slot, modPath));
                 ModPersistentRuntimeRestorePlan plan = await Task.Run(() =>
                     ModPersistentPresetEngine.PlanRuntimeRestore(modPath, deployedName, userIni, values));
                 slot.Values = [.. values];
                 (bool restore, bool hotReload) = await LoaderStateRestoreDialog.ConfirmSlotAsync(_services,
-                    CreatePresetPreviewImage(slot.PreviewFile, 320, 180),
+                    _services.PresetPreviews.CreatePresetPreviewImage(slot.PreviewFile, 320, 180),
                     T("PersistentSlots.SlotFileChangeAddAlreadyEqual", slot.Name, plan.Edit.Path, plan.ChangedCount, plan.AddedCount, plan.UnchangedCount),
-                    CanHotReloadLoader);
+                    _services.Slots.CanHotReloadLoader);
                 if (!restore) return;
                 string? backup = await Task.Run(() => ModPersistentPresetEngine.ApplyRuntimeRestore(plan));
                 slot.ActivatedAtUtc = DateTimeOffset.UtcNow;
@@ -316,7 +258,7 @@ public sealed partial class MainWindow
                     + (backup is null ? T("PersistentSlots.NoNewBackup") : T("PersistentSlots.BackupAt", backup)) + "\n" + T("PersistentSlots.RestartToVerify");
                 ShowAppNotification(T("PersistentSlots.OfflineRestored", slot.Name, plan.Values.Count));
                 if (hotReload)
-                    resultText += "\n" + await HotReloadLoaderAsync(userIni);
+                    resultText += "\n" + await _services.Slots.HotReloadLoaderAsync(userIni);
             }
             catch (Exception ex) when (ex is IOException or UnauthorizedAccessException or InvalidDataException
                 or DecoderFallbackException or ArgumentException or NotSupportedException)
@@ -325,7 +267,7 @@ public sealed partial class MainWindow
             }
             finally
             {
-                _restoringPersistentRuntime = false;
+                _services.Slots.IsRestoring = false;
                 _workspaceView.PersistentSlotComboBox.IsEnabled = true;
                 _workspaceView.PersistentUserIniTextBox.IsEnabled = true;
                 RefreshPersistentSlotControls();
@@ -343,16 +285,16 @@ public sealed partial class MainWindow
     {
         try
         {
-            if (_restoringPersistentRuntime) return;
+            if (_services.Slots.IsRestoring) return;
             ModPersistentSlot? slot = GetSelectedPersistentSlot();
             if (slot is null || !await ShowDangerConfirmAsync(
                 T("PersistentSlots.DeleteSlotModINIsWillNot", slot.Name),
                 T("PersistentSlots.DeleteStateSlot"), T("Dialogs.Delete"))) return;
 
-            _modPersistentSlots.Remove(slot);
+            _services.Slots.Items.Remove(slot);
             _selectedModPersistentSlotId = null;
             SaveShellConfig();
-            DeletePresetPreview(slot.PreviewFile);
+            _services.PresetPreviews.DeletePresetPreview(slot.PreviewFile);
             RefreshPersistentSlotControls();
         }
         catch (Exception ex)

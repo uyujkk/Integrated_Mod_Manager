@@ -708,7 +708,7 @@ public sealed partial class WorkspacePage
             _ = RefreshCharacterFolderAvatarsAsync();
             if (_services.Repositories.Selected is { SourcePath: { Length: > 0 } scannedSource } scanned
                 && string.Equals(Path.GetFullPath(scannedSource).TrimEnd('\\'), Path.GetFullPath(sourceDir).TrimEnd('\\'), StringComparison.OrdinalIgnoreCase))
-                _ = _host.SeedDefaultSlotsAsync(scanned, loaded.Items);
+                _ = _services.Slots.SeedDefaultSlotsAsync(scanned, loaded.Items);
             FirstCountTextBlock.Text = _host.Characters.All.Count.ToString();
             SecondCountTextBlock.Text = loaded.SecondCount.ToString();
             StatusTextBlock.Text = loaded.Warnings == 0

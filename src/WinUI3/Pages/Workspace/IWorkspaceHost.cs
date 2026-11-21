@@ -65,11 +65,6 @@ internal interface IWorkspaceHost
 
     // State slots and default slots.
     void RefreshPersistentSlotControls();
-    Task SeedDefaultSlotsAsync(WorkspaceRepository repository, IReadOnlyList<FirstLevelFolderItem> characters);
-
-    // Preset previews.
-    FrameworkElement CreatePresetPreviewEditor(string repositoryId, string presetId, string? previewFile, Action<string?> assign, Action refresh);
-    Image? CreatePresetPreviewImage(string? previewFile, double width, double height);
 
     // Combination presets and bundles.
     IEnumerable<ModConfigurationProfile> GetCurrentRepositoryProfiles();

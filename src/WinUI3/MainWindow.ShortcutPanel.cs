@@ -46,7 +46,7 @@ public sealed partial class MainWindow
         // Input stays disarmed after the rebuild; the user re-enables it deliberately.
         _shortcuts.InputEnabled = false;
         UpdateShortcutPrivilegeNotice();
-        RefreshLoaderAutoSave();
+        _services.Slots.RefreshLoaderAutoSave();
         _ = RefreshShortcutPaneSafelyAsync();
     }
 
@@ -64,7 +64,7 @@ public sealed partial class MainWindow
         _shortcutsPrepared = true;
         StartCharacterFollow();
         UpdateShortcutPrivilegeNotice();
-        RefreshLoaderAutoSave();
+        _services.Slots.RefreshLoaderAutoSave();
         RefreshShortcutTargets();
     }
 
@@ -133,13 +133,13 @@ public sealed partial class MainWindow
             case ShortcutPageAction.OpenDashboard: OnDashboardNavClicked(this, new RoutedEventArgs()); break;
             // The text colour is saved when its picker closes, not for every colour the picker passes through.
             case ShortcutPageAction.SaveSettings: SaveShellConfig(); break;
-            case ShortcutPageAction.EnablePresetPreviews: _ = RunUiActionAsync("Enable preset pictures", EnablePresetPreviewsAsync); break;
-            case ShortcutPageAction.ClearPresetPreviewRegion: ClearPresetPreviewRegion(); break;
+            case ShortcutPageAction.EnablePresetPreviews: _ = RunUiActionAsync("Enable preset pictures", _services.PresetPreviews.EnablePresetPreviewsAsync); break;
+            case ShortcutPageAction.ClearPresetPreviewRegion: _services.PresetPreviews.ClearPresetPreviewRegion(); break;
             case ShortcutPageAction.SelectCharacterRegion: _ = SelectCharacterRegionAsync(); break;
             case ShortcutPageAction.SaveCharacterReference: _ = SaveCharacterReferenceAsync(); break;
-            case ShortcutPageAction.RefreshLoaderAutoSave: RefreshLoaderAutoSave(); break;
+            case ShortcutPageAction.RefreshLoaderAutoSave: _services.Slots.RefreshLoaderAutoSave(); break;
             case ShortcutPageAction.SetLoaderAutoSave when request.Argument is int seconds:
-                _ = RunUiActionAsync("Change loader auto-save interval", () => SetLoaderAutoSaveAsync(seconds));
+                _ = RunUiActionAsync("Change loader auto-save interval", () => _services.Slots.SetLoaderAutoSaveAsync(seconds));
                 break;
             case ShortcutPageAction.DisableHotkey:
                 _shortcutPanelHotkey?.Disable();
@@ -392,7 +392,7 @@ public sealed partial class MainWindow
     /// <summary>Flush loader memory before capturing; offer an explicit disk-only fallback when input is unavailable.</summary>
     private async Task QuickSaveCombinationFromOverlayAsync()
     {
-        if (_savingOverlaySinglePreset || _applyingCombinationProfile || (_shortcuts.SendInProgress && !_restoringPersistentRuntime)) return;
+        if (_savingOverlaySinglePreset || _applyingCombinationProfile || (_shortcuts.SendInProgress && !_services.Slots.IsRestoring)) return;
         if (GetSelectedRepository() is not { } repository)
         {
             _shortcuts.StatusText = T("ShortcutPanel.SelectARepositoryInTheMain");
@@ -401,7 +401,7 @@ public sealed partial class MainWindow
         }
         _savingOverlaySinglePreset = true;
         if (!await WaitForOverlayCaptureAsync()) { _savingOverlaySinglePreset = false; return; }
-        string? userIni = repository.PersistentUserIniPath is { Length: > 0 } configured ? configured : TryGetDefaultPersistentIniPath(repository);
+        string? userIni = repository.PersistentUserIniPath is { Length: > 0 } configured ? configured : SlotService.TryGetDefaultPersistentIniPath(repository);
         bool includeState = userIni is not null && File.Exists(userIni);
         string name = T("ShortcutPanel.InGame", DateTime.Now);
         _shortcuts.StatusText = T("ShortcutPanel.SavingCombinationPreset");
@@ -409,7 +409,7 @@ public sealed partial class MainWindow
         SetCombinationBusy(true);
         try
         {
-            CharacterFrame? preview = await CapturePresetPreviewAsync();
+            CharacterFrame? preview = await _services.PresetPreviews.CapturePresetPreviewAsync();
             // Without a d3dx_user.ini there is no loader state to flush: save the Mod combination alone, as before.
             if (includeState && !await PrepareOverlayCaptureAsync(userIni!)) return;
             (int Mods, int Parameters)? saved = await CaptureCombinationProfileAsync(repository, name, null, includeState, userIni ?? string.Empty,
@@ -417,9 +417,9 @@ public sealed partial class MainWindow
             string previewNote = string.Empty;
             if (saved is not null && _configurationProfiles.FirstOrDefault(item => item.Id == _selectedConfigurationProfileId) is { } profile)
             {
-                profile.PreviewFile = await StorePresetPreviewAsync(repository.Id, profile.Id, preview);
+                profile.PreviewFile = await _services.PresetPreviews.StorePresetPreviewAsync(repository.Id, profile.Id, preview);
                 if (profile.PreviewFile is not null) SaveShellConfig();
-                previewNote = PresetPreviewNote(profile.PreviewFile);
+                previewNote = _services.PresetPreviews.PresetPreviewNote(profile.PreviewFile);
             }
             _shortcuts.StatusText = saved is (int mods, int parameters)
                 ? T("ShortcutPanel.SavedPresetModsParameters", name, mods, parameters) + previewNote

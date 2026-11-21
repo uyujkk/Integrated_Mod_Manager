@@ -1,8 +1,6 @@
 using System.Security.Cryptography;
 using System.Text;
 using System.Text.Json;
-using IntegratedModManager.Core.Configuration;
-using IntegratedModManager.Core.Deployment;
 using IntegratedModManager.Core.Repository;
 
 namespace ModFolderCopier.WinUI;
@@ -48,19 +46,15 @@ public sealed partial class MainWindow
                 log.Rewrite(() => state.ModRelativePath, value => state.ModRelativePath = value, plan.MapRelative);
         }
 
-        foreach (ModPersistentSlot slot in _modPersistentSlots.Where(slot => slot.RepositoryId == repository.Id))
-            log.Rewrite(() => slot.ModRelativePath, value => slot.ModRelativePath = value, plan.MapRelative);
-        if (_defaultSlotSeeds.TryGetValue(repository.Id, out HashSet<string>? seeds)) log.RewriteAll(seeds, plan.MapRelative);
+        _services.Slots.RenameCharacter(repository, plan, log);
 
         log.Rekey(_modBindings, plan.MapFullPath);
         log.Rekey(_modLinks, plan.MapFullPath);
-        log.Rekey(_services.Tracking.Origins, plan.MapFullPath);
-        foreach (TrackedModOrigin origin in _services.Tracking.Origins.Values)
-            log.Rewrite(() => origin.Path, value => origin.Path = value, plan.MapFullPath);
+        _services.Tracking.RenameCharacter(plan, log);
 
         log.Rekey(repository.CharacterAvatarBindings, plan.MapName);
         log.Rekey(repository.CharacterSelectionOverrides, plan.MapName);
-        CopyDeploymentLedger.RenameCharacter(_services.Install.CopyDeployments, repository.Id, plan, log);
+        _services.Install.RenameCharacter(repository, plan, log);
         if (_workspaceView._localLibraries.TryGetValue(WorkspaceIdentity.Library(repository.Id, repository.SourcePath), out LocalLibraryState? tags))
         {
             log.Rekey(tags.ModTags, plan.MapRelative);

@@ -15,6 +15,8 @@ internal sealed class AppServices
         Tracking = new(Repositories);
         OnlineDownloads = new(this);
         OnlineCharacters = new(this);
+        Slots = new(this);
+        PresetPreviews = new(this);
     }
 
     public LanguageService Language { get; } = new();
@@ -34,6 +36,12 @@ internal sealed class AppServices
 
     /// <summary>The current repository's character list, kept whether or not the Online page exists (stage J finish, step 5b).</summary>
     public OnlineCharacterOptionsService OnlineCharacters { get; }
+
+    /// <summary>State slots, Default slots and switching them from the overlay (stage J finish, step 6).</summary>
+    public SlotService Slots { get; }
+
+    /// <summary>Pictures of presets and state slots (stage J finish, step 6).</summary>
+    public PresetPreviewService PresetPreviews { get; }
     public LaunchService Launch { get; } = new();
 
     /// <summary>Install transactions, conflict checks, archives and copy ownership records (stage J finish, step 4).</summary>

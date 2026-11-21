@@ -9,13 +9,11 @@ namespace ModFolderCopier.WinUI;
 // d3dx_user.ini snapshots, behind the "More" button of the state slot card.
 public sealed partial class MainWindow
 {
-    private static ModPersistentSlot? CurrentPersistentSlot(IEnumerable<ModPersistentSlot> slots)
-        => slots.Where(slot => slot.ActivatedAtUtc is not null).MaxBy(slot => slot.ActivatedAtUtc);
 
     private void RefreshPersistentSlotMoreMenu(WorkspaceRepository? repository, string? relative)
     {
         _workspaceView.PersistentSlotMoreButton.Content = T("PersistentVariants.More");
-        bool idle = !_restoringPersistentRuntime && !_applyingCombinationProfile;
+        bool idle = !_services.Slots.IsRestoring && !_applyingCombinationProfile;
         bool hasSlot = relative is not null && _selectedModPersistentSlotId is not null;
         var menu = new MenuFlyout { Placement = Microsoft.UI.Xaml.Controls.Primitives.FlyoutPlacementMode.Bottom };
 
@@ -59,7 +57,7 @@ public sealed partial class MainWindow
     {
         WorkspaceRepository? repository = GetSelectedRepository();
         string? modPath = _currentSecondLevelPath;
-        string? relative = TryGetCurrentModRelativePath(repository, modPath);
+        string? relative = SlotService.TryGetCurrentModRelativePath(repository, modPath);
         ModPersistentSlot? slot = GetSelectedPersistentSlot();
         return repository is null || modPath is null || relative is null || slot is null
             || slot.RepositoryId != repository.Id
@@ -189,7 +187,7 @@ public sealed partial class MainWindow
     {
         WorkspaceRepository? repository = GetSelectedRepository();
         string? modPath = _currentSecondLevelPath;
-        string? relative = TryGetCurrentModRelativePath(repository, modPath);
+        string? relative = SlotService.TryGetCurrentModRelativePath(repository, modPath);
         if (repository is null || modPath is null || relative is null) return;
 
         string file = Path.Combine(modPath, VariantFileImport.FileName);
@@ -220,7 +218,7 @@ public sealed partial class MainWindow
             return;
         }
 
-        HashSet<string> taken = _modPersistentSlots
+        HashSet<string> taken = _services.Slots.Items
             .Where(slot => slot.RepositoryId == repository.Id && string.Equals(slot.ModRelativePath, relative, StringComparison.OrdinalIgnoreCase))
             .Select(slot => slot.Name).ToHashSet(StringComparer.CurrentCultureIgnoreCase);
         DateTimeOffset now = DateTimeOffset.UtcNow;
@@ -230,7 +228,7 @@ public sealed partial class MainWindow
             string name = variant.Name;
             for (int suffix = 2; !taken.Add(name); suffix++) name = $"{variant.Name} ({suffix})";
             var slot = new ModPersistentSlot { RepositoryId = repository.Id, ModRelativePath = relative, Name = name, Values = [.. variant.Values] };
-            _modPersistentSlots.Add(slot);
+            _services.Slots.Items.Add(slot);
             if (string.Equals(variant.Name, set.ActiveName?.Trim(), StringComparison.OrdinalIgnoreCase)) active = slot;
         }
         if (active is not null)
@@ -294,7 +292,7 @@ public sealed partial class MainWindow
             return;
         }
 
-        (UserIniSnapshot? chosen, bool hotReload) = await LoaderStateRestoreDialog.ChooseSnapshotAsync(_services, snapshots, userIni, CanHotReloadLoader);
+        (UserIniSnapshot? chosen, bool hotReload) = await LoaderStateRestoreDialog.ChooseSnapshotAsync(_services, snapshots, userIni, _services.Slots.CanHotReloadLoader);
         if (chosen is null) return;
 
         try
@@ -302,7 +300,7 @@ public sealed partial class MainWindow
             string backup = await Task.Run(() => UserIniSnapshots.Restore(chosen, userIni, DateTimeOffset.Now));
             _workspaceView.PersistentSlotStatusTextBlock.Text = T("PersistentVariants.SnapshotRestored", chosen.Name, backup);
             if (hotReload)
-                _workspaceView.PersistentSlotStatusTextBlock.Text += "\n" + await HotReloadLoaderAsync(userIni);
+                _workspaceView.PersistentSlotStatusTextBlock.Text += "\n" + await _services.Slots.HotReloadLoaderAsync(userIni);
         }
         catch (Exception ex) when (ex is IOException or UnauthorizedAccessException or InvalidDataException)
         {

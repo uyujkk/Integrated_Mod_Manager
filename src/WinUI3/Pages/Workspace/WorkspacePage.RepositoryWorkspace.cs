@@ -1264,7 +1264,7 @@ public sealed partial class WorkspacePage
                 name.Children.Add(new FontIcon { Glyph = "\uE8F1", FontSize = 15, VerticalAlignment = VerticalAlignment.Center });
                 var nameText = new TextBlock { Text = profile.Name, TextWrapping = TextWrapping.Wrap, MaxLines = 2, TextTrimming = TextTrimming.CharacterEllipsis };
                 Grid.SetColumn(nameText, 1); name.Children.Add(nameText);
-                if (_host.CreatePresetPreviewImage(profile.PreviewFile, 160, 90) is { } thumbnail) label.Children.Add(thumbnail);
+                if (_services.PresetPreviews.CreatePresetPreviewImage(profile.PreviewFile, 160, 90) is { } thumbnail) label.Children.Add(thumbnail);
                 label.Children.Add(name);
                 label.Children.Add(new TextBlock { Text = T("RepositoryWorkspace.Mods2", profile.ModRelativePaths.Count, T(profile.IncludesPersistentState ? "RepositoryWorkspace.SetAndState" : "RepositoryWorkspace.SetOnly")), FontSize = 12 });
                 _combinationPresetList.Items.Add(new ListViewItem { Content = label, Tag = profile.Id, HorizontalContentAlignment = HorizontalAlignment.Stretch });
@@ -1274,7 +1274,7 @@ public sealed partial class WorkspacePage
             _combinationMemberTitle!.Text = selected?.Name ?? T("RepositoryWorkspace.ModsInPreset");
             _combinationMemberPanel!.Children.Clear();
             if (selected is not null)
-                _combinationMemberPanel.Children.Add(_host.CreatePresetPreviewEditor(selected.RepositoryId, selected.Id, selected.PreviewFile,
+                _combinationMemberPanel.Children.Add(_services.PresetPreviews.CreatePresetPreviewEditor(selected.RepositoryId, selected.Id, selected.PreviewFile,
                     file => selected.PreviewFile = file, _host.RefreshConfigurationProfiles));
             if (selected is null)
             {

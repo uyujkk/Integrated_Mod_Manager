@@ -11,7 +11,7 @@ public sealed partial class MainWindow
     {
         LanguageService language = _services.Language;
         // Mod workspace: the default slots are named in the interface language.
-        language.LanguageChanged += (_, _) => RelabelDefaultSlots();
+        language.LanguageChanged += (_, _) => _services.Slots.RelabelDefaultSlots();
         // Shell, and the static text of every page.
         language.LanguageChanged += (_, _) => ApplyLanguage();
         // Shortcuts: binding descriptions and the page built in code.
