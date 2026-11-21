@@ -1,4 +1,3 @@
-using IntegratedModManager.Core.Online;
 using Microsoft.UI.Xaml;
 
 namespace ModFolderCopier.WinUI;
@@ -28,8 +27,7 @@ public sealed partial class MainWindow
         // Online: re-project the open details from the same raw cache; the older translation is rejected.
         language.LanguageChanged += (_, _) =>
         {
-            if (_onlineView.IsOnlineDetailOpen && _onlineView._activeOnlineDetailMod is OnlineModCard mod)
-                _ = _onlineView.ShowOnlineModDetailsAsync(mod);
+            _onlineView?.RedrawOpenDetails();
         };
 
         AppearanceService appearance = _services.Appearance;

@@ -98,7 +98,7 @@ public sealed partial class MainWindow
                 }
                 break;
             case PrimarySection.Online:
-                _onlineView.RefreshOnlinePaneV2();
+                _onlineView?.RefreshOnlinePaneV2();
                 break;
             case PrimarySection.Updates:
                 RefreshUpdatesPane();
@@ -137,10 +137,8 @@ public sealed partial class MainWindow
     {
         // Stage J7: the Mod workspace page, created with the window.
         _pages[PrimarySection.Repository] = _workspaceView;
-        // Stage J6: the Online page, created with the window.
-        _pages[PrimarySection.Online] = _onlineView;
-        // Settings (J2), the dashboard (J4), Updates (J3) and Shortcuts (J5) are created the first time they are shown
-        // (stage J finish, step 1) and kept from then on. They talk to the window only through AppServices and their
+        // Settings (J2), the dashboard (J4), Updates (J3), Shortcuts (J5) and, since stage J finish step 5b, the Online
+        // page (J6) are created the first time they are shown (stage J finish, step 1) and kept from then on. They talk to the window only through AppServices and their
         // view models and draw from the current state when they are made, so a language, theme or data change before
         // then needs no catching up.
     }
@@ -155,10 +153,27 @@ public sealed partial class MainWindow
             PrimarySection.Updates => new UpdatesPage(_services),
             PrimarySection.Shortcuts => _shortcutsPage = new ShortcutsPage(_services),
             PrimarySection.Settings => new SettingsPage(_services),
-            _ => throw new ArgumentOutOfRangeException(nameof(section), section, "The workspace and Online pages are made with the window.")
+            PrimarySection.Online => CreateOnlinePage(),
+            _ => throw new ArgumentOutOfRangeException(nameof(section), section, "The workspace page is made with the window.")
         };
         _pages[section] = page;
         return page;
+    }
+
+    // The Online page reaches the window only through IOnlineHost and AppServices; downloads run without it.
+    private OnlinePage CreateOnlinePage()
+    {
+        var page = new OnlinePage(_services, this);
+        _onlineView = page;
+        page.InitializeAfterCreation();
+        return page;
+    }
+
+    // The character list follows the repository whether or not the Online page exists (the page redraws its strip).
+    private void EnsureOnlineCharacterOptions(WorkspaceRepository? repository)
+    {
+        if (_onlineView is null) _services.OnlineCharacters.Ensure(repository);
+        else _onlineView.EnsureOnlineCharacterOptionsForRepository(repository);
     }
 
     private DashboardPage CreateDashboardPage()
@@ -226,7 +241,7 @@ public sealed partial class MainWindow
         }
 
         if (_currentPrimarySection == PrimarySection.Online)
-            _onlineView.UpdateOnlineResponsiveLayout(width);
+            _onlineView?.UpdateOnlineResponsiveLayout(width);
         ApplyTitleBarSearchVisibility();
         // The Settings and Updates pages lay themselves out when their own size changes.
         if (_currentPrimarySection == PrimarySection.Repository)
@@ -403,8 +418,11 @@ public sealed partial class MainWindow
             ApplyTheme(_services.Appearance.IsDark);
             ApplyTitleBarSearchVisibility();
             RestoreWindowPlacement();
-            _onlineView.UpdateOnlineWorkspaceWidthConstraint();
-            DispatcherQueue.TryEnqueue(_onlineView.UpdateOnlineWorkspaceWidthConstraint);
+            if (_onlineView is { } onlinePage)
+            {
+                onlinePage.UpdateOnlineWorkspaceWidthConstraint();
+                DispatcherQueue.TryEnqueue(onlinePage.UpdateOnlineWorkspaceWidthConstraint);
+            }
             _services.Images.TrimCache();
             DetectLocalUpdatePackage();
             await RefreshInstallBackupListAsync();
@@ -439,25 +457,19 @@ public sealed partial class MainWindow
     private void OnWindowClosed(object sender, WindowEventArgs args)
     {
         CloseShortcutPanel();
-        _onlineView.CaptureOnlineBrowseSession();
-        _onlineView._browseSaveTimer?.Stop();
-        ++_onlineView._browseRestoreRevision;
+        _onlineView?.BeginClosing();
         UiCrashDiagnostics.RecordAction("Window closed", width: RootGrid.ActualWidth, height: RootGrid.ActualHeight, closed: true);
         _services.IsClosing = true;
-        ++_onlineView._onlineDetailAnimationVersion;
         _services.Downloads.Persist();
         _bundleOperationCancellation?.Cancel();
         _workspaceView._existingModImportCancellation?.Cancel();
         _services.IsClosing = true;
-        _onlineView.InvalidateOnlineDetailRequest();
-        _services.OnlineDownloads._onlineDownloadActions.CancelPreparation();
+        _onlineView?.FinishClosing();
+        _services.OnlineDownloads.DownloadActions.CancelPreparation();
         foreach (DownloadTaskItem task in _services.Downloads.Tasks.Where(task => DownloadProgressPolicy.IsActive(task.State)))
             if (task.Session?.CanCancel != false) task.Cancellation.Cancel();
         ++_folderRefreshGeneration;
         _folderRefreshCancellation?.Cancel();
-        _onlineView.CancelOnlineModListRequest();
-        _onlineView._onlineCharacterAvatarCancellation.Cancel();
-        _onlineView._onlineCharacterAvatarCancellation.Dispose();
         RootGrid.ActualThemeChanged -= OnRootActualThemeChanged;
         SaveWindowPlacement();
         SaveShellConfig();
@@ -482,7 +494,7 @@ public sealed partial class MainWindow
 
             if (controlDown && e.Key == VirtualKey.F)
             {
-                (_currentPrimarySection == PrimarySection.Online ? _onlineView.OnlineSearchTextBox : _workspaceView.FirstLevelSearchTextBox).Focus(FocusState.Keyboard);
+                (_currentPrimarySection == PrimarySection.Online && _onlineView is not null ? _onlineView.OnlineSearchTextBox : _workspaceView.FirstLevelSearchTextBox).Focus(FocusState.Keyboard);
                 e.Handled = true;
                 return;
             }
@@ -501,9 +513,9 @@ public sealed partial class MainWindow
                 return;
             }
 
-            if (e.Key == VirtualKey.Escape && _onlineView.OnlineDetailDrawer.Visibility == Visibility.Visible)
+            if (e.Key == VirtualKey.Escape && _onlineView?.OnlineDetailDrawer.Visibility == Visibility.Visible)
             {
-                await _onlineView.CloseOnlineDetailPaneAsync();
+                await _onlineView!.CloseOnlineDetailPaneAsync();
                 e.Handled = true;
                 return;
             }
@@ -517,7 +529,7 @@ public sealed partial class MainWindow
             {
                 if (_currentPrimarySection == PrimarySection.Online)
                 {
-                    await _onlineView.LoadOnlineModsAsync(forceReload: true);
+                    if (_onlineView is not null) await _onlineView.LoadOnlineModsAsync(forceReload: true);
                 }
                 else
                 {

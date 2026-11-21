@@ -54,7 +54,6 @@ internal interface IWorkspaceHost
     bool IsApplyingRepositoryDeploymentMode { get; }
     Dictionary<string, List<ShortcutBinding>> ModBindings { get; }
     Dictionary<string, string> ModLinks { get; }
-    OnlinePage OnlineView { get; }
     BatchObservableCollection<SecondLevelFolderItem> SecondLevelItems { get; }
     string? SelectedConfigurationProfileId { get; }
     List<TextBox> ShortcutActionBoxes { get; }

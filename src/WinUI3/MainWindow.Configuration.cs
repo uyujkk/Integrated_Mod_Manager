@@ -258,7 +258,7 @@ public sealed partial class MainWindow
     {
         try
         {
-            _onlineView.CaptureOnlineBrowseSession();
+            _onlineView?.CaptureOnlineBrowseSession();
             var config = new BetaShellConfig
             {
                 CurrentPrimarySection = _currentPrimarySection.ToString().ToLowerInvariant(),

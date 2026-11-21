@@ -10,7 +10,7 @@ public sealed partial class OnlinePage
 
     private async Task PrepareSavedBatchAsync(OnlineSavedMod[] saved, WorkspaceRepository repository)
     {
-        if (_services.OnlineDownloads._onlineDownloadActions.IsPreparing || saved.Length == 0) return;
+        if (_services.OnlineDownloads.DownloadActions.IsPreparing || saved.Length == 0) return;
         if (!_services.Downloads.JournalAvailable)
         { await ShowMessageAsync(T("BatchDownloads.TheDownloadRecordIsUnreadableAnd"), T("BatchDownloads.CannotDownloadBatch")); return; }
         var context = OnlineDownloadService.CaptureOnlineDownloadContext(repository);
@@ -56,7 +56,7 @@ public sealed partial class OnlinePage
             if (candidates.Length == 0 && data.Mod.DownloadFiles.Count == 0 && _services.Install.IsSupportedArchiveFile(data.Mod.DownloadFileName) && !string.IsNullOrWhiteSpace(data.Mod.DownloadUrl))
                 candidates = [new OnlineDownloadCandidate { FileId = data.Mod.DownloadFileId, FileName = data.Mod.DownloadFileName, DownloadUrl = data.Mod.DownloadUrl, IsSupportedArchive = true }];
             var files = candidates.Select(candidate => (candidate.FileName + (candidate.IsArchived ? T("BatchDownloads.Archived") : ""), candidate)).ToArray();
-            bool active = _services.OnlineDownloads._onlineDownloadActions.IsActive(context, OnlineDownloadService.GetOnlineDownloadIdentity(data.Mod));
+            bool active = _services.OnlineDownloads.DownloadActions.IsActive(context, OnlineDownloadService.GetOnlineDownloadIdentity(data.Mod));
             bool enabled = data.Error is null && candidates.Length > 0 && !active;
             bool isChecked = data.Error is null && candidates.Length > 0 && !active;
             var options = folders.Select(path => (path == context.RepositoryPath ? T("BatchDownloads.RepositoryRoot") : Path.GetFileName(path), (object)path)).ToList();

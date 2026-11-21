@@ -40,29 +40,14 @@ public sealed partial class MainWindow
 
         ApplyPrimaryNavigationContent();
 
-        ToolTipService.SetToolTip(_onlineView.RefreshOnlineButton, T("Localization.RefreshOnlineModList"));
-        ToolTipService.SetToolTip(_onlineView.OnlinePrevPageButton, null);
-        ToolTipService.SetToolTip(_onlineView.OnlineNextPageButton, null);
-        ToolTipService.SetToolTip(_onlineView.OnlineSearchTextBox, T("Localization.SearchThisPageByCharacterMod2"));
-        ToolTipService.SetToolTip(_onlineView.OnlineSortComboBox, T("Localization.ChangeTheSortOrderForThe"));
         ToolTipService.SetToolTip(_workspaceView.PreviewImage, T("Localization.ClickToViewFullSize"));
-        ToolTipService.SetToolTip(_onlineView.OnlineDetailHeroImage, T("Localization.ClickToViewFullSize"));
-        AutomationProperties.SetName(_onlineView.RefreshOnlineButton, T("Localization.RefreshOnlineModList"));
-        AutomationProperties.SetName(_onlineView.OnlinePrevPageButton, T("Localization.PreviousPage"));
-        AutomationProperties.SetName(_onlineView.OnlineNextPageButton, T("Localization.NextPage"));
-        AutomationProperties.SetName(_onlineView.OnlineSearchTextBox, T("Localization.SearchThisPageByCharacterMod"));
-        AutomationProperties.SetName(_onlineView.OnlineSortComboBox, T("Localization.OnlineListSort"));
         AutomationProperties.SetName(_workspaceView.PreviewImage, T("Localization.OpenFullSizeModPreview"));
-        AutomationProperties.SetName(_onlineView.OnlineDetailHeroImage, T("Localization.OpenFullSizeOnlineModImage"));
-        _onlineView.InitializeOnlineControls();
+        // The Online page labels itself once it exists (stage J finish, step 5b); the character list is kept without it.
+        if (_onlineView is null) EnsureOnlineCharacterOptions(_services.Repositories.Selected);
+        else _onlineView.ApplyWindowLanguage();
 
         // The dashboard labels itself (Pages/DashboardPage.xaml.cs).
         RefreshDashboard();
-
-        _onlineView.OnlineTitleTextBlock.Text = T("Common.OnlineModBrowser");
-        _onlineView.OnlineSubtitleTextBlock.Text = T("Localization.ThisPageKeepsTheOnlineMod");
-        _onlineView.OnlinePreviewTitleTextBlock.Text = T("Common.OnlineModList");
-        _onlineView.OnlinePreviewHintTextBlock.Text = T("Localization.ThisPageLoadsDataFromAn");
 
         // The Settings page labels itself (Pages/SettingsPage.xaml.cs).
         RefreshAppearanceSettings();

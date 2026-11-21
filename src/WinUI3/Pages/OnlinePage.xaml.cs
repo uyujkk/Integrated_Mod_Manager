@@ -24,8 +24,8 @@ public sealed partial class OnlinePage : UserControl
         InitializeComponent();
         InitializeOnlineDetailShadow();
         InitializeOnlineCategoryBars();
-        // A catalog loaded for the page's repository replaces its character list (stage J finish, step 3).
-        services.CharacterCatalog.Loaded += (_, loaded) => ApplyOnlineCharacterCatalog(loaded.Key, loaded.Characters);
+        // A catalog loaded for the page's repository replaced the character list (stage J finish, steps 3 and 5b).
+        services.OnlineCharacters.CatalogApplied += OnOnlineCharacterCatalogApplied;
         // The download flow shows its progress here (stage J finish, step 5a).
         services.OnlineDownloads.View = this;
     }

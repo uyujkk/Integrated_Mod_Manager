@@ -15,7 +15,7 @@ public sealed partial class MainWindow
     private void OnDownloadTaskRefreshRequested(object? sender, (DownloadTaskItem Task, bool Finished) args)
     {
         RefreshDownloadTaskCard(args.Task);
-        _onlineView.RefreshOnlineCardStates(refreshInstalled: args.Finished);
+        _onlineView?.RefreshOnlineCardStates(refreshInstalled: args.Finished);
     }
 
     // The Updates page lists the finished tasks, the navigation the running ones; both follow the service.
@@ -109,7 +109,7 @@ public sealed partial class MainWindow
     }
 
     private void RefreshDownloadTaskCardView(DownloadTaskItem task, DownloadTaskCardView view)
-        => DownloadTaskViews.Refresh(task, view, _services.Language, _services.OnlineDownloads._onlineDownloadActions.IsPreparing);
+        => DownloadTaskViews.Refresh(task, view, _services.Language, _services.OnlineDownloads.DownloadActions.IsPreparing);
 
     // Navigation summary: always present so the history stays one click away; the badge and
     // bar follow the running downloads.
@@ -161,7 +161,7 @@ public sealed partial class MainWindow
     private void OnClearDownloadTasksClicked(object sender, RoutedEventArgs e)
     {
         _services.Downloads.ClearFinished();
-        _onlineView.RefreshOnlineCardStates();
+        _onlineView?.RefreshOnlineCardStates();
         _services.Downloads.Persist();
     }
 }

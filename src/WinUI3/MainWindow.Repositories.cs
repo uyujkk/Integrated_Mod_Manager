@@ -15,7 +15,7 @@ public sealed partial class MainWindow
 
     private void SaveSelectedRepositoryFromInputs()
     {
-        _onlineView.CaptureOnlineBrowseSession();
+        _onlineView?.CaptureOnlineBrowseSession();
         WorkspaceRepository? repository = GetSelectedRepository();
         if (repository is null)
         {
@@ -77,21 +77,15 @@ public sealed partial class MainWindow
 
     private void ResetOnlineRepositoryContext()
     {
-        _onlineView._activeBrowseSessionKey = null;
-        _onlineView._pendingBrowsePosition = null;
-        ++_onlineView._browseRestoreRevision;
-        _onlineView.CancelOnlineModListRequest();
-        _onlineView.InvalidateOnlineDetailRequest();
-        _onlineView._onlineDownloadEnrichmentVersion++;
+        _onlineView?.ResetRepositoryContext();
         _services.Online.Page.ResetPaging();
         _services.Online.Page.CharacterFilter = string.Empty;
         _services.Online.Page.KnownCharacters.Clear();
         _services.Online.Page.AuthorId = 0;
         _services.Online.Page.AuthorName = string.Empty;
-        _onlineView._lastLoadedOnlineConfigKey = null;
+        _onlineView?.ForgetLoadedList();
         _services.Online.Page.Mods.Clear();
-        _onlineView._activeOnlineDetailMod = null;
-        _onlineView.ResetOnlineDetailPaneToPlaceholder();
+        _onlineView?.ClearOnlineDetails();
     }
 
     // A game preset from the dashboard's "New repository" menu.
@@ -216,7 +210,7 @@ public sealed partial class MainWindow
             _services.Online.Page.ResetPaging();
             _services.Online.Page.CharacterFilter = string.Empty;
             _services.Online.Page.KnownCharacters.Clear();
-            _onlineView._lastLoadedOnlineConfigKey = null;
+            _onlineView?.ForgetLoadedList();
             _services.Online.Page.Mods.Clear();
             _currentPrimarySection = PrimarySection.Repository;
             ApplySelectedRepositoryToInputs();
@@ -295,7 +289,7 @@ public sealed partial class MainWindow
             _services.Online.Page.ResetPaging();
             _services.Online.Page.CharacterFilter = string.Empty;
             _services.Online.Page.KnownCharacters.Clear();
-            _onlineView._lastLoadedOnlineConfigKey = null;
+            _onlineView?.ForgetLoadedList();
             _services.Online.Page.Mods.Clear();
             ApplySelectedRepositoryToInputs();
             SaveConfig();
@@ -390,8 +384,8 @@ public sealed partial class MainWindow
 
             SaveShellConfig();
             RefreshSettingsPane();
-            _onlineView.RefreshOnlinePaneV2();
-            _onlineView.ResetOnlineDetailPaneToPlaceholder();
+            _onlineView?.RefreshOnlinePaneV2();
+            _onlineView?.ResetOnlineDetailPaneToPlaceholder();
             _workspaceView.StatusTextBlock.Text = T("Repositories.UpdatedOnlineCategorySettings", repository.Name);
         }
         catch (Exception ex)
@@ -413,7 +407,7 @@ public sealed partial class MainWindow
                 return;
             }
 
-            _onlineView.EnsureOnlineCharacterOptionsForRepository(repository);
+            EnsureOnlineCharacterOptions(repository);
             if (!_services.Online.Page.CharacterOptions.Any(character => character.IsWikiCharacter))
             {
                 _ = _services.CharacterCatalog.EnsureAsync(repository, forceReload: false);
@@ -475,10 +469,10 @@ public sealed partial class MainWindow
 
             SaveShellConfig();
             ResetOnlineRepositoryContext();
-            _onlineView.EnsureOnlineCharacterOptionsForRepository(repository);
+            EnsureOnlineCharacterOptions(repository);
             _ = _services.CharacterCatalog.EnsureAsync(repository, forceReload: false);
             RefreshSettingsPane();
-            _onlineView.RefreshOnlinePaneV2();
+            _onlineView?.RefreshOnlinePaneV2();
             ShowAppNotification(T("Repositories.CategoryMappingUpdated"));
         }
         catch (Exception ex)

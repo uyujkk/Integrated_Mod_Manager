@@ -22,23 +22,6 @@ public sealed partial class WorkspacePage
 
         EnsureShortcutRowCapacity(InitialShortcutRows);
 
-        _host.OnlineView.OnlineTitleTextBlock.Text = T("Common.OnlineModBrowser");
-        _host.OnlineView.OnlineSubtitleTextBlock.Text = T("ShortcutBindings.ThisPageNowFocusesOnThe");
-        _host.OnlineView.OnlinePreviewTitleTextBlock.Text = T("Common.OnlineModList");
-        _host.OnlineView.OnlinePreviewHintTextBlock.Text = T("ShortcutBindings.ThisPageLoadsDataFromAn");
-        _host.OnlineView.RefreshOnlineNavigationButtonLabels();
-        _host.OnlineView.OpenOnlineDetailPageButton.Content = T("Common.OpenOriginalPage");
-        _host.OnlineView.SelectOnlineDetailDownloadButton.Content = T("Common.SelectFile");
-        _host.OnlineView.DownloadOnlineDetailButton.Content = T("Common.DownloadLatestArchive");
-        if (_host.OnlineView._activeOnlineDetailMod is null)
-        {
-            _host.OnlineView.ResetOnlineDetailPaneToPlaceholder();
-        }
-        else
-        {
-            _host.OnlineView.UpdateOnlineDetailDownloadControls(_host.OnlineView._activeOnlineDetailMod);
-        }
-        _host.OnlineView.OnlineDetailRequirementTitleTextBlock.Text = T("Common.PossibleExtraAccessRequirements");
         _host.ApplyShortcutPlaceholders();
         UpdateShortcutRowVisibility();
         UpdateShortcutKeyFocusVisuals();

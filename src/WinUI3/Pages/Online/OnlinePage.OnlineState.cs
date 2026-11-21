@@ -17,7 +17,7 @@ public sealed partial class OnlinePage
     }
 
     private bool IsOnlineDownloadActionBlocked(OnlineModCard mod)
-        => _services.OnlineDownloads._onlineDownloadActions.IsPreparing || _services.OnlineDownloads._onlineDownloadActions.IsActive(
+        => _services.OnlineDownloads.DownloadActions.IsPreparing || _services.OnlineDownloads.DownloadActions.IsActive(
             OnlineDownloadService.CaptureOnlineDownloadContext(_services.Repositories.Selected), OnlineDownloadService.GetOnlineDownloadIdentity(mod));
 
     private void RefreshOnlineDetailActionState()

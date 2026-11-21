@@ -15,7 +15,7 @@ public sealed partial class MainWindow
     {
         UpdatesView.ActionRequested += OnUpdatesActionRequested;
         UpdatesView.PropertyChanged += OnUpdatesViewChanged;
-        _services.Downloads.IsRetryBlocked = () => _services.OnlineDownloads._onlineDownloadActions.IsPreparing;
+        _services.Downloads.IsRetryBlocked = () => _services.OnlineDownloads.DownloadActions.IsPreparing;
         // The navigation shows the running downloads; the Updates page lists the finished ones itself.
         _services.Downloads.Changed += (_, _) =>
         {
