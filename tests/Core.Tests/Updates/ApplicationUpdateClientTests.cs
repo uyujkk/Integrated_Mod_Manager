@@ -45,6 +45,24 @@ public sealed class ApplicationUpdateClientTests : IDisposable
             "https://github.com/o/r/releases/tag/v4.7.0", PackageUrl, ChecksumUrl), release);
     }
 
+    // Releases after 4.8.2 also carry the Developer Tools package; the updater must keep to the app's own ZIP
+    // and its own checksum, whatever order the assets come in.
+    [Fact]
+    public void ParseRelease_IgnoresTheDeveloperToolsPackage()
+    {
+        LatestReleaseInfo release = Parse($$"""
+            { "tag_name": "v4.8.2", "html_url": "https://github.com/o/r/releases/tag/v4.8.2",
+              "assets": [
+                { "name": "Integrated_Mod_Manager_Developer_Tools-v4.8.2.zip", "browser_download_url": "https://x/devtools.zip" },
+                { "name": "Integrated_Mod_Manager_Developer_Tools-v4.8.2.zip.sha256", "browser_download_url": "https://x/devtools.zip.sha256" },
+                { "name": "Integrated_Mod_Manager-v4.8.2.zip", "browser_download_url": "{{PackageUrl}}" },
+                { "name": "Integrated_Mod_Manager-v4.8.2.zip.sha256", "browser_download_url": "{{ChecksumUrl}}" } ] }
+            """);
+        Assert.Equal(PackageUrl, release.PackageUrl);
+        Assert.Equal(ChecksumUrl, release.Sha256Url);
+        Assert.DoesNotMatch(ApplicationUpdateClient.PackageNamePattern, "Integrated_Mod_Manager_Developer_Tools-v4.8.2.zip");
+    }
+
     [Fact]
     public void ParseRelease_FallsBackForMissingFields()
     {

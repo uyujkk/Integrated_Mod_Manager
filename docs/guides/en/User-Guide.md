@@ -236,6 +236,8 @@ Configuration writes are atomic with rotated backups; a damaged main configurati
 
 **Export Diagnostic Report** in Settings → **Diagnostics and Issue Report** collects the app version, a system summary, error logs and a sanitized configuration summary, excluding private paths and credentials. The GitHub option opens a pre-filled issue; nothing is submitted automatically, so review it first. The same card lists the feedback QQ group 1041384622, with a button to copy the number: report problems and share tips there, and Arknights and Arknights: Endfield players are welcome for everyday game chat and joining offline events such as Ambience Synesthesia. The card also has a button that opens the [Discord server](https://discord.gg/G9nszEQgrV).
 
+**Developer Tools** in the same group opens the separately released Developer Tools, or the release page when they are not installed (the command palette, Ctrl+K, has Open Developer Tools too). Extract `Integrated_Mod_Manager_Developer_Tools-vX.Y.Z.zip` into the app's folder; it creates a `DeveloperTools` folder beside `IntegratedModManager.exe`. The tools look at the app's data without changing it: copy records, state slots and broken links, the logs, cache sizes (online caches and the GameBanana sign-in can be cleared after a confirmation, only while the app is closed), a Mod's key bindings, translations, and a sanitized diagnostic report with counts of the 4.5+ data. See the [Developer Tools README](../../../tools/DeveloperTools/README.md).
+
 ## 12. Keyboard
 
 <img src="../../assets/screenshots/command-palette-v4.6.png" width="560" alt="Command palette searching for out: matching Mods with their character and deploy state">

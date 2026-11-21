@@ -19,7 +19,10 @@ public enum SettingsAction
     OpenLink,
 
     /// <summary>Delete the sign-in kept by the GameBanana page opened for likes (issue #129).</summary>
-    ClearGameBananaSignIn
+    ClearGameBananaSignIn,
+
+    /// <summary>Open the Developer Tools, or their release page when they are not installed.</summary>
+    OpenDeveloperTools
 }
 
 public sealed record SettingsActionRequest(SettingsAction Action, string? Argument = null);

@@ -144,7 +144,8 @@ public sealed partial class MainWindow
             new(CommandPaletteKind.Command, T("Common.ModShortcuts"), page, "nav:" + PrimarySection.Shortcuts),
             new(CommandPaletteKind.Command, T("Shell.Settings"), page, "nav:" + PrimarySection.Settings),
             new(CommandPaletteKind.Command, T("Localization.ImportMod"), command, "cmd:import"),
-            new(CommandPaletteKind.Command, T("CommandPalette.RefreshRepository"), command, "cmd:refresh")
+            new(CommandPaletteKind.Command, T("CommandPalette.RefreshRepository"), command, "cmd:refresh"),
+            new(CommandPaletteKind.Command, T("CommandPalette.OpenDeveloperTools"), command, "cmd:devtools")
         };
         foreach (FirstLevelFolderItem character in _characters.All)
             entries.Add(new(CommandPaletteKind.Character, character.Name,
@@ -275,6 +276,9 @@ public sealed partial class MainWindow
                 case "cmd" when value == "refresh":
                     NavigateToPrimarySection(PrimarySection.Repository);
                     await _workspaceView.RefreshListsAsync();
+                    break;
+                case "cmd" when value == "devtools":
+                    OpenDeveloperTools();
                     break;
                 case "char":
                     ShowRepositoryItemFromPalette(value, modPath: null);

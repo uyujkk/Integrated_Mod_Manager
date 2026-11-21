@@ -114,6 +114,7 @@ public sealed partial class SettingsPage : UserControl
         DiagnosticsTitleTextBlock.Text = T("ProductivityFeatures.DiagnosticsAndIssueReport");
         SetCard(ExportDiagnosticsButton, T("ProductivityFeatures.ExportDiagnosticReport"), T("ProductivityFeatures.GenerateASanitizedReportWithoutPrivate"));
         SetCard(SubmitDiagnosticsButton, T("ProductivityFeatures.ReportOnGitHub"), null);
+        SetCard(DeveloperToolsSettingsCard, T("Settings.DeveloperTools"), T("Settings.DeveloperToolsHint"));
         FeedbackGroupSettingsCard.Header = T("Settings.FeedbackGroup");
         FeedbackGroupNumberTextBlock.Text = T("Settings.FeedbackGroupNumber", SettingsViewModel.FeedbackQqGroup);
         CopyFeedbackGroupButton.Content = T("Settings.CopyGroupNumber");
@@ -234,6 +235,8 @@ public sealed partial class SettingsPage : UserControl
     private void OnExportDiagnosticsClicked(object sender, RoutedEventArgs e) => ViewModel.Request(SettingsAction.ExportDiagnostics);
 
     private void OnSubmitDiagnosticsClicked(object sender, RoutedEventArgs e) => ViewModel.Request(SettingsAction.SubmitDiagnostics);
+
+    private void OnOpenDeveloperToolsClicked(object sender, RoutedEventArgs e) => ViewModel.Request(SettingsAction.OpenDeveloperTools);
 
     private void OnCopyFeedbackGroupClicked(object sender, RoutedEventArgs e) => ViewModel.Request(SettingsAction.CopyFeedbackGroup);
 

@@ -234,21 +234,19 @@ The first level is a character, purpose, or other category. The second level con
 - The release bundles the Windows App SDK but requires the .NET 8 x64 runtime. Regular users do not need the .NET SDK or Visual Studio.
 - 7Z, RAR, ZIPX, and CAB prefer bundled or installed 7-Zip. If unavailable, the app uses an installed Bandizip's `bz.exe`, with Windows `tar.exe` checking paths and links before extraction.
 
-## Build from Source
+## For Developers
 
-Development requires Windows 10/11 x64, the .NET 8 SDK, Visual Studio 2022 or Build Tools 2022, MSBuild, Windows App SDK, and Windows SDK.
-
-```powershell
-cmd /c scripts\build_winui.bat
-```
-
-Run the complete test, coverage, WinUI x64 build, and package verification flow:
+Development requires Windows 10/11 x64, the .NET 8 SDK, Visual Studio 2022 or Build Tools 2022, MSBuild, Windows App SDK, and Windows SDK. The full workflow, with the rules for pull requests, is in [CONTRIBUTING.md](./.github/CONTRIBUTING.md).
 
 ```powershell
-powershell -NoProfile -ExecutionPolicy Bypass -File .\scripts\test-all.ps1
+.\scripts\check-code-style.ps1      # .editorconfig rules, before test-all
+.\scripts\test-all.ps1             # four test suites with coverage, WinUI x64 build, package
+.\scripts\test-ui.ps1              # UI tests on the build test-all staged (needs an unlocked desktop)
 ```
 
-GitHub Actions runs the same four-suite verification flow on pushes to `main`, pull requests, and manual dispatches. Test dependencies are centralized without removing safety cases. See the [Testing Guide](./docs/development/TESTING.md) and [4.5.2 verification record](./docs/verification/v4.5.2.md) for current results and testing boundaries.
+- **UI tests** start the built app on synthetic data from `tests/TestData`; set `IMM_ONLINE_FIXTURES` (the UI tests do it for you) to answer every online request from local samples. See the [Testing Guide](./docs/development/TESTING.md).
+- **Releases** are built by `.github/workflows/release.yml` from a version tag: tests, package, upgrade and rollback from the previous release, UI tests and a draft release with the app's ZIP and the Developer Tools' ZIP. See [Software Structure](./docs/development/Software-Structure.md) for the projects, data and flows, with diagrams.
+- **Developer Tools** (`tools/DeveloperTools`) are a separate download with every release after 4.8.2 (until then, build them with `scripts\build-developer-tools.ps1`): check copy records, state slots and links, read logs, see and clear caches, read a Mod's key bindings, compare translations, and export a sanitized diagnostic report. Extract `Integrated_Mod_Manager_Developer_Tools-vX.Y.Z.zip` into the app's folder, then open them from Settings → Diagnostics and issue report or the command palette (Ctrl+K). See the [Developer Tools README](./tools/DeveloperTools/README.md).
 
 ## Data and Security
 

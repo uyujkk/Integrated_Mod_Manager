@@ -23,6 +23,20 @@ public sealed class ApplicationReleasePolicyTests
         Assert.Equal("https://github.com/uyujkk/Integrated_Mod_Manager/releases/latest", ApplicationReleasePolicy.ReleasePageUrl);
     }
 
+    // The Developer Tools ship with every release (a separate asset) and carry the app's version.
+    [Fact]
+    public void DeveloperToolsCarryTheAppVersion()
+    {
+        string? folder = AppContext.BaseDirectory;
+        while (folder is not null && !File.Exists(Path.Combine(folder, "IntegratedModManager.sln"))) folder = Path.GetDirectoryName(folder);
+        Assert.NotNull(folder);
+        string info = File.ReadAllText(Path.Combine(folder, "tools", "DeveloperTools", "AssemblyInfo.cs"));
+        string version = ApplicationReleasePolicy.FileVersion;
+        Assert.Contains($"[assembly: AssemblyVersion(\"{version}\")]", info);
+        Assert.Contains($"[assembly: AssemblyFileVersion(\"{version}\")]", info);
+        Assert.Contains($"[assembly: AssemblyInformationalVersion(\"{ApplicationReleasePolicy.VersionLabel[1..]}\")]", info);
+    }
+
     [Fact]
     public void BuildsWithoutSelfUpdateKeepTheLoadedUpdateSettings()
     {

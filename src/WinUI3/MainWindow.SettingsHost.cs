@@ -1,6 +1,7 @@
 using System.ComponentModel;
 using System.Diagnostics;
 using IntegratedModManager.Core.Configuration;
+using IntegratedModManager.Core.DeveloperTools;
 using IntegratedModManager.Core.Updates;
 using Microsoft.UI.Xaml;
 using Microsoft.UI.Xaml.Controls;
@@ -193,6 +194,7 @@ public sealed partial class MainWindow
             case SettingsAction.OpenDiscord: OpenFeedbackDiscord(); break;
             case SettingsAction.OpenLink: OpenProjectResource(request.Argument!); break;
             case SettingsAction.ClearGameBananaSignIn: _ = ClearGameBananaSignInAsync(); break;
+            case SettingsAction.OpenDeveloperTools: OpenDeveloperTools(); break;
         }
     }
 
@@ -284,6 +286,23 @@ public sealed partial class MainWindow
             ReportUiActionFailure("OnExternalResourceClicked", ex);
         }
     }
+
+    // The separately released Developer Tools: <install root>\DeveloperTools\IntegratedModManager.DeveloperTools.exe,
+    // opened on this app's data folder. Without them, the release page that has their package.
+    private async void OpenDeveloperTools() => await RunUiActionAsync("Open developer tools", async () =>
+    {
+        string? tools = DeveloperToolsLocation.Find(GetInstallRootPath());
+        if (tools is null)
+        {
+            ShowAppNotification(T("Settings.DeveloperToolsNotInstalled"), InfoBarSeverity.Informational);
+            await OpenExternalUrlAsync(DeveloperToolsLocation.ReleasesUrl, T("Settings.DeveloperTools"));
+            return;
+        }
+        var start = new ProcessStartInfo(tools) { UseShellExecute = false, WorkingDirectory = Path.GetDirectoryName(tools)! };
+        start.ArgumentList.Add("--root");
+        start.ArgumentList.Add(AppContext.BaseDirectory.TrimEnd(Path.DirectorySeparatorChar));
+        Process.Start(start)?.Dispose();
+    });
 
     private async void OpenFeedbackDiscord() =>
         await RunUiActionAsync("Open feedback Discord", () => OpenExternalUrlAsync(SettingsViewModel.FeedbackDiscordUrl, T("Settings.FeedbackDiscord")));

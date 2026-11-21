@@ -1,0 +1,35 @@
+<UserControl
+    x:Class="IntegratedModManager.DeveloperTools.Pages.LogsPage"
+    xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
+    <Grid RowSpacing="12">
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto" />
+            <RowDefinition Height="Auto" />
+            <RowDefinition Height="*" />
+            <RowDefinition Height="Auto" />
+        </Grid.RowDefinitions>
+        <StackPanel Spacing="4">
+            <TextBlock x:Name="TitleText" Style="{StaticResource ToolPageTitleStyle}" />
+            <TextBlock x:Name="IntroText" Style="{StaticResource MutedTextStyle}" TextWrapping="Wrap" />
+        </StackPanel>
+        <Border Grid.Row="1" Style="{StaticResource CardBorderStyle}" Padding="12">
+            <Grid ColumnSpacing="8">
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="Auto" />
+                    <ColumnDefinition Width="Auto" />
+                    <ColumnDefinition Width="Auto" />
+                    <ColumnDefinition Width="*" />
+                    <ColumnDefinition Width="Auto" />
+                </Grid.ColumnDefinitions>
+                <ComboBox x:Name="FileComboBox" MinWidth="170" SelectionChanged="OnFilterChanged" />
+                <ComboBox x:Name="LevelComboBox" Grid.Column="1" MinWidth="150" SelectionChanged="OnFilterChanged" />
+                <ComboBox x:Name="SinceComboBox" Grid.Column="2" MinWidth="150" SelectionChanged="OnFilterChanged" />
+                <TextBox x:Name="SearchTextBox" Grid.Column="3" TextChanged="OnSearchChanged" />
+                <ToggleSwitch x:Name="FollowToggle" Grid.Column="4" MinWidth="0" Toggled="OnFollowToggled" />
+            </Grid>
+        </Border>
+        <TextBox x:Name="LogTextBox" Grid.Row="2" Style="{StaticResource ToolMonoTextBoxStyle}" />
+        <TextBlock x:Name="CountText" Grid.Row="3" Style="{StaticResource CaptionTextStyle}" />
+    </Grid>
+</UserControl>

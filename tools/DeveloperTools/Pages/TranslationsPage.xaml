@@ -1,0 +1,48 @@
+<UserControl
+    x:Class="IntegratedModManager.DeveloperTools.Pages.TranslationsPage"
+    xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
+    <Grid RowSpacing="12">
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto" />
+            <RowDefinition Height="Auto" />
+            <RowDefinition Height="Auto" />
+            <RowDefinition Height="*" />
+        </Grid.RowDefinitions>
+        <StackPanel Spacing="4">
+            <TextBlock x:Name="TitleText" Style="{StaticResource ToolPageTitleStyle}" />
+            <TextBlock x:Name="IntroText" Style="{StaticResource MutedTextStyle}" TextWrapping="Wrap" />
+        </StackPanel>
+        <Border Grid.Row="1" Style="{StaticResource CardBorderStyle}" Padding="12">
+            <Grid ColumnSpacing="8">
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="*" />
+                    <ColumnDefinition Width="Auto" />
+                    <ColumnDefinition Width="Auto" />
+                    <ColumnDefinition Width="Auto" />
+                </Grid.ColumnDefinitions>
+                <TextBox x:Name="FolderTextBox" />
+                <Button x:Name="BrowseButton" Grid.Column="1" Style="{StaticResource SecondaryButtonStyle}" Click="OnBrowseClicked" />
+                <ComboBox x:Name="ReferenceComboBox" Grid.Column="2" MinWidth="140" SelectionChanged="OnReferenceChanged" />
+                <Button x:Name="CompareButton" Grid.Column="3" Style="{StaticResource PrimaryButtonStyle}" Click="OnCompareClicked" />
+            </Grid>
+        </Border>
+        <StackPanel x:Name="SummaryPanel" Grid.Row="2" Spacing="6" />
+        <Border Grid.Row="3" Style="{StaticResource CardBorderStyle}" Padding="16">
+            <Grid RowSpacing="8">
+                <Grid.RowDefinitions>
+                    <RowDefinition Height="Auto" />
+                    <RowDefinition Height="*" />
+                </Grid.RowDefinitions>
+                <StackPanel Orientation="Horizontal" Spacing="8">
+                    <TextBlock x:Name="IssuesTitle" Style="{StaticResource CardTitleTextStyle}" VerticalAlignment="Center" />
+                    <ComboBox x:Name="LanguageFilter" MinWidth="140" SelectionChanged="OnFilterChanged" />
+                    <ComboBox x:Name="KindFilter" MinWidth="160" SelectionChanged="OnFilterChanged" />
+                </StackPanel>
+                <ScrollViewer Grid.Row="1">
+                    <StackPanel x:Name="IssuesPanel" Spacing="6" />
+                </ScrollViewer>
+            </Grid>
+        </Border>
+    </Grid>
+</UserControl>
