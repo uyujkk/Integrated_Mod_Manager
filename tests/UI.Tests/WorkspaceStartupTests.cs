@@ -36,6 +36,8 @@ public sealed class WorkspaceStartupTests
         AutomationElement? search = null;
         for (int attempt = 0; attempt < 2 && search is null; attempt++)
         {
+            // The shortcut goes to the window in front, which must be the app's.
+            app.MainWindow.SetForeground();
             Keyboard.TypeSimultaneously(VirtualKeyShort.CONTROL, VirtualKeyShort.KEY_K);
             var watch = Stopwatch.StartNew();
             while (search is null && watch.ElapsedMilliseconds < 3000)
@@ -78,6 +80,7 @@ public sealed class WorkspaceStartupTests
         Assert.True(PaletteFinds(app, "TestCharacter"), "the palette lists the scanned character");
         Assert.True(PaletteFinds(app, "TestModB"), "the palette lists the scanned Mods");
 
+        app.MainWindow.SetForeground();
         Keyboard.TypeSimultaneously(VirtualKeyShort.CONTROL, VirtualKeyShort.ALT, FlaUI.Core.WindowsAPI.VirtualKeyShort.F9);
         Window? overlay = null;
         WaitUntil(() => (overlay = app.FindWindow(window => window.Title.StartsWith("IMM ", StringComparison.Ordinal))) is not null, "the overlay");
