@@ -266,7 +266,9 @@ flowchart LR
 | `RepositoryService` | 已配置的仓库和当前仓库。The configured repositories and the current one. |
 | `DialogService` | 显示所有对话框：设置 `XamlRoot`、主题和默认样式，同一时间只开一个。Shows every dialog: XamlRoot, theme, default style, one at a time. |
 | `StatusService` | 全局通知，由窗口显示在 `InfoBar`。App-wide notifications shown in the InfoBar. |
-| `DeploymentService`、`DownloadService`、`LaunchService` | 部署备份位置；下载任务及其日志；启动加载器或启动器。Deployment backups; download tasks and their journal; starting the loader or launcher. |
+| `DeploymentService`、`DownloadService`、`LaunchService` | 部署备份位置；下载任务（新建、进度、清除）及其记录；启动加载器或启动器。Deployment backups; download tasks (creating, progress, clearing) and their record; starting the loader or launcher. |
+| `OnlineDownloadService` | 在线 Mod 的下载和安装：刷新文件、选择位置、重复检查、下载、解压、安装记录、重试；没有在线页也能运行，在线页存在时显示进度（`IOnlineDownloadView`）。Downloading and installing online Mods, with or without the Online page; the page shows progress while it exists. |
+| `ModTrackingService` | 追踪的在线 Mod、更新检查结果、检查更新和替换为新版本。Tracked online Mods, update checks and replacing a Mod with its newer version. |
 | `InstallService` | 安装流程：安装事务（备份、提交、撤销、按存储上限清理）、安装前的文件和 INI 冲突检查、断开链接清理、压缩包（格式、解压、导入为一个 Mod 文件夹）、复制归属记录（#107）。规则在 Core（`ModInstallTransactions`、`ModFileConflictDetector`、`ModIniConflictDetector`、`ArchiveImportLayout`、`CopyDeploymentLedger`、`InstallBackupPruning`）。The install pipeline: install transactions (backup, commit, undo, pruning by the storage limit), file and INI conflict checks before an install, broken link cleanup, archives (formats, extraction, import as one Mod folder) and the copy ownership records (#107); the rules are in Core. |
 | `OnlineState`、`OnlineSourceService`、`OnlineCategoryService`、`CharacterCatalogService`、`ImageService` | 在线页的状态、仓库的在线来源、游戏分类（缓存一天）、角色目录、在线图片缓存。Online page state, a repository's online source, categories (kept a day), character catalogs, the image cache. |
 | `GameBananaWebSession` | 点赞用的 GameBanana 网页的登录：保存位置、关闭网页、删除登录。The sign-in of the GameBanana page used for likes: where it lives, closing the page, deleting it. |
@@ -284,7 +286,7 @@ flowchart LR
 | 页面宿主 / Page hosts | `DashboardHost`, `WorkspaceHost`, `OnlineHost`, `UpdatesHost`, `ShortcutsHost`, `SettingsHost` |
 | 仓库与重命名 / Repositories and renames | `Repositories`, `RepositoryPerformance`, `CharacterRename`（角色改名时迁移窗口仍持有的引用 / migrates the references the window still holds when a character is renamed） |
 | 预设与状态 / Presets and state | `ConfigurationProfiles`, `CombinationPresets`, `CombinationBundles`, `PresetShare`, `PresetPreviews`, `PersistentSlots`, `PersistentVariants`, `DefaultSlots`, `SlotCapture`, `HotReload` |
-| 更新与下载 / Updates and downloads | `Updates`, `ModUpdates`, `DownloadTasks` |
+| 更新与下载 / Updates and downloads | `Updates`（应用更新和检查间隔 / app updates and check intervals）, `DownloadTasks`（导航里的任务列表 / the task list in the navigation） |
 | 快捷键与浮窗 / Shortcuts and overlay | `ShortcutPanel`, `ShortcutPresets`, `ShortcutCapture`, `ShortcutBindingRules`, `CharacterFollow`, `ProductivityFeatures` |
 | 终末地与 XXMI / Endfield and XXMI | `EndfieldBridge` |
 

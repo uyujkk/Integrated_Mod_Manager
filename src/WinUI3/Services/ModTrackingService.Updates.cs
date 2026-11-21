@@ -296,9 +296,7 @@ internal sealed partial class ModTrackingService
 
         DateTimeOffset? latestUpdatedAt = latest?.UpdatedAt;
         DateTimeOffset? recordedUpdatedAt = origin.LastKnownUpdatedAt;
-        bool hasUpdate = latestUpdatedAt.HasValue
-            && recordedUpdatedAt.HasValue
-            && latestUpdatedAt.Value > recordedUpdatedAt.Value.AddMinutes(1);
+        bool hasUpdate = TrackedModUpdatePolicy.HasUpdate(recordedUpdatedAt, latestUpdatedAt);
 
         if (!recordedUpdatedAt.HasValue && latestUpdatedAt.HasValue)
         {
