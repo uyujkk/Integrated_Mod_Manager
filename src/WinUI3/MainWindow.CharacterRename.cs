@@ -60,7 +60,7 @@ public sealed partial class MainWindow
 
         log.Rekey(repository.CharacterAvatarBindings, plan.MapName);
         log.Rekey(repository.CharacterSelectionOverrides, plan.MapName);
-        CopyDeploymentLedger.RenameCharacter(_copyDeployments, repository.Id, plan, log);
+        CopyDeploymentLedger.RenameCharacter(_services.Install.CopyDeployments, repository.Id, plan, log);
         if (_workspaceView._localLibraries.TryGetValue(WorkspaceIdentity.Library(repository.Id, repository.SourcePath), out LocalLibraryState? tags))
         {
             log.Rekey(tags.ModTags, plan.MapRelative);
@@ -107,14 +107,4 @@ public sealed partial class MainWindow
         File.WriteAllText(temporary, text);
         File.Move(temporary, path, true);
     }
-
-    private string CharacterRenameBlockText(CharacterRenamePlan plan, WorkspaceRepository repository) => plan.Block switch
-    {
-        CharacterRenameBlock.InvalidName => T("LocalLibrary.RenameInvalidName"),
-        CharacterRenameBlock.NameTaken => T("LocalLibrary.TheTargetNameAlreadyExistsChoose"),
-        CharacterRenameBlock.SourceMissing => T("LocalLibrary.RenameSourceMissing", plan.OldPath),
-        CharacterRenameBlock.LoaderUnavailable => T("LocalLibrary.RenameLoaderUnavailable", repository.TargetPath),
-        CharacterRenameBlock.LinksUnreadable => T("LocalLibrary.RenameLinksUnreadable", string.Join(Environment.NewLine, plan.UnreadableLinks)),
-        _ => string.Empty
-    };
 }

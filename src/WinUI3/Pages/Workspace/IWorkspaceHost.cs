@@ -1,5 +1,4 @@
 using IntegratedModManager.Core.Configuration;
-using IntegratedModManager.Core.Deployment;
 using IntegratedModManager.Core.Presets;
 using IntegratedModManager.Core.Repository;
 using Microsoft.UI.Xaml;
@@ -46,7 +45,6 @@ internal interface IWorkspaceHost
     // State the workspace shares with the dashboard, the Shortcuts page and the overlay.
     string[] ImageExtensions { get; }
     int ShortcutScanSafetyLimit { get; }
-    IReadOnlyList<string> SupportedArchiveExtensions { get; }
     CharacterListViewModel Characters { get; }
     List<ModConfigurationProfile> ConfigurationProfiles { get; }
     string? CurrentSecondLevelPath { get; set; }
@@ -63,34 +61,9 @@ internal interface IWorkspaceHost
     List<TextBox> ShortcutKeyBoxes { get; }
     Dictionary<string, TrackedModOrigin> TrackedModOrigins { get; }
 
-    // Install transactions: conflicts, backups, commit and rollback.
-    void CommitInstallTransaction(string transactionPath);
-    Task<bool> ConfirmInstallConflictsAsync(IReadOnlyList<string> fileConflicts, IReadOnlyList<(string? Candidate, ModIniConflictSummary Summary)> iniConflicts);
-    void CopyDirectoryTree(string sourcePath, string targetPath);
-    Task<string> CreateInstallTransactionAsync(string description, WorkspaceRepository repository, IEnumerable<string> affectedTargets);
-    void DeleteDirectoryTreeSafely(string path);
-    List<string> DetectModFileConflicts(string sourcePath, string targetRoot, string targetPathToIgnore);
-    List<string> DetectModFileConflicts(string sourcePath, string targetRoot, IEnumerable<string> targetPathsToIgnore);
-    string GetSafePathInsideDirectory(string rootPath, string relativePath);
-    (List<string> Directories, List<string> Files) InspectDirectoryTreeSafely(string rootPath);
-    Task<bool> OfferBrokenLinkCleanupAsync(string loaderRoot);
-    Task RollbackInstallTransactionAsync(string transactionPath, bool clearLastTransaction);
-
-    // INI conflict detection.
-    IReadOnlyList<ModIniConflictSummary> DetectModIniConflictsSafely(string candidateDirectory, string targetRoot, IEnumerable<string> ignoredTargets);
-
-    // Archives: supported formats and importing their contents.
-    string ImportArchiveContents(string archivePath, string firstLevelDirectory);
-    bool IsSupportedArchiveFile(string path);
-
-    // Copy ownership records (#107).
-    CopyDeploymentLedger CopyLedger(WorkspaceRepository repository);
-    Func<string, string, bool> OwnsCopy(WorkspaceRepository repository);
-    void SaveCopyRecordsIfChanged();
-
-    // Character rename migration (#108).
+    // Character rename migration (#108): the references the window still owns (the install pipeline is in
+    // AppServices.Install since stage J finish, step 4).
     ICharacterRenameReferences CreateCharacterRenameReferences(WorkspaceRepository repository);
-    string CharacterRenameBlockText(CharacterRenamePlan plan, WorkspaceRepository repository);
 
     // State slots and default slots.
     void RefreshPersistentSlotControls();

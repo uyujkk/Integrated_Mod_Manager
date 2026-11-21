@@ -1,5 +1,4 @@
-﻿using IntegratedModManager.Core.Archives;
-using IntegratedModManager.Core.Configuration;
+﻿using IntegratedModManager.Core.Configuration;
 using IntegratedModManager.Core.Online;
 using IntegratedModManager.Core.Repository;
 using IntegratedModManager.Core.Updates;
@@ -27,11 +26,7 @@ public sealed partial class MainWindow : Window
     private const string DefaultOnlineCategoryId = OnlineSourceRules.DefaultCategoryId;
     private const string DefaultOnlineGameName = "Arknights: Endfield";
     private const string EndfieldOfficialWikiUrl = OnlineSourceRules.EndfieldOfficialWikiUrl;
-    private const int ArchiveToolTimeoutMinutes = 10;
     private const int ShortcutScanSafetyLimit = 256;
-    private static readonly IReadOnlyList<string> SupportedArchiveExtensions = ArchiveExtractor.SupportedExtensions;
-    private static readonly ArchiveExtractor ArchiveExtraction = new(
-        FindSevenZipExecutable, FindBandizipExecutable, TimeSpan.FromMinutes(ArchiveToolTimeoutMinutes));
 
     private enum PrimarySection
     {
@@ -103,7 +98,6 @@ public sealed partial class MainWindow : Window
     private string? _localUpdatePackagePath;
     private Version? _localUpdatePackageVersion;
     private string? _selectedConfigurationProfileId;
-    private string? _lastInstallTransactionPath;
     private UiMessage? _modUpdateStatus;
     private UiMessage? _updateStatus;
     private PrimarySection _currentPrimarySection = PrimarySection.Dashboard;
@@ -146,6 +140,9 @@ public sealed partial class MainWindow : Window
         _services.CharacterCatalog.Attach(_httpClient, _appDataStore, LogApplicationIssue,
             repository => BuiltInRepositoryPresets.FirstOrDefault(preset => IsRepositoryForPreset(repository, preset))?.WikiUrl);
         _services.Dialogs.Attach(() => RootGrid.XamlRoot, () => RootGrid.ActualTheme);
+        _services.Install.Attach(LogApplicationIssue, () => SaveShellConfig(), () => _installBackupLimitGb,
+            (percent, message) => DispatcherQueue.TryEnqueue(() => _workspaceView.UpdateProgress(percent, message)),
+            text => _workspaceView.StatusTextBlock.Text = text);
         _services.Appearance.ReduceAnimations = () => ShouldReduceAnimations;
         _services.Dialogs.AttachWindow(() => WinRT.Interop.WindowNative.GetWindowHandle(this));
         _services.Status.NotificationRequested += OnNotificationRequested;

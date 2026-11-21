@@ -196,7 +196,7 @@ public sealed partial class OnlinePage
             string resolvedArchivePath = EnsureDownloadArchiveExtension(archivePath);
             session.RegisterArchive(resolvedArchivePath);
             downloadTask.ArchivePath = resolvedArchivePath;
-            if (!_host.IsSupportedArchiveFile(resolvedArchivePath))
+            if (!_services.Install.IsSupportedArchiveFile(resolvedArchivePath))
             {
                 throw new InvalidOperationException(T("OnlineDownloadFlow.TheFileWasDownloadedButIt", Path.GetFileName(resolvedArchivePath)));
             }
@@ -213,7 +213,7 @@ public sealed partial class OnlinePage
             downloadTask.Cancellation.Token.ThrowIfCancellationRequested();
             await Task.Run(() =>
             {
-                _host.ExtractArchiveToDirectory(resolvedArchivePath, extractFolder);
+                _services.Install.ExtractArchiveToDirectory(resolvedArchivePath, extractFolder);
                 // The extraction folder is already this Mod's own folder; an archive that
                 // brings its own top-level folder would otherwise be nested twice.
                 ArchiveImportLayout.HoistSingleTopFolder(extractFolder);
@@ -335,7 +335,7 @@ public sealed partial class OnlinePage
 
     internal string EnsureDownloadArchiveExtension(string archivePath)
     {
-        if (_host.IsSupportedArchiveFile(archivePath))
+        if (_services.Install.IsSupportedArchiveFile(archivePath))
         {
             return archivePath;
         }

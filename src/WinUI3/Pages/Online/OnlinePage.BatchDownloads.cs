@@ -58,7 +58,7 @@ public sealed partial class OnlinePage
         foreach (var data in rows)
         {
             var candidates = OnlineDownloadSelectionPolicy.OrderForManualSelection(data.Mod.DownloadFiles).Where(candidate => candidate.IsSupportedArchive).ToArray();
-            if (candidates.Length == 0 && data.Mod.DownloadFiles.Count == 0 && _host.IsSupportedArchiveFile(data.Mod.DownloadFileName) && !string.IsNullOrWhiteSpace(data.Mod.DownloadUrl))
+            if (candidates.Length == 0 && data.Mod.DownloadFiles.Count == 0 && _services.Install.IsSupportedArchiveFile(data.Mod.DownloadFileName) && !string.IsNullOrWhiteSpace(data.Mod.DownloadUrl))
                 candidates = [new OnlineDownloadCandidate { FileId = data.Mod.DownloadFileId, FileName = data.Mod.DownloadFileName, DownloadUrl = data.Mod.DownloadUrl, IsSupportedArchive = true }];
             var files = candidates.Select(candidate => (candidate.FileName + (candidate.IsArchived ? T("BatchDownloads.Archived") : ""), candidate)).ToArray();
             bool active = _onlineDownloadActions.IsActive(context, GetOnlineDownloadIdentity(data.Mod));

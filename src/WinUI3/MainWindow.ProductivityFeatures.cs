@@ -352,7 +352,7 @@ public sealed partial class MainWindow
                     continue;
                 }
 
-                long size = GetDirectorySize(directory);
+                long size = _services.Install.GetDirectorySize(directory);
                 string mods = string.Join(", ", transaction.Entries.Select(entry => Path.GetFileName(entry.TargetPath)).Where(name => !string.IsNullOrWhiteSpace(name)).Distinct(StringComparer.OrdinalIgnoreCase).Take(5));
                 if (transaction.Entries.Count > 5)
                 {
@@ -386,7 +386,7 @@ public sealed partial class MainWindow
             _workspaceView.SetBusyState(true);
             try
             {
-                await RollbackInstallTransactionAsync(backupPath, clearLastTransaction: true);
+                await _services.Install.RollbackInstallTransactionAsync(backupPath, clearLastTransaction: true);
                 await _workspaceView.RefreshListsAsync();
                 await RefreshInstallBackupListAsync();
                 ShowAppNotification(T("ProductivityFeatures.BackupRestored"));
@@ -403,68 +403,6 @@ public sealed partial class MainWindow
         catch (Exception ex)
         {
             ReportUiActionFailure("OnRestoreInstallBackupClicked", ex);
-        }
-    }
-
-    private void PruneInstallTransactionsByStorageLimit(string? preservePath)
-    {
-        try
-        {
-            if (!Directory.Exists(_services.Deployment.InstallBackupPath))
-            {
-                return;
-            }
-
-            string root = Path.GetFullPath(_services.Deployment.InstallBackupPath).TrimEnd(Path.DirectorySeparatorChar) + Path.DirectorySeparatorChar;
-            List<(DirectoryInfo Directory, long Size)> directories = new DirectoryInfo(_services.Deployment.InstallBackupPath).EnumerateDirectories()
-                .Select(directory => (directory, GetDirectorySize(directory.FullName)))
-                .OrderByDescending(item => item.directory.CreationTimeUtc)
-                .ToList();
-            long limitBytes = (long)(_installBackupLimitGb * 1024 * 1024 * 1024);
-            long totalBytes = directories.Sum(item => item.Size);
-            foreach ((DirectoryInfo directory, long size) in directories.OrderBy(item => item.Directory.CreationTimeUtc))
-            {
-                if (totalBytes <= limitBytes)
-                {
-                    break;
-                }
-                if (!string.IsNullOrWhiteSpace(preservePath) && string.Equals(directory.FullName, preservePath, StringComparison.OrdinalIgnoreCase))
-                {
-                    continue;
-                }
-                string resolved = Path.GetFullPath(directory.FullName);
-                if (!resolved.StartsWith(root, StringComparison.OrdinalIgnoreCase))
-                {
-                    continue;
-                }
-
-                try
-                {
-                    DeleteDirectoryTreeSafely(resolved);
-                    totalBytes -= size;
-                }
-                catch (Exception ex)
-                {
-                    LogApplicationIssue("Backup pruning", ex);
-                }
-            }
-        }
-        catch (Exception ex)
-        {
-            LogApplicationIssue("Backup pruning inventory", ex);
-        }
-    }
-
-    private static long GetDirectorySize(string path)
-    {
-        try
-        {
-            return InspectDirectoryTreeSafely(path).Files.Sum(file => new FileInfo(file).Length);
-        }
-        catch (Exception ex)
-        {
-            LogApplicationIssue("Directory size calculation", ex);
-            return 0;
         }
     }
 

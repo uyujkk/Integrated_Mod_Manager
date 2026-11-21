@@ -55,7 +55,6 @@ public sealed partial class MainWindow : IOnlineHost
     void IOnlineHost.RefreshDownloadTaskCard(DownloadTaskItem task) => RefreshDownloadTaskCard(task);
     void IOnlineHost.RefreshUpdatesPane() => RefreshUpdatesPane();
     void IOnlineHost.SetModUpdateStatus(UiMessage status) => SetModUpdateStatus(status);
-    void IOnlineHost.ExtractArchiveToDirectory(string archivePath, string destinationDirectory) => ExtractArchiveToDirectory(archivePath, destinationDirectory);
 
     HttpClient IOnlineHost.Http => _httpClient;
     AppDataStore IOnlineHost.DataStore => _appDataStore;
@@ -63,7 +62,5 @@ public sealed partial class MainWindow : IOnlineHost
 
     int IOnlineHost.ShortcutScanSafetyLimit => ShortcutScanSafetyLimit;
     IReadOnlyList<string> IOnlineHost.ImageExtensions => ImageExtensions;
-    bool IOnlineHost.IsSupportedArchiveFile(string path) => IsSupportedArchiveFile(path);
     string? IOnlineHost.FindPreviewImage(List<string> files) => _workspaceView.FindPreviewImage(files);
-    void IOnlineHost.DeleteDirectoryTreeSafely(string path) => DeleteDirectoryTreeSafely(path);
 }

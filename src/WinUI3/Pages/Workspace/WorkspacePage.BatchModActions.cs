@@ -70,7 +70,7 @@ public sealed partial class WorkspacePage
             {
                 string target = Path.Combine(folder, mod.Name);
                 for (int suffix = 2; Directory.Exists(target) || File.Exists(target); suffix++) target = Path.Combine(folder, $"{mod.Name} ({suffix})");
-                _host.CopyDirectoryTree(mod.Path, target);
+                _services.Install.CopyDirectoryTree(mod.Path, target);
                 count++;
             }
             return count;

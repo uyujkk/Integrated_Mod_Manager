@@ -11,6 +11,7 @@ internal sealed class AppServices
         Dialogs = new(Language);
         OnlineSource = new(Language);
         CharacterCatalog = new(OnlineSource);
+        Install = new(this);
     }
 
     public LanguageService Language { get; } = new();
@@ -22,6 +23,9 @@ internal sealed class AppServices
     public DeploymentService Deployment { get; } = new(AppContext.BaseDirectory);
     public DownloadService Downloads { get; } = new(AppContext.BaseDirectory);
     public LaunchService Launch { get; } = new();
+
+    /// <summary>Install transactions, conflict checks, archives and copy ownership records (stage J finish, step 4).</summary>
+    public InstallService Install { get; }
 
     /// <summary>The Settings page's state; the window writes results here and answers its requests.</summary>
     public SettingsViewModel Settings { get; } = new();

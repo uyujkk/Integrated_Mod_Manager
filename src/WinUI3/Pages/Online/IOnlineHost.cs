@@ -53,7 +53,6 @@ internal interface IOnlineHost
     void RefreshDownloadTaskCard(DownloadTaskItem task);
     void RefreshUpdatesPane();
     void SetModUpdateStatus(UiMessage status);
-    void ExtractArchiveToDirectory(string archivePath, string destinationDirectory);
 
     // The HTTP client, the local index and the online metadata service the window creates at startup.
     HttpClient Http { get; }
@@ -63,7 +62,5 @@ internal interface IOnlineHost
     // Shared values and helpers of the window.
     int ShortcutScanSafetyLimit { get; }
     IReadOnlyList<string> ImageExtensions { get; }
-    bool IsSupportedArchiveFile(string path);
     string? FindPreviewImage(List<string> files);
-    void DeleteDirectoryTreeSafely(string path);
 }

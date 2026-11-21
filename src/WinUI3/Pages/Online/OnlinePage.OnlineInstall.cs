@@ -76,7 +76,7 @@ public sealed partial class OnlinePage
         }
         if (cleanup.ExtractionPath is not null)
         {
-            try { if (Directory.Exists(cleanup.ExtractionPath)) _host.DeleteDirectoryTreeSafely(cleanup.ExtractionPath); }
+            try { if (Directory.Exists(cleanup.ExtractionPath)) _services.Install.DeleteDirectoryTreeSafely(cleanup.ExtractionPath); }
             catch (Exception ex) { _host.LogApplicationIssue("Owned online extraction cleanup", ex); }
         }
     }

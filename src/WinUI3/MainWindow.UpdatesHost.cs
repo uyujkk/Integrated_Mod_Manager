@@ -126,7 +126,7 @@ public sealed partial class MainWindow
                     if (_isApplyingBackupLimitSetting) return;
                     _installBackupLimitGb = UpdatesView.BackupLimitGb;
                     SaveShellConfig();
-                    await Task.Run(() => PruneInstallTransactionsByStorageLimit(null));
+                    await Task.Run(() => _services.Install.PruneInstallTransactionsByStorageLimit(null));
                     await RefreshInstallBackupListAsync();
                     break;
             }
@@ -160,6 +160,46 @@ public sealed partial class MainWindow
             case UpdatesAction.OpenCombinationPresets: OnOpenCombinationPresetsClicked(this, args); break;
             case UpdatesAction.RefreshBackups: OnRefreshBackupsClicked(this, args); break;
             case UpdatesAction.RestoreBackup when request.Item is string path: await RestoreInstallBackupAsync(path); break;
+        }
+    }
+
+    private async void OnRollbackLastInstallClicked(object sender, RoutedEventArgs e)
+    {
+        try
+        {
+            if (string.IsNullOrWhiteSpace(_services.Install.LastTransactionPath) || !Directory.Exists(_services.Install.LastTransactionPath))
+            {
+                RefreshConfigurationProfiles();
+                return;
+            }
+
+            if (!await ShowDangerConfirmAsync(
+                T("InstallTransactions.UndoTheMostRecentModCopy"),
+                T("InstallTransactions.UndoModChange"), T("Dialogs.Undo")))
+            {
+                return;
+            }
+
+            _workspaceView.SetBusyState(true);
+            try
+            {
+                await _services.Install.RollbackInstallTransactionAsync(_services.Install.LastTransactionPath, clearLastTransaction: true);
+                await _workspaceView.RefreshListsAsync();
+                ShowAppNotification(T("InstallTransactions.Restored"));
+            }
+            catch (Exception ex)
+            {
+                await ShowMessageAsync(T("InstallTransactions.RollbackFailed") + ex.Message, T("InstallTransactions.CannotRollBack"));
+            }
+            finally
+            {
+                _workspaceView.SetBusyState(false);
+                RefreshConfigurationProfiles();
+            }
+        }
+        catch (Exception ex)
+        {
+            ReportUiActionFailure("OnRollbackLastInstallClicked", ex);
         }
     }
 }
