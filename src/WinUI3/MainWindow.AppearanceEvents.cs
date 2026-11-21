@@ -17,7 +17,7 @@ public sealed partial class MainWindow
         // Shortcuts: binding descriptions and the page built in code.
         language.LanguageChanged += (_, _) =>
         {
-            _workspaceView.RefreshVisibleShortcutDescriptionsForLanguage();
+            _workspaceView?.RefreshVisibleShortcutDescriptionsForLanguage();
             RebuildShortcutPaneForLanguage();
         };
         language.LanguageChanged += (_, _) => RefreshSettingsPane();
@@ -32,11 +32,11 @@ public sealed partial class MainWindow
 
         AppearanceService appearance = _services.Appearance;
         // Mod workspace: the summary colours are set in code.
-        appearance.ThemeChanged += (_, _) => _workspaceView.RenderModSummary();
+        appearance.ThemeChanged += (_, _) => _workspaceView?.RenderModSummary();
         // Shell: the selected navigation item.
         appearance.ThemeChanged += (_, _) => RefreshPrimaryNavigationVisuals();
         // Mod workspace: the shortcut editor's key boxes (the Shortcuts page redraws its own cards).
-        appearance.ThemeChanged += (_, _) => _workspaceView.UpdateShortcutKeyFocusVisuals();
+        appearance.ThemeChanged += (_, _) => _workspaceView?.UpdateShortcutKeyFocusVisuals();
 
         appearance.DensityChanged += (_, _) => ApplyShellDensity();
         appearance.DensityChanged += (_, _) => ApplyWorkspaceDensity(appearance.IsCompact);
@@ -50,6 +50,7 @@ public sealed partial class MainWindow
 
     private void ApplyWorkspaceDensity(bool compact)
     {
+        if (_workspaceView is null) return;
         _workspaceView.FirstLevelListView.Padding = new Thickness(compact ? 3 : 6);
         _workspaceView.SecondLevelListView.Padding = new Thickness(compact ? 3 : 6);
         _workspaceView.ShortcutRowsPanel.Spacing = compact ? 6 : 10;

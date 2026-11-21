@@ -40,8 +40,6 @@ public sealed partial class MainWindow
 
         ApplyPrimaryNavigationContent();
 
-        ToolTipService.SetToolTip(_workspaceView.PreviewImage, T("Localization.ClickToViewFullSize"));
-        AutomationProperties.SetName(_workspaceView.PreviewImage, T("Localization.OpenFullSizeModPreview"));
         // The Online page labels itself once it exists (stage J finish, step 5b); the character list is kept without it.
         if (_onlineView is null) EnsureOnlineCharacterOptions(_services.Repositories.Selected);
         else _onlineView.ApplyWindowLanguage();
@@ -57,6 +55,22 @@ public sealed partial class MainWindow
         AppTitleBar.Subtitle = AppVersion;
 
 
+        if (_workspaceView is { } workspace) ApplyWorkspaceLanguage(workspace);
+        else
+        {
+            // As the page did with no character selected: the welcome line until a scan found characters.
+            ApplyShortcutPlaceholders();
+            RefreshLocalizedStates();
+            if (_services.Workspace.Characters.All.Count == 0) SetDefaultStatus();
+        }
+    }
+
+    // The Mod workspace's labels, the selected character or Mod in the new language, and its status line (from
+    // ApplyLanguage; also run when the page is made, stage J finish, step 7b).
+    private void ApplyWorkspaceLanguage(WorkspacePage _workspaceView)
+    {
+        ToolTipService.SetToolTip(_workspaceView.PreviewImage, T("Localization.ClickToViewFullSize"));
+        AutomationProperties.SetName(_workspaceView.PreviewImage, T("Localization.OpenFullSizeModPreview"));
         _workspaceView.RefreshButton.Label = T("Localization.Refresh");
         _workspaceView.ImportZipButton.Label = T("Localization.ImportMod");
         ToolTipService.SetToolTip(_workspaceView.ImportZipButton, T("Localization.ImportIntoTheSelectedFolder"));
@@ -88,7 +102,7 @@ public sealed partial class MainWindow
         _workspaceView.ModLinkTextBox.PlaceholderText = T("Localization.PasteTheWebLinkForThe");
         _workspaceView.PreviewFooterTextBlock.Text = T("Localization.ThePreviewShowsTheCurrentSecond");
         _workspaceView.OpenModLinkButton.Content = T("Localization.OpenLink");
-        RefreshCombinationProfileText();
+        RefreshCombinationProfileText(_workspaceView);
 
         _workspaceView.ProgressTextBlock.Text = string.IsNullOrWhiteSpace(_workspaceView.ProgressTextBlock.Text)
             ? T("Common.NoActiveCopyTask")
@@ -99,8 +113,8 @@ public sealed partial class MainWindow
         _workspaceView.UpdateShortcutRowVisibility();
         _workspaceView.UpdateLinkButtonState();
         RefreshLocalizedStates();
-        ApplyTextOverrides();
-        ApplyActionButtonPresentation();
+        ApplyTextOverrides(_workspaceView);
+        ApplyActionButtonPresentation(_workspaceView);
 
         if (_services.Workspace.Characters.Selected is { } firstItem)
         {
@@ -120,7 +134,7 @@ public sealed partial class MainWindow
         }
     }
 
-    private void ApplyTextOverrides()
+    private void ApplyTextOverrides(WorkspacePage _workspaceView)
     {
         _workspaceView.ImportZipButton.Label = T("Localization.ImportMod");
 
@@ -132,7 +146,7 @@ public sealed partial class MainWindow
         RefreshPersistentSlotControls();
     }
 
-    private void ApplyActionButtonPresentation()
+    private void ApplyActionButtonPresentation(WorkspacePage _workspaceView)
     {
         _workspaceView.CreateFirstLevelButton.Content = new FontIcon { Glyph = "\uE710", FontSize = 16 };
         _workspaceView.RenameFirstLevelButton.Content = new FontIcon { Glyph = "\uE70F", FontSize = 16 };
@@ -176,7 +190,7 @@ public sealed partial class MainWindow
         {
             foreach (SecondLevelFolderItem second in first.Children)
             {
-                second.State = _workspaceView.GetFolderCopyState(targetDir, second.Path);
+                second.State = _services.Workspace.FolderCopyState(targetDir, second.Path);
             }
         }
     }

@@ -12,7 +12,7 @@ public sealed partial class MainWindow : IWorkspaceHost
 {
     private void AttachWorkspacePageEvents()
     {
-        _workspaceView.OpenCombinationPresetsButton.Click += OnOpenCombinationPresetsClicked;
+        _workspaceView!.OpenCombinationPresetsButton.Click += OnOpenCombinationPresetsClicked;
     }
 
     FrameworkElement IWorkspaceHost.Root => RootGrid;
@@ -62,10 +62,17 @@ public sealed partial class MainWindow : IWorkspaceHost
     RepositoryPerformanceRecorder.Scope? IWorkspaceHost.MeasureRepositoryUi(RepositoryPerformanceOperation operation, int count) => MeasureRepositoryUi(operation, count);
 
     // The slot card is the workspace page's (stage J finish, step 6); the window and the services ask it to redraw.
-    private void RefreshPersistentSlotControls() => _workspaceView.RefreshPersistentSlotControls();
+    private void RefreshPersistentSlotControls() => _workspaceView?.RefreshPersistentSlotControls();
 
-    // Rescans the repository; the workspace page clears and redraws its lists around the scan.
-    private Task RefreshListsAsync() => _workspaceView.RefreshListsAsync();
+    // Rescans the repository; the workspace page, when it exists, clears and redraws its lists around the scan.
+    private Task RefreshListsAsync() => _workspaceView is { } page ? page.RefreshListsAsync() : _services.Workspace.ScanAsync();
+
+    // The workspace's presets, or without the page only the Updates page's undo line they used to set.
+    private void RefreshConfigurationProfiles()
+    {
+        if (_workspaceView is { } page) page.RefreshConfigurationProfiles();
+        else _services.Install.ShowUndoState();
+    }
 
     // Combination presets are a service and their card is the workspace page's (stage J finish, step 7); the window
     // locks its navigation and path boxes while one is saved, restored or bundled.
@@ -89,7 +96,7 @@ public sealed partial class MainWindow : IWorkspaceHost
         if (!_services.Combinations.IsApplying && !_services.Slots.IsRestoring)
         {
             NavigateToPrimarySection(PrimarySection.Repository);
-            _workspaceView.SetRepositoryWorkspaceViewV4(RepositoryWorkspaceView.Presets);
+            EnsureWorkspacePage().SetRepositoryWorkspaceViewV4(RepositoryWorkspaceView.Presets);
         }
     }
 }

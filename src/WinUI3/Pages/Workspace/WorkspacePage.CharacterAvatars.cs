@@ -1,9 +1,7 @@
-using IntegratedModManager.Core.Endfield;
 using IntegratedModManager.Core.Online;
 using IntegratedModManager.Core.Repository;
 using Microsoft.UI.Xaml;
 using Microsoft.UI.Xaml.Controls;
-using Microsoft.UI.Xaml.Media.Imaging;
 
 namespace ModFolderCopier.WinUI;
 

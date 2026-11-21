@@ -46,6 +46,15 @@ internal sealed partial class InstallService(AppServices services)
 
     public bool CanUndoLastTransaction => !string.IsNullOrWhiteSpace(LastTransactionPath) && Directory.Exists(LastTransactionPath);
 
+    /// <summary>The Updates page's undo button and its line (the workspace's preset card used to set them).</summary>
+    public void ShowUndoState()
+    {
+        bool canUndo = CanUndoLastTransaction;
+        services.Updates.SetRollback(canUndo, canUndo
+            ? T("ConfigurationProfiles.UndoCoversModDeploymentCombinationParameters")
+            : T("ConfigurationProfiles.ThereIsNoModOperationTo"));
+    }
+
     /// <summary>
     /// Lists links in the loader folder whose source is gone (deleted, renamed or moved
     /// outside the manager) and offers to remove just those links. Returns false only

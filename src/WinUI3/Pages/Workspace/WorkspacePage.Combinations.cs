@@ -92,10 +92,7 @@ public sealed partial class WorkspacePage
             : T("ConfigurationProfiles.Summary", selected.Name, selected.ModRelativePaths.Count, selected.PersistentStates.Sum(state => state.Values.Count))
                 + (selected.IncludesPersistentState ? T("ConfigurationProfiles.SummaryWithState") : T("ConfigurationProfiles.SummarySetOnly"));
 
-        bool canUndo = _services.Install.CanUndoLastTransaction;
-        _services.Updates.SetRollback(canUndo, canUndo
-            ? T("ConfigurationProfiles.UndoCoversModDeploymentCombinationParameters")
-            : T("ConfigurationProfiles.ThereIsNoModOperationTo"));
+        _services.Install.ShowUndoState();
         RefreshCombinationWorkspaceV4();
         RefreshCombinationBundleActions();
     }

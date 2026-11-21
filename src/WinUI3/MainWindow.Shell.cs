@@ -17,11 +17,11 @@ namespace ModFolderCopier.WinUI;
 
 public sealed partial class MainWindow
 {
-    private void RegisterTrackedTextInputs()
+    private void RegisterTrackedTextInputs(WorkspacePage page)
     {
         // The dashboard's path boxes are registered when that page is created (GetPage).
-        AttachTrackedTextInput(_workspaceView.FirstLevelSearchTextBox);
-        AttachTrackedTextInput(_workspaceView.ModLinkTextBox);
+        AttachTrackedTextInput(page.FirstLevelSearchTextBox);
+        AttachTrackedTextInput(page.ModLinkTextBox);
     }
 
     private void AttachTrackedTextInput(TextBox box)
@@ -90,7 +90,7 @@ public sealed partial class MainWindow
                 RefreshRepositoryActionButtons();
                 break;
             case PrimarySection.Repository:
-                _workspaceView.RefreshConfigurationProfiles();
+                RefreshConfigurationProfiles();
                 if (_pendingRepositoryRefresh)
                 {
                     _pendingRepositoryRefresh = false;
@@ -135,10 +135,8 @@ public sealed partial class MainWindow
 
     private void InitializePageHost()
     {
-        // Stage J7: the Mod workspace page, created with the window.
-        _pages[PrimarySection.Repository] = _workspaceView;
-        // Settings (J2), the dashboard (J4), Updates (J3), Shortcuts (J5) and, since stage J finish step 5b, the Online
-        // page (J6) are created the first time they are shown (stage J finish, step 1) and kept from then on. They talk to the window only through AppServices and their
+        // Settings (J2), the dashboard (J4), Updates (J3), Shortcuts (J5) and, since stage J finish steps 5b and 7b, the
+        // Online page (J6) and the Mod workspace (J7) are created the first time they are shown (stage J finish, step 1) and kept from then on. They talk to the window only through AppServices and their
         // view models and draw from the current state when they are made, so a language, theme or data change before
         // then needs no catching up.
     }
@@ -154,7 +152,8 @@ public sealed partial class MainWindow
             PrimarySection.Shortcuts => _shortcutsPage = new ShortcutsPage(_services),
             PrimarySection.Settings => new SettingsPage(_services),
             PrimarySection.Online => CreateOnlinePage(),
-            _ => throw new ArgumentOutOfRangeException(nameof(section), section, "The workspace page is made with the window.")
+            PrimarySection.Repository => CreateWorkspacePage(),
+            _ => throw new ArgumentOutOfRangeException(nameof(section), section, null)
         };
         _pages[section] = page;
         return page;
@@ -168,6 +167,42 @@ public sealed partial class MainWindow
         page.InitializeAfterCreation();
         return page;
     }
+
+    // The Mod workspace reaches the window only through IWorkspaceHost and AppServices. The scan, the status line and the
+    // path actions run without it (WorkspaceService); made later, it draws the lists already scanned.
+    private WorkspacePage CreateWorkspacePage()
+    {
+        var page = new WorkspacePage(_services, this);
+        _workspaceView = page;
+        AttachWorkspacePageEvents();
+        page.FirstLevelListView.ItemsSource = _services.Workspace.Characters.Visible;
+        page.SecondLevelListView.ItemsSource = _secondLevelItems;
+        RegisterTrackedTextInputs(page);
+        page.BuildShortcutRows();
+        page.LoadDefaultShortcutTemplate();
+        page.LoadLinkForCurrentMod(null);
+        try
+        {
+            page.InitializeRefinedWorkspace();
+            page.InitializeRepositoryWorkspaceV4();
+        }
+        catch (Exception ex)
+        {
+            TraceStartupStage("Refined workspace initialization failed: " + ex);
+            throw;
+        }
+        ApplyWorkspaceDensity(_services.Appearance.IsCompact);
+        // The status line keeps what the scan or an action wrote before the page existed.
+        string status = _services.Workspace.Status;
+        ApplyWorkspaceLanguage(page);
+        page.ShowLoadedLists();
+        if (status.Length > 0) _services.Workspace.Status = status;
+        page.UpdateRefinedWorkspaceLayout();
+        return page;
+    }
+
+    // An action that shows something in the Mod workspace makes the page if it does not exist yet.
+    private WorkspacePage EnsureWorkspacePage() => _workspaceView ?? (WorkspacePage)GetPage(PrimarySection.Repository);
 
     // The character list follows the repository whether or not the Online page exists (the page redraws its strip).
     private void EnsureOnlineCharacterOptions(WorkspaceRepository? repository)
@@ -245,7 +280,7 @@ public sealed partial class MainWindow
         ApplyTitleBarSearchVisibility();
         // The Settings and Updates pages lay themselves out when their own size changes.
         if (_currentPrimarySection == PrimarySection.Repository)
-            _workspaceView.UpdateRefinedWorkspaceLayout();
+            _workspaceView?.UpdateRefinedWorkspaceLayout();
 
         // The navigation view opens its labelled pane from 1440 px (ExpandedModeThresholdWidth) unless
         // the user collapsed it; below that it shows icons.
@@ -273,7 +308,7 @@ public sealed partial class MainWindow
 
     private void ApplyPrimaryNavigationContent()
     {
-        _workspaceView.UpdateRefinedWorkspaceLanguage();
+        _workspaceView?.UpdateRefinedWorkspaceLanguage();
         SetNavigationItem(DashboardNavButton, T("Shell.Dashboard"), T("Shell.Dashboard"));
         SetNavigationItem(RepositoryNavButton, T("Shell.Repositories"), T("Shell.Repositories"));
         SetNavigationItem(OnlineNavButton, T("Shell.Online"), T("Shell.OnlineMods"));
@@ -429,7 +464,7 @@ public sealed partial class MainWindow
 
             if (_services.Downloads.RestoredInterrupted > 0)
                 ShowAppNotification(T("Shell.InterruptedTasksRestored", _services.Downloads.RestoredInterrupted));
-            await _workspaceView.NotifyInterruptedImportsAsync();
+            await _services.Workspace.NotifyInterruptedImportsAsync();
             await ChooseFirstInstallGameAsync();
             // Waits for any startup dialog (including the update prompt below) before showing; the
             // getting-started tips come after what's new, so they never sit under a dialog.
@@ -461,8 +496,8 @@ public sealed partial class MainWindow
         UiCrashDiagnostics.RecordAction("Window closed", width: RootGrid.ActualWidth, height: RootGrid.ActualHeight, closed: true);
         _services.IsClosing = true;
         _services.Downloads.Persist();
-        _workspaceView._bundleOperationCancellation?.Cancel();
-        _workspaceView._existingModImportCancellation?.Cancel();
+        _workspaceView?._bundleOperationCancellation?.Cancel();
+        _workspaceView?._existingModImportCancellation?.Cancel();
         _services.IsClosing = true;
         _onlineView?.FinishClosing();
         _services.OnlineDownloads.DownloadActions.CancelPreparation();
@@ -493,7 +528,7 @@ public sealed partial class MainWindow
 
             if (controlDown && e.Key == VirtualKey.F)
             {
-                (_currentPrimarySection == PrimarySection.Online && _onlineView is not null ? _onlineView.OnlineSearchTextBox : _workspaceView.FirstLevelSearchTextBox).Focus(FocusState.Keyboard);
+                (_currentPrimarySection == PrimarySection.Online && _onlineView is not null ? _onlineView.OnlineSearchTextBox : _workspaceView?.FirstLevelSearchTextBox)?.Focus(FocusState.Keyboard);
                 e.Handled = true;
                 return;
             }
@@ -540,8 +575,7 @@ public sealed partial class MainWindow
 
             if (e.Key == VirtualKey.Enter)
             {
-                var item = _workspaceView.GetSelectedSecondLevelItem();
-                if (item is not null)
+                if (_workspaceView?.GetSelectedSecondLevelItem() is { } item)
                 {
                     await _workspaceView.ToggleDirectoryCopyAsync(item);
                     e.Handled = true;

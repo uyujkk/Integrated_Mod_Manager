@@ -14,9 +14,11 @@ namespace ModFolderCopier.WinUI;
 
 public sealed partial class WorkspacePage
 {
-    internal void AnimateImageReveal(UIElement image)
+    internal void AnimateImageReveal(UIElement image) => AnimateImageReveal(_services, image);
+
+    internal static void AnimateImageReveal(AppServices services, UIElement image)
     {
-        if (_services.Appearance.ReduceAnimations())
+        if (services.Appearance.ReduceAnimations())
         {
             ElementCompositionPreview.GetElementVisual(image).Opacity = 1f;
             return;
@@ -670,6 +672,19 @@ public sealed partial class WorkspacePage
         }
     }
 
+    // A page made after the scan (stage J finish, step 7b) draws what it found: the counts, the characters and the first
+    // one selected, as the scan's end did. The status line keeps the scan's result, as it did then.
+    internal void ShowLoadedLists()
+    {
+        FirstCountTextBlock.Text = _services.Workspace.Characters.All.Count.ToString();
+        SecondCountTextBlock.Text = _services.Workspace.Characters.All.Sum(first => first.Children.Count).ToString();
+        UpdateWorkspaceProgress();
+        if (_services.Workspace.Characters.All.Count == 0) return;
+        string status = _services.Workspace.Status;
+        ApplyFirstLevelFilter();
+        _services.Workspace.Status = status;
+    }
+
     internal void PopulateSecondLevelList(FirstLevelFolderItem? firstItem, bool preserveStatus = false)
     {
         using var timing = _host.MeasureRepositoryUi(RepositoryPerformanceOperation.Populate, firstItem?.Children.Count ?? 0);
@@ -1160,21 +1175,7 @@ public sealed partial class WorkspacePage
         return ModDeploymentLayout.DeployedPath(targetDir, sourceDirectoryPath);
     }
 
-    internal string GetFolderCopyState(string targetDir, string directoryPath)
-    {
-        if (string.IsNullOrWhiteSpace(targetDir))
-        {
-            return StateNotConfiguredText;
-        }
-
-        string targetPath = GetTargetDirectoryPath(targetDir, directoryPath);
-        if (!Directory.Exists(targetPath))
-        {
-            return StateMissingText;
-        }
-
-        return DirectoryLinkDeployment.IsDirectoryLink(targetPath) ? StateLinkedText : StateCopiedText;
-    }
+    internal string GetFolderCopyState(string targetDir, string directoryPath) => _services.Workspace.FolderCopyState(targetDir, directoryPath);
 
     internal SecondLevelFolderItem? GetSelectedSecondLevelItem()
     {
@@ -1240,8 +1241,16 @@ public sealed partial class WorkspacePage
         PreviewHintTextBlock.Visibility = Visibility.Visible;
     }
 
-    internal string? FindPreviewImage(List<string> files)
+    internal string? FindPreviewImage(List<string> files) => FindPreviewImage(files, _host.ImageExtensions);
+
+    internal static string? FindPreviewImage(List<string> files, IReadOnlyCollection<string> imageExtensions)
     {
+        bool IsImageFile(string path)
+        {
+            string extension = Path.GetExtension(path);
+            return !string.IsNullOrEmpty(extension) && imageExtensions.Contains(extension.ToLowerInvariant());
+        }
+
         string? namedPreview = files.FirstOrDefault(file =>
         {
             string name = Path.GetFileNameWithoutExtension(file).ToLowerInvariant();

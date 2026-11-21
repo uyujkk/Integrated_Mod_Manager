@@ -49,7 +49,7 @@ public sealed partial class MainWindow
         log.Rekey(repository.CharacterAvatarBindings, plan.MapName);
         log.Rekey(repository.CharacterSelectionOverrides, plan.MapName);
         _services.Install.RenameCharacter(repository, plan, log);
-        _workspaceView.RenameCharacterTags(repository, plan, log);
+        _services.Workspace.RenameCharacterTags(repository, plan, log);
     }
 
     // The character-follow references of the repository: keyed by character name, with each character's preferred Mod.

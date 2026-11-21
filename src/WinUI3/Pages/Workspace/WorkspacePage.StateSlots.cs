@@ -1,6 +1,5 @@
 using IntegratedModManager.Core.Deployment;
 using IntegratedModManager.Core.Presets;
-using IntegratedModManager.Core.Repository;
 using Microsoft.UI.Xaml.Controls;
 using Microsoft.UI.Xaml;
 using System.Text;
@@ -318,7 +317,6 @@ public sealed partial class WorkspacePage
         }
     }
 
-
     private void RefreshPersistentSlotMoreMenu(WorkspaceRepository? repository, string? relative)
     {
         PersistentSlotMoreButton.Content = T("PersistentVariants.More");
@@ -628,14 +626,4 @@ public sealed partial class WorkspacePage
         return values.Where(value => !transient.Contains(value) || keepAnyway.Contains(value)).ToArray();
     }
 
-    /// <summary>A character was renamed (#108): its Mods' tags and the tag filters naming it follow (moved from the window).</summary>
-    internal void RenameCharacterTags(WorkspaceRepository repository, CharacterRenamePlan plan, ReferenceUndoLog log)
-    {
-        if (_localLibraries.TryGetValue(WorkspaceIdentity.Library(repository.Id, repository.SourcePath), out LocalLibraryState? tags))
-        {
-            log.Rekey(tags.ModTags, plan.MapRelative);
-            foreach (LocalModFilter filter in tags.Filters)
-                log.Rewrite(() => filter.Character, value => filter.Character = value, plan.MapRelative);
-        }
-    }
 }

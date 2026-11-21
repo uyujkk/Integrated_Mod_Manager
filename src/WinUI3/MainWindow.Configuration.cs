@@ -415,7 +415,7 @@ public sealed partial class MainWindow
 
         if (!File.Exists(_services.ShellConfig.ConfigPath))
         {
-            _workspaceView.LoadDefaultShortcutTemplate();
+            _workspaceView?.LoadDefaultShortcutTemplate();
             return;
         }
 
@@ -446,8 +446,8 @@ public sealed partial class MainWindow
             SaveConfig();
         }
 
-        _workspaceView.LoadDefaultShortcutTemplate();
-        _workspaceView.LoadLinkForCurrentMod(null);
+        _workspaceView?.LoadDefaultShortcutTemplate();
+        _workspaceView?.LoadLinkForCurrentMod(null);
     }
 
     private bool SaveConfig()

@@ -17,8 +17,28 @@ public sealed partial class MainWindow
         };
         Paths.PropertyChanged += (_, args) =>
         {
-            if (args.PropertyName == nameof(RepositoryPathsViewModel.UseDirectoryLinks)) _workspaceView.OnLinkDeploymentChanged();
+            if (args.PropertyName == nameof(RepositoryPathsViewModel.UseDirectoryLinks)) OnLinkDeploymentChanged();
         };
+    }
+
+    // The dashboard's copy/link switch (moved from the workspace page, stage J finish, step 7b).
+    private void OnLinkDeploymentChanged()
+    {
+        if (_isApplyingRepositoryDeploymentMode)
+        {
+            return;
+        }
+
+        WorkspaceRepository? repository = _services.Repositories.Selected;
+        if (repository is null)
+        {
+            return;
+        }
+
+        repository.UseDirectoryLinks = Paths.UseDirectoryLinks;
+        SaveShellConfig();
+        RefreshLocalizedStates();
+        _workspaceView?.OnLinkDeploymentChanged();
     }
 
     private void OnDashboardActionRequested(object? sender, DashboardActionRequest request)
@@ -211,9 +231,10 @@ public sealed partial class MainWindow
         SaveSelectedRepositoryFromInputs();
         _currentPrimarySection = PrimarySection.Repository;
         ApplyShellState(refreshRepository: false);
-        _workspaceView.FirstLevelSearchTextBox.Text = string.Empty;
+        WorkspacePage workspace = EnsureWorkspacePage();
+        workspace.FirstLevelSearchTextBox.Text = string.Empty;
         await RefreshListsAsync();
-        _workspaceView.SelectFirstLevelByPath(path);
+        workspace.SelectFirstLevelByPath(path);
     }
 
     private void CheckModUpdatesFromDashboard()

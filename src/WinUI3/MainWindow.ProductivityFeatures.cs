@@ -382,7 +382,7 @@ public sealed partial class MainWindow
                 return;
             }
 
-            _workspaceView.SetBusyState(true);
+            _workspaceView?.SetBusyState(true);
             try
             {
                 await _services.Install.RollbackInstallTransactionAsync(backupPath, clearLastTransaction: true);
@@ -396,7 +396,7 @@ public sealed partial class MainWindow
             }
             finally
             {
-                _workspaceView.SetBusyState(false);
+                _workspaceView?.SetBusyState(false);
             }
         }
         catch (Exception ex)
@@ -612,7 +612,7 @@ public sealed partial class MainWindow
             {
                 cancellationToken.ThrowIfCancellationRequested();
                 firstItem.Children.Add(new SecondLevelFolderItem(
-                    mod.ModPath, mod.Files.ToList(), _workspaceView.GetFolderCopyState(targetDir, mod.ModPath)));
+                    mod.ModPath, mod.Files.ToList(), _services.Workspace.FolderCopyState(targetDir, mod.ModPath)));
             }
             loadedItems.Add(firstItem);
         }

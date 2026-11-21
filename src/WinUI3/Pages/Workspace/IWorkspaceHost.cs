@@ -8,8 +8,9 @@ namespace ModFolderCopier.WinUI;
 
 /// <summary>
 /// What the Mod workspace page uses from the window (stage J7, decided 2026-11-10). State slots, preset pictures
-/// (stage J finish, step 6) and combination presets (step 7) have since become services in AppServices, which the page
-/// uses directly; see UI-Structure-Plan.md, "J7 后续".
+/// (stage J finish, step 6), combination presets (step 7a) and the scan, status line and path actions (step 7b) have
+/// since become services in AppServices, which the page uses directly; the window creates the page the first time the
+/// workspace is shown. See UI-Structure-Plan.md, "J7 后续".
 /// </summary>
 internal interface IWorkspaceHost
 {

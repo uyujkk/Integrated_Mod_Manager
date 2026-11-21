@@ -1540,23 +1540,9 @@ public sealed partial class WorkspacePage
         parent.Children.Add(element);
     }
 
-    // The dashboard's copy/link switch.
+    // The dashboard's copy/link switch changed the repository (the window saved it): the selected Mod's state again.
     internal void OnLinkDeploymentChanged()
     {
-        if (_host.IsApplyingRepositoryDeploymentMode)
-        {
-            return;
-        }
-
-        WorkspaceRepository? repository = _services.Repositories.Selected;
-        if (repository is null)
-        {
-            return;
-        }
-
-        repository.UseDirectoryLinks = Paths.UseDirectoryLinks;
-        _host.SaveShellConfig();
-        _host.RefreshLocalizedStates();
         ApplySecondLevelSelectionState(GetSelectedSecondLevelItem(), preserveStatus: true);
     }
 }

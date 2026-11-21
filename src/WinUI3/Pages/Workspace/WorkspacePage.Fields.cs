@@ -14,7 +14,6 @@ public sealed partial class WorkspacePage
     internal string StateCopiedText => T("Localization.Copied");
     internal string StateLinkedText => T("Localization.Linked");
     internal string StateMissingText => T("Localization.NotDeployed");
-    internal string StateNotConfiguredText => T("Localization.NotConfigured");
     internal string StateNotSelectedText => T("Common.NotSelected");
     internal TextBox? _activeShortcutKeyBox;
     internal bool _isLoadingBindings;
