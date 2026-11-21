@@ -6,6 +6,14 @@ namespace IntegratedModManager.UI.Tests;
 // The Settings page evens out its two columns on a wide window and keeps one column in its own order on a narrow one.
 public sealed class SettingsLayoutTests
 {
+    // The side column's groups that may move, in their order: each one's title and last card.
+    private static readonly (string Title, string LastCard)[] MovableGroups =
+    [
+        ("SettingsPlaceholderTitleTextBlock", "ClearGameBananaSignInButton"),
+        ("DiagnosticsTitleTextBlock", "FeedbackDiscordSettingsCard"),
+        ("ProjectResourcesTitleTextBlock", "AboutExpander"),
+    ];
+
     private static void ScrollToEnd(AppSession app)
     {
         AutomationElement scroller = app.Find("SettingsScrollViewer");
@@ -44,25 +52,36 @@ public sealed class SettingsLayoutTests
         using AppSession app = AppSession.Configured((shell, _) => shell["CurrentPrimarySection"] = "settings").Start();
         app.Find("AboutExpander", TimeSpan.FromSeconds(10));
 
-        // Maximized, the main column ends far above the side column unless a side group moves under it.
+        // Maximized, the main column ends far above the side column unless a side group moves under it. Which groups
+        // move depends on their heights at that width (a new card or longer text changes the best choice), so this
+        // checks what the balance promises rather than naming a group.
         app.MainWindow.Patterns.Window.Pattern.SetWindowVisualState(WindowVisualState.Maximized);
         Thread.Sleep(1500);
         ScrollToEnd(app);
-        var feedback = app.Find("FeedbackDiscordSettingsCard").BoundingRectangle;
-        var about = app.Find("AboutExpander").BoundingRectangle;
         var releaseNotes = app.Find("ReleaseNotesExpander").BoundingRectangle;
-        Assert.True(about.Left < feedback.Left, "The project group should move to the main column");
-        Assert.True(about.Top > releaseNotes.Bottom, "Moved groups come after the main column's own groups");
-        Assert.True(Math.Abs(about.Bottom - feedback.Bottom) < Math.Abs(feedback.Bottom - releaseNotes.Bottom),
-            "The columns should end closer together than without the move");
+        var groups = MovableGroups
+            .Select(group => (Top: app.Find(group.Title).BoundingRectangle.Top, Card: app.Find(group.LastCard).BoundingRectangle))
+            .ToArray();
+        var moved = groups.Where(group => group.Card.Left == releaseNotes.Left).ToArray();
+        var kept = groups.Where(group => group.Card.Left != releaseNotes.Left).ToArray();
+        Assert.NotEmpty(moved);
+        Assert.All(moved, group => Assert.True(group.Top > releaseNotes.Bottom, "Moved groups come after the main column's own groups"));
+        Assert.True(moved.Zip(moved.Skip(1)).All(pair => pair.First.Card.Bottom < pair.Second.Top), "Moved groups keep their order");
+        double mainEnd = moved.Max(group => group.Card.Bottom);
+        double sideEnd = kept.Length > 0 ? kept.Max(group => group.Card.Bottom) : app.Find("OpenGitHubButton").BoundingRectangle.Bottom;
+        // Without the move, the side column would end lower by the moved groups' height and the main column at the
+        // release notes.
+        double unbalanced = sideEnd + moved.Sum(group => group.Card.Bottom - group.Top) - releaseNotes.Bottom;
+        Assert.True(Math.Abs(mainEnd - sideEnd) < unbalanced,
+            $"The columns should end closer together than without the move: main {mainEnd}, side {sideEnd}, without {unbalanced}");
 
         // One column: every side group back in its own order, after the main column.
         app.MainWindow.Patterns.Window.Pattern.SetWindowVisualState(WindowVisualState.Normal);
         app.Resize(1000, 800);
         Thread.Sleep(1500);
         ScrollToEnd(app);
-        feedback = app.Find("FeedbackDiscordSettingsCard").BoundingRectangle;
-        about = app.Find("AboutExpander").BoundingRectangle;
+        var feedback = app.Find("FeedbackDiscordSettingsCard").BoundingRectangle;
+        var about = app.Find("AboutExpander").BoundingRectangle;
         Assert.Equal(feedback.Left, about.Left);
         Assert.True(about.Top > feedback.Bottom, "The project group should come last again");
         app.AssertNoErrors();
