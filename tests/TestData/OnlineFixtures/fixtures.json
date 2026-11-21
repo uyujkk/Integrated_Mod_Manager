@@ -421,6 +421,11 @@
    "prefix": "https://gamebanana.com/mods/",
    "file": "mod-page.html",
    "contentType": "text/html"
+  },
+  {
+   "prefix": "https://files.example.invalid/sample-990100.zip",
+   "file": "archives/sample-990100.zip",
+   "contentType": "application/zip"
   }
  ]
 }

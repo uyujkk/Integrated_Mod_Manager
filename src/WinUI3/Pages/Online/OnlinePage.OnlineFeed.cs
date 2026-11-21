@@ -185,7 +185,7 @@ public sealed partial class OnlinePage
             query = query.Where(mod => MatchesOnlineSearch(mod, _services.Online.Page.SearchText));
         }
 
-        if (_services.Online.Page.AuthorWorkFilter == 1) query = query.Where(mod => FindInstalledOnlineMod(mod) is not null);
+        if (_services.Online.Page.AuthorWorkFilter == 1) query = query.Where(mod => _services.OnlineDownloads.FindInstalledOnlineMod(mod) is not null);
         else if (_services.Online.Page.AuthorWorkFilter == 2) query = query.Where(IsSavedOnlineMod);
 
         return OnlineBrowseOrder.Arrange(query, _services.Online.Page.SortMode).ToList();
@@ -711,41 +711,13 @@ public sealed partial class OnlinePage
     private void AdaptGameBananaCategoryMod(OnlineModCard card, bool useEndfieldMetadata)
     {
         string categoryName = card.CharacterName;
-        card.CharacterName = ResolveOnlineCharacterName(categoryName, card.Title, useEndfieldMetadata);
-        card.IsCharacterNameInferred = IsGenericOnlineCharacterName(categoryName)
+        card.CharacterName = _services.OnlineDownloads.ResolveOnlineCharacterName(categoryName, card.Title, useEndfieldMetadata);
+        card.IsCharacterNameInferred = OnlineDownloadService.IsGenericOnlineCharacterName(categoryName)
             && !string.Equals(card.CharacterName, categoryName, StringComparison.OrdinalIgnoreCase);
         if (string.IsNullOrWhiteSpace(card.Author))
         {
             card.Author = T("OnlineFeed.UnknownAuthor");
         }
-    }
-
-
-    internal async Task<OnlineModCard?> FetchGameBananaModCardAsyncV2(
-        int itemId, bool useEndfieldMetadata = false, CancellationToken cancellationToken = default)
-    {
-        GameBananaModMetadata metadata = await _host.Metadata.GetModAsync(itemId, cancellationToken);
-        string category = string.IsNullOrWhiteSpace(metadata.CharacterName) ? T("OnlineFeed.Uncategorized") : metadata.CharacterName;
-        string character = ResolveOnlineCharacterName(category, metadata.Title, useEndfieldMetadata);
-        OnlineDownloadCandidate? file = OnlineDownloadSelectionPolicy.SelectDefault(metadata.DownloadFiles);
-        return new OnlineModCard
-        {
-            ItemId = itemId, Title = metadata.Title, CharacterName = character,
-            CategoryId = metadata.CategoryId > 0 ? metadata.CategoryId.ToString(CultureInfo.InvariantCulture) : string.Empty,
-            IsCharacterNameInferred = IsGenericOnlineCharacterName(category)
-                && !string.Equals(character, category, StringComparison.OrdinalIgnoreCase),
-            RootCategoryName = metadata.RootCategoryName,
-            Author = string.IsNullOrWhiteSpace(metadata.Author) ? T("OnlineFeed.UnknownAuthor") : metadata.Author,
-            AuthorId = metadata.AuthorId,
-            Likes = metadata.Likes, Views = metadata.Views, Downloads = metadata.Downloads,
-            HotnessScore = GameBananaListingParser.Hotness(metadata.Likes, metadata.Views, metadata.Downloads),
-            PreviewUrl = metadata.PreviewUrl, ProfileUrl = metadata.ProfileUrl,
-            DownloadUrl = file?.DownloadUrl ?? metadata.FallbackDownloadUrl,
-            DownloadFileName = file?.FileName ?? string.Empty, DownloadFiles = metadata.DownloadFiles.ToList(),
-            DownloadFileId = file?.FileId ?? string.Empty,
-            FileSizeBytes = file?.FileSizeBytes ?? 0, HasUpdates = metadata.HasUpdates,
-            UpdatedAt = GameBananaJson.UnixTime(metadata.UpdatedEpoch, DateTimeOffset.Now)
-        };
     }
 
     private string GetGameBananaDownloadMetricCacheFile(int itemId)
@@ -874,17 +846,10 @@ public sealed partial class OnlinePage
     private bool MatchesOnlineSearch(OnlineModCard mod, string searchText)
     {
         EndfieldCharacterInfo? character = _services.OnlineSource.IsEndfield(_services.Repositories.Selected)
-            ? FindEndfieldCharacter(mod.CharacterName) : null;
+            ? _services.OnlineDownloads.FindEndfieldCharacter(mod.CharacterName) : null;
         return OnlineBrowseStateAdapter.MatchesSearch(mod.Title, mod.CharacterName, mod.Author,
             searchText, character?.AllNames);
     }
-
-
-
-
-
-
-
 
     private async void OnOnlinePrevPageClicked(object sender, RoutedEventArgs e)
     {

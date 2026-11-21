@@ -1,4 +1,3 @@
-using IntegratedModManager.Core.Deployment;
 using IntegratedModManager.Core.Endfield;
 using IntegratedModManager.Core.Online;
 using Microsoft.UI.Xaml;
@@ -23,14 +22,14 @@ public sealed partial class OnlinePage
                 Content = T("OnlineCharacters.AllCharacters"),
                 Tag = string.Empty
             });
-            if (CurrentOnlineCategories() is { CharacterTop: { } characterTop } index && index.CharacterTopId != OnlineRepositoryCategoryId())
+            if (_services.OnlineDownloads.CurrentOnlineCategories() is { CharacterTop: { } characterTop } index && index.CharacterTopId != _services.OnlineDownloads.OnlineRepositoryCategoryId())
                 OnlineCharacterComboBox.Items.Add(new ComboBoxItem { Content = T("OnlineCategories.AllOfTop", characterTop.Name), Tag = AllCharacterTopKey });
 
             foreach (OnlineCharacterOption character in visibleCharacters)
             {
                 OnlineCharacterComboBox.Items.Add(new ComboBoxItem
                 {
-                    Content = GetOnlineCharacterDisplayName(character),
+                    Content = _services.OnlineDownloads.GetOnlineCharacterDisplayName(character),
                     Tag = character.Key
                 });
             }
@@ -57,7 +56,7 @@ public sealed partial class OnlinePage
         return source
             .OrderByDescending(character => _host.IsFavoriteCharacter(character.Key))
             .ThenBy(character => character.WikiOrder)
-            .ThenBy(character => GetOnlineCharacterDisplayName(character), StringComparer.CurrentCultureIgnoreCase)
+            .ThenBy(character => _services.OnlineDownloads.GetOnlineCharacterDisplayName(character), StringComparer.CurrentCultureIgnoreCase)
             .ToList();
     }
 
@@ -109,7 +108,7 @@ public sealed partial class OnlinePage
         foreach (OnlineModCard mod in mods)
         {
             string name = mod.CharacterName?.Trim() ?? string.Empty;
-            if (string.IsNullOrWhiteSpace(name) || IsGenericOnlineCharacterName(name))
+            if (string.IsNullOrWhiteSpace(name) || OnlineDownloadService.IsGenericOnlineCharacterName(name))
             {
                 continue;
             }
@@ -204,19 +203,12 @@ public sealed partial class OnlinePage
         }
     }
 
-    private string GetOnlineCharacterDisplayName(OnlineCharacterOption character)
-    {
-        return IsChineseUi
-            ? character.DisplayNameZh
-            : character.DisplayNameEn;
-    }
-
     internal void RefreshOnlineCharacterAvatarStrip()
     {
         EnsureOnlineCharacterOptionsForRepository(_services.Repositories.Selected);
         IReadOnlyList<OnlineCharacterOption> visibleCharacters = GetVisibleOnlineCharacterOptions();
         string characterSignature = string.Join(";", visibleCharacters.Select(item => $"{item.Key}:{item.DisplayNameZh}:{item.DisplayNameEn}:{item.CategoryId}:{item.AvatarUrl}:{item.WikiOrder}"));
-        OnlineCategory? allTop = CurrentOnlineCategories() is { CharacterTop: { } top } categories && categories.CharacterTopId != OnlineRepositoryCategoryId() ? top : null;
+        OnlineCategory? allTop = _services.OnlineDownloads.CurrentOnlineCategories() is { CharacterTop: { } top } categories && categories.CharacterTopId != _services.OnlineDownloads.OnlineRepositoryCategoryId() ? top : null;
         string signature = $"{_services.Language.Current}|{_services.Appearance.IsDark}|{_isLoadingOnlineMods}|{_services.Online.Page.CharacterFilter}|{_services.Online.Page.TotalCount}|horizontal={_useHorizontalOnlineCharacterRail}|{characterSignature}"
             + $"|allTop={allTop?.Name}:{ShowsAllOfCharacterTop()}";
         if (string.Equals(signature, _onlineCharacterStripSignature, StringComparison.Ordinal))
@@ -259,7 +251,7 @@ public sealed partial class OnlinePage
                 : null;
             OnlineCharacterAvatarPanel.Children.Add(CreateOnlineCharacterButton(
                 character.Key,
-                GetOnlineCharacterDisplayName(character),
+                _services.OnlineDownloads.GetOnlineCharacterDisplayName(character),
                 character.AvatarUrl,
                 characterModCount,
                 avatarRequestVersion,
@@ -268,7 +260,7 @@ public sealed partial class OnlinePage
 
         string currentRole = string.IsNullOrWhiteSpace(_services.Online.Page.CharacterFilter)
             ? T("OnlineCharacters.All")
-            : GetOnlineCharacterDisplayName(_services.Online.Page.CharacterFilter);
+            : _services.OnlineDownloads.GetOnlineCharacterDisplayName(_services.Online.Page.CharacterFilter);
         OnlineCharacterRailHintTextBlock.Text = T("OnlineCharacters.CategoriesCurrent", visibleCharacters.Count, currentRole);
     }
 
@@ -431,33 +423,10 @@ public sealed partial class OnlinePage
             ? label
             : $"{characterOption.DisplayNameZh} / {characterOption.DisplayNameEn}";
         ToolTipService.SetToolTip(button, string.IsNullOrWhiteSpace(character) ? T("OnlineCharacters.ShowAllCharacters")
-            : character == AllCharacterTopKey ? T("OnlineCategories.AllOfTopHint", CurrentOnlineCategories()?.CharacterTop?.Name ?? label) : tooltip);
+            : character == AllCharacterTopKey ? T("OnlineCategories.AllOfTopHint", _services.OnlineDownloads.CurrentOnlineCategories()?.CharacterTop?.Name ?? label) : tooltip);
         AutomationProperties.SetName(button, string.IsNullOrWhiteSpace(character) ? T("OnlineCharacters.AllCharacters") : label);
         button.Click += async (_, _) => await _host.RunUiActionAsync("SelectOnlineCharacterAsync", () => SelectOnlineCharacterAsync(character));
         return character == AllCharacterTopKey ? button : WrapCharacterButtonWithFavorite(button, character);
-    }
-
-    private string GetOnlineCharacterDisplayName(EndfieldCharacterInfo character)
-    {
-        return IsChineseUi ? character.ChineseName : character.EnglishName;
-    }
-
-    private string GetOnlineCharacterDisplayName(string characterName)
-    {
-        OnlineCharacterOption? option = _services.Online.Page.CharacterOptions.FirstOrDefault(item =>
-            string.Equals(item.Key, characterName, StringComparison.OrdinalIgnoreCase));
-        if (option is not null)
-        {
-            return GetOnlineCharacterDisplayName(option);
-        }
-
-        if (_services.OnlineSource.IsEndfield(_services.Repositories.Selected))
-        {
-            EndfieldCharacterInfo? character = FindEndfieldCharacter(characterName);
-            return character is null ? characterName : GetOnlineCharacterDisplayName(character);
-        }
-
-        return characterName;
     }
 
     private bool DoesOnlineModMatchCharacter(string characterKey, string modCharacterName)
@@ -487,58 +456,6 @@ public sealed partial class OnlinePage
             Aliases = [modCharacterName]
         };
         return OnlineCharacterCatalogMatcher.MatchScore(character, candidate) >= 0.82;
-    }
-
-    private string ResolveOnlineCharacterName(string? categoryName, string title, bool useEndfieldMetadata)
-    {
-        string normalizedCategory = categoryName?.Trim() ?? string.Empty;
-        if (useEndfieldMetadata)
-        {
-            EndfieldCharacterInfo? categoryCharacter = FindEndfieldCharacter(normalizedCategory);
-            if (categoryCharacter is not null)
-            {
-                return categoryCharacter.EnglishName;
-            }
-        }
-
-        if (!string.IsNullOrWhiteSpace(normalizedCategory)
-            && !GenericOnlineCharacterNames.Contains(normalizedCategory))
-        {
-            return normalizedCategory;
-        }
-
-        if (useEndfieldMetadata)
-        {
-            EndfieldCharacterInfo? titleCharacter = EndfieldCharacterCatalog.BuiltIn.FirstOrDefault(character =>
-                character.AllNames.Any(alias => OnlineCharacterCatalogMatcher.ContainsAlias(title, alias)));
-            if (titleCharacter is not null)
-            {
-                return titleCharacter.EnglishName;
-            }
-        }
-
-        return "Uncategorized";
-    }
-
-    private EndfieldCharacterInfo? FindEndfieldCharacter(string? name)
-    {
-        if (string.IsNullOrWhiteSpace(name))
-        {
-            return null;
-        }
-
-        string normalized = OnlineCharacterCatalogMatcher.NormalizeLookup(name);
-        return EndfieldCharacterCatalog.BuiltIn.FirstOrDefault(character =>
-            character.AllNames.Any(alias => string.Equals(
-                OnlineCharacterCatalogMatcher.NormalizeLookup(alias),
-                normalized,
-                StringComparison.OrdinalIgnoreCase)));
-    }
-
-    private static bool IsGenericOnlineCharacterName(string? categoryName)
-    {
-        return string.IsNullOrWhiteSpace(categoryName)
-            || GenericOnlineCharacterNames.Contains(categoryName.Trim());
     }
 
     private async void OnOnlineCharacterSelectionChanged(object sender, SelectionChangedEventArgs e)
@@ -630,101 +547,4 @@ public sealed partial class OnlinePage
         RefreshOnlinePaneV2();
     }
 
-    private IReadOnlyCollection<string> GetCharacterFolderAliases(OnlineModCard mod)
-    {
-        var aliases = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
-        void AddAlias(string? value)
-        {
-            if (!string.IsNullOrWhiteSpace(value) && !IsGenericOnlineCharacterName(value))
-            {
-                aliases.Add(value.Trim());
-            }
-        }
-
-        AddAlias(mod.CharacterName);
-
-        string normalizedCharacterName = OnlineCharacterCatalogMatcher.NormalizeLookup(mod.CharacterName);
-        OnlineCharacterOption? option = _services.Online.Page.CharacterOptions.FirstOrDefault(item =>
-            (!string.IsNullOrWhiteSpace(mod.CategoryId)
-                && string.Equals(item.CategoryId, mod.CategoryId, StringComparison.OrdinalIgnoreCase))
-            || string.Equals(OnlineCharacterCatalogMatcher.NormalizeLookup(item.Key), normalizedCharacterName, StringComparison.OrdinalIgnoreCase)
-            || item.Aliases.Any(alias => string.Equals(
-                OnlineCharacterCatalogMatcher.NormalizeLookup(alias),
-                normalizedCharacterName,
-                StringComparison.OrdinalIgnoreCase)));
-        if (option is not null)
-        {
-            AddAlias(option.Key);
-            AddAlias(option.DisplayNameZh);
-            AddAlias(option.DisplayNameEn);
-            foreach (string alias in option.Aliases)
-            {
-                AddAlias(alias);
-            }
-        }
-
-        EndfieldCharacterInfo? endfieldCharacter = FindEndfieldCharacter(mod.CharacterName)
-            ?? EndfieldCharacterCatalog.BuiltIn.FirstOrDefault(character =>
-                !string.IsNullOrWhiteSpace(mod.CategoryId)
-                && string.Equals(
-                    character.GameBananaCategoryId,
-                    mod.CategoryId,
-                    StringComparison.OrdinalIgnoreCase));
-        if (endfieldCharacter is not null)
-        {
-            foreach (string alias in endfieldCharacter.AllNames)
-            {
-                AddAlias(alias);
-            }
-        }
-
-        return aliases;
-    }
-
-    private (string? Chinese, string? English) GetCharacterFolderNames(OnlineModCard mod)
-    {
-        string normalized = OnlineCharacterCatalogMatcher.NormalizeLookup(mod.CharacterName);
-        OnlineCharacterOption? option = _services.Online.Page.CharacterOptions.FirstOrDefault(item =>
-            (!string.IsNullOrWhiteSpace(mod.CategoryId) && string.Equals(item.CategoryId, mod.CategoryId, StringComparison.OrdinalIgnoreCase))
-            || string.Equals(OnlineCharacterCatalogMatcher.NormalizeLookup(item.Key), normalized, StringComparison.OrdinalIgnoreCase));
-        EndfieldCharacterInfo? endfield = FindEndfieldCharacter(mod.CharacterName)
-            ?? EndfieldCharacterCatalog.BuiltIn.FirstOrDefault(character => !string.IsNullOrWhiteSpace(mod.CategoryId)
-                && string.Equals(character.GameBananaCategoryId, mod.CategoryId, StringComparison.OrdinalIgnoreCase));
-        string? chinese = endfield?.ChineseName ?? option?.DisplayNameZh;
-        string? english = endfield?.EnglishName ?? option?.DisplayNameEn;
-        // A bare site category name still names the folder in its own script.
-        if (!IsGenericOnlineCharacterName(mod.CharacterName))
-        {
-            if (mod.CharacterName.Any(character => character is >= '一' and <= '鿿')) chinese ??= mod.CharacterName;
-            else english ??= mod.CharacterName;
-        }
-        return (chinese, english);
-    }
-
-    private CharacterFolderPlan PlanCharacterFolder(OnlineModCard mod, string repositoryPath, IReadOnlyCollection<string> aliases)
-    {
-        // Issue #129: weapons, UI, other… go to a folder named after the category, planned and created like a character's.
-        if (GetOnlineCategoryFolderName(mod) is { } category)
-        {
-            return CategoryFolderPlanner.Plan(repositoryPath, Directory.GetDirectories(repositoryPath),
-                Directory.GetFiles(repositoryPath).Select(Path.GetFileName).OfType<string>().ToArray(), category);
-        }
-        (string? chinese, string? english) = GetCharacterFolderNames(mod);
-        return CharacterFolderPlanner.Plan(repositoryPath,
-            Directory.GetDirectories(repositoryPath),
-            Directory.GetFiles(repositoryPath).Select(Path.GetFileName).OfType<string>().ToArray(),
-            aliases, mod.CharacterName, chinese, english, IsChineseUi);
-    }
-
-    private string CharacterFolderReasonText(CharacterFolderPlan plan, string character) => plan.Reason switch
-    {
-        CharacterFolderReason.Ambiguous => T("OnlineCharacters.SeveralFoldersMayBelongToChoose", character),
-        CharacterFolderReason.UnknownCharacter => T("OnlineCharacters.TheModSCharacterIsUnknown"),
-        CharacterFolderReason.MultipleCharacters => T("OnlineCharacters.CoversSeveralCharactersChooseADestination", character),
-        CharacterFolderReason.MixedNamingLanguage => T("OnlineCharacters.TheRepositoryMixesChineseAndEnglish"),
-        CharacterFolderReason.NoNameInLanguage => T("OnlineCharacters.NoNameForInTheRepository", character),
-        CharacterFolderReason.InvalidName => T("OnlineCharacters.CannotBeUsedAsAFolder", character),
-        CharacterFolderReason.NameConflict => T("OnlineCharacters.AFileWithThatNameAlready"),
-        _ => string.Empty
-    };
 }

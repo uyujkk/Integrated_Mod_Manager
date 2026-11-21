@@ -59,7 +59,6 @@ internal interface IWorkspaceHost
     string? SelectedConfigurationProfileId { get; }
     List<TextBox> ShortcutActionBoxes { get; }
     List<TextBox> ShortcutKeyBoxes { get; }
-    Dictionary<string, TrackedModOrigin> TrackedModOrigins { get; }
 
     // Character rename migration (#108): the references the window still owns (the install pipeline is in
     // AppServices.Install since stage J finish, step 4).

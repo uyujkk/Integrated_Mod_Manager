@@ -43,7 +43,7 @@ public sealed partial class WorkspacePage
         if (_existingModImportBusy) return;
         WorkspaceRepository? repository = _services.Repositories.Selected;
         if (repository is null || !Directory.Exists(repository.SourcePath)) return;
-        OnlineDownloadContext context = OnlinePage.CaptureOnlineDownloadContext(repository);
+        OnlineDownloadContext context = OnlineDownloadService.CaptureOnlineDownloadContext(repository);
         string[] characters = Directory.GetDirectories(context.RepositoryPath).OrderBy(Path.GetFileName).ToArray();
         if (characters.Length == 0)
         {
@@ -64,7 +64,7 @@ public sealed partial class WorkspacePage
                 return;
             }
             long bytes = plan.Items.Sum(item => item.Snapshot.Files.Sum(file => file.Length));
-            if (!await ExistingModImportDialogs.PreviewAsync(_services, plan, destination, OnlinePage.FormatFileSize(bytes), _host.Root.ActualHeight)) return;
+            if (!await ExistingModImportDialogs.PreviewAsync(_services, plan, destination, OnlineDownloadService.FormatFileSize(bytes), _host.Root.ActualHeight)) return;
             string manifest = Path.Combine(ExistingImportRecordsRoot, Guid.NewGuid().ToString("N") + ".json");
             _services.Online.Preferences.LastImportManifest = manifest;
             _host.SaveShellConfig();
@@ -102,7 +102,7 @@ public sealed partial class WorkspacePage
             if (!PathSafety.IsStrictlyInside(manifest, ExistingImportRecordsRoot))
                 throw new InvalidDataException("Import record is outside the application records folder.");
             var record = RecoveryJsonFile.Read<ExistingModImportManifest>(manifest);
-            if (!OnlinePage.IsPathInsideDirectory(record.DestinationRoot, repository.SourcePath))
+            if (!OnlineDownloadService.IsPathInsideDirectory(record.DestinationRoot, repository.SourcePath))
                 throw new InvalidDataException(T("ExistingModImport.SwitchToTheOriginalRepositoryBefore"));
             if (!await ExistingModImportDialogs.ConfirmUndoAsync(_services)) return;
             _existingModImportBusy = true;
@@ -111,7 +111,7 @@ public sealed partial class WorkspacePage
             await ShowMessageAsync(T("ExistingModImport.RemovedUnchangedCopiesPreservedModifiedOr", result.Removed.Length, result.Preserved.Length)
                 + "\n" + string.Join("\n", result.Preserved), T("ExistingModImport.UndoResult"));
         }
-        catch (Exception ex) { await _host.OnlineView.ReportOnlineActionErrorAsync(ex.Message, T("ExistingModImport.CannotUndoImport"), ex); }
+        catch (Exception ex) { await _services.OnlineDownloads.ReportOnlineActionErrorAsync(ex.Message, T("ExistingModImport.CannotUndoImport"), ex); }
         finally { _existingModImportBusy = false; }
     }
 
@@ -129,9 +129,9 @@ public sealed partial class WorkspacePage
                 return;
             }
             if (await ExistingModImportDialogs.ChooseInterruptedAsync(_services, candidates) is not { } manifest) return;
-            if (!OnlinePage.IsPathInsideDirectory(manifest, ExistingImportRecordsRoot)) throw new InvalidDataException("Import record is outside the application records folder.");
+            if (!OnlineDownloadService.IsPathInsideDirectory(manifest, ExistingImportRecordsRoot)) throw new InvalidDataException("Import record is outside the application records folder.");
             var record = RecoveryJsonFile.Read<ExistingModImportManifest>(manifest);
-            if (!OnlinePage.IsPathInsideDirectory(record.DestinationRoot, repository.SourcePath))
+            if (!OnlineDownloadService.IsPathInsideDirectory(record.DestinationRoot, repository.SourcePath))
                 throw new InvalidDataException(T("ExistingModImport.SwitchToTheOriginalRepositoryTo"));
             ExistingModImportRecoveryResult result = await Task.Run(() => ExistingModImportService.Recover(manifest, record.DestinationRoot));
             if (result.Recovered.Length > 0) { _services.Online.Preferences.LastImportManifest = manifest; _host.SaveShellConfig(); }
@@ -139,7 +139,7 @@ public sealed partial class WorkspacePage
             await ShowMessageAsync(T("ExistingModImport.RegisteredCompleteCopiesPreservedAmbiguousOr", result.Recovered.Length, result.Preserved.Length, result.StagingFolders.Length)
                 + "\n" + string.Join("\n", result.Preserved.Concat(result.StagingFolders)), T("ExistingModImport.ImportRecoveryCheck"));
         }
-        catch (Exception ex) { _host.LogApplicationIssue("Recover organized import", ex); await _host.OnlineView.ReportOnlineActionErrorAsync(ex.Message, T("ExistingModImport.CannotInspectImportRecord"), ex); }
+        catch (Exception ex) { _host.LogApplicationIssue("Recover organized import", ex); await _services.OnlineDownloads.ReportOnlineActionErrorAsync(ex.Message, T("ExistingModImport.CannotInspectImportRecord"), ex); }
         finally { _existingModImportBusy = false; }
     }
 
@@ -153,7 +153,7 @@ public sealed partial class WorkspacePage
             {
                 var record = RecoveryJsonFile.Read<ExistingModImportManifest>(path);
                 if (record.Version == 2 && !record.Complete && record.Pending is { Count: > 0 }
-                    && (repositoryPath is null || OnlinePage.IsPathInsideDirectory(record.DestinationRoot, repositoryPath))) records.Add(path);
+                    && (repositoryPath is null || OnlineDownloadService.IsPathInsideDirectory(record.DestinationRoot, repositoryPath))) records.Add(path);
             }
             catch (Exception ex) { _host.LogApplicationIssue("Inspect interrupted import record", ex); }
         }

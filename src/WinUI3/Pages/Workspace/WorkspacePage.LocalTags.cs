@@ -121,7 +121,7 @@ public sealed partial class WorkspacePage
                     var repo = _services.Repositories.Selected;
                     if (repo is null) return;
                     string role = Path.Combine(repo.SourcePath, filter.Character.Replace('/', Path.DirectorySeparatorChar));
-                    if (!Directory.Exists(role) || !OnlinePage.IsPathInsideDirectory(role, repo.SourcePath))
+                    if (!Directory.Exists(role) || !OnlineDownloadService.IsPathInsideDirectory(role, repo.SourcePath))
                     { await ShowMessageAsync(T("LocalTags.TheOriginalCharacterFolderIsUnavailable"), T("LocalTags.CannotApplyFilter")); return; }
                     FirstLevelSearchTextBox.Text = "";
                     SelectFirstLevelByPath(role);

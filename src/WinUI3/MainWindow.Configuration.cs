@@ -118,7 +118,7 @@ public sealed partial class MainWindow
             _presetPreviewDefaultRegion = config?.PresetPreviewDefaultRegion is { IsValid: true } region ? region : null;
             _shortcuts.OverlayTextColor = ShortcutOverlayController.FormatTextColor(ShortcutOverlayController.ParseTextColor(config?.ShortcutOverlayTextColor));
             _shortcuts.OverlayAutoContrast = config?.OverlayAutoContrast ?? false;
-            _lastModUpdateCheckUtc = TryParseDateTimeOffset(config?.LastModUpdateCheckUtc);
+            _services.Tracking.LastCheckUtc = TryParseDateTimeOffset(config?.LastModUpdateCheckUtc);
             _latestReleaseTag = config?.LatestReleaseTag;
             _latestReleaseTitle = config?.LatestReleaseTitle;
             _latestReleaseBody = config?.LatestReleaseBody;
@@ -187,7 +187,7 @@ public sealed partial class MainWindow
             _updateCheckInterval = UpdateCheckInterval.Manual;
             _lastUpdateCheckUtc = null;
             _modUpdateCheckInterval = UpdateCheckInterval.Manual;
-            _lastModUpdateCheckUtc = null;
+            _services.Tracking.LastCheckUtc = null;
             _latestReleaseTag = null;
             _latestReleaseTitle = null;
             _latestReleaseBody = null;
@@ -287,7 +287,7 @@ public sealed partial class MainWindow
                 PresetPreviewFrameLocked = _presetPreviewFrameLocked,
                 PresetPreviewDefaultRegion = _presetPreviewDefaultRegion,
                 ShortcutOverlayTextColor = _shortcuts.OverlayTextColor,
-                LastModUpdateCheckUtc = _lastModUpdateCheckUtc?.ToString("O"),
+                LastModUpdateCheckUtc = _services.Tracking.LastCheckUtc?.ToString("O"),
                 LatestReleaseTag = _latestReleaseTag,
                 LatestReleaseTitle = _latestReleaseTitle,
                 LatestReleaseBody = _latestReleaseBody,
@@ -411,7 +411,7 @@ public sealed partial class MainWindow
     {
         _modBindings.Clear();
         _modLinks.Clear();
-        _trackedModOrigins.Clear();
+        _services.Tracking.Origins.Clear();
 
         if (!File.Exists(_services.ShellConfig.ConfigPath))
         {
@@ -433,7 +433,7 @@ public sealed partial class MainWindow
 
             foreach ((string modPath, List<ShortcutBinding> bindings) in config.Bindings) _modBindings[modPath] = bindings;
             foreach ((string modPath, string link) in config.ModLinks) _modLinks[modPath] = link;
-            foreach ((string modPath, TrackedModOrigin origin) in config.ModOrigins) _trackedModOrigins[modPath] = origin;
+            foreach ((string modPath, TrackedModOrigin origin) in config.ModOrigins) _services.Tracking.Origins[modPath] = origin;
         }
         catch (Exception ex)
         {
@@ -441,7 +441,7 @@ public sealed partial class MainWindow
             _workspaceView.StatusTextBlock.Text = T("Configuration.FailedToLoadConfigOlderConfig");
         }
 
-        if (_onlineView.DeduplicateTrackedModOrigins())
+        if (_services.Tracking.Deduplicate())
         {
             SaveConfig();
         }
@@ -480,7 +480,7 @@ public sealed partial class MainWindow
         };
         foreach ((string modPath, List<ShortcutBinding> bindings) in _modBindings) config.Bindings[modPath] = bindings;
         foreach ((string modPath, string link) in _modLinks) config.ModLinks[modPath] = link;
-        foreach ((string modPath, TrackedModOrigin origin) in _trackedModOrigins) config.ModOrigins[modPath] = origin;
+        foreach ((string modPath, TrackedModOrigin origin) in _services.Tracking.Origins) config.ModOrigins[modPath] = origin;
 
         WriteConfigurationTextWithBackup(_services.ShellConfig.ConfigPath, LegacyConfigFile.Format(config));
     }

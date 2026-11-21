@@ -4,9 +4,10 @@ using IntegratedModManager.Core.Shortcuts;
 
 namespace ModFolderCopier.WinUI;
 
-public sealed partial class OnlinePage
+// What an online install records: the tracking origin, shortcut bindings and links (moved from OnlinePage).
+internal sealed partial class OnlineDownloadService
 {
-    private sealed class PreparedOnlineInstallMetadata
+    internal sealed class PreparedOnlineInstallMetadata
     {
         public required TrackedModOrigin Origin { get; init; }
         public required List<ShortcutBinding> Bindings { get; init; }
@@ -16,7 +17,7 @@ public sealed partial class OnlinePage
     internal static OnlineDownloadContext CaptureOnlineDownloadContext(WorkspaceRepository? repository)
         => new(repository?.Id ?? string.Empty, repository?.SourcePath ?? string.Empty, repository?.Name ?? string.Empty);
 
-    private async Task<PreparedOnlineInstallMetadata> PrepareOnlineInstallMetadataAsync(
+    internal async Task<PreparedOnlineInstallMetadata> PrepareOnlineInstallMetadataAsync(
         string extractFolder, OnlineModCard mod, OnlineModDetails details, CancellationToken cancellationToken)
     {
         cancellationToken.ThrowIfCancellationRequested();
@@ -54,19 +55,19 @@ public sealed partial class OnlinePage
         };
     }
 
-    private void CommitOnlineInstallMetadata(string extractFolder, PreparedOnlineInstallMetadata metadata)
+    internal void CommitOnlineInstallMetadata(string extractFolder, PreparedOnlineInstallMetadata metadata)
     {
         // One UI-thread, non-awaiting commit. Keep other installations' records; a source ID
         // identifies the website entry, not a unique local installation.
         _host.ModLinks[extractFolder] = metadata.Origin.ProfileUrl;
-        _host.TrackedModOrigins[extractFolder] = metadata.Origin;
+        _services.Tracking.Origins[extractFolder] = metadata.Origin;
         if (metadata.Bindings.Count > 0)
             _host.ModBindings[extractFolder] = metadata.Bindings;
         if (!_host.SaveConfig())
             metadata.PersistenceWarning = new IOException("Installation tracking could not be persisted.");
     }
 
-    private void CleanupOnlineDownload(OnlineDownloadSession session, bool canceled)
+    internal void CleanupOnlineDownload(OnlineDownloadSession session, bool canceled)
     {
         OnlineDownloadCleanup cleanup = session.GetCleanup(canceled);
         if (cleanup.ArchivePath is not null)

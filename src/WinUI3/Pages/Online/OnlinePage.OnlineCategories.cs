@@ -1,4 +1,3 @@
-using IntegratedModManager.Core.Deployment;
 using IntegratedModManager.Core.Online;
 using Microsoft.UI.Xaml;
 using Microsoft.UI.Xaml.Automation;
@@ -18,10 +17,6 @@ public sealed partial class OnlinePage
     // The category the last list request was for ("" for the characters), to notice when the categories arrive later.
     private string _requestedOnlineScope = string.Empty;
 
-    private string OnlineRepositoryCategoryId() => _services.OnlineSource.CategoryId(_services.Repositories.Selected);
-
-    private OnlineCategoryIndex? CurrentOnlineCategories() => _services.OnlineCategories.Current(OnlineRepositoryCategoryId());
-
     private string SelectedOnlineTopId(OnlineCategoryIndex index)
     {
         string topId = _services.Online.Page.CategoryTopId;
@@ -38,7 +33,7 @@ public sealed partial class OnlinePage
     /// <summary>Whether the selected category uses the character rail.</summary>
     private bool IsOnlineCharacterView()
     {
-        OnlineCategoryIndex? index = CurrentOnlineCategories();
+        OnlineCategoryIndex? index = _services.OnlineDownloads.CurrentOnlineCategories();
         return index?.CharacterTop is null || (SelectedOnlineTopId(index) == index.CharacterTopId
             && SelectedOnlineSubcategoryId(index, index.CharacterTopId) is null);
     }
@@ -46,15 +41,15 @@ public sealed partial class OnlinePage
     /// <summary>"All" of the character top-level category, characters or not; only when it is not the repository category itself.</summary>
     private bool ShowsAllOfCharacterTop()
     {
-        OnlineCategoryIndex? index = CurrentOnlineCategories();
+        OnlineCategoryIndex? index = _services.OnlineDownloads.CurrentOnlineCategories();
         return _services.Online.Page.ShowAllOfCharacterTop && IsOnlineCharacterView()
-            && index?.CharacterTop is not null && index.CharacterTopId != OnlineRepositoryCategoryId();
+            && index?.CharacterTop is not null && index.CharacterTopId != _services.OnlineDownloads.OnlineRepositoryCategoryId();
     }
 
     /// <summary>The category the list comes from when it is not the character list; null for the characters as before.</summary>
     private string? OnlineScopeCategoryId()
     {
-        OnlineCategoryIndex? index = CurrentOnlineCategories();
+        OnlineCategoryIndex? index = _services.OnlineDownloads.CurrentOnlineCategories();
         if (index is null) return null;
         if (ShowsAllOfCharacterTop()) return index.CharacterTopId;
         string topId = SelectedOnlineTopId(index);
@@ -63,7 +58,7 @@ public sealed partial class OnlinePage
     }
 
     /// <summary>The name of the category shown instead of characters, for the status line; null in the character list.</summary>
-    private string? OnlineScopeCategoryName() => CurrentOnlineCategories()?.Find(OnlineScopeCategoryId())?.Name;
+    private string? OnlineScopeCategoryName() => _services.OnlineDownloads.CurrentOnlineCategories()?.Find(OnlineScopeCategoryId())?.Name;
 
     // Called when the browse session changes (another repository): its remembered category, if it still exists.
     private void RestoreOnlineCategorySelection(string? sessionKey)
@@ -95,9 +90,9 @@ public sealed partial class OnlinePage
         try
         {
             if (!_services.OnlineSource.IsGameBanana(_services.OnlineSource.Source(_services.Repositories.Selected))) return;
-            string categoryId = OnlineRepositoryCategoryId();
+            string categoryId = _services.OnlineDownloads.OnlineRepositoryCategoryId();
             OnlineCategoryIndex? index = await _services.OnlineCategories.EnsureAsync(categoryId, forceReload);
-            if (index is null || _services.IsClosing || categoryId != OnlineRepositoryCategoryId()) return;
+            if (index is null || _services.IsClosing || categoryId != _services.OnlineDownloads.OnlineRepositoryCategoryId()) return;
             await _services.OnlineCategories.EnsureSubcategoriesAsync(categoryId, SelectedOnlineTopId(index));
         }
         catch (Exception ex)
@@ -108,7 +103,7 @@ public sealed partial class OnlinePage
 
     private void OnOnlineCategoriesChanged(object? sender, string repositoryCategoryId)
     {
-        if (_services.IsClosing || repositoryCategoryId != OnlineRepositoryCategoryId()) return;
+        if (_services.IsClosing || repositoryCategoryId != _services.OnlineDownloads.OnlineRepositoryCategoryId()) return;
         PopulateOnlineCategoryBars();
         PopulateOnlineCharacterOptions();
         _onlineCharacterStripSignature = null;
@@ -124,7 +119,7 @@ public sealed partial class OnlinePage
 
     private void PopulateOnlineCategoryBars()
     {
-        OnlineCategoryIndex? index = CurrentOnlineCategories();
+        OnlineCategoryIndex? index = _services.OnlineDownloads.CurrentOnlineCategories();
         _applyingOnlineCategoryBars = true;
         try
         {
@@ -181,7 +176,7 @@ public sealed partial class OnlinePage
         try
         {
             if (_applyingOnlineCategoryBars || sender.SelectedItem?.Tag is not string topId) return;
-            OnlineCategoryIndex? index = CurrentOnlineCategories();
+            OnlineCategoryIndex? index = _services.OnlineDownloads.CurrentOnlineCategories();
             string newTop = topId == index?.CharacterTopId ? string.Empty : topId;
             if (newTop == _services.Online.Page.CategoryTopId && (newTop.Length > 0 || !_services.Online.Page.ShowAllOfCharacterTop)) return;
             _services.Online.Page.CategoryTopId = newTop;
@@ -197,7 +192,7 @@ public sealed partial class OnlinePage
     {
         try
         {
-            if (_applyingOnlineCategoryBars || sender.SelectedItem?.Tag is not string subId || CurrentOnlineCategories() is not { } index) return;
+            if (_applyingOnlineCategoryBars || sender.SelectedItem?.Tag is not string subId || _services.OnlineDownloads.CurrentOnlineCategories() is not { } index) return;
             bool allOfTop = subId.Length == 0 && SelectedOnlineTopId(index) == index.CharacterTopId
                 && index.CharacterTopId != index.RepositoryCategoryId;
             string newSub = subId == index.RepositoryCategoryId ? string.Empty : subId;
@@ -228,17 +223,6 @@ public sealed partial class OnlinePage
         await CloseOnlineDetailPaneAsync();
         await LoadOnlineModsAsync(forceReload: false);
     }
-
-    /// <summary>The category a Mod outside the characters goes to (its folder name before it is made safe); null for a character Mod.</summary>
-    private string? GetOnlineCategoryFolderName(OnlineModCard mod)
-        => OnlineCategoryPlacement.CategoryName(CurrentOnlineCategories(), mod.RootCategoryName, mod.CategoryId, mod.CharacterName);
-
-    private string CategoryFolderHint(CharacterFolderPlan plan, string category) => plan.Action switch
-    {
-        CharacterFolderAction.UseExisting => T("OnlineCategories.FolderRecognized", category, Path.GetFileName(plan.Path)),
-        CharacterFolderAction.Create => T("OnlineCategories.FolderCreate", category, plan.Path),
-        _ => T("OnlineCategories.FolderAsk", category)
-    };
 
     private void InitializeOnlineCategoryBars()
     {

@@ -54,8 +54,8 @@ public sealed partial class MainWindow
 
         log.Rekey(_modBindings, plan.MapFullPath);
         log.Rekey(_modLinks, plan.MapFullPath);
-        log.Rekey(_trackedModOrigins, plan.MapFullPath);
-        foreach (TrackedModOrigin origin in _trackedModOrigins.Values)
+        log.Rekey(_services.Tracking.Origins, plan.MapFullPath);
+        foreach (TrackedModOrigin origin in _services.Tracking.Origins.Values)
             log.Rewrite(() => origin.Path, value => origin.Path = value, plan.MapFullPath);
 
         log.Rekey(repository.CharacterAvatarBindings, plan.MapName);

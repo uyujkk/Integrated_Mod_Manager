@@ -46,32 +46,6 @@ public sealed partial class OnlinePage
     }
     // Tasks restored from the history file have only the stored Chinese and English status.
     internal string DownloadTaskStatusText(DownloadTaskItem task) => DownloadTaskViews.StatusText(task, _services.Language);
-    internal static readonly HashSet<string> GenericOnlineCharacterNames = new(StringComparer.OrdinalIgnoreCase)
-    {
-        "operator", "operators", "character", "characters", "skin", "skins",
-        "other", "others", "misc", "miscellaneous", "uncategorized", "unclassified"
-    };
-    /// <summary>A folder the user may choose to have created (issue #6); created only after confirmation.</summary>
-    internal sealed record NewCharacterFolderChoice(string Path);
-    internal static string NormalizeShortcut(string? shortcut)
-    {
-        return string.Join("+", (shortcut ?? string.Empty)
-            .Split('+', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries)
-            .Select(part =>
-            {
-                if (string.Equals(part, "control", StringComparison.OrdinalIgnoreCase))
-                {
-                    return "Ctrl";
-                }
-
-                if (string.Equals(part, "menu", StringComparison.OrdinalIgnoreCase))
-                {
-                    return "Alt";
-                }
-
-                return part.Length == 1 ? part.ToUpperInvariant() : char.ToUpperInvariant(part[0]) + part[1..].ToLowerInvariant();
-            }));
-    }
     internal const int OnlineDisplayPageSize = 40;
     // How long a page may wait for its download counts before it is shown without them.
     internal static readonly TimeSpan OnlineDownloadCountInlineBudget = TimeSpan.FromSeconds(2);
@@ -147,7 +121,6 @@ public sealed partial class OnlinePage
     internal OnlineModCard? _activeOnlineDetailMod;
     internal bool _animateOnlineCardsOnNextRefresh;
     internal string? _blockedOnlineAutoLoadConfigKey;
-    internal string? _foregroundDownloadTaskId;
     internal bool _isApplyingOnlineCharacterSelection;
     internal bool _isLoadingOnlineMods;
     internal string? _lastLoadedOnlineConfigKey;

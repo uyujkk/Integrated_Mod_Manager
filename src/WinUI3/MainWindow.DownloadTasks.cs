@@ -1,73 +1,21 @@
-using IntegratedModManager.Core.Configuration;
 using IntegratedModManager.Core.Online;
 using Microsoft.UI.Xaml;
 using Microsoft.UI.Xaml.Controls;
-using Windows.System;
 
 namespace ModFolderCopier.WinUI;
 
 public sealed partial class MainWindow
 {
-    private DownloadTaskItem CreateDownloadTask(OnlineModCard mod, string destinationPath)
+    private DownloadTaskItem CreateDownloadTask(OnlineModCard mod, string destinationPath) => _services.Downloads.CreateTask(mod, destinationPath);
+
+    private void UpdateDownloadTask(DownloadTaskItem task, DownloadTaskState state, double progress, UiMessage status, bool forceRefresh = false)
+        => _services.Downloads.UpdateTask(task, state, progress, status, forceRefresh);
+
+    // A task's card follows its state: in the navigation flyout and on the Updates page, and on the Online page's cards.
+    private void OnDownloadTaskRefreshRequested(object? sender, (DownloadTaskItem Task, bool Finished) args)
     {
-        var task = new DownloadTaskItem
-        {
-            Title = mod.Title,
-            SourceIdentity = OnlinePage.GetOnlineDownloadIdentity(mod),
-            DestinationPath = destinationPath,
-            State = DownloadTaskState.Queued,
-            Status = M("DownloadTasks.WaitingToStart"),
-            StatusZh = UiText.Chinese("DownloadTasks.WaitingToStart"),
-            StatusEn = UiText.English("DownloadTasks.WaitingToStart")
-        };
-        _services.Downloads.Tasks.Insert(0, task);
-        while (_services.Downloads.Tasks.Count > 30)
-        {
-            DownloadTaskItem? oldestFinished = _services.Downloads.Tasks.LastOrDefault(item =>
-                item.State is DownloadTaskState.Completed or DownloadTaskState.Failed or DownloadTaskState.Canceled);
-            if (oldestFinished is null)
-            {
-                break;
-            }
-            _services.Downloads.Tasks.Remove(oldestFinished);
-            oldestFinished.Cancellation.Dispose();
-        }
-        RefreshDownloadTaskCenter();
-        return task;
-    }
-
-    private void UpdateDownloadTask(
-        DownloadTaskItem task,
-        DownloadTaskState state,
-        double progress,
-        UiMessage status,
-        bool forceRefresh = false)
-    {
-        if (!DownloadProgressPolicy.CanApply(task.State, state))
-        {
-            return;
-        }
-
-        bool phaseChanged = task.State != state;
-        task.State = state;
-        task.Progress = DownloadProgressPolicy.MergeProgress(task.Progress, progress);
-        task.Status = status;
-        task.StatusZh = status.Resolve(UiLanguagePolicy.Chinese);
-        task.StatusEn = status.Resolve(UiLanguagePolicy.English);
-        if (!_services.IsClosing && (phaseChanged || DownloadProgressPolicy.IsTerminal(state))) _onlineView.PersistDownloadTasks();
-
-        DateTimeOffset now = DateTimeOffset.UtcNow;
-        if (!forceRefresh && now - task.LastUiRefreshUtc < TimeSpan.FromMilliseconds(125))
-        {
-            return;
-        }
-        task.LastUiRefreshUtc = now;
-        DispatcherQueue.TryEnqueue(() =>
-        {
-            if (_services.IsClosing) return;
-            RefreshDownloadTaskCard(task);
-            _onlineView.RefreshOnlineCardStates(refreshInstalled: DownloadProgressPolicy.IsTerminal(task.State));
-        });
+        RefreshDownloadTaskCard(args.Task);
+        _onlineView.RefreshOnlineCardStates(refreshInstalled: args.Finished);
     }
 
     // The Updates page lists the finished tasks, the navigation the running ones; both follow the service.
@@ -100,7 +48,7 @@ public sealed partial class MainWindow
             }
 
             if (task.State is DownloadTaskState.Failed or DownloadTaskState.Canceled && task.RetryRequest is not null)
-                await _onlineView.RetryOnlineDownloadAsync(task);
+                await _services.OnlineDownloads.RetryOnlineDownloadAsync(task);
             else OpenDirectory(task.DestinationPath, T("DownloadTasks.DownloadFolder"));
         }
         catch (Exception ex)
@@ -161,7 +109,7 @@ public sealed partial class MainWindow
     }
 
     private void RefreshDownloadTaskCardView(DownloadTaskItem task, DownloadTaskCardView view)
-        => DownloadTaskViews.Refresh(task, view, _services.Language, _onlineView._onlineDownloadActions.IsPreparing);
+        => DownloadTaskViews.Refresh(task, view, _services.Language, _services.OnlineDownloads._onlineDownloadActions.IsPreparing);
 
     // Navigation summary: always present so the history stays one click away; the badge and
     // bar follow the running downloads.
@@ -212,15 +160,8 @@ public sealed partial class MainWindow
 
     private void OnClearDownloadTasksClicked(object sender, RoutedEventArgs e)
     {
-        foreach (DownloadTaskItem task in _services.Downloads.Tasks
-            .Where(item => item.State is DownloadTaskState.Completed or DownloadTaskState.Failed or DownloadTaskState.Canceled)
-            .ToList())
-        {
-            _services.Downloads.Tasks.Remove(task);
-            task.Cancellation.Dispose();
-        }
-        RefreshDownloadTaskCenter();
+        _services.Downloads.ClearFinished();
         _onlineView.RefreshOnlineCardStates();
-        _onlineView.PersistDownloadTasks();
+        _services.Downloads.Persist();
     }
 }

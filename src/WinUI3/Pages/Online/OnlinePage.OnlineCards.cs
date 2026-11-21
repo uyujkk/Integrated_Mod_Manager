@@ -481,9 +481,9 @@ public sealed partial class OnlinePage
     {
         var model = new OnlineModTileViewModel(mod,
             openPage: () => _host.RunUiActionAsync("_host.OpenExternalUrlAsync", () => _services.Dialogs.OpenExternalUrlAsync(mod.ProfileUrl, T("Common.OpenPageFailed"))),
-            download: () => _host.RunUiActionAsync("DownloadAndExtractOnlineModAsync", () => DownloadAndExtractOnlineModAsync(mod)))
+            download: () => _host.RunUiActionAsync("_services.OnlineDownloads.DownloadAndExtractOnlineModAsync", () => _services.OnlineDownloads.DownloadAndExtractOnlineModAsync(mod)))
         {
-            CharacterLabel = GetOnlineCharacterDisplayName(mod.CharacterName),
+            CharacterLabel = _services.OnlineDownloads.GetOnlineCharacterDisplayName(mod.CharacterName),
             PreviewPlaceholder = T("OnlineCards.NoPreview"),
             HeatLabel = T("OnlineCards.HEAT"),
             OpenPageToolTip = T("OnlineCards.OpenOriginalPage")

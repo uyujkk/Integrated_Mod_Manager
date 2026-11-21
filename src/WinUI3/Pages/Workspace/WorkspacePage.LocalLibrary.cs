@@ -428,7 +428,7 @@ public sealed partial class WorkspacePage
             }
         }
 
-        _host.TrackedModOrigins.Remove(item.Path);
+        _services.Tracking.Origins.Remove(item.Path);
         _host.ModLinks.Remove(item.Path);
         _services.Install.DeleteDirectoryTreeSafely(item.Path);
     }
@@ -1109,7 +1109,7 @@ public sealed partial class WorkspacePage
 
         progress.Report(new ProgressInfo(15, T("LocalLibrary.ValidatingRepositoryPath")));
         string fullSourcePath = Path.GetFullPath(sourcePath);
-        if (!OnlinePage.IsPathInsideDirectory(fullSourcePath, repository.SourcePath))
+        if (!OnlineDownloadService.IsPathInsideDirectory(fullSourcePath, repository.SourcePath))
         {
             throw new InvalidOperationException(T("LocalLibrary.RefusedToLinkADirectoryOutside"));
         }
