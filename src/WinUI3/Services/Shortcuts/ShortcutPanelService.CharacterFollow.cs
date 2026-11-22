@@ -1,11 +1,14 @@
 using System.Runtime.InteropServices.WindowsRuntime;
+using System.Security.Cryptography;
 using System.Text.Json;
+using System.Text;
 using IntegratedModManager.Core.Online;
+using IntegratedModManager.Core.Repository;
 using Path = System.IO.Path;
 
 namespace ModFolderCopier.WinUI;
 
-public sealed partial class MainWindow
+internal sealed partial class ShortcutPanelService
 {
     private readonly CharacterImageMatcher _characterMatcher = new();
     private CharacterFollowProfile _characterProfile = new();
@@ -22,7 +25,7 @@ public sealed partial class MainWindow
         _shortcuts.CharacterFollowStatus = T("CharacterFollow.NotConfiguredReferencesRemainLocal");
         UpdateCharacterFollowSummary();
         _characterFollowTimer = new System.Threading.Timer(_ =>
-            DispatcherQueue.TryEnqueue(() => _ = ObserveCharacterAsync()), null, 700, 700);
+            _dispatcher.TryEnqueue(() => _ = ObserveCharacterAsync()), null, 700, 700);
     }
 
     // The switch: turning it on needs a region and references, else it turns itself back off.
@@ -107,7 +110,7 @@ public sealed partial class MainWindow
         {
             CharacterFrame frame = await CaptureCharacterReferenceAsync();
             if (_services.IsClosing) return;
-            Activate();
+            _activate();
             if (await CharacterRegionDialog.ChooseAsync(_services, frame.Bgra, frame.Width, frame.Height) is { } chosen)
             {
                 _characterProfile.Region = chosen;
@@ -136,7 +139,7 @@ public sealed partial class MainWindow
             _characterProfile.Templates[role] = feature;
             if (_shortcuts.SelectedMod is ShortcutModOption selected) _characterPreferredMods[role] = selected.Path;
             SaveCharacterFollowProfile();
-            Activate();
+            _activate();
             _shortcuts.CharacterFollowStatus = T("CharacterFollow.SavedReferenceForTotal", role, _characterProfile.Templates.Count);
         }
         catch (Exception ex) { if (!_services.IsClosing) _shortcuts.CharacterFollowStatus = ex.Message; }
@@ -188,6 +191,38 @@ public sealed partial class MainWindow
         }
         catch (Exception ex) { _characterMatcher.Reset(); if (!_services.IsClosing) _shortcuts.CharacterFollowStatus = ex.Message; }
         finally { _characterCaptureBusy = false; }
+    }
+
+    // The character-follow references of the repository: keyed by character name, with each character's preferred Mod.
+    // Returns the file, its text before and after; the file is written by Save.
+    public (string? File, string? Before, string? After) MigrateCharacterFollowProfile(WorkspaceRepository repository, CharacterRenamePlan plan, ReferenceUndoLog log)
+    {
+        string file = CharacterFollowProfilePath(repository.SourcePath);
+        if (string.Equals(_characterProfilePath, file, StringComparison.OrdinalIgnoreCase))
+        {
+            log.Rekey(_characterProfile.Templates, plan.MapName);
+            log.Rekey(_characterPreferredMods, plan.MapName);
+            foreach (string role in _characterPreferredMods.Keys.ToArray())
+                log.Rewrite(() => _characterPreferredMods[role], value => _characterPreferredMods[role] = value, plan.MapFullPath);
+        }
+
+        if (!File.Exists(file)) return (null, null, null);
+        string before = File.ReadAllText(file);
+        CharacterFollowProfile profile = JsonSerializer.Deserialize<CharacterFollowProfile>(before) ?? new();
+        var scratch = new ReferenceUndoLog();
+        profile.Templates = new(profile.Templates ?? [], StringComparer.OrdinalIgnoreCase);
+        profile.PreferredMods = new(profile.PreferredMods ?? [], StringComparer.OrdinalIgnoreCase);
+        scratch.Rekey(profile.Templates, plan.MapName);
+        scratch.Rekey(profile.PreferredMods, plan.MapName);
+        foreach (string role in profile.PreferredMods.Keys.ToArray())
+            scratch.Rewrite(() => profile.PreferredMods[role], value => profile.PreferredMods[role] = value, plan.MapFullPath);
+        return scratch.Count == 0 ? (null, null, null) : (file, before, JsonSerializer.Serialize(profile));
+    }
+
+    private static string CharacterFollowProfilePath(string repository)
+    {
+        string name = Convert.ToHexString(SHA256.HashData(Encoding.UTF8.GetBytes(repository.ToUpperInvariant())))[..24];
+        return Path.Combine(AppContext.BaseDirectory, "character-references", name + ".json");
     }
 }
 

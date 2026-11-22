@@ -26,7 +26,6 @@ public sealed partial class MainWindow : Window
     private const string DefaultOnlineCategoryId = OnlineSourceRules.DefaultCategoryId;
     private const string DefaultOnlineGameName = ConfigurationService.DefaultGameName;
     private const string EndfieldOfficialWikiUrl = OnlineSourceRules.EndfieldOfficialWikiUrl;
-    private const int ShortcutScanSafetyLimit = 256;
 
     private enum ShellLayoutMode
     {
@@ -41,8 +40,6 @@ public sealed partial class MainWindow : Window
     private readonly BatchObservableCollection<SecondLevelFolderItem> _secondLevelItems = [];
     private readonly List<TextBox> _shortcutKeyBoxes = [];
     private readonly List<TextBox> _shortcutActionBoxes = [];
-    private readonly Dictionary<string, List<ShortcutBinding>> _modBindings = new(StringComparer.CurrentCultureIgnoreCase);
-    private readonly Dictionary<string, string> _modLinks = new(StringComparer.CurrentCultureIgnoreCase);
     private readonly GameBananaMetadataService _gameBananaMetadataService;
     private readonly Dictionary<string, DownloadTaskCardView> _navTaskCards = new(StringComparer.Ordinal);
 
@@ -85,7 +82,7 @@ public sealed partial class MainWindow : Window
         _services.Workspace.AttachRefresh(RefreshListsAsync);
         _services.Launcher.Attach(LogApplicationIssue, SaveSelectedRepositoryFromInputs, RunUiActionAsync, ReportUiActionFailure, RefreshDashboard);
         _services.Configuration.Attach(LogApplicationIssue, () => _onlineView?.CaptureOnlineBrowseSession(), ApplySelectedRepositoryToInputs,
-            SaveSelectedRepositoryFromInputs, _modBindings, _modLinks, WhatsNewFeatureSet);
+            SaveSelectedRepositoryFromInputs, _services.ShortcutBindings.Bindings, _services.ShortcutBindings.Links, WhatsNewFeatureSet);
         _services.Images.Attach(_httpClient, LogApplicationIssue);
         _services.OnlineCategories.Attach(_httpClient, LogApplicationIssue);
         _services.CharacterCatalog.Attach(_httpClient, _appDataStore, LogApplicationIssue,
@@ -97,7 +94,7 @@ public sealed partial class MainWindow : Window
         _services.Tracking.Attach(_services, LogApplicationIssue, LogApplicationIssueWithStack, SaveConfig,
             throwOnError => SaveShellConfig(throwOnError), SetModUpdateStatus, RefreshUpdatesPane,
             () => { _shell.CurrentSection = PrimarySection.Updates; ApplyShellState(refreshRepository: false); },
-            RefreshListsAsync, _modLinks);
+            RefreshListsAsync, _services.ShortcutBindings.Links);
         _services.Install.Attach(LogApplicationIssue, () => SaveShellConfig(), () => _shell.InstallBackupLimitGb,
             (percent, message) => DispatcherQueue.TryEnqueue(() => _workspaceView?.UpdateProgress(percent, message)),
             text => _services.Workspace.Status = text);
@@ -124,10 +121,10 @@ public sealed partial class MainWindow : Window
         if (_firstInstall) _services.Language.Load(UiLanguagePolicy.ForSystem(System.Globalization.CultureInfo.CurrentUICulture.Name, UiText.Languages));
         LoadConfig();
         LoadShellConfig();
-        ListenToShortcutState();
+        _services.ShortcutPanel.ListenToState();
         if (_firstInstall) SaveConfig();
         InitializeTraySupport();
-        InitializeShortcutPanelHotkey();
+        _services.ShortcutPanel.InitializeHotkey();
         TraceStartupStage("Configuration loaded");
         _services.Downloads.Load();
         InitializeAppearanceSettings();

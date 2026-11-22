@@ -3,8 +3,7 @@ using IntegratedModManager.Core.Repository;
 namespace ModFolderCopier.WinUI;
 
 // Issue #108: why a character rename cannot start (moved unchanged from the window, stage J finish, step 4). The
-// migration of the references (presets, slots, bindings and the rest) stays with the window until those move to their
-// services in steps 5 to 7.
+// migration of the references (presets, slots, bindings and the rest) is CharacterRenameReferences (step 8b).
 internal sealed partial class InstallService
 {
     public string CharacterRenameBlockText(CharacterRenamePlan plan, WorkspaceRepository repository) => plan.Block switch

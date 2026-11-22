@@ -56,8 +56,8 @@ public sealed partial class MainWindow
         if (_shell.CurrentSection == PrimarySection.Shortcuts)
         {
             _shortcutsPage!.EnsureBuilt();
-            PrepareShortcuts();
-            _ = RefreshShortcutPaneSafelyAsync();
+            _services.ShortcutPanel.Prepare();
+            _ = _services.ShortcutPanel.RefreshSafelyAsync();
         }
 
         UpdateShellLayout();
@@ -491,7 +491,7 @@ public sealed partial class MainWindow
 
     private void OnWindowClosed(object sender, WindowEventArgs args)
     {
-        CloseShortcutPanel();
+        _services.ShortcutPanel.Shutdown();
         _onlineView?.BeginClosing();
         UiCrashDiagnostics.RecordAction("Window closed", width: RootGrid.ActualWidth, height: RootGrid.ActualHeight, closed: true);
         _services.IsClosing = true;

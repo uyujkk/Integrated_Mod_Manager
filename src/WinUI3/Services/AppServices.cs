@@ -21,6 +21,8 @@ internal sealed class AppServices
         Workspace = new(this);
         Configuration = new(this);
         Launcher = new(this);
+        ShortcutBindings = new(this);
+        ShortcutPanel = new(this);
         Diagnostics = new(this);
     }
 
@@ -104,6 +106,12 @@ internal sealed class AppServices
 
     /// <summary>The integrated Endfield launch, used by the dashboard and the Mod workspace.</summary>
     public EndfieldBridgeService EndfieldBridge { get; } = new();
+
+    /// <summary>The Mods' shortcut bindings and links and their rules (stage J finish, step 8b).</summary>
+    public ShortcutBindingService ShortcutBindings { get; }
+
+    /// <summary>The Shortcuts page's and the overlay's work: Mods, targets, sending, presets and character follow (step 8b).</summary>
+    public ShortcutPanelService ShortcutPanel { get; }
 
     /// <summary>The Shortcuts page and overlay state (stage J5).</summary>
     public ShortcutPageViewModel Shortcuts { get; } = new();

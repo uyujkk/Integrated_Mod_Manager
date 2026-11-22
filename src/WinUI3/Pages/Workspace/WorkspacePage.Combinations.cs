@@ -313,7 +313,7 @@ public sealed partial class WorkspacePage
             }
             if (transaction is not null) _services.Install.CommitInstallTransaction(transaction);
             committed = true;
-            await _host.RefreshShortcutDeployedModsAsync();
+            await _services.ShortcutPanel.RefreshDeployedModsAsync();
             UpdateProgress(100, T("CombinationPresets.CombinationAndLoaderParametersVerified"));
             await ShowMessageAsync(T("CombinationPresets.RestoredModsParameters", profile.Name, actual.Count, runtimePlan?.Values.Count ?? 0)
                 + (stateBackup is null ? T("CombinationPresets.StateWasUnchangedNoNewState") : T("CombinationPresets.StateBackup") + stateBackup)

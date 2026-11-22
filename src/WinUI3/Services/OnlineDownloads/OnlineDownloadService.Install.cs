@@ -33,9 +33,9 @@ internal sealed partial class OnlineDownloadService
             try
             {
                 IReadOnlyList<DetectedModShortcut> detected = await Task.Run(
-                    () => ModShortcutScanner.ScanDirectory(extractFolder, _host.ShortcutScanSafetyLimit), cancellationToken);
+                    () => ModShortcutScanner.ScanDirectory(extractFolder, ShortcutBindingService.ScanSafetyLimit), cancellationToken);
                 cancellationToken.ThrowIfCancellationRequested();
-                bindings = detected.Take(_host.ShortcutScanSafetyLimit).Select(_host.CreateAutomaticShortcutBinding).ToList();
+                bindings = detected.Take(ShortcutBindingService.ScanSafetyLimit).Select(_services.ShortcutBindings.CreateAutomatic).ToList();
             }
             catch (OperationCanceledException) { throw; }
             catch (Exception ex) { _host.LogApplicationIssue("Prepare online Mod shortcuts", ex); }
@@ -51,7 +51,7 @@ internal sealed partial class OnlineDownloadService
                 PreviewUrl = string.IsNullOrWhiteSpace(previewUrl) ? mod.PreviewUrl : previewUrl,
                 LastKnownUpdatedAt = mod.UpdatedAt
             },
-            Bindings = bindings.Take(_host.ShortcutScanSafetyLimit).ToList()
+            Bindings = bindings.Take(ShortcutBindingService.ScanSafetyLimit).ToList()
         };
     }
 
@@ -59,10 +59,10 @@ internal sealed partial class OnlineDownloadService
     {
         // One UI-thread, non-awaiting commit. Keep other installations' records; a source ID
         // identifies the website entry, not a unique local installation.
-        _host.ModLinks[extractFolder] = metadata.Origin.ProfileUrl;
+        _services.ShortcutBindings.Links[extractFolder] = metadata.Origin.ProfileUrl;
         _services.Tracking.Origins[extractFolder] = metadata.Origin;
         if (metadata.Bindings.Count > 0)
-            _host.ModBindings[extractFolder] = metadata.Bindings;
+            _services.ShortcutBindings.Bindings[extractFolder] = metadata.Bindings;
         if (!_host.SaveConfig())
             metadata.PersistenceWarning = new IOException("Installation tracking could not be persisted.");
     }

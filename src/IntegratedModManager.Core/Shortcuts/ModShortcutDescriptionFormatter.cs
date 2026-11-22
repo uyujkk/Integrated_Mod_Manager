@@ -128,6 +128,28 @@ public static class ModShortcutDescriptionFormatter
         };
     }
 
+    /// <summary>
+    /// Whether a binding's text may be an automatic description written by an older version, which did not mark them
+    /// (moved from the window in stage J finish, step 8b). Only those are compared with <see cref="MatchesLegacyDescription"/>.
+    /// </summary>
+    public static bool IsPossibleLegacyDescription(string? action)
+    {
+        if (string.IsNullOrWhiteSpace(action))
+        {
+            return false;
+        }
+
+        string value = action.Trim();
+        return value.StartsWith("循环切换 ", StringComparison.Ordinal)
+            || value.StartsWith("按住触发 ", StringComparison.Ordinal)
+            || value.StartsWith("切换 ", StringComparison.Ordinal)
+            || value.StartsWith("触发 ", StringComparison.Ordinal)
+            || value.StartsWith("Cycle ", StringComparison.OrdinalIgnoreCase)
+            || value.StartsWith("Hold ", StringComparison.OrdinalIgnoreCase)
+            || value.StartsWith("Toggle ", StringComparison.OrdinalIgnoreCase)
+            || value.StartsWith("Trigger ", StringComparison.OrdinalIgnoreCase);
+    }
+
     public static bool MatchesLegacyDescription(string? description, DetectedModShortcut shortcut)
     {
         if (string.IsNullOrWhiteSpace(description))

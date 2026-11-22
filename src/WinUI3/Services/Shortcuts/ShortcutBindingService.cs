@@ -3,12 +3,38 @@ using IntegratedModManager.Core.Shortcuts;
 
 namespace ModFolderCopier.WinUI;
 
-// Shortcut binding rules the Mod workspace's editor and the online install share: reading bindings from a Mod's files,
-// the automatic binding and its description, upgrading old automatic bindings and link normalising (split from
-// MainWindow.ShortcutBindings.cs in stage J7; the editor itself moves with the workspace page).
-public sealed partial class MainWindow
+/// <summary>
+/// The Mods' shortcut bindings and links (config.ini) and the rules the workspace's editor and the online install share
+/// (stage J finish, step 8b, moved from the window unchanged): reading bindings from a Mod's files, the automatic
+/// binding and its description, and upgrading automatic bindings an older version wrote.
+/// </summary>
+internal sealed class ShortcutBindingService(AppServices services)
 {
-    private async Task<int> TryImportShortcutBindingsFromModFilesAsync(string modFolder)
+    /// <summary>The most bindings read from one Mod.</summary>
+    public const int ScanSafetyLimit = 256;
+
+    private readonly AppServices _services = services;
+    private Action<string, Exception> _log = (_, _) => { };
+    private Func<bool> _saveConfig = () => true;
+
+    /// <summary>Each Mod's bindings, by its folder.</summary>
+    public Dictionary<string, List<ShortcutBinding>> Bindings { get; } = new(StringComparer.CurrentCultureIgnoreCase);
+
+    /// <summary>Each Mod's link, by its folder.</summary>
+    public Dictionary<string, string> Links { get; } = new(StringComparer.CurrentCultureIgnoreCase);
+
+    /// <summary>Called once by the window: the error log and saving config.ini.</summary>
+    public void Attach(Action<string, Exception> log, Func<bool> saveConfig)
+    {
+        _log = log;
+        _saveConfig = saveConfig;
+    }
+
+    /// <summary>
+    /// Reads a Mod's bindings from its INI files when it has none yet, or upgrades automatic descriptions an older
+    /// version wrote; saves config.ini when anything changed. Returns the number of bindings added or upgraded.
+    /// </summary>
+    public async Task<int> TryImportFromModFilesAsync(string modFolder)
     {
         if (string.IsNullOrWhiteSpace(modFolder)
             || !Directory.Exists(modFolder))
@@ -16,11 +42,11 @@ public sealed partial class MainWindow
             return 0;
         }
 
-        bool hasExistingBindings = _modBindings.TryGetValue(modFolder, out List<ShortcutBinding>? existing)
+        bool hasExistingBindings = Bindings.TryGetValue(modFolder, out List<ShortcutBinding>? existing)
             && existing.Any(binding => !string.IsNullOrWhiteSpace(binding.Shortcut)
                 || !string.IsNullOrWhiteSpace(binding.Action));
         bool mayContainLegacyAutomaticDescriptions = hasExistingBindings
-            && existing!.Any(binding => IsPossibleLegacyAutomaticShortcutDescription(binding.Action));
+            && existing!.Any(binding => ModShortcutDescriptionFormatter.IsPossibleLegacyDescription(binding.Action));
         if (hasExistingBindings && !mayContainLegacyAutomaticDescriptions)
         {
             return 0;
@@ -29,11 +55,11 @@ public sealed partial class MainWindow
         IReadOnlyList<DetectedModShortcut> detected;
         try
         {
-            detected = await Task.Run(() => ModShortcutScanner.ScanDirectory(modFolder, ShortcutScanSafetyLimit));
+            detected = await Task.Run(() => ModShortcutScanner.ScanDirectory(modFolder, ScanSafetyLimit));
         }
         catch (Exception ex)
         {
-            LogApplicationIssue("Read Mod shortcut INI", ex);
+            _log("Read Mod shortcut INI", ex);
             return 0;
         }
 
@@ -47,28 +73,29 @@ public sealed partial class MainWindow
             int upgradedCount = UpgradeLegacyAutomaticShortcutBindings(existing!, detected);
             if (upgradedCount > 0)
             {
-                SaveConfig();
+                _saveConfig();
             }
 
             return upgradedCount;
         }
 
-        _modBindings[modFolder] = detected
-            .Take(ShortcutScanSafetyLimit)
-            .Select(CreateAutomaticShortcutBinding)
+        Bindings[modFolder] = detected
+            .Take(ScanSafetyLimit)
+            .Select(CreateAutomatic)
             .ToList();
-        SaveConfig();
-        return _modBindings[modFolder].Count;
+        _saveConfig();
+        return Bindings[modFolder].Count;
     }
 
     private string DescribeDetectedShortcut(DetectedModShortcut shortcut)
     {
         return ModShortcutDescriptionFormatter.Describe(
             shortcut,
-            useEnglish: !IsChineseUi);
+            useEnglish: !_services.Language.IsChinese);
     }
 
-    private ShortcutBinding CreateAutomaticShortcutBinding(DetectedModShortcut shortcut)
+    /// <summary>A binding read from a Mod's files, described in the current language.</summary>
+    public ShortcutBinding CreateAutomatic(DetectedModShortcut shortcut)
     {
         return new ShortcutBinding(shortcut.Shortcut, DescribeDetectedShortcut(shortcut))
         {
@@ -79,7 +106,8 @@ public sealed partial class MainWindow
         };
     }
 
-    private string GetShortcutBindingDisplayAction(ShortcutBinding binding)
+    /// <summary>What a binding does: its automatic description in the current language, or the text the user wrote.</summary>
+    public string DisplayAction(ShortcutBinding binding)
     {
         return binding.HasAutoDescription
             ? DescribeDetectedShortcut(ToDetectedModShortcut(binding))
@@ -94,24 +122,6 @@ public sealed partial class MainWindow
             binding.AutoTarget,
             binding.AutoSourceFile);
 
-    private static bool IsPossibleLegacyAutomaticShortcutDescription(string? action)
-    {
-        if (string.IsNullOrWhiteSpace(action))
-        {
-            return false;
-        }
-
-        string value = action.Trim();
-        return value.StartsWith("循环切换 ", StringComparison.Ordinal)
-            || value.StartsWith("按住触发 ", StringComparison.Ordinal)
-            || value.StartsWith("切换 ", StringComparison.Ordinal)
-            || value.StartsWith("触发 ", StringComparison.Ordinal)
-            || value.StartsWith("Cycle ", StringComparison.OrdinalIgnoreCase)
-            || value.StartsWith("Hold ", StringComparison.OrdinalIgnoreCase)
-            || value.StartsWith("Toggle ", StringComparison.OrdinalIgnoreCase)
-            || value.StartsWith("Trigger ", StringComparison.OrdinalIgnoreCase);
-    }
-
     private int UpgradeLegacyAutomaticShortcutBindings(
         List<ShortcutBinding> existingBindings,
         IReadOnlyList<DetectedModShortcut> detectedShortcuts)
@@ -121,7 +131,7 @@ public sealed partial class MainWindow
         {
             ShortcutBinding existingBinding = existingBindings[index];
             if (existingBinding.HasAutoDescription
-                || !IsPossibleLegacyAutomaticShortcutDescription(existingBinding.Action))
+                || !ModShortcutDescriptionFormatter.IsPossibleLegacyDescription(existingBinding.Action))
             {
                 continue;
             }
@@ -134,22 +144,10 @@ public sealed partial class MainWindow
                 continue;
             }
 
-            existingBindings[index] = CreateAutomaticShortcutBinding(match);
+            existingBindings[index] = CreateAutomatic(match);
             upgradedCount++;
         }
 
         return upgradedCount;
-    }
-
-    private static string NormalizeLink(string link)
-    {
-        string trimmed = link.Trim();
-        if (trimmed.StartsWith("http://", StringComparison.OrdinalIgnoreCase) ||
-            trimmed.StartsWith("https://", StringComparison.OrdinalIgnoreCase))
-        {
-            return trimmed;
-        }
-
-        return "https://" + trimmed;
     }
 }

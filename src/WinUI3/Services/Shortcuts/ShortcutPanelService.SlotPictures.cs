@@ -1,15 +1,14 @@
 using IntegratedModManager.Core.Presets;
-using Microsoft.UI.Xaml;
 using Microsoft.UI.Xaml.Automation;
 using Microsoft.UI.Xaml.Controls;
+using Microsoft.UI.Xaml;
 
 namespace ModFolderCopier.WinUI;
 
 // Optional game screenshots attached to presets saved from the overlay. Screenshots can show a UID, a
 // nickname or chat, so this stays off until the user agrees, and they never go into diagnostic reports.
-public sealed partial class MainWindow
+internal sealed partial class ShortcutPanelService
 {
-
     // In game: frame the character on the current slot's look, so its picture can be clicked to switch back to it later.
     private async Task FrameCurrentSlotPreviewAsync()
     {
@@ -31,7 +30,7 @@ public sealed partial class MainWindow
         }
 
         _savingOverlaySinglePreset = true;
-        bool animate = !_shell.ReduceMotion;
+        bool animate = !_services.ShellSettings.ReduceMotion;
         try
         {
             // Reopen where the last frame was. Otherwise a character stands taller than wide: start from the middle of the game.
@@ -51,7 +50,7 @@ public sealed partial class MainWindow
                 _services.PresetPreviews.LastRegion = PresetPreviewStore.RegionOf(chosen, game.Width, game.Height);
                 _services.PresetPreviews.DefaultRegion = selection.UseAsDefault ? _services.PresetPreviews.LastRegion : null;
             }
-            SaveShellConfig();
+            _services.Configuration.SaveShell();
             if (clipped is { } area
                 && await _services.PresetPreviews.CaptureTargetFrameAsync(target, overlay) is { } frame
                 && frame.Width == game.Width && frame.Height == game.Height)
@@ -63,13 +62,13 @@ public sealed partial class MainWindow
             if (stored is not null)
             {
                 slot.PreviewFile = stored;
-                SaveShellConfig();
+                _services.Configuration.SaveShell();
             }
             _shortcuts.StatusText = stored is null ? T("PresetPreview.CannotUse") : T("PresetPreview.Framed", slot.Name);
         }
         catch (Exception ex)
         {
-            LogApplicationIssue("Preset preview framing", ex);
+            _log("Preset preview framing", ex);
             if (!_services.IsClosing) _shortcuts.ReportError(T("PresetPreview.CannotUse"));
         }
         finally
@@ -80,7 +79,7 @@ public sealed partial class MainWindow
             {
                 _overlay.InvalidateSlots();
                 RefreshShortcutOverlay(bindingsChanged: true);
-                RefreshPersistentSlotControls();
+                _refreshSlotControls();
             }
         }
     }
@@ -152,7 +151,7 @@ public sealed partial class MainWindow
         layer.Children.Add(scroll);
         layer.Children.Add(cancel);
 
-        bool animate = !_shell.ReduceMotion;
+        bool animate = !_services.ShellSettings.ReduceMotion;
         // Half a card showing at the edge tells the user the row goes on.
         double visibleCards = slots.Length > maxVisibleCards ? maxVisibleCards + .5 : slots.Length;
         int width = Math.Max(420, (int)(visibleCards * (cardWidth + 16 + spacing)) + 48);
@@ -169,5 +168,4 @@ public sealed partial class MainWindow
         if (selected is not null && !_services.IsClosing) await _services.Slots.SwitchSlotFromOverlayAsync(selected, modPath);
         await leaving;
     }
-
 }

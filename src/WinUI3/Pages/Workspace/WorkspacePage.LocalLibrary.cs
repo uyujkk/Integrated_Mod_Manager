@@ -281,7 +281,7 @@ public sealed partial class WorkspacePage
             try
             {
                 // The folder, the links into it and every saved path move together, or none of them do (#108).
-                CharacterRename.Execute(plan, _host.CreateCharacterRenameReferences(repository));
+                CharacterRename.Execute(plan, new CharacterRenameReferences(_services, repository));
                 await RefreshListsAsync();
                 SelectFirstLevelByPath(plan.NewPath);
                 _services.Workspace.Status = T("LocalLibrary.RenamedFirstLevelFolderTo", trimmed);
@@ -314,7 +314,7 @@ public sealed partial class WorkspacePage
                 SecondLevelFolderItem? item = GetSelectedSecondLevelItem();
                 ApplySecondLevelSelectionState(item);
                 if (item is not null
-                    && await _host.TryImportShortcutBindingsFromModFilesAsync(item.Path) > 0
+                    && await _services.ShortcutBindings.TryImportFromModFilesAsync(item.Path) > 0
                     && string.Equals(_host.CurrentSecondLevelPath, item.Path, StringComparison.CurrentCultureIgnoreCase))
                 {
                     LoadBindingsForCurrentMod(item);
@@ -408,7 +408,7 @@ public sealed partial class WorkspacePage
         }
 
         _services.Tracking.Origins.Remove(item.Path);
-        _host.ModLinks.Remove(item.Path);
+        _services.ShortcutBindings.Links.Remove(item.Path);
         _services.Install.DeleteDirectoryTreeSafely(item.Path);
     }
 
@@ -894,7 +894,7 @@ public sealed partial class WorkspacePage
             }
 
             _services.Install.CommitInstallTransaction(transactionPath);
-            await _host.RefreshShortcutDeployedModsAsync(targetExists ? null : item.Path);
+            await _services.ShortcutPanel.RefreshDeployedModsAsync(targetExists ? null : item.Path);
         }
         catch (Exception ex)
         {
@@ -935,7 +935,7 @@ public sealed partial class WorkspacePage
             await RefreshListsAsync();
             SelectFirstLevelByPath(item.Path);
             SelectSecondLevelByPath(importedPath);
-            await _host.TryImportShortcutBindingsFromModFilesAsync(importedPath);
+            await _services.ShortcutBindings.TryImportFromModFilesAsync(importedPath);
         }
         catch (Exception ex)
         {

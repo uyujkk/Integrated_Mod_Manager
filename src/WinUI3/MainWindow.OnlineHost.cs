@@ -1,6 +1,4 @@
-using IntegratedModManager.Core.Configuration;
 using IntegratedModManager.Core.Online;
-using IntegratedModManager.Core.Shortcuts;
 using IntegratedModManager.Data;
 using Microsoft.UI.Xaml;
 using Microsoft.UI.Xaml.Media;
@@ -43,9 +41,6 @@ public sealed partial class MainWindow : IOnlineHost
     bool IOnlineHost.IsFavoriteCharacter(string characterKey) => IsFavoriteCharacter(characterKey);
     void IOnlineHost.ToggleFavoriteCharacter(string characterKey) => ToggleFavoriteCharacter(characterKey);
 
-    Dictionary<string, List<ShortcutBinding>> IOnlineHost.ModBindings => _modBindings;
-    Dictionary<string, string> IOnlineHost.ModLinks => _modLinks;
-    ShortcutBinding IOnlineHost.CreateAutomaticShortcutBinding(DetectedModShortcut shortcut) => CreateAutomaticShortcutBinding(shortcut);
 
     void IOnlineHost.RefreshDownloadTaskCard(DownloadTaskItem task) => RefreshDownloadTaskCard(task);
     void IOnlineHost.RefreshUpdatesPane() => RefreshUpdatesPane();
@@ -55,7 +50,6 @@ public sealed partial class MainWindow : IOnlineHost
     AppDataStore IOnlineHost.DataStore => _appDataStore;
     GameBananaMetadataService IOnlineHost.Metadata => _gameBananaMetadataService;
 
-    int IOnlineHost.ShortcutScanSafetyLimit => ShortcutScanSafetyLimit;
     IReadOnlyList<string> IOnlineHost.ImageExtensions => ImageExtensions;
     string? IOnlineHost.FindPreviewImage(List<string> files) => WorkspacePage.FindPreviewImage(files, ImageExtensions);
 }

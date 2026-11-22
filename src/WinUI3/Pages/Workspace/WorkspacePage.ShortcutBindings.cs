@@ -233,7 +233,7 @@ public sealed partial class WorkspacePage
 
             try
             {
-                string normalized = _host.NormalizeLink(currentLink);
+                string normalized = ModLinkText.Normalize(currentLink);
                 Process.Start(new ProcessStartInfo
                 {
                     FileName = normalized,
@@ -289,14 +289,14 @@ public sealed partial class WorkspacePage
             box.Text = string.Empty;
         }
 
-        if (item is not null && _host.ModBindings.TryGetValue(item.Path, out List<ShortcutBinding>? bindings) && bindings.Count > 0)
+        if (item is not null && _services.ShortcutBindings.Bindings.TryGetValue(item.Path, out List<ShortcutBinding>? bindings) && bindings.Count > 0)
         {
             _visibleShortcutRows = Math.Max(InitialShortcutRows, bindings.Count);
             EnsureShortcutRowCapacity(_visibleShortcutRows);
             for (int i = 0; i < _visibleShortcutRows; i++)
             {
                 _host.ShortcutKeyBoxes[i].Text = bindings[i].Shortcut;
-                _host.ShortcutActionBoxes[i].Text = _host.GetShortcutBindingDisplayAction(bindings[i]);
+                _host.ShortcutActionBoxes[i].Text = _services.ShortcutBindings.DisplayAction(bindings[i]);
             }
         }
         else
@@ -316,7 +316,7 @@ public sealed partial class WorkspacePage
             return;
         }
 
-        _host.ModBindings.TryGetValue(_host.CurrentSecondLevelPath, out List<ShortcutBinding>? previousBindings);
+        _services.ShortcutBindings.Bindings.TryGetValue(_host.CurrentSecondLevelPath, out List<ShortcutBinding>? previousBindings);
         var bindings = new List<ShortcutBinding>();
         for (int i = 0; i < _visibleShortcutRows; i++)
         {
@@ -330,7 +330,7 @@ public sealed partial class WorkspacePage
                 bool unchangedAutomaticBinding = previous is not null
                     && previous.HasAutoDescription
                     && string.Equals(shortcut, previous.Shortcut, StringComparison.Ordinal)
-                    && string.Equals(action, _host.GetShortcutBindingDisplayAction(previous), StringComparison.Ordinal);
+                    && string.Equals(action, _services.ShortcutBindings.DisplayAction(previous), StringComparison.Ordinal);
                 bindings.Add(unchangedAutomaticBinding
                     ? previous!
                     : new ShortcutBinding(shortcut, action));
@@ -339,11 +339,11 @@ public sealed partial class WorkspacePage
 
         if (bindings.Count == 0)
         {
-            _host.ModBindings.Remove(_host.CurrentSecondLevelPath);
+            _services.ShortcutBindings.Bindings.Remove(_host.CurrentSecondLevelPath);
         }
         else
         {
-            _host.ModBindings[_host.CurrentSecondLevelPath] = bindings;
+            _services.ShortcutBindings.Bindings[_host.CurrentSecondLevelPath] = bindings;
         }
 
         _host.SaveConfig();
@@ -353,7 +353,7 @@ public sealed partial class WorkspacePage
     internal void LoadLinkForCurrentMod(SecondLevelFolderItem? item)
     {
         _isLoadingModLink = true;
-        ModLinkTextBox.Text = item is not null && _host.ModLinks.TryGetValue(item.Path, out string? link) ? link : string.Empty;
+        ModLinkTextBox.Text = item is not null && _services.ShortcutBindings.Links.TryGetValue(item.Path, out string? link) ? link : string.Empty;
         _isLoadingModLink = false;
         UpdateLinkButtonState();
     }
@@ -369,11 +369,11 @@ public sealed partial class WorkspacePage
         string link = (ModLinkTextBox.Text ?? string.Empty).Trim();
         if (string.IsNullOrWhiteSpace(link))
         {
-            _host.ModLinks.Remove(_host.CurrentSecondLevelPath);
+            _services.ShortcutBindings.Links.Remove(_host.CurrentSecondLevelPath);
         }
         else
         {
-            _host.ModLinks[_host.CurrentSecondLevelPath] = link;
+            _services.ShortcutBindings.Links[_host.CurrentSecondLevelPath] = link;
         }
 
         _host.SaveConfig();
@@ -399,7 +399,7 @@ public sealed partial class WorkspacePage
     internal void RefreshVisibleShortcutDescriptionsForLanguage()
     {
         if (string.IsNullOrWhiteSpace(_host.CurrentSecondLevelPath)
-            || !_host.ModBindings.TryGetValue(_host.CurrentSecondLevelPath, out List<ShortcutBinding>? bindings)
+            || !_services.ShortcutBindings.Bindings.TryGetValue(_host.CurrentSecondLevelPath, out List<ShortcutBinding>? bindings)
             || bindings.Count == 0)
         {
             return;
@@ -413,7 +413,7 @@ public sealed partial class WorkspacePage
             {
                 if (bindings[i].HasAutoDescription)
                 {
-                    _host.ShortcutActionBoxes[i].Text = _host.GetShortcutBindingDisplayAction(bindings[i]);
+                    _host.ShortcutActionBoxes[i].Text = _services.ShortcutBindings.DisplayAction(bindings[i]);
                 }
             }
         }

@@ -241,8 +241,8 @@ Code that depends on "is the page on screen" checks `IsLoaded && Visibility == V
 
 ### 5.2 服务与页面接口 / Services and page interfaces
 
-图：页面通过 `AppServices` 共享状态和服务，只在需要窗口的地方通过接口回调窗口。在线页和工作区页的接口由窗口实现（`MainWindow.OnlineHost.cs`、`MainWindow.WorkspaceHost.cs`）；浮窗通过 `IShortcutOverlayActions` 请求窗口做事，窗口通过 `IShortcutOverlay` 控制浮窗。
-Diagram: pages share state and services through `AppServices` and call back into the window only through interfaces. The window implements the Online and Workspace interfaces (`MainWindow.OnlineHost.cs`, `MainWindow.WorkspaceHost.cs`); the overlay asks the window through `IShortcutOverlayActions`, and the window drives the overlay through `IShortcutOverlay`.
+图：页面通过 `AppServices` 共享状态和服务，只在需要窗口的地方通过接口回调窗口。在线页和工作区页的接口由窗口实现（`MainWindow.OnlineHost.cs`、`MainWindow.WorkspaceHost.cs`）；浮窗通过 `IShortcutOverlayActions` 请求 `ShortcutPanelService` 做事，窗口和页面通过 `IShortcutOverlay` 控制浮窗。
+Diagram: pages share state and services through `AppServices` and call back into the window only through interfaces. The window implements the Online and Workspace interfaces (`MainWindow.OnlineHost.cs`, `MainWindow.WorkspaceHost.cs`); the overlay asks `ShortcutPanelService` through `IShortcutOverlayActions`, and the window and pages drive the overlay through `IShortcutOverlay`.
 
 ```mermaid
 flowchart LR
@@ -254,7 +254,7 @@ flowchart LR
   MW -->|"owns"| AS
   OC -->|"reads"| AS
   Pages -.->|"IOnlineHost<br/>IWorkspaceHost"| MW
-  OC -.->|"IShortcutOverlay-<br/>Actions"| MW
+  OC -.->|"IShortcutOverlay-<br/>Actions"| AS
   MW -.->|"IShortcutOverlay"| OC
 ```
 
@@ -270,7 +270,7 @@ flowchart LR
 | `DeploymentService`、`DownloadService`、`LaunchService` | 部署备份位置；下载任务（新建、进度、清除）及其记录；启动加载器或启动器。Deployment backups; download tasks (creating, progress, clearing) and their record; starting the loader or launcher. |
 | `OnlineDownloadService` | 在线 Mod 的下载和安装：刷新文件、选择位置、重复检查、下载、解压、安装记录、重试；没有在线页也能运行，在线页存在时显示进度（`IOnlineDownloadView`）。Downloading and installing online Mods, with or without the Online page; the page shows progress while it exists. |
 | `OnlineCharacterOptionsService` | 当前仓库的角色列表（内置终末地角色、Wiki 目录、列表里出现的角色）；没有在线页时也随目录加载更新，收藏、工作区头像和分类映射用它。The current repository's character list, kept up to date without the Online page. |
-| `SlotService`、`PresetPreviewService` | 状态槽位（各 Mod 的槽位、默认槽位、浮窗里用 F10 热切换、加载器自动保存间隔）和预设、槽位的图片（保存、截取、清理）。工作区的槽位卡片在工作区页面里，浮窗的图片墙和框选仍在窗口里。State slots (per-Mod slots, Default slots, switching from the overlay with F10, the loader's auto-save interval) and pictures of presets and slots; the workspace's slot card is in the workspace page. |
+| `SlotService`、`PresetPreviewService` | 状态槽位（各 Mod 的槽位、默认槽位、浮窗里用 F10 热切换、加载器自动保存间隔）和预设、槽位的图片（保存、截取、清理）。工作区的槽位卡片在工作区页面里，浮窗的图片墙和框选在 `ShortcutPanelService`。State slots (per-Mod slots, Default slots, switching from the overlay with F10, the loader's auto-save interval) and pictures of presets and slots; the workspace's slot card is in the workspace page, the overlay's gallery and framing in `ShortcutPanelService`. |
 | `CombinationService` | 组合预设：所有仓库的预设、当前选中的预设、保存或恢复时的忙碌状态（窗口锁住导航，工作区锁住按钮），以及捕获已启用的组合和加载器参数（工作区和浮窗共用）。预设卡片、恢复、组合包和预设分享在工作区页面里。Combination presets: every repository's presets, the selected one, the busy state while one is saved or restored (the window locks its navigation, the workspace its buttons), and capturing the enabled combination with its loader values (shared by the workspace and the overlay). The preset card, restoring, bundles and shared presets are in the workspace page. |
 | `WorkspaceService` | 工作区显示的内容，有没有工作区页面都在：上次扫描的角色和 Mod、Mod 列表的视图和列宽、本地标签、状态行、扫描仓库（启动时、改路径后、刷新时，包括给新 Mod 建默认槽位）、角色头像（仪表盘也用），以及选择和打开 Mod 文件夹、加载器 Mods 文件夹和启动器、中断的导入记录。仪表盘、命令面板和浮窗读扫描结果；工作区页面显示时把它画出来。What the workspace shows, with or without its page: the characters and Mods of the last scan, the Mod list's view and widths, local tags, the status line, scanning the repository (at startup, after a path change, on refresh, with Default slots for new Mods), character avatars (the dashboard uses them too), choosing and opening the Mod folder, loader Mods folder and launcher, and interrupted import records. The dashboard, the command palette and the overlay read the scan; the workspace page draws it when it is shown. |
 | `ModTrackingService` | 追踪的在线 Mod、更新检查结果、检查更新和替换为新版本。Tracked online Mods, update checks and replacing a Mod with its newer version. |
@@ -280,6 +280,9 @@ flowchart LR
 | `EndfieldBridgeService` | 终末地仓库的内置启动：是否适用、XXMI 位置、启动设置。The integrated Endfield launch. |
 | `RepositoryLauncherService` | 运行当前仓库：终末地内置启动及其设置对话框、用游戏的导入器启动 XXMI、或仓库自己的启动器；仪表盘的启动卡片。Running the current repository: the integrated Endfield launch and its settings, XXMI with the game's importer, or the repository's own launcher; the dashboard's launch card. |
 | `DiagnosticsService`、`AppLog` | 设置页的诊断报告（去掉路径和密钥的摘要与日志压缩包）；`startup.log` 和 `app-errors.log`。Diagnostic reports from Settings (a sanitized summary and the logs in a zip); startup.log and app-errors.log. |
+| `ShortcutPanelService` | 快捷键页和浮窗的工作：读取仓库的 Mod 和它们的绑定、目标窗口、发送按键、全局快捷键、权限提示、以管理员身份重启；从浮窗保存组合预设和单个 Mod 的预设（先向所选窗口发 F10，加载器不写入时由用户决定是否按磁盘上的 `d3dx_user.ini` 保存）；角色跟随；槽位图片墙和框选。它实现 `IShortcutOverlayActions`。The Shortcuts page's and the overlay's work: the Mods and their bindings, the target window, sending keys, the global hotkey, the privilege notice, restarting elevated; saving presets from the overlay (F10 to the chosen window first); character follow; the slot gallery and framing. It implements `IShortcutOverlayActions`. |
+| `ShortcutBindingService` | 各 Mod 的快捷键说明和链接（`config.ini`），以及工作区编辑器和在线安装共用的规则：从 Mod 文件读取绑定、自动说明、升级旧版本写的自动说明。The Mods' bindings and links and the rules the workspace editor and the online install share: reading bindings from a Mod's files, automatic descriptions, upgrading old ones. |
+| `CharacterRenameReferences` | 角色改名（#108）时迁移各服务里指向该角色的引用，失败时全部还原。Moves every service's references to a renamed character (#108), and puts them back on failure. |
 | `BuiltInRepositories` | 仪表盘“新建仓库”提供的内置游戏仓库。The built-in game repositories the dashboard offers. |
 | `IShortcutOverlay` | 窗口控制浮窗的接口（打开、隐藏、切换、刷新）。How the window drives the overlay. |
 
@@ -292,15 +295,14 @@ flowchart LR
 | --- | --- |
 | 外壳 / Shell | `Shell`, `TitleBarSearch`, `CommandPalette`, `Localization`, `Configuration`（窗口位置；设置文件由 `ConfigurationService` 读写 / the window's place; the files are ConfigurationService's）, `Dialogs`, `AppearanceEvents`, `Tray`, `SingleInstance`, `UiActionGuard`, `UiDiagnostics`, `WhatsNew`, `FirstRun` |
 | 页面宿主 / Page hosts | `DashboardHost`, `WorkspaceHost`, `OnlineHost`, `UpdatesHost`, `ShortcutsHost`, `SettingsHost` |
-| 仓库与重命名 / Repositories and renames | `Repositories`, `RepositoryPerformance`, `CharacterRename`（角色改名时迁移窗口仍持有的引用 / migrates the references the window still holds when a character is renamed） |
-| 预设与状态 / Presets and state | `PresetPreviews`（浮窗的槽位图片墙和框选 / the overlay's slot gallery and framing） |
+| 仓库 / Repositories | `Repositories`, `RepositoryPerformance` |
 | 更新与下载 / Updates and downloads | `Updates`（应用更新和检查间隔 / app updates and check intervals）, `DownloadTasks`（导航里的任务列表 / the task list in the navigation） |
-| 快捷键与浮窗 / Shortcuts and overlay | `ShortcutPanel`, `ShortcutPresets`, `ShortcutCapture`, `ShortcutBindingRules`, `CharacterFollow`, `ProductivityFeatures`（系统辅助功能、收藏 / system accessibility settings, favorites） |
+| 收藏与辅助功能 / Favorites and accessibility | `ProductivityFeatures`（系统辅助功能、收藏 / system accessibility settings, favorites）。快捷键页和浮窗的代码在 `ShortcutPanelService`，`ShortcutsHost` 只打开页面并连接服务 / the Shortcuts code is `ShortcutPanelService`; `ShortcutsHost` opens the page and attaches the service |
 
 ### 5.4 浮窗 / Overlay
 
-图：浮窗是不抢焦点的置顶窗口（`ShortcutOverlayWindow`，`WS_EX_NOACTIVATE`），内容由 `ShortcutOverlayController` 搭建。按钮的动作经 `IShortcutOverlayActions` 交给窗口原有的代码（发送按键、F10、保存预设、切换槽位）；位置和贴边的计算在 Core 的 `OverlayLayoutPolicy`。
-Diagram: the overlay is a non-activating always-on-top window (`ShortcutOverlayWindow`, `WS_EX_NOACTIVATE`) whose content `ShortcutOverlayController` builds. Its actions go through `IShortcutOverlayActions` to the window's existing code (send keys, F10, save presets, switch slots); placement and snapping are computed by `OverlayLayoutPolicy` in Core.
+图：浮窗是不抢焦点的置顶窗口（`ShortcutOverlayWindow`，`WS_EX_NOACTIVATE`），内容由 `ShortcutOverlayController` 搭建。按钮的动作经 `IShortcutOverlayActions` 交给 `ShortcutPanelService`（发送按键、F10、保存预设、切换槽位；阶段 J finish 第 8b 步从窗口原样移出）；位置和贴边的计算在 Core 的 `OverlayLayoutPolicy`。
+Diagram: the overlay is a non-activating always-on-top window (`ShortcutOverlayWindow`, `WS_EX_NOACTIVATE`) whose content `ShortcutOverlayController` builds. Its actions go through `IShortcutOverlayActions` to `ShortcutPanelService` (send keys, F10, save presets, switch slots; moved unchanged from the window in stage J finish, step 8b); placement and snapping are computed by `OverlayLayoutPolicy` in Core.
 
 ```mermaid
 flowchart TB
@@ -308,11 +310,11 @@ flowchart TB
   OC["ShortcutOverlayController<br/>content"]
   OLP["OverlayLayoutPolicy<br/>Core.Layout"]
   VM["ShortcutPageViewModel"]
-  MW["MainWindow<br/>ShortcutsHost"]
+  SP["ShortcutPanelService"]
   OW --> OC
   OW --> OLP
   OC --> VM
-  OC -->|"IShortcutOverlayActions"| MW
+  OC -->|"IShortcutOverlayActions"| SP
 ```
 
 - 窗口：自己画的标题栏是拖动区域；高度跟随内容；可调大小；按显示器（设备名加分辨率）以 DIP 记住位置，保存在 `beta-shell.json` 的 `OverlayPlacements`；拖到工作区边缘 16 DIP 内贴边；跟随应用主题。
