@@ -217,7 +217,7 @@ public sealed partial class MainWindow
             SaveConfig();
             ApplyShellState(refreshRepository: false);
             RefreshDashboard();
-            _workspaceView.StatusTextBlock.Text = T("Repositories.CreatedRepository", repository.Name);
+            _services.Workspace.Status = T("Repositories.CreatedRepository", repository.Name);
         }
         catch (Exception ex)
         {
@@ -249,7 +249,7 @@ public sealed partial class MainWindow
             SaveShellConfig();
             RefreshDashboard();
             RefreshRepositoryActionButtons();
-            _workspaceView.StatusTextBlock.Text = T("Repositories.RenamedRepository", repository.Name);
+            _services.Workspace.Status = T("Repositories.RenamedRepository", repository.Name);
         }
         catch (Exception ex)
         {
@@ -295,7 +295,7 @@ public sealed partial class MainWindow
             SaveConfig();
             ApplyShellState(refreshRepository: false);
             RefreshDashboard();
-            _workspaceView.StatusTextBlock.Text = T("Repositories.CreatedRepository", repository.Name);
+            _services.Workspace.Status = T("Repositories.CreatedRepository", repository.Name);
         }
         catch (Exception ex)
         {
@@ -353,7 +353,7 @@ public sealed partial class MainWindow
         SaveShellConfig();
         RefreshDashboard();
         RefreshRepositoryActionButtons();
-        _workspaceView.StatusTextBlock.Text = T("Repositories.UpdatedRepository", repository.Name);
+        _services.Workspace.Status = T("Repositories.UpdatedRepository", repository.Name);
     }
 
     private async void OnEditOnlineRepositoryClicked(object sender, RoutedEventArgs e)
@@ -386,7 +386,7 @@ public sealed partial class MainWindow
             RefreshSettingsPane();
             _onlineView?.RefreshOnlinePaneV2();
             _onlineView?.ResetOnlineDetailPaneToPlaceholder();
-            _workspaceView.StatusTextBlock.Text = T("Repositories.UpdatedOnlineCategorySettings", repository.Name);
+            _services.Workspace.Status = T("Repositories.UpdatedOnlineCategorySettings", repository.Name);
         }
         catch (Exception ex)
         {
@@ -525,7 +525,7 @@ public sealed partial class MainWindow
 
             SaveShellConfig();
             ApplyShellState(refreshRepository: _currentPrimarySection == PrimarySection.Repository);
-            _workspaceView.StatusTextBlock.Text = T("Repositories.DeletedRepository", repository.Name);
+            _services.Workspace.Status = T("Repositories.DeletedRepository", repository.Name);
         }
         catch (Exception ex)
         {

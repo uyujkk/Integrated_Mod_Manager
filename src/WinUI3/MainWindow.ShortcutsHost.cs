@@ -16,8 +16,8 @@ public sealed partial class MainWindow : IShortcutOverlayActions
         _shortcuts.ActionRequested += OnShortcutPageRequested;
         // Stage J finish, step 6: slots and pictures are services; the window still draws the slot card and runs the overlay.
         _services.Slots.Attach(LogApplicationIssue, TraceStartupStage, () => SaveShellConfig(), RefreshPersistentSlotControls,
-            text => _workspaceView.StatusTextBlock.Text = text, _shortcutInput, () => _overlay, () => _savingOverlaySinglePreset);
-        _services.PresetPreviews.Attach(LogApplicationIssue, () => SaveShellConfig(), text => _workspaceView.StatusTextBlock.Text = text,
+            text => _services.Workspace.Status = text, _shortcutInput, () => _overlay, () => _savingOverlaySinglePreset);
+        _services.PresetPreviews.Attach(LogApplicationIssue, () => SaveShellConfig(), text => _services.Workspace.Status = text,
             Activate, RunUiActionAsync, () => _overlay);
     }
 

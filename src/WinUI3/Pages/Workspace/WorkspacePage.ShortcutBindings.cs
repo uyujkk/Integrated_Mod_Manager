@@ -239,7 +239,7 @@ public sealed partial class WorkspacePage
                     FileName = normalized,
                     UseShellExecute = true
                 });
-                StatusTextBlock.Text = T("ShortcutBindings.OpenedTheModLinkInThe");
+                _services.Workspace.Status = T("ShortcutBindings.OpenedTheModLinkInThe");
             }
             catch (Exception ex)
             {

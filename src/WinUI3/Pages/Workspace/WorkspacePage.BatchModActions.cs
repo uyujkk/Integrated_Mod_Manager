@@ -57,7 +57,7 @@ public sealed partial class WorkspacePage
             _host.SaveShellConfig();
             RefreshConfigurationProfiles();
         }
-        StatusTextBlock.Text = T("BatchMods.AddedToPreset", added, profile.Name);
+        _services.Workspace.Status = T("BatchMods.AddedToPreset", added, profile.Name);
     }
 
     private async Task CopyModsToFolderAsync(IReadOnlyList<SecondLevelFolderItem> mods)
@@ -75,7 +75,7 @@ public sealed partial class WorkspacePage
             }
             return count;
         });
-        StatusTextBlock.Text = T("BatchMods.Copied", copied, folder);
+        _services.Workspace.Status = T("BatchMods.Copied", copied, folder);
     }
 
     private async Task DeleteModsAsync(WorkspaceRepository repository, IReadOnlyList<SecondLevelFolderItem> mods)
@@ -108,7 +108,7 @@ public sealed partial class WorkspacePage
         string confirm = T("BatchMods.ConfirmDelete", deletable.Length, linkCount, names) + (unverified.Count == 0 ? string.Empty : "\n\n" + unverifiedNote);
         if (!await ShowDangerConfirmAsync(confirm, T("LocalLibrary.ConfirmDelete"), T("Dialogs.Delete"))) return;
 
-        string selectedFirstLevelPath = _host.Characters.Selected?.Path ?? string.Empty;
+        string selectedFirstLevelPath = _services.Workspace.Characters.Selected?.Path ?? string.Empty;
         var failed = new List<string>();
         foreach (SecondLevelFolderItem mod in deletable)
         {
@@ -122,7 +122,7 @@ public sealed partial class WorkspacePage
         _host.SaveConfig();
         await RefreshListsAsync();
         SelectFirstLevelByPath(selectedFirstLevelPath);
-        StatusTextBlock.Text = T("BatchMods.Deleted", deletable.Length - failed.Count);
+        _services.Workspace.Status = T("BatchMods.Deleted", deletable.Length - failed.Count);
         if (failed.Count > 0) await ShowMessageAsync(string.Join("\n", failed), T("LocalLibrary.DeleteFailed"));
     }
 }

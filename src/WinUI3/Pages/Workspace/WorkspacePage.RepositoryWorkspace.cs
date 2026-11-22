@@ -21,7 +21,8 @@ public sealed partial class WorkspacePage
     private bool _refreshingCombinationWorkspace;
     private bool _repositoryDetailDialogOpen;
     internal bool _repositoryWorkspaceBusy;
-    internal readonly ModListViewModel _modList = new();
+    // The Mod list state is WorkspaceService's (stage J finish, step 7b): the window saves its view and widths.
+    internal ModListViewModel _modList => _services.Workspace.ModList;
     private readonly ModDetailsViewModel _modDetails = new();
     private readonly HashSet<SecondLevelFolderItem> _repositoryCoversLoading = [];
     private ToggleButton[] _repositoryModeButtons = [];
@@ -168,7 +169,7 @@ public sealed partial class WorkspacePage
 
     private void OnCharacterMoreClicked(object sender, RoutedEventArgs e)
     {
-        if (_host.Characters.Selected is { } item)
+        if (_services.Workspace.Characters.Selected is { } item)
             CreateFirstLevelMenu(item).ShowAt((FrameworkElement)sender,
                 new FlyoutShowOptions { Placement = FlyoutPlacementMode.BottomEdgeAlignedLeft });
     }
@@ -561,7 +562,7 @@ public sealed partial class WorkspacePage
         if (!_repositoryV4Ready) return;
         WorkspaceTitleTextBlock.Text = _modList.View == RepositoryWorkspaceView.Presets ? T("RepositoryWorkspace.CombinationPresets") : T("Common.ModWorkspace");
         RepositoryCategoryTitleTextBlock.Text = T("RepositoryWorkspace.Characters");
-        RepositoryModTitleTextBlock.Text = _host.Characters.Selected is { } role ? role.Name : T("RepositoryWorkspace.ModFiles");
+        RepositoryModTitleTextBlock.Text = _services.Workspace.Characters.Selected is { } role ? role.Name : T("RepositoryWorkspace.ModFiles");
         _repositoryModSearch!.PlaceholderText = T("RepositoryWorkspace.SearchThisCharacterSMods");
         if (_localTagsButton is not null) _localTagsButton.Content = T("Common.Tags");
         AutomationProperties.SetName(_repositoryModSearch, T("RepositoryWorkspace.SearchMods"));
@@ -824,7 +825,7 @@ public sealed partial class WorkspacePage
         // A search or filter that hides the selected Mod moves the selection to the first match,
         // so the details never describe a Mod the list no longer shows.
         if (SecondLevelListView.SelectedItem is null && visible.Length > 0) SecondLevelListView.SelectedItem = visible[0];
-        RepositoryModTitleTextBlock.Text = _host.Characters.Selected is { } role ? role.Name : T("RepositoryWorkspace.ModFiles");
+        RepositoryModTitleTextBlock.Text = _services.Workspace.Characters.Selected is { } role ? role.Name : T("RepositoryWorkspace.ModFiles");
         RepositoryModCountTextBlock.Text = T("RepositoryWorkspace.Mods", visible.Length, _host.SecondLevelItems.Count);
         if (_localFiltersButton is not null)
         {
@@ -1045,11 +1046,11 @@ public sealed partial class WorkspacePage
     private void UpdateRepositoryEmptyState()
     {
         if (_repositoryEmptyState is null) return;
-        _modList.UpdateEmptyKind(_host.SecondLevelItems.Count, _host.Characters.Selected is not null);
+        _modList.UpdateEmptyKind(_host.SecondLevelItems.Count, _services.Workspace.Characters.Selected is not null);
         ModListEmptyKind kind = _modList.EmptyKind;
         _repositoryEmptyState.Visibility = kind == ModListEmptyKind.None ? Visibility.Collapsed : Visibility.Visible;
         _repositoryEmptyState.Glyph = kind == ModListEmptyKind.NoMatches ? "\uE721" : "\uE8B5";
-        string character = _host.Characters.Selected?.Name ?? string.Empty;
+        string character = _services.Workspace.Characters.Selected?.Name ?? string.Empty;
         _repositoryEmptyState.Title = kind switch
         {
             ModListEmptyKind.NoMatches => T("RepositoryWorkspace.NoMatchingModsTryAnotherSearch"),
@@ -1069,7 +1070,7 @@ public sealed partial class WorkspacePage
         _repositoryEmptyOnline!.Content = RepositoryIconLabel("\uE774", T("RepositoryWorkspace.FindOnline"));
         _repositoryEmptyAdopt.Content = T("RepositoryWorkspace.AdoptExistingFolder");
         _repositoryEmptyImport.IsEnabled = _repositoryEmptyOnline.IsEnabled = _repositoryEmptyAdopt.IsEnabled = !_repositoryWorkspaceBusy;
-        CharacterFolderHintTextBlock.Visibility = _host.Characters.All.Sum(item => item.Children.Count) == 0 ? Visibility.Visible : Visibility.Collapsed;
+        CharacterFolderHintTextBlock.Visibility = _services.Workspace.Characters.All.Sum(item => item.Children.Count) == 0 ? Visibility.Visible : Visibility.Collapsed;
     }
 
     private void SyncRepositorySelectionV4(SecondLevelFolderItem? item)
@@ -1153,7 +1154,7 @@ public sealed partial class WorkspacePage
         string? replaced = mod is null || !links || ModTone(mod) == ModStateTone.Deployed || several ? null
             : RepositoryWorkspacePolicy.ReplacedByDeploy(_host.SecondLevelItems.Select(item => (item.Name, ModTone(item))), mod.Name);
         RepositoryDeploymentHintTextBlock.Text = replaced is not null
-            ? T("RepositoryWorkspace.DeployReplaces", _host.Characters.Selected?.Name ?? string.Empty, replaced)
+            ? T("RepositoryWorkspace.DeployReplaces", _services.Workspace.Characters.Selected?.Name ?? string.Empty, replaced)
             : several ? T("RepositoryWorkspace.LinkDeploymentKeepsOtherMods")
             : links ? T("RepositoryWorkspace.LinkDeploymentReplacesTheSameCharacter")
             : T("RepositoryWorkspace.CopyDeploymentKeepsARecoverableBackup");
@@ -1220,19 +1221,19 @@ public sealed partial class WorkspacePage
             var package = new Windows.ApplicationModel.DataTransfer.DataPackage();
             package.SetText(mod.Path);
             Windows.ApplicationModel.DataTransfer.Clipboard.SetContent(package);
-            StatusTextBlock.Text = T("RepositoryWorkspace.PathCopied", mod.Path);
+            _services.Workspace.Status = T("RepositoryWorkspace.PathCopied", mod.Path);
         }
         catch (Exception ex)
         {
             _host.LogApplicationIssue("Copy Mod path", ex);
-            StatusTextBlock.Text = T("RepositoryWorkspace.PathNotCopied");
+            _services.Workspace.Status = T("RepositoryWorkspace.PathNotCopied");
         }
     }
 
     private void RefreshRepositoryCountsV4()
     {
         if (RepositoryCountTextBlock is null) return;
-        int deployed = _host.Characters.All.Sum(character => character.Children.Count(mod => ModTone(mod) == ModStateTone.Deployed));
+        int deployed = _services.Workspace.Characters.All.Sum(character => character.Children.Count(mod => ModTone(mod) == ModStateTone.Deployed));
         RepositoryCountTextBlock.Text = T("RepositoryWorkspace.CharactersMods", FirstCountTextBlock.Text, SecondCountTextBlock.Text, deployed);
     }
 
@@ -1539,23 +1540,9 @@ public sealed partial class WorkspacePage
         parent.Children.Add(element);
     }
 
-    // The dashboard's copy/link switch.
+    // The dashboard's copy/link switch changed the repository (the window saved it): the selected Mod's state again.
     internal void OnLinkDeploymentChanged()
     {
-        if (_host.IsApplyingRepositoryDeploymentMode)
-        {
-            return;
-        }
-
-        WorkspaceRepository? repository = _services.Repositories.Selected;
-        if (repository is null)
-        {
-            return;
-        }
-
-        repository.UseDirectoryLinks = Paths.UseDirectoryLinks;
-        _host.SaveShellConfig();
-        _host.RefreshLocalizedStates();
         ApplySecondLevelSelectionState(GetSelectedSecondLevelItem(), preserveStatus: true);
     }
 }

@@ -32,7 +32,7 @@ public sealed partial class MainWindow
         _isApplyingConflictDetection = false;
         RefreshBackupManagerText();
         _ = RefreshInstallBackupListAsync();
-        _workspaceView.RefreshConfigurationProfiles();
+        RefreshConfigurationProfiles();
         RefreshDownloadTaskCenter();
         UpdatesView.IsCheckingModUpdates = _services.Tracking.IsChecking;
         UpdatesView.SetReplacing(_services.Tracking.InProgress);
@@ -59,7 +59,7 @@ public sealed partial class MainWindow
     }
 
     // The preset controls are shown by the Mod workspace's Presets view; their labels stay here until J7.
-    private void RefreshCombinationProfileText()
+    private void RefreshCombinationProfileText(WorkspacePage _workspaceView)
     {
         _workspaceView.ConfigurationProfilesTitleTextBlock.Text = T("Updates.ModCombinationPresets");
         _workspaceView.ConfigurationProfilesHintTextBlock.Text = T("Updates.SaveEnabledModsAndPersistentState");
@@ -169,7 +169,7 @@ public sealed partial class MainWindow
         {
             if (string.IsNullOrWhiteSpace(_services.Install.LastTransactionPath) || !Directory.Exists(_services.Install.LastTransactionPath))
             {
-                _workspaceView.RefreshConfigurationProfiles();
+                RefreshConfigurationProfiles();
                 return;
             }
 
@@ -180,11 +180,11 @@ public sealed partial class MainWindow
                 return;
             }
 
-            _workspaceView.SetBusyState(true);
+            _workspaceView?.SetBusyState(true);
             try
             {
                 await _services.Install.RollbackInstallTransactionAsync(_services.Install.LastTransactionPath, clearLastTransaction: true);
-                await _workspaceView.RefreshListsAsync();
+                await RefreshListsAsync();
                 ShowAppNotification(T("InstallTransactions.Restored"));
             }
             catch (Exception ex)
@@ -193,8 +193,8 @@ public sealed partial class MainWindow
             }
             finally
             {
-                _workspaceView.SetBusyState(false);
-                _workspaceView.RefreshConfigurationProfiles();
+                _workspaceView?.SetBusyState(false);
+                RefreshConfigurationProfiles();
             }
         }
         catch (Exception ex)

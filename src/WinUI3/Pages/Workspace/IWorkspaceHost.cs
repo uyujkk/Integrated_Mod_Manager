@@ -8,8 +8,9 @@ namespace ModFolderCopier.WinUI;
 
 /// <summary>
 /// What the Mod workspace page uses from the window (stage J7, decided 2026-11-10). State slots, preset pictures
-/// (stage J finish, step 6) and combination presets (step 7) have since become services in AppServices, which the page
-/// uses directly; see UI-Structure-Plan.md, "J7 后续".
+/// (stage J finish, step 6), combination presets (step 7a) and the scan, status line and path actions (step 7b) have
+/// since become services in AppServices, which the page uses directly; the window creates the page the first time the
+/// workspace is shown. See UI-Structure-Plan.md, "J7 后续".
 /// </summary>
 internal interface IWorkspaceHost
 {
@@ -21,7 +22,6 @@ internal interface IWorkspaceHost
     void OnOnlineNavClicked(object sender, RoutedEventArgs e);
 
     // Errors, the error log and listing a repository through the local index.
-    (List<FirstLevelFolderItem> Items, int SecondCount) LoadFolderItemsUsingIndex(string repositoryId, string sourceDir, string targetDir, CancellationToken cancellationToken, out int warningCount);
     void LogApplicationIssue(string operation, Exception exception);
     void ReportUiActionFailure(string operation, Exception exception);
     Task RunUiActionAsync(string operation, Func<Task> action);
@@ -44,11 +44,8 @@ internal interface IWorkspaceHost
     // State the workspace shares with the dashboard, the Shortcuts page and the overlay.
     string[] ImageExtensions { get; }
     int ShortcutScanSafetyLimit { get; }
-    CharacterListViewModel Characters { get; }
     string? CurrentSecondLevelPath { get; set; }
     bool EnableConflictDetection { get; }
-    CancellationTokenSource? FolderRefreshCancellation { get; set; }
-    int FolderRefreshGeneration { get; set; }
     bool IsApplyingRepositoryDeploymentMode { get; }
     Dictionary<string, List<ShortcutBinding>> ModBindings { get; }
     Dictionary<string, string> ModLinks { get; }
@@ -68,7 +65,6 @@ internal interface IWorkspaceHost
 
     // Running the repository's launcher, the dashboard's avatars and the Online page.
     Task RunRepositoryLauncherAsync();
-    void ApplyDashboardCharacterAvatar(FirstLevelFolderItem item);
 
     // Workspace timing diagnostics.
     RepositoryPerformanceRecorder.Scope? MeasureRepositoryUi(RepositoryPerformanceOperation operation, int count);

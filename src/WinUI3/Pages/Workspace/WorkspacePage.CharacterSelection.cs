@@ -46,7 +46,7 @@ public sealed partial class WorkspacePage
             repository.CharacterSelectionOverrides[item.Name] = allowsMultiple;
         }
         _host.SaveShellConfig();
-        StatusTextBlock.Text = allowsMultiple
+        _services.Workspace.Status = allowsMultiple
             ? T("CharacterSelection.NowAllowsSeveral", item.Name)
             : T("CharacterSelection.NowSingle", item.Name);
         UpdateCharacterHeaderActions();
@@ -57,7 +57,7 @@ public sealed partial class WorkspacePage
     {
         if (CharacterMultipleModsToggle is null || CharacterAvatarButton is null) return;
         WorkspaceRepository? repository = _services.Repositories.Selected;
-        var item = _host.Characters.Selected;
+        var item = _services.Workspace.Characters.Selected;
         bool allows = repository is not null && item is not null
             && CharacterSelectionPolicy.AllowsMultiple(item.Name, repository.AllowMultipleModsPerCharacter, repository.CharacterSelectionOverrides);
         CharacterMultipleModsToggle.IsEnabled = item is not null && repository is not null;
@@ -82,7 +82,7 @@ public sealed partial class WorkspacePage
 
     private void OnCharacterMultipleModsToggleClicked(object sender, RoutedEventArgs e)
     {
-        if (_services.Repositories.Selected is { } repository && _host.Characters.Selected is { } item)
+        if (_services.Repositories.Selected is { } repository && _services.Workspace.Characters.Selected is { } item)
         {
             SetCharacterAllowsMultiple(repository, item, CharacterMultipleModsToggle.IsChecked == true);
         }

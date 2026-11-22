@@ -26,7 +26,7 @@ public sealed partial class MainWindow : IOnlineHost
     Windows.Foundation.Rect IOnlineHost.Bounds => Bounds;
     string IOnlineHost.Density => _interfaceDensity.ToString();
     bool IOnlineHost.ReduceMotion => _reduceMotion;
-    void IOnlineHost.AnimateImageReveal(UIElement image) => _workspaceView.AnimateImageReveal(image);
+    void IOnlineHost.AnimateImageReveal(UIElement image) => WorkspacePage.AnimateImageReveal(_services, image);
     Task IOnlineHost.ShowImageViewerAsync(ImageSource? source, string title, IReadOnlyList<string>? imageUrls, int selectedIndex)
         => ShowImageViewerAsync(source, title, imageUrls, selectedIndex);
 
@@ -37,9 +37,9 @@ public sealed partial class MainWindow : IOnlineHost
     void IOnlineHost.SaveShellConfig(bool throwOnError) => SaveShellConfig(throwOnError);
     bool IOnlineHost.SaveConfig() => SaveConfig();
 
-    Task IOnlineHost.RefreshListsAsync() => _workspaceView.RefreshListsAsync();
-    void IOnlineHost.SelectSecondLevelByPath(string? path) => _workspaceView.SelectSecondLevelByPath(path);
-    void IOnlineHost.SetBusyState(bool busy) => _workspaceView.SetBusyState(busy);
+    Task IOnlineHost.RefreshListsAsync() => RefreshListsAsync();
+    void IOnlineHost.SelectSecondLevelByPath(string? path) => _workspaceView?.SelectSecondLevelByPath(path);
+    void IOnlineHost.SetBusyState(bool busy) => _workspaceView?.SetBusyState(busy);
     bool IOnlineHost.IsFavoriteCharacter(string characterKey) => IsFavoriteCharacter(characterKey);
     void IOnlineHost.ToggleFavoriteCharacter(string characterKey) => ToggleFavoriteCharacter(characterKey);
 
@@ -57,5 +57,5 @@ public sealed partial class MainWindow : IOnlineHost
 
     int IOnlineHost.ShortcutScanSafetyLimit => ShortcutScanSafetyLimit;
     IReadOnlyList<string> IOnlineHost.ImageExtensions => ImageExtensions;
-    string? IOnlineHost.FindPreviewImage(List<string> files) => _workspaceView.FindPreviewImage(files);
+    string? IOnlineHost.FindPreviewImage(List<string> files) => WorkspacePage.FindPreviewImage(files, ImageExtensions);
 }

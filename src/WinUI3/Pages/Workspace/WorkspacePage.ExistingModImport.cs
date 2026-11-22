@@ -10,7 +10,6 @@ public sealed partial class WorkspacePage
 {
     internal CancellationTokenSource? _existingModImportCancellation;
     private bool _existingModImportBusy;
-    private string ExistingImportRecordsRoot => Path.Combine(AppContext.BaseDirectory, "backups", "existing-mod-imports");
 
     private void InitializeExistingModImportCommands(StackPanel host)
     {
@@ -50,7 +49,7 @@ public sealed partial class WorkspacePage
             await ShowMessageAsync(T("ExistingModImport.CreateACharacterFolderInThis"), T("ExistingModImport.ChooseATargetCharacter"));
             return;
         }
-        if (await ExistingModImportDialogs.ChooseAsync(_services, characters, _host.Characters.Selected?.Path, () => _services.Dialogs.PickFolderAsync()) is not { } chosen) return;
+        if (await ExistingModImportDialogs.ChooseAsync(_services, characters, _services.Workspace.Characters.Selected?.Path, () => _services.Dialogs.PickFolderAsync()) is not { } chosen) return;
         (string source, string destination) = chosen;
         _existingModImportBusy = true;
         using var cancellation = new CancellationTokenSource();
@@ -65,7 +64,7 @@ public sealed partial class WorkspacePage
             }
             long bytes = plan.Items.Sum(item => item.Snapshot.Files.Sum(file => file.Length));
             if (!await ExistingModImportDialogs.PreviewAsync(_services, plan, destination, OnlineDownloadService.FormatFileSize(bytes), _host.Root.ActualHeight)) return;
-            string manifest = Path.Combine(ExistingImportRecordsRoot, Guid.NewGuid().ToString("N") + ".json");
+            string manifest = Path.Combine(_services.Workspace.ExistingImportRecordsRoot, Guid.NewGuid().ToString("N") + ".json");
             _services.Online.Preferences.LastImportManifest = manifest;
             _host.SaveShellConfig();
             (ContentDialog operation, TextBlock status) = ExistingModImportDialogs.Progress(_services, cancellation);
@@ -99,7 +98,7 @@ public sealed partial class WorkspacePage
         if (_existingModImportBusy || manifest is null || repository is null) return;
         try
         {
-            if (!PathSafety.IsStrictlyInside(manifest, ExistingImportRecordsRoot))
+            if (!PathSafety.IsStrictlyInside(manifest, _services.Workspace.ExistingImportRecordsRoot))
                 throw new InvalidDataException("Import record is outside the application records folder.");
             var record = RecoveryJsonFile.Read<ExistingModImportManifest>(manifest);
             if (!OnlineDownloadService.IsPathInsideDirectory(record.DestinationRoot, repository.SourcePath))
@@ -122,14 +121,14 @@ public sealed partial class WorkspacePage
         _existingModImportBusy = true;
         try
         {
-            var candidates = await Task.Run(() => FindInterruptedImports(repository.SourcePath));
+            var candidates = await Task.Run(() => _services.Workspace.FindInterruptedImports(repository.SourcePath));
             if (candidates.Length == 0)
             {
                 await ShowMessageAsync(T("ExistingModImport.NoInterruptedImportsNeedReviewIn"), T("ExistingModImport.ImportRecoveryCheck"));
                 return;
             }
             if (await ExistingModImportDialogs.ChooseInterruptedAsync(_services, candidates) is not { } manifest) return;
-            if (!OnlineDownloadService.IsPathInsideDirectory(manifest, ExistingImportRecordsRoot)) throw new InvalidDataException("Import record is outside the application records folder.");
+            if (!OnlineDownloadService.IsPathInsideDirectory(manifest, _services.Workspace.ExistingImportRecordsRoot)) throw new InvalidDataException("Import record is outside the application records folder.");
             var record = RecoveryJsonFile.Read<ExistingModImportManifest>(manifest);
             if (!OnlineDownloadService.IsPathInsideDirectory(record.DestinationRoot, repository.SourcePath))
                 throw new InvalidDataException(T("ExistingModImport.SwitchToTheOriginalRepositoryTo"));
@@ -143,37 +142,9 @@ public sealed partial class WorkspacePage
         finally { _existingModImportBusy = false; }
     }
 
-    private string[] FindInterruptedImports(string? repositoryPath = null)
-    {
-        if (!Directory.Exists(ExistingImportRecordsRoot)) return [];
-        var records = new List<string>();
-        foreach (string path in Directory.EnumerateFiles(ExistingImportRecordsRoot, "*.json").OrderByDescending(File.GetLastWriteTimeUtc).Take(100))
-        {
-            try
-            {
-                var record = RecoveryJsonFile.Read<ExistingModImportManifest>(path);
-                if (record.Version == 2 && !record.Complete && record.Pending is { Count: > 0 }
-                    && (repositoryPath is null || OnlineDownloadService.IsPathInsideDirectory(record.DestinationRoot, repositoryPath))) records.Add(path);
-            }
-            catch (Exception ex) { _host.LogApplicationIssue("Inspect interrupted import record", ex); }
-        }
-        return records.ToArray();
-    }
-
-    internal async Task NotifyInterruptedImportsAsync()
-    {
-        try
-        {
-            int count = (await Task.Run(() => FindInterruptedImports())).Length;
-            if (count > 0 && !_services.IsClosing)
-                ShowAppNotification(T("ExistingModImport.InterruptedFound", count));
-        }
-        catch (Exception ex) { _host.LogApplicationIssue("Inspect import recovery on startup", ex); }
-    }
-
     private bool HasExistingImportRecords()
     {
-        try { return Directory.Exists(ExistingImportRecordsRoot) && Directory.EnumerateFiles(ExistingImportRecordsRoot, "*.json").Any(); }
+        try { return Directory.Exists(_services.Workspace.ExistingImportRecordsRoot) && Directory.EnumerateFiles(_services.Workspace.ExistingImportRecordsRoot, "*.json").Any(); }
         catch (Exception ex) { _host.LogApplicationIssue("Find import recovery records", ex); return false; }
     }
 }
