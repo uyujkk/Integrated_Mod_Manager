@@ -1,5 +1,3 @@
-using Microsoft.UI.Xaml.Automation;
-using Microsoft.UI.Xaml.Controls;
 
 namespace ModFolderCopier.WinUI;
 
@@ -16,22 +14,12 @@ public sealed partial class MainWindow
 
     private static UiMessage M(string key, params object?[] values) => LanguageService.M(key, values);
 
+    private string NormalizeUiText(string? value) => _services.Language.NormalizeUiText(value);
+
     // For text pairs built at runtime, such as stored status messages.
     private string L(string zh, string en)
     {
         return BetaLocalization.Resolve(!IsChineseUi, zh, en);
-    }
-
-    private string NormalizeUiText(string? value)
-    {
-        if (string.IsNullOrWhiteSpace(value))
-        {
-            return string.Empty;
-        }
-
-        return !IsChineseUi
-            ? value
-            : BetaLocalization.NormalizeChineseText(value);
     }
 
     private void ApplyLanguage()
@@ -54,149 +42,12 @@ public sealed partial class MainWindow
         AppTitleBar.Title = T("Localization.IntegratedModManager");
         AppTitleBar.Subtitle = AppVersion;
 
-
-        if (_workspaceView is { } workspace) ApplyWorkspaceLanguage(workspace);
+        if (_workspaceView is { } workspace) workspace.ApplyLanguage();
         else
         {
             // As the page did with no character selected: the welcome line until a scan found characters.
-            ApplyShortcutPlaceholders();
-            RefreshLocalizedStates();
-            if (_services.Workspace.Characters.All.Count == 0) SetDefaultStatus();
+            _services.Workspace.RefreshCopyStates();
+            if (_services.Workspace.Characters.All.Count == 0) _services.Workspace.SetDefaultStatus();
         }
     }
-
-    // The Mod workspace's labels, the selected character or Mod in the new language, and its status line (from
-    // ApplyLanguage; also run when the page is made, stage J finish, step 7b).
-    private void ApplyWorkspaceLanguage(WorkspacePage _workspaceView)
-    {
-        ToolTipService.SetToolTip(_workspaceView.PreviewImage, T("Localization.ClickToViewFullSize"));
-        AutomationProperties.SetName(_workspaceView.PreviewImage, T("Localization.OpenFullSizeModPreview"));
-        _workspaceView.RefreshButton.Label = T("Localization.Refresh");
-        _workspaceView.ImportZipButton.Label = T("Localization.ImportMod");
-        ToolTipService.SetToolTip(_workspaceView.ImportZipButton, T("Localization.ImportIntoTheSelectedFolder"));
-        _workspaceView.RunLauncherButton.Label = T("Localization.RunLauncher");
-        _workspaceView.UpdateDeployButtonLabel();
-
-        _workspaceView.FirstCountLabelTextBlock.Text = T("Localization.FirstLevelFolders");
-        _workspaceView.FirstCountHintTextBlock.Text = T("Localization.NumberOfCategoriesInTheSource");
-        _workspaceView.SecondCountLabelTextBlock.Text = T("Localization.SecondLevelFolders");
-        _workspaceView.SecondCountHintTextBlock.Text = T("Localization.TotalModFoldersFoundInThe");
-        _workspaceView.CurrentStateLabelTextBlock.Text = T("Localization.DeploymentStatus");
-        _workspaceView.CurrentStateHintTextBlock.Text = T("Localization.DistinguishesNormalCopiesFromDirectoryJunctions");
-        _workspaceView.CurrentFolderLabelTextBlock.Text = T("Localization.CurrentSecondLevelFolder");
-        _workspaceView.CurrentFolderHintTextBlock.Text = T("Localization.ShowsTheCurrentlySelectedModName");
-        _workspaceView.FirstLevelSearchTextBox.PlaceholderText = T("RepositoryWorkspace.SearchCharacters");
-        _workspaceView.CreateFirstLevelButton.Content = T("Localization.NewFolder");
-        _workspaceView.RenameFirstLevelButton.Content = T("Localization.Rename");
-        _workspaceView.DeleteSecondLevelButton.Content = T("Localization.DeleteMod");
-
-        _workspaceView.ShortcutSectionTitleTextBlock.Text = T("Localization.ShortcutNotes");
-        _workspaceView.ShortcutSectionSubtitleTextBlock.Text = T("Localization.ShortcutNotesForTheSelectedMod");
-        _workspaceView.AddShortcutRowButton.Content = T("Localization.AddRow");
-        _workspaceView.ShortcutHintTextBlock.Text = T("Localization.ReadsKeySectionsFromModINIs");
-
-        _workspaceView.PreviewSectionTitleTextBlock.Text = T("Localization.ImagePreview");
-        _workspaceView.PreviewSectionSubtitleTextBlock.Text = T("Localization.PrefersPreviewCoverThumbnailImageAnd");
-        _workspaceView.ModLinkSectionTitleTextBlock.Text = T("Localization.ModLink");
-        _workspaceView.ModLinkSectionSubtitleTextBlock.Text = T("Localization.BindAWebLinkToThe");
-        _workspaceView.ModLinkTextBox.PlaceholderText = T("Localization.PasteTheWebLinkForThe");
-        _workspaceView.PreviewFooterTextBlock.Text = T("Localization.ThePreviewShowsTheCurrentSecond");
-        _workspaceView.OpenModLinkButton.Content = T("Localization.OpenLink");
-        RefreshCombinationProfileText(_workspaceView);
-
-        _workspaceView.ProgressTextBlock.Text = string.IsNullOrWhiteSpace(_workspaceView.ProgressTextBlock.Text)
-            ? T("Common.NoActiveCopyTask")
-            : _workspaceView.ProgressTextBlock.Text;
-        _workspaceView.AuthorTextBlock.Text = T("Localization.ToolAuthorUyujkk");
-
-        ApplyShortcutPlaceholders();
-        _workspaceView.UpdateShortcutRowVisibility();
-        _workspaceView.UpdateLinkButtonState();
-        RefreshLocalizedStates();
-        ApplyTextOverrides(_workspaceView);
-        ApplyActionButtonPresentation(_workspaceView);
-
-        if (_services.Workspace.Characters.Selected is { } firstItem)
-        {
-            string? selectedPath = _currentSecondLevelPath;
-            _workspaceView.PopulateSecondLevelList(firstItem, preserveStatus: true);
-            _workspaceView.SelectSecondLevelByPath(selectedPath);
-        }
-        else if (_workspaceView.GetSelectedSecondLevelItem() is SecondLevelFolderItem secondItem)
-        {
-            _workspaceView.ShowSecondLevelDetails(secondItem, preserveStatus: true);
-        }
-        else
-        {
-            _workspaceView.ShowModSummary(null);
-            _workspaceView.ClearPreview();
-            SetDefaultStatus();
-        }
-    }
-
-    private void ApplyTextOverrides(WorkspacePage _workspaceView)
-    {
-        _workspaceView.ImportZipButton.Label = T("Localization.ImportMod");
-
-        _workspaceView.FirstCountHintTextBlock.Text = T("Localization.NumberOfCategoriesInTheMod");
-
-        _workspaceView.ShortcutSectionTitleTextBlock.Text = T("Localization.ShortcutAndDescription");
-        _workspaceView.ShortcutSectionSubtitleTextBlock.Text = T("Localization.RecordAShortcutAndDescriptionFor");
-        _workspaceView.ShortcutHintTextBlock.Text = T("Localization.ClickABoxToRecordGame");
-        RefreshPersistentSlotControls();
-    }
-
-    private void ApplyActionButtonPresentation(WorkspacePage _workspaceView)
-    {
-        _workspaceView.CreateFirstLevelButton.Content = new FontIcon { Glyph = "\uE710", FontSize = 16 };
-        _workspaceView.RenameFirstLevelButton.Content = new FontIcon { Glyph = "\uE70F", FontSize = 16 };
-        _workspaceView.DeleteSecondLevelButton.Content = new FontIcon { Glyph = "\uE74D", FontSize = 16 };
-
-        string createTip = T("Common.CreateFirstLevelFolder");
-        string renameTip = T("Localization.RenameFirstLevelFolder");
-        string deleteTip = T("Localization.DeleteSelectedMod");
-
-        ToolTipService.SetToolTip(_workspaceView.CreateFirstLevelButton, createTip);
-        ToolTipService.SetToolTip(_workspaceView.RenameFirstLevelButton, renameTip);
-        ToolTipService.SetToolTip(_workspaceView.DeleteSecondLevelButton, deleteTip);
-
-        AutomationProperties.SetName(_workspaceView.CreateFirstLevelButton, createTip);
-        AutomationProperties.SetName(_workspaceView.RenameFirstLevelButton, renameTip);
-        AutomationProperties.SetName(_workspaceView.DeleteSecondLevelButton, deleteTip);
-    }
-
-    private void ApplyShortcutPlaceholders()
-    {
-        foreach (TextBox box in _shortcutKeyBoxes)
-        {
-            box.PlaceholderText = T("Common.Shortcut");
-        }
-
-        foreach (TextBox box in _shortcutActionBoxes)
-        {
-            box.PlaceholderText = T("Common.Description");
-        }
-    }
-
-    private void SetDefaultStatus()
-    {
-        _services.Workspace.Status = T("Localization.ChooseAModStorageFolderAnd", AppVersion);
-    }
-
-    private void RefreshLocalizedStates()
-    {
-        string targetDir = Paths.Target.Trim();
-        foreach (FirstLevelFolderItem first in _services.Workspace.Characters.Visible)
-        {
-            foreach (SecondLevelFolderItem second in first.Children)
-            {
-                second.State = _services.Workspace.FolderCopyState(targetDir, second.Path);
-            }
-        }
-    }
-
-
-
-
-
 }

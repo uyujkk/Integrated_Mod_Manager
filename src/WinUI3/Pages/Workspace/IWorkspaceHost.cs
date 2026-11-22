@@ -34,8 +34,6 @@ internal interface IWorkspaceHost
     void SaveShellConfig(bool throwOnError = false);
 
     // Labels the window keeps for shared controls.
-    void ApplyShortcutPlaceholders();
-    void RefreshLocalizedStates();
 
     // Repositories: the selected one, switching, editing and the deployment mode switch.
     void OnEditRepositoryDetailsClicked(object sender, RoutedEventArgs e);
@@ -43,12 +41,8 @@ internal interface IWorkspaceHost
 
     // State the workspace shares with the dashboard, the Shortcuts page and the overlay.
     string[] ImageExtensions { get; }
-    string? CurrentSecondLevelPath { get; set; }
     bool EnableConflictDetection { get; }
     bool IsApplyingRepositoryDeploymentMode { get; }
-    BatchObservableCollection<SecondLevelFolderItem> SecondLevelItems { get; }
-    List<TextBox> ShortcutActionBoxes { get; }
-    List<TextBox> ShortcutKeyBoxes { get; }
 
     // Workspace timing diagnostics.
     RepositoryPerformanceRecorder.Scope? MeasureRepositoryUi(RepositoryPerformanceOperation operation, int count);

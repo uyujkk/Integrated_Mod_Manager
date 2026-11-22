@@ -176,7 +176,7 @@ public sealed partial class MainWindow
         _workspaceView = page;
         AttachWorkspacePageEvents();
         page.FirstLevelListView.ItemsSource = _services.Workspace.Characters.Visible;
-        page.SecondLevelListView.ItemsSource = _secondLevelItems;
+        page.SecondLevelListView.ItemsSource = _services.Workspace.SecondLevelItems;
         RegisterTrackedTextInputs(page);
         page.BuildShortcutRows();
         page.LoadDefaultShortcutTemplate();
@@ -194,7 +194,7 @@ public sealed partial class MainWindow
         ApplyWorkspaceDensity(_services.Appearance.IsCompact);
         // The status line keeps what the scan or an action wrote before the page existed.
         string status = _services.Workspace.Status;
-        ApplyWorkspaceLanguage(page);
+        page.ApplyLanguage();
         page.ShowLoadedLists();
         if (status.Length > 0) _services.Workspace.Status = status;
         page.UpdateRefinedWorkspaceLayout();
@@ -459,7 +459,7 @@ public sealed partial class MainWindow
                 DispatcherQueue.TryEnqueue(onlinePage.UpdateOnlineWorkspaceWidthConstraint);
             }
             _services.Images.TrimCache();
-            DetectLocalUpdatePackage();
+            _services.AppUpdates.DetectLocalUpdatePackage();
             await _services.Install.RefreshBackupListAsync();
 
             if (_services.Downloads.RestoredInterrupted > 0)
@@ -474,13 +474,13 @@ public sealed partial class MainWindow
                 await ShowGettingStartedTipsAsync();
             });
 
-            if (_localUpdatePackageVersion is not null && !_hasPromptedForLocalUpdate)
+            if (_services.AppUpdates.HasUnpromptedLocalPackage)
             {
-                await PromptAndStartLocalUpdateAsync();
+                await _services.AppUpdates.PromptAndStartLocalUpdateAsync();
             }
             else
             {
-                await CheckForUpdatesIfDueAsync();
+                await _services.AppUpdates.CheckForUpdatesIfDueAsync();
             }
         }
         catch (Exception ex)
@@ -507,7 +507,7 @@ public sealed partial class MainWindow
         RootGrid.ActualThemeChanged -= OnRootActualThemeChanged;
         SaveWindowPlacement();
         SaveShellConfig();
-        DisposeTraySupport();
+        _services.Tray.Dispose();
     }
 
     private async void OnRootKeyDown(object sender, KeyRoutedEventArgs e)

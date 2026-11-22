@@ -23,6 +23,8 @@ internal sealed class AppServices
         Launcher = new(this);
         ShortcutBindings = new(this);
         ShortcutPanel = new(this);
+        AppUpdates = new(this);
+        Tray = new(this);
         Diagnostics = new(this);
     }
 
@@ -112,6 +114,12 @@ internal sealed class AppServices
 
     /// <summary>The Shortcuts page's and the overlay's work: Mods, targets, sending, presets and character follow (step 8b).</summary>
     public ShortcutPanelService ShortcutPanel { get; }
+
+    /// <summary>The app's own updates: checks, local packages, downloads and the update agent (stage J finish, step 8c).</summary>
+    public AppUpdateService AppUpdates { get; }
+
+    /// <summary>The notification area icon and minimizing to it (stage J finish, step 8c).</summary>
+    public TrayService Tray { get; }
 
     /// <summary>The Shortcuts page and overlay state (stage J5).</summary>
     public ShortcutPageViewModel Shortcuts { get; } = new();

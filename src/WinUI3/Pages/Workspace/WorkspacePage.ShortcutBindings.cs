@@ -17,12 +17,12 @@ public sealed partial class WorkspacePage
     {
         ShortcutRowsPanel.Children.Clear();
         _shortcutKeyBorders.Clear();
-        _host.ShortcutKeyBoxes.Clear();
-        _host.ShortcutActionBoxes.Clear();
+        ShortcutKeyBoxes.Clear();
+        ShortcutActionBoxes.Clear();
 
         EnsureShortcutRowCapacity(InitialShortcutRows);
 
-        _host.ApplyShortcutPlaceholders();
+        ApplyShortcutPlaceholders();
         UpdateShortcutRowVisibility();
         UpdateShortcutKeyFocusVisuals();
         RefreshRefinedActionIcons();
@@ -31,7 +31,7 @@ public sealed partial class WorkspacePage
     private void EnsureShortcutRowCapacity(int requiredRows)
     {
         requiredRows = Math.Max(InitialShortcutRows, requiredRows);
-        while (_host.ShortcutKeyBoxes.Count < requiredRows)
+        while (ShortcutKeyBoxes.Count < requiredRows)
         {
             AddShortcutRowControls();
         }
@@ -76,8 +76,8 @@ public sealed partial class WorkspacePage
 
         ShortcutRowsPanel.Children.Add(rowGrid);
         _shortcutKeyBorders.Add(keyBorder);
-        _host.ShortcutKeyBoxes.Add(keyBox);
-        _host.ShortcutActionBoxes.Add(actionBox);
+        ShortcutKeyBoxes.Add(keyBox);
+        ShortcutActionBoxes.Add(actionBox);
     }
 
     private static Border CreateInsetBorder()
@@ -132,9 +132,9 @@ public sealed partial class WorkspacePage
 
         for (int i = 0; i < _shortcutKeyBorders.Count; i++)
         {
-            bool isActive = i < _host.ShortcutKeyBoxes.Count &&
-                ReferenceEquals(_host.ShortcutKeyBoxes[i], _activeShortcutKeyBox) &&
-                ReferenceEquals(_host.ShortcutKeyBoxes[i], focusedElement);
+            bool isActive = i < ShortcutKeyBoxes.Count &&
+                ReferenceEquals(ShortcutKeyBoxes[i], _activeShortcutKeyBox) &&
+                ReferenceEquals(ShortcutKeyBoxes[i], focusedElement);
             _shortcutKeyBorders[i].Background = isActive ? activeBackground : normalBackground;
             _shortcutKeyBorders[i].BorderBrush = isActive ? activeBorder : normalBorder;
             _shortcutKeyBorders[i].BorderThickness = isActive ? new Thickness(2) : new Thickness(1);
@@ -145,7 +145,7 @@ public sealed partial class WorkspacePage
     {
         try
         {
-            if (string.IsNullOrEmpty(_host.CurrentSecondLevelPath))
+            if (string.IsNullOrEmpty(_services.Workspace.CurrentModPath))
             {
                 await ShowMessageAsync(
                     T("Common.SelectASecondLevelModFirst"),
@@ -156,7 +156,7 @@ public sealed partial class WorkspacePage
             _visibleShortcutRows++;
             EnsureShortcutRowCapacity(_visibleShortcutRows);
             UpdateShortcutRowVisibility();
-            _host.ShortcutKeyBoxes[_visibleShortcutRows - 1].Focus(FocusState.Programmatic);
+            ShortcutKeyBoxes[_visibleShortcutRows - 1].Focus(FocusState.Programmatic);
             SaveCurrentModBindings();
         }
         catch (Exception ex)
@@ -258,12 +258,12 @@ public sealed partial class WorkspacePage
     {
         _isLoadingBindings = true;
         _activeShortcutKeyBox = null;
-        foreach (TextBox box in _host.ShortcutKeyBoxes)
+        foreach (TextBox box in ShortcutKeyBoxes)
         {
             box.Text = string.Empty;
         }
 
-        foreach (TextBox box in _host.ShortcutActionBoxes)
+        foreach (TextBox box in ShortcutActionBoxes)
         {
             box.Text = string.Empty;
         }
@@ -279,12 +279,12 @@ public sealed partial class WorkspacePage
         _isLoadingBindings = true;
         _activeShortcutKeyBox = null;
 
-        foreach (TextBox box in _host.ShortcutKeyBoxes)
+        foreach (TextBox box in ShortcutKeyBoxes)
         {
             box.Text = string.Empty;
         }
 
-        foreach (TextBox box in _host.ShortcutActionBoxes)
+        foreach (TextBox box in ShortcutActionBoxes)
         {
             box.Text = string.Empty;
         }
@@ -295,8 +295,8 @@ public sealed partial class WorkspacePage
             EnsureShortcutRowCapacity(_visibleShortcutRows);
             for (int i = 0; i < _visibleShortcutRows; i++)
             {
-                _host.ShortcutKeyBoxes[i].Text = bindings[i].Shortcut;
-                _host.ShortcutActionBoxes[i].Text = _services.ShortcutBindings.DisplayAction(bindings[i]);
+                ShortcutKeyBoxes[i].Text = bindings[i].Shortcut;
+                ShortcutActionBoxes[i].Text = _services.ShortcutBindings.DisplayAction(bindings[i]);
             }
         }
         else
@@ -311,17 +311,17 @@ public sealed partial class WorkspacePage
 
     internal void SaveCurrentModBindings()
     {
-        if (_isLoadingBindings || string.IsNullOrEmpty(_host.CurrentSecondLevelPath))
+        if (_isLoadingBindings || string.IsNullOrEmpty(_services.Workspace.CurrentModPath))
         {
             return;
         }
 
-        _services.ShortcutBindings.Bindings.TryGetValue(_host.CurrentSecondLevelPath, out List<ShortcutBinding>? previousBindings);
+        _services.ShortcutBindings.Bindings.TryGetValue(_services.Workspace.CurrentModPath, out List<ShortcutBinding>? previousBindings);
         var bindings = new List<ShortcutBinding>();
         for (int i = 0; i < _visibleShortcutRows; i++)
         {
-            string shortcut = (_host.ShortcutKeyBoxes[i].Text ?? string.Empty).Trim();
-            string action = (_host.ShortcutActionBoxes[i].Text ?? string.Empty).Trim();
+            string shortcut = (ShortcutKeyBoxes[i].Text ?? string.Empty).Trim();
+            string action = (ShortcutActionBoxes[i].Text ?? string.Empty).Trim();
             if (!string.IsNullOrWhiteSpace(shortcut) || !string.IsNullOrWhiteSpace(action))
             {
                 ShortcutBinding? previous = previousBindings is not null && i < previousBindings.Count
@@ -339,11 +339,11 @@ public sealed partial class WorkspacePage
 
         if (bindings.Count == 0)
         {
-            _services.ShortcutBindings.Bindings.Remove(_host.CurrentSecondLevelPath);
+            _services.ShortcutBindings.Bindings.Remove(_services.Workspace.CurrentModPath);
         }
         else
         {
-            _services.ShortcutBindings.Bindings[_host.CurrentSecondLevelPath] = bindings;
+            _services.ShortcutBindings.Bindings[_services.Workspace.CurrentModPath] = bindings;
         }
 
         _host.SaveConfig();
@@ -360,7 +360,7 @@ public sealed partial class WorkspacePage
 
     private void SaveCurrentModLink()
     {
-        if (_isLoadingModLink || string.IsNullOrEmpty(_host.CurrentSecondLevelPath))
+        if (_isLoadingModLink || string.IsNullOrEmpty(_services.Workspace.CurrentModPath))
         {
             UpdateLinkButtonState();
             return;
@@ -369,11 +369,11 @@ public sealed partial class WorkspacePage
         string link = (ModLinkTextBox.Text ?? string.Empty).Trim();
         if (string.IsNullOrWhiteSpace(link))
         {
-            _services.ShortcutBindings.Links.Remove(_host.CurrentSecondLevelPath);
+            _services.ShortcutBindings.Links.Remove(_services.Workspace.CurrentModPath);
         }
         else
         {
-            _services.ShortcutBindings.Links[_host.CurrentSecondLevelPath] = link;
+            _services.ShortcutBindings.Links[_services.Workspace.CurrentModPath] = link;
         }
 
         _host.SaveConfig();
@@ -398,8 +398,8 @@ public sealed partial class WorkspacePage
 
     internal void RefreshVisibleShortcutDescriptionsForLanguage()
     {
-        if (string.IsNullOrWhiteSpace(_host.CurrentSecondLevelPath)
-            || !_services.ShortcutBindings.Bindings.TryGetValue(_host.CurrentSecondLevelPath, out List<ShortcutBinding>? bindings)
+        if (string.IsNullOrWhiteSpace(_services.Workspace.CurrentModPath)
+            || !_services.ShortcutBindings.Bindings.TryGetValue(_services.Workspace.CurrentModPath, out List<ShortcutBinding>? bindings)
             || bindings.Count == 0)
         {
             return;
@@ -413,7 +413,7 @@ public sealed partial class WorkspacePage
             {
                 if (bindings[i].HasAutoDescription)
                 {
-                    _host.ShortcutActionBoxes[i].Text = _services.ShortcutBindings.DisplayAction(bindings[i]);
+                    ShortcutActionBoxes[i].Text = _services.ShortcutBindings.DisplayAction(bindings[i]);
                 }
             }
         }

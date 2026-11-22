@@ -1,6 +1,4 @@
 using System.Runtime.InteropServices;
-using IntegratedModManager.Core.Infrastructure;
-using IntegratedModManager.Core.Updates;
 using IntegratedModManager.Data;
 using Microsoft.UI.Xaml;
 using Microsoft.UI.Xaml.Automation;
@@ -154,102 +152,6 @@ public sealed partial class MainWindow
         ShowAppNotification(
                 isFavorite ? T("ProductivityFeatures.CharacterFavorited") : T("ProductivityFeatures.CharacterUnfavorited"),
                 InfoBarSeverity.Informational);
-    }
-
-    private Task<LatestReleaseInfo> FetchLatestReleaseInfoAsync(CancellationToken cancellationToken = default)
-        => ApplicationUpdateClient.FetchLatestReleaseAsync(_httpClient, GitHubLatestReleaseApiUrl, GitHubRepositoryUrl, cancellationToken);
-
-    private void ApplyLatestReleaseInfo(LatestReleaseInfo release)
-    {
-        _shell.LastUpdateCheckUtc = DateTimeOffset.UtcNow;
-        _shell.LatestReleaseTag = release.Tag;
-        _shell.LatestReleaseTitle = string.IsNullOrWhiteSpace(release.Title) ? release.Tag : release.Title;
-        _shell.LatestReleaseBody = release.Body;
-        _shell.LatestReleasePublishedAt = release.PublishedAt;
-        _shell.LatestReleaseUrl = release.PageUrl;
-        _shell.LatestReleasePackageUrl = release.PackageUrl;
-        _shell.LatestReleaseSha256Url = release.Sha256Url;
-        _appDataStore.WriteCache("app-release", "latest", release);
-        SaveShellConfig();
-        RefreshUpdateDetailsView();
-    }
-
-    private bool IsReleaseNewer(string tag)
-    {
-        return TryParseVersion(tag, out Version latest)
-            && TryParseVersion(AppVersion, out Version current)
-            && latest > current;
-    }
-
-    private async Task DownloadAndInstallApplicationUpdateAsync(LatestReleaseInfo release)
-    {
-        if (!AppSelfUpdateEnabled) { return; }
-        if (string.IsNullOrWhiteSpace(release.PackageUrl) || !TryParseVersion(release.Tag, out Version releaseVersion))
-        {
-            await ShowMessageAsync(
-                T("ProductivityFeatures.TheLatestReleaseHasNoRecognized"),
-                T("ProductivityFeatures.NoDownloadableUpdate"));
-            await OpenExternalUrlAsync(release.PageUrl, T("Common.FailedToOpenTheUpdatePage"));
-            return;
-        }
-
-        string installRoot = GetInstallRootPath();
-        string finalPath = Path.Combine(installRoot, $"Integrated_Mod_Manager-v{releaseVersion}.zip");
-        string temporaryPath = finalPath + ".download";
-        try
-        {
-            _shell.CurrentSection = PrimarySection.Settings;
-            ApplyShellState(refreshRepository: false);
-            SettingsView.BeginDownload(T("ProductivityFeatures.PreparingUpdateDownload"));
-
-            if (string.IsNullOrWhiteSpace(release.Sha256Url))
-            {
-                throw new InvalidDataException(T("ProductivityFeatures.ThisReleaseDoesNotProvideA"));
-            }
-
-            using var timeout = new CancellationTokenSource(TimeSpan.FromMinutes(15));
-            await ApplicationUpdateClient.DownloadAsync(_httpClient, release.PackageUrl, temporaryPath, (downloaded, totalBytes) =>
-            {
-                if (totalBytes is { } total)
-                {
-                    double progress = Math.Clamp(downloaded * 100d / total, 0, 100);
-                    SettingsView.ReportDownload(progress, T("ProductivityFeatures.DownloadingUpdate", progress, StorageSizeText.Format(downloaded), StorageSizeText.Format(total)));
-                }
-                else
-                {
-                    SettingsView.ReportDownload(null, downloaded > 0 ? T("ProductivityFeatures.Downloaded", StorageSizeText.Format(downloaded)) : null);
-                }
-            }, timeout.Token);
-
-            SettingsView.ReportDownloadText(T("ProductivityFeatures.VerifyingUpdatePackage"));
-            if (!await ApplicationUpdateClient.VerifyAsync(_httpClient, release.PackageUrl, release.Sha256Url, temporaryPath, timeout.Token))
-            {
-                throw new InvalidDataException(T("ProductivityFeatures.TheUpdatePackageFailedSHA256"));
-            }
-
-            File.Move(temporaryPath, finalPath, true);
-            _localUpdatePackagePath = finalPath;
-            _localUpdatePackageVersion = releaseVersion;
-            SettingsView.ReportDownload(100, T("ProductivityFeatures.DownloadCompleteStartingUpdater"));
-            await StartLocalUpdateAsync(finalPath);
-        }
-        catch (Exception ex)
-        {
-            try
-            {
-                if (File.Exists(temporaryPath))
-                {
-                    File.Delete(temporaryPath);
-                }
-            }
-            catch
-            {
-                // Preserve the original update failure if a scanner still holds the temporary file.
-            }
-
-            SettingsView.EndDownload();
-            await ShowMessageAsync(T("ProductivityFeatures.FailedToDownloadOrInstallUpdate") + ex.Message, T("Common.UpdateFailed"));
-        }
     }
 
     private void RefreshBackupManagerText()

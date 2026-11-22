@@ -54,7 +54,7 @@ public sealed partial class MainWindow
             Path.Combine(AppContext.BaseDirectory, "docs", "releases", WhatsNewReleaseNotes)
         ];
         string? notes = candidates.Select(Path.GetFullPath).FirstOrDefault(File.Exists);
-        string target = notes ?? $"{GitHubRepositoryUrl}/blob/main/docs/releases/{WhatsNewReleaseNotes}";
+        string target = notes ?? $"{AppUpdateService.GitHubRepositoryUrl}/blob/main/docs/releases/{WhatsNewReleaseNotes}";
         try
         {
             Process.Start(new ProcessStartInfo(target) { UseShellExecute = true })?.Dispose();

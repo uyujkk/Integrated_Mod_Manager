@@ -58,20 +58,6 @@ public sealed partial class MainWindow
         UpdatesView.NotifyRefreshed();
     }
 
-    // The preset controls are shown by the Mod workspace's Presets view; their labels stay here until J7.
-    private void RefreshCombinationProfileText(WorkspacePage _workspaceView)
-    {
-        _workspaceView.ConfigurationProfilesTitleTextBlock.Text = T("Updates.ModCombinationPresets");
-        _workspaceView.ConfigurationProfilesHintTextBlock.Text = T("Updates.SaveEnabledModsAndPersistentState");
-        _workspaceView.CaptureCombinationStateCheckBox.Content = T("Updates.IncludeD3dxUserIniParametersWhen");
-        _workspaceView.BrowseCombinationUserIniButton.Content = T("Common.Browse");
-        _workspaceView.CreateConfigurationProfileButton.Content = T("Updates.NewProfile");
-        _workspaceView.UpdateConfigurationProfileButton.Content = T("Updates.UpdateProfile");
-        _workspaceView.ApplyConfigurationProfileButton.Content = T("Updates.PreviewAndRestore");
-        _workspaceView.DeleteConfigurationProfileButton.Content = new Microsoft.UI.Xaml.Controls.FontIcon { Glyph = "", FontSize = 16 };
-        Microsoft.UI.Xaml.Controls.ToolTipService.SetToolTip(_workspaceView.DeleteConfigurationProfileButton, T("Updates.DeleteTheSelectedProfile"));
-    }
-
     // The check results, or the bare origins before any check.
     private List<TrackedModRow> BuildTrackedModRows()
     {
