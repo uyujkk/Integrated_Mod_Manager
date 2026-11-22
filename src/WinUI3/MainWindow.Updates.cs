@@ -9,16 +9,10 @@ namespace ModFolderCopier.WinUI;
 
 public sealed partial class MainWindow
 {
-    private static UpdateCheckInterval ParseUpdateCheckInterval(string? value)
-    {
-        return Enum.TryParse(value, ignoreCase: true, out UpdateCheckInterval interval)
-            ? interval
-            : UpdateCheckInterval.Manual;
-    }
 
     private TimeSpan? GetUpdateCheckIntervalTimeSpan()
     {
-        return _updateCheckInterval switch
+        return _shell.UpdateCheckInterval switch
         {
             UpdateCheckInterval.Daily => TimeSpan.FromDays(1),
             UpdateCheckInterval.EveryThreeDays => TimeSpan.FromDays(3),
@@ -35,15 +29,15 @@ public sealed partial class MainWindow
             return false;
         }
 
-        return !_lastUpdateCheckUtc.HasValue || DateTimeOffset.UtcNow - _lastUpdateCheckUtc.Value >= interval.Value;
+        return !_shell.LastUpdateCheckUtc.HasValue || DateTimeOffset.UtcNow - _shell.LastUpdateCheckUtc.Value >= interval.Value;
     }
 
     private async Task CheckForUpdatesIfDueAsync()
     {
-        bool startupCheckDue = AppSelfUpdateEnabled && _checkAppUpdatesOnStartup
+        bool startupCheckDue = AppSelfUpdateEnabled && _shell.CheckAppUpdatesOnStartup
             && (ShouldAutoCheckForUpdates()
-                || _updateCheckInterval == UpdateCheckInterval.Manual
-                    && (!_lastUpdateCheckUtc.HasValue || DateTimeOffset.UtcNow - _lastUpdateCheckUtc.Value >= TimeSpan.FromMinutes(30)));
+                || _shell.UpdateCheckInterval == UpdateCheckInterval.Manual
+                    && (!_shell.LastUpdateCheckUtc.HasValue || DateTimeOffset.UtcNow - _shell.LastUpdateCheckUtc.Value >= TimeSpan.FromMinutes(30)));
         if (startupCheckDue)
         {
             await CheckForUpdatesAsync(showDialogs: false, promptIfAvailable: true);
@@ -57,7 +51,7 @@ public sealed partial class MainWindow
 
     private TimeSpan? GetModUpdateCheckIntervalTimeSpan()
     {
-        return _modUpdateCheckInterval switch
+        return _shell.ModUpdateCheckInterval switch
         {
             UpdateCheckInterval.Daily => TimeSpan.FromDays(1),
             UpdateCheckInterval.EveryThreeDays => TimeSpan.FromDays(3),
@@ -94,7 +88,7 @@ public sealed partial class MainWindow
         _isApplyingUpdateCheckIntervalSelection = true;
         try
         {
-            SettingsView.UpdateIntervalIndex = (int)_updateCheckInterval;
+            SettingsView.UpdateIntervalIndex = (int)_shell.UpdateCheckInterval;
         }
         finally
         {
@@ -111,26 +105,26 @@ public sealed partial class MainWindow
             SettingsView.ReleaseNotes = T("Updates.ModUpdateTestBuildFixesInterval");
             return;
         }
-        string latestTag = string.IsNullOrWhiteSpace(_latestReleaseTag) ? T("Updates.NotCheckedYet") : _latestReleaseTag!;
-        string latestTitle = string.IsNullOrWhiteSpace(_latestReleaseTitle)
+        string latestTag = string.IsNullOrWhiteSpace(_shell.LatestReleaseTag) ? T("Updates.NotCheckedYet") : _shell.LatestReleaseTag!;
+        string latestTitle = string.IsNullOrWhiteSpace(_shell.LatestReleaseTitle)
             ? T("Updates.LatestReleaseDetailsWillAppearHere")
-            : NormalizeUiText(_latestReleaseTitle);
+            : NormalizeUiText(_shell.LatestReleaseTitle);
 
-        string publishedText = TryParseDateTimeOffset(_latestReleasePublishedAt) is DateTimeOffset publishedAt
+        string publishedText = ConfigurationService.TryParseDateTimeOffset(_shell.LatestReleasePublishedAt) is DateTimeOffset publishedAt
             ? publishedAt.ToLocalTime().ToString("yyyy-MM-dd HH:mm")
             : T("Updates.UnknownTime");
 
-        string lastCheckedText = _lastUpdateCheckUtc.HasValue
-            ? _lastUpdateCheckUtc.Value.ToLocalTime().ToString("yyyy-MM-dd HH:mm")
+        string lastCheckedText = _shell.LastUpdateCheckUtc.HasValue
+            ? _shell.LastUpdateCheckUtc.Value.ToLocalTime().ToString("yyyy-MM-dd HH:mm")
             : T("Updates.NotCheckedYet");
 
         SettingsView.ReleaseTitle = T("Updates.LatestRelease", latestTag);
         SettingsView.ReleaseMeta = T("Updates.TitlePublishedLastChecked", latestTitle, publishedText, lastCheckedText);
-        SettingsView.ReleaseNotes = string.IsNullOrWhiteSpace(_latestReleaseBody)
+        SettingsView.ReleaseNotes = string.IsNullOrWhiteSpace(_shell.LatestReleaseBody)
             ? T("Updates.GitHubReleaseNotesWillAppearHere")
-            : NormalizeUiText(_latestReleaseBody);
+            : NormalizeUiText(_shell.LatestReleaseBody);
         // Before the first check there is nothing but placeholders, so the box stays one line.
-        SettingsView.HasReleaseDetails = !string.IsNullOrWhiteSpace(_latestReleaseTag);
+        SettingsView.HasReleaseDetails = !string.IsNullOrWhiteSpace(_shell.LatestReleaseTag);
     }
 
     private void PopulateModUpdateIntervalOptions()
@@ -138,7 +132,7 @@ public sealed partial class MainWindow
         _isApplyingModUpdateIntervalSelection = true;
         try
         {
-            UpdatesView.ModUpdateIntervalIndex = (int)_modUpdateCheckInterval;
+            UpdatesView.ModUpdateIntervalIndex = (int)_shell.ModUpdateCheckInterval;
         }
         finally
         {
@@ -186,26 +180,26 @@ public sealed partial class MainWindow
                 return;
             }
 
-            if (string.IsNullOrWhiteSpace(_latestReleaseUrl))
+            if (string.IsNullOrWhiteSpace(_shell.LatestReleaseUrl))
             {
                 await CheckForUpdatesAsync(showDialogs: true);
                 return;
             }
 
-            if (!string.IsNullOrWhiteSpace(_latestReleasePackageUrl) && IsReleaseNewer(_latestReleaseTag ?? string.Empty))
+            if (!string.IsNullOrWhiteSpace(_shell.LatestReleasePackageUrl) && IsReleaseNewer(_shell.LatestReleaseTag ?? string.Empty))
             {
                 await DownloadAndInstallApplicationUpdateAsync(new LatestReleaseInfo(
-                    _latestReleaseTag ?? string.Empty,
-                    _latestReleaseTitle ?? string.Empty,
-                    _latestReleaseBody ?? string.Empty,
-                    _latestReleasePublishedAt ?? string.Empty,
-                    _latestReleaseUrl,
-                    _latestReleasePackageUrl,
-                    _latestReleaseSha256Url));
+                    _shell.LatestReleaseTag ?? string.Empty,
+                    _shell.LatestReleaseTitle ?? string.Empty,
+                    _shell.LatestReleaseBody ?? string.Empty,
+                    _shell.LatestReleasePublishedAt ?? string.Empty,
+                    _shell.LatestReleaseUrl,
+                    _shell.LatestReleasePackageUrl,
+                    _shell.LatestReleaseSha256Url));
                 return;
             }
 
-            await OpenExternalUrlAsync(_latestReleaseUrl, T("Common.FailedToOpenTheUpdatePage"));
+            await OpenExternalUrlAsync(_shell.LatestReleaseUrl, T("Common.FailedToOpenTheUpdatePage"));
         }
         catch (Exception ex)
         {

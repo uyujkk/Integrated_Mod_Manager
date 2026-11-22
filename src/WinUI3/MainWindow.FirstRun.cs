@@ -1,5 +1,4 @@
-﻿using IntegratedModManager.Core.Configuration;
-
+﻿
 namespace ModFolderCopier.WinUI;
 
 // The first start after installing: the app supports several games, so it asks instead of assuming one,
@@ -7,7 +6,6 @@ namespace ModFolderCopier.WinUI;
 public sealed partial class MainWindow
 {
     private bool _firstInstall;
-    private GettingStartedTips _gettingStartedTips = GettingStartedTips.Load(firstInstall: false, savedPending: false);
 
     private async Task ChooseFirstInstallGameAsync()
     {
@@ -15,7 +13,7 @@ public sealed partial class MainWindow
         _firstInstall = false;
         if (GetSelectedRepository() is not { } repository) return;
 
-        RepositoryPresetInfo? chosen = await FirstRunDialog.ShowAsync(_services, BuiltInRepositoryPresets, RootGrid.ActualTheme);
+        RepositoryPresetInfo? chosen = await FirstRunDialog.ShowAsync(_services, BuiltInRepositories.Presets, RootGrid.ActualTheme);
         if (chosen is null || _services.IsClosing) return;
         repository.Name = L(chosen.DisplayNameZh, chosen.DisplayNameEn);
         repository.OnlineSourceSite = DefaultOnlineSourceSite;
@@ -36,14 +34,14 @@ public sealed partial class MainWindow
     /// </summary>
     private async Task ShowGettingStartedTipsAsync()
     {
-        if (!_gettingStartedTips.IsPending) return;
+        if (!_shell.GettingStartedTips.IsPending) return;
         await Task.Delay(1500);
         for (int attempt = 0; attempt < 300 && IsContentDialogOpen(); attempt++)
         {
             await Task.Delay(1000);
         }
-        if (_services.IsClosing || !_gettingStartedTips.IsPending) return;
-        _services.Dashboard.GettingStarted = _gettingStartedTips;
+        if (_services.IsClosing || !_shell.GettingStartedTips.IsPending) return;
+        _services.Dashboard.GettingStarted = _shell.GettingStartedTips;
     }
 
     private void OnGettingStartedTipsClosed()

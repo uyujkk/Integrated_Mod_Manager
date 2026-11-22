@@ -1,4 +1,5 @@
 using IntegratedModManager.Core.Repository;
+using IntegratedModManager.Data;
 
 namespace ModFolderCopier.WinUI;
 
@@ -14,22 +15,17 @@ internal sealed partial class WorkspaceService(AppServices services)
     private readonly AppServices _services = services;
     private Action<string, Exception> _log = (_, _) => { };
     private Func<bool> _saveConfig = () => true;
-    private LoadFolderItems _loadFolderItems = null!;
     private Action<FirstLevelFolderItem> _avatarLoaded = _ => { };
 
-    /// <summary>The window's indexed folder listing (RepositoryIndex).</summary>
-    public delegate (List<FirstLevelFolderItem> Items, int SecondCount) LoadFolderItems(string repositoryId, string sourceDir, string targetDir,
-        CancellationToken cancellationToken, out int warningCount);
-
     /// <summary>
-    /// Called once by the window: the error log, saving config.ini, its indexed folder listing, and showing a loaded
-    /// avatar on the dashboard.
+    /// Called once by the window: the error log, saving config.ini, the local database with the repository index, and
+    /// showing a loaded avatar on the dashboard.
     /// </summary>
-    public void Attach(Action<string, Exception> log, Func<bool> saveConfig, LoadFolderItems loadFolderItems, Action<FirstLevelFolderItem> avatarLoaded)
+    public void Attach(Action<string, Exception> log, Func<bool> saveConfig, AppDataStore dataStore, Action<FirstLevelFolderItem> avatarLoaded)
     {
         _log = log;
         _saveConfig = saveConfig;
-        _loadFolderItems = loadFolderItems;
+        _dataStore = dataStore;
         _avatarLoaded = avatarLoaded;
     }
 
@@ -119,7 +115,7 @@ internal sealed partial class WorkspaceService(AppServices services)
         {
             var result = await Task.Run(() =>
             {
-                var items = _loadFolderItems(repositoryId, sourceDir, targetDir, cancellation.Token, out int warnings);
+                var items = LoadFolderItemsUsingIndex(repositoryId, sourceDir, targetDir, cancellation.Token, out int warnings);
                 return (items.Items, items.SecondCount, Warnings: warnings);
             }, cancellation.Token);
 

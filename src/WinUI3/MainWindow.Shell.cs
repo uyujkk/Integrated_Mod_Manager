@@ -51,9 +51,9 @@ public sealed partial class MainWindow
     {
         // What the click must show at once: the page and the navigation's selection, in this frame. The refreshes
         // below used to run first and held the selection back by 50-100 ms on every switch (J8 follow-up).
-        ShowPage(GetPage(_currentPrimarySection));
+        ShowPage(GetPage(_shell.CurrentSection));
         RefreshPrimaryNavigationVisuals();
-        if (_currentPrimarySection == PrimarySection.Shortcuts)
+        if (_shell.CurrentSection == PrimarySection.Shortcuts)
         {
             _shortcutsPage!.EnsureBuilt();
             PrepareShortcuts();
@@ -76,14 +76,14 @@ public sealed partial class MainWindow
 
     private void RefreshShellStateAfterSwitch()
     {
-        if (_currentPrimarySection is PrimarySection.Dashboard or PrimarySection.Repository or PrimarySection.Online)
+        if (_shell.CurrentSection is PrimarySection.Dashboard or PrimarySection.Repository or PrimarySection.Online)
         {
             ApplySelectedRepositoryToInputs();
         }
 
         // Language changes and background operations update their own controls. A page switch
         // only refreshes the destination, so hidden pages don't rebuild lists or rescan files.
-        switch (_currentPrimarySection)
+        switch (_shell.CurrentSection)
         {
             case PrimarySection.Dashboard:
                 RefreshDashboard();
@@ -219,11 +219,11 @@ public sealed partial class MainWindow
         return page;
     }
 
-    private UIElement GetActiveSectionElement() => GetPage(_currentPrimarySection);
+    private UIElement GetActiveSectionElement() => GetPage(_shell.CurrentSection);
 
     private void AnimateSectionEntrance(UIElement element)
     {
-        if (_reduceMotion || element.Visibility != Visibility.Visible)
+        if (_shell.ReduceMotion || element.Visibility != Visibility.Visible)
         {
             return;
         }
@@ -275,16 +275,16 @@ public sealed partial class MainWindow
             return;
         }
 
-        if (_currentPrimarySection == PrimarySection.Online)
+        if (_shell.CurrentSection == PrimarySection.Online)
             _onlineView?.UpdateOnlineResponsiveLayout(width);
         ApplyTitleBarSearchVisibility();
         // The Settings and Updates pages lay themselves out when their own size changes.
-        if (_currentPrimarySection == PrimarySection.Repository)
+        if (_shell.CurrentSection == PrimarySection.Repository)
             _workspaceView?.UpdateRefinedWorkspaceLayout();
 
         // The navigation view opens its labelled pane from 1440 px (ExpandedModeThresholdWidth) unless
         // the user collapsed it; below that it shows icons.
-        bool expanded = nextMode == ShellLayoutMode.Expanded && !_navigationCollapsed;
+        bool expanded = nextMode == ShellLayoutMode.Expanded && !_shell.NavigationCollapsed;
         if (_shellLayoutMode == nextMode && _primaryNavExpanded == expanded)
         {
             return;
@@ -300,7 +300,7 @@ public sealed partial class MainWindow
     private void ApplyPageMargins()
     {
         bool wide = _shellLayoutMode == ShellLayoutMode.Expanded;
-        bool compact = _interfaceDensity == InterfaceDensity.Compact;
+        bool compact = _shell.InterfaceDensity == InterfaceDensity.Compact;
         double side = wide ? (compact ? 24 : 36) : (compact ? 16 : 24);
         double top = wide ? (compact ? 16 : 24) : (compact ? 8 : 16);
         PagesHostGrid.Margin = new Thickness(side, top, side, top);
@@ -345,7 +345,7 @@ public sealed partial class MainWindow
     // The navigation view shows the current page as its selected item.
     private void RefreshPrimaryNavigationVisuals()
     {
-        NavigationViewItem item = _currentPrimarySection switch
+        NavigationViewItem item = _shell.CurrentSection switch
         {
             PrimarySection.Repository => RepositoryNavButton,
             PrimarySection.Online => OnlineNavButton,
@@ -381,7 +381,7 @@ public sealed partial class MainWindow
     {
         if (args.DisplayMode != NavigationViewDisplayMode.Expanded) return;
         _applyingPaneState = true;
-        sender.IsPaneOpen = !_navigationCollapsed;
+        sender.IsPaneOpen = !_shell.NavigationCollapsed;
         _applyingPaneState = false;
     }
 
@@ -389,8 +389,8 @@ public sealed partial class MainWindow
     {
         if (_applyingPaneState || sender.DisplayMode != NavigationViewDisplayMode.Expanded) return;
         bool collapsed = !sender.IsPaneOpen;
-        if (collapsed == _navigationCollapsed) return;
-        _navigationCollapsed = collapsed;
+        if (collapsed == _shell.NavigationCollapsed) return;
+        _shell.NavigationCollapsed = collapsed;
         UpdateShellLayout();
         SaveShellConfig();
     }
@@ -407,7 +407,7 @@ public sealed partial class MainWindow
     private void OnRepositoryNavClicked(object sender, RoutedEventArgs e)
     {
         SaveSelectedRepositoryFromInputs();
-        _currentPrimarySection = PrimarySection.Repository;
+        _shell.CurrentSection = PrimarySection.Repository;
         ApplyShellState(refreshRepository: true);
     }
 
@@ -419,7 +419,7 @@ public sealed partial class MainWindow
             _services.Repositories.SelectedId = _services.Repositories.Items[0].Id;
         }
 
-        _currentPrimarySection = PrimarySection.Online;
+        _shell.CurrentSection = PrimarySection.Online;
         ApplyShellState(refreshRepository: false);
         WorkspaceRepository? repository = GetSelectedRepository();
         if (repository is not null)
@@ -431,14 +431,14 @@ public sealed partial class MainWindow
     private void OnUpdatesNavClicked(object sender, RoutedEventArgs e)
     {
         SaveSelectedRepositoryFromInputs();
-        _currentPrimarySection = PrimarySection.Updates;
+        _shell.CurrentSection = PrimarySection.Updates;
         ApplyShellState(refreshRepository: false);
     }
 
     private void OnSettingsNavClicked(object sender, RoutedEventArgs e)
     {
         SaveSelectedRepositoryFromInputs();
-        _currentPrimarySection = PrimarySection.Settings;
+        _shell.CurrentSection = PrimarySection.Settings;
         ApplyShellState(refreshRepository: false);
     }
 
@@ -460,7 +460,7 @@ public sealed partial class MainWindow
             }
             _services.Images.TrimCache();
             DetectLocalUpdatePackage();
-            await RefreshInstallBackupListAsync();
+            await _services.Install.RefreshBackupListAsync();
 
             if (_services.Downloads.RestoredInterrupted > 0)
                 ShowAppNotification(T("Shell.InterruptedTasksRestored", _services.Downloads.RestoredInterrupted));
@@ -528,7 +528,7 @@ public sealed partial class MainWindow
 
             if (controlDown && e.Key == VirtualKey.F)
             {
-                (_currentPrimarySection == PrimarySection.Online && _onlineView is not null ? _onlineView.OnlineSearchTextBox : _workspaceView?.FirstLevelSearchTextBox)?.Focus(FocusState.Keyboard);
+                (_shell.CurrentSection == PrimarySection.Online && _onlineView is not null ? _onlineView.OnlineSearchTextBox : _workspaceView?.FirstLevelSearchTextBox)?.Focus(FocusState.Keyboard);
                 e.Handled = true;
                 return;
             }
@@ -561,7 +561,7 @@ public sealed partial class MainWindow
 
             if (e.Key == VirtualKey.F5)
             {
-                if (_currentPrimarySection == PrimarySection.Online)
+                if (_shell.CurrentSection == PrimarySection.Online)
                 {
                     if (_onlineView is not null) await _onlineView.LoadOnlineModsAsync(forceReload: true);
                 }
@@ -638,7 +638,7 @@ public sealed partial class MainWindow
 
     private UIElement? GetCurrentShellFocusTarget()
     {
-        return _currentPrimarySection switch
+        return _shell.CurrentSection switch
         {
             PrimarySection.Dashboard => DashboardNavButton,
             PrimarySection.Repository => RepositoryNavButton,

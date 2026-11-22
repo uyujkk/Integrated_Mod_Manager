@@ -31,7 +31,7 @@ public sealed partial class MainWindow
         }
 
         _savingOverlaySinglePreset = true;
-        bool animate = !_reduceMotion;
+        bool animate = !_shell.ReduceMotion;
         try
         {
             // Reopen where the last frame was. Otherwise a character stands taller than wide: start from the middle of the game.
@@ -152,7 +152,7 @@ public sealed partial class MainWindow
         layer.Children.Add(scroll);
         layer.Children.Add(cancel);
 
-        bool animate = !_reduceMotion;
+        bool animate = !_shell.ReduceMotion;
         // Half a card showing at the edge tells the user the row goes on.
         double visibleCards = slots.Length > maxVisibleCards ? maxVisibleCards + .5 : slots.Length;
         int width = Math.Max(420, (int)(visibleCards * (cardWidth + 16 + spacing)) + 48);

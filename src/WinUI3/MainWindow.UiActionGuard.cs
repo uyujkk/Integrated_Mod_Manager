@@ -1,3 +1,4 @@
+using IntegratedModManager.Core.Infrastructure;
 using Microsoft.UI.Xaml.Controls;
 
 namespace ModFolderCopier.WinUI;
@@ -38,7 +39,7 @@ public sealed partial class MainWindow
                 return;
             }
 
-            string summary = SanitizeDiagnosticText(exception.Message);
+            string summary = DiagnosticText.Sanitize(exception.Message);
             ShowAppNotification(T("UiActionGuard.Stopped", summary), InfoBarSeverity.Error, exception);
         }
         catch
@@ -47,22 +48,4 @@ public sealed partial class MainWindow
         }
     }
 
-    internal static void LogApplicationIssueWithStack(string operation, Exception exception)
-    {
-        LogApplicationIssue(operation, exception);
-        try
-        {
-            string stack = SanitizeDiagnosticText(exception.ToString());
-            lock (ApplicationErrorLogSync)
-            {
-                File.AppendAllText(
-                    Path.Combine(AppContext.BaseDirectory, "app-errors.log"),
-                    $"    {stack.Replace(Environment.NewLine, Environment.NewLine + "    ")}{Environment.NewLine}");
-            }
-        }
-        catch
-        {
-            // Error logging must never interrupt the user operation being diagnosed.
-        }
-    }
 }

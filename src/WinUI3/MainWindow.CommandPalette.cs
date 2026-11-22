@@ -300,9 +300,9 @@ public sealed partial class MainWindow
     {
         // Opening the page without a rescan: the palette searched the lists already in memory, and a
         // rescan would finish later and restore the previous selection over this one.
-        if (_currentPrimarySection != PrimarySection.Repository)
+        if (_shell.CurrentSection != PrimarySection.Repository)
         {
-            _currentPrimarySection = PrimarySection.Repository;
+            _shell.CurrentSection = PrimarySection.Repository;
             ApplyShellState(refreshRepository: false);
         }
         WorkspacePage workspace = EnsureWorkspacePage();

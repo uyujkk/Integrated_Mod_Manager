@@ -28,10 +28,10 @@ public sealed partial class MainWindow
     private void RefreshUpdatesPane()
     {
         _isApplyingConflictDetection = true;
-        UpdatesView.ConflictDetection = _enableConflictDetection;
+        UpdatesView.ConflictDetection = _shell.EnableConflictDetection;
         _isApplyingConflictDetection = false;
         RefreshBackupManagerText();
-        _ = RefreshInstallBackupListAsync();
+        _ = _services.Install.RefreshBackupListAsync();
         RefreshConfigurationProfiles();
         RefreshDownloadTaskCenter();
         UpdatesView.IsCheckingModUpdates = _services.Tracking.IsChecking;
@@ -98,7 +98,6 @@ public sealed partial class MainWindow
     }
 
     private bool _isApplyingConflictDetection;
-    private bool _restoringUpdatesView;
 
     private async void OnUpdatesViewChanged(object? sender, PropertyChangedEventArgs e)
     {
@@ -110,24 +109,24 @@ public sealed partial class MainWindow
                     RefreshUpdatesNavBadge();
                     break;
                 case nameof(UpdatesViewModel.View):
-                    if (!_restoringUpdatesView) SaveShellConfig();
+                    if (!_shell.RestoringUpdatesView) SaveShellConfig();
                     break;
                 case nameof(UpdatesViewModel.ModUpdateIntervalIndex):
                     if (_isApplyingModUpdateIntervalSelection) return;
-                    _modUpdateCheckInterval = (UpdateCheckInterval)UpdatesView.ModUpdateIntervalIndex;
+                    _shell.ModUpdateCheckInterval = (UpdateCheckInterval)UpdatesView.ModUpdateIntervalIndex;
                     SaveShellConfig();
                     break;
                 case nameof(UpdatesViewModel.ConflictDetection):
                     if (_isApplyingConflictDetection) return;
-                    _enableConflictDetection = UpdatesView.ConflictDetection;
+                    _shell.EnableConflictDetection = UpdatesView.ConflictDetection;
                     SaveShellConfig();
                     break;
                 case nameof(UpdatesViewModel.BackupLimitGb):
                     if (_isApplyingBackupLimitSetting) return;
-                    _installBackupLimitGb = UpdatesView.BackupLimitGb;
+                    _shell.InstallBackupLimitGb = UpdatesView.BackupLimitGb;
                     SaveShellConfig();
                     await Task.Run(() => _services.Install.PruneInstallTransactionsByStorageLimit(null));
-                    await RefreshInstallBackupListAsync();
+                    await _services.Install.RefreshBackupListAsync();
                     break;
             }
         }
@@ -159,7 +158,7 @@ public sealed partial class MainWindow
             case UpdatesAction.RollbackLastInstall: OnRollbackLastInstallClicked(this, args); break;
             case UpdatesAction.OpenCombinationPresets: OnOpenCombinationPresetsClicked(this, args); break;
             case UpdatesAction.RefreshBackups: OnRefreshBackupsClicked(this, args); break;
-            case UpdatesAction.RestoreBackup when request.Item is string path: await RestoreInstallBackupAsync(path); break;
+            case UpdatesAction.RestoreBackup when request.Item is string path: await _services.Install.RestoreBackupAsync(path); break;
         }
     }
 

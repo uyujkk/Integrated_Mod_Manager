@@ -19,6 +19,9 @@ internal sealed class AppServices
         PresetPreviews = new(this);
         Combinations = new(this);
         Workspace = new(this);
+        Configuration = new(this);
+        Launcher = new(this);
+        Diagnostics = new(this);
     }
 
     public LanguageService Language { get; } = new();
@@ -50,6 +53,18 @@ internal sealed class AppServices
 
     /// <summary>The workspace's characters and Mods, the repository scan, the status line and the path actions (stage J finish, step 7b).</summary>
     public WorkspaceService Workspace { get; }
+
+    /// <summary>The shell's own saved settings (stage J finish, step 8a).</summary>
+    public ShellSettings ShellSettings { get; } = new();
+
+    /// <summary>Loading and saving beta-shell.json and config.ini (stage J finish, step 8a).</summary>
+    public ConfigurationService Configuration { get; }
+
+    /// <summary>Running the selected repository's launch and its settings (stage J finish, step 8a).</summary>
+    public RepositoryLauncherService Launcher { get; }
+
+    /// <summary>Diagnostic reports from Settings (stage J finish, step 8a).</summary>
+    public DiagnosticsService Diagnostics { get; }
     public LaunchService Launch { get; } = new();
 
     /// <summary>Install transactions, conflict checks, archives and copy ownership records (stage J finish, step 4).</summary>

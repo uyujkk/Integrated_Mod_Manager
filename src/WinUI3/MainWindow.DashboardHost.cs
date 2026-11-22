@@ -13,7 +13,7 @@ public sealed partial class MainWindow
         _services.EndfieldBridge.LogIssue = LogApplicationIssue;
         _services.EndfieldBridge.BusyChanged += (_, _) =>
         {
-            if (!_services.IsClosing) RefreshEndfieldBridgeControls();
+            if (!_services.IsClosing) _services.Launcher.RefreshBridgeControls();
         };
         Paths.PropertyChanged += (_, args) =>
         {
@@ -57,10 +57,10 @@ public sealed partial class MainWindow
             case DashboardAction.OpenSource: _services.Workspace.OpenSource(); break;
             case DashboardAction.OpenTarget: _services.Workspace.OpenTarget(); break;
             case DashboardAction.OpenLauncher: _services.Workspace.OpenLauncher(); break;
-            case DashboardAction.BridgeOptions: OnBridgeOptionsClicked(this, args); break;
+            case DashboardAction.BridgeOptions: _services.Launcher.OnBridgeOptionsClicked(); break;
             case DashboardAction.BrowseOnline: OnOnlineNavClicked(this, args); break;
             case DashboardAction.CheckModUpdates: CheckModUpdatesFromDashboard(); break;
-            case DashboardAction.RunLauncher: _ = RunUiActionAsync("OnRunLauncherClicked", RunRepositoryLauncherAsync); break;
+            case DashboardAction.RunLauncher: _ = RunUiActionAsync("OnRunLauncherClicked", _services.Launcher.RunAsync); break;
             case DashboardAction.GettingStartedTipsClosed: OnGettingStartedTipsClosed(); break;
         }
     }
@@ -229,7 +229,7 @@ public sealed partial class MainWindow
     private async Task OpenCharacterFromDashboardAsync(string path)
     {
         SaveSelectedRepositoryFromInputs();
-        _currentPrimarySection = PrimarySection.Repository;
+        _shell.CurrentSection = PrimarySection.Repository;
         ApplyShellState(refreshRepository: false);
         WorkspacePage workspace = EnsureWorkspacePage();
         workspace.FirstLevelSearchTextBox.Text = string.Empty;
@@ -286,7 +286,7 @@ public sealed partial class MainWindow
     private void RefreshNewRepositoryMenu()
     {
         var choices = new List<NewRepositoryChoice> { new(null, T("Dashboard.BlankRepository"), "", null) };
-        foreach (RepositoryPresetInfo preset in BuiltInRepositoryPresets)
+        foreach (RepositoryPresetInfo preset in BuiltInRepositories.Presets)
         {
             string name = IsChineseUi ? preset.DisplayNameZh : preset.DisplayNameEn;
             WorkspaceRepository? existing = FindRepositoryForPreset(preset);
@@ -326,7 +326,7 @@ public sealed partial class MainWindow
     private void OnDashboardNavClicked(object sender, RoutedEventArgs e)
     {
         SaveSelectedRepositoryFromInputs();
-        _currentPrimarySection = PrimarySection.Dashboard;
+        _shell.CurrentSection = PrimarySection.Dashboard;
         ApplyShellState(refreshRepository: false);
     }
 

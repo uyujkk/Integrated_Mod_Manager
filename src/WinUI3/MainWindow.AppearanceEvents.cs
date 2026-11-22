@@ -43,7 +43,7 @@ public sealed partial class MainWindow
     }
 
     // Each page applies the density itself (MainWindow.AppearanceEvents.cs).
-    private void ApplyInterfaceDensity() => _services.Appearance.ApplyDensity(_interfaceDensity == InterfaceDensity.Compact);
+    private void ApplyInterfaceDensity() => _services.Appearance.ApplyDensity(_shell.InterfaceDensity == InterfaceDensity.Compact);
 
     // The navigation view keeps its own spacing; the density changes the page margins.
     private void ApplyShellDensity() => ApplyPageMargins();

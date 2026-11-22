@@ -1,38 +1,30 @@
-using System.Diagnostics;
-using System.IO.Compression;
 using System.Runtime.InteropServices;
-using System.Text;
-using System.Text.Json;
-using System.Text.RegularExpressions;
-using IntegratedModManager.Core.Deployment;
 using IntegratedModManager.Core.Infrastructure;
-using IntegratedModManager.Core.Repository;
 using IntegratedModManager.Core.Updates;
 using IntegratedModManager.Data;
 using Microsoft.UI.Xaml;
 using Microsoft.UI.Xaml.Automation;
 using Microsoft.UI.Xaml.Controls;
-using Windows.System;
 
 namespace ModFolderCopier.WinUI;
 
 public sealed partial class MainWindow
 {
-    private const double DefaultInstallBackupLimitGb = 5;
-    private static readonly object ApplicationErrorLogSync = new();
+    // The logs are AppLog's (stage J finish, step 8a).
+    private static void TraceStartupStage(string stage) => AppLog.TraceStartupStage(stage);
+
+    private static void LogPersistentDataStoreIssue(string operation, Exception exception) => AppLog.LogPersistentDataStoreIssue(operation, exception);
+
+    internal static void LogApplicationIssue(string operation, Exception exception) => AppLog.LogApplicationIssue(operation, exception);
+
+    internal static void LogApplicationIssueWithStack(string operation, Exception exception) => AppLog.LogApplicationIssueWithStack(operation, exception);
+
     private readonly AppDataStore _appDataStore;
     private readonly HashSet<string> _favoriteCharacterKeys = new(StringComparer.OrdinalIgnoreCase);
     private bool _systemHighContrast;
     private bool _systemAnimationsEnabled = true;
-    private bool _checkAppUpdatesOnStartup = false;
-    // As read from the config; a build without self-update writes these back unchanged.
-    private bool? _loadedCheckAppUpdatesOnStartup;
-    private string? _loadedUpdateCheckInterval;
     private bool _isApplyingStartupUpdateSetting;
     private bool _isApplyingBackupLimitSetting;
-    private double _installBackupLimitGb = DefaultInstallBackupLimitGb;
-    private string? _latestReleasePackageUrl;
-    private string? _latestReleaseSha256Url;
 
     private const uint SpiGetHighContrast = 0x0042;
     private const uint SpiGetClientAreaAnimation = 0x1042;
@@ -54,43 +46,6 @@ public sealed partial class MainWindow
         IntPtr value,
         uint flags);
 
-    private static void TraceStartupStage(string stage)
-    {
-        try
-        {
-            File.AppendAllText(
-                Path.Combine(AppContext.BaseDirectory, "startup.log"),
-                $"{DateTimeOffset.Now:O} {stage}{Environment.NewLine}");
-        }
-        catch
-        {
-            // Startup tracing must never prevent the application from opening.
-        }
-    }
-
-    private static void LogPersistentDataStoreIssue(string operation, Exception exception)
-        => LogApplicationIssue("SQLite " + operation, exception);
-
-    internal static void LogApplicationIssue(string operation, Exception exception)
-    {
-        try
-        {
-            string summary = SanitizeDiagnosticText(exception.Message);
-            lock (ApplicationErrorLogSync)
-            {
-                string logPath = Path.Combine(AppContext.BaseDirectory, "app-errors.log");
-                LogFileRotation.RotateIfLarger(logPath);
-                File.AppendAllText(
-                    logPath,
-                    $"{DateTimeOffset.Now:O} {operation}: {exception.GetType().Name} (0x{exception.HResult:X8}) {summary}{Environment.NewLine}");
-            }
-        }
-        catch
-        {
-            // Error logging must never interrupt the user operation being diagnosed.
-        }
-    }
-
     private void InitializePersistentDataStore()
     {
         _appDataStore.Initialize();
@@ -100,7 +55,7 @@ public sealed partial class MainWindow
         }
     }
 
-    private bool ShouldReduceAnimations => _reduceMotion
+    private bool ShouldReduceAnimations => _shell.ReduceMotion
         || _systemHighContrast
         || !_systemAnimationsEnabled;
 
@@ -160,7 +115,7 @@ public sealed partial class MainWindow
 
     private void NavigateToPrimarySection(PrimarySection section)
     {
-        _currentPrimarySection = section;
+        _shell.CurrentSection = section;
         ApplyShellState(refreshRepository: section == PrimarySection.Repository);
         SaveShellConfig();
     }
@@ -206,14 +161,14 @@ public sealed partial class MainWindow
 
     private void ApplyLatestReleaseInfo(LatestReleaseInfo release)
     {
-        _lastUpdateCheckUtc = DateTimeOffset.UtcNow;
-        _latestReleaseTag = release.Tag;
-        _latestReleaseTitle = string.IsNullOrWhiteSpace(release.Title) ? release.Tag : release.Title;
-        _latestReleaseBody = release.Body;
-        _latestReleasePublishedAt = release.PublishedAt;
-        _latestReleaseUrl = release.PageUrl;
-        _latestReleasePackageUrl = release.PackageUrl;
-        _latestReleaseSha256Url = release.Sha256Url;
+        _shell.LastUpdateCheckUtc = DateTimeOffset.UtcNow;
+        _shell.LatestReleaseTag = release.Tag;
+        _shell.LatestReleaseTitle = string.IsNullOrWhiteSpace(release.Title) ? release.Tag : release.Title;
+        _shell.LatestReleaseBody = release.Body;
+        _shell.LatestReleasePublishedAt = release.PublishedAt;
+        _shell.LatestReleaseUrl = release.PageUrl;
+        _shell.LatestReleasePackageUrl = release.PackageUrl;
+        _shell.LatestReleaseSha256Url = release.Sha256Url;
         _appDataStore.WriteCache("app-release", "latest", release);
         SaveShellConfig();
         RefreshUpdateDetailsView();
@@ -243,7 +198,7 @@ public sealed partial class MainWindow
         string temporaryPath = finalPath + ".download";
         try
         {
-            _currentPrimarySection = PrimarySection.Settings;
+            _shell.CurrentSection = PrimarySection.Settings;
             ApplyShellState(refreshRepository: false);
             SettingsView.BeginDownload(T("ProductivityFeatures.PreparingUpdateDownload"));
 
@@ -258,11 +213,11 @@ public sealed partial class MainWindow
                 if (totalBytes is { } total)
                 {
                     double progress = Math.Clamp(downloaded * 100d / total, 0, 100);
-                    SettingsView.ReportDownload(progress, T("ProductivityFeatures.DownloadingUpdate", progress, FormatStorageSize(downloaded), FormatStorageSize(total)));
+                    SettingsView.ReportDownload(progress, T("ProductivityFeatures.DownloadingUpdate", progress, StorageSizeText.Format(downloaded), StorageSizeText.Format(total)));
                 }
                 else
                 {
-                    SettingsView.ReportDownload(null, downloaded > 0 ? T("ProductivityFeatures.Downloaded", FormatStorageSize(downloaded)) : null);
+                    SettingsView.ReportDownload(null, downloaded > 0 ? T("ProductivityFeatures.Downloaded", StorageSizeText.Format(downloaded)) : null);
                 }
             }, timeout.Token);
 
@@ -300,7 +255,7 @@ public sealed partial class MainWindow
     private void RefreshBackupManagerText()
     {
         _isApplyingBackupLimitSetting = true;
-        UpdatesView.BackupLimitGb = _installBackupLimitGb;
+        UpdatesView.BackupLimitGb = _shell.InstallBackupLimitGb;
         _isApplyingBackupLimitSetting = false;
     }
 
@@ -308,245 +263,12 @@ public sealed partial class MainWindow
     {
         try
         {
-            await RefreshInstallBackupListAsync();
+            await _services.Install.RefreshBackupListAsync();
         }
         catch (Exception ex)
         {
             ReportUiActionFailure("OnRefreshBackupsClicked", ex);
         }
-    }
-
-    private async Task RefreshInstallBackupListAsync()
-    {
-        Directory.CreateDirectory(_services.Deployment.InstallBackupPath);
-        List<InstallBackupDisplayItem> backups = await Task.Run(ReadInstallBackups);
-        long totalBytes = backups.Sum(item => item.SizeBytes);
-        UpdatesView.SetBackups(
-            T("ProductivityFeatures.BackupsGB", backups.Count, FormatStorageSize(totalBytes), _installBackupLimitGb),
-            [.. backups.Take(30).Select(backup => new InstallBackupRow(backup.Path, backup.Description,
-                T("ProductivityFeatures.Text", backup.CreatedAt.ToLocalTime(), backup.ModNames, FormatStorageSize(backup.SizeBytes))))]);
-    }
-
-    private List<InstallBackupDisplayItem> ReadInstallBackups()
-    {
-        if (!Directory.Exists(_services.Deployment.InstallBackupPath))
-        {
-            return [];
-        }
-
-        List<InstallBackupDisplayItem> result = [];
-        foreach (string directory in Directory.EnumerateDirectories(_services.Deployment.InstallBackupPath))
-        {
-            try
-            {
-                string manifestPath = Path.Combine(directory, "transaction.json");
-                if (!File.Exists(manifestPath))
-                {
-                    continue;
-                }
-
-                ModInstallTransaction? transaction = JsonSerializer.Deserialize<ModInstallTransaction>(File.ReadAllText(manifestPath));
-                if (transaction is null)
-                {
-                    continue;
-                }
-
-                long size = _services.Install.GetDirectorySize(directory);
-                string mods = string.Join(", ", transaction.Entries.Select(entry => Path.GetFileName(entry.TargetPath)).Where(name => !string.IsNullOrWhiteSpace(name)).Distinct(StringComparer.OrdinalIgnoreCase).Take(5));
-                if (transaction.Entries.Count > 5)
-                {
-                    mods += T("ProductivityFeatures.AndMore");
-                }
-                result.Add(new InstallBackupDisplayItem(directory, transaction.Description, transaction.CreatedAtUtc, string.IsNullOrWhiteSpace(mods) ? T("ProductivityFeatures.NoModRecorded") : mods, size));
-            }
-            catch (Exception ex)
-            {
-                LogApplicationIssue("Read install backup", ex);
-            }
-        }
-
-        return result.OrderByDescending(item => item.CreatedAt).ToList();
-    }
-
-    private async Task RestoreInstallBackupAsync(string backupPath)
-    {
-        try
-        {
-            if (!Directory.Exists(backupPath))
-            {
-                return;
-            }
-
-            if (!await ShowDangerConfirmAsync(T("ProductivityFeatures.RestoringThisBackupReplacesTheCurrent"), T("ProductivityFeatures.RestoreInstallBackup"), T("Dialogs.Restore")))
-            {
-                return;
-            }
-
-            _workspaceView?.SetBusyState(true);
-            try
-            {
-                await _services.Install.RollbackInstallTransactionAsync(backupPath, clearLastTransaction: true);
-                await RefreshListsAsync();
-                await RefreshInstallBackupListAsync();
-                ShowAppNotification(T("ProductivityFeatures.BackupRestored"));
-            }
-            catch (Exception ex)
-            {
-                await ShowMessageAsync(T("ProductivityFeatures.FailedToRestoreBackup") + ex.Message, T("ProductivityFeatures.RestoreFailed"));
-            }
-            finally
-            {
-                _workspaceView?.SetBusyState(false);
-            }
-        }
-        catch (Exception ex)
-        {
-            ReportUiActionFailure("OnRestoreInstallBackupClicked", ex);
-        }
-    }
-
-    private async void OnExportDiagnosticsClicked(object sender, RoutedEventArgs e)
-    {
-        try
-        {
-            string path = await CreateDiagnosticReportAsync();
-            SettingsView.DiagnosticsStatus = T("ProductivityFeatures.Exported", Path.GetFileName(path));
-            Process.Start(new ProcessStartInfo { FileName = Path.GetDirectoryName(path)!, UseShellExecute = true });
-        }
-        catch (Exception ex)
-        {
-            ReportUiActionFailure("OnExportDiagnosticsClicked", ex);
-        }
-    }
-
-    private async void OnSubmitDiagnosticsClicked(object sender, RoutedEventArgs e)
-    {
-        try
-        {
-            string path = await CreateDiagnosticReportAsync();
-            bool confirmed = await ShowConfirmAsync(
-                T("ProductivityFeatures.DiagnosticReportCreatedGitHubSNew", Path.GetFileName(path)),
-                T("ProductivityFeatures.ReportAnIssue"), T("Dialogs.OpenIssuePage"));
-            if (!confirmed)
-            {
-                return;
-            }
-
-            string body = Uri.EscapeDataString($"App version: {AppVersion}\nOS: {Environment.OSVersion.VersionString}\nArchitecture: {RuntimeInformation.OSArchitecture}\n\nA sanitized diagnostic report was generated locally: {Path.GetFileName(path)}\nPlease attach it after reviewing the archive.");
-            string url = $"{GitHubRepositoryUrl}/issues/new?title={Uri.EscapeDataString("Bug report " + AppVersion)}&body={body}";
-            await Launcher.LaunchUriAsync(new Uri(url));
-            Process.Start(new ProcessStartInfo { FileName = Path.GetDirectoryName(path)!, UseShellExecute = true });
-        }
-        catch (Exception ex)
-        {
-            ReportUiActionFailure("OnSubmitDiagnosticsClicked", ex);
-        }
-    }
-
-    private async Task<string> CreateDiagnosticReportAsync()
-    {
-        string diagnosticsRoot = Path.Combine(AppContext.BaseDirectory, "diagnostics");
-        Directory.CreateDirectory(diagnosticsRoot);
-        string reportPath = Path.Combine(diagnosticsRoot, $"IntegratedModManager-Diagnostics-{DateTime.Now:yyyyMMdd-HHmmss}.zip");
-        await using FileStream output = new(reportPath, FileMode.Create, FileAccess.Write, FileShare.None);
-        using var archive = new ZipArchive(output, ZipArchiveMode.Create);
-
-        var summary = new StringBuilder();
-        summary.AppendLine($"Integrated Mod Manager diagnostics");
-        summary.AppendLine($"Generated (UTC): {DateTimeOffset.UtcNow:O}");
-        summary.AppendLine($"App version: {AppVersion}");
-        summary.AppendLine($"OS: {Environment.OSVersion.VersionString}");
-        summary.AppendLine($"OS architecture: {RuntimeInformation.OSArchitecture}");
-        summary.AppendLine($"Process architecture: {RuntimeInformation.ProcessArchitecture}");
-        summary.AppendLine($".NET: {RuntimeInformation.FrameworkDescription}");
-        summary.AppendLine($"Language: {_services.Language.Current}");
-        summary.AppendLine($"Theme: {(_services.Appearance.IsDark ? "Dark" : "Light")}");
-        summary.AppendLine($"Repository count: {_services.Repositories.Items.Count}");
-        summary.AppendLine($"Source paths configured: {_services.Repositories.Items.Count(item => !string.IsNullOrWhiteSpace(item.SourcePath))}");
-        summary.AppendLine($"Target paths configured: {_services.Repositories.Items.Count(item => !string.IsNullOrWhiteSpace(item.TargetPath))}");
-        summary.AppendLine($"SQLite: {_appDataStore.GetHealthSummary()}");
-        WriteZipText(archive, "report.txt", summary.ToString());
-
-        var sanitizedConfig = new
-        {
-            AppVersion,
-            Language = _services.Language.Current,
-            Theme = _services.Appearance.IsDark ? "Dark" : "Light",
-            _checkAppUpdatesOnStartup,
-            UpdateInterval = _updateCheckInterval.ToString(),
-            _installBackupLimitGb,
-            ReduceMotion = _reduceMotion,
-            Density = _interfaceDensity.ToString(),
-            Repositories = _services.Repositories.Items.Select((repository, index) => new
-            {
-                Number = index + 1,
-                HasSourcePath = !string.IsNullOrWhiteSpace(repository.SourcePath),
-                HasTargetPath = !string.IsNullOrWhiteSpace(repository.TargetPath),
-                HasLauncher = !string.IsNullOrWhiteSpace(repository.LauncherPath),
-                OnlineSource = repository.OnlineSourceSite,
-                OnlineGame = repository.OnlineGameName,
-                OnlineCategoryId = repository.OnlineCategoryId,
-                HasWiki = !string.IsNullOrWhiteSpace(repository.WikiUrl),
-                CharacterMappingCount = repository.CharacterCategoryMappings?.Count ?? 0
-            }).ToArray()
-        };
-        WriteZipText(archive, "config-summary.json", JsonSerializer.Serialize(sanitizedConfig, new JsonSerializerOptions { WriteIndented = true }));
-
-        foreach (string logPath in EnumerateDiagnosticLogs())
-        {
-            try
-            {
-                string text = await File.ReadAllTextAsync(logPath);
-                if (text.Length > 250_000)
-                {
-                    text = text[^250_000..];
-                }
-                WriteZipText(archive, "logs/" + Path.GetFileName(logPath), SanitizeDiagnosticText(text));
-            }
-            catch (Exception ex)
-            {
-                LogApplicationIssue("Add log to diagnostic report", ex);
-            }
-        }
-        return reportPath;
-    }
-
-    private IEnumerable<string> EnumerateDiagnosticLogs()
-    {
-        foreach (string name in new[] { "ui-action-context.json", "ui-action-context.json.previous" })
-        {
-            string actionPath = Path.Combine(AppContext.BaseDirectory, "diagnostics", name);
-            if (File.Exists(actionPath)) yield return actionPath;
-        }
-        string[] names = ["startup.log", "app-errors.log", "update-agent.log", "update.log", "ui-diagnostics.log"];
-        foreach (string name in names)
-        {
-            string path = Path.Combine(AppContext.BaseDirectory, name);
-            if (File.Exists(path))
-            {
-                yield return path;
-            }
-            string rootPath = Path.Combine(GetInstallRootPath(), name);
-            if (!string.Equals(path, rootPath, StringComparison.OrdinalIgnoreCase) && File.Exists(rootPath))
-            {
-                yield return rootPath;
-            }
-        }
-    }
-
-    private static string SanitizeDiagnosticText(string text)
-    {
-        text = Regex.Replace(text, @"(?i)(?:[a-z]:\\|\\\\)[^\r\n]+", "<private-path>");
-        text = Regex.Replace(text, @"(?i)(token|authorization|password|secret|api[_-]?key)\s*[:=]\s*\S+", "$1=<redacted>");
-        text = Regex.Replace(text, @"(?i)([?&](?:token|key|auth|signature)=)[^&\s]+", "$1<redacted>");
-        return text;
-    }
-
-    private static void WriteZipText(ZipArchive archive, string name, string text)
-    {
-        ZipArchiveEntry entry = archive.CreateEntry(name, CompressionLevel.Fastest);
-        using StreamWriter writer = new(entry.Open(), new UTF8Encoding(false));
-        writer.Write(text);
     }
 
     private void AnimateElementEntrance(UIElement element)
@@ -570,59 +292,4 @@ public sealed partial class MainWindow
         visual.StartAnimation("Offset", slide);
     }
 
-    private static string FormatStorageSize(long bytes)
-    {
-        string[] units = ["B", "KB", "MB", "GB", "TB"];
-        double value = Math.Max(0, bytes);
-        int unit = 0;
-        while (value >= 1024 && unit < units.Length - 1)
-        {
-            value /= 1024;
-            unit++;
-        }
-        return $"{value:0.#} {units[unit]}";
-    }
-
-    private (List<FirstLevelFolderItem> Items, int SecondCount) LoadFolderItemsUsingIndex(
-        string repositoryId,
-        string sourceDir,
-        string targetDir,
-        CancellationToken cancellationToken,
-        out int warningCount)
-    {
-        var scanner = new RepositoryScanService(new RepositoryIndexStoreAdapter(_appDataStore));
-        RepositoryScanResult scan;
-        using (var scanTiming = _repositoryPerformance.Measure(RepositoryPerformanceOperation.Scan))
-        {
-            scan = scanner.Scan(repositoryId, sourceDir, cancellationToken);
-            scanTiming?.SetCounts(scan.ModCount, scan.CacheHits);
-        }
-        using var projectionTiming = _repositoryPerformance.Measure(RepositoryPerformanceOperation.Projection, scan.ModCount, scan.CacheHits);
-        warningCount = scan.Warnings.Count;
-        foreach (RepositoryScanWarning warning in scan.Warnings)
-        {
-            LogApplicationIssue(warning.Operation, warning.Error);
-        }
-        List<FirstLevelFolderItem> loadedItems = [];
-        foreach (RepositoryScanCategory category in scan.Categories)
-        {
-            cancellationToken.ThrowIfCancellationRequested();
-            var firstItem = new FirstLevelFolderItem(category.Path);
-            foreach (RepositoryModIndexEntry mod in category.Mods)
-            {
-                cancellationToken.ThrowIfCancellationRequested();
-                firstItem.Children.Add(new SecondLevelFolderItem(
-                    mod.ModPath, mod.Files.ToList(), _services.Workspace.FolderCopyState(targetDir, mod.ModPath)));
-            }
-            loadedItems.Add(firstItem);
-        }
-        return (loadedItems, scan.ModCount);
-    }
-
-    private sealed record InstallBackupDisplayItem(
-        string Path,
-        string Description,
-        DateTimeOffset CreatedAt,
-        string ModNames,
-        long SizeBytes);
 }

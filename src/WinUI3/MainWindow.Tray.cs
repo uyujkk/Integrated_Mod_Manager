@@ -43,7 +43,6 @@ public sealed partial class MainWindow
     private TraySubclassProc? _traySubclassProc;
     private nint _trayWindowHandle;
     private bool _trayIconAdded;
-    private bool _minimizeToTray;
     private bool _isApplyingTraySetting;
     private bool _trayHintShown;
     private string _trayOpenText = "Open";
@@ -68,18 +67,18 @@ public sealed partial class MainWindow
 
             AppWindow.Changed += OnTrayAppWindowChanged;
             UpdateTrayLanguage();
-            SetTrayIconVisibility(_minimizeToTray);
+            SetTrayIconVisibility(_shell.MinimizeToTray);
         }
         catch (Exception ex)
         {
             LogApplicationIssue("Initialize system tray", ex);
-            _minimizeToTray = false;
+            _shell.MinimizeToTray = false;
         }
     }
 
     private void OnTrayAppWindowChanged(AppWindow sender, AppWindowChangedEventArgs args)
     {
-        if (!_minimizeToTray
+        if (!_shell.MinimizeToTray
             || sender.Presenter is not OverlappedPresenter { State: OverlappedPresenterState.Minimized })
         {
             return;
@@ -193,7 +192,7 @@ public sealed partial class MainWindow
     private void RefreshTraySetting()
     {
         _isApplyingTraySetting = true;
-        SettingsView.MinimizeToTray = _minimizeToTray;
+        SettingsView.MinimizeToTray = _shell.MinimizeToTray;
         _isApplyingTraySetting = false;
     }
 

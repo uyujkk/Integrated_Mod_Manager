@@ -2,36 +2,66 @@ using System.ComponentModel;
 using System.Diagnostics;
 using IntegratedModManager.Core.Repository;
 using IntegratedModManager.EndfieldLaunch;
-using Microsoft.UI.Xaml;
+
 
 namespace ModFolderCopier.WinUI;
 
-// Endfield launch settings and the integrated launch. The launch itself is the AGPL-3.0-only
-// IntegratedModManager.EndfieldLaunch component; this page only edits its settings and starts it.
-public sealed partial class MainWindow
+/// <summary>
+/// Running the selected repository's launch (stage J finish, step 8a, moved from the window unchanged): the integrated
+/// Endfield launch and its settings dialog, XXMI with the game's importer, or the repository's own program; and the
+/// dashboard's launch card. The launch itself is the AGPL-3.0-only IntegratedModManager.EndfieldLaunch component,
+/// started through EndfieldBridgeService; this service only edits its settings and starts it.
+/// </summary>
+internal sealed class RepositoryLauncherService(AppServices services)
 {
+    private readonly AppServices _services = services;
+    private Action<string, Exception> _log = (_, _) => { };
+    private Action _saveSelectedRepositoryFromInputs = () => { };
+    private Func<string, Func<Task>, Task> _runUiAction = (_, action) => action();
+    private Action<string, Exception> _reportFailure = (_, _) => { };
+    private Action _refreshDashboard = () => { };
 
-    private void RefreshEndfieldBridgeControls()
+    /// <summary>
+    /// Called once by the window: the error log, the path boxes into the selected repository, running a UI action with
+    /// its error report, reporting a failed action, and redrawing the dashboard.
+    /// </summary>
+    public void Attach(Action<string, Exception> log, Action saveSelectedRepositoryFromInputs, Func<string, Func<Task>, Task> runUiAction,
+        Action<string, Exception> reportFailure, Action refreshDashboard)
     {
-        WorkspaceRepository? repository = GetSelectedRepository();
-        Dashboard.BridgeVisible = EndfieldBridgeService.CanUse(repository);
-        Dashboard.BridgeLabel = repository?.UseEndfieldBridge == true
-            ? T("EndfieldBridge.LaunchIntegratedEndfieldLaunchSettingsRisks")
-            : T("EndfieldBridge.LaunchExistingLoaderIntegratedLaunchAvailable");
-        Dashboard.BridgeEnabled = !_services.EndfieldBridge.OperationInProgress && !_services.EndfieldBridge.LaunchInProgress;
+        _log = log;
+        _saveSelectedRepositoryFromInputs = saveSelectedRepositoryFromInputs;
+        _runUiAction = runUiAction;
+        _reportFailure = reportFailure;
+        _refreshDashboard = refreshDashboard;
     }
 
-    private async void OnBridgeOptionsClicked(object sender, RoutedEventArgs e)
+    private string T(string key, params object?[] values) => _services.Language.T(key, values);
+
+    private Task ShowMessageAsync(string content, string title) => _services.Dialogs.MessageAsync(title, content);
+
+    /// <summary>The dashboard's launch card for the selected repository.</summary>
+    public void RefreshBridgeControls()
+    {
+        WorkspaceRepository? repository = _services.Repositories.Selected;
+        _services.Dashboard.BridgeVisible = EndfieldBridgeService.CanUse(repository);
+        _services.Dashboard.BridgeLabel = repository?.UseEndfieldBridge == true
+            ? T("EndfieldBridge.LaunchIntegratedEndfieldLaunchSettingsRisks")
+            : T("EndfieldBridge.LaunchExistingLoaderIntegratedLaunchAvailable");
+        _services.Dashboard.BridgeEnabled = !_services.EndfieldBridge.OperationInProgress && !_services.EndfieldBridge.LaunchInProgress;
+    }
+
+    /// <summary>The dashboard's "launch settings" for an Endfield repository.</summary>
+    public async void OnBridgeOptionsClicked()
     {
         try
         {
-            SaveSelectedRepositoryFromInputs();
-            if (GetSelectedRepository() is { } repository && EndfieldBridgeService.CanUse(repository))
+            _saveSelectedRepositoryFromInputs();
+            if (_services.Repositories.Selected is { } repository && EndfieldBridgeService.CanUse(repository))
                 await ShowEndfieldBridgeOptionsAsync(repository);
         }
         catch (Exception ex)
         {
-            ReportUiActionFailure("OnBridgeOptionsClicked", ex);
+            _reportFailure("OnBridgeOptionsClicked", ex);
         }
     }
 
@@ -39,15 +69,15 @@ public sealed partial class MainWindow
     {
         if (_services.EndfieldBridge.OperationInProgress) return;
         _services.EndfieldBridge.OperationInProgress = true;
-        RefreshEndfieldBridgeControls();
+        RefreshBridgeControls();
         try
         {
             EndfieldLaunchService service = EndfieldBridgeService.CreateLaunchService();
             bool migrated = _services.EndfieldBridge.ImportLegacySettings(repository, service);
-            if (migrated) SaveShellConfig();
+            if (migrated) _services.Configuration.SaveShell();
             EndfieldLaunchSettingsDialog.Settings? settings = await EndfieldLaunchSettingsDialog.ShowAsync(_services, new EndfieldLaunchSettingsDialog.Host(
-                (operation, action) => RunUiActionAsync(operation, action), extensions => PickFileAsync(extensions), OpenTextDocument,
-                url => OpenExternalUrlAsync(url, T("EndfieldBridge.FailedToOpenPage")), ReportUiActionFailure), repository, service, migrated);
+                (operation, action) => _runUiAction(operation, action), extensions => _services.Dialogs.PickFileAsync(extensions), OpenTextDocument,
+                url => _services.Dialogs.OpenExternalUrlAsync(url, T("EndfieldBridge.FailedToOpenPage")), _reportFailure), repository, service, migrated);
             if (settings is not null)
             {
                 repository.UseEndfieldBridge = settings.UseIntegrated;
@@ -57,18 +87,18 @@ public sealed partial class MainWindow
                 repository.EndfieldGameArguments = settings.Arguments;
                 repository.EndfieldUseMods = settings.UseMods;
                 repository.LauncherPath = settings.LauncherPath;
-                if (GetSelectedRepository()?.Id == repository.Id) Paths.Launcher = repository.LauncherPath;
+                if (_services.Repositories.Selected?.Id == repository.Id) _services.Paths.Launcher = repository.LauncherPath;
                 _services.Workspace.Status = repository.UseEndfieldBridge
                     ? T("EndfieldBridge.EndfieldLaunchSettingsSavedRunLauncher")
                     : T("EndfieldBridge.SavedRunLauncherStartsTheExisting");
             }
 
-            SaveShellConfig();
+            _services.Configuration.SaveShell();
         }
         catch (Exception ex)
         {
             if (_services.IsClosing) return;
-            LogApplicationIssue("Endfield launch settings", ex);
+            _log("Endfield launch settings", ex);
             await ShowMessageAsync(T("EndfieldBridge.CouldNotOpenEndfieldLaunchSettings") + ex.Message, T("EndfieldBridge.EndfieldLaunch"));
         }
         finally
@@ -76,8 +106,8 @@ public sealed partial class MainWindow
             _services.EndfieldBridge.OperationInProgress = false;
             if (!_services.IsClosing)
             {
-                RefreshEndfieldBridgeControls();
-                RefreshDashboard();
+                RefreshBridgeControls();
+                _refreshDashboard();
             }
         }
 
@@ -89,16 +119,17 @@ public sealed partial class MainWindow
         Process.Start(new ProcessStartInfo("notepad.exe", CommandLine.Quote(path)) { UseShellExecute = true });
     }
 
-    private async Task RunRepositoryLauncherAsync()
+    /// <summary>Runs the selected repository's launch: the integrated Endfield launch, XXMI with the game's importer, or its own program.</summary>
+    public async Task RunAsync()
     {
         if (_services.EndfieldBridge.OperationInProgress || _services.EndfieldBridge.LaunchInProgress) return;
-        WorkspaceRepository? repository = GetSelectedRepository();
+        WorkspaceRepository? repository = _services.Repositories.Selected;
         bool useIntegrated = EndfieldBridgeService.CanUse(repository) && repository!.UseEndfieldBridge;
         try
         {
             if (useIntegrated)
             {
-                SaveSelectedRepositoryFromInputs();
+                _saveSelectedRepositoryFromInputs();
                 await StartIntegratedEndfieldLaunchAsync(repository!);
                 return;
             }
@@ -106,8 +137,8 @@ public sealed partial class MainWindow
             if (await TryStartThroughXxmiAsync(repository)) return;
 
             string loader = EndfieldBridgeService.CanUse(repository)
-                ? EndfieldBridgeService.ResolveLoader(Paths.Launcher)
-                : Paths.Launcher.Trim();
+                ? EndfieldBridgeService.ResolveLoader(_services.Paths.Launcher)
+                : _services.Paths.Launcher.Trim();
             if (string.IsNullOrWhiteSpace(loader) || !File.Exists(loader))
             {
                 await ShowMessageAsync(T("EndfieldBridge.NoValidDefaultXXMIPathWas"), T("EndfieldBridge.LauncherNotSet"));
@@ -116,8 +147,8 @@ public sealed partial class MainWindow
 
             _services.Launch.StartLoader(loader);
             _services.Workspace.Status = T("EndfieldBridge.ExistingLoaderStarted");
-            if (string.IsNullOrWhiteSpace(Paths.Launcher)) Paths.Launcher = loader;
-            SaveConfig();
+            if (string.IsNullOrWhiteSpace(_services.Paths.Launcher)) _services.Paths.Launcher = loader;
+            _services.Configuration.Save();
         }
         catch (Exception ex)
         {
@@ -130,9 +161,9 @@ public sealed partial class MainWindow
     private async Task<bool> TryStartThroughXxmiAsync(WorkspaceRepository? repository)
     {
         if (repository is null || EndfieldBridgeService.CanUse(repository)) return false;
-        RepositoryPresetInfo? preset = BuiltInRepositoryPresets.FirstOrDefault(candidate => IsRepositoryForPreset(repository, candidate));
+        RepositoryPresetInfo? preset = BuiltInRepositories.Presets.FirstOrDefault(candidate => RepositoryPresetMatching.IsForPreset(repository, candidate));
         if (XxmiLaunchPolicy.ImporterFor(preset?.Id, repository.XxmiImporter) is not { } importer) return false;
-        string loader = EndfieldBridgeService.ResolveLoader(Paths.Launcher);
+        string loader = EndfieldBridgeService.ResolveLoader(_services.Paths.Launcher);
         if (!XxmiLaunchPolicy.IsXxmiLauncher(loader) || !File.Exists(loader)) return false;
 
         if (Process.GetProcessesByName(Path.GetFileNameWithoutExtension(XxmiLaunchPolicy.LauncherFileName)).Length > 0)
@@ -160,20 +191,20 @@ public sealed partial class MainWindow
         catch (Exception ex) when (ex is EndfieldLaunchException or IOException or UnauthorizedAccessException)
         {
             // XXMI may keep its configuration elsewhere. It reports its own problems once started.
-            LogApplicationIssue("Read XXMI configuration", ex);
+            _log("Read XXMI configuration", ex);
         }
 
         _services.Launch.StartWithArguments(loader, XxmiLaunchPolicy.Arguments(importer), workingDirectory);
         _services.Workspace.Status = T("XxmiLaunch.Started", importer);
-        if (string.IsNullOrWhiteSpace(Paths.Launcher)) Paths.Launcher = loader;
-        SaveConfig();
+        if (string.IsNullOrWhiteSpace(_services.Paths.Launcher)) _services.Paths.Launcher = loader;
+        _services.Configuration.Save();
         return true;
     }
 
     private async Task StartIntegratedEndfieldLaunchAsync(WorkspaceRepository repository)
     {
         EndfieldLaunchService service = EndfieldBridgeService.CreateLaunchService();
-        if (_services.EndfieldBridge.ImportLegacySettings(repository, service)) SaveShellConfig();
+        if (_services.EndfieldBridge.ImportLegacySettings(repository, service)) _services.Configuration.SaveShell();
         if (!repository.EndfieldRiskAccepted || !EndfieldGame.IsValidGame(repository.EndfieldGamePath))
         {
             await ShowEndfieldBridgeOptionsAsync(repository);
@@ -187,7 +218,7 @@ public sealed partial class MainWindow
         }
 
         string sessionId = Guid.NewGuid().ToString("N");
-        LaunchProfile profile = EndfieldBridgeService.BuildLaunchProfile(repository, !IsChineseUi, sessionId);
+        LaunchProfile profile = EndfieldBridgeService.BuildLaunchProfile(repository, !_services.Language.IsChinese, sessionId);
         if (profile.WithMods && !File.Exists(profile.Xxmi))
         {
             await ShowMessageAsync(T("EndfieldBridge.ModLoadingIsOnButXXMI"), T("EndfieldBridge.EndfieldLaunch"));
@@ -212,7 +243,7 @@ public sealed partial class MainWindow
         }
 
         _services.EndfieldBridge.LaunchInProgress = true;
-        RefreshEndfieldBridgeControls();
+        RefreshBridgeControls();
         _services.Workspace.Status = T("EndfieldBridge.StartingEndfield");
         try
         {
@@ -222,7 +253,7 @@ public sealed partial class MainWindow
             {
                 case LaunchStates.GameStarted:
                     _services.Workspace.Status = status!.Message.For(english);
-                    ShowAppNotification(T("EndfieldBridge.Started"));
+                    _services.Status.Notify(T("EndfieldBridge.Started"));
                     break;
                 case LaunchStates.Failed:
                 case LaunchStates.Exited:
@@ -240,9 +271,7 @@ public sealed partial class MainWindow
         finally
         {
             _services.EndfieldBridge.LaunchInProgress = false;
-            if (!_services.IsClosing) RefreshEndfieldBridgeControls();
+            if (!_services.IsClosing) RefreshBridgeControls();
         }
     }
-
-    // Equal-width command buttons in rows, so long labels in either language never clip.
 }

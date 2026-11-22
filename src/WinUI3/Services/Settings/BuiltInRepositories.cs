@@ -1,10 +1,12 @@
-using IntegratedModManager.Core.Endfield;
+using IntegratedModManager.Core.Online;
 
 namespace ModFolderCopier.WinUI;
 
-public sealed partial class MainWindow
+// The built-in game repositories offered on the dashboard (stage J finish, step 8a: moved from the window unchanged).
+
+internal static class BuiltInRepositories
 {
-    private static readonly RepositoryPresetInfo[] BuiltInRepositoryPresets =
+    public static readonly RepositoryPresetInfo[] Presets =
     [
         new(
             "zzz",
@@ -28,9 +30,8 @@ public sealed partial class MainWindow
             "endfield",
             "明日方舟：终末地",
             "Arknights: Endfield",
-            DefaultOnlineCategoryId,
-            EndfieldOfficialWikiUrl)
+            OnlineSourceRules.DefaultCategoryId,
+            OnlineSourceRules.EndfieldOfficialWikiUrl)
     ];
 
-    private static readonly IReadOnlyList<EndfieldCharacterInfo> EndfieldCharacters = EndfieldCharacterCatalog.BuiltIn;
 }
