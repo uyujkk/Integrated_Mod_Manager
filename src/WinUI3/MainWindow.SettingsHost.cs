@@ -27,20 +27,12 @@ public sealed partial class MainWindow
     {
         RefreshAppearanceSettings();
         RefreshStartupUpdateSetting();
-        RefreshAppUpdateInstallState();
-
-        if (_updateStatus is null)
-        {
-            SetUpdateStatus(M("Updates.CurrentVersion", AppVersion));
-        }
-        else
-        {
-            SettingsView.UpdateStatus = T(_updateStatus);
-        }
+        _services.AppUpdates.RefreshAppUpdateInstallState();
+        _services.AppUpdates.RefreshStatusText();
 
         PopulateUpdateCheckIntervalOptions();
         RefreshSettingsOnlineConfigSummary();
-        RefreshUpdateDetailsView();
+        _services.AppUpdates.RefreshUpdateDetailsView();
         RefreshBackupManagerText();
         _services.Launcher.RefreshBridgeControls();
     }
@@ -49,7 +41,7 @@ public sealed partial class MainWindow
     {
         RefreshTraySetting();
         RefreshTitleBarSearchSetting();
-        UpdateTrayLanguage();
+        _services.Tray.UpdateLanguage();
         ApplyInterfaceDensity();
     }
 
@@ -63,13 +55,6 @@ public sealed partial class MainWindow
         SettingsView.CheckOnStartup = _shell.CheckAppUpdatesOnStartup;
         _isApplyingStartupUpdateSetting = false;
     }
-
-    // What the update button can do now.
-    private void RefreshAppUpdateInstallState()
-        => SettingsView.SetInstallState(
-            _localUpdatePackageVersion?.ToString(),
-            hasReleasePage: !string.IsNullOrWhiteSpace(_shell.LatestReleaseUrl),
-            canDownloadRelease: !string.IsNullOrWhiteSpace(_shell.LatestReleasePackageUrl) && IsReleaseNewer(_shell.LatestReleaseTag ?? string.Empty));
 
     // Copies the loaded choices into the view model, then applies whatever the user changes there.
     private void InitializeAppearanceSettings()
@@ -166,7 +151,7 @@ public sealed partial class MainWindow
             case nameof(SettingsViewModel.MinimizeToTray):
                 if (_isApplyingTraySetting) return;
                 _shell.MinimizeToTray = SettingsView.MinimizeToTray;
-                SetTrayIconVisibility(_shell.MinimizeToTray);
+                _services.Tray.SetVisible(_shell.MinimizeToTray);
                 SaveShellConfig();
                 break;
             case nameof(SettingsViewModel.ShowTitleBarSearch):
@@ -184,8 +169,8 @@ public sealed partial class MainWindow
         switch (request.Action)
         {
             case SettingsAction.OpenGitHub: OpenGitHubRepository(); break;
-            case SettingsAction.CheckUpdates: OnCheckUpdatesClicked(this, args); break;
-            case SettingsAction.InstallUpdate: OnInstallUpdateClicked(this, args); break;
+            case SettingsAction.CheckUpdates: _services.AppUpdates.CheckNow(); break;
+            case SettingsAction.InstallUpdate: _services.AppUpdates.Install(); break;
             case SettingsAction.EditOnlineRepository: OnEditOnlineRepositoryClicked(this, args); break;
             case SettingsAction.EditCharacterMappings: OnEditCharacterMappingsClicked(this, args); break;
             case SettingsAction.ExportDiagnostics: _services.Diagnostics.Export(); break;
@@ -261,7 +246,7 @@ public sealed partial class MainWindow
         {
             Process.Start(new ProcessStartInfo
             {
-                FileName = GitHubRepositoryUrl,
+                FileName = AppUpdateService.GitHubRepositoryUrl,
                 UseShellExecute = true
             });
 
@@ -291,7 +276,7 @@ public sealed partial class MainWindow
     // opened on this app's data folder. Without them, the release page that has their package.
     private async void OpenDeveloperTools() => await RunUiActionAsync("Open developer tools", async () =>
     {
-        string? tools = DeveloperToolsLocation.Find(GetInstallRootPath());
+        string? tools = DeveloperToolsLocation.Find(AppUpdateService.GetInstallRootPath());
         if (tools is null)
         {
             ShowAppNotification(T("Settings.DeveloperToolsNotInstalled"), InfoBarSeverity.Informational);

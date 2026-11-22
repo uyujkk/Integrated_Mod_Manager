@@ -29,19 +29,13 @@ public sealed partial class MainWindow : IWorkspaceHost
     bool IWorkspaceHost.SaveConfig() => SaveConfig();
     void IWorkspaceHost.SaveShellConfig(bool throwOnError) => SaveShellConfig(throwOnError);
 
-    void IWorkspaceHost.ApplyShortcutPlaceholders() => ApplyShortcutPlaceholders();
-    void IWorkspaceHost.RefreshLocalizedStates() => RefreshLocalizedStates();
 
     void IWorkspaceHost.OnEditRepositoryDetailsClicked(object sender, RoutedEventArgs e) => OnEditRepositoryDetailsClicked(sender, e);
     void IWorkspaceHost.SwitchRepository(string repositoryId, bool openManager) => SwitchRepository(repositoryId, openManager);
 
     string[] IWorkspaceHost.ImageExtensions => ImageExtensions;
-    string? IWorkspaceHost.CurrentSecondLevelPath { get => _currentSecondLevelPath; set => _currentSecondLevelPath = value; }
     bool IWorkspaceHost.EnableConflictDetection => _shell.EnableConflictDetection;
     bool IWorkspaceHost.IsApplyingRepositoryDeploymentMode => _isApplyingRepositoryDeploymentMode;
-    BatchObservableCollection<SecondLevelFolderItem> IWorkspaceHost.SecondLevelItems => _secondLevelItems;
-    List<TextBox> IWorkspaceHost.ShortcutActionBoxes => _shortcutActionBoxes;
-    List<TextBox> IWorkspaceHost.ShortcutKeyBoxes => _shortcutKeyBoxes;
 
 
 

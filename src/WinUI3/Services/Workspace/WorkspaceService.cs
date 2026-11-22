@@ -35,6 +35,12 @@ internal sealed partial class WorkspaceService(AppServices services)
     /// <summary>The Mod list's view, filters and column widths (the view and widths are saved in beta-shell.json).</summary>
     public ModListViewModel ModList { get; } = new();
 
+    /// <summary>The Mods of the selected character, as the workspace's Mod list shows them (moved from the window, step 8c).</summary>
+    public BatchObservableCollection<SecondLevelFolderItem> SecondLevelItems { get; } = [];
+
+    /// <summary>The folder of the selected Mod; the dashboard, the Shortcuts page and the overlay start from it.</summary>
+    public string? CurrentModPath { get; set; }
+
     /// <summary>Local tags of each repository (saved in beta-shell.json).</summary>
     public Dictionary<string, LocalLibraryState> LocalLibraries { get; set; } = new(StringComparer.OrdinalIgnoreCase);
 

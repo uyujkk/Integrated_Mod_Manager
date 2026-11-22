@@ -27,6 +27,19 @@ internal sealed class LanguageService
     // Text by key and values kept for later, such as a status line that a language switch shows again.
     public static UiMessage M(string key, params object?[] values) => new(key, values);
 
+    /// <summary>Stored text shown in the current language: Chinese text is normalised, other text kept (moved from the window, step 8c).</summary>
+    public string NormalizeUiText(string? value)
+    {
+        if (string.IsNullOrWhiteSpace(value))
+        {
+            return string.Empty;
+        }
+
+        return !IsChinese
+            ? value
+            : BetaLocalization.NormalizeChineseText(value);
+    }
+
     /// <summary>Sets the language found at startup, before anything is shown; nobody is told.</summary>
     public void Load(string language) => Current = language;
 

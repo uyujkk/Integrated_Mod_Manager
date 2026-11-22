@@ -37,7 +37,7 @@ public sealed partial class MainWindow
 
         repository.UseDirectoryLinks = Paths.UseDirectoryLinks;
         SaveShellConfig();
-        RefreshLocalizedStates();
+        _services.Workspace.RefreshCopyStates();
         _workspaceView?.OnLinkDeploymentChanged();
     }
 
@@ -132,7 +132,7 @@ public sealed partial class MainWindow
         Dashboard.CanOpenRepository = GetSelectedRepository() is not null;
         Dashboard.CurrentRepositoryName = GetSelectedRepository()?.Name ?? string.Empty;
         RefreshDashboardCurrentStatus();
-        RefreshTrayStatus();
+        _services.Tray.RefreshStatus();
         Dashboard.NotifyRefreshed();
         _ = ScanRepositorySummariesAsync();
     }
@@ -273,7 +273,7 @@ public sealed partial class MainWindow
                 }
             }
             RefreshDashboardCurrentStatus();
-            RefreshTrayStatus();
+            _services.Tray.RefreshStatus();
         }
         catch (Exception ex)
         {
@@ -302,9 +302,6 @@ public sealed partial class MainWindow
     {
         return RepositoryPresetMatching.FindExisting(_services.Repositories.Items, preset, DefaultOnlineSourceSite);
     }
-
-    private static bool IsRepositoryForPreset(WorkspaceRepository repository, RepositoryPresetInfo preset)
-        => RepositoryPresetMatching.IsForPreset(repository, preset);
 
     private async Task EditRepositoryFromCardAsync(string id)
     {

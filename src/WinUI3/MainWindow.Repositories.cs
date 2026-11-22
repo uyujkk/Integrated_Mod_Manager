@@ -66,7 +66,7 @@ public sealed partial class MainWindow
         _services.Repositories.SelectedId = repositoryId;
         ResetOnlineRepositoryContext();
         ApplySelectedRepositoryToInputs();
-        RefreshTrayStatus();
+        _services.Tray.RefreshStatus();
         if (openManager)
         {
             _shell.CurrentSection = PrimarySection.Repository;

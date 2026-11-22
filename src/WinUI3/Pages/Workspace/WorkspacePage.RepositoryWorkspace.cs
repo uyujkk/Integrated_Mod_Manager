@@ -159,7 +159,7 @@ public sealed partial class WorkspacePage
         // The repository is initially hidden on a clean install. Its first real
         // viewport is measured only when the user opens it, not when _host.Root loads.
         WorkspaceScrollViewer.SizeChanged += (_, _) => UpdateRepositoryWorkspaceLayoutV4();
-        _host.SecondLevelItems.CollectionChanged += OnRepositoryCatalogChanged;
+        _services.Workspace.SecondLevelItems.CollectionChanged += OnRepositoryCatalogChanged;
         _repositoryV4Ready = true;
         _host.Root.ActualThemeChanged += (_, _) => UpdateRepositoryWorkspaceLanguageV4();
         UpdateRepositoryWorkspaceLanguageV4();
@@ -597,7 +597,7 @@ public sealed partial class WorkspacePage
         _combinationRecoveryTitle!.Text = T("RepositoryWorkspace.SaveRestore");
         _combinationRecoveryHint!.Text = T("RepositoryWorkspace.N1CloseTheGameAndLoader");
         _combinationNoProfiles!.Text = T("RepositoryWorkspace.OnlyRecognizedDeploymentsInThisRepository");
-        foreach (var mod in _host.SecondLevelItems) mod.CoverPlaceholder = T("RepositoryWorkspace.NoPreviewImage");
+        foreach (var mod in _services.Workspace.SecondLevelItems) mod.CoverPlaceholder = T("RepositoryWorkspace.NoPreviewImage");
         string[] chipLabels = [T("RepositoryWorkspace.FilterAll"), T("RepositoryWorkspace.FilterDeployed"), T("RepositoryWorkspace.FilterNotDeployed")];
         for (int index = 0; index < _repositoryStateChips.Length; index++)
         {
@@ -804,13 +804,13 @@ public sealed partial class WorkspacePage
     internal void RefreshRepositoryModView()
     {
         if (!_repositoryV4Ready) return;
-        using var timing = _host.MeasureRepositoryUi(RepositoryPerformanceOperation.Filter, _host.SecondLevelItems.Count);
-        string? current = _modList.SelectedMod?.Path ?? _host.CurrentSecondLevelPath;
-        string? path = RepositoryWorkspacePolicy.PreserveSelection(_host.SecondLevelItems.Select(mod => mod.Path), current);
-        _modList.SelectedMod = _host.SecondLevelItems.FirstOrDefault(mod => string.Equals(mod.Path, path, StringComparison.OrdinalIgnoreCase));
+        using var timing = _host.MeasureRepositoryUi(RepositoryPerformanceOperation.Filter, _services.Workspace.SecondLevelItems.Count);
+        string? current = _modList.SelectedMod?.Path ?? _services.Workspace.CurrentModPath;
+        string? path = RepositoryWorkspacePolicy.PreserveSelection(_services.Workspace.SecondLevelItems.Select(mod => mod.Path), current);
+        _modList.SelectedMod = _services.Workspace.SecondLevelItems.FirstOrDefault(mod => string.Equals(mod.Path, path, StringComparison.OrdinalIgnoreCase));
         SelectedLocalLibrary();
-        foreach (var mod in _host.SecondLevelItems) ApplyModRowState(mod);
-        var visible = _host.SecondLevelItems
+        foreach (var mod in _services.Workspace.SecondLevelItems) ApplyModRowState(mod);
+        var visible = _services.Workspace.SecondLevelItems
             .Where(mod => MatchesLocalLibraryFilter(mod) && RepositoryWorkspacePolicy.MatchesStateFilter(mod.Tone, _modList.StateFilter))
             .ToArray();
         _syncingRepositorySelection = true;
@@ -826,7 +826,7 @@ public sealed partial class WorkspacePage
         // so the details never describe a Mod the list no longer shows.
         if (SecondLevelListView.SelectedItem is null && visible.Length > 0) SecondLevelListView.SelectedItem = visible[0];
         RepositoryModTitleTextBlock.Text = _services.Workspace.Characters.Selected is { } role ? role.Name : T("RepositoryWorkspace.ModFiles");
-        RepositoryModCountTextBlock.Text = T("RepositoryWorkspace.Mods", visible.Length, _host.SecondLevelItems.Count);
+        RepositoryModCountTextBlock.Text = T("RepositoryWorkspace.Mods", visible.Length, _services.Workspace.SecondLevelItems.Count);
         if (_localFiltersButton is not null)
         {
             _localFiltersButton.Content = string.IsNullOrEmpty(_localTagFilter) ? T("Common.Filters") : T("RepositoryWorkspace.TagActive");
@@ -1046,7 +1046,7 @@ public sealed partial class WorkspacePage
     private void UpdateRepositoryEmptyState()
     {
         if (_repositoryEmptyState is null) return;
-        _modList.UpdateEmptyKind(_host.SecondLevelItems.Count, _services.Workspace.Characters.Selected is not null);
+        _modList.UpdateEmptyKind(_services.Workspace.SecondLevelItems.Count, _services.Workspace.Characters.Selected is not null);
         ModListEmptyKind kind = _modList.EmptyKind;
         _repositoryEmptyState.Visibility = kind == ModListEmptyKind.None ? Visibility.Collapsed : Visibility.Visible;
         _repositoryEmptyState.Glyph = kind == ModListEmptyKind.NoMatches ? "\uE721" : "\uE8B5";
@@ -1152,7 +1152,7 @@ public sealed partial class WorkspacePage
         bool links = repository?.UseDirectoryLinks == true;
         bool several = links && mod is not null && AllowsMultipleMods(repository!, mod.Path);
         string? replaced = mod is null || !links || ModTone(mod) == ModStateTone.Deployed || several ? null
-            : RepositoryWorkspacePolicy.ReplacedByDeploy(_host.SecondLevelItems.Select(item => (item.Name, ModTone(item))), mod.Name);
+            : RepositoryWorkspacePolicy.ReplacedByDeploy(_services.Workspace.SecondLevelItems.Select(item => (item.Name, ModTone(item))), mod.Name);
         RepositoryDeploymentHintTextBlock.Text = replaced is not null
             ? T("RepositoryWorkspace.DeployReplaces", _services.Workspace.Characters.Selected?.Name ?? string.Empty, replaced)
             : several ? T("RepositoryWorkspace.LinkDeploymentKeepsOtherMods")

@@ -29,7 +29,7 @@ public sealed partial class WorkspacePage
         if (PersistentSlotComboBox is null) return;
 
         WorkspaceRepository? repository = _services.Repositories.Selected;
-        string? modPath = _host.CurrentSecondLevelPath;
+        string? modPath = _services.Workspace.CurrentModPath;
         string? relative = SlotService.TryGetCurrentModRelativePath(repository, modPath);
         PersistentSlotTitleTextBlock.Text = T("PersistentSlots.ModStateSlots");
         PersistentSlotHintTextBlock.Text = T("PersistentSlots.SaveAfterF10ToRestoreClose");
@@ -147,7 +147,7 @@ public sealed partial class WorkspacePage
         {
             if (_services.Slots.IsRestoring || _services.Combinations.IsApplying) return;
             WorkspaceRepository? repository = _services.Repositories.Selected;
-            string? modPath = _host.CurrentSecondLevelPath;
+            string? modPath = _services.Workspace.CurrentModPath;
             string? relative = SlotService.TryGetCurrentModRelativePath(repository, modPath);
             if (repository is null || modPath is null || relative is null) return;
 
@@ -232,7 +232,7 @@ public sealed partial class WorkspacePage
         {
             if (_services.Slots.IsRestoring || _services.Combinations.IsApplying) return;
             WorkspaceRepository? repository = _services.Repositories.Selected;
-            string? modPath = _host.CurrentSecondLevelPath;
+            string? modPath = _services.Workspace.CurrentModPath;
             string? relative = SlotService.TryGetCurrentModRelativePath(repository, modPath);
             ModPersistentSlot? slot = GetSelectedPersistentSlot();
             if (repository is null || modPath is null || relative is null || slot is null
@@ -363,7 +363,7 @@ public sealed partial class WorkspacePage
     private (WorkspaceRepository Repository, string ModPath, string Relative, ModPersistentSlot Slot)? SelectedSlotContext()
     {
         WorkspaceRepository? repository = _services.Repositories.Selected;
-        string? modPath = _host.CurrentSecondLevelPath;
+        string? modPath = _services.Workspace.CurrentModPath;
         string? relative = SlotService.TryGetCurrentModRelativePath(repository, modPath);
         ModPersistentSlot? slot = GetSelectedPersistentSlot();
         return repository is null || modPath is null || relative is null || slot is null
@@ -493,7 +493,7 @@ public sealed partial class WorkspacePage
     private async Task ImportVariantFileAsync()
     {
         WorkspaceRepository? repository = _services.Repositories.Selected;
-        string? modPath = _host.CurrentSecondLevelPath;
+        string? modPath = _services.Workspace.CurrentModPath;
         string? relative = SlotService.TryGetCurrentModRelativePath(repository, modPath);
         if (repository is null || modPath is null || relative is null) return;
 

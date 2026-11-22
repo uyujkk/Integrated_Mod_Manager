@@ -315,7 +315,7 @@ public sealed partial class WorkspacePage
                 ApplySecondLevelSelectionState(item);
                 if (item is not null
                     && await _services.ShortcutBindings.TryImportFromModFilesAsync(item.Path) > 0
-                    && string.Equals(_host.CurrentSecondLevelPath, item.Path, StringComparison.CurrentCultureIgnoreCase))
+                    && string.Equals(_services.Workspace.CurrentModPath, item.Path, StringComparison.CurrentCultureIgnoreCase))
                 {
                     LoadBindingsForCurrentMod(item);
                     // The row's shortcut count and the tab header read the bindings just imported.
@@ -632,14 +632,14 @@ public sealed partial class WorkspacePage
     internal async Task RefreshListsAsync()
     {
         using var timing = _host.MeasureRepositoryUi(RepositoryPerformanceOperation.Refresh, _services.Workspace.Characters.All.Sum(first => first.Children.Count));
-        string? previousMod = _host.CurrentSecondLevelPath;
+        string? previousMod = _services.Workspace.CurrentModPath;
         string? previousCategory = (_services.Workspace.Characters.Selected)?.Path;
         WorkspaceScanResult? result = await _services.Workspace.ScanAsync(
             cleared: () =>
             {
                 _modList.SelectedMod = null;
-                _host.SecondLevelItems.Clear();
-                _host.CurrentSecondLevelPath = null;
+                _services.Workspace.SecondLevelItems.Clear();
+                _services.Workspace.CurrentModPath = null;
                 RefreshPersistentSlotControls();
                 FirstCountTextBlock.Text = "0";
                 SecondCountTextBlock.Text = "0";
@@ -691,19 +691,19 @@ public sealed partial class WorkspacePage
         _modList.SelectedMod = null;
         ClearPreview();
         ShowModSummary(null);
-        _host.CurrentSecondLevelPath = null;
+        _services.Workspace.CurrentModPath = null;
         LoadDefaultShortcutTemplate();
         LoadLinkForCurrentMod(null);
 
         if (firstItem is null)
         {
-            _host.SecondLevelItems.ReplaceAll([]);
+            _services.Workspace.SecondLevelItems.ReplaceAll([]);
             ApplySecondLevelSelectionState(null, preserveStatus: true);
             RefreshRepositoryModView();
             return;
         }
 
-        _host.SecondLevelItems.ReplaceAll(firstItem.Children);
+        _services.Workspace.SecondLevelItems.ReplaceAll(firstItem.Children);
         RefreshRepositoryModView();
 
         if (!preserveStatus)
@@ -711,10 +711,10 @@ public sealed partial class WorkspacePage
             _services.Workspace.Status = T("LocalLibrary.CurrentFirstLevelFolder") + firstItem.Path;
         }
 
-        if (_host.SecondLevelItems.Count > 0)
+        if (_services.Workspace.SecondLevelItems.Count > 0)
         {
             SecondLevelListView.SelectedIndex = 0;
-            ApplySecondLevelSelectionState(_host.SecondLevelItems[0], preserveStatus: true);
+            ApplySecondLevelSelectionState(_services.Workspace.SecondLevelItems[0], preserveStatus: true);
         }
     }
 
@@ -739,7 +739,7 @@ public sealed partial class WorkspacePage
 
     private void ApplySecondLevelSelectionState(SecondLevelFolderItem? item, bool preserveStatus = false)
     {
-        _host.CurrentSecondLevelPath = item?.Path;
+        _services.Workspace.CurrentModPath = item?.Path;
         ShowSecondLevelDetails(item, preserveStatus);
         LoadBindingsForCurrentMod(item);
         LoadLinkForCurrentMod(item);
@@ -1140,14 +1140,14 @@ public sealed partial class WorkspacePage
             if (first.Children.Any(child => string.Equals(child.Path, path, StringComparison.CurrentCultureIgnoreCase)))
             {
                 FirstLevelListView.SelectedIndex = firstIndex;
-                for (int secondIndex = 0; secondIndex < _host.SecondLevelItems.Count; secondIndex++)
+                for (int secondIndex = 0; secondIndex < _services.Workspace.SecondLevelItems.Count; secondIndex++)
                 {
-                    if (string.Equals(_host.SecondLevelItems[secondIndex].Path, path, StringComparison.CurrentCultureIgnoreCase))
+                    if (string.Equals(_services.Workspace.SecondLevelItems[secondIndex].Path, path, StringComparison.CurrentCultureIgnoreCase))
                     {
-                        SecondLevelFolderItem selected = _host.SecondLevelItems[secondIndex];
+                        SecondLevelFolderItem selected = _services.Workspace.SecondLevelItems[secondIndex];
                         SecondLevelListView.SelectedItem = selected;
                         if (_modList.VisibleMods.Contains(selected)) SecondLevelListView.ScrollIntoView(selected);
-                        ApplySecondLevelSelectionState(_host.SecondLevelItems[secondIndex], preserveStatus: true);
+                        ApplySecondLevelSelectionState(_services.Workspace.SecondLevelItems[secondIndex], preserveStatus: true);
                         return;
                     }
                 }
