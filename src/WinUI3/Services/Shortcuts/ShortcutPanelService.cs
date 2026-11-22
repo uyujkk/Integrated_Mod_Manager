@@ -1,21 +1,39 @@
 using System.ComponentModel;
 using System.Diagnostics;
+using System.Runtime.InteropServices.WindowsRuntime;
 using IntegratedModManager.Core.Deployment;
 using IntegratedModManager.Core.Shortcuts;
-using Microsoft.UI.Xaml;
-using Microsoft.UI.Xaml.Controls;
+using Microsoft.UI.Dispatching;
+using Path = System.IO.Path;
 
 namespace ModFolderCopier.WinUI;
 
-public sealed partial class MainWindow
+/// <summary>
+/// The Shortcuts page's and the overlay's work (stage J finish, step 8b, moved from the window unchanged): reading the
+/// repository's Mods and their bindings, the target window, sending keys, the global hotkey, the privilege notice and
+/// restarting as administrator. The page and the overlay show <see cref="ShortcutPageViewModel"/> and ask for work
+/// through it and through <see cref="IShortcutOverlayActions"/>, which this service answers. Its other parts: saving
+/// presets from the overlay, character follow, the slot pictures and the overlay's requests.
+/// </summary>
+internal sealed partial class ShortcutPanelService(AppServices services)
 {
-    private readonly ShortcutInputService _shortcutInput = new();
-    /// <summary>The Shortcuts page and overlay state, shared with ShortcutsPage (stage J5).</summary>
+    private readonly AppServices _services = services;
     private ShortcutPageViewModel _shortcuts => _services.Shortcuts;
+    private nint _windowHandle;
+    private DispatcherQueue _dispatcher = null!;
+    private Action _activate = () => { };
+    private Action _closeWindow = () => { };
+    private Action _openDashboard = () => { };
+    private Func<string?> _currentModPath = () => null;
+    private Action _refreshSlotControls = () => { };
+    private Func<ShortcutsPage?> _page = () => null;
+    private Action<string, Exception> _log = (_, _) => { };
+    private Action<string, Exception> _reportFailure = (_, _) => { };
+    private Func<string, Func<Task>, Task> _runUiAction = (_, action) => action();
+    private readonly ShortcutInputService _shortcutInput = new();
     private readonly ModShortcutScanCache _shortcutScanCache = new();
-    // The overlay: its window, content and look (stage J5b); this window answers its requests (IShortcutOverlayActions).
+    // The overlay: its window, content and look (stage J5b); this service answers its requests (IShortcutOverlayActions).
     private ShortcutOverlayController _overlay = null!;
-    private ShortcutsPage? _shortcutsPage;
     // The Mod list and windows are read on first use: the page shown or the overlay opened.
     private bool _shortcutsPrepared;
     private ShortcutPanelHotkey? _shortcutPanelHotkey;
@@ -24,41 +42,61 @@ public sealed partial class MainWindow
     private HashSet<string>? _shortcutDeployedMods;
     private int _shortcutDeployedRevision;
 
-    private void OnShortcutsNavClicked(object sender, RoutedEventArgs e)
+    /// <summary>
+    /// Called once by the window: its handle (for the hotkey) and dispatcher, bringing it to the front, closing it, the
+    /// dashboard, the workspace's selected Mod, redrawing the workspace's slot card, the Shortcuts page once it exists,
+    /// the error log, reporting a failed action and running a UI action. Creates the overlay.
+    /// </summary>
+    public void Attach(nint windowHandle, DispatcherQueue dispatcher, Action activate, Action closeWindow, Action openDashboard,
+        Func<string?> currentModPath, Action refreshSlotControls, Func<ShortcutsPage?> page, Action<string, Exception> log,
+        Action<string, Exception> reportFailure, Func<string, Func<Task>, Task> runUiAction)
     {
-        try
-        {
-            _shell.CurrentSection = PrimarySection.Shortcuts;
-            ApplyShellState(refreshRepository: false);
-        }
-        catch (Exception ex) { ReportUiActionFailure(nameof(OnShortcutsNavClicked), ex); }
+        _windowHandle = windowHandle;
+        _dispatcher = dispatcher;
+        _activate = activate;
+        _closeWindow = closeWindow;
+        _openDashboard = openDashboard;
+        _currentModPath = currentModPath;
+        _refreshSlotControls = refreshSlotControls;
+        _page = page;
+        _log = log;
+        _reportFailure = reportFailure;
+        _runUiAction = runUiAction;
+        _overlay = new ShortcutOverlayController(_shortcuts, _services.Language, _services.Appearance, this, dispatcher);
+        _services.Overlay = _overlay;
+        _shortcuts.ActionRequested += OnShortcutPageRequested;
     }
 
-    private bool IsEnglishUi => !IsChineseUi;
+    /// <summary>The overlay's controller, for the slot and picture services.</summary>
+    public ShortcutOverlayController OverlayController => _overlay;
+
+    /// <summary>Sends keys to the target window; the slot service sends the reload key through it.</summary>
+    public ShortcutInputService Input => _shortcutInput;
+
+    /// <summary>Set while the overlay saves a preset or shows a picture layer.</summary>
+    public bool SavingFromOverlay => _savingOverlaySinglePreset;
+
+    // After the settings are loaded, so loading them is not taken for the user's changes.
+    public void ListenToState() => _shortcuts.PropertyChanged += OnShortcutStateChanged;
+
+    private string T(string key, params object?[] values) => _services.Language.T(key, values);
 
     /// <summary>The page relabels itself by rebuilding from the view model; the overlay is rebuilt here, and the Mods are read again.</summary>
-    private void RebuildShortcutPaneForLanguage()
+    public void RebuildForLanguage()
     {
         if (!_shortcutsPrepared) return;
         ++_shortcuts.ScanRevision;
         _overlay.RebuildForLanguage();
-        _shortcutsPage?.RebuildForLanguage();
+        _page()?.RebuildForLanguage();
         // Input stays disarmed after the rebuild; the user re-enables it deliberately.
         _shortcuts.InputEnabled = false;
         UpdateShortcutPrivilegeNotice();
         _services.Slots.RefreshLoaderAutoSave();
-        _ = RefreshShortcutPaneSafelyAsync();
-    }
-
-    private Button ShortcutButton(string label, Action action)
-    {
-        var button = new Button { Content = label };
-        button.Click += (_, _) => action();
-        return button;
+        _ = RefreshSafelyAsync();
     }
 
     /// <summary>Reads the windows once, when the page is first shown or the overlay first opened.</summary>
-    private void PrepareShortcuts()
+    public void Prepare()
     {
         if (_shortcutsPrepared) return;
         _shortcutsPrepared = true;
@@ -81,7 +119,7 @@ public sealed partial class MainWindow
                     if (SelectedShortcutRole() is string role && _shortcuts.SelectedMod is ShortcutModOption selected)
                         _characterPreferredMods[role] = selected.Path;
                 }
-                _ = RunUiActionAsync("Select shortcut Mod", () => LoadShortcutSelectionAsync());
+                _ = _runUiAction("Select shortcut Mod", () => LoadShortcutSelectionAsync());
                 break;
             case nameof(ShortcutPageViewModel.SelectedTarget):
                 // A newly selected target always requires deliberate re-arming (the view model disarms input).
@@ -92,11 +130,11 @@ public sealed partial class MainWindow
                 RefreshShortcutOverlay();
                 break;
             case nameof(ShortcutPageViewModel.HideUnsupported):
-                SaveShellConfig();
+                _services.Configuration.SaveShell();
                 RenderShortcutButtons();
                 break;
             case nameof(ShortcutPageViewModel.InputMode):
-                SaveShellConfig();
+                _services.Configuration.SaveShell();
                 break;
             // The overlay applies its own look (ShortcutOverlayController); the settings are saved here.
             case nameof(ShortcutPageViewModel.OverlayOpacity):
@@ -109,7 +147,7 @@ public sealed partial class MainWindow
             case nameof(ShortcutPageViewModel.OverlayCompactSlots):
             case nameof(ShortcutPageViewModel.CapturePresetPreviews):
             case nameof(ShortcutPageViewModel.KeepMenuStateVariables):
-                SaveShellConfig();
+                _services.Configuration.SaveShell();
                 break;
             case nameof(ShortcutPageViewModel.CharacterFollowEnabled):
                 OnCharacterFollowToggled();
@@ -125,28 +163,28 @@ public sealed partial class MainWindow
             case ShortcutPageAction.ReloadIni: _ = RefreshOverlayFromDiskAsync(); break;
             case ShortcutPageAction.OpenIni: ShowShortcutIniFile(); break;
             case ShortcutPageAction.SendShortcut when request.Argument is DetectedModShortcut shortcut:
-                _ = RunUiActionAsync("Send shortcut", () => SendShortcutFromPanelAsync(shortcut));
+                _ = _runUiAction("Send shortcut", () => SendShortcutFromPanelAsync(shortcut));
                 break;
             case ShortcutPageAction.SendNumLock: _ = SendNumLockAsync(); break;
             case ShortcutPageAction.RestartElevated: RestartManagerElevated(); break;
             case ShortcutPageAction.SetHotkey when request.Argument is (uint modifiers, uint key): SetShortcutHotkey(modifiers, key); break;
-            case ShortcutPageAction.OpenDashboard: OnDashboardNavClicked(this, new RoutedEventArgs()); break;
+            case ShortcutPageAction.OpenDashboard: _openDashboard(); break;
             // The text colour is saved when its picker closes, not for every colour the picker passes through.
-            case ShortcutPageAction.SaveSettings: SaveShellConfig(); break;
-            case ShortcutPageAction.EnablePresetPreviews: _ = RunUiActionAsync("Enable preset pictures", _services.PresetPreviews.EnablePresetPreviewsAsync); break;
+            case ShortcutPageAction.SaveSettings: _services.Configuration.SaveShell(); break;
+            case ShortcutPageAction.EnablePresetPreviews: _ = _runUiAction("Enable preset pictures", _services.PresetPreviews.EnablePresetPreviewsAsync); break;
             case ShortcutPageAction.ClearPresetPreviewRegion: _services.PresetPreviews.ClearPresetPreviewRegion(); break;
             case ShortcutPageAction.SelectCharacterRegion: _ = SelectCharacterRegionAsync(); break;
             case ShortcutPageAction.SaveCharacterReference: _ = SaveCharacterReferenceAsync(); break;
             case ShortcutPageAction.RefreshLoaderAutoSave: _services.Slots.RefreshLoaderAutoSave(); break;
             case ShortcutPageAction.SetLoaderAutoSave when request.Argument is int seconds:
-                _ = RunUiActionAsync("Change loader auto-save interval", () => _services.Slots.SetLoaderAutoSaveAsync(seconds));
+                _ = _runUiAction("Change loader auto-save interval", () => _services.Slots.SetLoaderAutoSaveAsync(seconds));
                 break;
             case ShortcutPageAction.DisableHotkey:
                 _shortcutPanelHotkey?.Disable();
                 _shortcuts.HotkeyEnabled = false;
                 _shortcuts.HotkeyRegistered = false;
                 _shortcuts.HotkeyRejected = false;
-                SaveShellConfig();
+                _services.Configuration.SaveShell();
                 break;
         }
     }
@@ -161,7 +199,7 @@ public sealed partial class MainWindow
             _shortcuts.HotkeyEnabled = true;
             _shortcuts.HotkeyRegistered = true;
             _shortcuts.HotkeyRejected = false;
-            SaveShellConfig();
+            _services.Configuration.SaveShell();
         }
         else
         {
@@ -172,8 +210,8 @@ public sealed partial class MainWindow
     private async Task RefreshShortcutModsAsync()
     {
         if (!_shortcutsPrepared) return;
-        string repository = GetSelectedRepository()?.SourcePath ?? string.Empty;
-        string? previous = _shortcuts.SelectedMod?.Path ?? _currentSecondLevelPath;
+        string repository = _services.Repositories.Selected?.SourcePath ?? string.Empty;
+        string? previous = _shortcuts.SelectedMod?.Path ?? _currentModPath();
         int revision = ++_shortcuts.ScanRevision;
         _shortcuts.InputEnabled = false;
         _shortcuts.ModsRead = false;
@@ -187,13 +225,13 @@ public sealed partial class MainWindow
         _shortcuts.ModOptions = options;
         _shortcuts.SelectedMod = null;
         _shortcuts.ModsRead = true;
-        _ = RefreshShortcutDeployedModsAsync();
+        _ = RefreshDeployedModsAsync();
         LoadCharacterFollowProfile(repository);
         _shortcuts.SelectedMod = options.FirstOrDefault(p => string.Equals(p.Path, previous, StringComparison.OrdinalIgnoreCase)) ?? options.FirstOrDefault();
         if (options.Length == 0) _shortcuts.StatusText = T("ShortcutPanel.NoModsFoundSelectARepository");
     }
 
-    private async Task RefreshShortcutPaneSafelyAsync()
+    public async Task RefreshSafelyAsync()
     {
         try { await RefreshShortcutModsAsync(); }
         catch (Exception ex) { if (!_services.IsClosing) _shortcuts.ReportError(ex.Message); }
@@ -219,7 +257,7 @@ public sealed partial class MainWindow
         }
         catch (Exception ex)
         {
-            LogApplicationIssue("Read shortcut panel INI", ex);
+            _log("Read shortcut panel INI", ex);
             if (!_services.IsClosing && revision == _shortcuts.ScanRevision) _shortcuts.ReportError(ex.Message);
         }
     }
@@ -234,7 +272,7 @@ public sealed partial class MainWindow
         // user turns it on: selecting a target never arms it.
         int detected = kept is null
             ? GameWindowDetection.Find(targets.Select(t => new GameWindowCandidate(t.ProcessName, t.Label)).ToArray(),
-                PreferredGameProcesses(GetSelectedRepository()))
+                PreferredGameProcesses(_services.Repositories.Selected))
             : -1;
         _shortcuts.SelectedTarget = detected >= 0 ? targets[detected] : kept;
         if (detected >= 0)
@@ -246,7 +284,7 @@ public sealed partial class MainWindow
     {
         if (repository is null) return [];
         if (_services.OnlineSource.IsEndfield(repository)) return [.. GameWindowDetection.KnownGames[0]];
-        RepositoryPresetInfo? preset = BuiltInRepositories.Presets.FirstOrDefault(candidate => IsRepositoryForPreset(repository, candidate));
+        RepositoryPresetInfo? preset = BuiltInRepositories.Presets.FirstOrDefault(candidate => RepositoryPresetMatching.IsForPreset(repository, candidate));
         return preset?.Id switch
         {
             "genshin" => [.. GameWindowDetection.KnownGames[1]],
@@ -255,8 +293,6 @@ public sealed partial class MainWindow
             _ => []
         };
     }
-
-    private DetectedModShortcut[] VisibleShortcuts() => _shortcuts.VisibleShortcuts();
 
     // Selects the INI of the first binding in File Explorer; the panel itself never edits Mod files.
     private void ShowShortcutIniFile()
@@ -270,11 +306,11 @@ public sealed partial class MainWindow
                 RecurseSubdirectories = true, IgnoreInaccessible = true, AttributesToSkip = FileAttributes.ReparsePoint,
                 MatchCasing = MatchCasing.CaseInsensitive
             }).OrderBy(file => file, StringComparer.OrdinalIgnoreCase).FirstOrDefault();
-            OpenFileLocation(path, sourceFile);
+            _services.Dialogs.OpenFileLocation(path, sourceFile);
         }
         catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
         {
-            LogApplicationIssue("Show shortcut INI file", ex);
+            _log("Show shortcut INI file", ex);
             _shortcuts.ReportError(ex.Message);
         }
     }
@@ -319,11 +355,12 @@ public sealed partial class MainWindow
             .Take(3000).OrderBy(option => option.Label, StringComparer.CurrentCultureIgnoreCase).ToArray();
     }
 
-    private async Task RefreshShortcutDeployedModsAsync(string? preferredPath = null)
+    /// <summary>Reads again which Mods are enabled in the loader folder; a disabled or replaced Mod is followed to its replacement.</summary>
+    public async Task RefreshDeployedModsAsync(string? preferredPath = null)
     {
         if (!_shortcutsPrepared) return;
         int revision = ++_shortcutDeployedRevision;
-        WorkspaceRepository? repository = GetSelectedRepository();
+        WorkspaceRepository? repository = _services.Repositories.Selected;
         string source = repository?.SourcePath ?? string.Empty, target = repository?.TargetPath ?? string.Empty;
         HashSet<string> deployed = new(StringComparer.OrdinalIgnoreCase);
         ShortcutModOption[] fresh = [];
@@ -335,9 +372,9 @@ public sealed partial class MainWindow
         }
         catch (Exception ex) when (ex is IOException or UnauthorizedAccessException or InvalidDataException or ArgumentException)
         {
-            LogApplicationIssue("Shortcut deployed Mods", ex); // Unknown deployment clears actions instead of exposing stale ones.
+            _log("Shortcut deployed Mods", ex); // Unknown deployment clears actions instead of exposing stale ones.
         }
-        if (_services.IsClosing || revision != _shortcutDeployedRevision || repository != GetSelectedRepository()
+        if (_services.IsClosing || revision != _shortcutDeployedRevision || repository != _services.Repositories.Selected
             || source != (repository?.SourcePath ?? string.Empty) || target != (repository?.TargetPath ?? string.Empty)) return;
         ShortcutModOption? current = _shortcuts.SelectedMod;
         // Only a Mod that was enabled and has just been disabled or replaced is followed. The main page also
@@ -389,58 +426,6 @@ public sealed partial class MainWindow
         RefreshShortcutOverlay();
     }
 
-    /// <summary>Flush loader memory before capturing; offer an explicit disk-only fallback when input is unavailable.</summary>
-    private async Task QuickSaveCombinationFromOverlayAsync()
-    {
-        if (_savingOverlaySinglePreset || _services.Combinations.IsApplying || (_shortcuts.SendInProgress && !_services.Slots.IsRestoring)) return;
-        if (GetSelectedRepository() is not { } repository)
-        {
-            _shortcuts.StatusText = T("ShortcutPanel.SelectARepositoryInTheMain");
-            RefreshShortcutOverlay();
-            return;
-        }
-        _savingOverlaySinglePreset = true;
-        if (!await WaitForOverlayCaptureAsync()) { _savingOverlaySinglePreset = false; return; }
-        string? userIni = repository.PersistentUserIniPath is { Length: > 0 } configured ? configured : SlotService.TryGetDefaultPersistentIniPath(repository);
-        bool includeState = userIni is not null && File.Exists(userIni);
-        string name = T("ShortcutPanel.InGame", DateTime.Now);
-        _shortcuts.StatusText = T("ShortcutPanel.SavingCombinationPreset");
-        RefreshShortcutOverlay();
-        _services.Combinations.SetBusy(true);
-        try
-        {
-            CharacterFrame? preview = await _services.PresetPreviews.CapturePresetPreviewAsync();
-            // Without a d3dx_user.ini there is no loader state to flush: save the Mod combination alone, as before.
-            if (includeState && !await PrepareOverlayCaptureAsync(userIni!)) return;
-            (int Mods, int Parameters)? saved = await _services.Combinations.CaptureAsync(repository, name, null, includeState, userIni ?? string.Empty,
-                () => Task.FromResult(false));
-            string previewNote = string.Empty;
-            if (saved is not null && _services.Combinations.Profiles.FirstOrDefault(item => item.Id == _services.Combinations.SelectedId) is { } profile)
-            {
-                profile.PreviewFile = await _services.PresetPreviews.StorePresetPreviewAsync(repository.Id, profile.Id, preview);
-                if (profile.PreviewFile is not null) SaveShellConfig();
-                previewNote = _services.PresetPreviews.PresetPreviewNote(profile.PreviewFile);
-            }
-            _shortcuts.StatusText = saved is (int mods, int parameters)
-                ? T("ShortcutPanel.SavedPresetModsParameters", name, mods, parameters) + previewNote
-                : T("ShortcutPanel.NoEnabledModsThePresetWas");
-        }
-        catch (Exception ex)
-        {
-            LogApplicationIssue("Overlay combination capture", ex);
-            if (!_services.IsClosing) _shortcuts.ReportError(T("ShortcutPanel.PresetNotSaved") + OverlayCaptureError(ex));
-        }
-        finally
-        {
-            _savingOverlaySinglePreset = false;
-            if (!_services.IsClosing)
-            {
-                _services.Combinations.SetBusy(false);
-                RefreshShortcutOverlay(bindingsChanged: true);
-            }
-        }
-    }
-
     private void RefreshShortcutOverlay(bool bindingsChanged = false) => _overlay.Refresh(bindingsChanged);
 
     private async Task SendNumLockAsync()
@@ -457,7 +442,8 @@ public sealed partial class MainWindow
         finally { _shortcuts.SendInProgress = false; if (!_services.IsClosing) RefreshShortcutOverlay(); }
     }
 
-    private void CloseShortcutPanel()
+    /// <summary>When the window closes: the hotkey, character follow, the input sender and the overlay.</summary>
+    public void Shutdown()
     {
         ++_shortcuts.ScanRevision;
         _shortcutPanelHotkey?.Dispose();
@@ -466,16 +452,17 @@ public sealed partial class MainWindow
         _overlay.Close();
     }
 
-    private void InitializeShortcutPanelHotkey()
+    /// <summary>Registers the overlay's global hotkey once the settings are loaded.</summary>
+    public void InitializeHotkey()
     {
         try
         {
-            _shortcutPanelHotkey = new ShortcutPanelHotkey(WinRT.Interop.WindowNative.GetWindowHandle(this),
-                () => DispatcherQueue.TryEnqueue(_overlay.Toggle));
+            _shortcutPanelHotkey = new ShortcutPanelHotkey(_windowHandle,
+                () => _dispatcher.TryEnqueue(_overlay.Toggle));
             if (_shortcuts.HotkeyEnabled)
                 _shortcuts.HotkeyRegistered = _shortcutPanelHotkey.TrySet(_shortcuts.HotkeyModifiers, _shortcuts.HotkeyKey);
         }
-        catch (Exception ex) { LogApplicationIssue("Shortcut panel hotkey", ex); }
+        catch (Exception ex) { _log("Shortcut panel hotkey", ex); }
     }
 
     private void UpdateShortcutPrivilegeNotice()
@@ -492,7 +479,7 @@ public sealed partial class MainWindow
         if (_shortcuts.SelectedTarget is not ShortcutTarget target)
         {
             // Only an Endfield repository gets the Endfield-specific explanation.
-            _shortcuts.PrivilegeText = EndfieldBridgeService.CanUse(GetSelectedRepository())
+            _shortcuts.PrivilegeText = EndfieldBridgeService.CanUse(_services.Repositories.Selected)
                 ? T("ShortcutPanel.EndfieldRunsAsAdministratorInputFrom")
                 : T("ShortcutPanel.ElevatedGameNeedsElevatedManager");
             return;
@@ -522,7 +509,7 @@ public sealed partial class MainWindow
             _shortcuts.ReportError(T("ShortcutPanel.AdministratorApprovalWasDeclinedTheManager"));
             return;
         }
-        catch (Exception ex) { ReportUiActionFailure(nameof(RestartManagerElevated), ex); return; }
-        Close();
+        catch (Exception ex) { _reportFailure(nameof(RestartManagerElevated), ex); return; }
+        _closeWindow();
     }
 }

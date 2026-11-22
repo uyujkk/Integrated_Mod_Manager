@@ -1,4 +1,3 @@
-using IntegratedModManager.Core.Configuration;
 using IntegratedModManager.Core.Repository;
 using Microsoft.UI.Xaml;
 using Microsoft.UI.Xaml.Controls;
@@ -37,25 +36,17 @@ public sealed partial class MainWindow : IWorkspaceHost
     void IWorkspaceHost.SwitchRepository(string repositoryId, bool openManager) => SwitchRepository(repositoryId, openManager);
 
     string[] IWorkspaceHost.ImageExtensions => ImageExtensions;
-    int IWorkspaceHost.ShortcutScanSafetyLimit => ShortcutScanSafetyLimit;
     string? IWorkspaceHost.CurrentSecondLevelPath { get => _currentSecondLevelPath; set => _currentSecondLevelPath = value; }
     bool IWorkspaceHost.EnableConflictDetection => _shell.EnableConflictDetection;
     bool IWorkspaceHost.IsApplyingRepositoryDeploymentMode => _isApplyingRepositoryDeploymentMode;
-    Dictionary<string, List<ShortcutBinding>> IWorkspaceHost.ModBindings => _modBindings;
-    Dictionary<string, string> IWorkspaceHost.ModLinks => _modLinks;
     BatchObservableCollection<SecondLevelFolderItem> IWorkspaceHost.SecondLevelItems => _secondLevelItems;
     List<TextBox> IWorkspaceHost.ShortcutActionBoxes => _shortcutActionBoxes;
     List<TextBox> IWorkspaceHost.ShortcutKeyBoxes => _shortcutKeyBoxes;
 
-    ICharacterRenameReferences IWorkspaceHost.CreateCharacterRenameReferences(WorkspaceRepository repository) => new CharacterRenameReferences(this, repository);
 
 
 
 
-    string IWorkspaceHost.GetShortcutBindingDisplayAction(ShortcutBinding binding) => GetShortcutBindingDisplayAction(binding);
-    string IWorkspaceHost.NormalizeLink(string link) => NormalizeLink(link);
-    Task<int> IWorkspaceHost.TryImportShortcutBindingsFromModFilesAsync(string modFolder) => TryImportShortcutBindingsFromModFilesAsync(modFolder);
-    Task IWorkspaceHost.RefreshShortcutDeployedModsAsync(string? preferredPath) => RefreshShortcutDeployedModsAsync(preferredPath);
 
 
     RepositoryPerformanceRecorder.Scope? IWorkspaceHost.MeasureRepositoryUi(RepositoryPerformanceOperation operation, int count) => MeasureRepositoryUi(operation, count);

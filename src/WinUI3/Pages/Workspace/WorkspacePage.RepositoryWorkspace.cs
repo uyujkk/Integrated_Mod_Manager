@@ -861,7 +861,7 @@ public sealed partial class WorkspacePage
 
     // Saved bindings when the Mod has them (they may be edited), otherwise the INI scan of its key sections.
     private int ModShortcutCount(SecondLevelFolderItem mod)
-        => _host.ModBindings.TryGetValue(mod.Path, out List<ShortcutBinding>? bindings)
+        => _services.ShortcutBindings.Bindings.TryGetValue(mod.Path, out List<ShortcutBinding>? bindings)
             ? bindings.Count(binding => !string.IsNullOrWhiteSpace(binding.Shortcut))
             : _scannedShortcutCounts.TryGetValue(mod.Path, out int scanned) ? scanned : 0;
 
@@ -871,11 +871,11 @@ public sealed partial class WorkspacePage
     // Rows of Mods without saved bindings count their INI key sections once, off the UI thread.
     private async Task EnsureModShortcutCountAsync(SecondLevelFolderItem mod)
     {
-        if (_host.ModBindings.ContainsKey(mod.Path) || _scannedShortcutCounts.ContainsKey(mod.Path) || !_shortcutCountScans.Add(mod.Path)) return;
+        if (_services.ShortcutBindings.Bindings.ContainsKey(mod.Path) || _scannedShortcutCounts.ContainsKey(mod.Path) || !_shortcutCountScans.Add(mod.Path)) return;
         try
         {
             int count = await Task.Run(() => ModShortcutScanner.ScanDirectory(mod.Path, activeOnly: true)
-                .Take(_host.ShortcutScanSafetyLimit).Count(shortcut => !string.IsNullOrWhiteSpace(shortcut.Shortcut)));
+                .Take(ShortcutBindingService.ScanSafetyLimit).Count(shortcut => !string.IsNullOrWhiteSpace(shortcut.Shortcut)));
             _scannedShortcutCounts[mod.Path] = count;
             ApplyModRowState(mod);
         }

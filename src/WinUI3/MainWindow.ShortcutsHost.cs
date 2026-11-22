@@ -1,75 +1,34 @@
-using IntegratedModManager.Core.Shortcuts;
-using Microsoft.UI.Xaml.Controls;
+using Microsoft.UI.Xaml;
 
 namespace ModFolderCopier.WinUI;
 
-// Stage J5: the window's side of the Shortcuts page and overlay. The page (Pages/ShortcutsPage) shows
-// ShortcutPageViewModel and asks for work through it; the overlay (Overlay/ShortcutOverlayController) shows the
-// same view model and asks through IShortcutOverlayActions, implemented here with the window's existing code, so
-// sending keys, F10, slot switching, captures and preset saves did not change when the overlay moved out (J5b).
-public sealed partial class MainWindow : IShortcutOverlayActions
+// The Shortcuts page and overlay are AppServices.ShortcutPanel since stage J finish, step 8b; the window opens the
+// page and attaches the service with what only the window has.
+public sealed partial class MainWindow
 {
+    private ShortcutsPage? _shortcutsPage;
+
+    private void OnShortcutsNavClicked(object sender, RoutedEventArgs e)
+    {
+        try
+        {
+            _shell.CurrentSection = PrimarySection.Shortcuts;
+            ApplyShellState(refreshRepository: false);
+        }
+        catch (Exception ex) { ReportUiActionFailure(nameof(OnShortcutsNavClicked), ex); }
+    }
+
     private void AttachShortcutServices()
     {
-        _overlay = new ShortcutOverlayController(_shortcuts, _services.Language, _services.Appearance, this, DispatcherQueue);
-        _services.Overlay = _overlay;
-        _shortcuts.ActionRequested += OnShortcutPageRequested;
-        // Stage J finish, step 6: slots and pictures are services; the window still draws the slot card and runs the overlay.
+        _services.ShortcutBindings.Attach(LogApplicationIssue, SaveConfig);
+        _services.ShortcutPanel.Attach(WinRT.Interop.WindowNative.GetWindowHandle(this), DispatcherQueue, Activate, Close,
+            () => OnDashboardNavClicked(this, new RoutedEventArgs()), () => _currentSecondLevelPath, RefreshPersistentSlotControls,
+            () => _shortcutsPage, LogApplicationIssue, ReportUiActionFailure, RunUiActionAsync);
+        // Stage J finish, step 6: slots and pictures are services; they reach the overlay through the shortcut service.
         _services.Slots.Attach(LogApplicationIssue, TraceStartupStage, () => SaveShellConfig(), RefreshPersistentSlotControls,
-            text => _services.Workspace.Status = text, _shortcutInput, () => _overlay, () => _savingOverlaySinglePreset);
+            text => _services.Workspace.Status = text, _services.ShortcutPanel.Input, () => _services.ShortcutPanel.OverlayController,
+            () => _services.ShortcutPanel.SavingFromOverlay);
         _services.PresetPreviews.Attach(LogApplicationIssue, () => SaveShellConfig(), text => _services.Workspace.Status = text,
-            Activate, RunUiActionAsync, () => _overlay);
+            Activate, RunUiActionAsync, () => _services.ShortcutPanel.OverlayController);
     }
-
-    // After the settings are loaded, so loading them is not taken for the user's changes.
-    private void ListenToShortcutState() => _shortcuts.PropertyChanged += OnShortcutStateChanged;
-
-    bool IShortcutOverlayActions.IsClosing => _services.IsClosing;
-
-    bool IShortcutOverlayActions.IsSavingFromOverlay => _savingOverlaySinglePreset;
-
-    bool IShortcutOverlayActions.HotkeyAvailable => _shortcutPanelHotkey is not null;
-
-    async Task IShortcutOverlayActions.EnsureShortcutsReadAsync()
-    {
-        if (_shortcutsPrepared) return;
-        PrepareShortcuts();
-        await RefreshShortcutModsAsync();
-    }
-
-    void IShortcutOverlayActions.RefreshTargets() => RefreshShortcutTargets();
-
-    Task IShortcutOverlayActions.RefreshDeployedModsAsync() => RefreshShortcutDeployedModsAsync();
-
-    bool IShortcutOverlayActions.IsModDeployed(ShortcutModOption option) => IsShortcutModDeployed(option);
-
-    Task IShortcutOverlayActions.SendShortcutAsync(DetectedModShortcut shortcut) => SendShortcutFromPanelAsync(shortcut);
-
-    void IShortcutOverlayActions.SetInputEnabled(bool enable) => SetShortcutInputFromOverlay(enable);
-
-    Task IShortcutOverlayActions.SaveCombinationPresetAsync() => QuickSaveCombinationFromOverlayAsync();
-
-    Task IShortcutOverlayActions.SaveSingleModPresetAsync() => SaveSingleModPresetFromOverlayAsync();
-
-    Task IShortcutOverlayActions.RefreshFromDiskAsync() => RefreshOverlayFromDiskAsync();
-
-    ModPersistentSlot[] IShortcutOverlayActions.OverlaySlots(out string? modPath) => _services.Slots.OverlaySlots(out modPath);
-
-    ModPersistentSlot? IShortcutOverlayActions.CurrentSlot(ModPersistentSlot[] slots) => SlotService.CurrentPersistentSlot(slots);
-
-    string? IShortcutOverlayActions.ModRelativePath(string? modPath) => SlotService.TryGetCurrentModRelativePath(GetSelectedRepository(), modPath);
-
-    Task IShortcutOverlayActions.SwitchSlotAsync(string slotId, string modPath) => _services.Slots.SwitchSlotFromOverlayAsync(slotId, modPath);
-
-    Task IShortcutOverlayActions.ShowSlotGalleryAsync() => ShowOverlaySlotGalleryAsync();
-
-    Task IShortcutOverlayActions.FrameCurrentSlotPictureAsync() => FrameCurrentSlotPreviewAsync();
-
-    Image? IShortcutOverlayActions.CreatePresetPreviewImage(string? previewFile, double width, double height) => _services.PresetPreviews.CreatePresetPreviewImage(previewFile, width, height);
-
-    Task IShortcutOverlayActions.RunAsync(string operation, Func<Task> action) => RunUiActionAsync(operation, action);
-
-    void IShortcutOverlayActions.ReportFailure(string operation, Exception error) => ReportUiActionFailure(operation, error);
-
-    void IShortcutOverlayActions.LogIssue(string operation, Exception error) => LogApplicationIssue(operation, error);
 }

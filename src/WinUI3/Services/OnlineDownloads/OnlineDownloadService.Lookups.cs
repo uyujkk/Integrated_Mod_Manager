@@ -269,13 +269,13 @@ internal sealed partial class OnlineDownloadService
         if (!IsChineseUi)
         {
             return bindings
-                .Take(_host.ShortcutScanSafetyLimit)
+                .Take(ShortcutBindingService.ScanSafetyLimit)
                 .Select(binding => new ShortcutBinding(binding.Shortcut, binding.Action))
                 .ToList();
         }
 
         var localized = new List<ShortcutBinding>();
-        foreach (ShortcutBinding binding in bindings.Take(_host.ShortcutScanSafetyLimit))
+        foreach (ShortcutBinding binding in bindings.Take(ShortcutBindingService.ScanSafetyLimit))
         {
             string action = binding.Action;
             if (!string.IsNullOrWhiteSpace(action))
@@ -379,7 +379,7 @@ internal sealed partial class OnlineDownloadService
                 if (seen.Add(identity))
                 {
                     bindings.Add(binding);
-                    if (bindings.Count >= _host.ShortcutScanSafetyLimit)
+                    if (bindings.Count >= ShortcutBindingService.ScanSafetyLimit)
                     {
                         break;
                     }

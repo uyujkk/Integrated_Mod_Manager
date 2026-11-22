@@ -1,4 +1,3 @@
-using IntegratedModManager.Core.Configuration;
 using IntegratedModManager.Core.Repository;
 using Microsoft.UI.Xaml;
 using Microsoft.UI.Xaml.Controls;
@@ -10,7 +9,8 @@ namespace ModFolderCopier.WinUI;
 /// What the Mod workspace page uses from the window (stage J7, decided 2026-11-10). State slots, preset pictures
 /// (stage J finish, step 6), combination presets (step 7a) and the scan, status line and path actions (step 7b) have
 /// since become services in AppServices, which the page uses directly; the window creates the page the first time the
-/// workspace is shown. See UI-Structure-Plan.md, "J7 后续".
+/// workspace is shown. Bindings, links and the character rename references followed in step 8b (ShortcutBindingService,
+/// CharacterRenameReferences). See UI-Structure-Plan.md, "J7 后续".
 /// </summary>
 internal interface IWorkspaceHost
 {
@@ -43,27 +43,12 @@ internal interface IWorkspaceHost
 
     // State the workspace shares with the dashboard, the Shortcuts page and the overlay.
     string[] ImageExtensions { get; }
-    int ShortcutScanSafetyLimit { get; }
     string? CurrentSecondLevelPath { get; set; }
     bool EnableConflictDetection { get; }
     bool IsApplyingRepositoryDeploymentMode { get; }
-    Dictionary<string, List<ShortcutBinding>> ModBindings { get; }
-    Dictionary<string, string> ModLinks { get; }
     BatchObservableCollection<SecondLevelFolderItem> SecondLevelItems { get; }
     List<TextBox> ShortcutActionBoxes { get; }
     List<TextBox> ShortcutKeyBoxes { get; }
-
-    // Character rename migration (#108): the references the window still owns (the install pipeline is in
-    // AppServices.Install since stage J finish, step 4).
-    ICharacterRenameReferences CreateCharacterRenameReferences(WorkspaceRepository repository);
-
-    // Shortcut binding rules shared with the online install, and the Shortcuts page.
-    string GetShortcutBindingDisplayAction(ShortcutBinding binding);
-    string NormalizeLink(string link);
-    Task<int> TryImportShortcutBindingsFromModFilesAsync(string modFolder);
-    Task RefreshShortcutDeployedModsAsync(string? preferredPath = null);
-
-    // Running the repository's launcher, the dashboard's avatars and the Online page.
 
     // Workspace timing diagnostics.
     RepositoryPerformanceRecorder.Scope? MeasureRepositoryUi(RepositoryPerformanceOperation operation, int count);

@@ -1,6 +1,4 @@
-using IntegratedModManager.Core.Configuration;
 using IntegratedModManager.Core.Online;
-using IntegratedModManager.Core.Shortcuts;
 using IntegratedModManager.Data;
 using Microsoft.UI.Xaml;
 using Microsoft.UI.Xaml.Media;
@@ -41,9 +39,6 @@ internal interface IOnlineHost
     void ToggleFavoriteCharacter(string characterKey);
 
     // Shortcut bindings and links of installed Mods, which an install fills in.
-    Dictionary<string, List<ShortcutBinding>> ModBindings { get; }
-    Dictionary<string, string> ModLinks { get; }
-    ShortcutBinding CreateAutomaticShortcutBinding(DetectedModShortcut shortcut);
 
     // Tracked Mods, download tasks and the Updates page.
     void RefreshDownloadTaskCard(DownloadTaskItem task);
@@ -56,7 +51,6 @@ internal interface IOnlineHost
     GameBananaMetadataService Metadata { get; }
 
     // Shared values and helpers of the window.
-    int ShortcutScanSafetyLimit { get; }
     IReadOnlyList<string> ImageExtensions { get; }
     string? FindPreviewImage(List<string> files);
 }

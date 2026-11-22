@@ -6,7 +6,7 @@ namespace ModFolderCopier.WinUI;
 /// <summary>
 /// What the Shortcuts overlay asks the app to do (stage J5b). The overlay (ShortcutOverlayController) only shows
 /// and lays out; everything that reaches the game, the loader files or the presets stays behind this interface,
-/// implemented by the window, so moving the overlay changed none of it.
+/// implemented by ShortcutPanelService (by the window until stage J finish, step 8b), so moving the overlay changed none of it.
 /// </summary>
 internal interface IShortcutOverlayActions
 {

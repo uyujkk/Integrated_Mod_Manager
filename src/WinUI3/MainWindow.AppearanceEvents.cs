@@ -18,7 +18,7 @@ public sealed partial class MainWindow
         language.LanguageChanged += (_, _) =>
         {
             _workspaceView?.RefreshVisibleShortcutDescriptionsForLanguage();
-            RebuildShortcutPaneForLanguage();
+            _services.ShortcutPanel.RebuildForLanguage();
         };
         language.LanguageChanged += (_, _) => RefreshSettingsPane();
         language.LanguageChanged += (_, _) => RefreshUpdatesPane();
