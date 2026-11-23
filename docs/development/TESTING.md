@@ -1,8 +1,8 @@
 # Testing / 测试说明
 
-[English README](../../README.md) · [中文首页](../README.zh-CN.md) · [软件结构 / Software structure](./Software-Structure.md) · [v4.8.2 verification / 验证记录](../verification/v4.8.2.md)
+[English README](../../README.md) · [中文首页](../README.zh-CN.md) · [软件结构 / Software structure](./Software-Structure.md) · [v4.8.3 verification / 验证记录](../verification/v4.8.3.md)
 
-Updated for 4.8.2 (2026-11-16). 按 4.8.2 更新。
+Updated for 4.8.3 (2026-11-22). 按 4.8.3 更新。
 
 ## One entry point / 统一入口
 
@@ -48,8 +48,8 @@ The whole pipeline is drawn in [Software Structure §9.1](./Software-Structure.m
 ./scripts/package-developer-tools.ps1 -OutputDirectory artifacts/developer-tools
 ```
 
-`tools/DeveloperTools` is built and packaged in `build-and-test.yml` and, for releases after 4.8.2, in `release.yml`, which adds `Integrated_Mod_Manager_Developer_Tools-vX.Y.Z.zip` to the draft as a separate asset. The package script checks that the tools' version matches the app's, that every file is inside a `DeveloperTools` folder, and that no app files or debug symbols are included. Its logic lives in Core's `DeveloperTools` folder and is tested in `Core.Tests/DeveloperTools`; `ApplicationUpdateClientTests` checks that the updater never picks the tools' ZIP. Run the tools on synthetic data with `--root <folder> --page <name> --language <code> --theme light|dark`.
-开发者工具在 `build-and-test.yml` 中构建打包，4.8.2 之后的版本起 `release.yml` 也会把它作为单独的附件加到草稿 Release。打包脚本检查版本与主程序一致、所有文件都在 `DeveloperTools` 文件夹里、不含主程序文件和调试符号。逻辑在 Core 的 `DeveloperTools` 目录，测试在 `Core.Tests/DeveloperTools`；`ApplicationUpdateClientTests` 检查更新器不会选中开发者工具的压缩包。
+`tools/DeveloperTools` is built and packaged in `build-and-test.yml` and, for releases from 4.8.3 on, in `release.yml`, which adds `Integrated_Mod_Manager_Developer_Tools-vX.Y.Z.zip` to the draft as a separate asset. The package script checks that the tools' version matches the app's, that every file is inside a `DeveloperTools` folder, and that no app files or debug symbols are included. Its logic lives in Core's `DeveloperTools` folder and is tested in `Core.Tests/DeveloperTools`; `ApplicationUpdateClientTests` checks that the updater never picks the tools' ZIP. Run the tools on synthetic data with `--root <folder> --page <name> --language <code> --theme light|dark`.
+开发者工具在 `build-and-test.yml` 中构建打包，从 4.8.3 起 `release.yml` 也会把它作为单独的附件加到草稿 Release。打包脚本检查版本与主程序一致、所有文件都在 `DeveloperTools` 文件夹里、不含主程序文件和调试符号。逻辑在 Core 的 `DeveloperTools` 目录，测试在 `Core.Tests/DeveloperTools`；`ApplicationUpdateClientTests` 检查更新器不会选中开发者工具的压缩包。
 
 ## Code style / 代码风格
 

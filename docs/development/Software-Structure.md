@@ -1,8 +1,8 @@
 # 软件结构 / Software Structure
 
-本文说明 Integrated Mod Manager 由哪些部分组成、各部分如何协作、数据存放在哪里，以及代码如何构建、测试和发布。适用于 4.8.2（`main`，2026-11-16）。
+本文说明 Integrated Mod Manager 由哪些部分组成、各部分如何协作、数据存放在哪里，以及代码如何构建、测试和发布。适用于 4.8.3（`main`，2026-11-22）。
 
-This document describes how Integrated Mod Manager is put together: its parts, how they work together, where data lives, and how the code is built, tested and released. It reflects 4.8.2 (`main`, 2026-11-16).
+This document describes how Integrated Mod Manager is put together: its parts, how they work together, where data lives, and how the code is built, tested and released. It reflects 4.8.3 (`main`, 2026-11-22).
 
 相关文档 / Related: [测试与构建 / Testing](./TESTING.md) · [组合包格式 / Combination bundles](./Combination-Bundles.md) · [界面外观 / UI design](./UI-Fluent-Design-Plan.md) · [用户手册 / User guide](../guides/zh-CN/用户手册.md) · [许可证 / Licensing](../LICENSING.md)
 
@@ -53,7 +53,7 @@ tests/
   Performance/                            性能基准 / benchmarks
   TestData/                               合成测试数据与在线样例 / synthetic fixtures and online samples
 tools/
-  DeveloperTools/                         开发者工具，4.8.2 之后随发布单独提供 / Developer Tools, a separate release asset after 4.8.2
+  DeveloperTools/                         开发者工具，从 4.8.3 起随发布单独提供 / Developer Tools, a separate release asset from 4.8.3
   online-fixtures/                        生成在线样例 / generates the online samples
   ui-baseline/                            截图基线脚本 / screenshot baseline script
 scripts/                                  构建、测试、打包与测试夹具脚本 / build, test, packaging and fixture scripts

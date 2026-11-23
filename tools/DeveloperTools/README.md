@@ -4,7 +4,7 @@
 
 ## 中文
 
-独立的 WinUI 3 工具，帮助开发者、Mod 作者和翻译者查看集成化 Mod 管理器的数据。版本与主程序相同（现为 4.8.2）。从 4.8.2 之后的下一个版本起，每次发布都附带单独的附件 `Integrated_Mod_Manager_Developer_Tools-vX.Y.Z.zip`；在那之前请从源码构建（见下面的“构建”）。它不进入主程序的安装包，也不会被主程序的更新器安装。
+独立的 WinUI 3 工具，帮助开发者、Mod 作者和翻译者查看集成化 Mod 管理器的数据。版本与主程序相同（现为 4.8.3）。从 4.8.3 起，每次发布都附带单独的附件 `Integrated_Mod_Manager_Developer_Tools-vX.Y.Z.zip`；更早的版本请从源码构建（见下面的“构建”）。它不进入主程序的安装包，也不会被主程序的更新器安装。
 
 ### 安装
 
@@ -57,7 +57,7 @@ IntegratedModManager.DeveloperTools.exe --root <主程序数据文件夹> --page
 
 ## English
 
-A standalone WinUI 3 tool that helps developers, Mod authors and translators look at Integrated Mod Manager's data. It has the app's version (4.8.2 now). From the release after 4.8.2 on, every release has it as a separate asset, `Integrated_Mod_Manager_Developer_Tools-vX.Y.Z.zip`; until then, build it from source (see Build below). It is not part of the app's package, and the app's updater never installs it.
+A standalone WinUI 3 tool that helps developers, Mod authors and translators look at Integrated Mod Manager's data. It has the app's version (4.8.3 now). From 4.8.3 on, every release has it as a separate asset, `Integrated_Mod_Manager_Developer_Tools-vX.Y.Z.zip`; for older versions, build it from source (see Build below). It is not part of the app's package, and the app's updater never installs it.
 
 ### Install
 

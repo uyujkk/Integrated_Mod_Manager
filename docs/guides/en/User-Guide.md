@@ -207,6 +207,7 @@ Before installing or applying a profile, target paths and INI conflicts are chec
 - Old files are backed up, and a failed start rolls back. The updater supports paths longer than 260 characters.
 - You can also place a correctly named newer ZIP in the app folder and restart; the app detects it and asks.
 - Use the `.zip.sha256` that matches the exact ZIP file name.
+- From 4.8.3, releases also have a Developer Tools ZIP. The app's updater downloads only the app's own ZIP and never installs or updates the Developer Tools; download them again after an upgrade if you use them (see 11.3).
 - Local preview builds don't check for or install app updates. To move from a preview back to a stable build, quit the manager, extract the stable ZIP over its folder (configuration, repositories and backups are kept), then check the update settings above. Previews before 4.6.0 saved both settings as off, so turn them on once; from 4.6.0 on, previews leave them unchanged.
 
 ## 11. Settings, data and privacy
@@ -236,7 +237,7 @@ Configuration writes are atomic with rotated backups; a damaged main configurati
 
 **Export Diagnostic Report** in Settings → **Diagnostics and Issue Report** collects the app version, a system summary, error logs and a sanitized configuration summary, excluding private paths and credentials. The GitHub option opens a pre-filled issue; nothing is submitted automatically, so review it first. The same card lists the feedback QQ group 1041384622, with a button to copy the number: report problems and share tips there, and Arknights and Arknights: Endfield players are welcome for everyday game chat and joining offline events such as Ambience Synesthesia. The card also has a button that opens the [Discord server](https://discord.gg/G9nszEQgrV).
 
-**Developer Tools** in the same group opens the separately released Developer Tools, or the release page when they are not installed (the command palette, Ctrl+K, has Open Developer Tools too). Extract `Integrated_Mod_Manager_Developer_Tools-vX.Y.Z.zip` into the app's folder; it creates a `DeveloperTools` folder beside `IntegratedModManager.exe`. The tools look at the app's data without changing it: copy records, state slots and broken links, the logs, cache sizes (online caches and the GameBanana sign-in can be cleared after a confirmation, only while the app is closed), a Mod's key bindings, translations, and a sanitized diagnostic report with counts of the 4.5+ data. See the [Developer Tools README](../../../tools/DeveloperTools/README.md).
+**Developer Tools** in the same group opens the Developer Tools (a separate download with every release from 4.8.3), or the release page when they are not installed (the command palette, Ctrl+K, has Open Developer Tools too). Extract `Integrated_Mod_Manager_Developer_Tools-vX.Y.Z.zip` into the app's folder; it creates a `DeveloperTools` folder beside `IntegratedModManager.exe`. The tools look at the app's data without changing it: copy records, state slots and broken links, the logs, cache sizes (online caches and the GameBanana sign-in can be cleared after a confirmation, only while the app is closed), a Mod's key bindings, translations, and a sanitized diagnostic report with counts of the 4.5+ data. See the [Developer Tools README](../../../tools/DeveloperTools/README.md).
 
 ## 12. Keyboard
 

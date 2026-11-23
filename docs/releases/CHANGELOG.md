@@ -6,7 +6,13 @@
 
 This document records version changes in Integrated Mod Manager. Unpublished versions are marked separately.
 
-## v4.8.2（正式版 / Stable）
+## v4.8.3（正式版 / Stable）
+
+Mod 工作区和在线页改为第一次打开时才创建，停在其他页面时启动更快，第一次打开 Mod 工作区时稍慢（#141–#149）。开发者工具重新制作，随每次发布作为单独的 ZIP 提供，可以从“设置 → 诊断与问题报告”和命令面板打开（#139）。安装、下载、预设、状态槽位、快捷键、浮窗、更新、托盘和命令面板从主窗口拆成独立的部分，数据格式不变，每一步都先用新的界面测试固定行为（#141–#149）。软件结构文档更新（#137）。见 [v4.8.3](v4.8.3.md)。
+
+The Mod workspace and the Online page are created the first time they are opened, so the app starts faster on other pages and the first visit to the Mod workspace is a little slower (#141–#149). The Developer Tools are rebuilt and ship as a separate ZIP with every release; they open from Settings → Diagnostics and Issue Report and from the command palette (#139). Installing, downloads, presets, state slots, shortcuts, the overlay, updates, the tray and the command palette moved out of the main window into their own parts with no data format changes, each move pinned first by new UI tests (#141–#149). The software structure docs are up to date (#137). See [v4.8.3](v4.8.3.md).
+
+## v4.8.2 — 2026-11-16（正式版 / Stable）
 
 游戏内浮窗重新设计：可以拖动的标题栏和状态圆点，在浮窗里选择目标窗口和开关发送，键帽式按键，高度跟随内容、可调大小、按显示器记住位置并贴边，⋯ 菜单，跟随应用主题，读取结果收进状态图标（#134）。在线页可以在管理器里打开 Mod 的 GameBanana 页面点赞，设置里可以清除这份登录（#129、#132）。设置页展开卡片时分组不再跳动，“新功能”和更新说明新增 Discord 按钮，切页更快（#135）。见 [v4.8.2](v4.8.2.md)。
 
