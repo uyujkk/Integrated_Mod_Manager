@@ -173,6 +173,7 @@ public sealed partial class OnlinePage
         RefreshOnlineButtonTextBlock.Text = _isLoadingOnlineMods
             ? T("Common.Loading")
             : T("Settings.RefreshOnlineList");
+        ApplyOnlineToolbarTexts();
         UpdateOnlineHeaderLayout();
         UpdateOnlineToolbarLayout();
         UpdateOnlineDetailCloseButton();
