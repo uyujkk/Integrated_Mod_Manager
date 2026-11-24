@@ -48,8 +48,8 @@ public sealed partial class OnlinePage
     internal void ApplyWindowLanguage()
     {
         ToolTipService.SetToolTip(RefreshOnlineButton, T("Localization.RefreshOnlineModList"));
-        ToolTipService.SetToolTip(OnlinePrevPageButton, null);
-        ToolTipService.SetToolTip(OnlineNextPageButton, null);
+        ToolTipService.SetToolTip(OnlinePrevPageButton, T("Localization.PreviousPage"));
+        ToolTipService.SetToolTip(OnlineNextPageButton, T("Localization.NextPage"));
         ToolTipService.SetToolTip(OnlineSearchTextBox, T("Localization.SearchThisPageByCharacterMod2"));
         ToolTipService.SetToolTip(OnlineSortComboBox, T("Localization.ChangeTheSortOrderForThe"));
         ToolTipService.SetToolTip(OnlineDetailHeroImage, T("Localization.ClickToViewFullSize"));

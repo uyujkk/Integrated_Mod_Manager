@@ -42,6 +42,9 @@ public sealed partial class OnlinePage
         bool showCharacters = IsOnlineCharacterView();
         bool railHidden = railLayout.Collapsed || !showCharacters;
         _onlineCharacterRailCollapsed = railLayout.Collapsed && showCharacters;
+        // The same width folds the top-level category tabs into the toolbar's drop-down.
+        _onlineNarrowLayout = railLayout.Collapsed;
+        UpdateOnlineCategoryFold();
         OnlineCharacterRailHost.Visibility = railHidden ? Visibility.Collapsed : Visibility.Visible;
         OnlineCharacterComboBox.Visibility = _onlineCharacterRailCollapsed ? Visibility.Visible : Visibility.Collapsed;
         bool useHorizontalCharacterRail = railLayout.Horizontal && showCharacters;
@@ -108,44 +111,75 @@ public sealed partial class OnlinePage
     }
 
     private bool _onlineCharacterRailCollapsed;
+    // A page too narrow for the character rail; the top-level category tabs fold into the toolbar's drop-down too.
+    private bool _onlineNarrowLayout;
 
-    // One toolbar row while the search box keeps OnlineLayoutPolicy.MinSearchWidth; otherwise the search box gets the
-    // first row and sort, filters (and, without the rail, the character list) the second.
+    // Width of a button label at the toolbar's text size, measured apart from the tree (no layout feedback).
+    private static double MeasureOnlineLabel(string text)
+    {
+        var label = new TextBlock { Text = text };
+        label.Measure(new Windows.Foundation.Size(double.PositiveInfinity, double.PositiveInfinity));
+        return label.DesiredSize.Width;
+    }
+
+    // Columns: [category drop-down][search][sort][buttons]. One toolbar row while the search box keeps
+    // OnlineLayoutPolicy.MinSearchWidth; otherwise the search box (and, on a narrow page, the category drop-down) gets
+    // the first row and sort, filters (and, without the rail, the character list) the second. The saved-items and
+    // download-options buttons show their labels where there is room and keep icon, tooltip and name without them.
     private void UpdateOnlineToolbarLayout()
     {
         // Desired sizes come from the last layout pass (both sit in Auto columns, so they are their natural sizes);
         // measuring elements in the tree from here could start a layout cycle.
         double resultsWidth = OnlineResultsHost.ActualWidth;
         if (resultsWidth <= 0) return;
-        double controlsWidth = 176 + OnlineToolbarButtonsPanel.DesiredSize.Width + 16;
-        bool twoRows = _onlineCharacterRailCollapsed || OnlineLayoutPolicy.ToolbarOnTwoRows(resultsWidth, controlsWidth);
-        // Row spacing only between rows that are used (the error bar carries its own top margin).
+        bool labelsShown = OnlineSavedItemsTextBlock.Visibility == Visibility.Visible;
+        double labels = MeasureOnlineLabel(OnlineSavedItemsTextBlock.Text) + MeasureOnlineLabel(OnlineDownloadOptionsTextBlock.Text) + 2 * 8;
+        double buttons = Math.Max(0, OnlineToolbarButtonsPanel.DesiredSize.Width - (labelsShown ? labels : 0));
+        bool forcedTwoRows = _onlineCharacterRailCollapsed || _onlineCategoryFolded;
+        bool oneRowWithLabels = !forcedTwoRows && !OnlineLayoutPolicy.ToolbarOnTwoRows(resultsWidth, 176 + buttons + labels + 16);
+        bool twoRows = forcedTwoRows || OnlineLayoutPolicy.ToolbarOnTwoRows(resultsWidth, 176 + buttons + 16);
+        // On the second row the sort box (and the character list beside it) keep at least 140 px each.
+        bool showLabels = oneRowWithLabels
+            || (twoRows && resultsWidth - (_onlineCharacterRailCollapsed ? 2 * 140 : 140) - buttons - 3 * 8 >= labels);
+        Visibility labelVisibility = showLabels ? Visibility.Visible : Visibility.Collapsed;
+        OnlineSavedItemsTextBlock.Visibility = OnlineDownloadOptionsTextBlock.Visibility = labelVisibility;
+
+        // Row spacing only between rows that are used (the filter row and the error bar carry their own top margins).
         OnlineToolbarGrid.RowSpacing = 0;
-        OnlineSortComboBox.Margin = OnlineToolbarButtonsPanel.Margin = OnlineCharacterComboBox.Margin = new Thickness(0, twoRows ? 8 : 0, 0, 0);
+        OnlineSortHost.Margin = OnlineToolbarButtonsPanel.Margin = OnlineCharacterComboBox.Margin = new Thickness(0, twoRows ? 8 : 0, 0, 0);
+        OnlineCategoryDropDownButton.Visibility = _onlineCategoryFolded ? Visibility.Visible : Visibility.Collapsed;
+        // An empty first column would still add its spacing, so the search box starts there unless the drop-down does.
         Grid.SetRow(OnlineSearchTextBox, 0);
-        Grid.SetColumnSpan(OnlineSearchTextBox, twoRows ? 3 : 1);
+        Grid.SetColumn(OnlineSearchTextBox, _onlineCategoryFolded ? 1 : 0);
+        Grid.SetColumnSpan(OnlineSearchTextBox, (twoRows ? 4 : 2) - (_onlineCategoryFolded ? 1 : 0));
         int row = twoRows ? 1 : 0;
         Grid.SetRow(OnlineCharacterComboBox, row);
-        Grid.SetRow(OnlineSortComboBox, row);
+        Grid.SetRow(OnlineSortHost, row);
         Grid.SetRow(OnlineToolbarButtonsPanel, row);
+        Grid.SetColumn(OnlineToolbarButtonsPanel, 3);
+        Grid.SetColumn(OnlineCharacterComboBox, 0);
+        Grid.SetColumnSpan(OnlineCharacterComboBox, 2);
         if (!twoRows)
         {
             OnlineSortColumn.Width = new GridLength(176);
-            Grid.SetColumn(OnlineSortComboBox, 1);
-            Grid.SetColumnSpan(OnlineSortComboBox, 1);
+            Grid.SetColumn(OnlineSortHost, 2);
+            Grid.SetColumnSpan(OnlineSortHost, 1);
         }
         else if (_onlineCharacterRailCollapsed)
         {
-            // Character list and sort share the row evenly.
+            // Character list and sort share the row: under the category drop-down the list takes that column and the
+            // sort box the rest; without it they split the row evenly.
             OnlineSortColumn.Width = new GridLength(1, GridUnitType.Star);
-            Grid.SetColumn(OnlineSortComboBox, 1);
-            Grid.SetColumnSpan(OnlineSortComboBox, 1);
+            Grid.SetColumnSpan(OnlineCharacterComboBox, _onlineCategoryFolded ? 1 : 2);
+            Grid.SetColumn(OnlineSortHost, _onlineCategoryFolded ? 1 : 2);
+            Grid.SetColumnSpan(OnlineSortHost, _onlineCategoryFolded ? 2 : 1);
         }
         else
         {
-            OnlineSortColumn.Width = new GridLength(176);
-            Grid.SetColumn(OnlineSortComboBox, 0);
-            Grid.SetColumnSpan(OnlineSortComboBox, 2);
+            // The sort box takes what the buttons leave; a fixed column here would add to the drop-down's width.
+            OnlineSortColumn.Width = new GridLength(1, GridUnitType.Star);
+            Grid.SetColumn(OnlineSortHost, 0);
+            Grid.SetColumnSpan(OnlineSortHost, 3);
         }
     }
 

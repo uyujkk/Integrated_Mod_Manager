@@ -25,6 +25,31 @@
             <Setter Property="CornerRadius" Value="{StaticResource OverlayCornerRadius}" />
             <Setter Property="Padding" Value="12" />
         </Style>
+        <!-- A filter in use, removed with its ✕ (OnlinePage.OnlineFilters). The accent outline marks it as active;
+             system brushes keep it readable in high contrast. -->
+        <Style x:Key="OnlineFilterChipStyle" TargetType="Button" BasedOn="{StaticResource DefaultButtonStyle}">
+            <Setter Property="MinHeight" Value="28" />
+            <Setter Property="Padding" Value="10,2,8,2" />
+            <Setter Property="CornerRadius" Value="14" />
+            <Setter Property="FontSize" Value="13" />
+            <Setter Property="BorderBrush" Value="{ThemeResource AccentFillColorDefaultBrush}" />
+        </Style>
+        <!-- A subcategory: smaller than the top-level tabs above it, filled with the accent colour when chosen. -->
+        <Style x:Key="OnlineCategoryChipStyle" TargetType="ToggleButton" BasedOn="{StaticResource DefaultToggleButtonStyle}">
+            <Setter Property="MinHeight" Value="28" />
+            <Setter Property="Padding" Value="12,3" />
+            <Setter Property="CornerRadius" Value="14" />
+            <Setter Property="FontSize" Value="13" />
+        </Style>
+        <!-- The ‹ › buttons at the ends of a category row; shown only while the row overflows. -->
+        <Style x:Key="OnlineScrollArrowButtonStyle" TargetType="Button" BasedOn="{StaticResource DefaultButtonStyle}">
+            <Setter Property="Width" Value="28" />
+            <Setter Property="Height" Value="28" />
+            <Setter Property="Padding" Value="0" />
+            <Setter Property="CornerRadius" Value="14" />
+            <Setter Property="VerticalAlignment" Value="Center" />
+            <Setter Property="Visibility" Value="Collapsed" />
+        </Style>
     </UserControl.Resources>
 
     <Grid>
@@ -141,24 +166,60 @@
 
                         <!-- Issue #129: the game's top-level Mod categories, read from the site, and the chosen one's
                              subcategories. Hidden until they are known; the character category keeps the rail. -->
-                        <StackPanel x:Name="OnlineCategoryBarPanel" Grid.Row="1" Spacing="2" Visibility="Collapsed">
-                            <ScrollViewer
-                                HorizontalScrollBarVisibility="Auto"
-                                HorizontalScrollMode="Enabled"
-                                VerticalScrollBarVisibility="Disabled"
-                                VerticalScrollMode="Disabled">
-                                <SelectorBar x:Name="OnlineCategorySelectorBar" SelectionChanged="OnOnlineCategorySelectionChanged" />
-                            </ScrollViewer>
-                            <ScrollViewer
-                                x:Name="OnlineSubcategoryScrollViewer"
-                                HorizontalScrollBarVisibility="Auto"
-                                HorizontalScrollMode="Enabled"
-                                VerticalScrollBarVisibility="Disabled"
-                                VerticalScrollMode="Disabled"
-                                Visibility="Collapsed">
-                                <SelectorBar x:Name="OnlineSubcategorySelectorBar" SelectionChanged="OnOnlineSubcategorySelectionChanged" />
-                            </ScrollViewer>
-                        </StackPanel>
+                        <!-- Top-level categories as tabs, the chosen one's subcategories as chips under them. Each row
+                             shows ‹ › only while it overflows; on a narrow page the tabs fold into the toolbar's
+                             category drop-down (OnlinePage.OnlineCategories). -->
+                        <Grid x:Name="OnlineCategoryBarPanel" Grid.Row="1" RowSpacing="6" Visibility="Collapsed">
+                            <Grid.RowDefinitions>
+                                <RowDefinition Height="Auto" />
+                                <RowDefinition Height="Auto" />
+                            </Grid.RowDefinitions>
+                            <Grid x:Name="OnlineCategoryTabsRow" ColumnSpacing="4">
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="Auto" />
+                                    <ColumnDefinition Width="*" />
+                                    <ColumnDefinition Width="Auto" />
+                                </Grid.ColumnDefinitions>
+                                <Button x:Name="OnlineCategoryScrollLeftButton" Style="{StaticResource OnlineScrollArrowButtonStyle}" Click="OnOnlineCategoryScrollLeftClicked">
+                                    <FontIcon FontSize="10" Glyph="&#xE76B;" />
+                                </Button>
+                                <ScrollViewer
+                                    x:Name="OnlineCategoryScrollViewer"
+                                    Grid.Column="1"
+                                    HorizontalScrollBarVisibility="Hidden"
+                                    HorizontalScrollMode="Enabled"
+                                    VerticalScrollBarVisibility="Disabled"
+                                    VerticalScrollMode="Disabled">
+                                    <SelectorBar x:Name="OnlineCategorySelectorBar" SelectionChanged="OnOnlineCategorySelectionChanged" />
+                                </ScrollViewer>
+                                <Button x:Name="OnlineCategoryScrollRightButton" Grid.Column="2" Style="{StaticResource OnlineScrollArrowButtonStyle}" Click="OnOnlineCategoryScrollRightClicked">
+                                    <FontIcon FontSize="10" Glyph="&#xE76C;" />
+                                </Button>
+                            </Grid>
+                            <Grid x:Name="OnlineSubcategoryRow" Grid.Row="1" ColumnSpacing="4" Visibility="Collapsed">
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="Auto" />
+                                    <ColumnDefinition Width="*" />
+                                    <ColumnDefinition Width="Auto" />
+                                </Grid.ColumnDefinitions>
+                                <Button x:Name="OnlineSubcategoryScrollLeftButton" Style="{StaticResource OnlineScrollArrowButtonStyle}" Click="OnOnlineSubcategoryScrollLeftClicked">
+                                    <FontIcon FontSize="10" Glyph="&#xE76B;" />
+                                </Button>
+                                <ScrollViewer
+                                    x:Name="OnlineSubcategoryScrollViewer"
+                                    Grid.Column="1"
+                                    Padding="8,0"
+                                    HorizontalScrollBarVisibility="Hidden"
+                                    HorizontalScrollMode="Enabled"
+                                    VerticalScrollBarVisibility="Disabled"
+                                    VerticalScrollMode="Disabled">
+                                    <StackPanel x:Name="OnlineSubcategoryChips" Orientation="Horizontal" Spacing="6" Padding="0,2" />
+                                </ScrollViewer>
+                                <Button x:Name="OnlineSubcategoryScrollRightButton" Grid.Column="2" Style="{StaticResource OnlineScrollArrowButtonStyle}" Click="OnOnlineSubcategoryScrollRightClicked">
+                                    <FontIcon FontSize="10" Glyph="&#xE76C;" />
+                                </Button>
+                            </Grid>
+                        </Grid>
 
                         <Grid
                             x:Name="OnlineWorkspaceGrid"
@@ -234,6 +295,7 @@
                                      the second row (OnlinePage.UpdateOnlineToolbarLayout). -->
                                 <Grid x:Name="OnlineToolbarGrid" ColumnSpacing="8" RowSpacing="0" Canvas.ZIndex="1">
                                     <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="Auto" />
                                         <ColumnDefinition Width="*" />
                                         <ColumnDefinition x:Name="OnlineSortColumn" Width="176" />
                                         <ColumnDefinition Width="Auto" />
@@ -242,18 +304,32 @@
                                         <RowDefinition Height="Auto" />
                                         <RowDefinition Height="Auto" />
                                         <RowDefinition Height="Auto" />
+                                        <RowDefinition Height="Auto" />
                                     </Grid.RowDefinitions>
                                     <!-- A failed list load: what went wrong and a retry, above the results (no dialog). -->
                                     <InfoBar
                                         x:Name="OnlineErrorInfoBar"
-                                        Grid.Row="2"
-                                        Grid.ColumnSpan="3"
+                                        Grid.Row="3"
+                                        Grid.ColumnSpan="4"
                                         Margin="0,8,0,0"
                                         Severity="Error"
                                         IsOpen="False"
                                         Visibility="Collapsed" />
+                                    <!-- On a narrow page the top-level categories fold into this drop-down. -->
+                                    <DropDownButton
+                                        x:Name="OnlineCategoryDropDownButton"
+                                        MinHeight="36"
+                                        MaxWidth="220"
+                                        Padding="10,2"
+                                        Visibility="Collapsed">
+                                        <TextBlock x:Name="OnlineCategoryDropDownTextBlock" TextTrimming="CharacterEllipsis" />
+                                        <DropDownButton.Flyout>
+                                            <MenuFlyout x:Name="OnlineCategoryDropDownMenu" Placement="BottomEdgeAlignedLeft" />
+                                        </DropDownButton.Flyout>
+                                    </DropDownButton>
                                     <TextBox
                                         x:Name="OnlineSearchTextBox" x:FieldModifier="internal"
+                                        Grid.Column="1"
                                         MinHeight="36"
                                         Padding="12,7"
                                         TextChanged="OnOnlineSearchTextChanged" />
@@ -263,18 +339,67 @@
                                         MinHeight="36"
                                         HorizontalAlignment="Stretch"
                                         SelectionChanged="OnOnlineCharacterSelectionChanged" />
-                                    <ComboBox
-                                        x:Name="OnlineSortComboBox" x:FieldModifier="internal"
-                                        Grid.Column="1"
-                                        MinHeight="36"
-                                        HorizontalAlignment="Stretch"
-                                        SelectionChanged="OnOnlineSortSelectionChanged" />
-                                    <StackPanel x:Name="OnlineToolbarButtonsPanel" Grid.Column="2" Orientation="Horizontal" Spacing="6">
-                                        <Button x:Name="OnlineWorkFilterButton" MinHeight="36" Padding="10,2" Click="OnOnlineWorkFilterClicked" Style="{StaticResource SecondaryButtonStyle}" />
-                                        <Button x:Name="ClearOnlineFiltersButton" MinHeight="36" Padding="10,2" Click="OnClearOnlineFiltersClicked" Style="{StaticResource SecondaryButtonStyle}" />
-                                        <Button x:Name="OnlineSavedItemsButton" Width="36" Height="36" Padding="0" Click="OnOnlineSavedItemsClicked" Style="{StaticResource SecondaryButtonStyle}"><FontIcon FontSize="14" Glyph="&#xE734;" /></Button>
-                                        <Button x:Name="OnlineDownloadOptionsButton" Width="36" Height="36" Padding="0" Click="OnOnlineDownloadOptionsClicked" Style="{StaticResource SecondaryButtonStyle}"><FontIcon FontSize="14" Glyph="&#xE713;" /></Button>
+                                    <Grid x:Name="OnlineSortHost" Grid.Column="2">
+                                        <ComboBox
+                                            x:Name="OnlineSortComboBox" x:FieldModifier="internal"
+                                            MinHeight="36"
+                                            HorizontalAlignment="Stretch"
+                                            SelectionChanged="OnOnlineSortSelectionChanged" />
+                                        <!-- A sort other than the default: a dot on the box, and a chip below. -->
+                                        <Ellipse
+                                            x:Name="OnlineSortChangedDot"
+                                            Width="8"
+                                            Height="8"
+                                            Margin="0,-3,-3,0"
+                                            HorizontalAlignment="Right"
+                                            VerticalAlignment="Top"
+                                            Fill="{ThemeResource AccentFillColorDefaultBrush}"
+                                            IsHitTestVisible="False"
+                                            Visibility="Collapsed" />
+                                    </Grid>
+                                    <StackPanel x:Name="OnlineToolbarButtonsPanel" Grid.Column="3" Orientation="Horizontal" Spacing="6">
+                                        <!-- Show: all, installed or saved Mods on this page; accent while it narrows the list. -->
+                                        <Button x:Name="OnlineWorkFilterButton" MinHeight="36" Padding="10,2" Click="OnOnlineWorkFilterClicked" Style="{StaticResource SecondaryButtonStyle}">
+                                            <StackPanel Orientation="Horizontal" Spacing="8">
+                                                <FontIcon FontSize="14" Glyph="&#xE71C;" />
+                                                <TextBlock x:Name="OnlineWorkFilterTextBlock" VerticalAlignment="Center" />
+                                                <FontIcon FontSize="10" Glyph="&#xE70D;" />
+                                            </StackPanel>
+                                        </Button>
+                                        <Button x:Name="OnlineSavedItemsButton" MinWidth="36" MinHeight="36" Padding="10,2" Click="OnOnlineSavedItemsClicked" Style="{StaticResource SecondaryButtonStyle}">
+                                            <StackPanel Orientation="Horizontal" Spacing="8">
+                                                <FontIcon FontSize="14" Glyph="&#xE734;" />
+                                                <TextBlock x:Name="OnlineSavedItemsTextBlock" VerticalAlignment="Center" />
+                                            </StackPanel>
+                                        </Button>
+                                        <Button x:Name="OnlineDownloadOptionsButton" MinWidth="36" MinHeight="36" Padding="10,2" Click="OnOnlineDownloadOptionsClicked" Style="{StaticResource SecondaryButtonStyle}">
+                                            <StackPanel Orientation="Horizontal" Spacing="8">
+                                                <FontIcon FontSize="14" Glyph="&#xE713;" />
+                                                <TextBlock x:Name="OnlineDownloadOptionsTextBlock" VerticalAlignment="Center" />
+                                            </StackPanel>
+                                        </Button>
                                     </StackPanel>
+                                    <!-- Filters in use: the match count, one removable chip per filter and "Clear all".
+                                         Collapsed while nothing narrows the list (OnlinePage.OnlineFilters). -->
+                                    <Grid
+                                        x:Name="OnlineActiveFiltersPanel"
+                                        Grid.Row="2"
+                                        Grid.ColumnSpan="4"
+                                        Margin="0,8,0,0"
+                                        ColumnSpacing="10"
+                                        Visibility="Collapsed">
+                                        <Grid.ColumnDefinitions>
+                                            <ColumnDefinition Width="Auto" />
+                                            <ColumnDefinition Width="*" />
+                                        </Grid.ColumnDefinitions>
+                                        <StackPanel Orientation="Horizontal" Spacing="6" VerticalAlignment="Top" Margin="0,5,0,0">
+                                            <FontIcon FontSize="13" Glyph="&#xE71C;" Foreground="{ThemeResource AccentTextFillColorPrimaryBrush}" />
+                                            <TextBlock x:Name="OnlineFilterSummaryTextBlock" VerticalAlignment="Center" Style="{StaticResource CaptionTextStyle}" />
+                                        </StackPanel>
+                                        <local:FlowPanel x:Name="OnlineFilterChipsPanel" Grid.Column="1" HorizontalSpacing="6" VerticalSpacing="6">
+                                            <HyperlinkButton x:Name="ClearOnlineFiltersButton" MinHeight="28" Padding="8,2" Click="OnClearOnlineFiltersClicked" />
+                                        </local:FlowPanel>
+                                    </Grid>
                                 </Grid>
                                 <ListView
                                     x:Name="OnlineVirtualizedListView" x:FieldModifier="internal"
@@ -525,7 +650,7 @@
                     </Grid>
                 </Border>
             </Grid>
-                                <!-- Footer: what this page shows, then paging. -->
+                                <!-- Footer: paging (what narrows the list is shown above it, in the filter row). -->
                                 <Grid Grid.Row="2" ColumnSpacing="8" Canvas.ZIndex="1">
                                     <Grid.ColumnDefinitions>
                                         <ColumnDefinition Width="*" />
@@ -533,7 +658,6 @@
                                         <ColumnDefinition Width="Auto" />
                                         <ColumnDefinition Width="Auto" />
                                     </Grid.ColumnDefinitions>
-                                    <TextBlock x:Name="OnlineFilterSummaryTextBlock" VerticalAlignment="Center" TextTrimming="CharacterEllipsis" Style="{StaticResource CaptionTextStyle}" />
                                     <Button
                                         x:Name="OnlinePrevPageButton" x:FieldModifier="internal"
                                         Grid.Column="1"

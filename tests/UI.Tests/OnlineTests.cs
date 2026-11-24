@@ -11,7 +11,7 @@ public sealed class OnlineTests
 {
     private const string FixtureModeLine = "测试样例模式";
 
-    private static AppSession StartOnline(string category = "90001", string language = "zh")
+    internal static AppSession StartOnline(string category = "90001", string language = "zh")
     {
         AppSession app = AppSession.Configured((shell, _) =>
         {
@@ -32,7 +32,7 @@ public sealed class OnlineTests
     }
 
     // Sample mode logs that it is on, and each request it has no sample for; anything else is a real error.
-    private static void AssertNoErrorsBesidesSampleMode(AppSession app, bool allowMissingSamples = false)
+    internal static void AssertNoErrorsBesidesSampleMode(AppSession app, bool allowMissingSamples = false)
     {
         string[] errors = app.Errors()
             .Where(line => !line.Contains(FixtureModeLine, StringComparison.Ordinal) || (!allowMissingSamples && line.Contains("no sample", StringComparison.Ordinal)))
@@ -41,7 +41,7 @@ public sealed class OnlineTests
     }
 
     // The page keeps hidden copies of some names (the other view's template); this is the one on screen.
-    private static AutomationElement Visible(AppSession app, string name)
+    internal static AutomationElement Visible(AppSession app, string name)
     {
         var watch = Stopwatch.StartNew();
         while (true)
@@ -53,7 +53,7 @@ public sealed class OnlineTests
         }
     }
 
-    private static void WaitUntil(Func<bool> condition, string what)
+    internal static void WaitUntil(Func<bool> condition, string what)
     {
         var watch = Stopwatch.StartNew();
         while (!condition())
