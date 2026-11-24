@@ -1,8 +1,8 @@
 # 软件结构 / Software Structure
 
-本文说明 Integrated Mod Manager 由哪些部分组成、各部分如何协作、数据存放在哪里，以及代码如何构建、测试和发布。适用于 4.8.3（`main`，2026-11-22）。
+本文说明 Integrated Mod Manager 由哪些部分组成、各部分如何协作、数据存放在哪里，以及代码如何构建、测试和发布。适用于 4.8.4（`main`，2026-11-24）。
 
-This document describes how Integrated Mod Manager is put together: its parts, how they work together, where data lives, and how the code is built, tested and released. It reflects 4.8.3 (`main`, 2026-11-22).
+This document describes how Integrated Mod Manager is put together: its parts, how they work together, where data lives, and how the code is built, tested and released. It reflects 4.8.4 (`main`, 2026-11-24).
 
 相关文档 / Related: [测试与构建 / Testing](./TESTING.md) · [组合包格式 / Combination bundles](./Combination-Bundles.md) · [界面外观 / UI design](./UI-Fluent-Design-Plan.md) · [用户手册 / User guide](../guides/zh-CN/用户手册.md) · [许可证 / Licensing](../LICENSING.md)
 
@@ -338,7 +338,7 @@ flowchart TB
 | `Online*Adapter.cs` | 在线页状态与图片加载的适配层（与 Core 测试共用）。Adapters for online page state and image loading, also compiled into Core tests. |
 | `UiCrashDiagnostics.cs` | 界面崩溃的本地诊断。Local diagnostics for UI crashes. |
 | `Models/` | 窗口使用的记录与配置类型，每个类型一个文件（如 `BetaShellConfig`、`WorkspaceRepository`、`ModPersistentSlot`）。Records and configuration types, one per file. |
-| `Controls/` | XAML 控件：`PageHeader`、`EmptyState`、`KeyVisual`（键帽）、`OnlineModRow`、`OnlineModTile`、`PaneSplitter`；`DelegateElementFactory` 让代码构建的 `ItemsRepeater` 只创建可见行。XAML controls; `DelegateElementFactory` lets code-built repeaters create only visible rows. |
+| `Controls/` | XAML 控件：`PageHeader`、`EmptyState`、`KeyVisual`（键帽）、`OnlineModRow`、`OnlineModTile`、`PaneSplitter`、`FlowPanel`（在线页子分类标签换行排列 / wraps the Online subcategory chips）；`DelegateElementFactory` 让代码构建的 `ItemsRepeater` 只创建可见行。XAML controls; `DelegateElementFactory` lets code-built repeaters create only visible rows. |
 | `ViewModels/` | 可绑定的 ViewModel：设置、仪表盘、仓库卡片、路径、工作区（角色列表、Mod 列表、详情）、在线页与卡片、更新、快捷键。Bindable view models for each page. |
 
 ### 5.6 写法 / How pages are written

@@ -37,6 +37,12 @@ The data is the repository's own synthetic test data: the character `TestCharact
 - 截图时请保持桌面解锁、不要移动鼠标。
 - 角色、Mod、在线样例和图片都是仓库自带的模拟数据；未连接游戏或加载器，未选择目标窗口，也未发送按键。仓库卡片上的来源名称是应用自己的标签，不是来自网站的内容。
 
+## 4.8.4 Online page / 4.8.4 在线页
+
+`online-v4.8.4.png` replaces `online-v4.8.png` on the homepage. It shows the 4.8.4 Online page: category tabs, subcategory chips, and the labelled Show, Authors & saved and Download options buttons. It was captured on 2026-11-24 from the Release build of the 4.8.4 preparation branch (`release/v4.8.4`, based on `11d8aa4`). The command was the one above, with `-Pages online` and the build in `artifacts\verification\v4.8.4\ReleaseSource`. Same window size, scaling, theme, language and synthetic samples, and the same 4-pixel trim. `online-v4.8.png` stays for history.
+
+`online-v4.8.4.png` 取代主页上的 `online-v4.8.png`，显示 4.8.4 的在线页：分类标签、子分类标签，以及写明用途的“显示”、“作者与收藏”和“下载选项”按钮。2026-11-24 用 4.8.4 准备分支（`release/v4.8.4`，基于 `11d8aa4`）的 Release 构建截取。命令同上，改为 `-Pages online`，构建在 `artifacts\verification\v4.8.4\ReleaseSource`。窗口大小、缩放、主题、语言和模拟样例都相同，四边同样各裁掉 4 个物理像素。`online-v4.8.png` 保留作为历史。
+
 ## 4.8.2 overlay / 4.8.2 浮窗
 
 `shortcut-overlay-v4.8.png` was captured on 2026-11-16 from the Release build of the 4.8.2 preparation branch (`release/v4.8.2`, based on `f85e2c4`) by a local UI test that starts an isolated copy with `tests/TestData`, adds the synthetic records of `tests/UI.Tests/OverlaySamples.cs` (copy records for `TestModA` and `TestModB`, so both count as enabled, and the state slots Battle, Casual and Everyday), opens the overlay with its hotkey and captures only the overlay window. 150% scaling, dark theme, English UI; trimmed by 4 physical pixels on every side. No target window was selected and no input was sent.
