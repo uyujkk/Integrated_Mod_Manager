@@ -6,7 +6,13 @@
 
 This document records version changes in Integrated Mod Manager. Unpublished versions are marked separately.
 
-## v4.8.3（正式版 / Stable）
+## v4.8.4（正式版 / Stable）
+
+在线页的筛选显示成搜索框下方的一行标签：当前页的匹配数量，每个筛选一个可以单独移除的标签，以及同时恢复分类和排序的“全部清除”。筛选、作者与收藏、下载选项按钮写明用途，排序不是按热度时有提示，工具栏和翻页按钮都有提示文字和读屏名称。子分类显示为标签，放不下时出现 ‹ › 箭头，窗口较窄时分类收进下拉菜单（#151）。见 [v4.8.4](v4.8.4.md)。
+
+The Online page shows its filters as a row under the search box: the match count on the page, one chip per filter that can be removed on its own, and Clear all, which also resets the category and the sort. The Show, Authors & saved and Download options buttons say what they do, the sort box shows when it isn't on hotness, and every toolbar and paging button has a tooltip and an accessible name. Subcategories are chips with ‹ › arrows when they overflow, and a narrow window folds the categories into a drop-down (#151). See [v4.8.4](v4.8.4.md).
+
+## v4.8.3 — 2026-11-23（正式版 / Stable）
 
 Mod 工作区和在线页改为第一次打开时才创建，停在其他页面时启动更快，第一次打开 Mod 工作区时稍慢（#141–#149）。开发者工具重新制作，随每次发布作为单独的 ZIP 提供，可以从“设置 → 诊断与问题报告”和命令面板打开（#139）。安装、下载、预设、状态槽位、快捷键、浮窗、更新、托盘和命令面板从主窗口拆成独立的部分，数据格式不变，每一步都先用新的界面测试固定行为（#141–#149）。软件结构文档更新（#137）。见 [v4.8.3](v4.8.3.md)。
 

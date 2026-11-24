@@ -14,9 +14,11 @@ Online data comes from external sites; a proxy may be needed if loading is slow 
 
 - **Characters:** browse by character with avatars and names in the app language; the star button pins a favorite character (stored per repository). **All** shows the whole category.
 - **Search and sort:** search matches character and Mod names; sort by heat, downloads, likes, views or update time. Heat is capped at 10 and uses log-weighted downloads, likes and views.
-- **Layout:** the top row holds the title, states and view switch, the second row search, sort and filters, and paging sits at the bottom. List and grid use one card style: the list for details, the grid for images.
+- **Layout:** the top row holds the title, states and view switch, then the categories, then a row with search, sort, the **Show** filter, **Authors & saved** and **Download options**; paging sits at the bottom. In a narrow window, **Authors & saved** and **Download options** show only their icons. List and grid use one card style: the list for details, the grid for images. Every button has a tooltip.
+- **Categories:** the tabs at the top switch GameBanana's top-level categories, with a row of subcategory chips below, **All** first. When the row doesn't fit, ‹ › arrows appear and the mouse wheel scrolls it. In a narrow window the top-level categories fold into **Category: X ▾** in the toolbar.
 - **Authors:** click an author to browse their work across pages in the current category; right-click a card to favorite the author. `author:name` searches only the current page.
-- **Page filters:** the filter button shows only the items on this page that are **Installed on page** or **Saved on page**, with the number of matches.
+- **Page filters:** the **Show: All on page ▾** button shows only the items on this page that are **Installed on page** or **Saved on page**, and turns to the accent colour while it filters.
+- **Active filters (4.8.4):** whenever something narrows the list, a row under the search box shows the match count on the page, then one chip for each filter (a category other than the default, character, author, search, the Show filter, and any sort other than hotness). The ✕ on a chip removes only that filter; **Clear all** goes back to the default list, including the category and the sort. The row is hidden when nothing is filtered. The sort box shows a dot when it isn't sorting by hotness.
 - **Browsing position:** author, character, page, search, sort, layout and scroll position are kept per repository and restored after restarting, without downloading anything. Changing a filter or page starts at the top.
 
 ## Details and images
