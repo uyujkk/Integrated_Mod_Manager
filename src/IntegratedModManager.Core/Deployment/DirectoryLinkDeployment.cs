@@ -185,6 +185,29 @@ public static class DirectoryLinkDeployment
         }
     }
 
+    /// <summary>
+    /// True when the link at <paramref name="linkPath"/> points at <paramref name="sourcePath"/>: as stored, or after
+    /// following every junction and symbolic link on both sides. A repository reached through a link (issue #154)
+    /// stores one spelling in its deployment links while Windows resolves them to another; both mean the same Mod.
+    /// </summary>
+    public static bool PointsTo(string linkPath, string sourcePath)
+    {
+        ArgumentException.ThrowIfNullOrWhiteSpace(sourcePath);
+        string? stored = TryGetStoredTarget(linkPath);
+        if (stored is null) return false;
+        string source = Path.TrimEndingDirectorySeparator(Path.GetFullPath(sourcePath));
+        return string.Equals(stored, source, StringComparison.OrdinalIgnoreCase)
+            || string.Equals(DeploymentPathSeparation.ResolveLinks(stored), DeploymentPathSeparation.ResolveLinks(source), StringComparison.OrdinalIgnoreCase);
+    }
+
+    /// <summary>
+    /// True when <paramref name="linkTarget"/> lies in <paramref name="repositoryRoot"/>, as written or after following
+    /// the links in the repository's own path.
+    /// </summary>
+    public static bool IsInsideRepository(string linkTarget, string repositoryRoot)
+        => PathSafety.IsSameOrInside(linkTarget, repositoryRoot)
+            || PathSafety.IsSameOrInside(DeploymentPathSeparation.ResolveLinks(linkTarget), DeploymentPathSeparation.ResolveLinks(repositoryRoot));
+
     /// <summary>A link whose target directory is gone, so its contents cannot be inspected.</summary>
     public static bool IsBrokenLink(string path)
     {
@@ -254,11 +277,10 @@ public static class DirectoryLinkDeployment
             return [];
         }
 
-        string source = Path.GetFullPath(sourcePath).TrimEnd(Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar);
         var links = new List<string>();
         foreach (string entry in Directory.EnumerateDirectories(loaderRoot))
         {
-            if (string.Equals(TryGetStoredTarget(entry), source, StringComparison.OrdinalIgnoreCase))
+            if (PointsTo(entry, sourcePath))
             {
                 links.Add(Path.GetFullPath(entry));
             }
@@ -335,17 +357,7 @@ public static class DirectoryLinkDeployment
             }
 
             string deployedPath = ModDeploymentLayout.DeployedPath(fullLoaderRoot, fullSiblingSource);
-            if (!IsDirectoryLink(deployedPath))
-            {
-                continue;
-            }
-
-            string? resolvedTarget = TryGetTarget(deployedPath);
-            if (!string.IsNullOrWhiteSpace(resolvedTarget)
-                && string.Equals(
-                    NormalizeDirectoryPath(resolvedTarget),
-                    fullSiblingSource,
-                    StringComparison.OrdinalIgnoreCase))
+            if (PointsTo(deployedPath, fullSiblingSource))
             {
                 links.Add(Path.GetFullPath(deployedPath));
             }

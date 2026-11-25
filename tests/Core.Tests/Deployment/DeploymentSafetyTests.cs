@@ -79,6 +79,113 @@ public sealed class DeploymentSafetyTests : IDisposable
     }
 
     [Fact]
+    public void CompareDeployed_OurOwnJunctionToTheModIsNotAnOverlap()
+    {
+        // Issue #154: with junction deployment the deployed folder is a link to the Mod; turning it off must be allowed.
+        string mod = Folder(@"Repository\TestCharacter\TestModA");
+        string deployed = Path.Combine(Folder("Loader"), "TestModA");
+        DirectoryLinkDeployment.CreateJunction(deployed, mod);
+
+        Assert.Equal(PathOverlap.Same, DeploymentPathSeparation.Compare(mod, deployed));
+        Assert.Equal(PathOverlap.None, DeploymentPathSeparation.CompareDeployed(mod, deployed));
+        Assert.True(DirectoryLinkDeployment.PointsTo(deployed, mod));
+    }
+
+    [Fact]
+    public void CompareDeployed_StillCatchesALoaderFolderInsideTheRepository()
+    {
+        // The #105 reproduction, written and through a link to the character folder.
+        string character = Folder(@"Repository\TestCharacter");
+        string mod = Folder(@"Repository\TestCharacter\TestModA");
+        string loaderLink = Path.Combine(_root, "LoaderLink");
+        DirectoryLinkDeployment.CreateJunction(loaderLink, character);
+
+        Assert.Equal(PathOverlap.Same, DeploymentPathSeparation.CompareDeployed(mod, ModDeploymentLayout.DeployedPath(character, mod)));
+        Assert.Equal(PathOverlap.Same, DeploymentPathSeparation.CompareDeployed(mod, Path.Combine(loaderLink, "TestModA")));
+        // A loader folder that reaches the Mod's own folder through a link.
+        string modLink = Path.Combine(_root, "ModLink");
+        DirectoryLinkDeployment.CreateJunction(modLink, mod);
+        Assert.Equal(PathOverlap.TargetInsideSource, DeploymentPathSeparation.CompareDeployed(mod, Path.Combine(modLink, "TestModA")));
+    }
+
+    // A repository reached through a junction: deployment links store the path as written, Windows resolves them to
+    // the real folder. Both spellings are the same Mod.
+    private (string RepositoryLink, string Loader) JunctionedRepository()
+    {
+        Folder(@"RealRepository\TestCharacter\TestModA");
+        Folder(@"RealRepository\TestCharacter\TestModB");
+        string repositoryLink = Path.Combine(_root, "RepositoryLink");
+        DirectoryLinkDeployment.CreateJunction(repositoryLink, Path.Combine(_root, "RealRepository"));
+        return (repositoryLink, Folder("Loader"));
+    }
+
+    [Fact]
+    public void JunctionedRepository_TheSameCharacterSwitchFindsTheOldLink()
+    {
+        var (repository, loader) = JunctionedRepository();
+        string modA = Path.Combine(repository, "TestCharacter", "TestModA");
+        string modB = Path.Combine(repository, "TestCharacter", "TestModB");
+        DirectoryLinkDeployment.CreateJunction(Path.Combine(loader, "TestModA"), modA);
+
+        Assert.True(DirectoryLinkDeployment.PointsTo(Path.Combine(loader, "TestModA"), modA));
+        Assert.True(DirectoryLinkDeployment.PointsTo(Path.Combine(loader, "TestModA"), Path.Combine(_root, "RealRepository", "TestCharacter", "TestModA")));
+        Assert.Single(DirectoryLinkDeployment.FindSiblingLinksToReplace(modB, repository, loader));
+        Assert.Single(DirectoryLinkDeployment.FindLinksTargeting(Path.Combine(_root, "RealRepository", "TestCharacter", "TestModA"), loader));
+    }
+
+    [Fact]
+    public void JunctionedRepository_TheLinkCanBeBackedUpAndRestored()
+    {
+        // Before the fix the backup refused the Mod's own link as one "outside the repository", so it could not be removed.
+        var (repository, loader) = JunctionedRepository();
+        string deployed = Path.Combine(loader, "TestModA");
+        DirectoryLinkDeployment.CreateJunction(deployed, Path.Combine(repository, "TestCharacter", "TestModA"));
+
+        string transaction = ModInstallTransactions.Create(Folder("Backups"), "remove", "repo", loader, repository, [deployed]);
+        DirectoryLinkDeployment.RemoveLink(deployed);
+        ModInstallTransactions.Rollback(transaction, ModInstallTransactions.ReadManifest(transaction), loader, repository);
+
+        Assert.True(DirectoryLinkDeployment.PointsTo(deployed, Path.Combine(repository, "TestCharacter", "TestModA")));
+    }
+
+    [Fact]
+    public void JunctionedRepository_PresetsRecogniseTheirOwnLinks()
+    {
+        var (repository, loader) = JunctionedRepository();
+        DirectoryLinkDeployment.CreateJunction(Path.Combine(loader, "TestModA"), Path.Combine(repository, "TestCharacter", "TestModA"));
+
+        Assert.Equal([@"TestCharacter\TestModA"], ModCombinationDeploymentPolicy.Capture(repository, loader));
+        ModCombinationDeploymentPlan plan = ModCombinationDeploymentPolicy.Plan(repository, loader, [@"TestCharacter\TestModB"], useLinks: true);
+        Assert.Equal([Path.Combine(loader, "TestModA")], plan.RemoveTargets);
+    }
+
+    [Fact]
+    public void JunctionedRepository_ALinkOutsideTheRepositoryIsStillRefused()
+    {
+        var (repository, loader) = JunctionedRepository();
+        string deployed = Path.Combine(loader, "Elsewhere");
+        DirectoryLinkDeployment.CreateJunction(deployed, Folder("Elsewhere"));
+
+        Assert.ThrowsAny<InvalidOperationException>(() =>
+            ModInstallTransactions.Create(Folder("Backups"), "remove", "repo", loader, repository, [deployed]));
+    }
+
+    [Fact]
+    public void IsLinkTo_RefusesFoldersAndLinksToOtherMods()
+    {
+        string mod = Folder(@"Repository\TestCharacter\TestModA");
+        string other = Folder(@"Repository\TestCharacter\TestModB");
+        string loader = Folder("Loader");
+        string foreign = Path.Combine(loader, "TestModA");
+        DirectoryLinkDeployment.CreateJunction(foreign, other);
+        string copied = Folder(@"Loader\TestModC");
+
+        Assert.False(DirectoryLinkDeployment.PointsTo(foreign, mod));
+        Assert.False(DirectoryLinkDeployment.PointsTo(copied, mod));
+        Assert.False(DirectoryLinkDeployment.PointsTo(Path.Combine(loader, "Missing"), mod));
+    }
+
+    [Fact]
     public void EnsureSeparate_NamesBothPaths()
     {
         string repository = Folder("Repository");

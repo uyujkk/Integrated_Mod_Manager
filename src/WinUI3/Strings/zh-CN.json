@@ -162,6 +162,8 @@
   "CombinationPresets.TakeOverExternalFoldersHint": "把这些文件夹当作对应 Mod 的部署，以后恢复组合时可以移除或保留它们。",
   "LocalLibrary.ExternalFolder": "外部文件夹",
   "LocalLibrary.RemoveExternalFolder": "加载器文件夹里的“{0}”和仓库里的这个 Mod 内容不同，也没有本程序复制它的记录，可能是你自己放进去的，或以前部署后又改过的副本。\n仍要移除它吗？移除前会照常备份。",
+  "LocalLibrary.ForeignLink": "外部链接",
+  "LocalLibrary.RemoveForeignLink": "加载器文件夹里的“{0}”是一个链接，但它指向“{1}”，不是仓库里的这个 Mod。\n仍要移除这个链接吗？只会移除链接本身，它指向的文件夹不会被改动。",
   "CombinationPresets.InvalidModPathSaveThePreset": "Mod 路径无效，请重新保存预设",
   "CombinationPresets.IssuesMustBeResolvedRestoreHas": "{0} · {1} 个问题需要处理，未开始恢复。",
   "CombinationPresets.KeepEnabled": "保持启用",

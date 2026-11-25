@@ -162,6 +162,8 @@
   "CombinationPresets.TakeOverExternalFoldersHint": "Treat these folders as the deployments of their Mods, so restoring a preset may remove or keep them.",
   "LocalLibrary.ExternalFolder": "External folder",
   "LocalLibrary.RemoveExternalFolder": "“{0}” in the loader folder differs from this repository Mod and was not copied by the manager. You may have put it there, or it is a copy you deployed earlier and then edited.\nRemove it anyway? It is backed up first, as usual.",
+  "LocalLibrary.ForeignLink": "Link from elsewhere",
+  "LocalLibrary.RemoveForeignLink": "“{0}” in the loader folder is a link, but it points to “{1}”, not to this repository Mod.\nRemove the link anyway? Only the link is removed; the folder it points to is not touched.",
   "CombinationPresets.InvalidModPathSaveThePreset": "Invalid Mod path; save the preset again",
   "CombinationPresets.IssuesMustBeResolvedRestoreHas": "{0} · {1} issues must be resolved. Restore has not started.",
   "CombinationPresets.KeepEnabled": "Keep enabled",

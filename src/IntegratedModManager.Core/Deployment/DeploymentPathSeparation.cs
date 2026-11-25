@@ -33,6 +33,24 @@ public static class DeploymentPathSeparation
         return written != PathOverlap.None ? written : CompareResolved(ResolveLinks(sourcePath), ResolveLinks(targetPath));
     }
 
+    /// <summary>
+    /// Compares a Mod folder with the folder it deploys to. Unlike <see cref="Compare"/>, the deployed folder itself is
+    /// not followed when it is a link: with junction deployment it is the manager's own link to this very Mod, and
+    /// removing it only removes the link (issue #154). Every folder above it is still followed, so a loader folder that
+    /// is, or reaches through a link, the Mod's own folder or one inside it is still caught (issue #105).
+    /// </summary>
+    public static PathOverlap CompareDeployed(string modPath, string deployedPath)
+    {
+        ArgumentException.ThrowIfNullOrWhiteSpace(modPath);
+        ArgumentException.ThrowIfNullOrWhiteSpace(deployedPath);
+        string deployed = Normalize(deployedPath);
+        PathOverlap written = CompareResolved(Normalize(modPath), deployed);
+        if (written != PathOverlap.None) return written;
+        string? parent = Path.GetDirectoryName(deployed);
+        string resolvedDeployed = parent is null ? deployed : Path.Combine(ResolveLinks(parent), Path.GetFileName(deployed));
+        return CompareResolved(ResolveLinks(modPath), Normalize(resolvedDeployed));
+    }
+
     /// <summary>Throws when the folders overlap; the message names both paths.</summary>
     public static void EnsureSeparate(string sourcePath, string targetPath)
     {

@@ -90,7 +90,7 @@ public static class ModInstallTransactions
                 bool wasDirectoryLink = existed && DirectoryLinkDeployment.IsDirectoryLink(fullTargetPath);
                 string? linkTarget = wasDirectoryLink ? DirectoryLinkDeployment.TryGetTarget(fullTargetPath) : null;
                 if (wasDirectoryLink
-                    && (string.IsNullOrWhiteSpace(linkTarget) || !PathSafety.IsSameOrInside(linkTarget, sourceRoot)))
+                    && (string.IsNullOrWhiteSpace(linkTarget) || !DirectoryLinkDeployment.IsInsideRepository(linkTarget, sourceRoot)))
                 {
                     throw ErrorTags.Tag(
                         new InvalidOperationException("Refused to back up a directory junction that points outside the repository."),
@@ -294,7 +294,7 @@ public static class ModInstallTransactions
                 if (!string.IsNullOrWhiteSpace(entry.LinkTarget))
                 {
                     linkTarget = Path.GetFullPath(entry.LinkTarget);
-                    if (!PathSafety.IsSameOrInside(linkTarget, sourceRoot) || !Directory.Exists(linkTarget))
+                    if (!DirectoryLinkDeployment.IsInsideRepository(linkTarget, sourceRoot) || !Directory.Exists(linkTarget))
                     {
                         throw ErrorTags.Tag(
                             new InvalidDataException("The directory-junction target in the install backup is invalid."),

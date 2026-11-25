@@ -400,8 +400,7 @@ public sealed partial class WorkspacePage
     {
         foreach (string link in deployedLinks)
         {
-            if (string.Equals(DirectoryLinkDeployment.TryGetStoredTarget(link), Path.GetFullPath(item.Path).TrimEnd(Path.DirectorySeparatorChar),
-                    StringComparison.OrdinalIgnoreCase))
+            if (DirectoryLinkDeployment.PointsTo(link, item.Path))
             {
                 DirectoryLinkDeployment.RemoveLink(link);
             }
@@ -809,6 +808,13 @@ public sealed partial class WorkspacePage
             if (!owned && !await ShowDangerConfirmAsync(T("LocalLibrary.RemoveExternalFolder", targetPath), T("LocalLibrary.ExternalFolder"), T("Dialogs.Remove")))
                 return;
         }
+        // Issue #154: a link with this Mod's name that points somewhere else is not ours; removing it only removes the
+        // link, but say so first.
+        else if (targetExists && !DirectoryLinkDeployment.PointsTo(targetPath, item.Path)
+            && !await ShowDangerConfirmAsync(T("LocalLibrary.RemoveForeignLink", targetPath, DirectoryLinkDeployment.TryGetTarget(targetPath) ?? "?"), T("LocalLibrary.ForeignLink"), T("Dialogs.Remove")))
+        {
+            return;
+        }
         IReadOnlyList<string> siblingLinksToReplace = Array.Empty<string>();
         try
         {
@@ -1167,7 +1173,8 @@ public sealed partial class WorkspacePage
     {
         if (!string.IsNullOrWhiteSpace(sourceRoot) && DeploymentPathSeparation.Compare(sourceRoot, targetRoot) != PathOverlap.None)
             return (sourceRoot, targetRoot);
-        return DeploymentPathSeparation.Compare(modPath, deployedPath) != PathOverlap.None ? (modPath, deployedPath) : null;
+        // Issue #154: the deployed folder itself is not followed, since with junction deployment it is our own link.
+        return DeploymentPathSeparation.CompareDeployed(modPath, deployedPath) != PathOverlap.None ? (modPath, deployedPath) : null;
     }
 
     private static string GetTargetDirectoryPath(string targetDir, string sourceDirectoryPath)
