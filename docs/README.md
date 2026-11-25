@@ -4,7 +4,7 @@
 
 This directory contains the usage, release, development, and research documentation for Integrated Mod Manager. The repository root is reserved for GitHub-recognized files, build entry points, and source-code entry points.
 
-当前正式版 / Current stable: **[v4.8.4](https://github.com/uyujkk/Integrated_Mod_Manager/releases/tag/v4.8.4)**。最新公开版本请以 [GitHub Releases](https://github.com/uyujkk/Integrated_Mod_Manager/releases/latest) 为准。历史发布报告与实验记录保留原版本事实。Historical reports retain their original context; screenshot/documentation updates do not replace the published package.
+当前正式版 / Current stable: **[v4.8.5](https://github.com/uyujkk/Integrated_Mod_Manager/releases/tag/v4.8.5)**。最新公开版本请以 [GitHub Releases](https://github.com/uyujkk/Integrated_Mod_Manager/releases/latest) 为准。历史发布报告与实验记录保留原版本事实。Historical reports retain their original context; screenshot/documentation updates do not replace the published package.
 
 ## 使用指南 / Guides
 
@@ -25,6 +25,7 @@ This directory contains the usage, release, development, and research documentat
 
 ## 发布记录 / Releases
 
+- [v4.8.5 联接部署的 Mod 可以关闭 / Turning Off Junction-Deployed Mods](./releases/v4.8.5.md)
 - [v4.8.4 在线页筛选和分类栏 / Online Filters and Category Bar](./releases/v4.8.4.md)
 - [v4.8.3 更快启动和单独的开发者工具 / Faster Startup and Separate Developer Tools](./releases/v4.8.3.md)
 - [v4.8.2 浮窗重新设计和在线点赞 / Overlay Redesign and Online Likes](./releases/v4.8.2.md)
@@ -69,6 +70,7 @@ This directory contains the usage, release, development, and research documentat
 
 验证记录与历史文档 / Verification records and history:
 
+- [v4.8.5 正式版验证 / Stable Release Verification](./verification/v4.8.5.md)
 - [v4.8.4 正式版验证 / Stable Release Verification](./verification/v4.8.4.md)
 - [v4.8.3 正式版验证 / Stable Release Verification](./verification/v4.8.3.md)
 - [v4.8.2 正式版验证 / Stable Release Verification](./verification/v4.8.2.md)
