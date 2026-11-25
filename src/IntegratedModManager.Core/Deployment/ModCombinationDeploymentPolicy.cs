@@ -107,10 +107,5 @@ public static class ModCombinationDeploymentPolicy
     // The same check as single-Mod deployment (DeploymentPathSeparation), links included.
     private static void ValidateSeparateRoots(string sourceRoot, string targetRoot) => DeploymentPathSeparation.EnsureSeparate(sourceRoot, targetRoot);
 
-    private static bool LinkMatches(string source, string target)
-    {
-        string? actual = DirectoryLinkDeployment.TryGetTarget(target);
-        return actual is not null && Path.TrimEndingDirectorySeparator(Path.GetFullPath(actual))
-            .Equals(Path.TrimEndingDirectorySeparator(Path.GetFullPath(source)), StringComparison.OrdinalIgnoreCase);
-    }
+    private static bool LinkMatches(string source, string target) => DirectoryLinkDeployment.PointsTo(target, source);
 }
