@@ -6,7 +6,13 @@
 
 This document records version changes in Integrated Mod Manager. Unpublished versions are marked separately.
 
-## v4.8.4（正式版 / Stable）
+## v4.8.5（正式版 / Stable）
+
+用目录联接部署的 Mod 可以正常关闭：4.8.0 加入的重叠检查不再解析管理器自己建的联接，移除时只删除联接，同名但指向别处的链接会先询问（#155，修复 #154）。仓库路径本身经过联接或符号链接时，关闭 Mod、同角色切换和组合预设都能认出管理器自己的链接（#155）。Windows App SDK 更新到 1.7.260224002（#153）。见 [v4.8.5](v4.8.5.md)。
+
+Mods deployed with directory junctions can be turned off again: the overlap check added in 4.8.0 no longer follows the manager's own junction, removing one deletes only the junction, and a same-named link that points elsewhere asks first (#155, fixing #154). When the repository path itself goes through a junction or symbolic link, turning Mods off, switching Mods for the same character and combination presets recognise the manager's own links (#155). The Windows App SDK moves to 1.7.260224002 (#153). See [v4.8.5](v4.8.5.md).
+
+## v4.8.4 — 2026-11-24（正式版 / Stable）
 
 在线页的筛选显示成搜索框下方的一行标签：当前页的匹配数量，每个筛选一个可以单独移除的标签，以及同时恢复分类和排序的“全部清除”。筛选、作者与收藏、下载选项按钮写明用途，排序不是按热度时有提示，工具栏和翻页按钮都有提示文字和读屏名称。子分类显示为标签，放不下时出现 ‹ › 箭头，窗口较窄时分类收进下拉菜单（#151）。见 [v4.8.4](v4.8.4.md)。
 

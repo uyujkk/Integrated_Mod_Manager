@@ -113,6 +113,7 @@ While a repository isn't set up, the Repositories page shows a **Get started** c
 
 - With **Deploy Mods with directory junctions** on, the loader and library share one copy of each Mod.
 - By default each character keeps one enabled Mod: enabling another replaces the links of its other Mods.
+- Turning a linked Mod off (double-click or **Remove from target**) removes only its junction; the Mod in the repository is not touched. A same-named link that points somewhere else shows where it points and asks first.
 - Select a character and check **Allow several enabled Mods** in the More or right-click menu to keep several enabled for it.
 - The repository editor can make several Mods the default, with individual characters turned back to one.
 - Copy mode never removes sibling copies automatically. Restoring a combination preset asks first when it enables several Mods of a single-selection character.
