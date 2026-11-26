@@ -6,7 +6,13 @@
 
 This document records version changes in Integrated Mod Manager. Unpublished versions are marked separately.
 
-## v4.8.5（正式版 / Stable）
+## v4.8.6（正式版 / Stable）
+
+功能更好找（#157）：原来只能右键的操作有了按钮（选中角色后的头像、重命名、打开文件夹和“可同时启用多个”；状态槽位的更新和重命名；在线页的“加入稍后下载”“收藏作者”和作者作品；更新页每行的“打开文件夹”）。搜索（Ctrl+K）知道 82 个功能和它们的位置，可用名字、位置或别的说法搜到；“详细”（默认）像开始屏幕一样按页面排成磁贴，选中就切到对应页面并框出位置，“简略”只列页面和命令。仪表板的“上手清单”取代了三步引导弹窗；每页第一次打开时有一条提示；标题栏的 ? 打开当前页的使用说明。见 [v4.8.6](v4.8.6.md)。
+
+Features are easier to find (#157): actions that were only in right-click menus have buttons (the selected character's avatar, rename, folder and Several at once; state slot update and rename; save for later, save author and the author's works on the Online page; an open-folder button on each Updates row). The search (Ctrl+K) knows 82 features with where they are, found by name, place or another word; Detailed (the default) shows them as a start screen of tiles grouped by page, and picking one opens the page and outlines the place, while Brief lists pages and commands. The dashboard's First steps card replaces the three-step tips popup; each page shows one tip the first time; the ? in the title bar opens the guide for the page. See [v4.8.6](v4.8.6.md).
+
+## v4.8.5 — 2026-11-25（正式版 / Stable）
 
 用目录联接部署的 Mod 可以正常关闭：4.8.0 加入的重叠检查不再解析管理器自己建的联接，移除时只删除联接，同名但指向别处的链接会先询问（#155，修复 #154）。仓库路径本身经过联接或符号链接时，关闭 Mod、同角色切换和组合预设都能认出管理器自己的链接（#155）。Windows App SDK 更新到 1.7.260224002（#153）。见 [v4.8.5](v4.8.5.md)。
 
