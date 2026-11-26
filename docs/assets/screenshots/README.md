@@ -37,6 +37,12 @@ The data is the repository's own synthetic test data: the character `TestCharact
 - 截图时请保持桌面解锁、不要移动鼠标。
 - 角色、Mod、在线样例和图片都是仓库自带的模拟数据；未连接游戏或加载器，未选择目标窗口，也未发送按键。仓库卡片上的来源名称是应用自己的标签，不是来自网站的内容。
 
+## 4.8.6 feature search / 4.8.6 功能搜索
+
+`feature-search-v4.8.6.png` replaces `command-palette-v4.8.png` on the homepage. It shows the 4.8.6 search (Ctrl+K) in its detailed style: the start screen of tiles with the General and Dashboard groups. It was captured on 2026-11-26 from the Release build of the 4.8.6 preparation branch (`release/v4.8.6`, based on `38abddb`) in a private copy with the synthetic test data (`%TEMP%\imm-readme-shot`), English UI, dark theme, a 1600 × 920 DIP window, with the window's own pixels copied from the screen after Ctrl+K. 1574 × 903 pixels after the same 4-pixel trim. `command-palette-v4.8.png` stays for history.
+
+`feature-search-v4.8.6.png` 取代主页上的 `command-palette-v4.8.png`，显示 4.8.6 搜索（Ctrl+K）的“详细”样式：磁贴开始屏幕的“常用”和“仪表板”两组。2026-11-26 用 4.8.6 准备分支（`release/v4.8.6`，基于 `38abddb`）的 Release 构建，在带模拟测试数据的独立副本（`%TEMP%\imm-readme-shot`）里截取：英文界面、深色主题、窗口 1600 × 920 DIP，按 Ctrl+K 后从屏幕复制窗口区域。四边同样各裁掉 4 个像素后为 1574 × 903 像素。`command-palette-v4.8.png` 保留作为历史。
+
 ## 4.8.4 Online page / 4.8.4 在线页
 
 `online-v4.8.4.png` replaces `online-v4.8.png` on the homepage. It shows the 4.8.4 Online page: category tabs, subcategory chips, and the labelled Show, Authors & saved and Download options buttons. It was captured on 2026-11-24 from the Release build of the 4.8.4 preparation branch (`release/v4.8.4`, based on `11d8aa4`). The command was the one above, with `-Pages online` and the build in `artifacts\verification\v4.8.4\ReleaseSource`. Same window size, scaling, theme, language and synthetic samples, and the same 4-pixel trim. `online-v4.8.png` stays for history.

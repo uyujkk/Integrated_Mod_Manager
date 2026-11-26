@@ -1,6 +1,6 @@
 # 软件结构 / Software Structure
 
-本文说明 Integrated Mod Manager 由哪些部分组成、各部分如何协作、数据存放在哪里，以及代码如何构建、测试和发布。适用于 4.8.4（`main`，2026-11-24）。
+本文说明 Integrated Mod Manager 由哪些部分组成、各部分如何协作、数据存放在哪里，以及代码如何构建、测试和发布。适用于 4.8.6（`main`，2026-11-26）。
 
 This document describes how Integrated Mod Manager is put together: its parts, how they work together, where data lives, and how the code is built, tested and released. It reflects 4.8.4 (`main`, 2026-11-24).
 

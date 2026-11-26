@@ -1,8 +1,8 @@
 # Testing / 测试说明
 
-[English README](../../README.md) · [中文首页](../README.zh-CN.md) · [软件结构 / Software structure](./Software-Structure.md) · [v4.8.5 verification / 验证记录](../verification/v4.8.5.md)
+[English README](../../README.md) · [中文首页](../README.zh-CN.md) · [软件结构 / Software structure](./Software-Structure.md) · [v4.8.6 verification / 验证记录](../verification/v4.8.6.md)
 
-Updated for 4.8.5 (2026-11-25). 按 4.8.5 更新。
+Updated for 4.8.6 (2026-11-26). 按 4.8.6 更新。
 
 ## One entry point / 统一入口
 
