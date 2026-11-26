@@ -1,10 +1,10 @@
 # Shortcut Panel and Overlay
 
-> For 4.8.2. [中文](../zh-CN/快捷键与浮窗.md) · [User guide](./User-Guide.md)
+> For 4.8.6 (overlay layout since 4.8.2). [中文](../zh-CN/快捷键与浮窗.md) · [User guide](./User-Guide.md)
 
 The Shortcuts page reads the `[Key…]` bindings in a Mod's INI files and sends the matching key to the game when you click a button, so you don't have to remember shortcuts or own a numeric keypad. The always-on-top overlay works over the game: switch Mods, save presets, hot-switch state slots, and follow the character currently on the field.
 
-![Shortcuts page: the Mod, window and input cards, the status bar and two key-cap bindings](../../assets/screenshots/shortcut-panel-v4.8.png)
+![Shortcuts page: the Mod, window and input cards, the status bar and two key-cap bindings](../../assets/screenshots/shortcut-panel-v4.8.6.png)
 
 ## Getting started
 
@@ -18,7 +18,7 @@ The page is one column of cards. At the top are the Mod, the target game window 
 
 ## Overlay
 
-<img src="../../assets/screenshots/shortcut-overlay-v4.8.png" width="320" alt="Overlay: the title bar with the status dot, the Mod name, the status icon, the ⋯ menu and close; the Mod, window and send switch; the state slots; two key caps; the Save preset button">
+<img src="../../assets/screenshots/shortcut-overlay-v4.8.6.png" width="320" alt="Overlay: the title bar with the status dot, the Mod name, the status icon, the ⋯ menu and close; the Mod, window and send switch; the state slots; two key caps; the Save preset button">
 
 - Click **Open** in the header of **In-game overlay**, or use the global hotkey **Ctrl + Alt + K** (default). The hotkey can be changed or disabled on the same card. **✕** hides the overlay; its tooltip names the hotkey.
 - The overlay never takes focus, so the game stays in the foreground after you click.

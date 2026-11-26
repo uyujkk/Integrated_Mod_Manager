@@ -1,6 +1,35 @@
 # Homepage screenshots / 主页截图
 
+## 4.8.6 pages / 4.8.6 各页面
+
+The homepage, both READMEs and the user guides use this set. 主页、两份 README 和用户手册都使用这一组。
+
+Captured on 2026-11-26 from the Release build of v4.8.6 (`fb3ec72`; `artifacts\verification\ReleaseSource`) in a private copy at `G:\IMM-Demo-4.8.6` with the synthetic test data, so the only paths shown belong to that folder. Window 1600 × 920 DIP at 150% scaling (2382 × 1371 physical pixels), dark theme, English UI. Each page was opened through UI Automation (navigation items, view buttons and tabs), the window was copied from the screen, and every picture was trimmed by 4 physical pixels on every side (2374 × 1363). Page tips were closed in the configuration so they do not cover the pages.
+
+| File | Surface |
+| --- | --- |
+| `dashboard-v4.8.6.png` | Dashboard with the First steps card (three of five done), the active repository, quick actions and the paths section |
+| `repository-v4.8.6.png` | Mod workspace: the sample character, the Mod card heading with rename, open folder, delete and Several at once, the two test Mods, and the details of `TestModA` |
+| `state-slots-v4.8.6.png` | State Slots tab cropped from the Mod workspace (562 × 952): the Everyday slot marked current, the update and rename buttons, its two values |
+| `combination-presets-v4.8.6.png` | Combination presets: two sample presets, the selected preset's Mods and value counts, Save & Restore |
+| `feature-search-v4.8.6.png` | The search (Ctrl+K) in its detailed style: the start screen of tiles with the General, Dashboard and Repositories groups |
+| `feature-search-results-v4.8.6.png` | The search after typing "slot", cropped to the search panel (1230 × 610); the text was typed as "SLOT" |
+| `online-v4.8.6.png` | Online page in sample mode: categories, sample characters and Mod cards with Save for later, open page and download |
+| `online-details-v4.8.6.png` | The same with the details drawer of "Sample Mod 01": Save author, All works by …, Download Latest Archive and Save for later |
+| `shortcut-panel-v4.8.6.png` | Shortcuts page: the Mod, window and input cards, the status bar and two key-cap bindings |
+| `shortcut-overlay-v4.8.6.png` | The overlay alone (604 × 686), opened with its Open button: the sample state slots and two key caps |
+| `updates-v4.8.6.png` | Updates page, Mod updates view: two sample tracked Mods (never checked) with open folder, open page and More |
+| `updates-downloads-v4.8.6.png` | Updates page, Download history view: one completed, one failed and one canceled sample |
+| `updates-recovery-v4.8.6.png` | Updates page, Install and recovery view |
+| `settings-v4.8.6.png` | Settings page with the search style, cropped above the feedback card (2374 × 1090), whose text names real games |
+
+The configuration is the one `tools/ui-baseline/Capture-UiBaseline.ps1 -SampleData` writes, plus two sample combination presets ("Both test Mods" with two saved values, "Only Test Mod A"), the page tips marked closed and, for the dashboard, the First steps card turned on. The data is the repository's own synthetic test data (see the 4.8 section below); no game, loader, real Mod or online content was used, no target window was selected and no input was sent. `Capture-UiBaseline.ps1` itself produced black pictures on this machine that day, so the pictures were taken with the same steps by hand.
+
+2026-11-26 用 v4.8.6 的 Release 构建（`fb3ec72`）在带模拟测试数据的独立副本 `G:\IMM-Demo-4.8.6` 中截取，画面里的路径只属于这个文件夹。窗口 1600 × 920 DIP、150% 缩放，深色主题、英文界面；用 UI 自动化切换页面、视图和标签页，从屏幕复制窗口区域，四边各裁掉 4 个物理像素。配置与 `Capture-UiBaseline.ps1 -SampleData` 相同，另加两个示例组合预设、关闭页面提示，仪表板截图打开了上手清单。设置页裁到反馈卡片上方（其中提到真实游戏名）。未连接游戏或加载器，未选择目标窗口，也未发送按键。
+
 ## 4.8 pages / 4.8 各页面
+
+The homepage used this set until 4.8.6; the files stay for history. 4.8.6 之前主页使用这一组，文件保留作为历史。
 
 Captured on 2026-11-10 from a Release build of the 4.8.0 release branch (`45eff17`) with `tools/ui-baseline/Capture-UiBaseline.ps1`, which copies the app and `tests/TestData` into `%TEMP%\imm-baseline` and never touches the user's own Mods or settings. Window 1600 × 920 DIP on a 3840 × 2160 screen at 150% scaling (144 DPI); the script works in physical pixels and scales the window size by the system DPI. Dark theme, English UI.
 
@@ -37,12 +66,6 @@ The data is the repository's own synthetic test data: the character `TestCharact
 - 截图时请保持桌面解锁、不要移动鼠标。
 - 角色、Mod、在线样例和图片都是仓库自带的模拟数据；未连接游戏或加载器，未选择目标窗口，也未发送按键。仓库卡片上的来源名称是应用自己的标签，不是来自网站的内容。
 
-## 4.8.6 feature search / 4.8.6 功能搜索
-
-`feature-search-v4.8.6.png` replaces `command-palette-v4.8.png` on the homepage. It shows the 4.8.6 search (Ctrl+K) in its detailed style: the start screen of tiles with the General and Dashboard groups. It was captured on 2026-11-26 from the Release build of the 4.8.6 preparation branch (`release/v4.8.6`, based on `38abddb`) in a private copy with the synthetic test data (`%TEMP%\imm-readme-shot`), English UI, dark theme, a 1600 × 920 DIP window, with the window's own pixels copied from the screen after Ctrl+K. 1574 × 903 pixels after the same 4-pixel trim. `command-palette-v4.8.png` stays for history.
-
-`feature-search-v4.8.6.png` 取代主页上的 `command-palette-v4.8.png`，显示 4.8.6 搜索（Ctrl+K）的“详细”样式：磁贴开始屏幕的“常用”和“仪表板”两组。2026-11-26 用 4.8.6 准备分支（`release/v4.8.6`，基于 `38abddb`）的 Release 构建，在带模拟测试数据的独立副本（`%TEMP%\imm-readme-shot`）里截取：英文界面、深色主题、窗口 1600 × 920 DIP，按 Ctrl+K 后从屏幕复制窗口区域。四边同样各裁掉 4 个像素后为 1574 × 903 像素。`command-palette-v4.8.png` 保留作为历史。
-
 ## 4.8.4 Online page / 4.8.4 在线页
 
 `online-v4.8.4.png` replaces `online-v4.8.png` on the homepage. It shows the 4.8.4 Online page: category tabs, subcategory chips, and the labelled Show, Authors & saved and Download options buttons. It was captured on 2026-11-24 from the Release build of the 4.8.4 preparation branch (`release/v4.8.4`, based on `11d8aa4`). The command was the one above, with `-Pages online` and the build in `artifacts\verification\v4.8.4\ReleaseSource`. Same window size, scaling, theme, language and synthetic samples, and the same 4-pixel trim. `online-v4.8.png` stays for history.
@@ -57,7 +80,7 @@ The data is the repository's own synthetic test data: the character `TestCharact
 
 ## 4.6 pages / 4.6 各页面
 
-The homepage now uses the 4.8 set above; the user guides still use these. 主页已改用上面的 4.8 截图，用户手册仍使用这些图片。
+The homepage and the user guides now use the 4.8.6 set; these files stay for history. 主页和用户手册已改用 4.8.6 截图，这些文件保留作为历史。
 
 Captured on 2026-10-27 from an isolated copy of the published v4.6.0 package (native window at 1600 × 920 DIP, 150% scaling, dark theme, English UI) with `PrintWindow`, so only the app's own window is in the images.
 
@@ -105,6 +128,6 @@ Captured on 2026-10-26 from an isolated Release build after v4.5.1 with the synt
 
 Captured on 2026-10-07 from an isolated copy of the unmodified v4.1.0 application with synthetic fixture folders and seeded demonstration presets. No game, launcher, deployment target or loader-state file was connected. The image is the user's original PNG, copied byte-for-byte. 2026-10-07 使用独立 4.1.0 应用和模拟数据截图，未连接游戏、加载器或目标目录；图片为用户提供的原始 PNG，逐字节复制。
 
-Earlier screenshots (4.1 settings, 4.4 shortcut panel and overlay, 4.5 repository and state slots) were replaced by the 4.6 set, and the homepage now uses the 4.8 set. They remain in the repository history and under the release tags.
+Earlier screenshots (4.1 settings, 4.4 shortcut panel and overlay, 4.5 repository and state slots) were replaced by the 4.6 set, then by the 4.8 set, and the homepage now uses the 4.8.6 set. They remain in the repository history and under the release tags.
 
 These images demonstrate layout, not real-game compatibility, rendering, or a completed preset restore. The fixture Mods are not playable assets.

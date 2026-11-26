@@ -37,52 +37,50 @@ The application, launcher, updater and Developer Tools use version **4.8.6** (`4
 
 ## Interface Preview
 
-Screenshots come from an isolated copy of a 4.8.0 build with the repository's synthetic test data: a sample character with two test Mods, sample tracked Mods and download history, and the Online page in its offline sample mode (sample characters and Mods with generated pictures; nothing is requested from the network). No game, loader, real Mod or online content is shown. See [how they were captured](./docs/assets/screenshots/README.md).
+Screenshots come from an isolated copy of the 4.8.6 build with the repository's synthetic test data: a sample character with two test Mods, sample state slots and combination presets, sample tracked Mods and download history, and the Online page in its offline sample mode (sample characters and Mods with generated pictures; nothing is requested from the network). No game, loader, real Mod or online content is shown. See [how they were captured](./docs/assets/screenshots/README.md).
 
-**Mod workspace** — characters on the left; the character's Mods with size and deploy state, filtered by All Mods / Deployed only / Not deployed, under a command bar; the details show the preview, source link, folder, tags and size, with the red Remove from target button.
+**Dashboard** — after a first install, the First steps card at the top ticks off the first tasks and takes you to each one; below are the current repository (click its name to switch), quick actions as cards, the paths in one section, the characters and all repositories.
 
-![Mod workspace: the sample character, its two test Mods with size and deploy state, and the details of TestModA](./docs/assets/screenshots/repository-v4.8.png)
+![Dashboard: the First steps card with three of five tasks done, the active repository and the quick-action cards](./docs/assets/screenshots/dashboard-v4.8.6.png)
 
-**Dashboard** — the current repository (click its name to switch), quick actions as cards, the paths in one section, the characters and all repositories.
+**Mod workspace** — characters on the left; the selected character's heading has its avatar, rename, open folder and Several at once; the Mods show size and deploy state, filtered by All Mods / Deployed only / Not deployed, under a command bar; the details show the preview, source link, folder, tags and size, with the red Remove from target button.
 
-![Dashboard: the sample repository, three quick-action cards, the paths section, one character and the repository card](./docs/assets/screenshots/dashboard-v4.8.png)
+![Mod workspace: the sample character, its two test Mods with size and deploy state, and the details of TestModA](./docs/assets/screenshots/repository-v4.8.6.png)
 
-**Online** — browse by character, search, sort and filter; each card shows the picture, character, author and counts, with buttons for the source page and download.
+**Search (Ctrl+K)** — by default the search opens like a start screen: a tile for every feature, grouped by page, the main ones wide with their place on them. Pointing at a tile shows where it is; picking one takes you there and outlines it. Typing searches features (also by another word for them), pages, characters and Mods.
 
-![Online page in sample mode: category tabs and subcategory chips, labelled toolbar buttons, three sample characters and sample Mods with generated pictures](./docs/assets/screenshots/online-v4.8.4.png)
+![The search as a start screen: tiles for every feature grouped by page, the main ones wide with their place, and a line that says where the pointed-at feature is](./docs/assets/screenshots/feature-search-v4.8.6.png)
+
+**Online** — browse by category and character, search, sort and filter; each card shows the picture, character, author and counts, with Save for later, source page and download. The details drawer has Save author and All works by ….
+
+![Online page in sample mode with the details drawer open: category tabs and subcategory chips, sample characters, sample Mod cards and the drawer with Save author, Download Latest Archive and Save for later](./docs/assets/screenshots/online-details-v4.8.6.png)
 
 <p align="center">
-  <img src="./docs/assets/screenshots/feature-search-v4.8.6.png" width="560" alt="The 4.8.6 search (Ctrl+K) as a start screen: tiles for every feature grouped by page, the main ones wide with their place, and a line that says where the pointed-at feature is">
+  <img src="./docs/assets/screenshots/state-slots-v4.8.6.png" width="260" alt="State Slots tab: the Everyday slot marked current with its update and rename buttons and its two saved values">
   &nbsp;
-  <img src="./docs/assets/screenshots/state-slots-v4.6.png" width="260" alt="State Slots tab: the current slot Battle with its three saved values">
+  <img src="./docs/assets/screenshots/shortcut-overlay-v4.8.6.png" width="290" alt="Overlay: the title bar with the status dot, the Mod name, the status icon, the ⋯ menu and close; the Mod, window and send switch; the state slots; Pick by picture and Frame character; two key caps; the Save preset button">
 </p>
 
-**Command palette (Ctrl+K)** — one search over the pages, commands and the current repository's characters and Mods, grouped by type. **State slots (4.5, 4.6 screenshot)** — save a Mod's persistent values as named slots; More… updates or renames a slot, writes it as the Mod's defaults (with backups), imports a variant file and snapshots the whole `d3dx_user.ini`.
+**State slots** — save a Mod's persistent values as named slots; the buttons beside the list update or rename a slot, and More… writes it as the Mod's defaults (with backups), imports a variant file and snapshots the whole `d3dx_user.ini`. **Overlay (4.8.2)** — over the game: drag it by its title bar (the dot shows whether keys are being sent), choose the Mod and the target window and turn sending on, click key caps to send them, hot-switch slots (experimental), and save a combination or a named single-Mod preset (F10 is sent first). It sizes itself to its content, remembers its place on each display, snaps to edges, follows the app's theme, and keeps compact view, click-through and opacity in its ⋯ menu.
 
 **Mod shortcut panel** — one column of cards: the Mod, the target window and input, a status bar, the Mod's key bindings as key caps with Send, then the overlay and its settings.
 
-![Shortcuts page: the Mod, window and input cards, the status bar and two key-cap bindings](./docs/assets/screenshots/shortcut-panel-v4.8.png)
-
-<p align="center">
-  <img src="./docs/assets/screenshots/shortcut-overlay-v4.8.png" width="290" alt="Overlay: the title bar with the status dot, the Mod name, the status icon, the ⋯ menu and close; the Mod, window and send switch; the state slots; two key caps; the Save preset button">
-</p>
-
-**Overlay (4.8.2)** — over the game: drag it by its title bar (the dot shows whether keys are being sent), choose the Mod and the target window and turn sending on, click key caps to send them, hot-switch slots (experimental), and save a combination or a named single-Mod preset (F10 is sent first). It sizes itself to its content, remembers its place on each display, snaps to edges, follows the app's theme, and keeps compact view, click-through and opacity in its ⋯ menu.
+![Shortcuts page: the Mod, window and input cards, the status bar and two key-cap bindings](./docs/assets/screenshots/shortcut-panel-v4.8.6.png)
 
 <details>
-<summary>Updates and Settings</summary>
+<summary>Combination presets, Updates and Settings</summary>
 
-The Updates page has a status area with Check now and three views: Mod updates, Download history, and Install and recovery.
+Combination presets: save a Mod set with persistent values, review its members, restore it with a preview, share it without Mod files, or export and install a combination bundle.
 
-![Updates page: the status area, the three views and two sample tracked Mods](./docs/assets/screenshots/updates-v4.8.png)
+![Combination presets: two sample presets, the selected preset's Mods and saved-value counts, and Save & Restore](./docs/assets/screenshots/combination-presets-v4.8.6.png)
 
-Settings uses cards, in two columns on wide windows: appearance and language on the left; app updates, project links and diagnostics on the right. The picture is cropped below the diagnostics.
+The Updates page has a status area with Check Now and three views: Mod updates (each row with open folder, open page and More), Download history, and Install and recovery.
 
-![Settings page: appearance and language, app updates, the project link and diagnostics](./docs/assets/screenshots/settings-v4.8.png)
+![Updates page: the status area, the three views and two sample tracked Mods](./docs/assets/screenshots/updates-v4.8.6.png)
 
-Combination presets (4.1 screenshot): save a Mod set with persistent values, review its members, and export or install a combination bundle.
+Settings uses cards, in two columns on wide windows: appearance and language (including the search style) on the left; app updates, project links and diagnostics on the right. The picture is cropped above the feedback card.
 
-![Combination preset workspace with synthetic members and saved-value counts](./docs/assets/screenshots/combination-presets-v4.1.png)
+![Settings page: appearance and language with the search style, app updates, the project link and diagnostics](./docs/assets/screenshots/settings-v4.8.6.png)
 
 </details>
 
