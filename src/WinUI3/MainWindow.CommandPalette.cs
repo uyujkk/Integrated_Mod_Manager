@@ -16,7 +16,8 @@ public sealed partial class MainWindow
                 WorkspacePage workspace = EnsureWorkspacePage();
                 workspace.OnImportZipClicked(workspace.ImportZipButton, new RoutedEventArgs());
             },
-            RefreshListsAsync, OpenDeveloperTools, ShowRepositoryItemFromPalette, ReportUiActionFailure);
+            RefreshListsAsync, OpenDeveloperTools, ShowRepositoryItemFromPalette, ReportUiActionFailure,
+            () => _shell.DetailedSearch, RunFeature, OnCommandPaletteOpened);
         _commandPalette.InitializeShortcut();
     }
 

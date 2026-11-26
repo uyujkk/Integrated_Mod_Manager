@@ -50,6 +50,17 @@ public sealed partial class OnlinePage
         _services.Online.Preferences.SavedMods = _services.Online.Preferences.SavedMods.Take(100).ToList();
         _host.SaveShellConfig();
         ShowAppNotification(remove ? T("OnlineLibrary.RemovedFromSaved") : T("OnlineLibrary.Saved"));
+        RefreshOnlineCardStates(refreshInstalled: false);
+        UpdateOnlineDetailSavedButton();
+    }
+
+    // The card's "save for later" button: a clock while not saved, a check mark once saved; the tooltip says what a
+    // click does.
+    private void ApplyOnlineSavedState(OnlineModTileViewModel model)
+    {
+        bool saved = IsSavedOnlineMod(model.Mod);
+        model.SavedGlyph = saved ? "\uE73E" : "\uE823";
+        model.SavedToolTip = saved ? T("OnlineLibrary.RemoveFromSaved") : T("OnlineLibrary.SaveForLater");
     }
 
     private MenuFlyout CreateOnlineCardMenu(OnlineModCard mod)
@@ -61,31 +72,37 @@ public sealed partial class OnlinePage
         var author = new MenuFlyoutItem { Text = T("OnlineLibrary.BrowseAuthorAllPages"), IsEnabled = mod.AuthorId > 0 };
         author.Click += async (_, _) => await _host.RunUiActionAsync("BrowseOnlineAuthorAsync", () => BrowseOnlineAuthorAsync(mod.AuthorId, mod.Author));
         menu.Items.Add(author);
-        bool savedAuthor = _services.Online.Preferences.Authors.Any(item => item.Id == mod.AuthorId
-            && item.CategoryId == _services.OnlineSource.CategoryId(_services.Repositories.Selected));
-        var favorite = new MenuFlyoutItem { Text = savedAuthor ? T("OnlineLibrary.UnsaveAuthor") : T("OnlineLibrary.SaveAuthor"), IsEnabled = mod.AuthorId > 0 };
-        favorite.Click += (_, _) =>
-        {
-            string category = _services.OnlineSource.CategoryId(_services.Repositories.Selected);
-            _services.Online.Preferences.Authors.RemoveAll(item => item.Id == mod.AuthorId && item.CategoryId == category);
-            if (!savedAuthor) _services.Online.Preferences.Authors.Insert(0, new OnlineAuthorBookmark(mod.AuthorId, mod.Author, category));
-            _services.Online.Preferences.Authors = _services.Online.Preferences.Authors.Take(100).ToList();
-            _host.SaveShellConfig();
-        };
+        var favorite = new MenuFlyoutItem { Text = IsSavedAuthor(mod) ? T("OnlineLibrary.UnsaveAuthor") : T("OnlineLibrary.SaveAuthor"), IsEnabled = mod.AuthorId > 0 };
+        favorite.Click += (_, _) => ToggleSavedAuthor(mod);
         menu.Items.Add(favorite);
         menu.Opening += (_, _) =>
         {
             save.Text = IsSavedOnlineMod(mod) ? T("OnlineLibrary.RemoveFromSaved") : T("OnlineLibrary.SaveForLater");
-            savedAuthor = _services.Online.Preferences.Authors.Any(item => item.Id == mod.AuthorId
-                && item.CategoryId == _services.OnlineSource.CategoryId(_services.Repositories.Selected));
-            favorite.Text = savedAuthor ? T("OnlineLibrary.UnsaveAuthor") : T("OnlineLibrary.SaveAuthor");
+            favorite.Text = IsSavedAuthor(mod) ? T("OnlineLibrary.UnsaveAuthor") : T("OnlineLibrary.SaveAuthor");
         };
         return menu;
     }
 
+    // Saved authors belong to the current repository's category.
+    private bool IsSavedAuthor(OnlineModCard mod) => mod.AuthorId > 0 && _services.Online.Preferences.Authors.Any(item => item.Id == mod.AuthorId
+        && item.CategoryId == _services.OnlineSource.CategoryId(_services.Repositories.Selected));
+
+    private void ToggleSavedAuthor(OnlineModCard mod)
+    {
+        if (mod.AuthorId <= 0) return;
+        bool saved = IsSavedAuthor(mod);
+        string category = _services.OnlineSource.CategoryId(_services.Repositories.Selected);
+        _services.Online.Preferences.Authors.RemoveAll(item => item.Id == mod.AuthorId && item.CategoryId == category);
+        if (!saved) _services.Online.Preferences.Authors.Insert(0, new OnlineAuthorBookmark(mod.AuthorId, mod.Author, category));
+        _services.Online.Preferences.Authors = _services.Online.Preferences.Authors.Take(100).ToList();
+        _host.SaveShellConfig();
+        UpdateOnlineDetailAuthorButtons();
+    }
+
     private async void OnOnlineSavedItemsClicked(object sender, RoutedEventArgs e)
     {
-        try { await ShowOnlineLibraryAsync(); }
+        // Items removed in the dialog update the cards' buttons when it closes.
+        try { await ShowOnlineLibraryAsync(); RefreshOnlineCardStates(refreshInstalled: false); UpdateOnlineDetailSavedButton(); }
         catch (OperationCanceledException) { }
         catch (Exception ex)
         {

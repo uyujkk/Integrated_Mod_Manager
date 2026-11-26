@@ -61,7 +61,9 @@ public sealed partial class MainWindow
             case DashboardAction.BrowseOnline: OnOnlineNavClicked(this, args); break;
             case DashboardAction.CheckModUpdates: CheckModUpdatesFromDashboard(); break;
             case DashboardAction.RunLauncher: _ = RunUiActionAsync("OnRunLauncherClicked", _services.Launcher.RunAsync); break;
-            case DashboardAction.GettingStartedTipsClosed: OnGettingStartedTipsClosed(); break;
+            case DashboardAction.GettingStartedClosed: OnGettingStartedClosed(); break;
+            case DashboardAction.RunFeature when request.Argument is { } feature: RunFeature(feature); break;
+            case DashboardAction.OpenSearch: OpenCommandPalette(); break;
         }
     }
 
@@ -180,6 +182,7 @@ public sealed partial class MainWindow
         Dashboard.CurrentStatusText = Dashboard.CurrentIsReady ? T("Dashboard.Ready") : T("Dashboard.SetupNeeded");
         Dashboard.CurrentSummary = repository is null ? string.Empty : DescribeRepositoryCounts(repository);
         RefreshDashboardCharacters(repository);
+        RefreshGettingStarted();
     }
 
     // The overview is rebuilt only when its content changes, so refreshes do not flicker it.

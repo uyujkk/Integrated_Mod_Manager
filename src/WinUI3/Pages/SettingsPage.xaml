@@ -106,6 +106,17 @@
                     </toolkit:SettingsCard.HeaderIcon>
                     <ToggleSwitch x:Name="TitleBarSearchToggleSwitch" IsOn="{x:Bind ViewModel.ShowTitleBarSearch, Mode=TwoWay}" />
                 </toolkit:SettingsCard>
+                <!-- Brief: pages and commands until something is typed. Detailed: every feature and where it is. -->
+                <toolkit:SettingsCard x:Name="SearchStyleSettingsCard">
+                    <toolkit:SettingsCard.HeaderIcon>
+                        <FontIcon Glyph="&#xE8FD;" />
+                    </toolkit:SettingsCard.HeaderIcon>
+                    <ComboBox
+                        x:Name="SearchStyleComboBox"
+                        MinWidth="160"
+                        ItemsSource="{x:Bind ViewModel.SearchStyleOptions, Mode=OneWay}"
+                        SelectedIndex="{x:Bind ViewModel.SearchStyleIndex, Mode=TwoWay}" />
+                </toolkit:SettingsCard>
                 <toolkit:SettingsCard x:Name="TraySettingsCard">
                     <toolkit:SettingsCard.HeaderIcon>
                         <FontIcon Glyph="&#xE8B7;" />

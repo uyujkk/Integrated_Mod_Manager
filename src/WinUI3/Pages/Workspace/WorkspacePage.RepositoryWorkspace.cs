@@ -76,12 +76,15 @@ public sealed partial class WorkspacePage
     internal void InitializeRepositoryWorkspaceV4()
     {
         _repositoryModSearch = new TextBox { Height = 36, MinWidth = 0 };
+        // The search's feature directory points at these places by automation id.
+        AutomationProperties.SetAutomationId(_repositoryModSearch, "RepositoryModSearchBox");
         _repositoryModSearch.TextChanged += (_, _) => RefreshRepositoryModView();
         AutomationProperties.SetName(_repositoryModSearch, T("RepositoryWorkspace.SearchMods"));
         RepositoryDecorateButton(CreateFirstLevelButton, "\uE710", true);
         UpdateCharacterHeaderActions();
 
         RepositoryDecorateButton(DeleteSecondLevelButton, "\uE74D", true);
+        RepositoryDecorateButton(RenameFirstLevelButton, "\uE70F", true);
         InitializeLocalTagControls(ModCardGrid);
         _repositoryStateChips = Enum.GetValues<ModStateFilter>().Select(filter =>
         {

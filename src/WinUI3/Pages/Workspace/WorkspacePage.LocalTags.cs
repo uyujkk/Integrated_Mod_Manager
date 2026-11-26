@@ -46,9 +46,11 @@ public sealed partial class WorkspacePage
         _localTagsButton = new Button { Content = T("Common.Tags"), MinHeight = 36 };
         _localTagsButton.Click += async (_, _) => await _host.RunUiActionAsync("EditLocalTagsAsync", () => EditLocalTagsAsync());
         AutomationProperties.SetName(_localTagsButton, T("LocalTags.EditLocalModTagsInBulk"));
+        AutomationProperties.SetAutomationId(_localTagsButton, "LocalTagsButton");
         Grid.SetColumn(_localTagsButton, 1); row.Children.Add(_localTagsButton);
         _localFiltersButton = new Button { Content = T("Common.Filters"), MinHeight = 36 };
         _localFiltersButton.Click += (_, _) => ShowLocalFilterMenu();
+        AutomationProperties.SetAutomationId(_localFiltersButton, "LocalFiltersButton");
         Grid.SetColumn(_localFiltersButton, 2); row.Children.Add(_localFiltersButton);
         _batchModsButton = new Button { Content = T("BatchMods.Button"), MinHeight = 36 };
         _batchModsButton.Click += async (_, _) => await _host.RunUiActionAsync("Batch Mod actions", ShowBatchModActionsAsync);

@@ -39,36 +39,31 @@ public sealed class SmokeTests
         app.AssertNoErrors();
     }
 
-    // Stage J4-b: after a first install (and no "what's new") the dashboard's getting-started tips show until closed. They
-    // take the keyboard focus, so Narrator reads the step; closing the app keeps them, Esc closes them for good.
+    // A first install shows the dashboard's "First steps" card (it replaced the step-by-step tips of stage J4-b): part of
+    // the page, no popup and no "what's new" dialog; closing the app keeps it, Hide closes it for good.
     [Fact]
-    public void FirstInstall_GettingStartedTipsShowUntilClosed()
+    public void FirstInstall_GettingStartedCardShowsUntilHidden()
     {
         using AppSession app = AppSession.FirstInstall().Start();
         AppSession.Invoke(app.FindByName(app.Text("FirstRun.Later"), TimeSpan.FromSeconds(20)));
 
-        // A first install has no "what's new" dialog: the tips come straight after the game.
-        AutomationElement next = app.Find("GettingStartedNextButton", TimeSpan.FromSeconds(20));
+        AutomationElement hide = app.Find("GettingStartedCloseButton", TimeSpan.FromSeconds(20));
         Assert.Null(app.MainWindow.FindFirstDescendant(cf => cf.ByName(app.Text("WhatsNew.Close"))));
-        Assert.Contains(app.Text("GettingStarted.NewRepository.Title"), next.HelpText);
-        Assert.True(FlaUI.Core.Tools.Retry.WhileFalse(() => next.Properties.HasKeyboardFocus.ValueOrDefault, TimeSpan.FromSeconds(3)).Result,
-            "The tip should take the keyboard focus");
-        AppSession.Invoke(next);
-        Assert.Contains(app.Text("GettingStarted.Paths.Title"), app.Find("GettingStartedNextButton").HelpText);
+        Assert.Equal(app.Text("GettingStarted.Hide"), hide.Name);
+        app.FindByName(app.Text("GettingStarted.Title"));
+        // Nothing has the focus taken away: the card does not pop up.
+        Assert.False(hide.Properties.HasKeyboardFocus.ValueOrDefault);
 
-        // Closing the app is not closing the tips: they come back, from the start.
         app.Restart();
-        next = app.Find("GettingStartedNextButton", TimeSpan.FromSeconds(20));
-        Assert.Contains(app.Text("GettingStarted.NewRepository.Title"), next.HelpText);
-
-        Keyboard.Type(VirtualKeyShort.ESCAPE);
+        hide = app.Find("GettingStartedCloseButton", TimeSpan.FromSeconds(20));
+        AppSession.Invoke(hide);
         Thread.Sleep(1000);
-        Assert.False(app.Shows("GettingStartedNextButton"), "Esc should close the tips");
-        app.WaitForSaved(saved => !saved["GettingStartedTipsPending"]!.GetValue<bool>(), "Closing the tips should be saved");
+        Assert.False(app.Shows("GettingStartedCloseButton"), "Hide should close the card");
+        app.WaitForSaved(saved => !saved["GettingStartedTipsPending"]!.GetValue<bool>(), "Hiding the card should be saved");
 
         app.Restart();
         Thread.Sleep(5000);
-        Assert.False(app.Shows("GettingStartedNextButton"), "Closed tips should not come back");
+        Assert.False(app.Shows("GettingStartedCloseButton"), "A hidden card should not come back");
         app.AssertNoErrors();
     }
 

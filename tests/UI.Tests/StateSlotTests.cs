@@ -98,6 +98,23 @@ public sealed class StateSlotTests
         Thread.Sleep(500);
     }
 
+    // Renaming and updating the selected slot are buttons beside the slot list (once only under "More…").
+    [Fact]
+    public void Workspace_TheSelectedSlotIsRenamedWithTheButtonBesideTheList()
+    {
+        using AppSession app = StartOnSlots();
+        ChooseSlot(app, "Battle");
+        Assert.True(app.Find("UpdatePersistentSlotButton").IsEnabled);
+        Assert.Equal(app.Text("PersistentVariants.UpdateSelectedSlot"), app.Find("UpdatePersistentSlotButton").Name);
+
+        AppSession.Invoke(app.Find("RenamePersistentSlotButton"));
+        app.Find("PromptTextBox", TimeSpan.FromSeconds(10)).Patterns.Value.Pattern.SetValue("Battle renamed");
+        AppSession.Invoke(app.FindByName(app.Text("Dialogs.Rename")));
+        WaitUntil(() => Slot(app, "Battle renamed") is not null, "the slot renamed");
+        Assert.Null(Slot(app, "Battle"));
+        app.AssertNoErrors();
+    }
+
     [Fact]
     public void Workspace_TheSlotListHasTheDefaultAndSavedSlots()
     {

@@ -65,6 +65,11 @@ internal sealed class ShellSettings
     public bool? LegacyDarkTheme { get; set; }
     public bool MinimizeToTray { get; set; }
     public bool ShowTitleBarSearch { get; set; } = true;
+    /// <summary>The search lists every feature with where it is (detailed) or only pages and commands until typed (brief).</summary>
+    public bool DetailedSearch { get; set; } = true;
+    public HashSet<string> ClosedPageHints { get; set; } = new(StringComparer.OrdinalIgnoreCase);
+    public bool SearchUsed { get; set; }
+    public bool ShortcutsVisited { get; set; }
     public bool NavigationCollapsed { get; set; }
     public InterfaceDensity InterfaceDensity { get; set; } = InterfaceDensity.Comfortable;
     /// <summary>Set while the Updates page's view is restored from the file, which is not a change to save.</summary>
@@ -77,5 +82,5 @@ internal sealed class ShellSettings
     public bool WindowMaximized { get; set; }
 
     public string? WhatsNewSeenVersion { get; set; }
-    public GettingStartedTips GettingStartedTips { get; set; } = GettingStartedTips.Load(firstInstall: false, savedPending: false);
+    public GettingStartedChecklist GettingStarted { get; set; } = GettingStartedChecklist.Load(firstInstall: false, savedPending: false);
 }

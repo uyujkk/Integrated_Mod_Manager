@@ -45,22 +45,22 @@ public sealed class PageHostTests
         return sum / count;
     }
 
-    // Shown pages stay in the window and are only hidden while another section is chosen: the dashboard's
-    // getting-started tip (a popup over the window) must still go away with its page and come back with it.
+    // Shown pages stay in the window and are only hidden while another section is chosen: the dashboard's "First steps"
+    // card is part of its page, so it goes away with the page and comes back with it.
     [Fact]
-    public void Pages_HiddenDashboardTakesItsTipAlong()
+    public void Pages_HiddenDashboardTakesItsCardAlong()
     {
         using AppSession app = AppSession.FirstInstall().Start();
         AppSession.Invoke(app.FindByName(app.Text("FirstRun.Later"), TimeSpan.FromSeconds(20)));
-        app.Find("GettingStartedNextButton", TimeSpan.FromSeconds(20));
+        app.Find("GettingStartedCloseButton", TimeSpan.FromSeconds(20));
 
         AppSession.Invoke(app.Find("SettingsNavButton"));
-        Wait(() => app.MainWindow.FindFirstDescendant(cf => cf.ByAutomationId("GettingStartedNextButton")) is null or { IsOffscreen: true },
-            "The tip should close with the dashboard");
+        Wait(() => app.MainWindow.FindFirstDescendant(cf => cf.ByAutomationId("GettingStartedCloseButton")) is null or { IsOffscreen: true },
+            "The card should go with the dashboard");
         app.Find("LanguageComboBox", TimeSpan.FromSeconds(10));
 
         AppSession.Invoke(app.Find("DashboardNavButton"));
-        app.Find("GettingStartedNextButton", TimeSpan.FromSeconds(10));
+        app.Find("GettingStartedCloseButton", TimeSpan.FromSeconds(10));
         app.AssertNoErrors();
     }
 

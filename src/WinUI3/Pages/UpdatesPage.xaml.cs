@@ -392,25 +392,29 @@ public sealed partial class UpdatesPage : UserControl
         openPageButton.Click += (_, _) => ViewModel.Request(UpdatesAction.OpenModPage, row.ProfileUrl);
         actions.Children.Add(openPageButton);
 
-        // Folder, old backup and removal live in the "More" menu.
-        var more = new MenuFlyout { Placement = FlyoutPlacementMode.BottomEdgeAlignedRight };
-        var openFolderItem = new MenuFlyoutItem
+        // The folder is a button of its own (it was only in the "More" menu); the old backup and removal stay there.
+        var openFolderButton = new Button
         {
-            Text = T("Updates.OpenFolder"), Icon = new FontIcon { Glyph = "" }, IsEnabled = Directory.Exists(row.Path)
+            Content = new FontIcon { Glyph = "\uE838", FontSize = 14 }, Width = 32, Height = 32, MinWidth = 32, MinHeight = 32, Padding = new Thickness(0),
+            Style = AppStyle("SecondaryButtonStyle"), IsEnabled = Directory.Exists(row.Path)
         };
-        openFolderItem.Click += (_, _) =>
+        ToolTipService.SetToolTip(openFolderButton, T("Updates.OpenFolder"));
+        AutomationProperties.SetName(openFolderButton, T("Updates.OpenFolder"));
+        AutomationProperties.SetAutomationId(openFolderButton, "UpdatesOpenFolderButton");
+        openFolderButton.Click += (_, _) =>
         {
             if (Directory.Exists(row.Path))
                 Process.Start(new ProcessStartInfo { FileName = "explorer.exe", Arguments = $"\"{row.Path}\"", UseShellExecute = true });
         };
-        more.Items.Add(openFolderItem);
+        actions.Children.Insert(actions.Children.IndexOf(openPageButton), openFolderButton);
+        var more = new MenuFlyout { Placement = FlyoutPlacementMode.BottomEdgeAlignedRight };
         if (!string.IsNullOrWhiteSpace(row.BackupPath))
         {
             var backupItem = new MenuFlyoutItem { Text = T("Updates.OpenOldBackup"), Icon = new FontIcon { Glyph = "" } };
             backupItem.Click += (_, _) => ViewModel.Request(UpdatesAction.OpenOldBackup, row.BackupPath);
             more.Items.Add(backupItem);
         }
-        more.Items.Add(new MenuFlyoutSeparator());
+        if (more.Items.Count > 0) more.Items.Add(new MenuFlyoutSeparator());
         var removeTrackingItem = new MenuFlyoutItem
         {
             Text = T("Updates.RemoveTracking"), Icon = new FontIcon { Glyph = "" }, IsEnabled = !ViewModel.IsReplacing(row.Path)
@@ -512,9 +516,21 @@ public sealed partial class UpdatesPage : UserControl
         List<DownloadTaskItem> visible = [.. finished.Where(task => UpdatesListPolicy.Matches(task.State, ViewModel.HistoryFilter))];
         DownloadHistoryRepeater.ItemTemplate ??= new DelegateElementFactory(item => CreateDownloadHistoryRow((DownloadTaskItem)item));
         DownloadHistoryRepeater.ItemsSource = visible;
-        DownloadHistoryEmptyHost.Content = finished.Length == 0
-            ? new EmptyState { Glyph = "", Title = T("DownloadTasks.NoDownloadTasks"), Hint = T("DownloadTasks.DownloadsStartedFromTheOnlineBrowser") }
-            : visible.Count == 0 ? new EmptyState { Glyph = "", Title = T("DownloadTasks.NoMatchingHistory") } : null;
+        if (finished.Length == 0)
+        {
+            // Downloads start on the Online page, so the empty history leads there like the empty Mod list does.
+            var browse = new Button { Content = T("Dashboard.BrowseOnline"), Style = AppStyle("PrimaryButtonStyle") };
+            browse.Click += (_, _) => ViewModel.Request(UpdatesAction.BrowseOnline);
+            DownloadHistoryEmptyHost.Content = new EmptyState
+            {
+                Glyph = "", Title = T("DownloadTasks.NoDownloadTasks"), Hint = T("DownloadTasks.DownloadsStartedFromTheOnlineBrowser"),
+                Actions = browse
+            };
+        }
+        else
+        {
+            DownloadHistoryEmptyHost.Content = visible.Count == 0 ? new EmptyState { Glyph = "", Title = T("DownloadTasks.NoMatchingHistory") } : null;
+        }
     }
 
     private void OnDownloadHistoryFilterChanged(object sender, SelectionChangedEventArgs e)

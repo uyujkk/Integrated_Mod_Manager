@@ -82,6 +82,21 @@ public sealed class BetaShellConfig
     /// <summary>Whether the title bar shows the search box; null (configs from before the setting) shows it.</summary>
     public bool? ShowTitleBarSearch { get; set; }
 
+    /// <summary>
+    /// "detailed" (the default, also for configs from before the setting): the search lists every feature with where
+    /// it is before anything is typed; "brief": it lists pages and commands, and features only as matches.
+    /// </summary>
+    public string? SearchStyle { get; set; }
+
+    /// <summary>The one-time page hints the user closed, by page ("repository", "online", ...).</summary>
+    public List<string>? ClosedPageHints { get; set; }
+
+    /// <summary>The search was opened at least once (a "First steps" task).</summary>
+    public bool SearchUsed { get; set; }
+
+    /// <summary>The Shortcuts page was opened at least once (a "First steps" task).</summary>
+    public bool ShortcutsVisited { get; set; }
+
     public bool NavigationCollapsed { get; set; }
 
     public string? InterfaceDensity { get; set; }
@@ -122,7 +137,10 @@ public sealed class BetaShellConfig
     /// <summary>False in configs from before an empty game meant "no game" (see <see cref="RepositoryGameMigration"/>).</summary>
     public bool RepositoryGamesExplicit { get; set; }
 
-    /// <summary>True from a first install until the getting-started tips are closed or finished.</summary>
+    /// <summary>
+    /// True while the dashboard shows the "First steps" card: from a first install, or after asking for it in the search,
+    /// until it is closed. The name is from the step-by-step tips the card replaced.
+    /// </summary>
     public bool GettingStartedTipsPending { get; set; }
 
     // Fields written by a newer version survive being saved by this one, so going back and forth loses nothing.

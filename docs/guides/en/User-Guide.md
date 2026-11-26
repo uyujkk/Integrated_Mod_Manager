@@ -16,7 +16,7 @@ The left navigation contains, from top to bottom:
 
 | Entry | Purpose |
 | --- | --- |
-| Search | Opens the command palette (`Ctrl+K`): search the pages and the current repository's characters and Mods, or run Import Mod and Refresh repository |
+| Search | Opens the search (`Ctrl+K`): in the detailed style it lists every feature and where it is, and takes you there; it also searches the pages and the current repository's characters and Mods, or runs Import Mod and Refresh repository |
 | Dashboard | The current repository's status and counts, paths, a character overview, repository cards and quick actions; create or switch repositories; Endfield launch method |
 | Repositories | Characters, the Mod list and details; Files, Covers and combination presets; deployment, previews, shortcut notes and state slots |
 | Online | Browse GameBanana by character; a details drawer shows images, requirements and installed status, then download |
@@ -246,7 +246,7 @@ Configuration writes are atomic with rotated backups; a damaged main configurati
 
 | Key | Action |
 | --- | --- |
-| `Ctrl+K` | Open the command palette; arrow keys choose, `Enter` opens, `Esc` closes |
+| `Ctrl+K` | Open the search; arrow keys choose, `Enter` opens or takes you to a feature, `Esc` closes |
 | `Alt+1` – `Alt+5` | Dashboard, Repositories, Online, Updates, Settings |
 | `Ctrl+F` | Focus search (online search on the Online page, character search elsewhere) |
 | `Ctrl+U` | Open the Updates page |
@@ -255,6 +255,8 @@ Configuration writes are atomic with rotated backups; a damaged main configurati
 | `Enter` | Run the selected item's main action |
 | `Esc` | Close the online details drawer, the image viewer or the command palette |
 | `Left` / `Right` | Change image in the full-size viewer |
+
+**Finding features:** the search has two styles, set in Settings › Appearance and Language › Search style. **Detailed** (the default) opens like the Windows 8 start screen: it fills the window with a tile for every feature (the main ones wide, with their place on them; settings have no tiles and are found by typing), grouped by page and scrolling sideways; pointing at a tile or moving to it with the arrow keys shows where it is underneath, and typing turns it into search results; **Brief** lists pages and commands, and shows matching features as you type. Picking a feature opens its page, unfolds the group it is in and outlines it in the accent colour for a few seconds, with the keyboard focus on it; a feature that needs a selected character or Mod first says where it is at the bottom of the window. The **?** button in the title bar opens the guide for the page on screen.
 
 ## 13. Troubleshooting
 

@@ -5,7 +5,6 @@ using IntegratedModManager.Core.Layout;
 using IntegratedModManager.Core.Repository;
 using Microsoft.UI.Xaml;
 using Microsoft.UI.Xaml.Automation;
-using Microsoft.UI.Xaml.Automation.Peers;
 using Microsoft.UI.Xaml.Controls;
 using Microsoft.UI.Xaml.Media;
 
@@ -23,8 +22,6 @@ public sealed partial class DashboardPage : UserControl
     private readonly (TextBox Box, FontIcon Icon, bool ExpectFile)[] _pathStatusIcons;
     private int _layoutMode = -1;
     private string? _autoExpandedFor;
-    // Each new step cancels the opening of the one before (it opens after the page has scrolled to its target).
-    private int _gettingStartedTipVersion;
 
     internal DashboardPage(AppServices services)
     {
@@ -51,27 +48,14 @@ public sealed partial class DashboardPage : UserControl
         services.Appearance.ThemeChanged += (_, _) => RefreshPathsState();
         // The language is read from the settings after the page is made, so label again when it is shown.
         Loaded += (_, _) => ApplyLanguage();
-        // The getting-started tips show while the page is on screen and wait while it is not. The window keeps a shown
-        // page and only hides it when another section is chosen, so the tips follow the page's visibility as well.
-        Loaded += (_, _) => ShowGettingStartedTip();
-        Unloaded += (_, _) => GettingStartedTip.IsOpen = false;
         RegisterPropertyChangedCallback(VisibilityProperty, (_, _) =>
         {
-            if (Visibility != Visibility.Visible)
-            {
-                GettingStartedTip.IsOpen = false;
-                return;
-            }
-            RefreshPathsState();
-            ShowGettingStartedTip();
+            if (Visibility == Visibility.Visible) RefreshPathsState();
         });
         ApplyLanguage();
     }
 
     public DashboardViewModel ViewModel { get; }
-
-    /// <summary>The getting-started tip is open (the window then takes the page out instead of hiding it).</summary>
-    internal bool HasOpenTip => GettingStartedTip.IsOpen;
 
     // On screen: loaded, and not hidden while another section is shown (the window keeps a shown page).
     private bool IsShown => IsLoaded && Visibility == Visibility.Visible;
@@ -89,6 +73,7 @@ public sealed partial class DashboardPage : UserControl
 
     private void ApplyLanguage()
     {
+        RefreshGettingStartedCard();
         ToolTipService.SetToolTip(AddRepositoryButton, T("Localization.CreateRepository"));
         AutomationProperties.SetName(AddRepositoryButton, T("Localization.CreateRepository"));
         ToolTipService.SetToolTip(RenameRepositoryButton, T("Localization.EditCurrentRepository"));
@@ -162,7 +147,8 @@ public sealed partial class DashboardPage : UserControl
                 RefreshBridgeButton();
                 break;
             case nameof(DashboardViewModel.GettingStarted):
-                ShowGettingStartedTip();
+            case nameof(DashboardViewModel.GettingStartedProgress):
+                RefreshGettingStartedCard();
                 break;
         }
     }
@@ -366,124 +352,90 @@ public sealed partial class DashboardPage : UserControl
         }
     }
 
-    /// <summary>Opens the getting-started tip at the current step, or closes it when there is nothing to show.</summary>
-    private void ShowGettingStartedTip()
+    // --- "First steps" ---
+
+    // Each task: what to do, a line on how, and the button that takes the user there (a feature of the search's
+    // directory, or the search itself).
+    private (string Title, string Detail, string Action, string? Feature) GettingStartedText(GettingStartedTask task) => task switch
     {
-        if (ViewModel.GettingStarted is not { } tips || !tips.ShouldShow(IsShown, _services.Dialogs.IsDialogOpen))
+        GettingStartedTask.Paths => (T("GettingStarted.Paths"), T("GettingStarted.PathsDetail"), T("GettingStarted.PathsAction"), "Paths"),
+        GettingStartedTask.FirstMod => (T("GettingStarted.FirstMod"), T("GettingStarted.FirstModDetail"), T("GettingStarted.FirstModAction"), "Import"),
+        GettingStartedTask.Deploy => (T("GettingStarted.Deploy"), T("GettingStarted.DeployDetail"), T("GettingStarted.DeployAction"), "Deploy"),
+        GettingStartedTask.Search => (T("GettingStarted.Search"), T("GettingStarted.SearchDetail"), T("GettingStarted.SearchAction"), null),
+        _ => (T("GettingStarted.Shortcuts"), T("GettingStarted.ShortcutsDetail"), T("GettingStarted.ShortcutsAction"), "Overlay")
+    };
+
+    private void RefreshGettingStartedCard()
+    {
+        if (ViewModel.GettingStarted is not { IsPending: true })
         {
-            GettingStartedTip.IsOpen = false;
+            GettingStartedCard.Visibility = Visibility.Collapsed;
             return;
         }
+        GettingStartedProgress progress = ViewModel.GettingStartedProgress;
+        int done = GettingStartedChecklist.DoneCount(progress), total = GettingStartedChecklist.Tasks.Count;
+        bool allDone = done == total;
+        GettingStartedTitleTextBlock.Text = T("GettingStarted.Title");
+        GettingStartedProgressTextBlock.Text = allDone ? T("GettingStarted.AllDone") : T("GettingStarted.Progress", done, total);
+        GettingStartedProgressBar.Maximum = total;
+        GettingStartedProgressBar.Value = done;
+        AutomationProperties.SetName(GettingStartedProgressBar, GettingStartedProgressTextBlock.Text);
+        GettingStartedCloseButton.Content = allDone ? T("GettingStarted.Close") : T("GettingStarted.Hide");
+        ToolTipService.SetToolTip(GettingStartedCloseButton, T("GettingStarted.HideHint"));
+        AutomationProperties.SetHelpText(GettingStartedCloseButton, T("GettingStarted.HideHint"));
 
-        (FrameworkElement target, string title, string body) = tips.Current switch
+        GettingStartedTaskPanel.Children.Clear();
+        GettingStartedTask? next = GettingStartedChecklist.Next(progress);
+        foreach (GettingStartedTask task in GettingStartedChecklist.Tasks)
+            GettingStartedTaskPanel.Children.Add(CreateGettingStartedRow(task, GettingStartedChecklist.IsDone(task, progress), task == next));
+        GettingStartedCard.Visibility = Visibility.Visible;
+    }
+
+    private FrameworkElement CreateGettingStartedRow(GettingStartedTask task, bool done, bool next)
+    {
+        (string title, string detail, string action, string? feature) = GettingStartedText(task);
+        var row = new Grid { ColumnSpacing = 12, Padding = new Thickness(0, 4, 0, 4) };
+        row.ColumnDefinitions.Add(new ColumnDefinition { Width = GridLength.Auto });
+        row.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(1, GridUnitType.Star) });
+        row.ColumnDefinitions.Add(new ColumnDefinition { Width = GridLength.Auto });
+        // A filled check once done, an empty ring while open.
+        var mark = new FontIcon
         {
-            GettingStartedStep.NewRepository => ((FrameworkElement)AddRepositoryButton, T("GettingStarted.NewRepository.Title"), T("GettingStarted.NewRepository.Body")),
-            GettingStartedStep.Paths => (DashboardPathsExpander, T("GettingStarted.Paths.Title"), T("GettingStarted.Paths.Body")),
-            _ => (DashboardOpenRepositoryButton, T("GettingStarted.OpenMods.Title"), T("GettingStarted.OpenMods.Body"))
+            Glyph = ((char)(done ? 0xEC61 : 0xEA3A)).ToString(), FontSize = 18, VerticalAlignment = VerticalAlignment.Center,
+            Opacity = done ? 1 : 0.6
         };
-        // Moving to another target: close first, so the tip opens again beside the new one.
-        GettingStartedTip.IsOpen = false;
-        GettingStartedTip.Title = title;
-        GettingStartedTip.Subtitle = body;
-        GettingStartedStepTextBlock.Text = T("GettingStarted.Step", tips.Number, GettingStartedTips.Steps.Count);
-        GettingStartedSkipButton.Content = T("GettingStarted.Skip");
-        GettingStartedNextButton.Content = tips.IsLast ? T("GettingStarted.Done") : T("GettingStarted.Next");
-        AutomationProperties.SetName(GettingStartedTip, title);
-        AutomationProperties.SetHelpText(GettingStartedTip, body);
-        // The Next button is focused, so Narrator reads the step with it.
-        string announcement = T("GettingStarted.Announcement", title, body);
-        AutomationProperties.SetHelpText(GettingStartedNextButton, announcement);
-        // The tip is placed against where its target is when it opens. So the page scrolls the target into view
-        // first, without animation, the layout is brought up to date, and only then is the tip placed and opened.
-        // Step 2 used to open while the page was still moving to the path settings, beside where they had been.
-        int version = ++_gettingStartedTipVersion;
-        bool belowLeft = tips.Current == GettingStartedStep.NewRepository;
-        DispatcherQueue.TryEnqueue(() =>
+        if (done) mark.Foreground = ThemeBrush("AppSuccessBrush");
+        row.Children.Add(mark);
+        var text = new StackPanel { Spacing = 1, VerticalAlignment = VerticalAlignment.Center };
+        text.Children.Add(new TextBlock
         {
-            if (version != _gettingStartedTipVersion || ViewModel.GettingStarted?.IsPending != true || XamlRoot is null) return;
-            UpdateLayout();
-            double top = target.TransformToVisual(DashboardRootPanel).TransformPoint(new Windows.Foundation.Point(0, 0)).Y;
-            // The target sits at least a tip's height below the top, so a tall one can be pointed at from above.
-            double lead = Math.Max(DashboardScrollViewer.ViewportHeight * 0.3, GettingStartedTipHeight + 24);
-            double offset = Math.Clamp(top - lead, 0, DashboardScrollViewer.ScrollableHeight);
-            if (Math.Abs(offset - DashboardScrollViewer.VerticalOffset) >= 1)
-            {
-                DashboardScrollViewer.ChangeView(null, offset, null, disableAnimation: true);
-                UpdateLayout();
-            }
-            PlaceGettingStartedTip(target, belowLeft);
-            GettingStartedTip.IsOpen = true;
-            _ = FocusGettingStartedTipAsync(announcement);
+            Text = title, TextWrapping = TextWrapping.Wrap,
+            FontWeight = next ? Microsoft.UI.Text.FontWeights.SemiBold : Microsoft.UI.Text.FontWeights.Normal,
+            Opacity = done ? 0.7 : 1
         });
-    }
-
-    // Below or above the target when the tip fits there, otherwise in the middle of the page pointing at nothing;
-    // never beside a wide target, where it used to leave the window (J8 follow-up).
-    private void PlaceGettingStartedTip(FrameworkElement target, bool belowLeft)
-    {
-        Windows.Foundation.Rect bounds = target.TransformToVisual(null)
-            .TransformBounds(new Windows.Foundation.Rect(0, 0, target.ActualWidth, target.ActualHeight));
-        TipPlacement placement = TipPlacementPolicy.Choose(bounds.X, bounds.Y, bounds.Width, bounds.Height,
-            XamlRoot.Size.Width, XamlRoot.Size.Height, GettingStartedTipWidth, GettingStartedTipHeight, belowLeft);
-        GettingStartedTip.Target = placement == TipPlacement.Center ? null : target;
-        GettingStartedTip.PreferredPlacement = placement switch
+        if (!done) text.Children.Add(new TextBlock { Text = detail, TextWrapping = TextWrapping.Wrap, Style = (Style)Application.Current.Resources["CaptionTextStyle"] });
+        Grid.SetColumn(text, 1);
+        row.Children.Add(text);
+        if (!done)
         {
-            TipPlacement.BottomLeft => TeachingTipPlacementMode.BottomLeft,
-            TipPlacement.Bottom => TeachingTipPlacementMode.Bottom,
-            TipPlacement.Top => TeachingTipPlacementMode.Top,
-            _ => TeachingTipPlacementMode.Center
-        };
-    }
-
-    // A teaching tip is at most 336 wide; with its tail and the longest (Russian) step text it stays within these.
-    private const double GettingStartedTipWidth = 360;
-    private const double GettingStartedTipHeight = 300;
-
-    // The tip's popup is laid out a moment after it opens; until then its buttons cannot take the focus.
-    private async Task FocusGettingStartedTipAsync(string announcement)
-    {
-        for (int attempt = 0; attempt < 20 && GettingStartedTip.IsOpen; attempt++)
-        {
-            await Task.Delay(100);
-            if (GettingStartedNextButton.XamlRoot is not null && GettingStartedNextButton.Focus(FocusState.Programmatic)) break;
+            var button = new Button
+            {
+                Content = action, MinHeight = 30, Padding = new Thickness(12, 3, 12, 4), VerticalAlignment = VerticalAlignment.Center,
+                Style = (Style)Application.Current.Resources[next ? "AccentButtonStyle" : "SecondaryButtonStyle"]
+            };
+            AutomationProperties.SetAutomationId(button, "GettingStarted" + task + "Button");
+            AutomationProperties.SetName(button, action + ": " + title);
+            button.Click += (_, _) =>
+            {
+                if (feature is null) ViewModel.Request(DashboardAction.OpenSearch);
+                else ViewModel.Request(DashboardAction.RunFeature, feature);
+            };
+            Grid.SetColumn(button, 2);
+            row.Children.Add(button);
         }
-        if (!GettingStartedTip.IsOpen) return;
-        FrameworkElementAutomationPeer.FromElement(GettingStartedTip)?.RaiseNotificationEvent(AutomationNotificationKind.Other,
-            AutomationNotificationProcessing.ImportantMostRecent, announcement, "GettingStartedTip");
+        AutomationProperties.SetName(row, (done ? T("GettingStarted.DoneTask") : T("GettingStarted.OpenTask")) + ": " + title);
+        return row;
     }
 
-    private void OnGettingStartedNextClicked(object sender, RoutedEventArgs e)
-    {
-        if (ViewModel.GettingStarted is not { } tips) return;
-        tips.Next();
-        if (tips.IsPending) ShowGettingStartedTip();
-        else FinishGettingStarted();
-    }
-
-    private void OnGettingStartedSkipClicked(object sender, RoutedEventArgs e) => CloseGettingStarted();
-
-    private void OnGettingStartedTipKeyDown(object sender, Microsoft.UI.Xaml.Input.KeyRoutedEventArgs e)
-    {
-        if (e.Key != Windows.System.VirtualKey.Escape) return;
-        e.Handled = true;
-        CloseGettingStarted();
-    }
-
-    // The tip's own close button (X); the page's own closes are programmatic and keep the tips.
-    private void OnGettingStartedTipClosed(TeachingTip sender, TeachingTipClosedEventArgs args)
-    {
-        if (args.Reason != TeachingTipCloseReason.Programmatic && ViewModel.GettingStarted is not null) CloseGettingStarted();
-    }
-
-    private void CloseGettingStarted()
-    {
-        ViewModel.GettingStarted?.Close();
-        FinishGettingStarted();
-    }
-
-    private void FinishGettingStarted()
-    {
-        GettingStartedTip.IsOpen = false;
-        ViewModel.Request(DashboardAction.GettingStartedTipsClosed);
-    }
+    private void OnGettingStartedCloseClicked(object sender, RoutedEventArgs e) => ViewModel.Request(DashboardAction.GettingStartedClosed);
 }

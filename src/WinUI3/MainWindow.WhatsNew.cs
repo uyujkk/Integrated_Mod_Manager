@@ -32,7 +32,8 @@ public sealed partial class MainWindow
             return;
         }
 
-        var dialog = WhatsNewDialog.Create(_services, WhatsNewFeatureSet, RootGrid.ActualHeight);
+        var dialog = WhatsNewDialog.Create(_services, WhatsNewFeatureSet, RootGrid.ActualHeight,
+            () => DispatcherQueue.TryEnqueue(OpenCommandPalette));
         _shell.WhatsNewSeenVersion = WhatsNewFeatureSet;
         SaveShellConfig();
         switch (await _services.Dialogs.ShowAsync(dialog))

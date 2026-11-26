@@ -57,6 +57,8 @@ public sealed class AppSession : IDisposable
             ["ShortcutPanelHotkeyEnabled"] = true,
             ["ShortcutPanelHotkeyModifiers"] = 3,
             ["ShortcutPanelHotkeyKey"] = 0x78,
+            // The one-time page hints are closed, so the pages lay out as before; DiscoverabilityTests opens them.
+            ["ClosedPageHints"] = new JsonArray("repository", "online", "updates", "shortcuts"),
             ["Repositories"] = new JsonArray(new JsonObject
             {
                 ["Id"] = "ui-repository", ["Name"] = "UI repository", ["SourcePath"] = mods, ["TargetPath"] = target,

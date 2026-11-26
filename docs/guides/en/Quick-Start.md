@@ -10,11 +10,13 @@
 4. Optional: turn on directory-link deployment and choose an external launcher; Endfield repositories can use the integrated launch.
 5. Open the Repositories page. While the repository isn't set up, a **Get started** card lists the remaining steps.
 
+After a first install, the dashboard has a **First steps** card at the top: set the paths, add a first Mod, turn a Mod on, find features with the search, and look at shortcuts and the overlay. Each one ticks itself off when you do it, and its button takes you to the place. **Hide** closes the card; bring it back from the search with **Show the first steps**. It never pops up or covers the page.
+
 Recommended structure: `Mod Storage\Character\Specific Mod\files…`. The first level is a character or category; the second level is the complete Mod folder that gets deployed.
 
 ## Features at a glance
 
-- **Navigation and search:** `Ctrl+K` opens a command palette over the pages and the current repository's characters and Mods; the navigation collapses to an icon rail, and download progress sits at its foot.
+- **Navigation and search:** `Ctrl+K` (or the search box in the title bar) opens the search. By default it is **Detailed**: before you type, it fills the window like the Windows 8 start screen, every feature a tile grouped by page and scrolling sideways (the mouse wheel too), the main ones as wide tiles that also say where they are (settings have no tiles; type to find them); pointing at a tile shows where it is. Click one and it opens that page and outlines the place in the accent colour. Typing finds features, pages, and the current repository's characters and Mods; features are found by other words too (for example "rollback" or "d3dx_user"). Switch to **Brief** in Settings › Appearance and Language › Search style. The **?** button in the title bar opens the guide for the page on screen. Each page shows one tip the first time; its ✕ closes it for good. The navigation collapses to an icon rail, and download progress sits at its foot.
 - **Repositories and character avatars:** one repository per game; characters show avatars you can replace or bind to a catalog character.
 - **Deploying Mods:** Mod rows show a thumbnail, tags, the number of key bindings, size and deploy state, with deploy-state filters. Double-click a Mod or use the deployment button in Details; do it again to remove. With directory links, each character keeps one enabled Mod by default; allow several per character from the character menu.
 - **Import:** ZIP, 7Z, RAR, TAR and more, with Import or drag-and-drop onto the Mod area.
@@ -34,14 +36,15 @@ Recommended structure: `Mod Storage\Character\Specific Mod\files…`. The first 
 | Action | How |
 | --- | --- |
 | Deploy or remove a Mod | Double-click it, or use the deployment button in Details |
-| Change an avatar, allow several Mods | Select a character, then use More above the list or right-click it |
+| Change an avatar, rename, open the folder, allow several Mods | Select a character, then use the buttons beside the Mod card title (or right-click it) |
+| Find where a feature is | `Ctrl+K`; the detailed search lists every feature and its place |
 | Save a state slot | Select a Mod → State Slots tab |
 | Save or restore a combination | Presets at the top of Repositories |
 | Share a preset | Presets → Share preset / Import shared preset |
 | Act on several Mods | **Batch** above the Mod list |
 | Work in game | Press Ctrl + Alt + K for the overlay |
 | Import an archive | Select a character, then Import or drag onto the Mod area |
-| Search pages, characters and Mods | `Ctrl+K` |
+| Search features, pages, characters and Mods | `Ctrl+K` |
 | Set a preview | Select a Mod and drag an image onto Preview |
 | Refresh the page | `F5` |
 | Switch sections | `Alt+1` – `Alt+5` |

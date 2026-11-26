@@ -59,6 +59,36 @@ public sealed class CommandPaletteSearchTests
     }
 
     [Fact]
+    public void FeaturesAreFoundByTheirOtherWordsAboveTheirLocation()
+    {
+        var tags = new CommandPaletteEntry(CommandPaletteKind.Feature, "Edit tags", "Mod workspace › Tags", "feature:tags", "label category", "", 2);
+        var filter = new CommandPaletteEntry(CommandPaletteKind.Feature, "Filter by tag", "Mod workspace › Filters › label", "feature:filter", "", "", 2);
+        // "label" is another word for tags and only in the filter's location line.
+        Assert.Equal([tags, filter], CommandPaletteSearch.Rank([filter, tags], "label", 10));
+        // A title match ranks above another word for it.
+        var labels = new CommandPaletteEntry(CommandPaletteKind.Feature, "Label printer", "Elsewhere", "feature:labels", Area: 1);
+        Assert.Equal([labels, tags, filter], CommandPaletteSearch.Rank([filter, tags, labels], "label", 10));
+    }
+
+    [Fact]
+    public void EmptyQueryNeverListsFeatures()
+    {
+        var feature = new CommandPaletteEntry(CommandPaletteKind.Feature, "Edit tags", "Mod workspace", "feature:tags");
+        Assert.Equal([Settings, Import], CommandPaletteSearch.Rank([.. All, feature], "", 10));
+    }
+
+    [Fact]
+    public void DirectoryListsEveryFeatureAreaByArea()
+    {
+        var online = new CommandPaletteEntry(CommandPaletteKind.Feature, "Save for later", "Online", "feature:save", Area: 3);
+        var paths = new CommandPaletteEntry(CommandPaletteKind.Feature, "Paths", "Dashboard", "feature:paths", Area: 1);
+        var import = new CommandPaletteEntry(CommandPaletteKind.Feature, "Import", "Mod workspace", "feature:import", Area: 2);
+        var newRepository = new CommandPaletteEntry(CommandPaletteKind.Feature, "New repository", "Dashboard", "feature:new", Area: 1);
+        Assert.Equal([paths, newRepository, import, online],
+            CommandPaletteSearch.Directory([online, Settings, paths, DemoA, import, newRepository, Casual]));
+    }
+
+    [Fact]
     public void LimitCapsTheResults()
     {
         Assert.Single(CommandPaletteSearch.Rank(All, "o", 1));

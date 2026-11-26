@@ -30,8 +30,14 @@ public enum DashboardAction
     CheckModUpdates,
     RunLauncher,
 
-    /// <summary>The getting-started tips were closed or finished; the window saves that.</summary>
-    GettingStartedTipsClosed
+    /// <summary>The "First steps" card was closed; the window saves that.</summary>
+    GettingStartedClosed,
+
+    /// <summary>A "First steps" task's button: the argument is a feature id of the search's feature directory.</summary>
+    RunFeature,
+
+    /// <summary>The "First steps" task that opens the search.</summary>
+    OpenSearch
 }
 
 public sealed record DashboardActionRequest(DashboardAction Action, string? Argument = null);
@@ -116,16 +122,24 @@ public sealed partial class DashboardViewModel : ObservableObject
 
     public void NotifyRefreshed() => Refreshed?.Invoke(this, EventArgs.Empty);
 
-    private GettingStartedTips? _gettingStarted;
+    private GettingStartedChecklist? _gettingStarted;
+    private GettingStartedProgress _gettingStartedProgress;
 
     /// <summary>
-    /// The getting-started tips to show (stage J4-b), or null. The window sets them once no startup
-    /// dialog is open; the page walks them and asks for <see cref="DashboardAction.GettingStartedTipsClosed"/>.
+    /// The "First steps" card while it is shown, or null. The page lists the tasks and asks for
+    /// <see cref="DashboardAction.GettingStartedClosed"/> when it is closed.
     /// </summary>
-    public GettingStartedTips? GettingStarted
+    public GettingStartedChecklist? GettingStarted
     {
         get => _gettingStarted;
         set => SetProperty(ref _gettingStarted, value);
+    }
+
+    /// <summary>What is done already; the window updates it whenever the dashboard refreshes.</summary>
+    public GettingStartedProgress GettingStartedProgress
+    {
+        get => _gettingStartedProgress;
+        set => SetProperty(ref _gettingStartedProgress, value);
     }
 
     /// <summary>The current repository's name; empty when none is selected.</summary>

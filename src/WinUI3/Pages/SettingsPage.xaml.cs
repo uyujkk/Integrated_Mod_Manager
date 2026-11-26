@@ -66,6 +66,9 @@ public sealed partial class SettingsPage : UserControl
         SetCard(DensitySettingsCard, T("Settings.InterfaceDensity"), T("Settings.CompactModeShowsMoreContentOn"));
         SetCard(MotionSettingsCard, T("Settings.ReduceMotion"), T("Settings.DisablePageSlideInAndImage"));
         SetCard(TitleBarSearchSettingsCard, T("Settings.ShowTitleBarSearch"), T("Settings.ShowTitleBarSearchDescription"));
+        SetCard(SearchStyleSettingsCard, T("Settings.SearchStyle"), T("Settings.SearchStyleDescription"));
+        ViewModel.SetSearchStyleLabels([T("Settings.SearchStyleBrief"), T("Settings.SearchStyleDetailed")]);
+        AutomationProperties.SetName(SearchStyleComboBox, T("Settings.SearchStyle"));
         SetCard(TraySettingsCard, T("Tray.MinimizeToSystemTray"), T("Tray.KeepTheAppRunningInThe"));
         foreach (ToggleSwitch toggle in new[] { ReduceMotionToggleSwitch, TitleBarSearchToggleSwitch, MinimizeToTrayToggleSwitch, StartupUpdateToggleSwitch })
         {

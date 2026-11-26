@@ -9,7 +9,7 @@ param(
     [string[]]$Sizes = @('1400x900', '1000x800'),
     [string[]]$Themes = @('light', 'dark'),
     # updates-downloads and updates-recovery are the Updates page's other two views (stage J3-b);
-    # gettingstarted is the dashboard with the tips a first install shows, nosearch the dashboard with the title
+    # gettingstarted is the dashboard with the "First steps" card a first install shows, nosearch the dashboard with the title
     # bar's search box turned off (stage J4-b); overlay is the Shortcuts page with its overlay opened by the hotkey
     # (stage J5b); palette is the Mod workspace with the command palette open, searching for "test" (4.8 README).
     # None of these is in the default set.

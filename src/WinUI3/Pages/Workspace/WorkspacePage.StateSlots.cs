@@ -341,8 +341,17 @@ public sealed partial class WorkspacePage
             return item;
         }
 
-        menu.Items.Add(Item(T("PersistentVariants.UpdateSelectedSlot"), hasSlot, UpdateSelectedPersistentSlotAsync));
-        menu.Items.Add(Item(T("PersistentVariants.RenameSelectedSlot"), hasSlot, RenameSelectedPersistentSlotAsync));
+        // Updating and renaming the selected slot are the buttons beside the slot list; the rest stays here.
+        foreach ((Button button, string label) in new[]
+        {
+            (UpdatePersistentSlotButton, T("PersistentVariants.UpdateSelectedSlot")),
+            (RenamePersistentSlotButton, T("PersistentVariants.RenameSelectedSlot"))
+        })
+        {
+            button.IsEnabled = hasSlot && idle;
+            ToolTipService.SetToolTip(button, label);
+            Microsoft.UI.Xaml.Automation.AutomationProperties.SetName(button, label);
+        }
         menu.Items.Add(Item(T("PersistentVariants.WriteSlotAsModDefaults"), hasSlot, WriteSelectedSlotAsModDefaultsAsync));
         menu.Items.Add(Item(T("PersistentVariants.ImportVariantFile"), relative is not null, ImportVariantFileAsync));
         menu.Items.Add(new MenuFlyoutSeparator());
@@ -357,6 +366,18 @@ public sealed partial class WorkspacePage
         }));
         PersistentSlotMoreButton.Flyout = menu;
         PersistentSlotMoreButton.IsEnabled = repository is not null && idle;
+    }
+
+    private async void OnUpdatePersistentSlotClicked(object sender, RoutedEventArgs e)
+    {
+        try { await UpdateSelectedPersistentSlotAsync(); }
+        catch (Exception ex) { _host.ReportUiActionFailure("Persistent slot: update", ex); }
+    }
+
+    private async void OnRenamePersistentSlotClicked(object sender, RoutedEventArgs e)
+    {
+        try { await RenameSelectedPersistentSlotAsync(); }
+        catch (Exception ex) { _host.ReportUiActionFailure("Persistent slot: rename", ex); }
     }
 
     // The selected slot of the current Mod, with what is needed to capture or write it.

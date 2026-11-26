@@ -32,13 +32,17 @@ public sealed partial class OnlineModTileViewModel : ObservableObject
     private string _downloadToolTip = string.Empty;
     private string _downloadGlyph = "";
     private bool _canDownload;
+    private readonly Action? _toggleSaved;
+    private string _savedToolTip = string.Empty;
+    private string _savedGlyph = "\uE823";
 
     // Opening the details is the grid's item click (mouse or Enter), not a tile command.
-    public OnlineModTileViewModel(OnlineModCard mod, Func<Task> openPage, Func<Task> download)
+    public OnlineModTileViewModel(OnlineModCard mod, Func<Task> openPage, Func<Task> download, Action? toggleSaved = null)
     {
         Mod = mod;
         _openPage = openPage;
         _download = download;
+        _toggleSaved = toggleSaved;
     }
 
     public OnlineModCard Mod { get; }
@@ -83,6 +87,15 @@ public sealed partial class OnlineModTileViewModel : ObservableObject
             if (SetProperty(ref _canDownload, value)) DownloadCommand.NotifyCanExecuteChanged();
         }
     }
+
+    // "Save for later" used to be only in the card's right-click menu; the card shows it as a button too.
+    public string SavedToolTip { get => _savedToolTip; set => SetProperty(ref _savedToolTip, value); }
+
+    // A clock while not saved, a check mark once saved.
+    public string SavedGlyph { get => _savedGlyph; set => SetProperty(ref _savedGlyph, value); }
+
+    [RelayCommand]
+    private void ToggleSaved() => _toggleSaved?.Invoke();
 
     [RelayCommand]
     private Task OpenPageAsync() => _openPage();
