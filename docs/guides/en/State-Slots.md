@@ -1,10 +1,10 @@
 # Single-Mod State Slots
 
-> For 4.7 and later. [中文](../zh-CN/状态槽位.md) · [User guide](./User-Guide.md)
+> For 4.8.6 (state slots exist since 4.7). [中文](../zh-CN/状态槽位.md) · [User guide](./User-Guide.md)
 
 Many Mods keep their look (outfit, hair, accessories) in `global persist` variables, and the loader stores the current values in `d3dx_user.ini`. State slots save those values for **one Mod** as named sets you can switch back to.
 
-<img src="../../assets/screenshots/state-slots-v4.6.png" width="300" alt="State Slots tab: a selected slot marked current with its saved values">
+<img src="../../assets/screenshots/state-slots-v4.8.6.png" width="300" alt="State Slots tab: the loader parameter file, the Everyday slot marked current with its update and rename buttons, its two saved values, Save Slot, Delete Slot and Restore Loader State">
 
 ## Saving a slot
 
@@ -29,6 +29,8 @@ Many Mods keep their look (outfit, hair, accessories) in `global persist` variab
 
 - **Update selected slot with current values:** reads `d3dx_user.ini` again and replaces the selected slot.
 - **Rename selected slot.**
+
+These two are also the buttons beside the slot list (the refresh icon updates, the pencil renames).
 - **Write selected slot as Mod defaults:** writes the values into `global persist $variable = value` in the Mod's own INI files, so they survive clearing or deleting `d3dx_user.ini`.
   - Each file is first backed up beside it as `.imm-persist-*.bak`; the result is read back, and a failure restores the originals.
   - In copy mode the deployed copy changes too.

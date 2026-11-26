@@ -1,12 +1,12 @@
 # Combination Presets and Bundles
 
-> For 4.7.0. [中文](../zh-CN/组合预设.md) · [User guide](./User-Guide.md)
+> For 4.8.6. [中文](../zh-CN/组合预设.md) · [User guide](./User-Guide.md)
 
 A combination preset records **which Mods are enabled** in the current repository, optionally with those Mods' values from `d3dx_user.ini`. Restoring brings back the Mod set first, then writes the values. A bundle exports a preset together with its Mod files so it can be installed in another repository.
 
 To keep several sets of values for **one Mod**, use [state slots](./State-Slots.md) instead.
 
-![Combination preset workspace with synthetic members and saved-value counts](../../assets/screenshots/combination-presets-v4.1.png)
+![Combination presets: two sample presets under My Presets, the selected preset's Mods and saved-value counts in the middle, Save & Restore on the right; Export Bundle, Install Bundle, Share preset and Import shared preset above](../../assets/screenshots/combination-presets-v4.8.6.png)
 
 ## Saving a combination
 
@@ -14,8 +14,8 @@ Switch to **Presets** at the top of Repositories.
 
 1. Deploy the Mods you want in the current repository.
 2. To include values: set them up in game and press **F10** so the loader writes them.
-3. Enable persistent-state capture and select the `d3dx_user.ini` the loader actually uses.
-4. Use **New Profile** to name and save it; **Update Profile** overwrites the selected one.
+3. Under **Save & Restore** on the right, check **Include d3dx_user.ini parameters when saving/updating** and select the `d3dx_user.ini` the loader actually uses.
+4. Use **New Profile** at the bottom left to name and save it; the save button beside the preset's title (**Update Profile**) overwrites the selected one.
 
 Turn state capture off to save only the enabled set. The left panel lists this repository's presets; the middle shows members and value counts.
 
@@ -26,7 +26,7 @@ Turn state capture off to save only the enabled set. The left panel lists this r
 ## Restoring a combination
 
 1. Close the game and loader.
-2. Select a preset, choose **Restore Combination**, and review the Mods to install or remove and the value changes.
+2. Select a preset, choose **Preview and Restore** at the bottom right, and review the Mods to install or remove and the value changes.
 3. On confirmation, recognized deployments are restored first, then matching numeric persistent values are written; other Mods' values stay as they are.
 
 - With directory links, if the preset enables several Mods of a single-selection character, you are asked first.

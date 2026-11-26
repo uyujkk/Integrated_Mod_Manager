@@ -1,6 +1,6 @@
 # Quick Start
 
-> For 4.7.0. [中文](../zh-CN/快速上手.md) · [Full user guide](./User-Guide.md) · [Documentation index](../../README.md)
+> For 4.8.6. [中文](../zh-CN/快速上手.md) · [Full user guide](./User-Guide.md) · [Documentation index](../../README.md)
 
 ## Install and set up
 
@@ -11,6 +11,8 @@
 5. Open the Repositories page. While the repository isn't set up, a **Get started** card lists the remaining steps.
 
 After a first install, the dashboard has a **First steps** card at the top: set the paths, add a first Mod, turn a Mod on, find features with the search, and look at shortcuts and the overlay. Each one ticks itself off when you do it, and its button takes you to the place. **Hide** closes the card; bring it back from the search with **Show the first steps**. It never pops up or covers the page.
+
+![The First steps card at the top of the dashboard: three tasks ticked off, the other two each with a button that takes you there](../../assets/screenshots/dashboard-v4.8.6.png)
 
 Recommended structure: `Mod Storage\Character\Specific Mod\files…`. The first level is a character or category; the second level is the complete Mod folder that gets deployed.
 

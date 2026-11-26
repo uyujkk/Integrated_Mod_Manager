@@ -1,6 +1,6 @@
 # Integrated Mod Manager User Guide
 
-> For 4.7.0 on Windows 10/11 x64. Tool author: uyujkk.
+> For 4.8.6 on Windows 10/11 x64. Tool author: uyujkk.
 >
 > This is an unofficial fan-made tool. It is not affiliated with, authorized, endorsed, or sponsored by XXMI, any game publisher, or related developers.
 
@@ -25,9 +25,11 @@ The left navigation contains, from top to bottom:
 | Downloads | At the foot of the navigation: the running count and progress; click to open the task list |
 | Settings | Language, theme, density, motion, repository online categories, app updates and diagnostics |
 
-![Dashboard: the demo repository strip, paths, characters, the repository card and quick actions](../../assets/screenshots/dashboard-v4.6.png)
+![Dashboard: the First steps card at the top (three of five done), the active repository and quick actions](../../assets/screenshots/dashboard-v4.8.6.png)
 
 On wide windows, **Collapse** at the foot of the navigation turns it into an icon rail, and the choice is saved; narrow windows use the rail automatically.
+
+Repositories, Online, Updates and Shortcuts each show one tip at the top the first time you open them, saying where the page's buttons are; its ✕ closes it for good. The **?** button beside the search box in the title bar opens the guide for the page on screen.
 
 ## 2. Installation, startup and upgrades
 
@@ -83,22 +85,25 @@ Mod Storage Folder
 3. Optionally turn on directory-link deployment (4.4) and choose an external launcher.
 4. Open the Repositories page and select a character and a Mod.
 
+After a first install the Dashboard also has a **First steps** card: set the game and the paths, add a first Mod, turn a Mod on, find features with the search, and look at shortcuts and the overlay. Each task ticks itself off when you do it anywhere, and its button takes you to the place. **Hide** closes it; search for **Show the first steps** to bring it back. Upgrades do not get it.
+
 While a repository isn't set up, the Repositories page shows a **Get started** card with three steps: choose the game, set the Mod repository folder, set the deploy target. Each step has its own button; the card disappears once all are done.
 
 ### 4.2 Character list and avatars
 
-- Search characters by name; each item shows its Mod count. **New** above the list creates a character folder, and **More** opens the same menu as right-clicking a character: open folder, rename, allow several enabled Mods, avatar.
+- Search characters by name; each item shows its Mod count. **New** above the list creates a character folder.
+- Select a character and the Mod card heading has its avatar, rename (pencil) and open-folder buttons and a **Several at once** toggle. **More** above the list and the right-click menu of a character offer the same.
 - Each character shows an avatar, taken from, in order:
   1. an `.imm_avatar.*` or `avatar.*` image in the character folder;
   2. a character you bound the folder to;
   3. the catalog character whose Chinese name, English name or alias equals the folder name (case, width and spaces are ignored).
 - The catalog is shared with the Online page: the official operator list for Endfield (the built-in list fills gaps), the wiki plus GameBanana character categories for other games. A catalog older than a day refreshes in the background, so new characters appear within a day.
-- Select a character and use **Avatar** in the More or right-click menu to choose an image (copied into the folder; the old one is kept as `.imm_avatar.previous.*`), bind the folder to a character, restore the previous avatar, or remove the custom one.
+- Select a character and click the avatar beside the Mod card title (or **Avatar** in the More or right-click menu) to choose an image (copied into the folder; the old one is kept as `.imm_avatar.previous.*`), bind the folder to a character, restore the previous avatar, or remove the custom one.
 - Clicking a character in the Dashboard's character overview opens its Mods on the Repositories page.
 
 ### 4.3 Deploying and removing
 
-![Repository page: characters with avatars, a character's Mods with thumbnails, tags and deploy state, and the selected Mod's details](../../assets/screenshots/repository-v4.6.png)
+![Repositories page: the character list; the selected character's Mod card with rename, open folder, delete and Several at once in its heading; the selected Mod's details and deploy button on the right](../../assets/screenshots/repository-v4.8.6.png)
 
 - Switch between Files, Covers and Presets at the top; switching views never deploys Mods.
 - Each Mod row shows a thumbnail, the name, tags, the number of key bindings, size and deploy state. **All Mods / Deployed only / Not deployed** above the list filter by deploy state; the search box filters by name.
@@ -114,7 +119,7 @@ While a repository isn't set up, the Repositories page shows a **Get started** c
 - With **Deploy Mods with directory junctions** on, the loader and library share one copy of each Mod.
 - By default each character keeps one enabled Mod: enabling another replaces the links of its other Mods.
 - Turning a linked Mod off (double-click or **Remove from target**) removes only its junction; the Mod in the repository is not touched. A same-named link that points somewhere else shows where it points and asks first.
-- Select a character and check **Allow several enabled Mods** in the More or right-click menu to keep several enabled for it.
+- Select a character and turn on **Several at once** beside the Mod card title (or check **Allow several enabled Mods** in the More or right-click menu) to keep several enabled for it.
 - The repository editor can make several Mods the default, with individual characters turned back to one.
 - Copy mode never removes sibling copies automatically. Restoring a combination preset asks first when it enables several Mods of a single-selection character.
 
@@ -153,7 +158,9 @@ Choose a launcher executable and use **Run Launcher**; its folder is used as the
 
 Select a Mod and open the **State Slots** tab to save the Mod's current `global persist` values as named slots, several per Mod. You can also write a slot as the Mod's defaults, import a variant file, snapshot the whole `d3dx_user.ini`, and hot-apply while the game runs (experimental). See [State slots](./State-Slots.md).
 
-Every Mod gets a **Default** slot with its original defaults; restoring it reads what the Mod declares now, so it follows Mod updates. When you save a slot, the Mod menu's open state, page and position are left out by default, and the main window lists them so you can keep any. A selected slot can have a picture (captured from the game, an image file, or cleared) that shows in the overlay and in restore dialogs.
+<img src="../../assets/screenshots/state-slots-v4.8.6.png" width="300" alt="State Slots tab: the loader parameter file, the selected Everyday slot with its update and rename buttons, its two saved values, Save Slot, Delete Slot and Restore Loader State">
+
+The two buttons beside the slot list update the selected slot with the current values and rename it. Every Mod gets a **Default** slot with its original defaults; restoring it reads what the Mod declares now, so it follows Mod updates. When you save a slot, the Mod menu's open state, page and position are left out by default, and the main window lists them so you can keep any. A selected slot can have a picture (captured from the game, an image file, or cleared) that shows in the overlay and in restore dialogs.
 
 ## 6. Shortcut page and overlay
 
@@ -171,21 +178,25 @@ Open **Presets** at the top of Repositories to save the enabled Mod set, optiona
 
 The Online page browses GameBanana by character, with favorite characters and authors, download-later lists, batch downloads, search and sorting, a details drawer and a full-size gallery. The drawer's heart button opens the Mod's GameBanana page inside the manager, where you can sign in to like it (4.8.2); Settings → **Clear GameBanana sign-in** removes that sign-in. Downloads are extracted and installed automatically and their source is recorded; the download history is on the Updates page, and running tasks also open from **Downloads** at the foot of the navigation. See [Browse and download](./Browse-and-Download.md).
 
+Every card has three buttons on the right: **Save for later** (a clock), open page and download; the bottom of the details drawer has **Save for later** too. Under the author in the details, **Save author** and **All works by …**.
+
+![Online page: category tabs and subcategory chips, browsing by character, the toolbar, and the open details drawer (Save author under the author, download and Save for later at the bottom)](../../assets/screenshots/online-details-v4.8.6.png)
+
 The app never bypasses logins, captchas, payments, subscriptions, permission checks or author restrictions; requirement hints are best-effort and the author's page is authoritative.
 
 ## 9. Updates page: Mod updates, safety and tasks
 
-On wide windows the Updates page fills the window in two or three columns and doesn't scroll as a whole: tracked Mods, download history, and install safety with install backups. Each list scrolls inside its card and only builds the rows on screen, so it stays smooth with many entries. Below about 900 px the cards stack and the page scrolls.
+The top of the Updates page shows the check status of the tracked Mods and **Check Now**; below it are three views: **Mod updates**, **Download history** and **Install and recovery**. The view you pick is remembered. Lists only build the rows on screen, so they stay smooth with many entries.
 
-![Updates page: tracked Mods, a filtered download history and install safety](../../assets/screenshots/updates-v4.6.png)
+![The Mod updates view: status filters, two sample tracked Mods with open-folder, open-page and More buttons on each row, and the check interval below](../../assets/screenshots/updates-v4.8.6.png)
 
 ### 9.1 Tracked Mod updates
 
-Online installs record the remote ID, source link, preview and update time. Check manually or every day, three days or week (the check settings are one row at the top of the card).
+Online installs record the remote ID, source link, preview and update time. Check manually or every day, three days or week (**Check interval** is below the list).
 
 - Each row shows a thumbnail, the title, the recorded and latest dates, and a status: update available, check failed, not checked or up to date. Updates come first.
 - **All / Updates / Check failed / Up to date** above the list filter by status and show counts; the search box filters by name.
-- Each row has its actions on the right: **Download and replace** when there is an update (the old files are backed up first), open page, and More (for example delete the tracking record). Deleting a tracking record never deletes local files.
+- Each row has its actions on the right: open the local folder, **Download and replace** when there is an update (the old files are backed up first), open page, and More (for example delete the tracking record). Deleting a tracking record never deletes local files.
 
 ### 9.2 Conflict detection
 
@@ -193,13 +204,19 @@ Before installing or applying a profile, target paths and INI conflicts are chec
 
 ### 9.3 Backups and rollback
 
+The **Install and recovery** view has the **Detect conflicts before install** switch, **Undo Last Mod Change**, a way into the combination presets, and **Install Backups**.
+
+![The Install and recovery view: Detect conflicts before install, Undo Last Mod Change, the way into combination presets, and Install Backups](../../assets/screenshots/updates-recovery-v4.8.6.png)
+
 - Deploy, remove and profile changes create transactional backups and roll back on failure; the latest change can be undone by hand.
 - The backup list shows time, affected Mods and size, with a Restore action. Set a 0.5–100 GB cap in the **Install Backups** card on the Updates page; older backups are pruned beyond it.
 - Parameter writes keep their own backups (`d3dx_user.ini.imm-persist-*.bak`, `.imm-snapshot-*.bak`) beside the parameter file. Undoing a deployment does not undo parameters.
 
 ### 9.4 Download history and tasks
 
-**Download history** rows show an outcome icon, the title and the last status, with **All / Completed / Failed / Canceled** filters. Completed tasks open their output folder; failed ones can be retried. Running tasks also appear under **Downloads** at the foot of the navigation, where you can cancel them or clear finished entries.
+**Download history** rows show an outcome icon, the title and the last status, with **All / Completed / Failed / Canceled** filters; every row has **Open Folder**, and **Clear Finished** clears the list. Running tasks appear under **Downloads** at the foot of the navigation, where you can cancel them; failed ones can be retried, see [Browse and download](./Browse-and-Download.md#download-task-center). An empty history has a button that takes you to the Online page.
+
+![The Download history view: one completed, one failed and one canceled sample, each with Open Folder](../../assets/screenshots/updates-downloads-v4.8.6.png)
 
 ## 10. App updates
 
@@ -242,7 +259,7 @@ Configuration writes are atomic with rotated backups; a damaged main configurati
 
 ## 12. Keyboard
 
-<img src="../../assets/screenshots/command-palette-v4.6.png" width="560" alt="Command palette searching for out: matching Mods with their character and deploy state">
+<img src="../../assets/screenshots/feature-search-results-v4.8.6.png" width="620" alt="Searching for slot: features grouped by page, each saying where it is">
 
 | Key | Action |
 | --- | --- |
@@ -257,6 +274,8 @@ Configuration writes are atomic with rotated backups; a damaged main configurati
 | `Left` / `Right` | Change image in the full-size viewer |
 
 **Finding features:** the search has two styles, set in Settings › Appearance and Language › Search style. **Detailed** (the default) opens like the Windows 8 start screen: it fills the window with a tile for every feature (the main ones wide, with their place on them; settings have no tiles and are found by typing), grouped by page and scrolling sideways; pointing at a tile or moving to it with the arrow keys shows where it is underneath, and typing turns it into search results; **Brief** lists pages and commands, and shows matching features as you type. Picking a feature opens its page, unfolds the group it is in and outlines it in the accent colour for a few seconds, with the keyboard focus on it; a feature that needs a selected character or Mod first says where it is at the bottom of the window. The **?** button in the title bar opens the guide for the page on screen.
+
+![The detailed search style: a start screen of tiles grouped by page; wide tiles say where they are](../../assets/screenshots/feature-search-v4.8.6.png)
 
 ## 13. Troubleshooting
 
@@ -275,6 +294,6 @@ Configuration writes are atomic with rotated backups; a damaged main configurati
 - Detection, translation and automatic extraction are aids; the original author page is authoritative. Inspect and scan unknown Mods first.
 - Review screenshots, configuration and diagnostics for personal paths, accounts or credentials before sharing.
 
-**Feature status (4.7.0):** directory-link deployment, loader state restore and combination presets are verified, stable features; variant file import still needs a real exported file; F10 hot apply and online auto-translation remain experimental. Not yet confirmed in a real game: XXMI launches, click-through in full screen, automatic contrast, restoring Default slots and importing a shared preset.
+**Feature status (4.8.6):** directory-link deployment, loader state restore and combination presets are verified, stable features (the 4.8.5 fix for turning off junction-deployed Mods is not yet confirmed in a real game); variant file import still needs a real exported file; F10 hot apply and online auto-translation remain experimental. Not yet confirmed in a real game: XXMI launches, click-through in full screen, automatic contrast, restoring Default slots and importing a shared preset.
 
 Source code, issues and full release history: <https://github.com/uyujkk/Integrated_Mod_Manager>
