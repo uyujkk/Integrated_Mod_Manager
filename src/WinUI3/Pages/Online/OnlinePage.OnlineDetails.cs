@@ -597,6 +597,56 @@ public sealed partial class OnlinePage
         ToolTipService.SetToolTip(LikeOnlineDetailButton, label);
         LikeOnlineDetailButton.Visibility = GameBananaWeb.ModPage(mod.ItemId, mod.ProfileUrl) is not null
             ? Visibility.Visible : Visibility.Collapsed;
+        UpdateOnlineDetailSavedButton(mod);
+    }
+
+    // The drawer's "save for later" button mirrors the card's: a clock and "Save for later", or a check mark and
+    // "Remove from saved".
+    internal void UpdateOnlineDetailSavedButton(OnlineModCard? shown = null)
+    {
+        if (SaveOnlineDetailButton is null) return;
+        OnlineModCard? current = shown ?? _activeOnlineDetailMod;
+        bool saved = current is not null && IsSavedOnlineMod(current);
+        string label = saved ? T("OnlineLibrary.RemoveFromSaved") : T("OnlineLibrary.SaveForLater");
+        SaveOnlineDetailIcon.Glyph = saved ? "\uE73E" : "\uE823";
+        SaveOnlineDetailTextBlock.Text = label;
+        Microsoft.UI.Xaml.Automation.AutomationProperties.SetName(SaveOnlineDetailButton, label);
+        SaveOnlineDetailButton.IsEnabled = current is not null && _services.Repositories.Selected is not null;
+        UpdateOnlineDetailAuthorButtons(current);
+    }
+
+    // Under the author line: all of this author's works, and a star to save the author (filled once saved).
+    internal void UpdateOnlineDetailAuthorButtons(OnlineModCard? shown = null)
+    {
+        if (OnlineDetailAuthorActions is null) return;
+        OnlineModCard? current = shown ?? _activeOnlineDetailMod;
+        bool hasAuthor = current is { AuthorId: > 0 };
+        OnlineDetailAuthorActions.Visibility = hasAuthor ? Visibility.Visible : Visibility.Collapsed;
+        if (!hasAuthor) return;
+        bool saved = IsSavedAuthor(current!);
+        OnlineDetailAuthorWorksButton.Content = T("OnlineLibrary.AuthorWorks", current!.Author);
+        Microsoft.UI.Xaml.Automation.AutomationProperties.SetName(OnlineDetailAuthorWorksButton, T("OnlineLibrary.AuthorWorks", current.Author));
+        string label = saved ? T("OnlineLibrary.UnsaveAuthor") : T("OnlineLibrary.SaveAuthor");
+        OnlineDetailSaveAuthorIcon.Glyph = ((char)(saved ? 0xE735 : 0xE734)).ToString();
+        OnlineDetailSaveAuthorTextBlock.Text = label;
+        Microsoft.UI.Xaml.Automation.AutomationProperties.SetName(OnlineDetailSaveAuthorButton, label);
+        OnlineDetailSaveAuthorButton.IsEnabled = _services.Repositories.Selected is not null;
+    }
+
+    private async void OnOnlineDetailAuthorWorksClicked(object sender, RoutedEventArgs e)
+    {
+        if (_activeOnlineDetailMod is not { AuthorId: > 0 } mod) return;
+        await _host.RunUiActionAsync("BrowseOnlineAuthorAsync", () => BrowseOnlineAuthorAsync(mod.AuthorId, mod.Author));
+    }
+
+    private void OnOnlineDetailSaveAuthorClicked(object sender, RoutedEventArgs e)
+    {
+        if (_activeOnlineDetailMod is { } mod) ToggleSavedAuthor(mod);
+    }
+
+    private void OnSaveOnlineDetailClicked(object sender, RoutedEventArgs e)
+    {
+        if (_activeOnlineDetailMod is { } mod) ToggleSavedOnlineMod(mod);
     }
 
     private async void OnLikeOnlineDetailClicked(object sender, RoutedEventArgs e)

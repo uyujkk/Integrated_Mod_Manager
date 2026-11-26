@@ -160,6 +160,11 @@ public sealed partial class MainWindow
                 ApplyTitleBarSearchVisibility();
                 SaveShellConfig();
                 break;
+            case nameof(SettingsViewModel.SearchStyleIndex):
+                if (_isApplyingTitleBarSearchSetting || (SettingsView.SearchStyleIndex == 1) == _shell.DetailedSearch) return;
+                _shell.DetailedSearch = SettingsView.SearchStyleIndex == 1;
+                SaveShellConfig();
+                break;
         }
     }
 

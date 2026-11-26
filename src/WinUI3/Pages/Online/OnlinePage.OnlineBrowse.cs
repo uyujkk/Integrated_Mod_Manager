@@ -141,6 +141,7 @@ public sealed partial class OnlinePage
             model.StatusToolTip = state.ToolTip;
             model.DownloadToolTip = state.Action;
             model.DownloadGlyph = state.Glyph;
+            ApplyOnlineSavedState(model);
         }
         view.Loaded += (_, _) => { _onlineCardRefreshers.Add(Refresh); Refresh(true); };
         view.Unloaded += (_, _) => _onlineCardRefreshers.Remove(Refresh);

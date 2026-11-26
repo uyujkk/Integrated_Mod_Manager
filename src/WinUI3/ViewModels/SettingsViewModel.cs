@@ -72,6 +72,8 @@ public sealed partial class SettingsViewModel : ObservableObject
     private int _updateIntervalIndex;
     private bool _minimizeToTray;
     private bool _showTitleBarSearch = true;
+    private int _searchStyleIndex = 1;
+    private IReadOnlyList<string> _searchStyleOptions = [];
     private string _updateStatus = string.Empty;
     private string _releaseTitle = string.Empty;
     private string _releaseMeta = string.Empty;
@@ -173,6 +175,24 @@ public sealed partial class SettingsViewModel : ObservableObject
     {
         get => _showTitleBarSearch;
         set => SetProperty(ref _showTitleBarSearch, value);
+    }
+
+    /// <summary>The search's two styles, in the current language: brief, detailed.</summary>
+    public IReadOnlyList<string> SearchStyleOptions => _searchStyleOptions;
+
+    /// <summary>0 brief (pages and commands until something is typed), 1 detailed (every feature and where it is).</summary>
+    public int SearchStyleIndex
+    {
+        get => _searchStyleIndex;
+        // The combo box reports -1 while its list is replaced; that is not a choice.
+        set { if (value is 0 or 1) SetProperty(ref _searchStyleIndex, value); }
+    }
+
+    public void SetSearchStyleLabels(IReadOnlyList<string> labels)
+    {
+        _searchStyleOptions = labels;
+        OnPropertyChanged(nameof(SearchStyleOptions));
+        OnPropertyChanged(nameof(SearchStyleIndex));
     }
 
     public string UpdateStatus

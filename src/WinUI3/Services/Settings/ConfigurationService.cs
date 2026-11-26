@@ -77,7 +77,7 @@ internal sealed class ConfigurationService(AppServices services)
             fallbackRepository = SlotService.TryCreatePersistentDemoRepository() ?? fallbackRepository;
             _services.Repositories.Items.Add(fallbackRepository);
             _services.Repositories.SelectedId = fallbackRepository.Id;
-            Settings.GettingStartedTips = GettingStartedTips.Load(FirstInstall, savedPending: false);
+            Settings.GettingStarted = GettingStartedChecklist.Load(FirstInstall, savedPending: false);
             Settings.WhatsNewSeenVersion = WhatsNewPolicy.SeenAfterLoad(null, _whatsNewFeatureSet, FirstInstall);
             SaveShell();
             _applySelectedRepositoryToInputs();
@@ -172,6 +172,10 @@ internal sealed class ConfigurationService(AppServices services)
             Settings.StoredThemePreference = config?.ThemePreference;
             Settings.MinimizeToTray = config?.MinimizeToTray ?? false;
             Settings.ShowTitleBarSearch = config?.ShowTitleBarSearch ?? true;
+            Settings.DetailedSearch = !string.Equals(config?.SearchStyle, "brief", StringComparison.OrdinalIgnoreCase);
+            Settings.ClosedPageHints = new HashSet<string>(config?.ClosedPageHints ?? [], StringComparer.OrdinalIgnoreCase);
+            Settings.SearchUsed = config?.SearchUsed ?? false;
+            Settings.ShortcutsVisited = config?.ShortcutsVisited ?? false;
             Settings.InterfaceDensity = string.Equals(config?.InterfaceDensity, "compact", StringComparison.OrdinalIgnoreCase)
                 ? InterfaceDensity.Compact
                 : InterfaceDensity.Comfortable;
@@ -215,11 +219,11 @@ internal sealed class ConfigurationService(AppServices services)
             Settings.WindowMaximized = config?.WindowMaximized ?? false;
             Settings.WhatsNewSeenVersion = WhatsNewPolicy.SeenAfterLoad(config?.WhatsNewSeenVersion, _whatsNewFeatureSet, FirstInstall);
             _services.Install.LoadCopyRecords(config?.CopyDeployments ?? []);
-            Settings.GettingStartedTips = GettingStartedTips.Load(FirstInstall, config?.GettingStartedTipsPending ?? false);
+            Settings.GettingStarted = GettingStartedChecklist.Load(FirstInstall, config?.GettingStartedTipsPending ?? false);
         }
         catch
         {
-            Settings.GettingStartedTips = GettingStartedTips.Load(FirstInstall, savedPending: false);
+            Settings.GettingStarted = GettingStartedChecklist.Load(FirstInstall, savedPending: false);
             _services.Repositories.Items.Add(fallbackRepository);
             _services.Repositories.SelectedId = fallbackRepository.Id;
             Settings.CurrentSection = PrimarySection.Dashboard;
@@ -340,6 +344,10 @@ internal sealed class ConfigurationService(AppServices services)
                 ThemePreference = ThemePreferences.Format(Settings.ThemePreference),
                 MinimizeToTray = Settings.MinimizeToTray,
                 ShowTitleBarSearch = Settings.ShowTitleBarSearch,
+                SearchStyle = Settings.DetailedSearch ? "detailed" : "brief",
+                ClosedPageHints = [.. Settings.ClosedPageHints.Order(StringComparer.Ordinal)],
+                SearchUsed = Settings.SearchUsed,
+                ShortcutsVisited = Settings.ShortcutsVisited,
                 NavigationCollapsed = Settings.NavigationCollapsed,
                 InterfaceDensity = Settings.InterfaceDensity == InterfaceDensity.Compact ? "compact" : "comfortable",
                 OnlineCardLayout = _services.Online.Page.CardLayoutMode == OnlineCardLayoutMode.Grid ? "grid" : "list",
@@ -363,7 +371,7 @@ internal sealed class ConfigurationService(AppServices services)
                 WhatsNewSeenVersion = Settings.WhatsNewSeenVersion,
                 Repositories = [.. _services.Repositories.Items],
                 RepositoryGamesExplicit = true,
-                GettingStartedTipsPending = Settings.GettingStartedTips.IsPending,
+                GettingStartedTipsPending = Settings.GettingStarted.IsPending,
                 ExtensionData = _services.ShellConfig.ExtensionData
             };
 

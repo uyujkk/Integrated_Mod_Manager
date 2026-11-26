@@ -24,6 +24,7 @@ public sealed partial class WorkspacePage
         var button = new Button { Content = new FontIcon { Glyph = "\uE8B5", FontSize = 16 }, MinHeight = 34, Flyout = menu };
         ToolTipService.SetToolTip(button, T("ExistingModImport.OrganizeExistingMods"));
         AutomationProperties.SetName(button, T("ExistingModImport.OrganizeExistingMods"));
+        AutomationProperties.SetAutomationId(button, "ExistingModImportButton");
         menu.Opening += (_, _) =>
         {
             import.Text = T("ExistingModImport.PreviewAndCopyExistingMods");

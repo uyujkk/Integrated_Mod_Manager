@@ -62,6 +62,23 @@ public sealed partial class WorkspacePage
             && CharacterSelectionPolicy.AllowsMultiple(item.Name, repository.AllowMultipleModsPerCharacter, repository.CharacterSelectionOverrides);
         CharacterMultipleModsToggle.IsEnabled = item is not null && repository is not null;
         CharacterMultipleModsToggle.IsChecked = allows;
+        CharacterMultipleModsTextBlock.Text = T("CharacterSelection.SeveralModsShort");
+        // The Mod card heading shows the selected character's avatar and its rename and folder buttons.
+        CharacterAvatarHost.DataContext = item;
+        Visibility characterVisibility = item is null ? Visibility.Collapsed : Visibility.Visible;
+        CharacterAvatarButton.Visibility = characterVisibility;
+        RenameFirstLevelButton.Visibility = characterVisibility;
+        OpenCharacterFolderButton.Visibility = characterVisibility;
+        CharacterMultipleModsToggle.Visibility = item is null || repository is null ? Visibility.Collapsed : Visibility.Visible;
+        if (item is not null)
+        {
+            string renameTip = T("CharacterSelection.RenameCharacter", item.Name);
+            ToolTipService.SetToolTip(RenameFirstLevelButton, renameTip);
+            Microsoft.UI.Xaml.Automation.AutomationProperties.SetName(RenameFirstLevelButton, renameTip);
+            string folderTip = T("CharacterSelection.OpenCharacterFolder", item.Name);
+            ToolTipService.SetToolTip(OpenCharacterFolderButton, folderTip);
+            Microsoft.UI.Xaml.Automation.AutomationProperties.SetName(OpenCharacterFolderButton, folderTip);
+        }
         string toggleTip = item is null
             ? T("CharacterSelection.SelectACharacterToSet")
             : allows ? T("CharacterSelection.ToggleTipOn", item.Name) : T("CharacterSelection.ToggleTipOff", item.Name);
@@ -78,6 +95,12 @@ public sealed partial class WorkspacePage
             ToolTipService.SetToolTip(CharacterMoreButton, moreTip);
             Microsoft.UI.Xaml.Automation.AutomationProperties.SetName(CharacterMoreButton, moreTip);
         }
+    }
+
+    private void OnOpenCharacterFolderClicked(object sender, RoutedEventArgs e)
+    {
+        if (_services.Workspace.Characters.Selected is { } item)
+            _services.Dialogs.OpenDirectory(item.Path, T("LocalLibrary.FirstLevelFolder"));
     }
 
     private void OnCharacterMultipleModsToggleClicked(object sender, RoutedEventArgs e)

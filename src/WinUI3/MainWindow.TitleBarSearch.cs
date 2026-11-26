@@ -3,7 +3,8 @@ using Microsoft.UI.Xaml;
 namespace ModFolderCopier.WinUI;
 
 // The title bar's search box can be turned off in Settings (Appearance and language); Ctrl+K opens the
-// command palette either way, so turning it off only frees the title bar.
+// command palette either way, so turning it off only frees the title bar. The search style (brief or detailed, the
+// default) sits beside it.
 public sealed partial class MainWindow
 {
     private bool _isApplyingTitleBarSearchSetting;
@@ -24,6 +25,7 @@ public sealed partial class MainWindow
     {
         _isApplyingTitleBarSearchSetting = true;
         SettingsView.ShowTitleBarSearch = _shell.ShowTitleBarSearch;
+        SettingsView.SearchStyleIndex = _shell.DetailedSearch ? 1 : 0;
         _isApplyingTitleBarSearchSetting = false;
     }
 }

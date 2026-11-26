@@ -96,6 +96,17 @@
 
             <StackPanel Grid.Column="2" Orientation="Horizontal" Spacing="6" VerticalAlignment="Center">
                 <Button
+                    AutomationProperties.AutomationId="OnlineSaveForLaterButton"
+                    Width="34"
+                    Height="32"
+                    Padding="0"
+                    Command="{x:Bind ViewModel.ToggleSavedCommand}"
+                    ToolTipService.ToolTip="{x:Bind ViewModel.SavedToolTip, Mode=OneWay}"
+                    AutomationProperties.Name="{x:Bind ViewModel.SavedToolTip, Mode=OneWay}"
+                    Style="{StaticResource SecondaryButtonStyle}">
+                    <FontIcon Glyph="{x:Bind ViewModel.SavedGlyph, Mode=OneWay}" FontSize="14" />
+                </Button>
+                <Button
                     Width="34"
                     Height="32"
                     Padding="0"

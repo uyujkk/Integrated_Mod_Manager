@@ -1,8 +1,8 @@
 ﻿
 namespace ModFolderCopier.WinUI;
 
-// The first start after installing: the app supports several games, so it asks instead of assuming one,
-// then the getting-started tips point at the dashboard's main places (stage J4-b).
+// The first start after installing: the app supports several games, so it asks instead of assuming one. The
+// dashboard's "First steps" card (MainWindow.Features.cs) then lists the first tasks.
 public sealed partial class MainWindow
 {
     private bool _firstInstall;
@@ -26,27 +26,5 @@ public sealed partial class MainWindow
         SaveShellConfig();
         RefreshDashboard();
         RefreshRepositoryActionButtons();
-    }
-
-    /// <summary>
-    /// Hands the pending tips to the dashboard once the startup dialogs (the game, what's new, an update
-    /// prompt) are closed; the dashboard shows them while it is on screen.
-    /// </summary>
-    private async Task ShowGettingStartedTipsAsync()
-    {
-        if (!_shell.GettingStartedTips.IsPending) return;
-        await Task.Delay(1500);
-        for (int attempt = 0; attempt < 300 && IsContentDialogOpen(); attempt++)
-        {
-            await Task.Delay(1000);
-        }
-        if (_services.IsClosing || !_shell.GettingStartedTips.IsPending) return;
-        _services.Dashboard.GettingStarted = _shell.GettingStartedTips;
-    }
-
-    private void OnGettingStartedTipsClosed()
-    {
-        _services.Dashboard.GettingStarted = null;
-        SaveShellConfig();
     }
 }

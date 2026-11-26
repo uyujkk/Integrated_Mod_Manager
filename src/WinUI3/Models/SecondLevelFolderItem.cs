@@ -96,6 +96,9 @@ public sealed class SecondLevelFolderItem : System.ComponentModel.INotifyPropert
 
     public Visibility DeployedPillVisibility => _tone == ModStateTone.Deployed ? Visibility.Visible : Visibility.Collapsed;
 
+    /// <summary>Enabled in the game (copied or linked); the dashboard's "First steps" card asks.</summary>
+    public bool IsDeployed => _tone == ModStateTone.Deployed;
+
     public Visibility IdlePillVisibility => _tone == ModStateTone.Deployed ? Visibility.Collapsed : Visibility.Visible;
 
     /// <summary>The Mod's local tags, shown as chips under its name.</summary>

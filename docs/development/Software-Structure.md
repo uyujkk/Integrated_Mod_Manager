@@ -295,7 +295,7 @@ flowchart LR
 
 | 分组 / Group | `MainWindow.<名称>.cs` |
 | --- | --- |
-| 外壳 / Shell | `Shell`, `TitleBarSearch`, `CommandPalette`（创建 `Controls/CommandPalette`，打开选中的角色或 Mod / creates the palette and opens what it picked）, `Localization`, `Configuration`（窗口位置；设置文件由 `ConfigurationService` 读写 / the window's place; the files are ConfigurationService's）, `Dialogs`, `AppearanceEvents`, `Tray`（设置页的托盘开关，图标是 `TrayService` / the Settings switch; the icon is TrayService）, `SingleInstance`, `UiActionGuard`, `UiDiagnostics`, `WhatsNew`, `FirstRun` |
+| 外壳 / Shell | `Shell`, `TitleBarSearch`, `CommandPalette`（创建 `Controls/CommandPalette`，打开选中的角色或 Mod / creates the palette and opens what it picked）, `Localization`, `Configuration`（窗口位置；设置文件由 `ConfigurationService` 读写 / the window's place; the files are ConfigurationService's）, `Dialogs`, `AppearanceEvents`, `Tray`（设置页的托盘开关，图标是 `TrayService` / the Settings switch; the icon is TrayService）, `SingleInstance`, `UiActionGuard`, `UiDiagnostics`, `WhatsNew`, `FirstRun`, `Features`（搜索里的功能目录“带我去”、仪表板的上手清单、每页一次的提示、标题栏帮助 / the search's feature directory, the dashboard's First steps card, one-time page hints, title bar help） |
 | 页面宿主 / Page hosts | `DashboardHost`, `WorkspaceHost`, `OnlineHost`, `UpdatesHost`, `ShortcutsHost`, `SettingsHost` |
 | 仓库 / Repositories | `Repositories`, `RepositoryPerformance` |
 | 更新与下载 / Updates and downloads | `Updates`（检查间隔选择和 Mod 更新按钮；应用更新是 `AppUpdateService` / the interval pickers and the Mod check button; app updates are AppUpdateService）, `DownloadTasks`（导航里的任务列表 / the task list in the navigation） |
@@ -332,7 +332,7 @@ flowchart TB
 | `UiText.cs`、`UiMessage.cs` + `Strings/*.json` | 界面文案，每种语言一个文件（嵌入资源）。UI text, one embedded file per language. |
 | `Themes/Tokens.xaml`、`Styles/Controls.xaml`、`Styles/Pages.xaml` | 设计令牌（画刷、间距、圆角）和共用控件样式。Design tokens and shared control styles. |
 | `Dialogs/` | 每个对话框一个类，由 `DialogService` 显示。One class per dialog, shown by `DialogService`. |
-| `Controls/CommandPalette.cs` | Ctrl+K 命令面板：搜索页面、命令、角色和当前仓库的所有 Mod，按组显示；选中一行只导航或选择，不部署。The Ctrl+K palette: one grouped search over pages, commands, characters and Mods; a pick only navigates or selects. |
+| `Controls/CommandPalette.cs` | Ctrl+K 命令面板：搜索页面、命令、全部功能（`Services/FeatureCatalog.cs`，写明位置和快捷键）、角色和当前仓库的所有 Mod，按组显示；“详细”样式不输入文字就按页面列出全部功能。选中一行只导航、选择或指出位置（`Controls/Spotlight.cs`），不部署。The Ctrl+K palette: one grouped search over pages, commands, every feature with its place and shortcut (`Services/FeatureCatalog.cs`), characters and Mods; the detailed style lists every feature before anything is typed. A pick only navigates, selects or points at a place (`Controls/Spotlight.cs`). |
 | `ShortcutInputService.cs`, `ShortcutProcessSecurity.cs`, `ShortcutPanelHotkey.cs` | 用 `SendInput` 发送按键、检查进程权限、注册全局快捷键。Sends keys with `SendInput`, checks process integrity, registers the global hotkey. |
 | `CharacterScreenCapture.cs` | 跟随出场角色时截取 HUD 区域。Captures the HUD region to follow the active character. |
 | `Online*Adapter.cs` | 在线页状态与图片加载的适配层（与 Core 测试共用）。Adapters for online page state and image loading, also compiled into Core tests. |

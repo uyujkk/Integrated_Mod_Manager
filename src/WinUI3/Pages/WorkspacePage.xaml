@@ -229,15 +229,12 @@
                                                 Click="OnCreateFirstLevelClicked" Style="{StaticResource SecondaryButtonStyle}">
                                             <FontIcon FontSize="16" Glyph="&#xE710;" />
                                         </Button>
-                                        <!-- Rename, avatar and the several-Mods toggle are in the "More" menu, the same menu as a right-click on a
-                                             character. The hidden controls keep their state and handlers. -->
+                                        <!-- The same menu as a right-click on a character. Its actions are also visible buttons in the Mod
+                                             card's heading (avatar, rename, open folder) and beside the state chips (several Mods). -->
                                         <Button x:Name="CharacterMoreButton" Grid.Column="2" Width="32" Height="32" MinWidth="32" MinHeight="32" Padding="5" CornerRadius="4"
                                                 Click="OnCharacterMoreClicked" Style="{StaticResource SecondaryButtonStyle}">
                                             <FontIcon FontSize="16" Glyph="&#xE712;" />
                                         </Button>
-                                        <Button x:Name="RenameFirstLevelButton" x:FieldModifier="internal" Grid.Column="2" Visibility="Collapsed" Click="OnRenameFirstLevelClicked" Style="{StaticResource SecondaryButtonStyle}" />
-                                        <Button x:Name="CharacterAvatarButton" Grid.Column="2" Visibility="Collapsed" Click="OnCharacterAvatarButtonClicked" Style="{StaticResource SecondaryButtonStyle}" />
-                                        <ToggleButton x:Name="CharacterMultipleModsToggle" Grid.Column="2" Visibility="Collapsed" Click="OnCharacterMultipleModsToggleClicked" />
                                     </Grid>
                                     <TextBox x:Name="FirstLevelSearchTextBox" x:FieldModifier="internal" Grid.Row="1" Height="34" MinWidth="0" Padding="8,6,8,6" BorderThickness="0"
                                             TextChanged="OnFirstLevelSearchTextChanged" />
@@ -278,20 +275,61 @@
                                         <RowDefinition Height="Auto" />
                                         <RowDefinition Height="*" />
                                     </Grid.RowDefinitions>
+                                    <!-- The selected character: its avatar (click to change it), name, rename and open-folder buttons, then
+                                         the Mod count and deleting the selected Mod. Once these were only in the character's right-click menu. -->
                                     <Grid ColumnSpacing="8">
                                         <Grid.ColumnDefinitions>
+                                            <ColumnDefinition Width="Auto" />
                                             <ColumnDefinition Width="*" />
                                             <ColumnDefinition Width="Auto" />
                                             <ColumnDefinition Width="Auto" />
+                                            <ColumnDefinition Width="Auto" />
+                                            <ColumnDefinition Width="Auto" />
                                         </Grid.ColumnDefinitions>
-                                        <TextBlock x:Name="RepositoryModTitleTextBlock" FontSize="16" FontWeight="SemiBold" VerticalAlignment="Center" />
-                                        <TextBlock x:Name="RepositoryModCountTextBlock" Grid.Column="1" FontSize="12" VerticalAlignment="Center" />
-                                        <Button x:Name="DeleteSecondLevelButton" x:FieldModifier="internal" Grid.Column="2" Width="32" Height="32" MinHeight="32" Padding="6" CornerRadius="4"
+                                        <Button x:Name="CharacterAvatarButton" Width="34" Height="34" MinWidth="34" MinHeight="34" Padding="0" CornerRadius="17"
+                                                Click="OnCharacterAvatarButtonClicked" Style="{StaticResource SecondaryButtonStyle}">
+                                            <Grid x:Name="CharacterAvatarHost" Width="30" Height="30">
+                                                <Ellipse Fill="{ThemeResource ControlFillColorSecondaryBrush}" />
+                                                <TextBlock Text="{Binding AvatarInitial}" FontSize="12" FontWeight="SemiBold" HorizontalAlignment="Center" VerticalAlignment="Center"
+                                                        Opacity="0.75" Visibility="{Binding AvatarPlaceholderVisibility}" />
+                                                <Ellipse>
+                                                    <Ellipse.Fill>
+                                                        <ImageBrush ImageSource="{Binding AvatarImageSource}" Stretch="UniformToFill" />
+                                                    </Ellipse.Fill>
+                                                </Ellipse>
+                                            </Grid>
+                                        </Button>
+                                        <TextBlock x:Name="RepositoryModTitleTextBlock" Grid.Column="1" FontSize="16" FontWeight="SemiBold" VerticalAlignment="Center"
+                                                MaxLines="1" TextTrimming="CharacterEllipsis" />
+                                        <Button x:Name="RenameFirstLevelButton" x:FieldModifier="internal" Grid.Column="2" Width="32" Height="32" MinWidth="32" MinHeight="32" Padding="5" CornerRadius="4"
+                                                Click="OnRenameFirstLevelClicked" Style="{StaticResource SecondaryButtonStyle}">
+                                            <FontIcon FontSize="16" Glyph="&#xE70F;" />
+                                        </Button>
+                                        <Button x:Name="OpenCharacterFolderButton" x:FieldModifier="internal" Grid.Column="3" Width="32" Height="32" MinWidth="32" MinHeight="32" Padding="5" CornerRadius="4"
+                                                Click="OnOpenCharacterFolderClicked" Style="{StaticResource SecondaryButtonStyle}">
+                                            <FontIcon FontSize="16" Glyph="&#xE838;" />
+                                        </Button>
+                                        <TextBlock x:Name="RepositoryModCountTextBlock" Grid.Column="4" Margin="4,0,0,0" FontSize="12" VerticalAlignment="Center" />
+                                        <Button x:Name="DeleteSecondLevelButton" x:FieldModifier="internal" Grid.Column="5" Width="32" Height="32" MinHeight="32" Padding="6" CornerRadius="4"
                                                 Click="OnDeleteSecondLevelClicked" Style="{StaticResource DangerButtonStyle}">
                                             <FontIcon FontSize="16" Glyph="&#xE74D;" />
                                         </Button>
                                     </Grid>
-                                    <StackPanel x:Name="RepositoryStateChipsPanel" Grid.Row="2" Orientation="Horizontal" Spacing="6" />
+                                    <!-- The state chips, and on the right whether this character may keep several Mods enabled. -->
+                                    <Grid Grid.Row="2" ColumnSpacing="8">
+                                        <Grid.ColumnDefinitions>
+                                            <ColumnDefinition Width="*" />
+                                            <ColumnDefinition Width="Auto" />
+                                        </Grid.ColumnDefinitions>
+                                        <StackPanel x:Name="RepositoryStateChipsPanel" Orientation="Horizontal" Spacing="6" />
+                                        <ToggleButton x:Name="CharacterMultipleModsToggle" Grid.Column="1" MinHeight="28" Padding="10,2,12,2" CornerRadius="14"
+                                                Click="OnCharacterMultipleModsToggleClicked">
+                                            <StackPanel Orientation="Horizontal" Spacing="6">
+                                                <FontIcon FontSize="12" Glyph="&#xE71D;" />
+                                                <TextBlock x:Name="CharacterMultipleModsTextBlock" VerticalAlignment="Center" MaxLines="1" TextTrimming="CharacterEllipsis" />
+                                            </StackPanel>
+                                        </ToggleButton>
+                                    </Grid>
                                     <Border x:Name="SecondLevelDropBorder" Grid.Row="3" Padding="0" AllowDrop="True" Style="{StaticResource InsetBorderStyle}"
                                             DragOver="OnSecondLevelDragOver" DragLeave="OnDropTargetDragLeave" Drop="OnSecondLevelDrop">
                                         <!-- The list; RepositoryWorkspace.cs adds the cover view and the empty state over it. -->
@@ -487,7 +525,23 @@
                                                         <TextBox x:Name="PersistentUserIniTextBox" x:FieldModifier="internal" PlaceholderText="d3dx_user.ini" />
                                                         <Button x:Name="BrowsePersistentUserIniButton" x:FieldModifier="internal" Grid.Column="1" Style="{StaticResource SecondaryButtonStyle}" />
                                                     </Grid>
-                                                    <ComboBox x:Name="PersistentSlotComboBox" x:FieldModifier="internal" HorizontalAlignment="Stretch" />
+                                                    <!-- The slot list, with updating and renaming the selected slot beside it (once only under "More…"). -->
+                                                    <Grid ColumnSpacing="6">
+                                                        <Grid.ColumnDefinitions>
+                                                            <ColumnDefinition Width="*" />
+                                                            <ColumnDefinition Width="Auto" />
+                                                            <ColumnDefinition Width="Auto" />
+                                                        </Grid.ColumnDefinitions>
+                                                        <ComboBox x:Name="PersistentSlotComboBox" x:FieldModifier="internal" HorizontalAlignment="Stretch" />
+                                                        <Button x:Name="UpdatePersistentSlotButton" x:FieldModifier="internal" Grid.Column="1" Width="32" Height="32" MinWidth="32" MinHeight="32" Padding="5" CornerRadius="4"
+                                                                Click="OnUpdatePersistentSlotClicked" Style="{StaticResource SecondaryButtonStyle}">
+                                                            <FontIcon FontSize="16" Glyph="&#xE72C;" />
+                                                        </Button>
+                                                        <Button x:Name="RenamePersistentSlotButton" x:FieldModifier="internal" Grid.Column="2" Width="32" Height="32" MinWidth="32" MinHeight="32" Padding="5" CornerRadius="4"
+                                                                Click="OnRenamePersistentSlotClicked" Style="{StaticResource SecondaryButtonStyle}">
+                                                            <FontIcon FontSize="16" Glyph="&#xE70F;" />
+                                                        </Button>
+                                                    </Grid>
                                                     <ContentControl x:Name="PersistentSlotPreviewHost" x:FieldModifier="internal" HorizontalContentAlignment="Stretch" />
                                                     <TextBlock x:Name="PersistentSlotValuesTextBlock" x:FieldModifier="internal" Style="{StaticResource CaptionTextStyle}" TextWrapping="Wrap" IsTextSelectionEnabled="True" />
                                                     <Grid ColumnSpacing="8">

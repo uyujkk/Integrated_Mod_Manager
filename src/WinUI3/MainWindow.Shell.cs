@@ -53,6 +53,8 @@ public sealed partial class MainWindow
         // below used to run first and held the selection back by 50-100 ms on every switch (J8 follow-up).
         ShowPage(GetPage(_shell.CurrentSection));
         RefreshPrimaryNavigationVisuals();
+        RefreshPageHint();
+        if (_shell.CurrentSection == PrimarySection.Shortcuts) MarkShortcutsVisited();
         if (_shell.CurrentSection == PrimarySection.Shortcuts)
         {
             _shortcutsPage!.EnsureBuilt();
@@ -121,11 +123,7 @@ public sealed partial class MainWindow
         if (!PageContentHost.Children.Contains(page)) PageContentHost.Children.Add(page);
         foreach (UIElement child in PageContentHost.Children.ToArray())
         {
-            bool shown = ReferenceEquals(child, page);
-            // An open teaching tip stays on screen when its page is only collapsed (it does not finish closing), so a
-            // dashboard showing its getting-started tip leaves the window as before; it closes the tip when unloaded.
-            if (!shown && child is DashboardPage { HasOpenTip: true }) PageContentHost.Children.Remove(child);
-            else child.Visibility = shown ? Visibility.Visible : Visibility.Collapsed;
+            child.Visibility = ReferenceEquals(child, page) ? Visibility.Visible : Visibility.Collapsed;
         }
     }
 
@@ -310,6 +308,7 @@ public sealed partial class MainWindow
     {
         _workspaceView?.UpdateRefinedWorkspaceLanguage();
         SetNavigationItem(DashboardNavButton, T("Shell.Dashboard"), T("Shell.Dashboard"));
+        ApplyHelpLanguage();
         SetNavigationItem(RepositoryNavButton, T("Shell.Repositories"), T("Shell.Repositories"));
         SetNavigationItem(OnlineNavButton, T("Shell.Online"), T("Shell.OnlineMods"));
         SetNavigationItem(UpdatesNavButton, T("Shell.Updates"), T("Shell.Updates"));
@@ -466,13 +465,9 @@ public sealed partial class MainWindow
                 ShowAppNotification(T("Shell.InterruptedTasksRestored", _services.Downloads.RestoredInterrupted));
             await _services.Workspace.NotifyInterruptedImportsAsync();
             await ChooseFirstInstallGameAsync();
-            // Waits for any startup dialog (including the update prompt below) before showing; the
-            // getting-started tips come after what's new, so they never sit under a dialog.
-            _ = RunUiActionAsync("Show what's new", async () =>
-            {
-                await ShowWhatsNewOnceAsync();
-                await ShowGettingStartedTipsAsync();
-            });
+            // The "First steps" card is part of the dashboard, so it needs no wait for the startup dialogs.
+            RefreshGettingStarted();
+            _ = RunUiActionAsync("Show what's new", ShowWhatsNewOnceAsync);
 
             if (_services.AppUpdates.HasUnpromptedLocalPackage)
             {
