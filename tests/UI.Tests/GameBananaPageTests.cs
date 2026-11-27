@@ -27,14 +27,14 @@ public sealed class GameBananaPageTests
 
     private static string Profile(AppSession app) => Path.Combine(app.AppFolder, "cache", "gamebanana-webview2");
 
-    private static AutomationElement Visible(AppSession app, string name)
+    private static AutomationElement Visible(AppSession app, string name, int seconds = 20)
     {
         var watch = Stopwatch.StartNew();
         while (true)
         {
             AutomationElement? found = app.MainWindow.FindAllDescendants(cf => cf.ByName(name)).FirstOrDefault(element => !element.IsOffscreen);
             if (found is not null) return found;
-            if (watch.ElapsedMilliseconds > 20000) throw new InvalidOperationException("Not visible: " + name);
+            if (watch.ElapsedMilliseconds > seconds * 1000) throw new InvalidOperationException("Not visible: " + name);
             Thread.Sleep(200);
         }
     }
@@ -78,7 +78,8 @@ public sealed class GameBananaPageTests
         WaitUntil(() => PageShown(app), "the GameBanana page");
         // The notice says what the page is and where the sign-in goes; the sample page loads.
         Visible(app, app.Text("OnlineDetails.GameBananaPageNotice"));
-        Visible(app, app.Text("OnlineDetails.GameBananaLikeHint"));
+        // The hint shows once the sample page has loaded; the browser's first start can take long on a CI machine.
+        Visible(app, app.Text("OnlineDetails.GameBananaLikeHint"), seconds: 60);
     }
 
     [Fact]
