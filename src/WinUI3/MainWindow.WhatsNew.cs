@@ -9,8 +9,8 @@ namespace ModFolderCopier.WinUI;
 // later patch versions show it once. Update WhatsNewFeatureSet and the texts for the next set.
 public sealed partial class MainWindow
 {
-    private const string WhatsNewFeatureSet = "4.8.6";
-    private const string WhatsNewReleaseNotes = "v4.8.6.md";
+    private const string WhatsNewFeatureSet = "4.8.7";
+    private const string WhatsNewReleaseNotes = "v4.8.7.md";
 
     private async Task ShowWhatsNewOnceAsync()
     {

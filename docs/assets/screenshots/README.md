@@ -1,5 +1,11 @@
 # Homepage screenshots / 主页截图
 
+## 4.8.7 search / 4.8.7 搜索
+
+`feature-search-v4.8.7.png` replaces `feature-search-v4.8.6.png` on the homepage and in the user guides. It shows the 4.8.7 start screen: Windows 11 tiles over the thin acrylic backdrop, with the General, Dashboard and Repositories groups. Captured on 2026-11-27 from the Release build of the 4.8.7 preparation branch (`release/v4.8.7`, based on `60c0900`) in the same private copy (`G:\IMM-Demo-4.8.6`), English UI, dark theme, 1600 × 920 DIP at 150%, after Ctrl+K and the opening animation; 2374 × 1363 after the 4-pixel trim. `feature-search-v4.8.6.png` stays for history.
+
+`feature-search-v4.8.7.png` 取代主页和用户手册里的 `feature-search-v4.8.6.png`，显示 4.8.7 的开始屏幕：较薄亚克力背景上的 Windows 11 磁贴，以及“常用”“仪表板”“仓库”三组。2026-11-27 用 4.8.7 准备分支（`release/v4.8.7`，基于 `60c0900`）的 Release 构建，在同一个独立副本里按 Ctrl+K、等打开动画结束后截取：英文界面、深色主题、1600 × 920 DIP、150% 缩放，四边各裁掉 4 个像素后为 2374 × 1363。`feature-search-v4.8.6.png` 保留作为历史。
+
 ## 4.8.6 pages / 4.8.6 各页面
 
 The homepage, both READMEs and the user guides use this set. 主页、两份 README 和用户手册都使用这一组。
@@ -12,7 +18,7 @@ Captured on 2026-11-26 from the Release build of v4.8.6 (`fb3ec72`; `artifacts\v
 | `repository-v4.8.6.png` | Mod workspace: the sample character, the Mod card heading with rename, open folder, delete and Several at once, the two test Mods, and the details of `TestModA` |
 | `state-slots-v4.8.6.png` | State Slots tab cropped from the Mod workspace (562 × 952): the Everyday slot marked current, the update and rename buttons, its two values |
 | `combination-presets-v4.8.6.png` | Combination presets: two sample presets, the selected preset's Mods and value counts, Save & Restore |
-| `feature-search-v4.8.6.png` | The search (Ctrl+K) in its detailed style: the start screen of tiles with the General, Dashboard and Repositories groups |
+| `feature-search-v4.8.6.png` | (Replaced by the 4.8.7 picture above.) The search (Ctrl+K) in its detailed style: the start screen of tiles with the General, Dashboard and Repositories groups |
 | `feature-search-results-v4.8.6.png` | The search after typing "slot", cropped to the search panel (1230 × 610); the text was typed as "SLOT" |
 | `online-v4.8.6.png` | Online page in sample mode: categories, sample characters and Mod cards with Save for later, open page and download |
 | `online-details-v4.8.6.png` | The same with the details drawer of "Sample Mod 01": Save author, All works by …, Download Latest Archive and Save for later |

@@ -405,7 +405,7 @@ internal sealed class CommandPalette(AppServices services, Grid root, FrameworkE
         _commandPaletteSearch!.Width = tiles ? 420 : double.NaN;
         _commandPaletteSearch.HorizontalAlignment = tiles ? HorizontalAlignment.Right : HorizontalAlignment.Stretch;
         _commandPalettePanel.Padding = tiles ? new Thickness(36, 16, 36, 20) : new Thickness(12);
-        // The start screen fills the window with a see-through layer, so the page stays faintly visible; its panel has no
+        // The start screen fills the window with a thin acrylic, so the page shows through blurred; its panel has no
         // surface of its own. The list is an acrylic flyout with a shadow over a dimmed window.
         _commandPaletteOverlay!.Background = _themeBrush(tiles ? "AppStartScreenBrush" : "AppSmokeBrush");
         _commandPalettePanel.Background = tiles ? new SolidColorBrush(Microsoft.UI.Colors.Transparent) : _themeBrush("AppPaletteBackgroundBrush");

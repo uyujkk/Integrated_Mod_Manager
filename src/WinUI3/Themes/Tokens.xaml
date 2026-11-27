@@ -80,10 +80,10 @@
             <SolidColorBrush x:Key="AppSmokeBrush" Color="#4D000000" />
             <!-- AcrylicInAppFillColorDefaultBrush: the command palette. -->
             <AcrylicBrush x:Key="AppPaletteBackgroundBrush" TintColor="#FCFCFC" TintOpacity="0" TintLuminosityOpacity="0.85" FallbackColor="#F9F9F9" />
-            <!-- The start screen of tiles: a see-through layer over the whole window (no blur), so the page stays faintly visible. -->
-            <SolidColorBrush x:Key="AppStartScreenBrush" Color="#D1F3F3F3" />
-            <!-- Its tiles: nearly solid Windows 11 cards that stay readable over the page, a hairline border and a lighter hover. -->
-            <SolidColorBrush x:Key="AppTileBackgroundBrush" Color="#E6FFFFFF" />
+            <!-- The start screen of tiles: a thin in-app acrylic over the whole window, so the page shows through blurred. -->
+            <AcrylicBrush x:Key="AppStartScreenBrush" TintColor="#F3F3F3" TintOpacity="0" TintLuminosityOpacity="0.15" FallbackColor="#F3F3F3" />
+            <!-- Its tiles: Windows 11 cards (CardBackgroundFillColorDefault, CardStrokeColorDefault) and a lighter hover. -->
+            <SolidColorBrush x:Key="AppTileBackgroundBrush" Color="#B3FFFFFF" />
             <SolidColorBrush x:Key="AppTilePointerOverBrush" Color="#F2FFFFFF" />
             <SolidColorBrush x:Key="AppTileBorderBrush" Color="#14000000" />
         </ResourceDictionary>
@@ -122,9 +122,9 @@
             <SolidColorBrush x:Key="AppOnDangerFillBrush" Color="#FFFFFF" />
             <SolidColorBrush x:Key="AppSmokeBrush" Color="#4D000000" />
             <AcrylicBrush x:Key="AppPaletteBackgroundBrush" TintColor="#2C2C2C" TintOpacity="0.15" TintLuminosityOpacity="0.96" FallbackColor="#2C2C2C" />
-            <SolidColorBrush x:Key="AppStartScreenBrush" Color="#D1141414" />
-            <SolidColorBrush x:Key="AppTileBackgroundBrush" Color="#D92B2B2B" />
-            <SolidColorBrush x:Key="AppTilePointerOverBrush" Color="#F2383838" />
+            <AcrylicBrush x:Key="AppStartScreenBrush" TintColor="#1C1C1C" TintOpacity="0" TintLuminosityOpacity="0.12" FallbackColor="#202020" />
+            <SolidColorBrush x:Key="AppTileBackgroundBrush" Color="#14FFFFFF" />
+            <SolidColorBrush x:Key="AppTilePointerOverBrush" Color="#24FFFFFF" />
             <SolidColorBrush x:Key="AppTileBorderBrush" Color="#1AFFFFFF" />
         </ResourceDictionary>
         <ResourceDictionary x:Key="HighContrast">

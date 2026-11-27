@@ -1,6 +1,6 @@
 # Quick Start
 
-> For 4.8.6. [中文](../zh-CN/快速上手.md) · [Full user guide](./User-Guide.md) · [Documentation index](../../README.md)
+> For 4.8.7. [中文](../zh-CN/快速上手.md) · [Full user guide](./User-Guide.md) · [Documentation index](../../README.md)
 
 ## Install and set up
 
@@ -18,7 +18,7 @@ Recommended structure: `Mod Storage\Character\Specific Mod\files…`. The first 
 
 ## Features at a glance
 
-- **Navigation and search:** `Ctrl+K` (or the search box in the title bar) opens the search. By default it is **Detailed**: before you type, it fills the window like the Windows 8 start screen, every feature a tile grouped by page and scrolling sideways (the mouse wheel too), the main ones as wide tiles that also say where they are (settings have no tiles; type to find them); pointing at a tile shows where it is. The first time you click one, it opens that page and outlines the place in the accent colour; after that a click uses the feature directly. It opens with an animation from the bottom-left corner, the page faintly visible behind it, and Tab moves between the groups. Typing finds features, pages, and the current repository's characters and Mods; features are found by other words too (for example "rollback" or "d3dx_user"). Switch to **Brief** in Settings › Appearance and Language › Search style. The **?** button in the title bar opens the guide for the page on screen. Each page shows one tip the first time; its ✕ closes it for good. The navigation collapses to an icon rail, and download progress sits at its foot.
+- **Navigation and search:** `Ctrl+K` (or the search box in the title bar) opens the search. By default it is **Detailed**: before you type, it fills the window like the Windows 8 start screen, every feature a tile grouped by page and scrolling sideways (the mouse wheel too), the main ones as wide tiles that also say where they are (settings have no tiles; type to find them); pointing at a tile shows where it is. The first time you click one, it opens that page and outlines the place in the accent colour; after that a click uses the feature directly. It opens with an animation from the bottom-left corner, the page showing through blurred behind it, and Tab moves between the groups. Typing finds features, pages, and the current repository's characters and Mods; features are found by other words too (for example "rollback" or "d3dx_user"). Switch to **Brief** in Settings › Appearance and Language › Search style. The **?** button in the title bar opens the guide for the page on screen. Each page shows one tip the first time; its ✕ closes it for good. The navigation collapses to an icon rail, and download progress sits at its foot.
 - **Repositories and character avatars:** one repository per game; characters show avatars you can replace or bind to a catalog character.
 - **Deploying Mods:** Mod rows show a thumbnail, tags, the number of key bindings, size and deploy state, with deploy-state filters. Double-click a Mod or use the deployment button in Details; do it again to remove. With directory links, each character keeps one enabled Mod by default; allow several per character from the character menu.
 - **Import:** ZIP, 7Z, RAR, TAR and more, with Import or drag-and-drop onto the Mod area.
