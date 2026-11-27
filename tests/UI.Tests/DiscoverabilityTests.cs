@@ -13,11 +13,7 @@ public sealed class DiscoverabilityTests
     private static void WaitUntil(Func<bool> condition, string what, int seconds = 15)
         => Assert.True(FlaUI.Core.Tools.Retry.WhileFalse(condition, TimeSpan.FromSeconds(seconds)).Result, what);
 
-    private static AutomationElement OpenSearch(AppSession app)
-    {
-        Keyboard.TypeSimultaneously(VirtualKeyShort.CONTROL, VirtualKeyShort.KEY_K);
-        return app.FindByName(app.Text("CommandPalette.Placeholder"), TimeSpan.FromSeconds(5));
-    }
+    private static AutomationElement OpenSearch(AppSession app) => app.OpenSearch();
 
     [Fact]
     public void Search_DetailedListsEveryFeatureAreaByArea()
@@ -100,6 +96,58 @@ public sealed class DiscoverabilityTests
     }
 
     private const string Spotlight_RingId = "FeatureSpotlightRing";
+
+    // Only the first pick shows where a feature is; after that the tile uses it, like a start screen: here the
+    // presets view opens, and no ring is drawn. The first pick is remembered.
+    [Fact]
+    public void Search_PickingAFeatureAgainUsesIt()
+    {
+        using AppSession app = AppSession.Configured((shell, _) =>
+        {
+            shell["CurrentPrimarySection"] = "repository";
+            shell["GuidedFeatures"] = new JsonArray("Presets");
+        }).Start();
+        app.Resize(1400, 900);
+        app.Find("RepositoryViewPresets", TimeSpan.FromSeconds(10));
+        Assert.False(app.Shows("CreateConfigurationProfileButton"), "The workspace should start on the file list");
+        AutomationElement search = OpenSearch(app);
+        search.AsTextBox().Text = app.Text("Features.Presets");
+        app.Find("FeaturePresets", TimeSpan.FromSeconds(5));
+        Keyboard.Type(VirtualKeyShort.ENTER);
+        app.Find("CreateConfigurationProfileButton", TimeSpan.FromSeconds(10));
+        Thread.Sleep(800);
+        Assert.False(app.Shows(Spotlight_RingId), "A feature picked before should be used, not shown again");
+
+        // A feature picked for the first time is shown, and remembered.
+        search = OpenSearch(app);
+        search.AsTextBox().Text = app.Text("Features.Covers");
+        app.Find("FeatureCovers", TimeSpan.FromSeconds(5));
+        Keyboard.Type(VirtualKeyShort.ENTER);
+        app.Find(Spotlight_RingId, TimeSpan.FromSeconds(10));
+        app.WaitForSaved(saved => saved["GuidedFeatures"]?.AsArray().Any(item => (string?)item == "Covers") == true,
+            "The first pick should be remembered");
+        app.AssertNoErrors();
+    }
+
+    // Tab and Shift+Tab jump between the groups of the start screen.
+    [Fact]
+    public void Search_TabMovesBetweenGroupsOfTiles()
+    {
+        using AppSession app = AppSession.Configured().Start();
+        app.Resize(1400, 900);
+        OpenSearch(app);
+        app.Find("FeatureTiles", TimeSpan.FromSeconds(5));
+        Keyboard.Type(VirtualKeyShort.DOWN);
+        WaitUntil(() => app.Find("FeatureTileWhere").Name.Contains(app.Text("Features.GetStarted.Where")), "Down should reach the first tile");
+        Keyboard.Type(VirtualKeyShort.TAB);
+        WaitUntil(() => app.Find("FeatureTileWhere").Name.Contains(app.Text("Features.Paths.Where")),
+            "Tab should move to the first tile of the next group");
+        Keyboard.TypeSimultaneously(VirtualKeyShort.SHIFT, VirtualKeyShort.TAB);
+        WaitUntil(() => app.Find("FeatureTileWhere").Name.Contains(app.Text("Features.GetStarted.Where")),
+            "Shift+Tab should move back to the first tile of the previous group");
+        Keyboard.Type(VirtualKeyShort.ESCAPE);
+        app.AssertNoErrors();
+    }
 
     [Fact]
     public void Settings_SearchStyleIsSaved()

@@ -19,6 +19,23 @@ public sealed partial class MainWindow
             RefreshListsAsync, OpenDeveloperTools, ShowRepositoryItemFromPalette, ReportUiActionFailure,
             () => _shell.DetailedSearch, RunFeature, OnCommandPaletteOpened);
         _commandPalette.InitializeShortcut();
+        // A moment after start-up, when the window is idle, the search's start screen is built ahead of time.
+        var prepare = DispatcherQueue.CreateTimer();
+        prepare.Interval = TimeSpan.FromSeconds(2);
+        prepare.IsRepeating = false;
+        prepare.Tick += (timer, _) =>
+        {
+            timer.Stop();
+            try
+            {
+                _commandPalette.Prepare();
+            }
+            catch (Exception ex)
+            {
+                ReportUiActionFailure("PrepareSearch", ex);
+            }
+        };
+        prepare.Start();
     }
 
     private void OpenCommandPalette() => _commandPalette.Open();
