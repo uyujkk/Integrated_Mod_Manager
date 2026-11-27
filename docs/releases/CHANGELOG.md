@@ -6,7 +6,13 @@
 
 This document records version changes in Integrated Mod Manager. Unpublished versions are marked separately.
 
-## v4.8.6（正式版 / Stable）
+## v4.8.7（正式版 / Stable）
+
+功能搜索的磁贴改成 Windows 11 风格（#160）：保留开始屏幕式布局，磁贴是半透明的卡片，背景是一层亚克力，后面的页面模糊地透出来；按 Ctrl+K 后背景从左下角展开，磁贴一列一列地滑入（合成线程动画，启动后空闲时提前建好磁贴）。一个功能第一次选中时带你看位置，之后再选就直接使用（按下按钮、展开分组或下拉列表、切换视图），会改动数据或开关的功能只移焦点。Tab / Shift+Tab 在分组之间切换。指引框等折叠分组展开完再画，并跟着页面滚动和布局变化移动。见 [v4.8.7](v4.8.7.md)。
+
+The feature search gets Windows 11 tiles (#160): it keeps the start-screen layout, with translucent cards over an acrylic backdrop that shows the page blurred; after Ctrl+K the backdrop spreads from the bottom-left and the tiles slide in column by column (composition animations; the tiles are built ahead of time while the window is idle). The first pick of a feature shows where it is; after that a pick uses it (presses the button, opens the group or list, switches the view), and features that change data or flip a switch only get the focus. Tab and Shift+Tab move between groups. The guide ring waits until a folded group has opened and follows the place as the page scrolls or changes. See [v4.8.7](v4.8.7.md).
+
+## v4.8.6 — 2026-11-26（正式版 / Stable）
 
 功能更好找（#157）：原来只能右键的操作有了按钮（选中角色后的头像、重命名、打开文件夹和“可同时启用多个”；状态槽位的更新和重命名；在线页的“加入稍后下载”“收藏作者”和作者作品；更新页每行的“打开文件夹”）。搜索（Ctrl+K）知道 82 个功能和它们的位置，可用名字、位置或别的说法搜到；“详细”（默认）像开始屏幕一样按页面排成磁贴，选中就切到对应页面并框出位置，“简略”只列页面和命令。仪表板的“上手清单”取代了三步引导弹窗；每页第一次打开时有一条提示；标题栏的 ? 打开当前页的使用说明。见 [v4.8.6](v4.8.6.md)。
 
