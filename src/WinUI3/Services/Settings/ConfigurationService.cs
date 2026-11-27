@@ -174,6 +174,7 @@ internal sealed class ConfigurationService(AppServices services)
             Settings.ShowTitleBarSearch = config?.ShowTitleBarSearch ?? true;
             Settings.DetailedSearch = !string.Equals(config?.SearchStyle, "brief", StringComparison.OrdinalIgnoreCase);
             Settings.ClosedPageHints = new HashSet<string>(config?.ClosedPageHints ?? [], StringComparer.OrdinalIgnoreCase);
+            Settings.GuidedFeatures = new HashSet<string>(config?.GuidedFeatures ?? [], StringComparer.OrdinalIgnoreCase);
             Settings.SearchUsed = config?.SearchUsed ?? false;
             Settings.ShortcutsVisited = config?.ShortcutsVisited ?? false;
             Settings.InterfaceDensity = string.Equals(config?.InterfaceDensity, "compact", StringComparison.OrdinalIgnoreCase)
@@ -346,6 +347,7 @@ internal sealed class ConfigurationService(AppServices services)
                 ShowTitleBarSearch = Settings.ShowTitleBarSearch,
                 SearchStyle = Settings.DetailedSearch ? "detailed" : "brief",
                 ClosedPageHints = [.. Settings.ClosedPageHints.Order(StringComparer.Ordinal)],
+                GuidedFeatures = [.. Settings.GuidedFeatures.Order(StringComparer.Ordinal)],
                 SearchUsed = Settings.SearchUsed,
                 ShortcutsVisited = Settings.ShortcutsVisited,
                 NavigationCollapsed = Settings.NavigationCollapsed,

@@ -3,7 +3,9 @@ using System.Text.Json;
 using System.Text.Json.Nodes;
 using FlaUI.Core;
 using FlaUI.Core.AutomationElements;
+using FlaUI.Core.Input;
 using FlaUI.Core.Tools;
+using FlaUI.Core.WindowsAPI;
 using FlaUI.UIA3;
 
 namespace IntegratedModManager.UI.Tests;
@@ -138,6 +140,28 @@ public sealed class AppSession : IDisposable
             string name = new(what.Select(c => char.IsLetterOrDigit(c) ? c : '_').Take(60).ToArray());
             Capture($"NotFound-{name}-{DateTime.Now:HHmmss}");
             throw;
+        }
+    }
+
+    /// <summary>
+    /// Opens the search with Ctrl+K and returns its search box. Right after the window appears the key press sometimes
+    /// arrives before the window has the keyboard, so it is pressed again (with the window focused) if nothing opened.
+    /// </summary>
+    public AutomationElement OpenSearch()
+    {
+        string placeholder = Text("CommandPalette.Placeholder");
+        for (int attempt = 0; ; attempt++)
+        {
+            Keyboard.TypeSimultaneously(VirtualKeyShort.CONTROL, VirtualKeyShort.KEY_K);
+            try
+            {
+                return FindIn(MainWindow, cf => cf.ByName(placeholder), placeholder, TimeSpan.FromSeconds(3));
+            }
+            catch (InvalidOperationException) when (attempt < 2)
+            {
+                MainWindow.Focus();
+                Thread.Sleep(300);
+            }
         }
     }
 

@@ -91,6 +91,12 @@ public sealed class BetaShellConfig
     /// <summary>The one-time page hints the user closed, by page ("repository", "online", ...).</summary>
     public List<string>? ClosedPageHints { get; set; }
 
+    /// <summary>
+    /// Features already picked once from the search. The first time, picking a feature shows where it is; after that it
+    /// is used directly (a button is pressed, a group opened, a list unfolded).
+    /// </summary>
+    public List<string>? GuidedFeatures { get; set; }
+
     /// <summary>The search was opened at least once (a "First steps" task).</summary>
     public bool SearchUsed { get; set; }
 

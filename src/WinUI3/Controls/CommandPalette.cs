@@ -1,10 +1,15 @@
 using IntegratedModManager.Core.Repository;
+using System.Numerics;
+using Microsoft.UI.Composition;
+using Microsoft.UI.Input;
 using Microsoft.UI.Xaml;
 using Microsoft.UI.Xaml.Automation;
 using Microsoft.UI.Xaml.Controls;
+using Microsoft.UI.Xaml.Hosting;
 using Microsoft.UI.Xaml.Input;
 using Microsoft.UI.Xaml.Media;
 using Windows.System;
+using Windows.UI.Core;
 
 namespace ModFolderCopier.WinUI;
 
@@ -48,6 +53,11 @@ internal sealed class CommandPalette(AppServices services, Grid root, FrameworkE
     private string? _tilesKey;
     private Button? _firstTile;
     private readonly HashSet<string> _wideFeatures = new(StringComparer.Ordinal);
+    // For the opening animation and Tab: the column each tile and heading stands in, counted from the left, and the
+    // first tile of every group.
+    private readonly List<(UIElement Element, int Column)> _tileColumns = [];
+    private readonly List<Button> _groupFirstTiles = [];
+    private readonly Dictionary<Button, int> _tileGroupIndex = [];
     private const double TileSize = 150, TileHeight = 120, TileGap = 8;
 
     private string T(string key) => _services.Language.T(key);
@@ -82,10 +92,7 @@ internal sealed class CommandPalette(AppServices services, Grid root, FrameworkE
             && !IsInside(focused, _titleBarSearch) ? focused : null;
         _detailed = _detailedStyle();
         _commandPaletteEntries = BuildCommandPaletteEntries();
-        // An in-app Acrylic surface over a dimmed window, like other Windows flyouts.
-        _commandPalettePanel!.Background = _themeBrush("AppPaletteBackgroundBrush");
-        _commandPalettePanel.BorderBrush = _themeBrush("AppStrongBorderBrush");
-        _commandPaletteOverlay!.Background = _themeBrush("AppSmokeBrush");
+        _commandPalettePanel!.BorderBrush = _themeBrush("AppStrongBorderBrush");
         _commandPaletteSearch!.PlaceholderText = T("CommandPalette.Placeholder");
         AutomationProperties.SetName(_commandPaletteSearch, T("CommandPalette.Placeholder"));
         _commandPaletteHint!.Text = T("CommandPalette.Hint") + "  ·  " + (_detailed ? T("CommandPalette.DetailedHint") : T("CommandPalette.BriefHint"));
@@ -95,10 +102,31 @@ internal sealed class CommandPalette(AppServices services, Grid root, FrameworkE
         _commandPaletteSearch.Text = string.Empty;
         RefreshCommandPaletteResults();
         _commandPaletteOverlay!.Visibility = Visibility.Visible;
-        if (_tilesShown) AnimateTilesIn();
+        if (_tilesShown)
+        {
+            RevealFromBottomLeft();
+            AnimateTilesIn();
+        }
         _commandPaletteSearch.Focus(FocusState.Programmatic);
         _opened();
     }
+
+    // Builds the start screen while the window is idle, so the first Ctrl+K opens without building some eighty tiles
+    // first. The tiles are measured too, which applies their templates; they are drawn only when the search opens.
+    public void Prepare()
+    {
+        if (IsOpen || !_detailedStyle()) return;
+        EnsureCommandPalette();
+        string key = TilesKey();
+        if (key == _tilesKey) return;
+        _detailed = true;
+        _tilesKey = key;
+        BuildTiles(CommandPaletteSearch.Directory(BuildCommandPaletteEntries()));
+        _tileGroups!.Measure(new Windows.Foundation.Size(double.PositiveInfinity, Math.Max(_root.ActualHeight, 1)));
+    }
+
+    // The tiles depend on the language, the theme and how many rows fit in the window.
+    private string TilesKey() => string.Join("|", _services.Language.Current, _services.Appearance.ThemeKey, TileRows());
 
     // An accelerator works wherever focus is in the window, unlike the root KeyDown handler.
     public void InitializeShortcut()
@@ -158,6 +186,7 @@ internal sealed class CommandPalette(AppServices services, Grid root, FrameworkE
         // and typing on a tile goes on in the search box.
         _tileGroups = new StackPanel { Orientation = Orientation.Horizontal, Spacing = 40, XYFocusKeyboardNavigation = XYFocusKeyboardNavigationMode.Enabled };
         _tileGroups.CharacterReceived += OnTileCharacterReceived;
+        _tileGroups.PreviewKeyDown += OnTilePreviewKeyDown;
         _tileScroller = new ScrollViewer
         {
             Content = _tileGroups, HorizontalScrollBarVisibility = ScrollBarVisibility.Auto, HorizontalScrollMode = ScrollMode.Enabled,
@@ -268,7 +297,7 @@ internal sealed class CommandPalette(AppServices services, Grid root, FrameworkE
             _commandPaletteList.Items.Clear();
             _commandPaletteList.Visibility = Visibility.Collapsed;
             _commandPaletteEmpty!.Visibility = Visibility.Collapsed;
-            string key = string.Join("|", _services.Language.Current, _services.Appearance.ThemeKey, TileRows());
+            string key = TilesKey();
             if (key != _tilesKey)
             {
                 _tilesKey = key;
@@ -372,13 +401,20 @@ internal sealed class CommandPalette(AppServices services, Grid root, FrameworkE
         _commandPalettePanel!.Width = tiles ? double.NaN : _detailed ? 820 : 640;
         _commandPalettePanel.HorizontalAlignment = tiles ? HorizontalAlignment.Stretch : HorizontalAlignment.Center;
         _commandPalettePanel.VerticalAlignment = tiles ? VerticalAlignment.Stretch : VerticalAlignment.Top;
-        _commandPalettePanel.Margin = tiles ? new Thickness(24, 56, 24, 24) : new Thickness(16, 72, 16, 16);
+        _commandPalettePanel.Margin = tiles ? new Thickness(0, 48, 0, 0) : new Thickness(16, 72, 16, 16);
         _commandPaletteSearch!.Width = tiles ? 420 : double.NaN;
         _commandPaletteSearch.HorizontalAlignment = tiles ? HorizontalAlignment.Right : HorizontalAlignment.Stretch;
-        _commandPalettePanel.Padding = new Thickness(tiles ? 24 : 12);
+        _commandPalettePanel.Padding = tiles ? new Thickness(36, 16, 36, 20) : new Thickness(12);
+        // The start screen fills the window with a see-through layer, so the page stays faintly visible; its panel has no
+        // surface of its own. The list is an acrylic flyout with a shadow over a dimmed window.
+        _commandPaletteOverlay!.Background = _themeBrush(tiles ? "AppStartScreenBrush" : "AppSmokeBrush");
+        _commandPalettePanel.Background = tiles ? new SolidColorBrush(Microsoft.UI.Colors.Transparent) : _themeBrush("AppPaletteBackgroundBrush");
+        _commandPalettePanel.BorderThickness = new Thickness(tiles ? 0 : 1);
+        _commandPalettePanel.Translation = tiles ? Vector3.Zero : new Vector3(0, 0, 32);
     }
 
-    // Each area has its own tile colour (white text keeps a contrast of 4.5:1 or more); high contrast keeps system colours.
+    // Each area has its own colour for the icon squares of its tiles (lightened in the dark theme); high contrast keeps
+    // system colours.
     private static readonly Windows.UI.Color[] AreaColors =
     [
         Microsoft.UI.ColorHelper.FromArgb(255, 0x00, 0x63, 0xB1), Microsoft.UI.ColorHelper.FromArgb(255, 0x00, 0x6E, 0x75),
@@ -391,15 +427,16 @@ internal sealed class CommandPalette(AppServices services, Grid root, FrameworkE
     // the lines under the tiles.
     private int TileRows() => Math.Clamp((int)((_root.ActualHeight - 56 - 24 - 48 - 56 - 16 - 40 - 70) / (TileHeight + TileGap)), 2, 6);
 
-    private static Windows.UI.Color Shade(Windows.UI.Color color, double factor)
-        => Microsoft.UI.ColorHelper.FromArgb(255, (byte)(color.R * factor), (byte)(color.G * factor), (byte)(color.B * factor));
-
     // Windows 8's groups: blocks two square tiles wide, filled row by row; a wide tile takes a whole row of its block,
     // and a full block starts the next one to the right. The main features come first, as wide tiles.
     private void BuildTiles(IReadOnlyList<CommandPaletteEntry> features)
     {
         _tileGroups!.Children.Clear();
         _firstTile = null;
+        _tileColumns.Clear();
+        _groupFirstTiles.Clear();
+        _tileGroupIndex.Clear();
+        int columnBase = 0;
         bool highContrast = string.Equals(_services.Appearance.ThemeKey, "HighContrast", StringComparison.Ordinal);
         int rows = TileRows();
         foreach (var area in features.Where(feature => feature.Area != FeatureCatalog.SettingsArea)
@@ -412,9 +449,10 @@ internal sealed class CommandPalette(AppServices services, Grid root, FrameworkE
                 Margin = new Thickness(2, 0, 0, 0)
             };
             group.Children.Add(heading);
+            _tileColumns.Add((heading, columnBase));
             var grid = new Grid { RowSpacing = TileGap, ColumnSpacing = TileGap };
             for (int row = 0; row < rows; row++) grid.RowDefinitions.Add(new RowDefinition { Height = new GridLength(TileHeight) });
-            Windows.UI.Color? baseColor = highContrast ? null : AreaColors[(area.Key - 1) % AreaColors.Length];
+            Windows.UI.Color? areaColor = highContrast ? null : AreaColors[(area.Key - 1) % AreaColors.Length];
             CommandPaletteEntry[] ordered = [.. area.Where(IsWide), .. area.Where(entry => !IsWide(entry))];
             int block = 0, cell = 0, index = 0;
             foreach (CommandPaletteEntry entry in ordered)
@@ -424,104 +462,115 @@ internal sealed class CommandPalette(AppServices services, Grid root, FrameworkE
                 if (cell >= rows * 2) { block++; cell = 0; }
                 while (grid.ColumnDefinitions.Count < (block + 1) * 2)
                     grid.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(TileSize) });
-                Button tile = CreateTile(entry, wide, baseColor is { } color ? Shade(color, (index % 3) switch { 0 => 1.0, 1 => 0.88, _ => 0.94 }) : null);
+                Button tile = CreateTile(entry, wide, areaColor);
                 Grid.SetRow(tile, cell / 2);
                 Grid.SetColumn(tile, block * 2 + cell % 2);
                 if (wide) Grid.SetColumnSpan(tile, 2);
                 grid.Children.Add(tile);
+                _tileColumns.Add((tile, columnBase + block * 2 + cell % 2));
+                _tileGroupIndex[tile] = _groupFirstTiles.Count + (index == 0 ? 0 : -1);
+                if (index == 0) _groupFirstTiles.Add(tile);
                 _firstTile ??= tile;
                 cell += wide ? 2 : 1;
                 index++;
             }
             group.Children.Add(grid);
             _tileGroups.Children.Add(group);
+            // The gap between groups counts as a column, so the next group follows a beat later.
+            columnBase += grid.ColumnDefinitions.Count + 1;
         }
     }
 
     private bool IsWide(CommandPaletteEntry entry) => _wideFeatures.Contains(entry.Key["feature:".Length..]);
 
-    private Button CreateTile(CommandPaletteEntry entry, bool wide, Windows.UI.Color? color)
+    // A Windows 11 card: a light translucent surface with a hairline border, the feature's icon on a small square tinted
+    // in its page's colour, and its name. High contrast keeps the system colours.
+    private Button CreateTile(CommandPaletteEntry entry, bool wide, Windows.UI.Color? accent)
     {
         string id = entry.Key["feature:".Length..];
-        Brush? text = color is null ? null : new SolidColorBrush(Microsoft.UI.Colors.White);
-        var face = new Grid { Padding = new Thickness(12, 10, 12, 10) };
-        if (color is { } fill)
-        {
-            // A light diagonal gradient, like a lit tile.
-            var gradient = new LinearGradientBrush { StartPoint = new Windows.Foundation.Point(0, 0), EndPoint = new Windows.Foundation.Point(1, 1) };
-            gradient.GradientStops.Add(new GradientStop { Color = fill, Offset = 0 });
-            gradient.GradientStops.Add(new GradientStop { Color = Shade(fill, 0.8), Offset = 1 });
-            face.Background = gradient;
-        }
+        bool dark = string.Equals(_services.Appearance.ThemeKey, "Dark", StringComparison.Ordinal);
+        var face = new Grid { Padding = new Thickness(12, 12, 12, 10) };
         face.RowDefinitions.Add(new RowDefinition { Height = GridLength.Auto });
         face.RowDefinitions.Add(new RowDefinition { Height = new GridLength(1, GridUnitType.Star) });
         face.RowDefinitions.Add(new RowDefinition { Height = GridLength.Auto });
         var icon = new FontIcon
         {
-            Glyph = _featureGlyphs.TryGetValue(id, out string? glyph) ? glyph : ((char)0xE8FD).ToString(),
-            FontSize = wide ? 30 : 24, HorizontalAlignment = HorizontalAlignment.Left, VerticalAlignment = VerticalAlignment.Top
+            Glyph = _featureGlyphs.TryGetValue(id, out string? glyph) ? glyph : ((char)0xE8FD).ToString(), FontSize = 16
         };
-        if (text is not null) icon.Foreground = text;
-        face.Children.Add(icon);
+        var badge = new Border
+        {
+            Width = 32, Height = 32, CornerRadius = new CornerRadius(6), Child = icon,
+            HorizontalAlignment = HorizontalAlignment.Left, VerticalAlignment = VerticalAlignment.Top
+        };
+        if (accent is { } color)
+        {
+            badge.Background = new SolidColorBrush(Microsoft.UI.ColorHelper.FromArgb(dark ? (byte)0x59 : (byte)0x22, color.R, color.G, color.B));
+            icon.Foreground = new SolidColorBrush(dark ? Lighten(color, 0.55) : color);
+        }
+        else
+        {
+            badge.BorderThickness = new Thickness(1);
+            badge.BorderBrush = _themeBrush("AppTileBorderBrush");
+        }
+        face.Children.Add(badge);
         if (entry.Shortcut.Length > 0)
         {
-            var key = new Border
+            face.Children.Add(new Border
             {
-                Padding = new Thickness(5, 0, 5, 1), CornerRadius = new CornerRadius(3), HorizontalAlignment = HorizontalAlignment.Right,
-                VerticalAlignment = VerticalAlignment.Top, BorderThickness = new Thickness(1),
-                BorderBrush = text ?? _themeBrush("AppStrongBorderBrush"),
-                Child = new TextBlock { Text = entry.Shortcut, FontSize = 11, Foreground = text }
-            };
-            if (text is null) ((TextBlock)key.Child).ClearValue(TextBlock.ForegroundProperty);
-            face.Children.Add(key);
+                Padding = new Thickness(5, 0, 5, 1), CornerRadius = new CornerRadius(4), HorizontalAlignment = HorizontalAlignment.Right,
+                VerticalAlignment = VerticalAlignment.Top, BorderThickness = new Thickness(1), BorderBrush = _themeBrush("AppStrongBorderBrush"),
+                Child = new TextBlock { Text = entry.Shortcut, FontSize = 11 }
+            });
         }
         // Wide tiles also say where the feature is; square ones keep it for the line under the tiles.
         if (wide)
         {
             var place = new TextBlock
             {
-                Text = entry.Detail, FontSize = 12, Opacity = 0.85, TextWrapping = TextWrapping.Wrap, MaxLines = 2,
+                Text = entry.Detail, FontSize = 12, Opacity = 0.75, TextWrapping = TextWrapping.Wrap, MaxLines = 2,
                 TextTrimming = TextTrimming.CharacterEllipsis, VerticalAlignment = VerticalAlignment.Bottom, Margin = new Thickness(0, 0, 0, 2)
             };
-            if (text is not null) place.Foreground = text;
             Grid.SetRow(place, 1);
             face.Children.Add(place);
         }
         var title = new TextBlock
         {
-            Text = entry.Title, FontSize = wide ? 15 : 13, FontWeight = Microsoft.UI.Text.FontWeights.SemiBold,
-            TextWrapping = TextWrapping.Wrap, MaxLines = wide ? 1 : 3, TextTrimming = TextTrimming.CharacterEllipsis, LineHeight = wide ? 20 : 17
+            Text = entry.Title, FontSize = wide ? 14 : 13, FontWeight = Microsoft.UI.Text.FontWeights.SemiBold,
+            TextWrapping = TextWrapping.Wrap, MaxLines = wide ? 1 : 2, TextTrimming = TextTrimming.CharacterEllipsis, LineHeight = wide ? 20 : 18
         };
-        if (text is not null) title.Foreground = text;
         Grid.SetRow(title, 2);
         face.Children.Add(title);
-        // Pointing at a tile draws a light frame around it, as on the start screen.
-        var frame = new Border
-        {
-            BorderThickness = new Thickness(2), BorderBrush = text ?? _themeBrush("AppStrongBorderBrush"), Opacity = 0,
-            Margin = new Thickness(-12, -10, -12, -10), IsHitTestVisible = false
-        };
-        Grid.SetRowSpan(frame, 3);
-        face.Children.Add(frame);
+        Brush rest = _themeBrush("AppTileBackgroundBrush"), over = _themeBrush("AppTilePointerOverBrush");
+        Brush edge = _themeBrush("AppTileBorderBrush"), strongEdge = _themeBrush("AppStrongBorderBrush");
+        var card = new Border { Child = face, CornerRadius = new CornerRadius(8), BorderThickness = new Thickness(1), Background = rest, BorderBrush = edge };
         var tile = new Button
         {
-            Content = face, Width = wide ? TileSize * 2 + TileGap : TileSize, Height = TileHeight, Padding = new Thickness(0),
-            BorderThickness = new Thickness(0), CornerRadius = new CornerRadius(4), HorizontalContentAlignment = HorizontalAlignment.Stretch,
-            VerticalContentAlignment = VerticalAlignment.Stretch, Tag = entry, RenderTransformOrigin = new Windows.Foundation.Point(0.5, 0.5),
-            RenderTransform = new ScaleTransform()
+            Content = card, Width = wide ? TileSize * 2 + TileGap : TileSize, Height = TileHeight, Padding = new Thickness(0),
+            BorderThickness = new Thickness(0), CornerRadius = new CornerRadius(8), Background = new SolidColorBrush(Microsoft.UI.Colors.Transparent),
+            HorizontalContentAlignment = HorizontalAlignment.Stretch, VerticalContentAlignment = VerticalAlignment.Stretch, Tag = entry,
+            RenderTransformOrigin = new Windows.Foundation.Point(0.5, 0.5), RenderTransform = new ScaleTransform()
         };
+        // The card draws its own hover; the button's own states would paint a second surface behind it.
+        var none = new SolidColorBrush(Microsoft.UI.Colors.Transparent);
+        foreach (string key in new[] { "ButtonBackgroundPointerOver", "ButtonBackgroundPressed", "ButtonBorderBrushPointerOver", "ButtonBorderBrushPressed" })
+            tile.Resources[key] = none;
         string where = T("CommandPalette.TileWhere", entry.Title, entry.Detail);
         ToolTipService.SetToolTip(tile, entry.Detail);
         AutomationProperties.SetAutomationId(tile, "Feature" + id);
         AutomationProperties.SetName(tile, entry.Title + ", " + entry.Detail + (entry.Shortcut.Length > 0 ? ", " + entry.Shortcut : ""));
         tile.Click += (_, _) => RunCommandPaletteEntry(entry);
-        // Pointing at a tile or moving to it says where the feature is, under the tiles; pressing tilts it in a little.
+        // Pointing at a tile or moving to it says where the feature is, under the tiles; pressing sinks it in a little.
         void ShowWhere()
         {
             _tileWhere!.Text = where;
-            frame.Opacity = 0.9;
+            card.Background = over;
+            card.BorderBrush = strongEdge;
         }
-        void Leave() => frame.Opacity = 0;
+        void Leave()
+        {
+            card.Background = rest;
+            card.BorderBrush = edge;
+        }
         void Press(double scale)
         {
             var transform = (ScaleTransform)tile.RenderTransform;
@@ -531,51 +580,116 @@ internal sealed class CommandPalette(AppServices services, Grid root, FrameworkE
         tile.PointerExited += (_, _) => { Leave(); Press(1); };
         tile.GotFocus += (_, _) => ShowWhere();
         tile.LostFocus += (_, _) => Leave();
-        tile.AddHandler(UIElement.PointerPressedEvent, new PointerEventHandler((_, _) => Press(0.96)), handledEventsToo: true);
+        tile.AddHandler(UIElement.PointerPressedEvent, new PointerEventHandler((_, _) => Press(0.97)), handledEventsToo: true);
         tile.AddHandler(UIElement.PointerReleasedEvent, new PointerEventHandler((_, _) => Press(1)), handledEventsToo: true);
         tile.PointerCaptureLost += (_, _) => Press(1);
         return tile;
     }
 
-    // The groups slide in from the right one after another when the start screen opens, unless motion is reduced.
+    private static Windows.UI.Color Lighten(Windows.UI.Color color, double amount)
+        => Microsoft.UI.ColorHelper.FromArgb(255, (byte)(color.R + (255 - color.R) * amount), (byte)(color.G + (255 - color.G) * amount),
+            (byte)(color.B + (255 - color.B) * amount));
+
+    // The start screen opens from the bottom-left corner: its backdrop spreads out as a growing circle, and the tiles come
+    // in column by column from the left, each sliding up and to the right as it fades in. Everything runs on the
+    // composition thread (no layout work per frame), and the animations always end with every tile shown. Reduced
+    // motion shows it at once.
     private int _tilesAnimation;
+    private static readonly TimeSpan RevealTime = TimeSpan.FromMilliseconds(380);
+    private static readonly TimeSpan TileFadeTime = TimeSpan.FromMilliseconds(240), TileMoveTime = TimeSpan.FromMilliseconds(360);
+    private const int ColumnStepMs = 40, FirstColumnMs = 70, LastAnimatedColumn = 16;
+
+    private void RevealFromBottomLeft()
+    {
+        Visual visual = ElementCompositionPreview.GetElementVisual(_commandPaletteOverlay!);
+        if (_services.ShellSettings.ReduceMotion)
+        {
+            visual.Clip = null;
+            return;
+        }
+        Compositor compositor = visual.Compositor;
+        float width = (float)Math.Max(_root.ActualWidth, 1), height = (float)Math.Max(_root.ActualHeight, 1);
+        float radius = MathF.Sqrt(width * width + height * height);
+        CompositionEllipseGeometry circle = compositor.CreateEllipseGeometry();
+        circle.Center = new Vector2(0, height);
+        circle.Radius = new Vector2(radius);
+        visual.Clip = compositor.CreateGeometricClip(circle);
+        Vector2KeyFrameAnimation grow = compositor.CreateVector2KeyFrameAnimation();
+        grow.InsertKeyFrame(0, new Vector2(16));
+        grow.InsertKeyFrame(1, new Vector2(radius), Decelerate(compositor));
+        grow.Duration = RevealTime;
+        int version = _tilesAnimation;
+        CompositionScopedBatch batch = compositor.CreateScopedBatch(CompositionBatchTypes.Animation);
+        circle.StartAnimation("Radius", grow);
+        batch.End();
+        // The clip is only for the opening; without it nothing is cut off when the window is resized later.
+        batch.Completed += (_, _) => _root.DispatcherQueue.TryEnqueue(() =>
+        {
+            if (version == _tilesAnimation) visual.Clip = null;
+        });
+    }
 
     private void AnimateTilesIn()
     {
         int version = ++_tilesAnimation;
-        bool still = _services.ShellSettings.ReduceMotion;
-        foreach (UIElement group in _tileGroups!.Children)
-        {
-            group.OpacityTransition = null;
-            group.TranslationTransition = null;
-            group.Opacity = still ? 1 : 0;
-            group.Translation = still ? System.Numerics.Vector3.Zero : new System.Numerics.Vector3(80, 0, 0);
-        }
         _tileScroller!.ChangeView(0, null, null, disableAnimation: true);
-        if (still) return;
-        // One frame later, so the start values are drawn; each later group takes a little longer, which staggers them.
-        bool queued = _root.DispatcherQueue.TryEnqueue(() =>
+        if (_services.ShellSettings.ReduceMotion || _tileColumns.Count == 0)
         {
-            // A newer start replaces this one; otherwise the tiles always end up shown.
-            if (version != _tilesAnimation) return;
-            int index = 0;
-            foreach (UIElement group in _tileGroups.Children)
+            foreach ((UIElement element, _) in _tileColumns)
             {
-                group.OpacityTransition = new ScalarTransition { Duration = TimeSpan.FromMilliseconds(200 + 60 * index) };
-                group.TranslationTransition = new Vector3Transition { Duration = TimeSpan.FromMilliseconds(260 + 70 * index) };
-                group.Opacity = 1;
-                group.Translation = System.Numerics.Vector3.Zero;
-                index++;
+                Visual still = ElementCompositionPreview.GetElementVisual(element);
+                still.StopAnimation("Opacity");
+                still.Opacity = 1;
             }
-        });
-        if (!queued)
-        {
-            foreach (UIElement group in _tileGroups.Children)
-            {
-                group.Opacity = 1;
-                group.Translation = System.Numerics.Vector3.Zero;
-            }
+            return;
         }
+        Compositor compositor = ElementCompositionPreview.GetElementVisual(_tileGroups!).Compositor;
+        CompositionEasingFunction ease = Decelerate(compositor);
+        // One pair of animations per column: the columns past the window's right edge all start with the last one.
+        var fades = new Dictionary<int, ScalarKeyFrameAnimation>();
+        var moves = new Dictionary<int, Vector3KeyFrameAnimation>();
+        foreach ((UIElement element, int column) in _tileColumns)
+        {
+            int step = Math.Min(column, LastAnimatedColumn);
+            if (!fades.TryGetValue(step, out ScalarKeyFrameAnimation? fade))
+            {
+                TimeSpan delay = TimeSpan.FromMilliseconds(FirstColumnMs + ColumnStepMs * step);
+                fade = compositor.CreateScalarKeyFrameAnimation();
+                fade.InsertKeyFrame(0, 0);
+                fade.InsertKeyFrame(1, 1, ease);
+                fade.Duration = TileFadeTime;
+                fade.DelayTime = delay;
+                fade.DelayBehavior = AnimationDelayBehavior.SetInitialValueBeforeDelay;
+                Vector3KeyFrameAnimation move = compositor.CreateVector3KeyFrameAnimation();
+                move.InsertKeyFrame(0, new Vector3(-24, 28, 0));
+                move.InsertKeyFrame(1, Vector3.Zero, ease);
+                move.Duration = TileMoveTime;
+                move.DelayTime = delay;
+                move.DelayBehavior = AnimationDelayBehavior.SetInitialValueBeforeDelay;
+                fades[step] = fade;
+                moves[step] = move;
+            }
+            ElementCompositionPreview.SetIsTranslationEnabled(element, true);
+            Visual visual = ElementCompositionPreview.GetElementVisual(element);
+            visual.StartAnimation("Opacity", fade);
+            visual.StartAnimation("Translation", moves[step]);
+        }
+    }
+
+    // Windows 11's "fast out, slow in" curve for things that arrive.
+    private static CompositionEasingFunction Decelerate(Compositor compositor)
+        => compositor.CreateCubicBezierEasingFunction(new Vector2(0.1f, 0.9f), new Vector2(0.2f, 1f));
+
+    // Tab and Shift+Tab jump between the groups of tiles; past the last or first group they go back to the search box.
+    private void OnTilePreviewKeyDown(object sender, KeyRoutedEventArgs e)
+    {
+        if (e.Key != VirtualKey.Tab || _groupFirstTiles.Count == 0) return;
+        if (FocusManager.GetFocusedElement(_root.XamlRoot) is not Button focused || !_tileGroupIndex.TryGetValue(focused, out int group)) return;
+        bool back = InputKeyboardSource.GetKeyStateForCurrentThread(VirtualKey.Shift).HasFlag(CoreVirtualKeyStates.Down);
+        int next = back ? group - 1 : group + 1;
+        if (next < 0 || next >= _groupFirstTiles.Count) _commandPaletteSearch!.Focus(FocusState.Keyboard);
+        else _groupFirstTiles[next].Focus(FocusState.Keyboard);
+        e.Handled = true;
     }
 
     // Typing on a tile goes on in the search box, as on Windows 8's start screen.
@@ -640,7 +754,8 @@ internal sealed class CommandPalette(AppServices services, Grid root, FrameworkE
                 Close();
                 e.Handled = true;
                 break;
-            case VirtualKey.Down when _tilesShown && _firstTile is not null:
+            case VirtualKey.Down or VirtualKey.Tab when _tilesShown && _firstTile is not null
+                && !InputKeyboardSource.GetKeyStateForCurrentThread(VirtualKey.Shift).HasFlag(CoreVirtualKeyStates.Down):
                 _firstTile.Focus(FocusState.Keyboard);
                 e.Handled = true;
                 break;

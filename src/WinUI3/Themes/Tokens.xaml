@@ -80,6 +80,12 @@
             <SolidColorBrush x:Key="AppSmokeBrush" Color="#4D000000" />
             <!-- AcrylicInAppFillColorDefaultBrush: the command palette. -->
             <AcrylicBrush x:Key="AppPaletteBackgroundBrush" TintColor="#FCFCFC" TintOpacity="0" TintLuminosityOpacity="0.85" FallbackColor="#F9F9F9" />
+            <!-- The start screen of tiles: a see-through layer over the whole window (no blur), so the page stays faintly visible. -->
+            <SolidColorBrush x:Key="AppStartScreenBrush" Color="#D1F3F3F3" />
+            <!-- Its tiles: nearly solid Windows 11 cards that stay readable over the page, a hairline border and a lighter hover. -->
+            <SolidColorBrush x:Key="AppTileBackgroundBrush" Color="#E6FFFFFF" />
+            <SolidColorBrush x:Key="AppTilePointerOverBrush" Color="#F2FFFFFF" />
+            <SolidColorBrush x:Key="AppTileBorderBrush" Color="#14000000" />
         </ResourceDictionary>
         <ResourceDictionary x:Key="Dark">
             <SolidColorBrush x:Key="AppPrimaryButtonBrush" Color="{ThemeResource SystemAccentColorLight2}" />
@@ -116,6 +122,10 @@
             <SolidColorBrush x:Key="AppOnDangerFillBrush" Color="#FFFFFF" />
             <SolidColorBrush x:Key="AppSmokeBrush" Color="#4D000000" />
             <AcrylicBrush x:Key="AppPaletteBackgroundBrush" TintColor="#2C2C2C" TintOpacity="0.15" TintLuminosityOpacity="0.96" FallbackColor="#2C2C2C" />
+            <SolidColorBrush x:Key="AppStartScreenBrush" Color="#D1141414" />
+            <SolidColorBrush x:Key="AppTileBackgroundBrush" Color="#D92B2B2B" />
+            <SolidColorBrush x:Key="AppTilePointerOverBrush" Color="#F2383838" />
+            <SolidColorBrush x:Key="AppTileBorderBrush" Color="#1AFFFFFF" />
         </ResourceDictionary>
         <ResourceDictionary x:Key="HighContrast">
             <SolidColorBrush x:Key="AppPrimaryButtonBrush" Color="{ThemeResource SystemColorHighlightColor}" />
@@ -152,6 +162,10 @@
             <SolidColorBrush x:Key="AppOnDangerFillBrush" Color="{ThemeResource SystemColorButtonTextColor}" />
             <SolidColorBrush x:Key="AppSmokeBrush" Color="#4D000000" />
             <SolidColorBrush x:Key="AppPaletteBackgroundBrush" Color="{ThemeResource SystemColorWindowColor}" />
+            <SolidColorBrush x:Key="AppStartScreenBrush" Color="{ThemeResource SystemColorWindowColor}" />
+            <SolidColorBrush x:Key="AppTileBackgroundBrush" Color="{ThemeResource SystemColorButtonFaceColor}" />
+            <SolidColorBrush x:Key="AppTilePointerOverBrush" Color="{ThemeResource SystemColorButtonFaceColor}" />
+            <SolidColorBrush x:Key="AppTileBorderBrush" Color="{ThemeResource SystemColorButtonTextColor}" />
         </ResourceDictionary>
     </ResourceDictionary.ThemeDictionaries>
 </ResourceDictionary>

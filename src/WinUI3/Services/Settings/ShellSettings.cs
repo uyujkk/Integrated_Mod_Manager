@@ -68,6 +68,8 @@ internal sealed class ShellSettings
     /// <summary>The search lists every feature with where it is (detailed) or only pages and commands until typed (brief).</summary>
     public bool DetailedSearch { get; set; } = true;
     public HashSet<string> ClosedPageHints { get; set; } = new(StringComparer.OrdinalIgnoreCase);
+    /// <summary>Features picked from the search before: they are used directly instead of shown.</summary>
+    public HashSet<string> GuidedFeatures { get; set; } = new(StringComparer.OrdinalIgnoreCase);
     public bool SearchUsed { get; set; }
     public bool ShortcutsVisited { get; set; }
     public bool NavigationCollapsed { get; set; }

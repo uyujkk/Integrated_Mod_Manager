@@ -21,8 +21,7 @@ public sealed class DeveloperToolsEntryTests
     public void CommandPalette_OffersTheDeveloperTools()
     {
         using AppSession app = AppSession.Configured().Start();
-        Keyboard.TypeSimultaneously(VirtualKeyShort.CONTROL, VirtualKeyShort.KEY_K);
-        AutomationElement search = app.FindByName(app.Text("CommandPalette.Placeholder"), TimeSpan.FromSeconds(5));
+        AutomationElement search = app.OpenSearch();
         // An empty query lists the commands; the entry is among them, and a search finds it too.
         app.FindByName(app.Text("CommandPalette.OpenDeveloperTools"), TimeSpan.FromSeconds(5));
         search.AsTextBox().Text = app.Text("Settings.DeveloperTools");

@@ -16,8 +16,17 @@ public sealed partial class MainWindow
 {
     private Spotlight? _spotlight;
 
-    // Picked in the search: go to the page, make it ready, and point at the place. Places that need a selection first
-    // (a character, an open Mod) say where they are instead.
+    // Features whose place changes data, restarts the app or flips a switch: picking them again only focuses the place,
+    // so nothing happens without the user pressing it.
+    private static readonly HashSet<string> FocusOnlyFeatures = new(StringComparer.Ordinal)
+    {
+        "Deploy", "DeleteMod", "SeveralMods", "SaveSlot", "RestoreLoader", "ApplyPreset", "ModKeys", "Rollback", "Elevate",
+        "ClearSignIn", "Feedback"
+    };
+
+    // Picked in the search: go to the page, make it ready, and point at the place. The first time a feature is picked it
+    // shows where the place is; after that it is used directly, like a start screen tile. Places that need a selection
+    // first (a character, an open Mod) say where they are instead.
     private async void RunFeature(string id)
     {
         try
@@ -34,7 +43,13 @@ public sealed partial class MainWindow
                 case "workspace:presets": EnsureWorkspacePage().SetRepositoryWorkspaceViewV4(RepositoryWorkspaceView.Presets); break;
             }
             _spotlight ??= new Spotlight(RootGrid);
-            bool shown = feature.Target is { } target && await _spotlight.ShowAsync(target, feature.Container, feature.Title);
+            bool firstTime = _shell.GuidedFeatures.Add(feature.Id);
+            if (firstTime) SaveShellConfig();
+            SpotlightMode mode = firstTime ? SpotlightMode.Show : FocusOnlyFeatures.Contains(feature.Id) ? SpotlightMode.Focus : SpotlightMode.Use;
+            // The workspace's view buttons are toggle buttons, which the spotlight never presses; using them is choosing the view.
+            if (mode == SpotlightMode.Use && feature.Id is "Presets" or "Covers")
+                EnsureWorkspacePage().SetRepositoryWorkspaceViewV4(feature.Id == "Presets" ? RepositoryWorkspaceView.Presets : RepositoryWorkspaceView.Covers);
+            bool shown = feature.Target is { } target && await _spotlight.ShowAsync(target, feature.Container, feature.Title, mode);
             if (!shown) ShowAppNotification(T("Features.WhereNotice", feature.Title, feature.Where), InfoBarSeverity.Informational);
         }
         catch (Exception ex)
